@@ -34,15 +34,18 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "arcticdem.h"
+#include "pgc.h"
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_ARCTICDEM_LIBNAME   "arcticdem"
-#define LUA_MOSAIC_RASTER_NAME  "arcticdem-mosaic"
-#define LUA_STRIPS_RASTER_NAME  "arcticdem-strips"
+#define LUA_PGC_LIBNAME                    "pgc"
+#define LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME  "arcticdem-mosaic"
+#define LUA_ARCTIC_DEM_STRIPS_RASTER_NAME  "arcticdem-strips"
+#define LUA_REMA_DEM_MOSAIC_RASTER_NAME    "remadem-mosaic"
+#define LUA_REMA_DEM_STRIPS_RASTER_NAME    "remadem-strips"
+
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -51,10 +54,10 @@
 /*----------------------------------------------------------------------------
  * arcticdem_version
  *----------------------------------------------------------------------------*/
-int arcticdem_version (lua_State* L)
+int pgc_version (lua_State* L)
 {
     /* Display Version Information on Terminal */
-    print2term("ArcticDEM Plugin Version: %s\n", BINID);
+    print2term("PGC Plugin Version: %s\n", BINID);
     print2term("Build Information: %s\n", BUILDINFO);
 
     /* Return Version Information to Lua */
@@ -66,15 +69,15 @@ int arcticdem_version (lua_State* L)
 /*----------------------------------------------------------------------------
  * arcticdem_open
  *----------------------------------------------------------------------------*/
-int arcticdem_open (lua_State *L)
+int pgc_open (lua_State *L)
 {
-    static const struct luaL_Reg arcticdem_functions[] = {
-        {"version",         arcticdem_version},
+    static const struct luaL_Reg pgc_functions[] = {
+        {"version",         pgc_version},
         {NULL,              NULL}
     };
 
     /* Set Library */
-    luaL_newlib(L, arcticdem_functions);
+    luaL_newlib(L, pgc_functions);
 
     return 1;
 }
@@ -84,27 +87,27 @@ int arcticdem_open (lua_State *L)
  ******************************************************************************/
 
 extern "C" {
-void initarcticdem (void)
+void initpgc(void)
 {
     /* Initialize Modules */
     ArcticDemMosaicRaster::init();
     ArcticDemStripsRaster::init();
 
     /* Register Rasters */
-    GeoRaster::registerRaster(LUA_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
-    GeoRaster::registerRaster(LUA_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
+    GeoRaster::registerRaster(LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
+    GeoRaster::registerRaster(LUA_ARCTIC_DEM_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_ARCTICDEM_LIBNAME, arcticdem_open);
+    LuaEngine::extend(LUA_PGC_LIBNAME, pgc_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_ARCTICDEM_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_PGC_LIBNAME, BINID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_ARCTICDEM_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_PGC_LIBNAME, BINID);
 }
 
-void deinitarcticdem (void)
+void deinitpgc (void)
 {
     /* Uninitialize Modules */
     ArcticDemMosaicRaster::deinit();

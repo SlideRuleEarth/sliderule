@@ -1,6 +1,6 @@
 ROOT = $(shell pwd)
 BUILD = $(ROOT)/build/sliderule
-ARCTICDEM_BUILD = $(ROOT)/build/arcticdem
+PGC_BUILD = $(ROOT)/build/pgc
 ATLAS_BUILD = $(ROOT)/build/atlas
 ICESAT2_BUILD = $(ROOT)/build/icesat2
 GEDI_BUILD = $(ROOT)/build/gedi
@@ -18,7 +18,7 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 default-build: ## default build of sliderule
 	make -j4 -C $(BUILD)
 
-all: default-build atlas arcticdem gedi icesat2 ## build everything
+all: default-build atlas pgc gedi icesat2 ## build everything
 
 config: config-release ## configure make for default build
 
@@ -47,12 +47,12 @@ config-development-debug: prep ## configure make for debug version of sliderule 
 config-development-cicd: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_APACHE_ARROW_10_COMPAT=ON $(ROOT)
 
-config-all: config-development config-atlas config-arcticdem config-gedi config-icesat2 ## configure everything
+config-all: config-development config-atlas config-pgc config-gedi config-icesat2 ## configure everything
 
 install: ## install sliderule to system
 	make -C $(BUILD) install
 
-install-all: install install-atlas install-arcticdem install-gedi install-icesat2 ## install everything
+install-all: install install-atlas install-pgc install-gedi install-icesat2 ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(BUILD)/install_manifest.txt
@@ -87,24 +87,24 @@ config-python-conda: prep ## configure make for python bindings (using conda env
 config-library: prep ## configure make for shared library libsliderule.so
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
 
-##########################
-# ArcticDEM Plugin Targets
-##########################
+#####################
+# PGC Plugin Targets
+#####################
 
-config-arcticdem-debug: prep ## configure make for arcticdem plugin
-	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/arcticdem
+config-pgc-debug: prep ## configure make for pgc plugin
+	cd $(PGC_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/pgc
 
-config-arcticdem: prep ## configure make for arcticdem plugin
-	cd $(ARCTICDEM_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/arcticdem
+config-pgc: prep ## configure make for pgc plugin
+	cd $(PGC_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/pgc
 
-arcticdem: ## build icesat2 plugin
-	make -j4 -C $(ARCTICDEM_BUILD)
+pgc: ## build icesat2 plugin
+	make -j4 -C $(PGC_BUILD)
 
-install-arcticdem: ## install icesat2 plugin to system
-	make -C $(ARCTICDEM_BUILD) install
+install-pgc: ## install icesat2 plugin to system
+	make -C $(PGC_BUILD) install
 
-uninstall-arcticdem: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(ARCTICDEM_BUILD)/install_manifest.txt
+uninstall-pgc: ## uninstall most recent install of icesat2 plugin from system
+	xargs rm < $(PGC_BUILD)/install_manifest.txt
 
 ########################
 # Atlas Plugin Targets
@@ -172,10 +172,10 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd $(BUILD); make
 
-ctags: config-arcticdem config-development ## generate ctags
+ctags: config-pgc config-development ## generate ctags
 	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
 	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(ARCTICDEM_BUILD)/compile_commands.json > compile_commands.json
+	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
@@ -207,21 +207,21 @@ testpy: ## run python binding test
 
 prep: ## create necessary build directories
 	mkdir -p $(BUILD)
-	mkdir -p $(ARCTICDEM_BUILD)
+	mkdir -p $(PGC_BUILD)
 	mkdir -p $(ATLAS_BUILD)
 	mkdir -p $(ICESAT2_BUILD)
 	mkdir -p $(GEDI_BUILD)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
-	- make -C $(ARCTICDEM_BUILD) clean
+	- make -C $(PGC_BUILD) clean
 	- make -C $(ATLAS_BUILD) clean
 	- make -C $(ICESAT2_BUILD) clean
 	- make -C $(GEDI_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
-	- rm -Rf $(ARCTICDEM_BUILD)
+	- rm -Rf $(PGC_BUILD)
 	- rm -Rf $(ATLAS_BUILD)
 	- rm -Rf $(ICESAT2_BUILD)
 	- rm -Rf $(GEDI_BUILD)

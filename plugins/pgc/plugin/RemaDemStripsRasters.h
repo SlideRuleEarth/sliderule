@@ -29,24 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_plugin__
-#define __arcticdem_plugin__
+#ifndef __remadem_strips_raster__
+#define __remadem_strips_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
+#include "PgcDemStripsRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * REMA DEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initarcticdem (void);
-}
+class RemaDemStripsRaster: public PgcDemStripsRaster
+{
+    public:
 
-#endif  /* __arcticdem_plugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const int REMA_DEM_EPSG = 3031;
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+        { return new RemaDemStripsRaster(L, _parms); }
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        RemaDemStripsRaster(lua_State* L, GeoParms* _parms):
+          PgcDemStripsRaster(L, _parms, REMA_DEM_EPSG, "rema", "s2s041/2m/s") {}
+};
+
+#endif  /* __remadem_strips_raster__ */

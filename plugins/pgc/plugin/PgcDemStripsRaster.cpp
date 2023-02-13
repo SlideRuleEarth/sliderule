@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemStripsRaster.h"
+#include "PgcDemStripsRaster.h"
 #include "TimeLib.h"
 
 /******************************************************************************
@@ -55,24 +55,19 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemStripsRaster::ArcticDemStripsRaster(lua_State *L, GeoParms* _parms):
-    VctRaster(L, _parms, ARCTIC_DEM_EPSG)
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geocells):
+    VctRaster(L, _parms, target_crs),
+    demName(dem_name),
+    vsis3Path("/vsis3/pgc-opendata-dems/")
 {
+    path2geocells = vsis3Path;
+    path2geocells.append(dem_name).append("/strips/").append(geocells);
 }
-
-/*----------------------------------------------------------------------------
- * create
- *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemStripsRaster::create(lua_State* L, GeoParms* _parms)
-{
-    return new ArcticDemStripsRaster(L, _parms);
-}
-
 
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
+void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
     /*
      * Strip DEM ﬁles are distributed in folders according to the 1° x 1° geocell in which the geometric center resides.
@@ -102,7 +97,7 @@ void ArcticDemStripsRaster::getIndexFile(std::string& file, double lon, double l
     std::string lonStr(lonBuf);
     std::string latStr(latBuf);
 
-    file = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n" +
+    file = path2geocells +
            latStr +
            ((_lon < 0) ? "w" : "e") +
            lonStr +
@@ -115,9 +110,9 @@ void ArcticDemStripsRaster::getIndexFile(std::string& file, double lon, double l
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-void ArcticDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
+void PgcDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
-    /* ArcticDEM geocells are 1x1 degree */
+    /* PgcDEM geocells are 1x1 degree */
     const double geocellSize = 1.0;
 
     lat = floor(lat);
@@ -133,7 +128,7 @@ void ArcticDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
+bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 {
     /*
      * Could get date from filename but will read from geojson index file instead.
@@ -145,9 +140,6 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
      * the two images can be from up to 20 days apart.
      *
      */
-
-    const std::string fileToken  = "arcticdem";
-    const std::string vsisPath   = "/vsis3/pgc-opendata-dems/";
     const char* demField         = "dem";
     const int DATES_CNT          = 2;
     const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
@@ -168,11 +160,11 @@ bool ArcticDemStripsRaster::findRasters(OGRPoint& p)
             if (fname)
             {
                 std::string fileName(fname);
-                std::size_t pos = fileName.find(fileToken);
+                std::size_t pos = fileName.find(demName);
                 if (pos == std::string::npos)
-                    throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
+                    throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", demName.c_str());
 
-                fileName = vsisPath + fileName.substr(pos);
+                fileName = vsis3Path + fileName.substr(pos);
 
                 raster_info_t rinfo;
                 rinfo.fileName = fileName;

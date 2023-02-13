@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
+#include "PgcDemMosaicRaster.h"
 #include "TimeLib.h"
 
 /******************************************************************************
@@ -55,32 +55,26 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArcticDemMosaicRaster::ArcticDemMosaicRaster(lua_State *L, GeoParms* _parms):
-    VrtRaster(L, _parms)
+PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
+    VrtRaster(L, _parms),
+    vrtFile("/vsis3/pgc-opendata-dems/")
 {
+    vrtFile.append(vrt_file);
+
     /*
-     * ArcticDemMosaicRaster uses one mosaics VRT file;
+     * PgcDemMosaicRaster uses one mosaics VRT file;
      */
     openGeoIndex();
-
-}
-
-/*----------------------------------------------------------------------------
- * create
- *----------------------------------------------------------------------------*/
-GeoRaster* ArcticDemMosaicRaster::create(lua_State* L, GeoParms* _parms)
-{
-    return new ArcticDemMosaicRaster(L, _parms);
 }
 
 
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void ArcticDemMosaicRaster::getIndexFile(std::string& file, double lon, double lat)
+void PgcDemMosaicRaster::getIndexFile(std::string& file, double lon, double lat)
 {
     std::ignore = lon = lat;
-    file = "/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt";
+    file = vrtFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
 
@@ -88,7 +82,7 @@ void ArcticDemMosaicRaster::getIndexFile(std::string& file, double lon, double l
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-bool ArcticDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
+bool PgcDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
 {
     /*
      * There is a metadata .json file in s3 bucket where raster is located.

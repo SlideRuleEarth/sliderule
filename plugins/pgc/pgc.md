@@ -1,4 +1,4 @@
-# SlideRule ArcticDEM Plugin
+# SlideRule PGC Plugin
 
 
 ## I. Prerequisites

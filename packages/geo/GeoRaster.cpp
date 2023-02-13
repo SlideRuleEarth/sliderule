@@ -288,9 +288,6 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
 {
     /* Initialize Class Data Members */
     rastersList = new List<raster_info_t>;
-    rastersList->clear();
-    rasterDict.clear();
-    fileDict.clear();
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
