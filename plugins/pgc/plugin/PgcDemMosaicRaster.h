@@ -29,20 +29,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_mosaic_raster__
-#define __arcticdem_mosaic_raster__
+#ifndef __pgcdem_mosaic_raster__
+#define __pgcdem_mosaic_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "PgcDemMosaicRaster.h"
+#include <string_view>
+#include "VrtRaster.h"
 
 /******************************************************************************
- * ARCTICDEM MOSAIC RASTER CLASS
+ *PGC DEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemMosaicRaster: public PgcDemMosaicRaster
+class PgcDemMosaicRaster: public VrtRaster
 {
     public:
 
@@ -50,17 +51,22 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemMosaicRaster(L, _parms); }
-
     protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         PgcDemMosaicRaster(L, _parms, "arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt") {}
+                PgcDemMosaicRaster    (lua_State* L, GeoParms* _parms, const char* vrt_file);
+        bool    getRasterDate         (raster_info_t& rinfo);
+        void    getIndexFile          (std::string& file, double lon=0, double lat=0);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        std::string vrtFile;
 };
 
-#endif  /* __arcticdem_mosaic_raster__ */
+#endif  /* __pgcdem_mosaic_raster__ */

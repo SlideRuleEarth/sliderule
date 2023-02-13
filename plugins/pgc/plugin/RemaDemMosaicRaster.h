@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_mosaic_raster__
-#define __arcticdem_mosaic_raster__
+#ifndef __remadem_mosaic_raster__
+#define __remadem_mosaic_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,10 @@
 #include "PgcDemMosaicRaster.h"
 
 /******************************************************************************
- * ARCTICDEM MOSAIC RASTER CLASS
+ * REMA DEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemMosaicRaster: public PgcDemMosaicRaster
+class RemaDemMosaicRaster: public PgcDemMosaicRaster
 {
     public:
 
@@ -51,7 +51,7 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
          *--------------------------------------------------------------------*/
 
         static GeoRaster* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemMosaicRaster(L, _parms); }
+        { return new RemaDemMosaicRaster(L, _parms); }
 
     protected:
 
@@ -59,8 +59,8 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         PgcDemMosaicRaster(L, _parms, "arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt") {}
+        RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
+         PgcDemMosaicRaster(L, _parms, "rema/mosaics/v2.0/2m/2m_dem_tiles.vrt") {}
 };
 
-#endif  /* __arcticdem_mosaic_raster__ */
+#endif  /* __remadem_mosaic_raster__ */
