@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_plugin__
-#define __arcticdem_plugin__
+#ifndef __pgc_plugin__
+#define __pgc_plugin__
 
 /******************************************************************************
  * INCLUDES
@@ -44,9 +44,9 @@
  ******************************************************************************/
 
 extern "C" {
-void initarcticdem (void);
+void initpgc (void);
 }
 
-#endif  /* __arcticdem_plugin__ */
+#endif  /* __pgc_plugin__ */
 
 

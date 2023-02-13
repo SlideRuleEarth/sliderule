@@ -70,10 +70,10 @@ if __icesat2__ then
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
--- Run ICESat-2 Plugin Self Tests
-if __arcticdem__ then
-    local arcticdem_td = td .. "../../plugins/arcticdem/selftests/"
-    runner.script(arcticdem_td .. "arcticdem_reader.lua")
+-- Run PGC Plugin Self Tests
+if __pgc__ then
+    local pgc_td = td .. "../../plugins/pgc/selftests/"
+    runner.script(pgc_td .. "arcticdem_reader.lua")
 end
 
 -- Report Results --

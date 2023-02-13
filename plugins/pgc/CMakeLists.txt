@@ -1,6 +1,6 @@
-# ArcticDEM SlideRule Plugin top-level CMake build script
+# PGC SlideRule Plugin top-level CMake build script
 
-project (ARCTICDEM LANGUAGES CXX)
+project (PGC LANGUAGES CXX)
 
 #################
 # CMake Options #
@@ -17,14 +17,14 @@ cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommend
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 
-####################
-# ArcticDem Plugin #
-####################
+##############
+# PGC Plugin #
+##############
 
-add_library (arcticdem MODULE "")
+add_library (pgc MODULE "")
 
-set_target_properties (arcticdem PROPERTIES OUTPUT_NAME arcticdem)
-set_target_properties (arcticdem PROPERTIES PREFIX "")
+set_target_properties (pgc PROPERTIES OUTPUT_NAME pgc)
+set_target_properties (pgc PROPERTIES PREFIX "")
 
 # Prerequisites #
 find_package (Lua "5.3")
@@ -34,33 +34,33 @@ find_package (GDAL)
 file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
 execute_process (COMMAND git --work-tree ${PROJECT_SOURCE_DIR}/../.. --git-dir ${PROJECT_SOURCE_DIR}/../../.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
 string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
-target_compile_definitions (arcticdem PUBLIC BUILDINFO="${BUILDINFO}")
+target_compile_definitions (pgc PUBLIC BUILDINFO="${BUILDINFO}")
 
 # Set Environment Variables #
 set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
 set (CONFDIR ${INSTALLDIR}/etc/sliderule)
 
 # Compile Definitions #
-target_compile_definitions (arcticdem PUBLIC BINID="${TGTVER}")
+target_compile_definitions (pgc PUBLIC BINID="${TGTVER}")
 if(ENABLE_ADDRESS_SANITIZER)
-	target_compile_options (arcticdem PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+	target_compile_options (pgc PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif()
 
 # Link Options #
 if(ENABLE_ADDRESS_SANITIZER)
-	target_link_options (arcticdem PUBLIC -fsanitize=address)
+	target_link_options (pgc PUBLIC -fsanitize=address)
 endif()
 
 # Source Files #
-target_sources(arcticdem
+target_sources(pgc
     PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.cpp
 )
 
 # Include Directories #
-target_include_directories (arcticdem
+target_include_directories (pgc
     PUBLIC
         ${INSTALLDIR}/include/sliderule
         ${LUA_INCLUDE_DIR}
@@ -69,13 +69,13 @@ target_include_directories (arcticdem
 )
 
 # Plugin Installation #
-install (TARGETS arcticdem LIBRARY DESTINATION ${CONFDIR})
+install (TARGETS pgc LIBRARY DESTINATION ${CONFDIR})
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/arcticdem.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
     DESTINATION
-        ${INSTALLDIR}/include/sliderule/arcticdem
+        ${INSTALLDIR}/include/sliderule/pgc
 )

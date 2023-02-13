@@ -4,4 +4,4 @@
 |---------|-------------|
 | icesat2 | ICESat-2 customized data products |
 | atlas | ATLAS instrument raw data processing |
-| arcticdem | ArcticDEM sampling support |
+| pgc | ArcticDEM, RemaDEM sampling support |
