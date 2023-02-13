@@ -1,6 +1,9 @@
 local runner = require("test_executive")
 local console = require("console")
 
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
+
 -- Table Unit Test --
 
 runner.command("NEW UT_ORDERING ut_ordering")

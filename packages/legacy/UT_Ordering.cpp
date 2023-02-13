@@ -41,7 +41,13 @@
  * MACROS
  ******************************************************************************/
 
-#define ut_assert(e,...)    UT_Ordering::_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
+#define ut_assert(e,...)    \
+    try { \
+        UT_Ordering::_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__); \
+    } catch(const RunTimeException& x) { \
+        print2term("Caught exception: %s\n", x.what()); \
+        UT_Ordering::_ut_assert(false,__FILE__,__LINE__,__VA_ARGS__); \
+    };
 
 /******************************************************************************
  * STATIC DATA
@@ -75,6 +81,7 @@ UT_Ordering::UT_Ordering(CommandProcessor* cmd_proc, const char* obj_name):
     registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_Ordering::testAddRemove,  0, "");
     registerCommand("DUPLICATES", (cmdFunc_t)&UT_Ordering::testDuplicates, 0, "");
     registerCommand("SORT",       (cmdFunc_t)&UT_Ordering::testSort,       0, "");
+    registerCommand("ITERATE",    (cmdFunc_t)&UT_Ordering::testIterator,   0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -166,14 +173,13 @@ int UT_Ordering::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     ut_assert(mylist.length() == 68, "failed length check %d\n", mylist.length());
 
     // check final set
-    int j = 0;
-    for(int i =  1; i < 11; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
-    for(int i = 12; i < 22; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
-    for(int i = 23; i < 33; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
-    for(int i = 34; i < 44; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
-    for(int i = 45; i < 55; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
-    for(int i = 56; i < 66; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
-    for(int i = 67; i < 75; i++) ut_assert(mylist[j++] == i, "failed to keep %d\n", i);
+    for(int i =  1; i < 11; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 12; i < 22; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 23; i < 33; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 34; i < 44; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 45; i < 55; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 56; i < 66; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 67; i < 75; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
 
     // return success or failure
     return failures == 0 ? 0 : -1;
@@ -234,7 +240,7 @@ int UT_Ordering::testSort(int argc, char argv[][MAX_CMD_SIZE])
         int d = 20 - i;
         mylist2.add(20 - i, d);
     }
-    for(int i = 0; i < 20; i++) ut_assert(mylist2[i] == (i + 1), "failed to sort %d\n", i + 1);
+    for(int i = 1; i <= 20; i++) ut_assert(mylist2[i] == i, "failed to sort %d\n", i);
 
     // random order
     Ordering<int,int> mylist3;
@@ -252,7 +258,7 @@ int UT_Ordering::testSort(int argc, char argv[][MAX_CMD_SIZE])
     d = 3; mylist3.add(3, d);
     d = 6; mylist3.add(6, d);
     d = 8; mylist3.add(8, d);
-    d = 6; mylist3.add(7, d);
+    d = 7; mylist3.add(7, d);
     d = 9; mylist3.add(9, d);
     d = 12; mylist3.add(12, d);
     d = 10; mylist3.add(10, d);
