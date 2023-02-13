@@ -1,11 +1,27 @@
 #
-# Perform a authentication request
+# Perform provisioning system requests
 #
 
 import sys
 import json
 import requests
 import logging
+import socket
+import sliderule
+
+###############################################################################
+# DNS OVERRIDE
+###############################################################################
+
+dns = {}
+socket_getaddrinfo = socket.getaddrinfo
+def override_getaddrinfo(*args):
+    if args[0] in dns:
+        print("Overriding {} to {}".format(args[0], dns[args[0]]))
+        return socket_getaddrinfo(dns[args[0]], *args[1:])
+    else:
+        return socket_getaddrinfo(*args)
+socket.getaddrinfo = override_getaddrinfo
 
 ###############################################################################
 # MAIN
@@ -82,3 +98,15 @@ if __name__ == '__main__':
     print("Refresh 2 Response: ", rsps)
     assert(len(refresh) > 0)
     assert(len(access) > 0)
+
+    # Get IP Address of Cluster
+    host = "https://ps." + url + "/api/org_ip_adr/" + organization + "/"
+    headers = {'Authorization': 'Bearer ' + access}
+    rsps = session.get(host, headers=headers, timeout=(60,10))
+    rsps = rsps.json()
+    print("Cluster IP Address: ", rsps)
+    assert(rsps["status"] == "SUCCESS")
+
+    # Override DNS for Cluster
+    dns[organization + ".slideruleearth.io"] = rsps["ip_address"]
+    sliderule.init("slideruleearth.io", verbose=True, organization=organization)
