@@ -29,47 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __legacypkg__
-#define __legacypkg__
+#ifndef __pgc_plugin__
+#define __pgc_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string.h>
-
-#include "CcsdsFileWriter.h"
-#include "CcsdsFrameStripper.h"
-#include "CcsdsMsgProcessor.h"
-#include "CcsdsPacketProcessor.h"
-#include "CcsdsProcessorModule.h"
-#include "CcsdsPublisherProcessorModule.h"
-#include "CcsdsRecordFileWriter.h"
-#include "CfsInterface.h"
-#include "CommandableObject.h"
-#include "CommandProcessor.h"
-#include "CosmosInterface.h"
-#include "LuaInterpreter.h"
-#include "LuaLibraryCmd.h"
-#include "StatisticRecord.h"
-#include "UT_Dictionary.h"
-#include "UT_List.h"
-#include "UT_MsgQ.h"
-#include "UT_Ordering.h"
-#include "UT_Table.h"
-#include "UT_TimeLib.h"
-
-/******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define CMDQ "cmdq"
+#include "ArcticDemMosaicRaster.h"
+#include "ArcticDemStripsRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
-void initlegacy (void);
-void deinitlegacy (void);
+extern "C" {
+void initpgc (void);
+}
 
-#endif  /* __legacypkg__ */
+#endif  /* __pgc_plugin__ */
+
+

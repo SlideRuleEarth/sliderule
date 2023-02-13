@@ -51,6 +51,7 @@ const char* GeoParms::AUXILIARY_FILES       = "with_flags";
 const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
+const char* GeoParms::CLOSEST_TIME          = "closest_time";
 const char* GeoParms::ASSET                 = "asset";
 
 const char* GeoParms::NEARESTNEIGHBOUR_ALGO = "NearestNeighbour";
@@ -108,6 +109,7 @@ GeoParms::GeoParms (lua_State* L, int index):
     auxiliary_files     (false),
     filter_time         (false),
     url_substring       (NULL),
+    filter_closest_time (false),
     asset_name          (NULL),
     asset               (NULL)
 {
@@ -213,8 +215,22 @@ void GeoParms::fromLua (lua_State* L, int index)
 
             /* URL Substring Filter */
             lua_getfield(L, index, URL_SUBSTRING);
-            url_substring = LuaObject::getLuaString(L, -1, true, NULL);
+            url_substring = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
             if(url_substring) mlog(DEBUG, "Setting %s to %s", URL_SUBSTRING, url_substring);
+            lua_pop(L, 1);
+
+            /* Closest Time Filter */
+            lua_getfield(L, index, CLOSEST_TIME);
+            const char* closest_time_str = LuaObject::getLuaString(L, -1, true, NULL);
+            if(closest_time_str)
+            {
+                int64_t gps = TimeLib::str2gpstime(closest_time_str);
+                if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", closest_time_str);
+                filter_closest_time = true;
+                closest_time = TimeLib::gps2gmttime(gps);
+                TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
+                mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", CLOSEST_TIME, closest_date.year, closest_date.month, closest_date.day, closest_time.hour, closest_time.minute, closest_time.second);
+            }
             lua_pop(L, 1);
 
             /* Asset */

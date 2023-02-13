@@ -29,20 +29,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_mosaic_raster__
-#define __arcticdem_mosaic_raster__
+#ifndef __remadem_mosaic_raster__
+#define __remadem_mosaic_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "VrtRaster.h"
+#include "PgcDemMosaicRaster.h"
 
 /******************************************************************************
- * ARCTICDEM MOSAIC RASTER CLASS
+ * REMA DEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemMosaicRaster: public VrtRaster
+class RemaDemMosaicRaster: public PgcDemMosaicRaster
 {
     public:
 
@@ -50,7 +50,8 @@ class ArcticDemMosaicRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create (lua_State* L, GeoParms* _parms);
+        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+        { return new RemaDemMosaicRaster(L, _parms); }
 
     protected:
 
@@ -58,9 +59,8 @@ class ArcticDemMosaicRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                ArcticDemMosaicRaster (lua_State* L, GeoParms* _parms);
-        void    getIndexFile          (std::string& file, double lon=0, double lat=0);
-        bool    getRasterDate         (raster_info_t& rinfo);
+        RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
+         PgcDemMosaicRaster(L, _parms, "rema/mosaics/v2.0/2m/2m_dem_tiles.vrt") {}
 };
 
-#endif  /* __arcticdem_mosaic_raster__ */
+#endif  /* __remadem_mosaic_raster__ */

@@ -234,29 +234,23 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
  *----------------------------------------------------------------------------*/
 LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_type)
 {
-    LuaObject* lua_obj;
-    try
+    LuaObject* lua_obj = NULL;
+    globalMut.lock();
     {
-        globalMut.lock();
+        try
         {
-            lua_obj = globalObjects.get(name);
-            if(StringLib::match(lua_obj->getType(), object_type))
+            LuaObject* obj = globalObjects.get(name);
+            if(StringLib::match(obj->getType(), object_type))
             {
+                lua_obj = obj;
                 lua_obj->referenceCount++;
             }
-            else
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "mismatched type on request object (%s != %s)", lua_obj->getType(), object_type);
-            }
         }
-        globalMut.unlock();
+        catch(const RunTimeException& e)
+        {
+        }
     }
-    catch(const RunTimeException& e)
-    {
-        lua_obj = NULL;
-        globalMut.unlock();
-        mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
-    }
+    globalMut.unlock();
 
     return lua_obj;
 }

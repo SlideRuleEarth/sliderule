@@ -29,24 +29,58 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_plugin__
-#define __arcticdem_plugin__
+#ifndef __ut_ordering__
+#define __ut_ordering__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
+#include "CommandableObject.h"
+#include "core.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * UNIT TEST ORDERING CLASS
  ******************************************************************************/
 
-extern "C" {
-void initarcticdem (void);
-}
+class UT_Ordering: public CommandableObject
+{
+    public:
 
-#endif  /* __arcticdem_plugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const char* TYPE;
+        static const int UT_MAX_ASSERT = 256;
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        int failures;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+            UT_Ordering            (CommandProcessor* cmd_proc, const char* obj_name);
+            ~UT_Ordering           (void);
+
+    bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
+
+	int     testAddRemove       (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testDuplicates      (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testSort            (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testIterator        (int argc, char argv[][MAX_CMD_SIZE]);
+};
+
+#endif  /* __ut_ordering__ */

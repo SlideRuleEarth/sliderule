@@ -51,6 +51,7 @@ end
 if __legacy__ then
     runner.script(td .. "message_queue.lua")
     runner.script(td .. "list.lua")
+    runner.script(td .. "ordering.lua")
     runner.script(td .. "dictionary.lua")
     runner.script(td .. "table.lua")
     runner.script(td .. "timelib.lua")
@@ -70,10 +71,10 @@ if __icesat2__ then
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
--- Run ICESat-2 Plugin Self Tests
-if __arcticdem__ then
-    local arcticdem_td = td .. "../../plugins/arcticdem/selftests/"
-    runner.script(arcticdem_td .. "arcticdem_reader.lua")
+-- Run PGC Plugin Self Tests
+if __pgc__ then
+    local pgc_td = td .. "../../plugins/pgc/selftests/"
+    runner.script(pgc_td .. "arcticdem_reader.lua")
 end
 
 -- Report Results --

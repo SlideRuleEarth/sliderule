@@ -257,6 +257,7 @@ void initlegacy (void)
     cmdProc->registerHandler("UT_DICTIONARY",               UT_Dictionary::createObject,                    0,  "");
     cmdProc->registerHandler("UT_LIST",                     UT_List::createObject,                          0,  "");
     cmdProc->registerHandler("UT_MSGQ",                     UT_MsgQ::createObject,                          0,  "");
+    cmdProc->registerHandler("UT_ORDERING",                 UT_Ordering::createObject,                      0,  "");
     cmdProc->registerHandler("UT_TABLE"  ,                  UT_Table::createObject,                         0,  "");
     cmdProc->registerHandler("UT_TIMELIB",                  UT_TimeLib::createObject,                       0,  "");
 

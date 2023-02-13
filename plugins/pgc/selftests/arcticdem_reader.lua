@@ -116,8 +116,10 @@ end
 
 local samplingRadius = 20
 local demType = demTypes[2];
-print(string.format("\n--------------------------------\nTest: %s URL Filter\n--------------------------------", demType))
-local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true, with_flags=true, substr = "SETSM_s2s041_WV01_20181210_102001007A560E00_10200100802C2300" }))
+local url = "SETSM_s2s041_WV01_20181210_102001007A560E00_10200100802C2300"
+
+print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
+local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true, with_flags=true, substr = url}))
 runner.check(dem ~= nil)
 local tbl, status = dem:sample(lon, lat)
 runner.check(status == true)
@@ -148,9 +150,11 @@ runner.check(sampleCnt == 1)  -- Only one sample/strip returned
 
 samplingRadius = 20
 demType = demTypes[2];
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter\n--------------------------------", demType))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true,
-                                  t0="2014:2:25:23:00:00", t1="2016:6:2:24:00:00" }))
+local t0str = "2014:2:25:23:00:00"
+local t1str = "2016:6:2:24:00:00"
+
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, t1=%s\n--------------------------------", demType, t0str, t1str))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, t1=t1str}))
 runner.check(dem ~= nil)
 tbl, status = dem:sample(lon, lat)
 runner.check(status == true)
@@ -180,8 +184,9 @@ end
 runner.check(sampleCnt == 2)
 
 
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true,
-                                  t0="2021:2:3:1:0:0" }))
+t0str = "2021:2:3:1:0:0"
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s\n--------------------------------", demType, t0str))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str }))
 runner.check(dem ~= nil)
 tbl, status = dem:sample(lon, lat)
 runner.check(status == true)
@@ -201,8 +206,9 @@ end
 runner.check(sampleCnt == 4)
 
 
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true,
-                                  t1="2021:2:3:1:0:0" }))
+t1str = "2021:2:3:1:0:0"
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t1=%s\n--------------------------------", demType, t1str))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t1=t1str}))
 runner.check(dem ~= nil)
 tbl, status = dem:sample(lon, lat)
 runner.check(status == true)
@@ -220,6 +226,65 @@ for i, v in ipairs(tbl) do
     sampleCnt = sampleCnt + 1
 end
 runner.check(sampleCnt == 10)
+
+local tstr = "2021:2:4:23:3:0"
+local expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
+
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local fname = v["file"]
+    print(string.format("(%02d) fname: %s", i, fname))
+    runner.check( expectedFile == fname )
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 1)
+
+
+tstr = "2016:6:0:0:0:0"
+expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV02_20160602_1030010057849C00_103001005607CA00_2m_lsf_seg1_dem.tif"
+
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local fname = v["file"]
+    print(string.format("(%02d) fname: %s", i, fname))
+    runner.check( expectedFile == fname )
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 1)
+
+
+tstr  = "2016:6:0:0:0:0"
+t0str = "2021:2:3:1:0:0"
+expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, closest_time=%s\n--------------------------------", demType, t0str, tstr))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, closest_time=tstr}))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local fname = v["file"]
+    print(string.format("(%02d) fname: %s", i, fname))
+    runner.check( expectedFile == fname )
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 1)
 
 -- Report Results --
 

@@ -194,8 +194,6 @@ void VrtRaster::transformCRS(OGRPoint &p)
  *----------------------------------------------------------------------------*/
 bool VrtRaster::findRasters(OGRPoint& p)
 {
-    bool foundFile = false;
-
     const int32_t col = static_cast<int32_t>(floor(invGeot[0] + invGeot[1] * p.getX() + invGeot[2] * p.getY()));
     const int32_t row = static_cast<int32_t>(floor(invGeot[3] + invGeot[4] * p.getX() + invGeot[5] * p.getY()));
 
@@ -229,7 +227,6 @@ bool VrtRaster::findRasters(OGRPoint& p)
 
                     rastersList->add(rinfo);
                     CPLFree(fname);
-                    foundFile = true;
                     /*
                      * VRT file can have many rasters in it with the same point of interest.
                      * This is not how GDAL VRT is inteded to be used.
@@ -247,9 +244,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
     }
     if (root) CPLDestroyXMLNode(root);
 
-    if(!foundFile) mlog(DEBUG, "Failed to find raster in VRT index file");
-
-    return foundFile;
+    return (rastersList->length() > 0);
 }
 
 /*----------------------------------------------------------------------------

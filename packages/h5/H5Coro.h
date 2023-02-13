@@ -232,7 +232,8 @@ class H5FileBuffer
             FILTER_MSG              = 0xB,
             ATTRIBUTE_MSG           = 0xC,
             HEADER_CONT_MSG         = 0x10,
-            SYMBOL_TABLE_MSG        = 0x11
+            SYMBOL_TABLE_MSG        = 0x11,
+            ATTRIBUTE_INFO_MSG      = 0x15
         } msg_type_t;
 
         typedef enum {
@@ -322,51 +323,52 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
 
-        void                tearDown            (void);
+        void                tearDown              (void);
 
-        void                ioRequest           (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);
-        bool                ioCheckCache        (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
-        static uint64_t     ioHashL1            (uint64_t key);
-        static uint64_t     ioHashL2            (uint64_t key);
+        void                ioRequest             (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);
+        bool                ioCheckCache          (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
+        static uint64_t     ioHashL1              (uint64_t key);
+        static uint64_t     ioHashL2              (uint64_t key);
 
-        void                readByteArray       (uint8_t* data, int64_t size, uint64_t* pos);
-        uint64_t            readField           (int64_t size, uint64_t* pos);
-        void                readDataset         (info_t* info);
+        void                readByteArray         (uint8_t* data, int64_t size, uint64_t* pos);
+        uint64_t            readField             (int64_t size, uint64_t* pos);
+        void                readDataset           (info_t* info);
 
-        uint64_t            readSuperblock      (void);
-        int                 readFractalHeap     (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readDirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readIndirectBlock   (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readBTreeV1         (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);
-        btree_node_t        readBTreeNodeV1     (int ndims, uint64_t* pos);
-        int                 readSymbolTable     (uint64_t pos, uint64_t heap_data_addr, int dlvl);
+        uint64_t            readSuperblock        (void);
+        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDirectBlock       (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readIndirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);
+        btree_node_t        readBTreeNodeV1       (int ndims, uint64_t* pos);
+        int                 readSymbolTable       (uint64_t pos, uint64_t heap_data_addr, int dlvl);
 
-        int                 readObjHdr          (uint64_t pos, int dlvl);
-        int                 readMessages        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
-        int                 readObjHdrV1        (uint64_t pos, int dlvl);
-        int                 readMessagesV1      (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
-        int                 readMessage         (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readObjHdr            (uint64_t pos, int dlvl);
+        int                 readMessages          (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
+        int                 readObjHdrV1          (uint64_t pos, int dlvl);
+        int                 readMessagesV1        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
+        int                 readMessage           (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
 
-        int                 readDataspaceMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readLinkInfoMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readDatatypeMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readFillValueMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readLinkMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readDataLayoutMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readFilterMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readAttributeMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl, uint64_t size);
-        int                 readHeaderContMsg   (uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readSymbolTableMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDataspaceMsg      (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readLinkInfoMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDatatypeMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readFillValueMsg      (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readLinkMsg           (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readDataLayoutMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readFilterMsg         (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readAttributeMsg      (uint64_t pos, uint8_t hdr_flags, int dlvl, uint64_t size);
+        int                 readHeaderContMsg     (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readSymbolTableMsg    (uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readAttributeInfoMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 
-        void                parseDataset        (void);
-        const char*         type2str            (data_type_t datatype);
-        const char*         layout2str          (layout_t layout);
-        int                 highestBit          (uint64_t value);
-        int                 inflateChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
-        int                 shuffleChunk        (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
+        void                parseDataset          (void);
+        const char*         type2str              (data_type_t datatype);
+        const char*         layout2str            (layout_t layout);
+        int                 highestBit            (uint64_t value);
+        int                 inflateChunk          (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
+        int                 shuffleChunk          (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
 
-        static uint64_t     metaGetKey          (const char* url);
-        static void         metaGetUrl          (char* url, const char* resource, const char* dataset);
+        static uint64_t     metaGetKey            (const char* url);
+        static void         metaGetUrl            (char* url, const char* resource, const char* dataset);
 
         /*--------------------------------------------------------------------
         * Data

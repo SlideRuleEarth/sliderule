@@ -29,47 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __legacypkg__
-#define __legacypkg__
+#ifndef __pgcdem_mosaic_raster__
+#define __pgcdem_mosaic_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string.h>
-
-#include "CcsdsFileWriter.h"
-#include "CcsdsFrameStripper.h"
-#include "CcsdsMsgProcessor.h"
-#include "CcsdsPacketProcessor.h"
-#include "CcsdsProcessorModule.h"
-#include "CcsdsPublisherProcessorModule.h"
-#include "CcsdsRecordFileWriter.h"
-#include "CfsInterface.h"
-#include "CommandableObject.h"
-#include "CommandProcessor.h"
-#include "CosmosInterface.h"
-#include "LuaInterpreter.h"
-#include "LuaLibraryCmd.h"
-#include "StatisticRecord.h"
-#include "UT_Dictionary.h"
-#include "UT_List.h"
-#include "UT_MsgQ.h"
-#include "UT_Ordering.h"
-#include "UT_Table.h"
-#include "UT_TimeLib.h"
+#include <string_view>
+#include "VrtRaster.h"
 
 /******************************************************************************
- * DEFINES
+ *PGC DEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-#define CMDQ "cmdq"
+class PgcDemMosaicRaster: public VrtRaster
+{
+    public:
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-void initlegacy (void);
-void deinitlegacy (void);
+    protected:
 
-#endif  /* __legacypkg__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                PgcDemMosaicRaster    (lua_State* L, GeoParms* _parms, const char* vrt_file);
+        bool    getRasterDate         (raster_info_t& rinfo);
+        void    getIndexFile          (std::string& file, double lon=0, double lat=0);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        std::string vrtFile;
+};
+
+#endif  /* __pgcdem_mosaic_raster__ */

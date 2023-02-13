@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_strips_raster__
-#define __arcticdem_strips_raster__
+#ifndef __pgcdem_strips_raster__
+#define __pgcdem_strips_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,10 @@
 #include "VctRaster.h"
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * PGC DEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemStripsRaster: public VctRaster
+class PgcDemStripsRaster: public VctRaster
 {
     public:
 
@@ -50,13 +50,9 @@ class ArcticDemStripsRaster: public VctRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int ARCTIC_DEM_EPSG = 3413;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-
-        static GeoRaster* create (lua_State* L, GeoParms* _parms);
 
     protected:
 
@@ -64,11 +60,19 @@ class ArcticDemStripsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                ArcticDemStripsRaster (lua_State* L, GeoParms* _parms);
-;
-        void    getIndexFile          (std::string& file, double lon=0, double lat=0 );
-        void    getIndexBbox          (bbox_t& bbox, double lon=0, double lat=0);
-        bool    findRasters           (OGRPoint &p);
+                PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geocells);
+        void    getIndexFile       (std::string& file, double lon=0, double lat=0 );
+        void    getIndexBbox       (bbox_t& bbox, double lon=0, double lat=0);
+        bool    findRasters        (OGRPoint &p);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        std::string vsis3Path;
+        std::string demName;
+        std::string path2geocells;
 };
 
-#endif  /* __arcticdem_strips_raster__ */
+#endif  /* __pgcdem_strips_raster__ */

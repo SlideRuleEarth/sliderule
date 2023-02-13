@@ -245,13 +245,19 @@ int GeoRaster::sample(double lon, double lat)
             return 0;
     }
 
-    if (!findCachedRasters(p))
+    if (findCachedRasters(p))
     {
-        if (findRasters(p))
-            updateCache(p);
+        /* Rasters alredy in cache have been previously filtered  */
+        sampleRasters();
     }
-
-    sampleRasters();
+    else
+    {
+        if(findRasters(p) && filterRasters())
+        {
+            updateCache(p);
+            sampleRasters();
+        }
+    }
 
     return getSampledRastersCount();
 }
@@ -282,9 +288,6 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
 {
     /* Initialize Class Data Members */
     rastersList = new List<raster_info_t>;
-    rastersList->clear();
-    rasterDict.clear();
-    fileDict.clear();
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
@@ -618,20 +621,6 @@ void GeoRaster::readPixel(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
- * filterRasters
- *----------------------------------------------------------------------------*/
-bool GeoRaster::filterRaster(const raster_info_t& rinfo)
-{
-    if(parms->filter_time && !TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
-        return true;
-
-    if(parms->url_substring && (rinfo.fileName.find(parms->url_substring) == std::string::npos))
-        return true;
-
-    return false;
-}
-
-/*----------------------------------------------------------------------------
  * containsWindow
  *----------------------------------------------------------------------------*/
 bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
@@ -694,8 +683,6 @@ void GeoRaster::CoordTransform::clear(bool close)
     source.Clear();
     target.Clear();
 }
-
-
 
 /*----------------------------------------------------------------------------
  * resamplePixel
@@ -951,6 +938,7 @@ void GeoRaster::invalidateCache(void)
     }
 }
 
+
 /*----------------------------------------------------------------------------
  * updateCache
  *----------------------------------------------------------------------------*/
@@ -968,8 +956,6 @@ void GeoRaster::updateCache(OGRPoint& p)
         raster_info_t &rinfo   = rastersList->get(i);
         const char* rasterFile = rinfo.fileName.c_str();
         const char* auxFile    = rinfo.auxFileName.c_str();;
-
-        if(filterRaster(rinfo)) continue;
 
         /* For now code supports only one auxiliary raster */
         const char* keys[2] = {rasterFile, auxFile};
@@ -1044,6 +1030,73 @@ void GeoRaster::updateCache(OGRPoint& p)
     }
 }
 
+/*----------------------------------------------------------------------------
+ * filterRasters
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::filterRasters(void)
+{
+    /* Temporal and URL filters - remove unwanted rasters from the list */
+    if(parms->url_substring || parms->filter_time )
+    {
+        for(int i = 0; i < rastersList->length(); i++)
+        {
+            raster_info_t& rinfo = rastersList->get(i);
+            bool removeRaster    = false;
+
+            /* URL filter */
+            if(parms->url_substring)
+            {
+                if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
+                    removeRaster = true;
+            }
+
+            /* Temporal filter */
+            if(!removeRaster && parms->filter_time)
+            {
+                if(!TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
+                    removeRaster = true;
+            }
+
+            if(removeRaster)
+            {
+                rastersList->remove(i);
+                i--; /* Adjust index after removal */
+            }
+        }
+    }
+
+    /* Closest time filter */
+    if(parms->filter_closest_time)
+    {
+        double closestGps = static_cast<double>(TimeLib::gmt2gpstime(parms->closest_time));
+        double minDelta   = fabs(std::numeric_limits<double_t>::max() - closestGps);
+        raster_info_t* closest = NULL;
+
+        for(int i = 0; i < rastersList->length(); i++)
+        {
+            raster_info_t& rinfo = rastersList->get(i);
+            double gps   = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate));
+            double delta = fabs(closestGps - gps);
+
+            if(delta < minDelta)
+            {
+                /* Keep track of raster with closest time */
+                minDelta = delta;
+                closest  = &rinfo;
+            }
+        }
+
+        if(closest)
+        {
+            /* Return list with only one (closest) raster */
+            raster_info_t ri = *closest;
+            rastersList->clear();
+            rastersList->add(ri);
+        }
+    }
+
+    return (rastersList->length() > 0);
+}
 
 /*----------------------------------------------------------------------------
  * createThreads

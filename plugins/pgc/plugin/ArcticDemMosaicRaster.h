@@ -29,47 +29,38 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __legacypkg__
-#define __legacypkg__
+#ifndef __arcticdem_mosaic_raster__
+#define __arcticdem_mosaic_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string.h>
-
-#include "CcsdsFileWriter.h"
-#include "CcsdsFrameStripper.h"
-#include "CcsdsMsgProcessor.h"
-#include "CcsdsPacketProcessor.h"
-#include "CcsdsProcessorModule.h"
-#include "CcsdsPublisherProcessorModule.h"
-#include "CcsdsRecordFileWriter.h"
-#include "CfsInterface.h"
-#include "CommandableObject.h"
-#include "CommandProcessor.h"
-#include "CosmosInterface.h"
-#include "LuaInterpreter.h"
-#include "LuaLibraryCmd.h"
-#include "StatisticRecord.h"
-#include "UT_Dictionary.h"
-#include "UT_List.h"
-#include "UT_MsgQ.h"
-#include "UT_Ordering.h"
-#include "UT_Table.h"
-#include "UT_TimeLib.h"
+#include "PgcDemMosaicRaster.h"
 
 /******************************************************************************
- * DEFINES
+ * ARCTICDEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-#define CMDQ "cmdq"
+class ArcticDemMosaicRaster: public PgcDemMosaicRaster
+{
+    public:
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-void initlegacy (void);
-void deinitlegacy (void);
+        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+        { return new ArcticDemMosaicRaster(L, _parms); }
 
-#endif  /* __legacypkg__ */
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
+         PgcDemMosaicRaster(L, _parms, "arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt") {}
+};
+
+#endif  /* __arcticdem_mosaic_raster__ */

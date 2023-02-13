@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -62,15 +62,38 @@ class Ordering
             GREATER_THAN,
             LESS_THAN
         } searchMode_t;
-        
+
         typedef int (*postFunc_t) (void* data, int size, void* parm);
-        
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        
+
         static const long INFINITE_LIST_SIZE = -1;
-        
+
+        /*--------------------------------------------------------------------
+         * Iterator Subclass
+         *--------------------------------------------------------------------*/
+
+        typedef struct kv {
+            kv(K _key, const T& _value): key(_key), value(_value) {};
+            ~kv(void) {};
+            K           key;
+            const T&    value;
+        } kv_t;
+
+        class Iterator
+        {
+            public:
+                                    Iterator    (const Ordering& o);
+                                    ~Iterator   (void);
+                kv_t                operator[]  (int index) const;
+                const int           length;
+            private:
+                const T**           values;
+                K*                  keys;
+        };
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -78,13 +101,13 @@ class Ordering
                     Ordering    (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
         virtual     ~Ordering   (void);
 
-        bool        add         (K key, T& data, bool unique=false);
+        bool        add         (K key, const T& data, bool unique=false);
         T&          get         (K key, searchMode_t smode=EXACT_MATCH);
         bool        remove      (K key, searchMode_t smode=EXACT_MATCH);
         long        length      (void);
         void        flush       (void);
         void        clear       (void);
-    
+
         K           first       (T* data);
         K           next        (T* data);
         K           last        (T* data);
@@ -117,13 +140,13 @@ class Ordering
         long            maxListSize;
         postFunc_t      postFunc;
         void*           postParm;
-        
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-        
+
         bool            setMaxListSize  (long _max_list_size);
-        bool            addNode         (K key, T& data, bool unique);
+        bool            addNode         (K key, const T& data, bool unique);
         void            postNode        (sorted_node_t* node);
         virtual void    freeNode        (sorted_node_t* node);
 };
@@ -141,6 +164,58 @@ class MgOrdering: public Ordering<T,K>
     private:
         void freeNode (typename Ordering<T,K>::sorted_node_t* node);
 };
+
+/******************************************************************************
+ * ITERATOR METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+Ordering<T,K>::Iterator::Iterator(const Ordering& o):
+    length(o.len)
+{
+    values = new const T* [length];
+    keys = new K [length];
+
+    int j = 0;
+    sorted_node_t* node_ptr = o.firstNode;
+    while(node_ptr != NULL)
+    {
+        values[j] = &node_ptr->data;
+        keys[j] = node_ptr->key;
+        j++;
+        node_ptr = node_ptr->next;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+Ordering<T,K>::Iterator::~Iterator(void)
+{
+    delete [] values;
+    delete [] keys;
+}
+
+/*----------------------------------------------------------------------------
+ * []
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) const
+{
+    if( (index < length) && (index >= 0) )
+    {
+        Ordering<T,K>::kv_t pair(keys[index], *values[index]);
+        return pair;
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Ordering::Iterator index out of range");
+    }
+}
 
 /******************************************************************************
  ORDERING METHODS
@@ -176,7 +251,7 @@ Ordering<T,K>::~Ordering(void)
  * add
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Ordering<T,K>::add(K key, T& data, bool unique)
+bool Ordering<T,K>::add(K key, const T& data, bool unique)
 {
     return addNode(key, data, unique);
 }
@@ -237,7 +312,7 @@ T& Ordering<T,K>::get(K key, searchMode_t smode)
 
 /*----------------------------------------------------------------------------
  * remove
- * 
+ *
  *  TODO factor out common search code into its own function
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
@@ -330,7 +405,6 @@ void Ordering<T,K>::clear(void)
     }
 
     /* Clear In Previous Direction */
-    sorted_node_t* next_node = curr->next;
     while(curr != NULL)
     {
         sorted_node_t* node = curr;
@@ -340,21 +414,9 @@ void Ordering<T,K>::clear(void)
         len--;
     }
 
-    /* Clear In Next Direction */
-    curr = next_node;
-    while(curr != NULL)
-    {
-        sorted_node_t* node = curr;
-        curr = curr->next;
-        freeNode(node);
-        delete node;
-        len--;
-    }
-
     /* Reset Parameters */
     firstNode = NULL;
     lastNode = NULL;
-    curr = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -513,11 +575,11 @@ bool Ordering<T,K>::setMaxListSize(long _max_list_size)
 
 /*----------------------------------------------------------------------------
  * addNode
- * 
- *  take note of mid-function return point 
+ *
+ *  take note of mid-function return point
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Ordering<T,K>::addNode(K key, T& data, bool unique)
+bool Ordering<T,K>::addNode(K key, const T& data, bool unique)
 {
     /* Check for Valid Current Pointer */
     if (curr == NULL && lastNode != NULL) curr = lastNode;
@@ -556,7 +618,7 @@ bool Ordering<T,K>::addNode(K key, T& data, bool unique)
     new_node->data = data;
     new_node->next = NULL;
     new_node->prev = NULL;
-    
+
     /* Add Node */
     if (curr == NULL)
     {
@@ -618,7 +680,7 @@ bool Ordering<T,K>::addNode(K key, T& data, bool unique)
             break;
         }
     }
-    
+
     return true;
 }
 
@@ -650,7 +712,7 @@ void Ordering<T,K>::freeNode(sorted_node_t* node)
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, typename K, bool is_array>
-MgOrdering<T,K,is_array>::MgOrdering(typename Ordering<T,K>::postFunc_t post_func, void* post_parm, K max_list_size): 
+MgOrdering<T,K,is_array>::MgOrdering(typename Ordering<T,K>::postFunc_t post_func, void* post_parm, K max_list_size):
     Ordering<T,K>(post_func, post_parm, max_list_size)
 {
 }

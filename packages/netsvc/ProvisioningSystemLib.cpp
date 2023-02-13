@@ -291,7 +291,7 @@ int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaLogin - pslogin()
+ * luaLogin - pslogin(<username>, <password>, <organization>, [<verbose>])
  *----------------------------------------------------------------------------*/
 int ProvisioningSystemLib::luaLogin(lua_State* L)
 {
@@ -317,7 +317,7 @@ int ProvisioningSystemLib::luaLogin(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaValidate - psvalidate()
+ * luaValidate - psvalidate(<token>, [<verbose>])
  *----------------------------------------------------------------------------*/
 int ProvisioningSystemLib::luaValidate(lua_State* L)
 {

@@ -29,47 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __legacypkg__
-#define __legacypkg__
+#ifndef __arcticdem_strips_raster__
+#define __arcticdem_strips_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string.h>
-
-#include "CcsdsFileWriter.h"
-#include "CcsdsFrameStripper.h"
-#include "CcsdsMsgProcessor.h"
-#include "CcsdsPacketProcessor.h"
-#include "CcsdsProcessorModule.h"
-#include "CcsdsPublisherProcessorModule.h"
-#include "CcsdsRecordFileWriter.h"
-#include "CfsInterface.h"
-#include "CommandableObject.h"
-#include "CommandProcessor.h"
-#include "CosmosInterface.h"
-#include "LuaInterpreter.h"
-#include "LuaLibraryCmd.h"
-#include "StatisticRecord.h"
-#include "UT_Dictionary.h"
-#include "UT_List.h"
-#include "UT_MsgQ.h"
-#include "UT_Ordering.h"
-#include "UT_Table.h"
-#include "UT_TimeLib.h"
+#include "PgcDemStripsRaster.h"
 
 /******************************************************************************
- * DEFINES
+ * ARCTICDEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-#define CMDQ "cmdq"
+class ArcticDemStripsRaster: public PgcDemStripsRaster
+{
+    public:
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-void initlegacy (void);
-void deinitlegacy (void);
+        static const int ARCTIC_DEM_EPSG = 3413;
 
-#endif  /* __legacypkg__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+        { return new ArcticDemStripsRaster(L, _parms); }
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
+          PgcDemStripsRaster(L, _parms, ARCTIC_DEM_EPSG, "arcticdem", "s2s041/2m/n") {}
+};
+
+#endif  /* __arcticdem_strips_raster__ */
