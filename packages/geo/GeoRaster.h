@@ -40,6 +40,8 @@
 #include "OsApi.h"
 #include "TimeLib.h"
 #include "GeoParms.h"
+#include "Ordering.h"
+#include "List.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
@@ -253,11 +255,11 @@ class GeoRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        List<raster_info_t>*  rastersList;
-        GeoIndex              geoIndex;
-        CoordTransform        cord;
-        GeoParms*             parms;
-        Dictionary<Raster*>   rasterDict;
+        Ordering<raster_info_t>*    rastersList;
+        GeoIndex                    geoIndex;
+        CoordTransform              cord;
+        GeoParms*                   parms;
+        Dictionary<Raster*>         rasterDict;
 
     private:
 
