@@ -29,47 +29,58 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __legacypkg__
-#define __legacypkg__
+#ifndef __ut_ordering__
+#define __ut_ordering__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string.h>
-
-#include "CcsdsFileWriter.h"
-#include "CcsdsFrameStripper.h"
-#include "CcsdsMsgProcessor.h"
-#include "CcsdsPacketProcessor.h"
-#include "CcsdsProcessorModule.h"
-#include "CcsdsPublisherProcessorModule.h"
-#include "CcsdsRecordFileWriter.h"
-#include "CfsInterface.h"
 #include "CommandableObject.h"
-#include "CommandProcessor.h"
-#include "CosmosInterface.h"
-#include "LuaInterpreter.h"
-#include "LuaLibraryCmd.h"
-#include "StatisticRecord.h"
-#include "UT_Dictionary.h"
-#include "UT_List.h"
-#include "UT_MsgQ.h"
-#include "UT_Ordering.h"
-#include "UT_Table.h"
-#include "UT_TimeLib.h"
+#include "core.h"
 
 /******************************************************************************
- * DEFINES
+ * UNIT TEST ORDERING CLASS
  ******************************************************************************/
 
-#define CMDQ "cmdq"
+class UT_Ordering: public CommandableObject
+{
+    public:
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-void initlegacy (void);
-void deinitlegacy (void);
+        static const char* TYPE;
+        static const int UT_MAX_ASSERT = 256;
 
-#endif  /* __legacypkg__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        int failures;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+            UT_Ordering            (CommandProcessor* cmd_proc, const char* obj_name);
+            ~UT_Ordering           (void);
+
+    bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
+
+	int     testAddRemove       (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testDuplicates      (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testSort            (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testIterator        (int argc, char argv[][MAX_CMD_SIZE]);
+};
+
+#endif  /* __ut_ordering__ */

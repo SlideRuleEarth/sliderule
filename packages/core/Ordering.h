@@ -177,10 +177,10 @@ Ordering<T,K>::Iterator::Iterator(const Ordering& o):
     length(o.len)
 {
     values = new const T* [length];
-    keys = new const char* [length];
+    keys = new K [length];
 
     int j = 0;
-    sorted_node_t* node_ptr = firstNode;
+    sorted_node_t* node_ptr = o.firstNode;
     while(node_ptr != NULL)
     {
         values[j] = &node_ptr->data;
