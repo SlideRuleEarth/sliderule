@@ -30,6 +30,7 @@
 import os
 import netrc
 import requests
+import socket
 import json
 import struct
 import ctypes
@@ -353,7 +354,6 @@ def __build_auth_header():
     """
     Build authentication header for use with provisioning system
     """
-
     global service_url, ps_access_token, ps_refresh_token, ps_token_exp
     headers = None
     if ps_access_token:
@@ -369,6 +369,21 @@ def __build_auth_header():
         # Build Authentication Header
         headers = {'Authorization': 'Bearer ' + ps_access_token}
     return headers
+
+
+###############################################################################
+# Overriding DNS
+###############################################################################
+
+local_dns = {}
+socket_getaddrinfo = socket.getaddrinfo
+def __override_getaddrinfo(*args):
+    if args[0] in local_dns:
+        logger.info("Overriding {} to {}".format(args[0], local_dns[args[0]]))
+        return socket_getaddrinfo(local_dns[args[0]], *args[1:])
+    else:
+        return socket_getaddrinfo(*args)
+socket.getaddrinfo = __override_getaddrinfo
 
 
 ###############################################################################
@@ -527,6 +542,7 @@ def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organizatio
     set_verbose(verbose)
     set_url(url) # configure domain
     authenticate(organization) # configure credentials (if any) for organization
+    local_dns.clear() # clear cache of DNS lookups for clusters
     scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
     check_version(plugins=plugins) # verify compatibility between client and server versions
 
@@ -748,8 +764,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
-
-    global service_url, service_org, request_timeout
+    global service_url, service_org, request_timeout, local_dns
 
     # Update number of nodes
     if type(desired_nodes) == int:
@@ -793,20 +808,31 @@ def scaleout(desired_nodes, time_to_live):
         return # nothing needs to be done
     if desired_nodes < 0:
         raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
+    # Send Initial Request for Desired Cluster State
     update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
     start = time.time()
     available_nodes,_ = update_available_servers()
     scale_up_needed = False
+    dns_overridden = False
+    # Wait for Cluster to Reach Desired State
     while available_nodes < desired_nodes:
         scale_up_needed = True
         logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
         time.sleep(10.0)
         available_nodes,_ = update_available_servers()
-        if available_nodes == 0:
-            time.sleep(20.0) # wait an extra 20 seconds for cluster to start if cluster is not running
+        # Override DNS if Cluster is Starting
+        if available_nodes == 0 and not dns_overridden:
+            headers = __build_auth_header()
+            host = "https://ps." + service_url + "/api/org_ip_adr/" + service_org + "/"
+            rsps = session.get(host, headers=headers, timeout=request_timeout).json()
+            if rsps["status"] == "SUCCESS":
+                dns_overridden = True
+                local_dns[service_org + "." + service_url] = rsps["ip_address"]
+        # Timeout Occurred
         if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
             logger.error("Maximum time allowed waiting for cluster has been exceeded")
             break
+    # Log Final Message if Cluster Needed State Change
     if scale_up_needed:
         logger.info("Cluster has reached capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
 
