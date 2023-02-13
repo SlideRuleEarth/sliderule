@@ -56,16 +56,15 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
-    VrtRaster(L, _parms)
+    VrtRaster(L, _parms),
+    vrtFile("/vsis3/pgc-opendata-dems/")
 {
-    vrtFile = "/vsis3/pgc-opendata-dems/";
     vrtFile.append(vrt_file);
 
     /*
      * PgcDemMosaicRaster uses one mosaics VRT file;
      */
     openGeoIndex();
-
 }
 
 

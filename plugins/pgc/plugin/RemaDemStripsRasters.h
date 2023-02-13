@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_strips_raster__
-#define __arcticdem_strips_raster__
+#ifndef __remadem_strips_raster__
+#define __remadem_strips_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,10 @@
 #include "PgcDemStripsRaster.h"
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * REMA DEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemStripsRaster: public PgcDemStripsRaster
+class RemaDemStripsRaster: public PgcDemStripsRaster
 {
     public:
 
@@ -50,14 +50,14 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int ARCTIC_DEM_EPSG = 3413;
+        static const int REMA_DEM_EPSG = 3031;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static GeoRaster* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemStripsRaster(L, _parms); }
+        { return new RemaDemStripsRaster(L, _parms); }
 
     protected:
 
@@ -65,8 +65,8 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, ARCTIC_DEM_EPSG, "arcticdem", "s2s041/2m/n") {}
+        RemaDemStripsRaster(lua_State* L, GeoParms* _parms):
+          PgcDemStripsRaster(L, _parms, REMA_DEM_EPSG, "rema", "s2s041/2m/s") {}
 };
 
-#endif  /* __arcticdem_strips_raster__ */
+#endif  /* __remadem_strips_raster__ */
