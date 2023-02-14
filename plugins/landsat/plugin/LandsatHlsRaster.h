@@ -56,8 +56,9 @@ class LandsatHlsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create (lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                  const bool zonal_stats, const bool auxiliary_files);
+        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+                          { return new LandsatHlsRaster(L, _parms); }
+
 
     protected:
 
@@ -65,9 +66,8 @@ class LandsatHlsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                LandsatHlsRaster (lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                  const bool zonal_stats, const bool auxiliary_files);
-;
+                LandsatHlsRaster (lua_State* L, GeoParms* _parms);
+
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
         void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters      (OGRPoint &p);

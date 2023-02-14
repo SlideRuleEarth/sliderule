@@ -166,10 +166,10 @@ uninstall-gedi: ## uninstall most recent install of gedi plugin from system
 ##########################
 
 config-landsat-debug: prep ## configure make for landsat plugin
-	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/landsat
+	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/landsat
 
 config-landsat: prep ## configure make for landsat plugin
-	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/landsat
+	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/landsat
 
 landsat: ## build icesat2 plugin
 	make -j4 -C $(LANDSAT_BUILD)
@@ -195,7 +195,7 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 ctags: config-pgc config-development ## generate ctags
 	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
 	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json > compile_commands.json
+	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json  $(LANDSAT_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)

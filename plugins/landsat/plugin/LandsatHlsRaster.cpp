@@ -55,19 +55,9 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LandsatHlsRaster::LandsatHlsRaster(lua_State *L, const char *dem_sampling, const int sampling_radius,
-                                   const bool zonal_stats, const bool auxiliary_files):
-    VctRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files, LANDSAT_HLS_EPSG)
+LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
+    VctRaster(L, _parms, LANDSAT_HLS_EPSG)
 {
-}
-
-/*----------------------------------------------------------------------------
- * create
- *----------------------------------------------------------------------------*/
-GeoRaster* LandsatHlsRaster::create(lua_State* L, const char* dem_sampling, const int sampling_radius,
-                                    const bool zonal_stats, const bool auxiliary_files)
-{
-    return new LandsatHlsRaster(L, dem_sampling, sampling_radius, zonal_stats, auxiliary_files);
 }
 
 
