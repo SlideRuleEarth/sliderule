@@ -35,7 +35,6 @@
 
 #include "core.h"
 #include "GeoRaster.h"
-#include "TimeLib.h"
 
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
@@ -287,7 +286,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     parms(_parms)
 {
     /* Initialize Class Data Members */
-    rastersList = new List<raster_info_t>;
+    rastersList = new Ordering<raster_info_t>;
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
@@ -951,9 +950,10 @@ void GeoRaster::updateCache(OGRPoint& p)
     Raster *raster = NULL;
 
     /* Check new tif file list against rasters in dictionary */
-    for (int i = 0; i < rastersList->length(); i++)
+    Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
+    for (int i = 0; i < raster_iter.length; i++)
     {
-        raster_info_t &rinfo   = rastersList->get(i);
+        const raster_info_t &rinfo   = raster_iter[i].value;
         const char* rasterFile = rinfo.fileName.c_str();
         const char* auxFile    = rinfo.auxFileName.c_str();;
 
@@ -1038,9 +1038,10 @@ bool GeoRaster::filterRasters(void)
     /* Temporal and URL filters - remove unwanted rasters from the list */
     if(parms->url_substring || parms->filter_time )
     {
-        for(int i = 0; i < rastersList->length(); i++)
+        Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
+        for(int i = 0; i < raster_iter.length; i++)
         {
-            raster_info_t& rinfo = rastersList->get(i);
+            const raster_info_t& rinfo = raster_iter[i].value;
             bool removeRaster    = false;
 
             /* URL filter */
@@ -1059,8 +1060,7 @@ bool GeoRaster::filterRasters(void)
 
             if(removeRaster)
             {
-                rastersList->remove(i);
-                i--; /* Adjust index after removal */
+                rastersList->remove(raster_iter[i].key);
             }
         }
     }
@@ -1068,30 +1068,30 @@ bool GeoRaster::filterRasters(void)
     /* Closest time filter */
     if(parms->filter_closest_time)
     {
-        double closestGps = static_cast<double>(TimeLib::gmt2gpstime(parms->closest_time));
-        double minDelta   = fabs(std::numeric_limits<double_t>::max() - closestGps);
-        raster_info_t* closest = NULL;
+        int64_t closestGps = TimeLib::gmt2gpstime(parms->closest_time);
+        int64_t minDelta   = abs(std::numeric_limits<int64_t>::max() - closestGps);
+        unsigned long closest_key = INVALID_KEY;
 
-        for(int i = 0; i < rastersList->length(); i++)
+        Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
+        for(int i = 0; i < raster_iter.length; i++)
         {
-            raster_info_t& rinfo = rastersList->get(i);
-            double gps   = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate));
-            double delta = fabs(closestGps - gps);
+            int64_t gps   = TimeLib::gmt2gpstime(raster_iter[i].value.gmtDate);
+            int64_t delta = abs(closestGps - gps);
 
             if(delta < minDelta)
             {
                 /* Keep track of raster with closest time */
                 minDelta = delta;
-                closest  = &rinfo;
+                closest_key  = raster_iter[i].key;
             }
         }
 
-        if(closest)
+        if(closest_key != INVALID_KEY)
         {
             /* Return list with only one (closest) raster */
-            raster_info_t ri = *closest;
+            raster_info_t ri = rastersList->get(closest_key);
             rastersList->clear();
-            rastersList->add(ri);
+            rastersList->add(0, ri);
         }
     }
 

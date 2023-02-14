@@ -206,11 +206,11 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                     gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
                 rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime/DATES_CNT));
-                rastersList->add(rinfo);
+                rastersList->add(rastersList->length(), rinfo);
             }
             OGRFeature::DestroyFeature(feature);
         }
-        mlog(DEBUG, "Found %d rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
     {
