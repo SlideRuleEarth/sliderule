@@ -24,6 +24,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_Table.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/UT_String.cpp
 )
 
 target_include_directories (slideruleLib
@@ -55,6 +56,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_Table.h
         ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/UT_String.h
     DESTINATION
         ${INCDIR}
 )

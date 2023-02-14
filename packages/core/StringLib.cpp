@@ -256,6 +256,123 @@ bool SafeString::replace(const char* oldtxt, const char* newtxt)
 }
 
 /*----------------------------------------------------------------------------
+ * inreplace
+ *
+ *  replaces all occurrences in place
+ *----------------------------------------------------------------------------*/
+bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_replacements)
+{
+    /* Check Number of Replacements */
+    if(num_replacements > MAX_REPLACEMENTS)
+    {
+        return false;
+    }
+
+    /* Get Delta Sizes for each Replacement */
+    int replacement_size_delta[MAX_REPLACEMENTS];
+    for(int r = 0; r < num_replacements; r++)
+    {
+        replacement_size_delta[r] = strlen(newtxt[r]) - strlen(oldtxt[r]);
+    }
+
+    /* Count Number of Replacements */
+    int replacement_count[MAX_REPLACEMENTS];
+    for(int r = 0; r < num_replacements; r++)
+    {
+        replacement_count[r] = 0;
+        int i = 0;
+        while(i < (len - 1))
+        {
+            int j = i, k = 0;
+            while((j < (len - 1)) && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            {
+                j++;
+                k++;
+            }
+
+            if(oldtxt[r][k] == '\0')
+            {
+                replacement_count[r]++;
+                i = j;
+            }
+            else
+            {
+                i++;
+            }
+        }
+    }
+
+    /* Calculate Size of New String */
+    int total_size_delta = 0;
+    for(int r = 0; r < num_replacements; r++)
+    {
+        total_size_delta += replacement_size_delta[r] * replacement_count[r];
+    }
+
+    /* Set New Size */
+    int new_size = len + total_size_delta;
+    if(new_size > 0)
+    {
+        len = new_size;
+        maxlen = new_size;
+    }
+    else
+    {
+        len = 1;
+        maxlen = 1;
+        str[0] = '\0';
+        return true;
+    }
+
+    /* Allocate New String */
+    char* newstr = new char [maxlen];
+
+    /* Populate New String */
+    int orig_i = 0, new_i = 0;
+    while(str[orig_i])
+    {
+        /* For Each Possible Replacement */
+        bool replacement = false;
+        for(int r = 0; r < num_replacements; r++)
+        {
+            /* Check for Match */
+            int j = orig_i, k = 0;
+            while(str[j] && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            {
+                j++;
+                k++;
+            }
+
+            /* Replace Matched Text */
+            if(oldtxt[r][k] == '\0')
+            {
+                int i = 0;
+                while(newtxt[i])
+                {
+                    newstr[new_i++] = newtxt[r][i++];
+                }
+                orig_i = j;
+                replacement = true;
+                break;
+            }
+        }
+
+        /* Copy Over and Advance String Indices */
+        if(!replacement)
+        {
+            newstr[new_i++] = str[orig_i++];
+        }
+    }
+
+    /* Terminate New String and Replace Existing String */
+    newstr[new_i] = '\0';
+    delete [] str;
+    str = newstr;
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * urlize
  *
  * ! 	    # 	    $ 	    & 	    ' 	    ( 	    ) 	    * 	    +

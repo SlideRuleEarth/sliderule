@@ -56,6 +56,7 @@ class StringLib
             public:
 
                 static const long DEFAULT_STR_SIZE = 64;
+                static const int MAX_REPLACEMENTS = 16;
 
                                 String      (long _maxlen=DEFAULT_STR_SIZE);
                                 String      (const char* _str, ...) VARG_CHECK(printf, 2, 3);
@@ -69,6 +70,7 @@ class StringLib
                 int             findChar    (char c, int start=0);
                 String&         setChar     (char c, int index);
                 bool            replace     (const char* oldtxt, const char* newtxt);
+                bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
                 String&         urlize      (void);
                 List<String>*   split       (char separator, bool strip=true);
                 char            operator[]  (int index);
