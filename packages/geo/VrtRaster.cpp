@@ -224,8 +224,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
 
                     /* Get the date this raster was created */
                     getRasterDate(rinfo);
-
-                    rastersList->add(rinfo);
+                    rastersList->add(rastersList->length(), rinfo);
                     CPLFree(fname);
                     /*
                      * VRT file can have many rasters in it with the same point of interest.
