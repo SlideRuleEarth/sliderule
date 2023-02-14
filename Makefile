@@ -48,12 +48,12 @@ config-development-debug: prep ## configure make for debug version of sliderule 
 config-development-cicd: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_APACHE_ARROW_10_COMPAT=ON $(ROOT)
 
-config-all: config-development config-atlas config-pgc config-gedi config-icesat2 ## configure everything
+config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat ## configure everything
 
 install: ## install sliderule to system
 	make -C $(BUILD) install
 
-install-all: install install-atlas install-pgc install-gedi install-icesat2 ## install everything
+install-all: install install-atlas install-pgc install-gedi install-icesat2 install-landsat ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(BUILD)/install_manifest.txt
@@ -98,10 +98,10 @@ config-pgc-debug: prep ## configure make for pgc plugin
 config-pgc: prep ## configure make for pgc plugin
 	cd $(PGC_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/pgc
 
-pgc: ## build icesat2 plugin
+pgc: ## build pgc plugin
 	make -j4 -C $(PGC_BUILD)
 
-install-pgc: ## install icesat2 plugin to system
+install-pgc: ## install pgc plugin to system
 	make -C $(PGC_BUILD) install
 
 uninstall-pgc: ## uninstall most recent install of icesat2 plugin from system
