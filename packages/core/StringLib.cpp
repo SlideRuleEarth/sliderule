@@ -347,7 +347,7 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
             if(oldtxt[r][k] == '\0')
             {
                 int i = 0;
-                while(newtxt[i])
+                while(newtxt[r][i])
                 {
                     newstr[new_i++] = newtxt[r][i++];
                 }
