@@ -286,6 +286,63 @@ for i, v in ipairs(tbl) do
 end
 runner.check(sampleCnt == 1)
 
+
+print(string.format("\n--------------------------------\nTest: %s fileId test\n--------------------------------", demType))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, with_flags = true}))
+runner.check(dem ~= nil)
+
+tbl, status = dem:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    local flags = v["flags"]
+    local time = v["time"]
+    local fileid = v["fileid"]
+    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    runner.check(fileid == sampleCnt)  -- getting back 14 unique strips, each with fileid 0 to 13
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 14)
+print("\n");
+
+tbl, status = dem:sample(lon+1.0, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    local flags = v["flags"]
+    local time = v["time"]
+    local fileid = v["fileid"]
+    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    runner.check(fileid == sampleCnt+14)  -- getting back 7 different strips, not previusly found, fileid 14 to 20
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 7)
+print("\n");
+
+tbl, status = dem:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local el = v["value"]
+    local fname = v["file"]
+    local flags = v["flags"]
+    local time = v["time"]
+    local fileid = v["fileid"]
+    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    runner.check(fileid == sampleCnt)  -- getting back the same 14 raster (from first sample call) fileid 0 to 13
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 14)
+
+
+
 -- Report Results --
 
 runner.report()
