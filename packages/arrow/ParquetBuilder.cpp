@@ -815,13 +815,13 @@ const char* ParquetBuilder::buildGeoMetaData (void)
 const char* ParquetBuilder::buildServerMetaData (void)
 {
     /* Build Launch Time String */
-    int64_t launch_time_gps = TimeLib::gettimems(OsApi::getLaunchTime());
+    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
 
     /* Build Duration String */
-    int64_t duration = TimeLib::gettimems() - launch_time_gps;
+    int64_t duration = TimeLib::gpstime() - launch_time_gps;
     SafeString durationstr("%ld", duration);
 
     /* Build Package String */

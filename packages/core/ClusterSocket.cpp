@@ -505,7 +505,7 @@ int ClusterSocket::onAlive(int fd)
             read_connection_t* connection = read_connections[fd];
 
             /* Send Meter */
-            int64_t now = TimeLib::gettimems();
+            int64_t now = TimeLib::gpstime();
             if((now - connection->prev) > METER_PERIOD_MS)
             {
                 uint8_t meter = 0;

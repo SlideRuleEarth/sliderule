@@ -505,7 +505,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                 /* Pull Out Time */
                 if(measureLatency)
                 {
-                    int64_t nowt = TimeLib::gettimems();
+                    int64_t nowt = TimeLib::gpstime();
                     int64_t pktt = TimeLib::gmt2gpstime(TimeLib::cds2gmttime(CCSDS_GET_CDS_DAYS(msg), CCSDS_GET_CDS_MSECS(msg)));
                     latency = nowt - pktt;
                     cmdProc->setCurrentValue(getName(), latencyKey, (void*)&latency, sizeof(latency));

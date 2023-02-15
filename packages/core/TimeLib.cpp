@@ -93,9 +93,7 @@ void TimeLib::init(void)
     /* Setup Base Time */
     parsenistfile();
     lastTime = OsApi::time(OsApi::SYS_CLK);
-    baseTimeMs = lastTime / 1000;
-    baseTimeMs += getleapms(baseTimeMs);
-    baseTimeMs -= LocalGpsEpochMs;
+    baseTimeMs = sys2gpstime(lastTime);
     currentTimeMs = baseTimeMs;
     runningTimeUs = 0;
     stepTimeUs = 1000;
@@ -141,24 +139,13 @@ double TimeLib::latchtime(void)
  *
  *  grabs the current number of ms that have elapsed since gps time epoch
  *----------------------------------------------------------------------------*/
-int64_t TimeLib::gettimems(int64_t now)
+int64_t TimeLib::gpstime(void)
 {
-    if(now == USE_CURRENT_TIME)
-    {
-        #ifdef TIME_HEARTBEAT
-            return currentTimeMs;
-        #else
-            int64_t sysnow = OsApi::time(OsApi::SYS_CLK);
-            sysnow /= 1000; // to milliseconds
-            sysnow += getleapms(sysnow);
-            sysnow -= LocalGpsEpochMs; // to gps epoch
-            return sysnow;
-        #endif
-    }
-    else
-    {
-        return now + getleapms(now) - LocalGpsEpochMs;
-    }
+    #ifdef TIME_HEARTBEAT
+        return currentTimeMs;
+    #else
+        return sys2gpstime(OsApi::time(OsApi::SYS_CLK));
+    #endif
 }
 
 /*----------------------------------------------------------------------------
@@ -166,22 +153,32 @@ int64_t TimeLib::gettimems(int64_t now)
  *
  *  grabs the current GMT system time
  *----------------------------------------------------------------------------*/
-TimeLib::gmt_time_t TimeLib::gettime(int64_t now)
+TimeLib::gmt_time_t TimeLib::gmttime(void)
 {
-#ifdef _USE_WINDOWS_TIME_
-    SYSTEMTIME systime;
-    GetSystemTime(&systime);
-    gmt_time_t gmttime;
-    gmttime.year = systime.wYear;
-    gmttime.doy = dayofyear(systime.wYear, systime.wMonth, systime.wDay);
-    gmttime.hour = systime.wHour;
-    gmttime.minute = systime.wMinute;
-    gmttime.second = systime.wSecond;
-    gmttime.millisecond = systime.wMilliseconds;
-    return gmttime;
-#else
-    return gps2gmttime(gettimems(now));
-#endif
+    return gps2gmttime(gpstime());
+}
+
+/*----------------------------------------------------------------------------
+ * sys2gpstime
+ *
+ *  converts system time (microseconds) to milliseconds since gps epoch
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::sys2gpstime (int64_t sysnow)
+{
+    sysnow /= 1000; // to milliseconds
+    sysnow += getleapms(sysnow);
+    sysnow -= LocalGpsEpochMs; // to gps epoch
+    return sysnow;
+}
+
+/*----------------------------------------------------------------------------
+ * sys2gmttime
+ *
+ *  converts system time (microseconds) to milliseconds since gps epoch
+ *----------------------------------------------------------------------------*/
+TimeLib::gmt_time_t TimeLib::sys2gmttime (int64_t sysnow)
+{
+    return(gps2gmttime(sys2gpstime(sysnow)));
 }
 
 /*----------------------------------------------------------------------------
@@ -726,9 +723,7 @@ void TimeLib::heartbeat(void)
         {
             /* Detect Gross Adjustment */
             mlog(CRITICAL, "Gross adjustment detected in step time: %lld", (long long)usec_per_sec);
-            baseTimeMs = now / 1000;
-            baseTimeMs += getleapms(baseTimeMs);
-            baseTimeMs -= LocalGpsEpochMs; // moves time up to GPS epoch
+            baseTimeMs = sys2gpstime(now);
             runningTimeUs = 0;
             stepTimeUs = 1000;
         }

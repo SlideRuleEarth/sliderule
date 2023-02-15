@@ -94,21 +94,20 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
-    /* Display Version Information on Terminal */
+    /* Get Information */
+    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+    int64_t duration = TimeLib::gpstime() - launch_time_gps;
+    const char** pkg_list = LuaEngine::getPkgList();
+
+    /* Display Information on Terminal */
     print2term("SlideRule Version:   %s\n", LIBID);
     print2term("Build Information:   %s\n", BUILDINFO);
     print2term("Environment Version: %s\n", OsApi::getEnvVersion());
-
-    /* Display Timing Information on Terminal */
-    int64_t duration = TimeLib::gettimems() - OsApi::getLaunchTime();
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(OsApi::getLaunchTime());
-    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
     print2term("Launch Time: %s\n", timestr.str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
-
-    /* Display Package Information on Terminal */
-    const char** pkg_list = LuaEngine::getPkgList();
     print2term("Packages: [ ");
     if(pkg_list)
     {

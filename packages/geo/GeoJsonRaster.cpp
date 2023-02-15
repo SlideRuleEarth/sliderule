@@ -238,7 +238,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
 
         /* Store raster creation time */
-        gmtDate = TimeLib::gettime();
+        gmtDate = TimeLib::gmttime();
 
         /* Must close raster to flush it into file */
         GDALClose((GDALDatasetH)rasterDset);

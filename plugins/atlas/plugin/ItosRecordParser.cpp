@@ -1848,7 +1848,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
 
     /* Get Time String */
     char timestr[25] = {'\0'};
-    TimeLib::gmt_time_t timeinfo = TimeLib::gettime();
+    TimeLib::gmt_time_t timeinfo = TimeLib::gmttime();
     snprintf (timestr, 25, "%d:%d", timeinfo.year, timeinfo.doy);
 
     /* Generate Content */
@@ -1957,7 +1957,7 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
 
     /* Get Time String */
     char timestr[25] = {'\0'};
-    TimeLib::gmt_time_t timeinfo = TimeLib::gettime();
+    TimeLib::gmt_time_t timeinfo = TimeLib::gmttime();
     snprintf (timestr, 25, "%d:%d", timeinfo.year, timeinfo.doy);
 
     /* Generate Content */

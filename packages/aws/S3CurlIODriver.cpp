@@ -153,7 +153,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
     struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
     TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     SafeString dateHeader("Date: %s", date.str());
@@ -190,7 +190,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
     struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
     TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     SafeString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     SafeString dateHeader("Date: %s", date.str());
@@ -245,7 +245,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     }
 
     /* Build Date String */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gettime();
+    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
     TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     SafeString timestamp("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
 

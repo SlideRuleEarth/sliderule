@@ -459,7 +459,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     /* Construct Log Record */
     EventLib::event_t event;
     memset(&event, 0, sizeof(event));
-    event.systime = TimeLib::gettimems();
+    event.systime = TimeLib::gpstime();
     event.tid     = Thread::getId();
     event.id      = ORIGIN;
     event.parent  = ORIGIN;

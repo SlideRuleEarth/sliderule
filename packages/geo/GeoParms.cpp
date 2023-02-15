@@ -200,7 +200,7 @@ void GeoParms::fromLua (lua_State* L, int index)
             /* Start and Stop Time Special Cases */
             if(t0_str && !t1_str) // only start time supplied
             {
-                int64_t now = TimeLib::gettimems();
+                int64_t now = TimeLib::gpstime();
                 stop_time = TimeLib::gps2gmttime(now);
                 TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);

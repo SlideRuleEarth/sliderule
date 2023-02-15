@@ -104,7 +104,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     bool failure=false;
 
     /* Start Timer */
-    int64_t start_time = TimeLib::gettimems();
+    int64_t start_time = TimeLib::gpstime();
 
     /* Get Word List */
     const char* wordset_name = argv[0];
@@ -283,7 +283,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Start Timer */
-    int64_t stop_time = TimeLib::gettimems();
+    int64_t stop_time = TimeLib::gpstime();
     double elapsed_time = (double)(stop_time - start_time) / 1000.0;
     print2term("Time to complete: %lf seconds\n", elapsed_time);
 
