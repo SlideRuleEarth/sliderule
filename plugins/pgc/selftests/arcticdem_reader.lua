@@ -10,7 +10,7 @@ json = require("json")
 
 -- Unit Test --
 
-local lon = -178.0
+local lon = -178.0   -- DO NOT CHANGE lon and lat, later tests are hardcoded to these values!!!
 local lat =   51.7
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
@@ -287,7 +287,7 @@ end
 runner.check(sampleCnt == 1)
 
 
-print(string.format("\n--------------------------------\nTest: %s fileId test\n--------------------------------", demType))
+print(string.format("\n--------------------------------\nTest: %s fileId\n--------------------------------", demType))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, with_flags = true}))
 runner.check(dem ~= nil)
 
@@ -341,6 +341,59 @@ for i, v in ipairs(tbl) do
 end
 runner.check(sampleCnt == 14)
 
+
+
+demType = demTypes[1];
+print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat)
+sampleCnt = 0
+local el, fname
+for i, v in ipairs(tbl) do
+    el = v["value"]
+    fname = v["file"]
+    print(string.format("(%02d) value: %6.2f   %s", i, el, fname))
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 1)
+
+-- Compare sample value received from sample call to value read with GDAL command line utility.
+-- To read the same value execute command below from a terminal (GDAL must be installed on the system)
+-- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.7
+
+local expected_mosaic_value = 80.7135009765625 -- read using gdallocationinfo
+local expected_max = expected_mosaic_value + 0.000000001
+local expected_min = expected_mosaic_value - 0.000000001
+
+runner.check(el <= expected_max and el >= expected_min)
+
+
+
+demType = demTypes[2];
+print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat)
+sampleCnt = 0
+local el, fname
+for i, v in ipairs(tbl) do
+    el = v["value"]
+    fname = v["file"]
+    print(string.format("(%02d)  value: %6.2f   %s", i, el, fname))
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 14)
+
+-- Compare sample value received from sample call to value read with GDAL command line utility.
+-- To read the same value execute command below from a terminal (GDAL must be installed on the system)
+-- gdallocationinfo  -wgs84 /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20200222_1020010099A56800_1020010095159800_2m_lsf_seg1_dem.tif -178.0 51.7
+
+expected_mosaic_value = 632.90625 -- read using gdallocationinfo
+expected_max = expected_mosaic_value + 0.000000001
+expected_min = expected_mosaic_value - 0.000000001
+
+runner.check(el <= expected_max and el >= expected_min)
 
 
 -- Report Results --
