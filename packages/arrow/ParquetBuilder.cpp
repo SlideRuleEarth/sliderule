@@ -286,6 +286,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     /* Create Writer Properties */
     parquet::WriterProperties::Builder writer_props_builder;
     writer_props_builder.compression(parquet::Compression::GZIP);
+    writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
     shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
     /* Create Arrow Writer Properties */
