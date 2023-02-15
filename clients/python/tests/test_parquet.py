@@ -23,15 +23,15 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile1.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
         assert len(gdf) == 964
-        assert len(gdf.keys()) == 19
+        assert len(gdf.keys()) == 17
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405240
         assert gdf['segment_id'].describe()["max"] == 405915
-        os.remove("testfile.parquet")
+        os.remove("testfile1.parquet")
 
     def test_atl03(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
@@ -45,12 +45,12 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile2.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, asset=asset, resources=[resource])
         assert len(gdf) == 194696
-        assert len(gdf.keys()) == 20
+        assert len(gdf.keys()) == 18
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405240
         assert gdf['segment_id'].describe()["max"] == 405915
-        os.remove("testfile.parquet")
+        os.remove("testfile2.parquet")
