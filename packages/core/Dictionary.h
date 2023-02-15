@@ -472,11 +472,8 @@ int Dictionary<T>::getKeys (char*** keys) const
     {
         if(hashTable[i].chain != EMPTY_ENTRY)
         {
-            int len = 0;
-            while( (len < (MAX_STR_SIZE - 1)) && (hashTable[i].key[len] != '\0') ) len++;
-            char* new_key = new char[len + 1];
-            for(int k = 0; k < len; k++) new_key[k] = hashTable[i].key[k];
-            new_key[len] = '\0';
+            char* new_key = NULL;
+            OsApi::dupstr(&new_key, hashTable[i].key);
             (*keys)[j++] = new_key;
         }
     }
@@ -623,13 +620,9 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
             hashTable[i].prev = other.hashTable[i].prev;
 
             /* copy key */
-            const char* key = other.hashTable[i].key;
-            int len = 0;
-            while( (len < (MAX_STR_SIZE - 1)) && (key[len] != '\0') ) len++;
-            char* tmp_key = new char[len + 1];
-            for(int j = 0; j < len; j++) tmp_key[j] = key[j];
-            tmp_key[len] = '\0';
-            hashTable[i].key = tmp_key;
+            char* new_key = NULL;
+            OsApi::dupstr(&new_key, other.hashTable[i].key);
+            hashTable[i].key = new_key;
         }
     }
     currIndex = 0;
@@ -730,11 +723,8 @@ void Dictionary<T>::addNode (const char* key, T& data, unsigned int hash, bool r
     }
     else
     {
-        int len = 0;
-        while( (len < (MAX_STR_SIZE - 1)) && (key[len] != '\0') ) len++;
-        char* tmp_key = new char[len + 1];
-        for(int i = 0; i < len; i++) tmp_key[i] = key[i];
-        tmp_key[len] = '\0';
+        char* tmp_key = NULL;
+        OsApi::dupstr(&tmp_key, key);
         new_key = tmp_key;
     }
 

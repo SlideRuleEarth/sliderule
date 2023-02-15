@@ -37,6 +37,7 @@
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "MsgQ.h"
+#include "StringLib.h"
 #include "RecordObject.h"
 #include "Dictionary.h"
 #include "List.h"
