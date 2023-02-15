@@ -1139,7 +1139,7 @@ unsigned int RecordObject::str2flags (const char* str)
     List<SafeString>* flaglist = flagss.split('|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i].getString(false);
+        const char* flag = (*flaglist)[i].str(false);
         if(StringLib::match(flag, "NATIVE"))    flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))   flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))   flags |= BIGENDIAN;
@@ -1163,7 +1163,7 @@ const char* RecordObject::flags2str (unsigned int flags)
 
     if(flags & POINTER)     flagss += "|PTR";
 
-    return flagss.getString(true);
+    return flagss.str(true);
 }
 
 /*----------------------------------------------------------------------------

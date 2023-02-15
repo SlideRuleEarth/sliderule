@@ -753,7 +753,7 @@ void TimeLib::parsenistfile(void)
     leap_second_file_name += CONFDIR;
     leap_second_file_name.appendChar(PATH_DELIMETER);
     leap_second_file_name += TIME_NIST_LIST_FILENAME;
-    FILE* fd = fopen( leap_second_file_name.getString(), "r" );
+    FILE* fd = fopen( leap_second_file_name.str(), "r" );
     if( fd != NULL )
     {
         char line[MAX_STR_SIZE];

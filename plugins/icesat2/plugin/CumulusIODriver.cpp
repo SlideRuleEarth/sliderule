@@ -92,7 +92,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     /*
      * Determine ioBucket and ioKey
      */
-    ioBucket = (char*)resourcepath.getString(true);
+    ioBucket = (char*)resourcepath.str(true);
 
     /*
     * Differentiate Bucket and Key

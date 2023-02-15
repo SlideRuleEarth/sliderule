@@ -104,9 +104,9 @@ const char* PistacheServer::sanitize (const char* filename)
 {
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
-    safe_filename.replace(delimeter.getString(), "_");
-    SafeString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.getString());
-    return safe_pathname.getString(true);
+    safe_filename.replace(delimeter.str(), "_");
+    SafeString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.str());
+    return safe_pathname.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -181,7 +181,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(serverHead.getString());
+    response.headers().add<Http::Header::Server>(serverHead.str());
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Send Response */
@@ -206,14 +206,14 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(serverHead.getString());
+    response.headers().add<Http::Header::Server>(serverHead.str());
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Build Response */
     SafeString rsp("{\"apis\": [\"/echo\", \"/info\", \"/source/:name\", \"/engine/:name\"] }");
 
     /* Send Response */
-    response.send(Http::Code::Ok, rsp.getString());
+    response.send(Http::Code::Ok, rsp.str());
 
     /* Stop Trace */
     stop_trace(CRITICAL, trace_id);
@@ -237,7 +237,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(serverHead.getString());
+    response.headers().add<Http::Header::Server>(serverHead.str());
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Launch Engine */
@@ -289,7 +289,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
 
     /* Build Header */
-    response.headers().add<Http::Header::Server>(serverHead.getString());
+    response.headers().add<Http::Header::Server>(serverHead.str());
     response.headers().add<Http::Header::ContentType>(MIME(Application, OctetStream));
 
     /* Create Engine */

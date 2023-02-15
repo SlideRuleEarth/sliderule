@@ -244,8 +244,8 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
     try
     {
         List<SafeString>* request_line = (*header_list)[0].split(' ');
-        const char* verb_str = (*request_line)[0].getString();
-        const char* url_str = (*request_line)[1].getString();
+        const char* verb_str = (*request_line)[0].str();
+        const char* url_str = (*request_line)[1].str();
 
         /* Get Verb */
         request->verb = EndpointObject::str2verb(verb_str);
@@ -273,14 +273,14 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
         try
         {
-            char* key = (char*)(*keyvalue_list)[0].getString();
-            const char* value = (*keyvalue_list)[1].getString(true);
+            char* key = (char*)(*keyvalue_list)[0].str();
+            const char* value = (*keyvalue_list)[1].str(true);
             StringLib::convertLower(key);
             request->headers.add(key, value, true);
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h].getString(), e.what());
+            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h].str(), e.what());
         }
         delete keyvalue_list;
     }

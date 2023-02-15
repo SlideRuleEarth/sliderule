@@ -104,7 +104,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(OsApi::getLaunchTime());
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-    print2term("Launch Time: %s\n", timestr.getString());
+    print2term("Launch Time: %s\n", timestr.str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
 
     /* Display Package Information on Terminal */
@@ -126,7 +126,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
     lua_pushstring(L, OsApi::getEnvVersion());
-    lua_pushstring(L, timestr.getString());
+    lua_pushstring(L, timestr.str());
     lua_pushinteger(L, duration);
     lua_newtable(L);
     if(pkg_list)
@@ -238,7 +238,7 @@ static void populate_metric_table (const EventLib::metric_t& metric, int32_t ind
     lua_State* L = (lua_State*)parm;
     SafeString metric_full_name("%s.%s", metric.category, metric.name);
 
-    lua_pushstring(L, metric_full_name.getString());
+    lua_pushstring(L, metric_full_name.str());
     lua_newtable(L);
     {
         lua_pushstring(L, "value");

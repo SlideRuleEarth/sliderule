@@ -64,8 +64,9 @@ class StringLib
                                 String      (int base, unsigned char* buffer, int size);
                                 ~String     (void);
 
-                const char*     getString   (bool duplicate = false);
-                long            getLength   (void);
+                const char*     str         (bool duplicate = false);
+                long            length      (void);
+                long            bytes       (void);
                 void            appendChar  (char c);
                 int             findChar    (char c, int start=0);
                 String&         setChar     (char c, int index);
@@ -82,7 +83,7 @@ class StringLib
 
             private:
 
-                char*   str;
+                char*   carray;
                 long    len;
                 long    maxlen;
         };

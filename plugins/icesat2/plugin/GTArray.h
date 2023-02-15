@@ -93,8 +93,8 @@ const long GTArray<T>::DefaultNumRows[Icesat2Parms::NUM_PAIR_TRACKS] = {H5Coro::
  *----------------------------------------------------------------------------*/
 template <class T>
 GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5Array<T>(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).getString(), context, col, prt_startrow[Icesat2Parms::RPT_L], prt_numrows[Icesat2Parms::RPT_L]),
-        H5Array<T>(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).getString(), context, col, prt_startrow[Icesat2Parms::RPT_R], prt_numrows[Icesat2Parms::RPT_R]) }
+    gt{ H5Array<T>(asset, resource, SafeString("/gt%dl/%s", track, gt_dataset).str(), context, col, prt_startrow[Icesat2Parms::RPT_L], prt_numrows[Icesat2Parms::RPT_L]),
+        H5Array<T>(asset, resource, SafeString("/gt%dr/%s", track, gt_dataset).str(), context, col, prt_startrow[Icesat2Parms::RPT_R], prt_numrows[Icesat2Parms::RPT_R]) }
 {
 }
 

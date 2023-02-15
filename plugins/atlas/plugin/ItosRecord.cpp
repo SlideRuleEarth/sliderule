@@ -204,7 +204,7 @@ const char* Record::getUndottedName (void)
     s.replace(".", "_");
     s.replace("[", "_");
     s.replace("]", "_");
-    return s.getString(true);
+    return s.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -1654,7 +1654,7 @@ const char* Filter::getProperty (const char* name)
     {
         for(int s = 0; s < source.length(); s++)
         {
-           StringLib::concat(str, source[s].getString(), MAX_STR_LEN);
+           StringLib::concat(str, source[s].str(), MAX_STR_LEN);
            StringLib::concat(str, " ", MAX_STR_LEN);
         }
     }
@@ -2603,7 +2603,7 @@ Packet* TelemetryPacket::_duplicate (void)
 
     for(int i = 0; i < applyWhen.length(); i++)
     {
-        tpkt->setPktProperty("applyWhen", applyWhen[i].getString());
+        tpkt->setPktProperty("applyWhen", applyWhen[i].str());
     }
 
     return tpkt;

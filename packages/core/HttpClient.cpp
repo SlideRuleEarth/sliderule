@@ -243,11 +243,11 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
                                 content_length);
 
             /* Build Request */
-            int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
+            int hdr_len = rqst_hdr.length();
             rqst_len = content_length + hdr_len;
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
-                memcpy(rqstBuf, rqst_hdr.getString(), hdr_len);
+                memcpy(rqstBuf, rqst_hdr.str(), hdr_len);
                 memcpy(&rqstBuf[hdr_len], data, content_length);
             }
             else

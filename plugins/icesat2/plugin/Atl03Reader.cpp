@@ -199,7 +199,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Generate ATL08 Resource Name */
     SafeString atl08_resource("%s", resource);
     atl08_resource.setChar('8', 4);
-    resource08 = atl08_resource.getString(true);
+    resource08 = atl08_resource.str(true);
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -574,7 +574,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     {
         for(int i = 0; i < geo_fields->length(); i++)
         {
-            const char* field_name = (*geo_fields)[i].getString();
+            const char* field_name = (*geo_fields)[i].str();
             const char* group_name = "geolocation";
             if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
                 (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
@@ -584,7 +584,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
                 group_name = "geophys_corr";
             }
             SafeString dataset_name("%s/%s", group_name, field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.str(), &info->reader->context, 0, region.first_segment, region.num_segments);
             anc_geo_data.add(field_name, array);
         }
     }
@@ -594,9 +594,9 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     {
         for(int i = 0; i < photon_fields->length(); i++)
         {
-            const char* field_name = (*photon_fields)[i].getString();
+            const char* field_name = (*photon_fields)[i].str();
             SafeString dataset_name("heights/%s", field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region.first_photon,  region.num_photons);
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
             anc_ph_data.add(field_name, array);
         }
     }
@@ -1770,7 +1770,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::str
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict->get((*field_list)[i].getString());
+            GTDArray* array = field_dict->get((*field_list)[i].str());
 
             /* Create Ancillary Record */
             int record_size = offsetof(anc_extent_t, data) + array->gt[Icesat2Parms::RPT_L].elementSize() + array->gt[Icesat2Parms::RPT_R].elementSize();
@@ -1808,7 +1808,7 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::stri
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict->get((*field_list)[i].getString());
+            GTDArray* array = field_dict->get((*field_list)[i].str());
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_photon_t, data) +

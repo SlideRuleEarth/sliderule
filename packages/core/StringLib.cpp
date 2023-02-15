@@ -69,8 +69,8 @@ SafeString::String(long _maxlen)
 {
     if(_maxlen <= 0)    maxlen = DEFAULT_STR_SIZE;
     else                maxlen = _maxlen;
-    str = new char[maxlen];
-    memset(str, 0, maxlen);
+    carray = new char[maxlen];
+    memset(carray, 0, maxlen);
     len = 1;
 }
 
@@ -85,18 +85,18 @@ SafeString::String(const char* _str, ...)
         va_start(args, _str);
         len = vsnprintf(NULL, 0, _str, args) + 1; // get length
         va_end(args);
-        str = new char[len]; // allocate memory
+        carray = new char[len]; // allocate memory
         maxlen = len;
         va_start(args, _str);
-        vsprintf(str, _str, args); // copy in formatted contents
+        vsprintf(carray, _str, args); // copy in formatted contents
         va_end(args);
-        str[maxlen - 1] ='\0'; // null terminate
+        carray[maxlen - 1] ='\0'; // null terminate
     }
     else
     {
         maxlen = DEFAULT_STR_SIZE;
-        str = new char[maxlen];
-        memset(str, 0, maxlen);
+        carray = new char[maxlen];
+        memset(carray, 0, maxlen);
         len = 1;
     }
 }
@@ -107,10 +107,10 @@ SafeString::String(const char* _str, ...)
 SafeString::String(const SafeString& other)
 {
     maxlen = other.maxlen;
-    str = new char[maxlen];
-    memset(str, 0, maxlen);
+    carray = new char[maxlen];
+    memset(carray, 0, maxlen);
     len = other.len;
-    StringLib::copy(str, other.str, len);
+    StringLib::copy(carray, other.carray, len);
 }
 
 /*----------------------------------------------------------------------------
@@ -121,15 +121,15 @@ SafeString::String (int base, unsigned char* buffer, int size)
     if(base == 64)
     {
         int encoded_len = size;
-        str = StringLib::b64encode(buffer, &encoded_len);
+        carray = StringLib::b64encode(buffer, &encoded_len);
         maxlen = encoded_len;
         len = encoded_len;
     }
     else
     {
         maxlen = DEFAULT_STR_SIZE;
-        str = new char[maxlen];
-        memset(str, 0, maxlen);
+        carray = new char[maxlen];
+        memset(carray, 0, maxlen);
         len = 1;
     }
 }
@@ -139,30 +139,38 @@ SafeString::String (int base, unsigned char* buffer, int size)
  *----------------------------------------------------------------------------*/
 SafeString::~String(void)
 {
-    delete [] str;
+    delete [] carray;
 }
 
 /*----------------------------------------------------------------------------
  * getString
  *----------------------------------------------------------------------------*/
-const char* SafeString::getString(bool duplicate)
+const char* SafeString::str(bool duplicate)
 {
     if(duplicate)
     {
         char* new_str = new char[len];
-        StringLib::copy(new_str, str, len);
+        StringLib::copy(new_str, carray, len);
         return new_str;
     }
     else
     {
-        return str;
+        return carray;
     }
 }
 
 /*----------------------------------------------------------------------------
- * getLength
+ * length - number of non-null characters in string
  *----------------------------------------------------------------------------*/
-long SafeString::getLength(void)
+long SafeString::length(void)
+{
+    return len - 1; // remove null terminator in length
+}
+
+/*----------------------------------------------------------------------------
+ * bytes - size of memory needed to store string (includes null terminator)
+ *----------------------------------------------------------------------------*/
+long SafeString::bytes(void)
 {
     return len;
 }
@@ -177,13 +185,13 @@ void SafeString::appendChar(char c)
         maxlen *= 2; // optimization
         char* new_str = new char[maxlen];
         memset(new_str, 0, maxlen);
-        StringLib::copy(new_str, str, len);
-        delete [] str;
-        str = new_str;
+        StringLib::copy(new_str, carray, len);
+        delete [] carray;
+        carray = new_str;
     }
 
-    str[len-1] = c;
-    str[len] = '\0';
+    carray[len-1] = c;
+    carray[len] = '\0';
     len++;
 }
 
@@ -196,7 +204,7 @@ int SafeString::findChar (char c, int start)
     {
         for(int i = start; i < len; i++)
         {
-            if(str[i] == c)
+            if(carray[i] == c)
             {
                 return i;
             }
@@ -213,7 +221,7 @@ SafeString& SafeString::setChar (char c, int index)
 {
     if(index >= 0 && index < len)
     {
-        str[index] = c;
+        carray[index] = c;
     }
     return *this;
 }
@@ -228,7 +236,7 @@ bool SafeString::replace(const char* oldtxt, const char* newtxt)
     bool status = false;
 
     int newtxtlen = (int)strlen(newtxt);
-    char* startptr = strstr(str, oldtxt);
+    char* startptr = strstr(carray, oldtxt);
     char* endptr = startptr + strlen(oldtxt);
 
     while(startptr != NULL)
@@ -239,16 +247,16 @@ bool SafeString::replace(const char* oldtxt, const char* newtxt)
         char* newstr = new char[maxlen];
         memset(newstr, 0, maxlen);
 
-        memcpy(newstr, str, (startptr - str));
-        memcpy(newstr + (startptr - str), newtxt, newtxtlen);
-        memcpy(newstr + (startptr - str) + newtxtlen, endptr, len - (endptr - str));
+        memcpy(newstr, carray, (startptr - carray));
+        memcpy(newstr + (startptr - carray), newtxt, newtxtlen);
+        memcpy(newstr + (startptr - carray) + newtxtlen, endptr, len - (endptr - carray));
 
-        delete [] str;
-        str = newstr;
+        delete [] carray;
+        carray = newstr;
 
-        len = (int)strlen(str) + 1;
+        len = (int)strlen(carray) + 1;
 
-        startptr = strstr(str, oldtxt);
+        startptr = strstr(carray, oldtxt);
         endptr = startptr + strlen(oldtxt);
     }
 
@@ -284,7 +292,7 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
         while(i < (len - 1))
         {
             int j = i, k = 0;
-            while((j < (len - 1)) && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            while((j < (len - 1)) && oldtxt[r][k] && (carray[j] == oldtxt[r][k]))
             {
                 j++;
                 k++;
@@ -320,7 +328,7 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
     {
         len = 1;
         maxlen = 1;
-        str[0] = '\0';
+        carray[0] = '\0';
         return true;
     }
 
@@ -329,7 +337,7 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
 
     /* Populate New String */
     int orig_i = 0, new_i = 0;
-    while(str[orig_i])
+    while(carray[orig_i])
     {
         /* For Each Possible Replacement */
         bool replacement = false;
@@ -337,7 +345,7 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
         {
             /* Check for Match */
             int j = orig_i, k = 0;
-            while(str[j] && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            while(carray[j] && oldtxt[r][k] && (carray[j] == oldtxt[r][k]))
             {
                 j++;
                 k++;
@@ -360,14 +368,14 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
         /* Copy Over and Advance String Indices */
         if(!replacement)
         {
-            newstr[new_i++] = str[orig_i++];
+            newstr[new_i++] = carray[orig_i++];
         }
     }
 
     /* Terminate New String and Replace Existing String */
     newstr[new_i] = '\0';
-    delete [] str;
-    str = newstr;
+    delete [] carray;
+    carray = newstr;
 
     return true;
 }
@@ -392,7 +400,7 @@ SafeString& SafeString::urlize(void)
     /* Setup pointers to new and old strings */
     char* alloc_str = new char [maxlen];
     char* new_str = alloc_str;
-    char* old_str = str;
+    char* old_str = carray;
 
     /* Translate old string into new string */
     while(*old_str != '\0')
@@ -427,8 +435,8 @@ SafeString& SafeString::urlize(void)
     len = new_str - alloc_str;
 
     /* Replace member string */
-    delete [] str;
-    str = alloc_str;
+    delete [] carray;
+    carray = alloc_str;
 
     /* Return Self */
     return *this;
@@ -444,12 +452,12 @@ List<SafeString>* SafeString::split(char separator, bool strip)
     char token[MAX_STR_SIZE];
     int i = 0;
 
-    while(i < len && str[i] != '\0')
+    while(i < len && carray[i] != '\0')
     {
         /* Create Token */
         int t = 0;
-        while( (i < len) && (str[i] != '\0') && (str[i] == separator) ) i++; // find first character
-        while( (i < len) && (str[i] != '\0') && (str[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = str[i++]; // copy characters in
+        while( (i < len) && (carray[i] != '\0') && (carray[i] == separator) ) i++; // find first character
+        while( (i < len) && (carray[i] != '\0') && (carray[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = carray[i++]; // copy characters in
         token[t++] = '\0';
 
         /*  Strip Leading and Trailing Spaces */
@@ -463,7 +471,7 @@ List<SafeString>* SafeString::split(char separator, bool strip)
 
         /* Add Token to List */
         SafeString ss("%s", &token[s1]);
-        if(ss.getLength() > 1) tokens->add(ss);
+        if(ss.length() > 0) tokens->add(ss);
     }
 
     return tokens;
@@ -476,7 +484,7 @@ char SafeString::operator[](int index)
 {
     if(index >= 0 && index < len)
     {
-        return str[index];
+        return carray[index];
     }
     else
     {
@@ -491,7 +499,7 @@ SafeString& SafeString::operator+=(const SafeString& rhs)
 {
     if((len + rhs.len) < (maxlen - 1))
     {
-        StringLib::concat(str, rhs.str, maxlen);
+        StringLib::concat(carray, rhs.carray, maxlen);
         len += rhs.len;
     }
     else
@@ -499,11 +507,11 @@ SafeString& SafeString::operator+=(const SafeString& rhs)
         maxlen += rhs.maxlen;
         char* new_str = new char[maxlen];
         memset(new_str, 0, maxlen);
-        StringLib::copy(new_str, str, maxlen);
-        StringLib::concat(new_str, rhs.str, maxlen);
+        StringLib::copy(new_str, carray, maxlen);
+        StringLib::concat(new_str, rhs.carray, maxlen);
         len = (int)strlen(new_str) + 1;
-        delete [] str;
-        str = new_str;
+        delete [] carray;
+        carray = new_str;
     }
 
     return *this;
@@ -518,7 +526,7 @@ SafeString& SafeString::operator+=(const char* rstr)
 
     if((len + rlen) < (maxlen - 1))
     {
-        StringLib::concat(str, rstr, maxlen);
+        StringLib::concat(carray, rstr, maxlen);
         len += rlen;
     }
     else
@@ -527,11 +535,11 @@ SafeString& SafeString::operator+=(const char* rstr)
         maxlen *= 2; // optimization
         char* new_str = new char[maxlen];
         memset(new_str, 0, maxlen);
-        StringLib::copy(new_str, str, maxlen);
+        StringLib::copy(new_str, carray, maxlen);
         StringLib::concat(new_str, rstr, maxlen);
         len = (int)strlen(new_str) + 1;
-        delete [] str;
-        str = new_str;
+        delete [] carray;
+        carray = new_str;
     }
 
     return *this;
@@ -544,12 +552,12 @@ SafeString& SafeString::operator=(const SafeString& rhs)
 {
     if(maxlen < rhs.len)
     {
-        delete [] str;
+        delete [] carray;
         maxlen = rhs.maxlen;
-        str = new char[maxlen];
+        carray = new char[maxlen];
     }
 
-    StringLib::copy(str, rhs.str, rhs.len);
+    StringLib::copy(carray, rhs.carray, rhs.len);
     len = rhs.len;
 
     return *this;
@@ -565,25 +573,25 @@ SafeString& SafeString::operator=(const char* rstr)
         int rlen = (int)strlen(rstr);
         if(rlen <= 0)
         {
-            str[0] = '\0';
+            carray[0] = '\0';
             len = 1;
         }
         else if(maxlen < rlen)
         {
-            delete [] str;
+            delete [] carray;
             maxlen = rlen;
-            str = new char[maxlen];
+            carray = new char[maxlen];
         }
 
-        StringLib::copy(str, rstr, rlen);
+        StringLib::copy(carray, rstr, rlen);
         len = rlen + 1;
     }
     else
     {
-        delete [] str;
+        delete [] carray;
         maxlen = DEFAULT_STR_SIZE;
-        str = new char[maxlen];
-        memset(str, 0, maxlen);
+        carray = new char[maxlen];
+        memset(carray, 0, maxlen);
         len = 1;
     }
 
@@ -604,10 +612,10 @@ SafeString operator+(SafeString lhs, const SafeString& rhs)
  *----------------------------------------------------------------------------*/
 void SafeString::reset(void)
 {
-    delete [] str;
+    delete [] carray;
     maxlen = DEFAULT_STR_SIZE;
-    str = new char[maxlen];
-    memset(str, 0, maxlen);
+    carray = new char[maxlen];
+    memset(carray, 0, maxlen);
     len = 1;
 }
 

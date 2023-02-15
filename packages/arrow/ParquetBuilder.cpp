@@ -277,7 +277,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
 
     /* Create Unique Temporary Filename */
     SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
-    fileName = tmp_file.getString(true);
+    fileName = tmp_file.str(true);
 
     /* Create Arrow Output Stream */
     shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -802,7 +802,7 @@ const char* ParquetBuilder::buildGeoMetaData (void)
     const char* newtxt[2] = { "",     " " };
     geostr.inreplace(oldtxt, newtxt, 2);
 
-    return geostr.getString(true);
+    return geostr.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -810,79 +810,58 @@ const char* ParquetBuilder::buildGeoMetaData (void)
  *----------------------------------------------------------------------------*/
 const char* ParquetBuilder::buildServerMetaData (void)
 {
-//    /* Display Version Information on Terminal */
-//    print2term("SlideRule Version:   %s\n", LIBID);
-//    print2term("Build Information:   %s\n", BUILDINFO);
-//    print2term("Environment Version: %s\n", environment_version);
-//
-//    /* Display Timing Information on Terminal */
-//    int64_t duration = TimeLib::gettimems() - launch_time;
-//    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time);
-//    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-//    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-//    print2term("Launch Time: %s\n", timestr.getString());
-//    print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
-//
-//    /* Display Package Information on Terminal */
-//    const char** pkg_list = LuaEngine::getPkgList();
-//    print2term("Packages: [ ");
-//    if(pkg_list)
-//    {
-//        int index = 0;
-//        while(pkg_list[index])
-//        {
-//            print2term("%s", pkg_list[index]);
-//            index++;
-//            if(pkg_list[index]) print2term(", ");
-//        }
-//    }
-//    print2term(" ]\n");
-//
-//    {
-//        "arcticdem":
-//        {   "commit":"v2.0.0-0-g67d5c1f",
-//            "version":"v2.0.0"
-//        },
-//        "server":
-//        {
-//            "environment":"v2.0.0-0-gc9130d9",
-//            "version":"v2.0.0",
-//            "duration":2843438206,
-//            "packages":["core","arrow","aws","geo","h5","netsvc","arcticdem","icesat2"],
-//            "commit":"v2.0.0-0-g67d5c1f",
-//            "launch":"2023-01-12T15:55:31Z"
-//        },
-//        "icesat2":
-//        {
-//            "commit":"v2.0.0-0-g67d5c1f",
-//            "version":"v2.0.0"
-//        }
-//    }
-//    SafeString meta("{\"server\":{");
-//    meta += "\"environment\":\"";
-//    meta += environment_version;
-//    meta += "\",\"version\";
-//
-//    /* Return Information to Lua (and clean up package list) */
-//    lua_pushstring(L, LIBID);
-//    lua_pushstring(L, BUILDINFO);
-//    lua_pushstring(L, environment_version);
-//    lua_pushstring(L, timestr.getString());
-//    lua_pushinteger(L, duration);
-//    lua_newtable(L);
-//    if(pkg_list)
-//    {
-//        int index = 0;
-//        while(pkg_list[index])
-//        {
-//            lua_pushstring(L, pkg_list[index]);
-//            lua_rawseti(L, -2, index+1);
-//            delete [] pkg_list[index];
-//            index++;
-//        }
-//        delete [] pkg_list;
-//    }
+    /* Build Launch Time String */
+    int64_t launch_time_gps = TimeLib::gettimems(OsApi::getLaunchTime());
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
 
-    return NULL;
+    /* Build Duration String */
+    int64_t duration = TimeLib::gettimems() - launch_time_gps;
+    SafeString durationstr("%ld", duration);
 
+    /* Build Package String */
+    const char** pkg_list = LuaEngine::getPkgList();
+    SafeString packagestr("[");
+    if(pkg_list)
+    {
+        int index = 0;
+        while(pkg_list[index])
+        {
+            packagestr += pkg_list[index];
+            index++;
+            if(pkg_list[index]) packagestr += ", ";
+        }
+    }
+    packagestr += "]";
+
+    /* Initialize Meta Data String */
+    SafeString metastr(R"json({
+        "server":
+        {
+            "environment":"$1",
+            "version":"$2",
+            "duration":$3,
+            "packages":$4,
+            "commit":"$5",
+            "launch":"$6"
+        },
+        "icesat2":
+        {
+            "commit":"v2.0.0-0-g67d5c1f",
+            "version":"v2.0.0"
+        },
+        "arcticdem":
+        {   "commit":"v2.0.0-0-g67d5c1f",
+            "version":"v2.0.0"
+        },
+    })json");
+
+    /* Fill In Meta Data String */
+    const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
+    const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
+    metastr.inreplace(oldtxt, newtxt, 8);
+
+    /* Return Copy of Meta String */
+    return metastr.str(true);
 }
