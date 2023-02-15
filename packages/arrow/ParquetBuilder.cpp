@@ -295,10 +295,13 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     if(geoData.as_geo)
     {
         auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-        const char* metadata_str = buildGeoMetaData();
-        metadata->Append("geo", metadata_str);
+        const char* geodata_str = buildGeoMetaData();
+        const char* serverdata_str = buildServerMetaData();
+        metadata->Append("geo", geodata_str);
+        metadata->Append("sliderule", serverdata_str);
         pimpl->schema = pimpl->schema->WithMetadata(metadata);
-        delete [] metadata_str;
+        delete [] geodata_str;
+        delete [] serverdata_str;
     }
 
     /* Create Parquet Writer */
@@ -845,16 +848,7 @@ const char* ParquetBuilder::buildServerMetaData (void)
             "packages":$4,
             "commit":"$5",
             "launch":"$6"
-        },
-        "icesat2":
-        {
-            "commit":"v2.0.0-0-g67d5c1f",
-            "version":"v2.0.0"
-        },
-        "arcticdem":
-        {   "commit":"v2.0.0-0-g67d5c1f",
-            "version":"v2.0.0"
-        },
+        }
     })json");
 
     /* Fill In Meta Data String */
