@@ -88,8 +88,8 @@ LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
     {
         SafeString safe_filename("%s", script);
         safe_filename.replace("..", "_");
-        SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.getString());
-        engine = new LuaEngine(safe_pathname.getString(), arg, ORIGIN, NULL, false);
+        SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.str());
+        engine = new LuaEngine(safe_pathname.str(), arg, ORIGIN, NULL, false);
     }
     else
     {

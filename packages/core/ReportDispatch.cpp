@@ -206,7 +206,7 @@ int ReportDispatch::ReportFile::writeFileHeader (void)
 
         /* Write Header String */
         headerInProgress = true;
-        int status = File::writeBuffer(header.getString(false), header.getLength() - 1); // SafeString includes null terminator in length
+        int status = File::writeBuffer(header.str(false), header.length());
         headerInProgress = false;
         return status;
     }
@@ -253,7 +253,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         row += "\n";
 
         /* Write Row String */
-        return File::writeBuffer(row.getString(false), row.getLength() - 1);       // SafeString includes null terminator in length
+        return File::writeBuffer(row.str(false), row.length());
     }
     else if(format == JSON)
     {
@@ -276,7 +276,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         }
 
         /* Write Row String */
-        return File::writeBuffer(json.getString(false), json.getLength() - 1);     // SafeString includes null terminator in length
+        return File::writeBuffer(json.str(false), json.length());
     }
 
     return 0;

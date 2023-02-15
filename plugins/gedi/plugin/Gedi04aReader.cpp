@@ -158,7 +158,7 @@ Gedi04aReader::Gedi04aReader (lua_State* L, Asset* _asset, const char* _resource
     /* Initialize Readers */
     active = true;
     numComplete = 0;
-    LocalLib::set(readerPid, 0, sizeof(readerPid));
+    memset(readerPid, 0, sizeof(readerPid));
 
     /* PRocess Resource */
     try
@@ -235,8 +235,8 @@ Gedi04aReader::~Gedi04aReader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aReader::Region::Region (info_t* info):
-    lat_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lat_lowestmode", GediParms::beam2group(info->beam)).getString(), &info->reader->context),
-    lon_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lon_lowestmode", GediParms::beam2group(info->beam)).getString(), &info->reader->context),
+    lat_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lat_lowestmode", GediParms::beam2group(info->beam)).str(), &info->reader->context),
+    lon_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lon_lowestmode", GediParms::beam2group(info->beam)).str(), &info->reader->context),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
@@ -409,15 +409,15 @@ void Gedi04aReader::Region::rasterregion (info_t* info)
  * Gedi04a::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aReader::Gedi04a::Gedi04a (info_t* info, Region& region):
-    shot_number     (info->reader->asset, info->reader->resource, SafeString("%s/shot_number",      GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->asset, info->reader->resource, SafeString("%s/delta_time",       GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    agbd            (info->reader->asset, info->reader->resource, SafeString("%s/agbd",             GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_lowestmode (info->reader->asset, info->reader->resource, SafeString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/solar_elevation",  GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/degrade_flag",     GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    l2_quality_flag (info->reader->asset, info->reader->resource, SafeString("%s/l2_quality_flag",  GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    l4_quality_flag (info->reader->asset, info->reader->resource, SafeString("%s/l4_quality_flag",  GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    surface_flag    (info->reader->asset, info->reader->resource, SafeString("%s/surface_flag",     GediParms::beam2group(info->beam)).getString(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->asset, info->reader->resource, SafeString("%s/shot_number",      GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->asset, info->reader->resource, SafeString("%s/delta_time",       GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    agbd            (info->reader->asset, info->reader->resource, SafeString("%s/agbd",             GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_lowestmode (info->reader->asset, info->reader->resource, SafeString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/degrade_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    l2_quality_flag (info->reader->asset, info->reader->resource, SafeString("%s/l2_quality_flag",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    l4_quality_flag (info->reader->asset, info->reader->resource, SafeString("%s/l4_quality_flag",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    surface_flag    (info->reader->asset, info->reader->resource, SafeString("%s/surface_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
 {
 
     /* Join Hardcoded Reads */
@@ -648,7 +648,7 @@ int Gedi04aReader::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_RETRIED,      lua_obj->stats.footprints_retried);
 
         /* Clear if Requested */
-        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 
         /* Set Success */
         status = true;

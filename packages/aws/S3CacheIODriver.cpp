@@ -154,10 +154,10 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
 
                         /* Add File to Cache */
                         cacheIndex++;
-                        cacheLookUp.add(key.getString(), cacheIndex);
-                        const char* cache_key = StringLib::duplicate(key.getString());
+                        cacheLookUp.add(key.str(), cacheIndex);
+                        const char* cache_key = StringLib::duplicate(key.str());
                         cacheFiles.add(cacheIndex, cache_key);
-                        mlog(INFO, "Caching %s for S3 retrieval", key.getString());
+                        mlog(INFO, "Caching %s for S3 retrieval", key.str());
                     }
                 }
             }
@@ -249,20 +249,20 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     /* Build Cache Filename */
     SafeString cache_filename("%s", key);
     cache_filename.replace(PATH_DELIMETER_STR, "#");
-    SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.getString());
+    SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.str());
 
     /* Log Operation */
-    mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.getString());
+    mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.str());
 
     /* Quick Exit If Cache Hit */
     if(found_in_cache)
     {
-        *file = cache_filepath.getString(true);
+        *file = cache_filepath.str(true);
         return true;
     }
 
     /* Download File */
-    int64_t bytes_read = get(cache_filepath.getString(), bucket, key, asset->getRegion(), &latestCredentials);
+    int64_t bytes_read = get(cache_filepath.str(), bucket, key, asset->getRegion(), &latestCredentials);
     if(bytes_read <= 0)
     {
         mlog(CRITICAL, "Failed to download S3 object: %ld", (long int)bytes_read);
@@ -282,8 +282,8 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
                 /* Delete File in Local File System */
                 SafeString oldest_filename("%s", oldest_key);
                 oldest_filename.replace(PATH_DELIMETER_STR, "#");
-                SafeString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.getString());
-                remove(oldest_filepath.getString());
+                SafeString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.str());
+                remove(oldest_filepath.str());
                 cacheFiles.remove(index);
             }
         }
@@ -297,6 +297,6 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     cacheMut.unlock();
 
     /* Return Success */
-    *file = cache_filepath.getString(true);
+    *file = cache_filepath.str(true);
     return true;
 }

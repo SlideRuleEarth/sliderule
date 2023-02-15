@@ -77,7 +77,7 @@ FileIODriver::FileIODriver (const Asset* _asset, const char* resource):
     asset(_asset)
 {
     SafeString filepath("%s/%s", asset->getPath(), resource);
-    ioFile = fopen(filepath.getString(), "r");
+    ioFile = fopen(filepath.str(), "r");
     if(ioFile == NULL)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");

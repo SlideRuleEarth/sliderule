@@ -29,48 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __legacypkg__
-#define __legacypkg__
+#ifndef __runtime_exception__
+#define __runtime_exception__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string.h>
-
-#include "CcsdsFileWriter.h"
-#include "CcsdsFrameStripper.h"
-#include "CcsdsMsgProcessor.h"
-#include "CcsdsPacketProcessor.h"
-#include "CcsdsProcessorModule.h"
-#include "CcsdsPublisherProcessorModule.h"
-#include "CcsdsRecordFileWriter.h"
-#include "CfsInterface.h"
-#include "CommandableObject.h"
-#include "CommandProcessor.h"
-#include "CosmosInterface.h"
-#include "LuaInterpreter.h"
-#include "LuaLibraryCmd.h"
-#include "StatisticRecord.h"
-#include "UT_Dictionary.h"
-#include "UT_List.h"
-#include "UT_MsgQ.h"
-#include "UT_Ordering.h"
-#include "UT_Table.h"
-#include "UT_TimeLib.h"
-#include "UT_String.h"
+#include <stdexcept>
 
 /******************************************************************************
- * DEFINES
+ * EXCEPTION
  ******************************************************************************/
 
-#define CMDQ "cmdq"
+#define RTE_INFO                        -1
+#define RTE_ERROR                       0
+#define RTE_TIMEOUT                     1
+#define RTE_RESOURCE_DOES_NOT_EXIST     2
+#define RTE_EMPTY_SUBSET                3
 
 /******************************************************************************
- * PROTOTYPES
+ * EXCEPTION
  ******************************************************************************/
 
-void initlegacy (void);
-void deinitlegacy (void);
+class RunTimeException : public std::runtime_error
+{
+    public:
 
-#endif  /* __legacypkg__ */
+        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...) VARG_CHECK(printf, 4, 5);
+        char const* what() const throw();
+        event_level_t level (void) const;
+        int code (void) const;
+
+    private:
+
+        static const int ERROR_MSG_LEN = 128;
+        char errmsg[ERROR_MSG_LEN];
+        const event_level_t lvl;
+        const int rc;
+};
+
+#endif // __runtime_exception__

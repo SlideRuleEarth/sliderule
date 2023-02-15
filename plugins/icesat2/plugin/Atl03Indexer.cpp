@@ -152,14 +152,14 @@ Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<const char*>* _res
     resourceEntry = 0;
 
     /* Clear Record */
-    LocalLib::set(&indexRec, 0, sizeof(indexRec));
+    memset(&indexRec, 0, sizeof(indexRec));
 
     /* Initialize Indexers */
     active = true;
     numComplete = 0;
     threadCount = num_threads;
     indexerPid = new Thread* [threadCount];
-    LocalLib::set(indexerPid, 0, threadCount * sizeof(Thread*));
+    memset(indexerPid, 0, threadCount * sizeof(Thread*));
 
     /* Create Indexers */
     for(int t = 0; t < threadCount; t++)

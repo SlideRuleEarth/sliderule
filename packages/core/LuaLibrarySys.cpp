@@ -69,9 +69,6 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {NULL,          NULL}
 };
 
-int64_t LuaLibrarySys::launch_time = 0;
-const char* LuaLibrarySys::environment_version;
-
 /******************************************************************************
  * SYSTEM LIBRARY EXTENSION METHODS
  ******************************************************************************/
@@ -81,8 +78,6 @@ const char* LuaLibrarySys::environment_version;
  *----------------------------------------------------------------------------*/
 void LuaLibrarySys::lsys_init (void)
 {
-    launch_time = TimeLib::gettimems();
-    environment_version = StringLib::duplicate("unknown");
 }
 
 /*----------------------------------------------------------------------------
@@ -102,14 +97,14 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Display Version Information on Terminal */
     print2term("SlideRule Version:   %s\n", LIBID);
     print2term("Build Information:   %s\n", BUILDINFO);
-    print2term("Environment Version: %s\n", environment_version);
+    print2term("Environment Version: %s\n", OsApi::getEnvVersion());
 
     /* Display Timing Information on Terminal */
-    int64_t duration = TimeLib::gettimems() - launch_time;
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time);
+    int64_t duration = TimeLib::gettimems() - OsApi::getLaunchTime();
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(OsApi::getLaunchTime());
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-    print2term("Launch Time: %s\n", timestr.getString());
+    print2term("Launch Time: %s\n", timestr.str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
 
     /* Display Package Information on Terminal */
@@ -130,8 +125,8 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Return Information to Lua (and clean up package list) */
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
-    lua_pushstring(L, environment_version);
-    lua_pushstring(L, timestr.getString());
+    lua_pushstring(L, OsApi::getEnvVersion());
+    lua_pushstring(L, timestr.str());
     lua_pushinteger(L, duration);
     lua_newtable(L);
     if(pkg_list)
@@ -209,7 +204,7 @@ int LuaLibrarySys::lsys_wait (lua_State* L)
     }
 
     /* Wait */
-    LocalLib::sleep(secs);
+    OsApi::sleep(secs);
 
     /* Return Success */
     lua_pushboolean(L, true);
@@ -243,7 +238,7 @@ static void populate_metric_table (const EventLib::metric_t& metric, int32_t ind
     lua_State* L = (lua_State*)parm;
     SafeString metric_full_name("%s.%s", metric.category, metric.name);
 
-    lua_pushstring(L, metric_full_name.getString());
+    lua_pushstring(L, metric_full_name.str());
     lua_newtable(L);
     {
         lua_pushstring(L, "value");
@@ -313,8 +308,7 @@ int LuaLibrarySys::lsys_setenvver (lua_State* L)
     if(lua_isstring(L, 1))
     {
         version_str = lua_tostring(L, 1);
-        if(environment_version != NULL) delete [] environment_version;
-        environment_version = StringLib::duplicate(version_str);
+        OsApi::setEnvVersion(version_str);
     }
     else
     {
@@ -406,7 +400,7 @@ int LuaLibrarySys::lsys_setiosize (lua_State* L)
     {
         /* Set I/O Size */
         int size = lua_tonumber(L, 1);
-        status = LocalLib::setIOMaxsize(size);
+        status = OsApi::setIOMaxsize(size);
     }
 
     /* Return Status */
@@ -419,7 +413,7 @@ int LuaLibrarySys::lsys_setiosize (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_getiosize (lua_State* L)
 {
-    lua_pushnumber(L, LocalLib::getIOMaxsize());
+    lua_pushnumber(L, OsApi::getIOMaxsize());
     return 1;
 }
 
@@ -536,7 +530,7 @@ int LuaLibrarySys::lsys_cwd (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_memu (lua_State* L)
 {
-    double m = LocalLib::memusage();
+    double m = OsApi::memusage();
     lua_pushnumber(L, m);
     return 1;
 }

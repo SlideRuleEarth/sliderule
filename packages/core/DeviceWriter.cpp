@@ -137,7 +137,7 @@ void* DeviceWriter::writerThread (void* parm)
                     {
                         dw->bytesDropped += ref.size;
                         dw->packetsDropped += 1;
-                        mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, LocalLib::err2str(errno));
+                        mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, strerror(errno));
 
                         /* Handle Non-Timeout Errors */
                         if(dw->dieOnDisconnect)
@@ -148,7 +148,7 @@ void* DeviceWriter::writerThread (void* parm)
                         else
                         {
                             mlog(ERROR, "failed to write to device with error... sleeping and going on to next message!");
-                            LocalLib::sleep(1); // prevent spin
+                            OsApi::sleep(1); // prevent spin
                             break; // stop trying to send this message and go to the next one
                         }
                     }

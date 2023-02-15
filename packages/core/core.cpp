@@ -158,20 +158,19 @@ static int core_open (lua_State *L)
  *----------------------------------------------------------------------------*/
 void initcore (void)
 {
+    /* Initialize Platform */
+    OsApi::init(os_print);
+
     /* Initialize Libraries */
-    LuaEngine::init();
-    LocalLib::init();
     MsgQ::init();
     SockLib::init();
     TTYLib::init();
     TimeLib::init();
     EventLib::init(EVENTQ);
+    LuaEngine::init();
 
     /* Register File IO Driver */
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
-
-    /* Attach OsApi Print Function */
-    LocalLib::setPrint(os_print);
 
     /* Initialize Modules */
     LuaEndpoint::init();
@@ -201,7 +200,6 @@ void initcore (void)
  *----------------------------------------------------------------------------*/
 void deinitcore (void)
 {
-    /* Clean up libraries initialized in initcore() */
     print2term("Exiting... ");
     LuaEngine::deinit();
     EventLib::deinit();
@@ -209,7 +207,7 @@ void deinitcore (void)
     TTYLib::deinit();
     SockLib::deinit();
     MsgQ::deinit();
-    LocalLib::deinit();
+    OsApi::deinit();
     print2term("cleanup complete (%d errors)\n", appErrors);
 }
 

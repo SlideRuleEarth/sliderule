@@ -204,7 +204,7 @@ const char* Record::getUndottedName (void)
     s.replace(".", "_");
     s.replace("[", "_");
     s.replace("]", "_");
-    return s.getString(true);
+    return s.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -230,7 +230,7 @@ int Record::getNumArrayElements (void)
             #define MAX_CHARS 256
             char num_elements_str[MAX_CHARS];
             memset(num_elements_str, 0, MAX_CHARS);
-            LocalLib::copy(num_elements_str, b1 + 1, b2 - (b1 + 1));
+            memcpy(num_elements_str, b1 + 1, b2 - (b1 + 1));
             long num_elements_tmp = 0;
             if(StringLib::str2long(num_elements_str, &num_elements_tmp))
             {
@@ -490,8 +490,8 @@ bool Field::setProperty (const char* property, const char* _value, int index)
         if(rngstr != NULL) // range specified
         {
             char minstr[Record::MAX_VAL_SIZE], maxstr[Record::MAX_VAL_SIZE]; (void)maxstr;
-            LocalLib::copy(minstr, _value, rngstr - _value); minstr[rngstr - _value] = 0;
-            LocalLib::copy(maxstr, rngstr + 2, strlen(rngstr + 2)); maxstr[strlen(rngstr + 2)] = 0;
+            memcpy(minstr, _value, rngstr - _value); minstr[rngstr - _value] = 0;
+            memcpy(maxstr, rngstr + 2, strlen(rngstr + 2)); maxstr[strlen(rngstr + 2)] = 0;
             bool stat1 = _setProperty("minRange", minstr, index);
             bool stat2 = _setProperty("maxRange", maxstr, index);
             status = stat1 && stat2;
@@ -1654,7 +1654,7 @@ const char* Filter::getProperty (const char* name)
     {
         for(int s = 0; s < source.length(); s++)
         {
-           StringLib::concat(str, source[s].getString(), MAX_STR_LEN);
+           StringLib::concat(str, source[s].str(), MAX_STR_LEN);
            StringLib::concat(str, " ", MAX_STR_LEN);
         }
     }
@@ -2603,7 +2603,7 @@ Packet* TelemetryPacket::_duplicate (void)
 
     for(int i = 0; i < applyWhen.length(); i++)
     {
-        tpkt->setPktProperty("applyWhen", applyWhen[i].getString());
+        tpkt->setPktProperty("applyWhen", applyWhen[i].str());
     }
 
     return tpkt;

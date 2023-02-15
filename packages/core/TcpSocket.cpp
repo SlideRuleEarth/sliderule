@@ -206,7 +206,7 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
     /* Timeout If Not Connected*/
     if(!isConnected())
     {
-        LocalLib::performIOTimeout();
+        OsApi::performIOTimeout();
         return TIMEOUT_RC;
     }
 
@@ -243,7 +243,7 @@ int TcpSocket::readBuffer(void* buf, int len, int timeout)
     /* Timeout If Not Connected*/
     if(!isConnected())
     {
-        LocalLib::performIOTimeout();
+        OsApi::performIOTimeout();
         return TIMEOUT_RC;
     }
 
@@ -329,7 +329,7 @@ void* TcpSocket::connectionThread(void* parm)
             }
         }
 
-        LocalLib::performIOTimeout();
+        OsApi::performIOTimeout();
     }
 
     return NULL;

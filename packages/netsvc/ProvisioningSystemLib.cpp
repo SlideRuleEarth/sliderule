@@ -106,17 +106,17 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
         if(curl)
         {
             /* Set cURL Options */
-            curl_easy_setopt(curl, CURLOPT_URL, url_str.getString());
+            curl_easy_setopt(curl, CURLOPT_URL, url_str.str());
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
             curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); // seconds
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L); // seconds
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_str.getString());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_str.str());
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ProvisioningSystemLib::writeData);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
 
             /* Set Content-Type Header */
             struct curl_slist* headers = NULL;
-            headers = curl_slist_append(headers, hdr_str.getString());
+            headers = curl_slist_append(headers, hdr_str.str());
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
             /* Perform the request, res will get the return code */
@@ -142,7 +142,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
                     rsps = new char [rsps_size + 1];
                     for(int i = 0; i < rsps_set.length(); i++)
                     {
-                        LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
+                        memcpy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
                         rsps_index += rsps_set[i].size;
                         delete [] rsps_set[i].data;
                     }
@@ -194,14 +194,14 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
         if(curl)
         {
             /* Set cURL Options */
-            curl_easy_setopt(curl, CURLOPT_URL, url_str.getString());
+            curl_easy_setopt(curl, CURLOPT_URL, url_str.str());
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write2nothing);
 
             /* Set Bearer Token Header */
             struct curl_slist* headers = NULL;
-            headers = curl_slist_append(headers, hdr_str.getString());
+            headers = curl_slist_append(headers, hdr_str.str());
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
             /* Perform the request, res will get the return code */
@@ -403,7 +403,7 @@ size_t ProvisioningSystemLib::writeData(void *buffer, size_t size, size_t nmemb,
     rsps.size = size * nmemb;
     rsps.data = new char [rsps.size + 1];
 
-    LocalLib::copy(rsps.data, buffer, rsps.size);
+    memcpy(rsps.data, buffer, rsps.size);
     rsps.data[rsps.size] = '\0';
 
     rsps_set->add(rsps);

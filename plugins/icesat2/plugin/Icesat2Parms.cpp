@@ -508,7 +508,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Clear confidence table (sets all to false) */
-        LocalLib::set(atl03_cnf, 0, sizeof(atl03_cnf));
+        memset(atl03_cnf, 0, sizeof(atl03_cnf));
 
         /* Get number of classifications in table */
         int num_cnf = lua_rawlen(L, index);
@@ -556,7 +556,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
     else if(lua_isinteger(L, index))
     {
         /* Clear confidence table (sets all to false) */
-        LocalLib::set(atl03_cnf, 0, sizeof(atl03_cnf));
+        memset(atl03_cnf, 0, sizeof(atl03_cnf));
 
         /* Set Confidences */
         int confidence = LuaObject::getLuaInteger(L, index);
@@ -577,7 +577,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
     else if(lua_isstring(L, index))
     {
         /* Clear confidence table (sets all to false) */
-        LocalLib::set(atl03_cnf, 0, sizeof(atl03_cnf));
+        memset(atl03_cnf, 0, sizeof(atl03_cnf));
 
         /* Set Confidences */
         const char* confidence_str = LuaObject::getLuaString(L, index);
@@ -614,7 +614,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
     if(lua_istable(L, index))
     {
         /* Clear photon quality table (sets all to false) */
-        LocalLib::set(quality_ph, 0, sizeof(quality_ph));
+        memset(quality_ph, 0, sizeof(quality_ph));
 
         /* Get number of photon quality level in table */
         int num_quality = lua_rawlen(L, index);
@@ -662,7 +662,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
     else if(lua_isinteger(L, index))
     {
         /* Clear photon quality table (sets all to false) */
-        LocalLib::set(quality_ph, 0, sizeof(quality_ph));
+        memset(quality_ph, 0, sizeof(quality_ph));
 
         /* Set Photon Quality Level */
         int quality = LuaObject::getLuaInteger(L, index);
@@ -683,7 +683,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
     else if(lua_isstring(L, index))
     {
         /* Clear photon quality table (sets all to false) */
-        LocalLib::set(quality_ph, 0, sizeof(quality_ph));
+        memset(quality_ph, 0, sizeof(quality_ph));
 
         /* Set Photon Quality Level */
         const char* quality_ph_str = LuaObject::getLuaString(L, index);
@@ -720,7 +720,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Clear classification table (sets all to false) */
-        LocalLib::set(atl08_class, 0, sizeof(atl08_class));
+        memset(atl08_class, 0, sizeof(atl08_class));
 
         /* Get number of classifications in table */
         int num_classes = lua_rawlen(L, index);
@@ -768,7 +768,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
     else if(lua_isinteger(L, index))
     {
         /* Clear classification table (sets all to false) */
-        LocalLib::set(atl08_class, 0, sizeof(atl08_class));
+        memset(atl08_class, 0, sizeof(atl08_class));
 
         /* Set classification */
         int classification = LuaObject::getLuaInteger(L, -1);
@@ -785,7 +785,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
     else if(lua_isstring(L, index))
     {
         /* Clear classification table (sets all to false) */
-        LocalLib::set(atl08_class, 0, sizeof(atl08_class));
+        memset(atl08_class, 0, sizeof(atl08_class));
 
         /* Set classification */
         const char* classifiction_str = LuaObject::getLuaString(L, index);

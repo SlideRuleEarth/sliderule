@@ -208,7 +208,7 @@ int LuaLibraryCmd::lcmd_stopuntil (lua_State* L)
         {
             break; // count only if not pending
         }
-        LocalLib::sleep(1);
+        OsApi::sleep(1);
     }
 
     /* Return Status to Lua */

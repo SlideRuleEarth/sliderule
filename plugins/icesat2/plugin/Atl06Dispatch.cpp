@@ -217,7 +217,7 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
     elevationIndex = 0;
 
     /* Initialize Statistics */
-    LocalLib::set(&stats, 0, sizeof(stats));
+    memset(&stats, 0, sizeof(stats));
 }
 
 /*----------------------------------------------------------------------------
@@ -277,7 +277,7 @@ bool Atl06Dispatch::processTermination (void)
 void Atl06Dispatch::initializationStage (Atl03Reader::extent_t* extent, result_t* result)
 {
     /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result_t) * Icesat2Parms::NUM_PAIR_TRACKS);
+    memset(result, 0, sizeof(result_t) * Icesat2Parms::NUM_PAIR_TRACKS);
 
     /* Initialize Results */
     int first_photon = 0;
@@ -640,7 +640,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, "dropped",         lua_obj->stats.post_dropped_cnt);
 
         /* Optionally Clear */
-        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 
         /* Set Success */
         status = true;

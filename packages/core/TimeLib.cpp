@@ -92,7 +92,7 @@ void TimeLib::init(void)
 {
     /* Setup Base Time */
     parsenistfile();
-    lastTime = LocalLib::time(LocalLib::SYS_CLK);
+    lastTime = OsApi::time(OsApi::SYS_CLK);
     baseTimeMs = lastTime / 1000;
     baseTimeMs += getleapms(baseTimeMs);
     baseTimeMs -= LocalGpsEpochMs;
@@ -101,7 +101,7 @@ void TimeLib::init(void)
     stepTimeUs = 1000;
 
     /* Initialize Tick Frequency */
-    tickFreq = LocalLib::timeres(LocalLib::CPU_CLK);
+    tickFreq = OsApi::timeres(OsApi::CPU_CLK);
 
     /* Start Heart Beat */
     try
@@ -133,7 +133,7 @@ void TimeLib::deinit(void)
  *----------------------------------------------------------------------------*/
 double TimeLib::latchtime(void)
 {
-    return (double)LocalLib::time(LocalLib::CPU_CLK) / (double)tickFreq;
+    return (double)OsApi::time(OsApi::CPU_CLK) / (double)tickFreq;
 }
 
 /*----------------------------------------------------------------------------
@@ -148,7 +148,7 @@ int64_t TimeLib::gettimems(int64_t now)
         #ifdef TIME_HEARTBEAT
             return currentTimeMs;
         #else
-            int64_t sysnow = LocalLib::time(LocalLib::SYS_CLK);
+            int64_t sysnow = OsApi::time(OsApi::SYS_CLK);
             sysnow /= 1000; // to milliseconds
             sysnow += getleapms(sysnow);
             sysnow -= LocalGpsEpochMs; // to gps epoch
@@ -715,7 +715,7 @@ void TimeLib::heartbeat(void)
         counter = 0;
 
         /* Calculate Microseconds per Second */
-        int64_t now = LocalLib::time(LocalLib::SYS_CLK);
+        int64_t now = OsApi::time(OsApi::SYS_CLK);
         int64_t usec_per_sec = now - lastTime;
         if(usec_per_sec > 500000 && usec_per_sec < 1500000)
         {
@@ -753,7 +753,7 @@ void TimeLib::parsenistfile(void)
     leap_second_file_name += CONFDIR;
     leap_second_file_name.appendChar(PATH_DELIMETER);
     leap_second_file_name += TIME_NIST_LIST_FILENAME;
-    FILE* fd = fopen( leap_second_file_name.getString(), "r" );
+    FILE* fd = fopen( leap_second_file_name.str(), "r" );
     if( fd != NULL )
     {
         char line[MAX_STR_SIZE];

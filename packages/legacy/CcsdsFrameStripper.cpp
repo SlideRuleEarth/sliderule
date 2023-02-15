@@ -145,7 +145,7 @@ CcsdsFrameStripper::CcsdsFrameStripper(CommandProcessor* cmd_proc, const char* o
     if(SyncMarkerSize > 0)
     {
         SyncMarker = new uint8_t [sync_size];
-        LocalLib::copy(SyncMarker, sync_marker, sync_size);
+        memcpy(SyncMarker, sync_marker, sync_size);
     }
 
     if(LStripSize > 0)          state = LSTRIP;
@@ -248,7 +248,7 @@ bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
             }
 
             /* Add Bytes Left to Frame Buffer */
-            LocalLib::copy(&frameBuffer[frameIndex], &parse_buffer[parse_index], bytes_left);
+            memcpy(&frameBuffer[frameIndex], &parse_buffer[parse_index], bytes_left);
             frameIndex += bytes_left;
             parse_index += bytes_left;
         }

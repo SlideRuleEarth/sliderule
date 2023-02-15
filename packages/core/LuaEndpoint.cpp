@@ -297,7 +297,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
 
     /* Check Memory */
     if( (normalRequestMemoryThreshold >= 1.0) ||
-        ((mem = LocalLib::memusage()) < normalRequestMemoryThreshold) )
+        ((mem = OsApi::memusage()) < normalRequestMemoryThreshold) )
     {
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
@@ -310,7 +310,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             if(result)
             {
                 int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
-                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.getString());
+                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.str());
                 rspq->postCopy(header, header_length);
                 rspq->postCopy(result, result_length);
             }
@@ -350,10 +350,10 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
 
     /* Check Memory */
     if( (streamRequestMemoryThreshold >= 1.0) ||
-        ((mem = LocalLib::memusage()) < streamRequestMemoryThreshold) )
+        ((mem = OsApi::memusage()) < streamRequestMemoryThreshold) )
     {
         /* Send Header */
-        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.getString());
+        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.str());
         rspq->postCopy(header, header_length);
 
         /* Create Engine */

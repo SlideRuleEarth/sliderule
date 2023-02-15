@@ -216,7 +216,7 @@ int H5DatasetDevice::readBuffer (void* buf, int len, int timeout)
             int bytes_to_copy = MIN(len, bytes_remaining);
             if(bytes_to_copy > 0)
             {
-                LocalLib::copy(buf, &dataBuffer[dataOffset], bytes_to_copy);
+                memcpy(buf, &dataBuffer[dataOffset], bytes_to_copy);
                 dataOffset += bytes_to_copy;
                 bytes = bytes_to_copy;
             }
@@ -230,7 +230,7 @@ int H5DatasetDevice::readBuffer (void* buf, int len, int timeout)
                 recData->size = bytes_to_copy;
                 unsigned char* rec_buf = (unsigned char*)buf;
                 int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, sizeof(h5dataset_t) + bytes_to_copy);
-                LocalLib::copy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
+                memcpy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
                 dataOffset += bytes_to_copy;
                 bytes = bytes_written + bytes_to_copy;
             }

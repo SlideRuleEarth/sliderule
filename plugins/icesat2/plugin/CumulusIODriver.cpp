@@ -76,15 +76,15 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     const char* date = elements[1];
 
     char year[5];
-    LocalLib::copy(&year[0], &date[0], 5);
+    memcpy(&year[0], &date[0], 5);
     year[4] = '\0';
 
     char month[3];
-    LocalLib::copy(&month[0], &date[4], 3);
+    memcpy(&month[0], &date[4], 3);
     month[2] = '\0';
 
     char day[3];
-    LocalLib::copy(&day[0], &date[6], 3);
+    memcpy(&day[0], &date[6], 3);
     day[2] = '\0';
 
     SafeString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, day, resource);
@@ -92,7 +92,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     /*
      * Determine ioBucket and ioKey
      */
-    ioBucket = (char*)resourcepath.getString(true);
+    ioBucket = (char*)resourcepath.str(true);
 
     /*
     * Differentiate Bucket and Key

@@ -65,25 +65,25 @@ struct ParquetBuilder::impl
     shared_ptr<arrow::Schema>               schema;
     unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
 
-    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, bool as_geo);
-    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset);
+    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo);
+    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset);
 };
 
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type, bool as_geo)
+shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo)
 {
     vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, rec_type, 0);
-    if(as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
+    addFieldsToSchema(schema_vector, field_list, geo, rec_type, 0);
+    if(geo.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
     return make_shared<arrow::Schema>(schema_vector);
 }
 
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset)
+bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
@@ -92,6 +92,18 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
     for(int i = 0; i < num_fields; i++)
     {
         bool add_field_to_list = true;
+
+        /* Check for Geometry Columns */
+        if(geo.as_geo)
+        {
+            if( (geo.lat_field.offset == (fields[i]->offset + offset)) ||
+                (geo.lon_field.offset == (fields[i]->offset + offset)) )
+            {
+                /* skip over source columns for geometry as they will be added
+                 * separately as a part of the dedicated geometry column */
+                continue;
+            }
+        }
 
         /* Add to Schema */
         switch(fields[i]->type)
@@ -109,7 +121,7 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
 
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype, fields[i]->offset);
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, geo, fields[i]->exttype, fields[i]->offset);
                                         add_field_to_list = false;
                                         break;
 
@@ -260,12 +272,12 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     geoData = geo;
 
     /* Define Table Schema */
-    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData.as_geo);
+    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData);
     fieldIterator = new field_iterator_t(fieldList);
 
     /* Create Unique Temporary Filename */
     SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
-    fileName = tmp_file.getString(true);
+    fileName = tmp_file.str(true);
 
     /* Create Arrow Output Stream */
     shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -274,6 +286,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     /* Create Writer Properties */
     parquet::WriterProperties::Builder writer_props_builder;
     writer_props_builder.compression(parquet::Compression::GZIP);
+    writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
     shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
     /* Create Arrow Writer Properties */
@@ -283,10 +296,13 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     if(geoData.as_geo)
     {
         auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-        const char* metadata_str = buildGeoMetaData();
-        metadata->Append("geo", metadata_str);
+        const char* geodata_str = buildGeoMetaData();
+        const char* serverdata_str = buildServerMetaData();
+        metadata->Append("geo", geodata_str);
+        metadata->Append("sliderule", serverdata_str);
         pimpl->schema = pimpl->schema->WithMetadata(metadata);
-        delete [] metadata_str;
+        delete [] geodata_str;
+        delete [] serverdata_str;
     }
 
     /* Create Parquet Writer */
@@ -786,8 +802,61 @@ const char* ParquetBuilder::buildGeoMetaData (void)
         }
     })json");
 
-    geostr.replace("    ", "");
-    geostr.replace("\n", " ");
+    const char* oldtxt[2] = { "    ", "\n" };
+    const char* newtxt[2] = { "",     " " };
+    geostr.inreplace(oldtxt, newtxt, 2);
 
-    return geostr.getString(true);
+    return geostr.str(true);
+}
+
+/*----------------------------------------------------------------------------
+ * buildServerMetaData
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::buildServerMetaData (void)
+{
+    /* Build Launch Time String */
+    int64_t launch_time_gps = TimeLib::gettimems(OsApi::getLaunchTime());
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+
+    /* Build Duration String */
+    int64_t duration = TimeLib::gettimems() - launch_time_gps;
+    SafeString durationstr("%ld", duration);
+
+    /* Build Package String */
+    const char** pkg_list = LuaEngine::getPkgList();
+    SafeString packagestr("[");
+    if(pkg_list)
+    {
+        int index = 0;
+        while(pkg_list[index])
+        {
+            packagestr += pkg_list[index];
+            index++;
+            if(pkg_list[index]) packagestr += ", ";
+        }
+    }
+    packagestr += "]";
+
+    /* Initialize Meta Data String */
+    SafeString metastr(R"json({
+        "server":
+        {
+            "environment":"$1",
+            "version":"$2",
+            "duration":$3,
+            "packages":$4,
+            "commit":"$5",
+            "launch":"$6"
+        }
+    })json");
+
+    /* Fill In Meta Data String */
+    const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
+    const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
+    metastr.inreplace(oldtxt, newtxt, 8);
+
+    /* Return Copy of Meta String */
+    return metastr.str(true);
 }

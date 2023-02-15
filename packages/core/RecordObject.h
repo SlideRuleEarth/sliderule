@@ -41,8 +41,6 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 
-#include <exception>
-#include <stdexcept>
 
 /******************************************************************************
  * DEFINES

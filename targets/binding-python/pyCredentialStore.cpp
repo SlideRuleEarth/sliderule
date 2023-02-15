@@ -87,10 +87,10 @@ bool pyCredentialStore::provide (const py::dict& credentials)
 
     CredentialStore::Credential credential;
     credential.provided = true;
-    credential.accessKeyId = _accessKeyId.getString(true);
-    credential.secretAccessKey = _secretAccessKey.getString(true);
-    credential.sessionToken = _sessionToken.getString(true);
-    credential.expiration = _expiration.getString(true);
+    credential.accessKeyId = _accessKeyId.str(true);
+    credential.secretAccessKey = _secretAccessKey.str(true);
+    credential.sessionToken = _sessionToken.str(true);
+    credential.expiration = _expiration.str(true);
     credential.expirationGps = TimeLib::str2gpstime(credential.expiration);
 
     return CredentialStore::put(asset, credential);

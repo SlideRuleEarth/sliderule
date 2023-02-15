@@ -37,6 +37,7 @@
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "MsgQ.h"
+#include "StringLib.h"
 #include "RecordObject.h"
 #include "Dictionary.h"
 #include "List.h"
@@ -565,6 +566,6 @@ int EventLib::sendEvent (event_t* event, int attr_size)
     int event_record_size = offsetof(event_t, attr) + attr_size;
     RecordObject record(rec_type, event_record_size, false);
     event_t* data = (event_t*)record.getRecordData();
-    LocalLib::copy(data, event, event_record_size);
+    memcpy(data, event, event_record_size);
     return record.post(outq, 0, NULL, false);
 }

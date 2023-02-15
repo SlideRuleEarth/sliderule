@@ -224,18 +224,18 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
 
         /* Populate Header */
         rec_hdr_t hdr = {
-            .version = LocalLib::swaps(RECORD_FORMAT_VERSION),
-            .type_size = LocalLib::swaps(recordDefinition->type_size),
-            .data_size = LocalLib::swapl(data_size)
+            .version = OsApi::swaps(RECORD_FORMAT_VERSION),
+            .type_size = OsApi::swaps(recordDefinition->type_size),
+            .data_size = OsApi::swapl(data_size)
         };
-        LocalLib::copy(recordMemory, &hdr, sizeof(rec_hdr_t));
-        LocalLib::copy(&recordMemory[sizeof(rec_hdr_t)], recordDefinition->type_name, recordDefinition->type_size);
+        memcpy(recordMemory, &hdr, sizeof(rec_hdr_t));
+        memcpy(&recordMemory[sizeof(rec_hdr_t)], recordDefinition->type_name, recordDefinition->type_size);
 
         /* Set Record Data Pointer */
         recordData = &recordMemory[sizeof(rec_hdr_t) + recordDefinition->type_size];
 
         /* Zero Out Record Data */
-        if(clear) LocalLib::set(recordData, 0, recordDefinition->data_size);
+        if(clear) memset(recordData, 0, recordDefinition->data_size);
     }
     else
     {
@@ -260,7 +260,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
             memoryOwner = true;
             memoryAllocated = size;
             recordMemory = new unsigned char[memoryAllocated];
-            LocalLib::copy(recordMemory, buffer, memoryAllocated);
+            memcpy(recordMemory, buffer, memoryAllocated);
 
             /* Set Record Data */
             recordData = (unsigned char*)&recordMemory[sizeof(rec_hdr_t) + recordDefinition->type_size];
@@ -311,7 +311,7 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
     }
 
     /* Copy Data and Return */
-    LocalLib::copy(recordMemory, buffer, size);
+    memcpy(recordMemory, buffer, size);
     return true;
 }
 
@@ -328,7 +328,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
     if(size > 0)
     {
-        int hdrsize = sizeof(rec_hdr_t) + LocalLib::swaps(rechdr->type_size);
+        int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
         bufsize = hdrsize + size;
         datasize = bufsize - hdrsize;
     }
@@ -338,7 +338,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     {
         *buffer = new unsigned char[bufsize];
         uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
-        LocalLib::copy(*buffer, recordMemory, bytes_to_copy);
+        memcpy(*buffer, recordMemory, bytes_to_copy);
     }
     else if (mode == REFERENCE)
     {
@@ -353,14 +353,14 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     {
         assert(*buffer);
         uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
-        LocalLib::copy(*buffer, recordMemory, bytes_to_copy);
+        memcpy(*buffer, recordMemory, bytes_to_copy);
     }
 
     /* Set Size in Record Header */
     if(size > 0)
     {
         rec_hdr_t* bufhdr = (rec_hdr_t*)(*buffer);
-        bufhdr->data_size = LocalLib::swapl(datasize);
+        bufhdr->data_size = OsApi::swapl(datasize);
     }
 
     /* Return Buffer Size */
@@ -593,11 +593,11 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
         int val_len = (int)StringLib::size(val, MAX_VAL_STR_SIZE) + 1;
         if(val_len <= f.elements)
         {
-            LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, val_len);
+            memcpy(recordData + TOBYTES(f.offset), (unsigned char*)val, val_len);
         }
         else if(f.elements > 0)
         {
-            LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, f.elements - 1);
+            memcpy(recordData + TOBYTES(f.offset), (unsigned char*)val, f.elements - 1);
             *(recordData + TOBYTES(f.offset) + f.elements - 1) = '\0';
         }
         else // variable length
@@ -605,7 +605,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
             int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
             if(memory_left > 1)
             {
-                LocalLib::copy(recordData + TOBYTES(f.offset), (unsigned char*)val, memory_left - 1);
+                memcpy(recordData + TOBYTES(f.offset), (unsigned char*)val, memory_left - 1);
                 *(recordData + TOBYTES(f.offset) + memory_left - 1) = '\0';
             }
         }
@@ -674,22 +674,22 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
         switch(f.type)
         {
             case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                     break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = LocalLib::swaps((int16_t)val);   break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = LocalLib::swapl((int32_t)val);   break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = LocalLib::swapll((int64_t)val);  break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);   break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);   break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = OsApi::swapll((int64_t)val);  break;
             case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                    break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = LocalLib::swaps((uint16_t)val);  break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl((uint32_t)val);  break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = LocalLib::swapll((uint64_t)val); break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);  break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);  break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val); break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = LocalLib::swapf((float)val);   break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = LocalLib::swaplf((double)val); break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);   break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val); break;
             case TIME8:     {
                                 double intpart;
                                 uint32_t seconds = (uint32_t)val;
                                 uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl(seconds);
-                                *(uint32_t*)(recordData + elem_offset + 4) = LocalLib::swapl(subseconds);
+                                *(uint32_t*)(recordData + elem_offset) = OsApi::swapl(seconds);
+                                *(uint32_t*)(recordData + elem_offset + 4) = OsApi::swapl(subseconds);
                                 break;
                             }
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
@@ -745,22 +745,22 @@ void RecordObject::setValueInteger(const field_t& f, const long val, int element
         switch(f.type)
         {
             case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                     break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = LocalLib::swaps((int16_t)val);   break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = LocalLib::swapl((int32_t)val);   break;
-            case INT64:     *(int64_t*)(recordData + elem_offset)  = LocalLib::swapll((int64_t)val);  break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);   break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);   break;
+            case INT64:     *(int64_t*)(recordData + elem_offset)  = OsApi::swapll((int64_t)val);  break;
             case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                    break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = LocalLib::swaps((uint16_t)val);  break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl((uint32_t)val);  break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = LocalLib::swapll((uint64_t)val); break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);  break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);  break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val); break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = LocalLib::swapf((float)val);   break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = LocalLib::swaplf((double)val); break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);   break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val); break;
             case TIME8:     {
                                 double intpart;
                                 uint32_t seconds = (uint32_t)val;
                                 uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + elem_offset) = LocalLib::swapl(seconds);
-                                *(uint32_t*)(recordData + elem_offset + 4) = LocalLib::swapl(subseconds);
+                                *(uint32_t*)(recordData + elem_offset) = OsApi::swapl(seconds);
+                                *(uint32_t*)(recordData + elem_offset + 4) = OsApi::swapl(subseconds);
                                 break;
                             }
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
@@ -868,19 +868,19 @@ double RecordObject::getValueReal(const field_t& f, int element)
         switch(f.type)
         {
             case INT8:      return (double)                 *(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (double)LocalLib::swaps (*(int16_t*) (recordData + elem_offset));
-            case INT32:     return (double)LocalLib::swapl (*(int32_t*) (recordData + elem_offset));
-            case INT64:     return (double)LocalLib::swapll(*(int64_t*) (recordData + elem_offset));
+            case INT16:     return (double)OsApi::swaps (*(int16_t*) (recordData + elem_offset));
+            case INT32:     return (double)OsApi::swapl (*(int32_t*) (recordData + elem_offset));
+            case INT64:     return (double)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
             case UINT8:     return (double)                 *(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (double)LocalLib::swaps (*(uint16_t*)(recordData + elem_offset));
-            case UINT32:    return (double)LocalLib::swapl (*(uint32_t*)(recordData + elem_offset));
-            case UINT64:    return (double)LocalLib::swapll(*(uint64_t*)(recordData + elem_offset));
+            case UINT16:    return (double)OsApi::swaps (*(uint16_t*)(recordData + elem_offset));
+            case UINT32:    return (double)OsApi::swapl (*(uint32_t*)(recordData + elem_offset));
+            case UINT64:    return (double)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (double)LocalLib::swapf (*(float*) (recordData + elem_offset));
-            case DOUBLE:    return (double)LocalLib::swaplf(*(double*)(recordData + elem_offset));
+            case FLOAT:     return (double)OsApi::swapf (*(float*) (recordData + elem_offset));
+            case DOUBLE:    return (double)OsApi::swaplf(*(double*)(recordData + elem_offset));
             case TIME8:     {
-                                uint32_t seconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset));
-                                uint32_t subseconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset + 4));
+                                uint32_t seconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset));
+                                uint32_t subseconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset + 4));
                                 return (double)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
                             }
             default:        return 0.0;
@@ -929,19 +929,19 @@ long RecordObject::getValueInteger(const field_t& f, int element)
         switch(f.type)
         {
             case INT8:      return (long)                 *(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (long)LocalLib::swaps (*(int16_t*) (recordData + elem_offset));
-            case INT32:     return (long)LocalLib::swapl (*(int32_t*) (recordData + elem_offset));
-            case INT64:     return (long)LocalLib::swapll(*(int64_t*) (recordData + elem_offset));
+            case INT16:     return (long)OsApi::swaps (*(int16_t*) (recordData + elem_offset));
+            case INT32:     return (long)OsApi::swapl (*(int32_t*) (recordData + elem_offset));
+            case INT64:     return (long)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
             case UINT8:     return (long)                 *(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (long)LocalLib::swaps (*(uint16_t*)(recordData + elem_offset));
-            case UINT32:    return (long)LocalLib::swapl (*(uint32_t*)(recordData + elem_offset));
-            case UINT64:    return (long)LocalLib::swapll(*(uint64_t*)(recordData + elem_offset));
+            case UINT16:    return (long)OsApi::swaps (*(uint16_t*)(recordData + elem_offset));
+            case UINT32:    return (long)OsApi::swapl (*(uint32_t*)(recordData + elem_offset));
+            case UINT64:    return (long)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (long)LocalLib::swapf (*(float*) (recordData + elem_offset));
-            case DOUBLE:    return (long)LocalLib::swaplf(*(double*)(recordData + elem_offset));
+            case FLOAT:     return (long)OsApi::swapf (*(float*) (recordData + elem_offset));
+            case DOUBLE:    return (long)OsApi::swaplf(*(double*)(recordData + elem_offset));
             case TIME8:     {
-                                uint32_t seconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset));
-                                uint32_t subseconds = LocalLib::swapl(*(uint32_t*)(recordData + elem_offset + 4));
+                                uint32_t seconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset));
+                                uint32_t subseconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset + 4));
                                 return (long)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
                             }
             default:        return 0;
@@ -1139,7 +1139,7 @@ unsigned int RecordObject::str2flags (const char* str)
     List<SafeString>* flaglist = flagss.split('|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i].getString(false);
+        const char* flag = (*flaglist)[i].str(false);
         if(StringLib::match(flag, "NATIVE"))    flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))   flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))   flags |= BIGENDIAN;
@@ -1163,7 +1163,7 @@ const char* RecordObject::flags2str (unsigned int flags)
 
     if(flags & POINTER)     flagss += "|PTR";
 
-    return flagss.getString(true);
+    return flagss.str(true);
 }
 
 /*----------------------------------------------------------------------------

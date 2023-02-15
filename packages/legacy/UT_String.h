@@ -29,22 +29,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __lua_library_sys__
-#define __lua_library_sys__
+#ifndef __ut_string__
+#define __ut_string__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
-#include "Ordering.h"
-#include "LuaEngine.h"
+#include "CommandableObject.h"
+#include "core.h"
 
 /******************************************************************************
- * LUA LIBRARY SYS CLASS
+ * UNIT TEST STRING CLASS
  ******************************************************************************/
 
-class LuaLibrarySys
+class UT_String: public CommandableObject
 {
     public:
 
@@ -52,44 +51,33 @@ class LuaLibrarySys
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LUA_SYSLIBNAME;
-        static const struct luaL_Reg sysLibs [];
-
-        static const int LUA_COMMAND_TIMEOUT = 30000; // milliseconds
+        static const char* TYPE;
+        static const int UT_MAX_ASSERT = 256;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     lsys_init           (void);
-        static int      luaopen_syslib      (lua_State* L);
+        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
 
     private:
 
         /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        int failures;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      lsys_version        (lua_State* L);
-        static int      lsys_quit           (lua_State* L);
-        static int      lsys_abort          (lua_State* L);
-        static int      lsys_alive          (lua_State* L);
-        static int      lsys_wait           (lua_State* L);
-        static int      lsys_log            (lua_State* L);
-        static int      lsys_metric         (lua_State* L);
-        static int      lsys_lsmsgq         (lua_State* L);
-        static int      lsys_setenvver      (lua_State* L);
-        static int      lsys_type           (lua_State* L);
-        static int      lsys_setstddepth    (lua_State* L);
-        static int      lsys_setiosize      (lua_State* L);
-        static int      lsys_getiosize      (lua_State* L);
-        static int      lsys_seteventlvl    (lua_State* L);
-        static int      lsys_geteventlvl    (lua_State* L);
-        static int      lsys_healthy        (lua_State* L);
-        static int      lsys_ipv4           (lua_State* L);
-        static int      lsys_lsrec          (lua_State* L);
-        static int      lsys_cwd            (lua_State* L);
-        static int      lsys_memu           (lua_State* L);
+            UT_String           (CommandProcessor* cmd_proc, const char* obj_name);
+            ~UT_String          (void);
+
+    bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
+
+	int     testReplace         (int argc, char argv[][MAX_CMD_SIZE]);
 };
 
-#endif  /* __lua_library_sys__ */
+#endif  /* __ut_string__ */

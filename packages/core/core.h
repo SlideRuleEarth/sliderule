@@ -78,7 +78,6 @@
 #include "RecordObject.h"
 #include "RecordDispatcher.h"
 #include "ReportDispatch.h"
-#include "RTExcept.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
 #include "Table.h"

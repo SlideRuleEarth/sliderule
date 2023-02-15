@@ -43,9 +43,10 @@ endif()
 
 target_sources (slideruleLib
     PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/OsApi.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Cond.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LocalLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Mutex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/RunTimeException.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Sem.cpp
         ${CMAKE_CURRENT_LIST_DIR}/SockLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Thread.cpp
@@ -67,8 +68,8 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/OsApi.h
         ${CMAKE_CURRENT_LIST_DIR}/Cond.h
-        ${CMAKE_CURRENT_LIST_DIR}/LocalLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Mutex.h
+        ${CMAKE_CURRENT_LIST_DIR}/RunTimeException.h
         ${CMAKE_CURRENT_LIST_DIR}/Sem.h
         ${CMAKE_CURRENT_LIST_DIR}/SockLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Thread.h

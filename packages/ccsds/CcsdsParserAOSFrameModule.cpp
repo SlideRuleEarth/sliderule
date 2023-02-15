@@ -201,7 +201,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
         {
             /* Copy into Primary Header Buffer */
             int cpylen = MIN(headerBytes, bytes_left);
-            LocalLib::copy(&aosPrimaryHdr[FrameHeaderSize - headerBytes], &parse_buffer[parse_index], cpylen);
+            memcpy(&aosPrimaryHdr[FrameHeaderSize - headerBytes], &parse_buffer[parse_index], cpylen);
             headerBytes     -= cpylen;
             frameIndex      += cpylen;
             parse_index     += cpylen;
@@ -307,7 +307,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
         else if(state == TRAILER)
         {
             int cpylen = MIN(trailerBytes, bytes_left);
-            LocalLib::copy(&aosTrailer[FrameTrailerSize - trailerBytes], &parse_buffer[parse_index], cpylen);
+            memcpy(&aosTrailer[FrameTrailerSize - trailerBytes], &parse_buffer[parse_index], cpylen);
 
             if(trailerBytes <= bytes_left)
             {
@@ -383,7 +383,7 @@ void CcsdsParserAOSFrameModule::gotoInitState(bool reset)
     trailerBytes    = FrameTrailerSize;
     frameIndex      = 0;
 
-    LocalLib::set(aosPrimaryHdr, 0, FrameHeaderSize);
+    memset(aosPrimaryHdr, 0, FrameHeaderSize);
 
     if(reset)
     {
@@ -417,7 +417,7 @@ CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int
     if(SyncMarkerSize > 0)
     {
         SyncMarker = new uint8_t [sync_size];
-        LocalLib::copy(SyncMarker, sync_marker, sync_size);
+        memcpy(SyncMarker, sync_marker, sync_size);
     }
 
     aosPrimaryHdr = new unsigned char[FrameHeaderSize];

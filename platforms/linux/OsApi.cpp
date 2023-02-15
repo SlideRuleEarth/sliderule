@@ -56,10 +56,12 @@
  * STATIC DATA
  ******************************************************************************/
 
-LocalLib::print_func_t LocalLib::print_func = NULL;
-int LocalLib::io_timeout = IO_DEFAULT_TIMEOUT;
-int LocalLib::io_maxsize = IO_DEFAULT_MAXSIZE;
-int LocalLib::memfd = -1;
+int OsApi::memfd = -1;
+OsApi::print_func_t OsApi::print_func = NULL;
+int OsApi::io_timeout = IO_DEFAULT_TIMEOUT;
+int OsApi::io_maxsize = IO_DEFAULT_MAXSIZE;
+int64_t OsApi::launch_time = 0;
+char* OsApi::environment_version = NULL;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -68,54 +70,26 @@ int LocalLib::memfd = -1;
 /*----------------------------------------------------------------------------
  * initLib
  *----------------------------------------------------------------------------*/
-void LocalLib::init()
+void OsApi::init(print_func_t _print_func)
 {
     memfd = open("/proc/meminfo", O_RDONLY);
+    launch_time = OsApi::time(OsApi::SYS_CLK);
+    OsApi::dupstr(&environment_version, "unknown");
+    print_func = _print_func;
 }
 
 /*----------------------------------------------------------------------------
  * deinitLib
  *----------------------------------------------------------------------------*/
-void LocalLib::deinit(void)
+void OsApi::deinit(void)
 {
     if(memfd) close(memfd);
 }
 
 /*----------------------------------------------------------------------------
- * setPrint
- *----------------------------------------------------------------------------*/
-void LocalLib::setPrint(print_func_t _print_func)
-{
-    assert(_print_func);    // do not let print function be set to NULL
-    print_func = _print_func;
-}
-
-/*----------------------------------------------------------------------------
- * print
- *----------------------------------------------------------------------------*/
-void LocalLib::print (const char* file_name, unsigned int line_number, const char* format_string, ...)
-{
-    if(print_func)
-    {
-        /* Allocate Message String on Stack */
-        char message[MAX_PRINT_MESSAGE];
-
-        /* Build Formatted Message String */
-        va_list args;
-        va_start(args, format_string);
-        vsnprintf(message, MAX_PRINT_MESSAGE, format_string, args);
-        va_end(args);
-        message[MAX_PRINT_MESSAGE - 1] = '\0';
-
-        /* Call Call Back */
-        print_func(file_name, line_number, message);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * sleep
  *----------------------------------------------------------------------------*/
-void LocalLib::sleep(double secs)
+void OsApi::sleep(double secs)
 {
     struct timespec waittime;
 
@@ -126,35 +100,17 @@ void LocalLib::sleep(double secs)
 }
 
 /*----------------------------------------------------------------------------
- *  copy
+ *  dupstr
  *----------------------------------------------------------------------------*/
-void* LocalLib::copy(void* dst, const void* src, int len)
+void OsApi::dupstr (char** dst, const char* src)
 {
-    return memcpy(dst, src, len);
-}
-
-/*----------------------------------------------------------------------------
- *  move
- *----------------------------------------------------------------------------*/
-void* LocalLib::move(void* dst, const void* src, int len)
-{
-    return memmove(dst, src, len);
-}
-
-/*----------------------------------------------------------------------------
- *  set
- *----------------------------------------------------------------------------*/
-void* LocalLib::set(void* buf, int val, int len)
-{
-    return memset(buf, val, len);
-}
-
-/*----------------------------------------------------------------------------
- *  err2str
- *----------------------------------------------------------------------------*/
-const char* LocalLib::err2str(int errnum)
-{
-    return strerror(errnum);
+    assert(dst);
+    if(*dst) delete [] *dst;
+    int len = 0;
+    while( (len < (MAX_STR_SIZE - 1)) && (src[len] != '\0') ) len++;
+    *dst = new char[len + 1];
+    for(int k = 0; k < len; k++) (*dst)[k] = src[k];
+    (*dst)[len] = '\0';
 }
 
 /*----------------------------------------------------------------------------
@@ -163,7 +119,7 @@ const char* LocalLib::err2str(int errnum)
 *   SYS_CLK returns microseconds since unix epoch
 *   CPU_CLK returns monotonically incrementing time normalized number (us)
 *-----------------------------------------------------------------------------*/
-int64_t LocalLib::time(int clkid)
+int64_t OsApi::time(int clkid)
 {
     struct timespec now;
 
@@ -188,7 +144,7 @@ int64_t LocalLib::time(int clkid)
 *
 * Returns: resolution of specified clock in number of ticks per second
 *-----------------------------------------------------------------------------*/
-int64_t LocalLib::timeres(int clkid)
+int64_t OsApi::timeres(int clkid)
 {
     if (clkid == SYS_CLK)
     {
@@ -207,7 +163,7 @@ int64_t LocalLib::timeres(int clkid)
 /*----------------------------------------------------------------------------
  * swaps
  *----------------------------------------------------------------------------*/
-uint16_t LocalLib::swaps(uint16_t val)
+uint16_t OsApi::swaps(uint16_t val)
 {
     return bswap_16(val);
 }
@@ -215,7 +171,7 @@ uint16_t LocalLib::swaps(uint16_t val)
 /*----------------------------------------------------------------------------
  * swapl
  *----------------------------------------------------------------------------*/
-uint32_t LocalLib::swapl(uint32_t val)
+uint32_t OsApi::swapl(uint32_t val)
 {
     return bswap_32(val);
 }
@@ -223,7 +179,7 @@ uint32_t LocalLib::swapl(uint32_t val)
 /*----------------------------------------------------------------------------
  * swapll
  *----------------------------------------------------------------------------*/
-uint64_t LocalLib::swapll(uint64_t val)
+uint64_t OsApi::swapll(uint64_t val)
 {
     return bswap_64(val);
 }
@@ -231,7 +187,7 @@ uint64_t LocalLib::swapll(uint64_t val)
 /*----------------------------------------------------------------------------
  * swapf
  *----------------------------------------------------------------------------*/
-float LocalLib::swapf(float val)
+float OsApi::swapf(float val)
 {
     float rtrndata = 0.0;
     uint8_t* dataptr = (uint8_t*)&rtrndata;
@@ -243,7 +199,7 @@ float LocalLib::swapf(float val)
 /*----------------------------------------------------------------------------
  * swaplf
  *----------------------------------------------------------------------------*/
-double LocalLib::swaplf(double val)
+double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
     uint8_t* dataptr = (uint8_t*)&rtrndata;
@@ -255,7 +211,7 @@ double LocalLib::swaplf(double val)
 /*----------------------------------------------------------------------------
  * nproc
  *----------------------------------------------------------------------------*/
-int LocalLib::nproc (void)
+int OsApi::nproc (void)
 {
     return get_nprocs();
 }
@@ -263,7 +219,7 @@ int LocalLib::nproc (void)
 /*----------------------------------------------------------------------------
  * memusage
  *----------------------------------------------------------------------------*/
-double LocalLib::memusage (void)
+double OsApi::memusage (void)
 {
     const int BUFSIZE = 128;
     const char* mem_total_ptr = NULL;
@@ -336,9 +292,36 @@ double LocalLib::memusage (void)
 }
 
 /*----------------------------------------------------------------------------
+ * print
+ *----------------------------------------------------------------------------*/
+void OsApi::print (const char* file_name, unsigned int line_number, const char* format_string, ...)
+{
+    /* Allocate Message String on Stack */
+    char message[MAX_PRINT_MESSAGE];
+
+    /* Build Formatted Message String */
+    va_list args;
+    va_start(args, format_string);
+    vsnprintf(message, MAX_PRINT_MESSAGE, format_string, args);
+    va_end(args);
+    message[MAX_PRINT_MESSAGE - 1] = '\0';
+
+    if(print_func)
+    {
+        /* Call Callback */
+        print_func(file_name, line_number, message);
+    }
+    else
+    {
+        /* Default */
+        printf("%s:%d %s\n", file_name, line_number, message);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * setIOMaxsize
  *----------------------------------------------------------------------------*/
-bool LocalLib::setIOMaxsize(int maxsize)
+bool OsApi::setIOMaxsize(int maxsize)
 {
     if(maxsize > 0)
     {
@@ -352,7 +335,7 @@ bool LocalLib::setIOMaxsize(int maxsize)
 /*----------------------------------------------------------------------------
  * getIOMaxsize
  *----------------------------------------------------------------------------*/
-int LocalLib::getIOMaxsize(void)
+int OsApi::getIOMaxsize(void)
 {
     return io_maxsize;
 }
@@ -360,7 +343,7 @@ int LocalLib::getIOMaxsize(void)
 /*----------------------------------------------------------------------------
  * setIOTimeout
  *----------------------------------------------------------------------------*/
-void LocalLib::setIOTimeout(int timeout)
+void OsApi::setIOTimeout(int timeout)
 {
     io_timeout = timeout;
 }
@@ -368,7 +351,7 @@ void LocalLib::setIOTimeout(int timeout)
 /*----------------------------------------------------------------------------
  * getIOTimeout
  *----------------------------------------------------------------------------*/
-int LocalLib::getIOTimeout(void)
+int OsApi::getIOTimeout(void)
 {
     return io_timeout;
 }
@@ -376,9 +359,33 @@ int LocalLib::getIOTimeout(void)
 /*----------------------------------------------------------------------------
  * performIOTimeout
  *----------------------------------------------------------------------------*/
-int LocalLib::performIOTimeout(void)
+int OsApi::performIOTimeout(void)
 {
-    if(io_timeout >= 1000) LocalLib::sleep(io_timeout / 1000);
-    else                   LocalLib::sleep(1);
+    if(io_timeout >= 1000) OsApi::sleep(io_timeout / 1000);
+    else                   OsApi::sleep(1);
     return TIMEOUT_RC;
+}
+
+/*----------------------------------------------------------------------------
+ * getLaunchTime
+ *----------------------------------------------------------------------------*/
+int64_t OsApi::getLaunchTime (void)
+{
+    return launch_time;
+}
+
+/*----------------------------------------------------------------------------
+ * setEnvVersion
+ *----------------------------------------------------------------------------*/
+void OsApi::setEnvVersion (const char* verstr)
+{
+    OsApi::dupstr(&environment_version, verstr);
+}
+
+/*----------------------------------------------------------------------------
+ * getEnvVersion
+ *----------------------------------------------------------------------------*/
+const char* OsApi::getEnvVersion (void)
+{
+    return environment_version;
 }

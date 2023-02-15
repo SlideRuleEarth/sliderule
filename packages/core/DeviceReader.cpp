@@ -110,7 +110,7 @@ void* DeviceReader::readerThread (void* parm)
 {
     assert(parm != NULL);
     DeviceReader* dr = (DeviceReader*)parm;
-    int io_maxsize = LocalLib::getIOMaxsize();
+    int io_maxsize = OsApi::getIOMaxsize();
     unsigned char* buf = new unsigned char [io_maxsize];
 
     /* Read Loop */
@@ -152,7 +152,7 @@ void* DeviceReader::readerThread (void* parm)
             {
                 if(bytes == SHUTDOWN_RC)    mlog(DEBUG, "shutting down device... sleeping and trying again");
                 else                        mlog(ERROR, "failed to read device (%d)... sleeping and trying again!", bytes);
-                LocalLib::performIOTimeout(); // prevent spinning
+                OsApi::performIOTimeout(); // prevent spinning
             }
         }
     }

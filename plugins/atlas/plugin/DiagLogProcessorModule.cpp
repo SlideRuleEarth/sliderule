@@ -133,7 +133,7 @@ bool DiagLogProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
         /* Copy Out Log Message */
         int diagmsg_len = strnlen((const char*)&pktbuf[DIAG_LOG_START], DIAG_LOG_STR_SIZE - (DIAG_LOG_START + msgindex));
-        LocalLib::copy(&diagmsg[msgindex], &pktbuf[DIAG_LOG_START], diagmsg_len);
+        memcpy(&diagmsg[msgindex], &pktbuf[DIAG_LOG_START], diagmsg_len);
         msgsize = diagmsg_len + msgindex;
 
         /* Decide on New Line */

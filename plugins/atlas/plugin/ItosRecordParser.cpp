@@ -237,12 +237,12 @@ bool ItosRecordParser::parseFilterTbl(SafeString* fcontents)
     List<SafeString>& lines = *dynlines; // alias
     for(int l = 0; l < lines.length(); l++)
     {
-        mlog(DEBUG, "PARSING: %s", lines[l].getString());
-        SafeString line("%s", lines[l].getString());
+        mlog(DEBUG, "PARSING: %s", lines[l].str());
+        SafeString line("%s", lines[l].str());
         List<SafeString>* dynatoms = line.split(' ');
         List<SafeString>& atoms = *dynatoms;
 
-        const char* start_str = atoms[0].getString();
+        const char* start_str = atoms[0].str();
         if(start_str[0] == '!')
         {
             continue;
@@ -250,18 +250,18 @@ bool ItosRecordParser::parseFilterTbl(SafeString* fcontents)
 
         long            q           = 0; // atoms[0]
         long            spw         = 0; // atoms[1]
-        const char*     fsw_define  = atoms[3].getString();
+        const char*     fsw_define  = atoms[3].str();
         long            sid         = 0; // atoms[4]
         double          rate        = 0; // atoms[5]
-        const char*     type        = atoms[6].getString();
-        const char*     sender      = atoms[7].getString();
-        const char*     task        = atoms[8].getString();
+        const char*     type        = atoms[6].str();
+        const char*     sender      = atoms[7].str();
+        const char*     task        = atoms[8].str();
         const char**    sources     = NULL;
 
-        StringLib::str2long(atoms[0].getString(),   &q);
-        StringLib::str2long(atoms[1].getString(),   &spw);
-        StringLib::str2long(atoms[4].getString(),   &sid);
-        StringLib::str2double(atoms[5].getString(), &rate);
+        StringLib::str2long(atoms[0].str(),   &q);
+        StringLib::str2long(atoms[1].str(),   &spw);
+        StringLib::str2long(atoms[4].str(),   &sid);
+        StringLib::str2double(atoms[5].str(), &rate);
 
         int num_sources = atoms.length() - 9;
         if(num_sources > 0)
@@ -269,7 +269,7 @@ bool ItosRecordParser::parseFilterTbl(SafeString* fcontents)
             sources = new const char * [num_sources + 1];
             for(int a = 0; a < num_sources; a++)
             {
-                sources[a] = atoms[a + 9].getString(true);
+                sources[a] = atoms[a + 9].str(true);
             }
             sources[num_sources] = NULL;
         }
@@ -304,7 +304,7 @@ bool ItosRecordParser::parseRecTokens(SafeString* fcontents)
     char token[Record::MAX_TOKEN_SIZE];
     long tindex = 0;
     long findex = 0;
-    long fsize = fcontents->getLength();
+    long fsize = fcontents->bytes();
     bool offset_hack = false;
 
     #define FROMEND(c) ((findex) < ((fsize) - (c)))
@@ -335,7 +335,7 @@ bool ItosRecordParser::parseRecTokens(SafeString* fcontents)
                     }
                 }
                 SafeString ss("%s", token);
-                if(ss.getLength() > 1) tokens.add(ss);
+                if(ss.length() > 0) tokens.add(ss);
             }
             else
             {
@@ -432,7 +432,7 @@ bool ItosRecordParser::parseRecTokens(SafeString* fcontents)
                 }
 
                 SafeString ss("%s", token);
-                if(ss.getLength() > 1) tokens.add(ss);
+                if(ss.length() > 0) tokens.add(ss);
             }
             else
             {
@@ -452,7 +452,7 @@ bool ItosRecordParser::isStr (int i, const char* str)
     if(i < tokens.length())
     {
         SafeString& tok = tokens[i];
-        if(strncmp(tok.getString(), str, Record::MAX_TOKEN_SIZE) == 0)
+        if(strncmp(tok.str(), str, Record::MAX_TOKEN_SIZE) == 0)
         {
             return true;
         }
@@ -469,7 +469,7 @@ bool ItosRecordParser::startStr (int i, const char* str)
     if(i < tokens.length())
     {
         SafeString& tok = tokens[i];
-        if(strstr(tok.getString(), str) != NULL)
+        if(strstr(tok.str(), str) != NULL)
         {
             return true;
         }
@@ -487,12 +487,12 @@ bool ItosRecordParser::checkComment (int* c_index, Record* c_record, int* index)
     {
         if(c_record != NULL)
         {
-            c_record->setComment(tokens[*index].getString());
+            c_record->setComment(tokens[*index].str());
             c_record = NULL;
         }
         else
         {
-            mlog(ERROR, "Unable to find record to associate to comment [%s]", tokens[*index].getString());
+            mlog(ERROR, "Unable to find record to associate to comment [%s]", tokens[*index].str());
         }
         return true;
     }
@@ -533,7 +533,7 @@ Record* ItosRecordParser::createRecord (Record* container, int* index)
     if(isStr(*index + 1, "="))
     {
         record_type = (char*)"#";
-        record_name = (char*)tokens[*index].getString();
+        record_name = (char*)tokens[*index].str();
         is_value = true;
         (*index) += 2; // move past "="
     }
@@ -541,7 +541,7 @@ Record* ItosRecordParser::createRecord (Record* container, int* index)
     else if(isStr(*index + 1, "+="))
     {
         record_type = (char*)"$";
-        record_name = (char*)tokens[*index].getString();
+        record_name = (char*)tokens[*index].str();
         is_value = true;
         (*index) += 2; // move past "+="
     }
@@ -549,7 +549,7 @@ Record* ItosRecordParser::createRecord (Record* container, int* index)
     else if(isStr(*index + 1, "{"))
     {
         record_type = (char*)"@";
-        record_name = (char*)tokens[*index].getString();
+        record_name = (char*)tokens[*index].str();
         (*index) += 1; // move index to "{"
     }
     /* Else Container */
@@ -561,8 +561,8 @@ Record* ItosRecordParser::createRecord (Record* container, int* index)
             (*index)++; // move past "prototype"
         }
 
-        record_type = (char*)tokens[(*index)++].getString();
-        record_name = (char*)tokens[(*index)++].getString();
+        record_type = (char*)tokens[(*index)++].str();
+        record_name = (char*)tokens[(*index)++].str();
     }
 
     /* Create Record */
@@ -584,7 +584,7 @@ Record* ItosRecordParser::createRecord (Record* container, int* index)
     /* Set Comment Record and Index */
     if(commentIndex != INVALID_COMMENT_INDEX)
     {
-        record->setComment(tokens[commentIndex].getString());
+        record->setComment(tokens[commentIndex].str());
         commentIndex = INVALID_COMMENT_INDEX;
     }
 
@@ -601,7 +601,7 @@ Record* ItosRecordParser::createRecord (Record* container, int* index)
         }
         else if(is_value)
         {
-            record->addValue((char*)tokens[*index].getString());
+            record->addValue((char*)tokens[*index].str());
         }
         else if(!checkComment(&commentIndex, commentRecord, index))
         {
@@ -1108,7 +1108,7 @@ void ItosRecordParser::createMnemonics (void)
                         {
                             sourceFields += sub->getSubValue(sf);
                         }
-                        def->source = sourceFields.getString(true);
+                        def->source = sourceFields.str(true);
                     }
                     else if(strcmp(sub->getDisplayName(), "conversion") == 0)
                     {
@@ -1165,7 +1165,7 @@ void ItosRecordParser::createMnemonics (void)
                     while(l > 0 && def->source[l] != '.') l--;
                     if(l > 0)
                     {
-                        LocalLib::copy(pkt_name, def->source, l);
+                        memcpy(pkt_name, def->source, l);
                         pkt_name[l] = '\0';
                         l--; // move to next character
                         for(int p = 0; p < packets.length(); p++)
@@ -1196,7 +1196,7 @@ void ItosRecordParser::createMnemonics (void)
                     while(l > 0 && def->name[l] != '.') l--;
                     if(l > 0)
                     {
-                        LocalLib::copy(pkt_name, def->name, l);
+                        memcpy(pkt_name, def->name, l);
                         pkt_name[l] = '\0';
                         l--; // move to next character
                         for(int p = 0; p < packets.length(); p++)
@@ -1292,7 +1292,7 @@ TypeConversion* ItosRecordParser::createConversion (TypeConversion::type_conv_t 
                 valcat += subrec->getSubValue(v);
                 valcat += " ";
             }
-            value = valcat.getString(true);
+            value = valcat.str(true);
         }
         else
         {
@@ -1431,7 +1431,7 @@ const char* ItosRecordParser::createCTSummary (const char* pkttype, bool local)
     html += "<script src=\"summary.js\"></script>\n";
 
     /* Return SafeString */
-    return html.getString(true);
+    return html.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -1511,7 +1511,7 @@ const char* ItosRecordParser::createPacketDetails (Packet* packet)
             html += "<table id=\"table-description\">\n";
             html += "	<tr><td><b>Database Comments:</b></td><td></td></tr>\n";
             html += "	<tr><td><br /></td></tr>\n";
-            /* COMMENT */ snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "	<tr><td>%s</td></tr>\n", safe_comment.getString(false));  html += tmp;
+            /* COMMENT */ snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "	<tr><td>%s</td></tr>\n", safe_comment.str(false));  html += tmp;
             html += "	<tr><td><br /></td></tr>\n";
             html += "</table>\n";
         }
@@ -1711,7 +1711,7 @@ const char* ItosRecordParser::createPacketDetails (Packet* packet)
         snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<script src=\"%s.js\"></script>\n", packet->getUndottedName()); html += tmp;
     }
 
-    return html.getString(true);
+    return html.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -1781,7 +1781,7 @@ const char* ItosRecordParser::createMNSummary (bool local)
     html += "<script src=\"summary.js\"></script>\n";
 
     /* Return SafeString */
-    return html.getString(true);
+    return html.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -1874,9 +1874,9 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
         report->replace("$APPENDIX_A1", createCTSummary("cmd"));
         report->replace("$APPENDIX_A2", createCTSummary("tlm"));
         report->replace("$APPENDIX_A3", createMNSummary(true));
-        report->replace("$APPENDIX_B", pktreport.getString(true));
+        report->replace("$APPENDIX_B", pktreport.str(true));
         snprintf(fullreportname, 256, "%s.html", outputpath);
-        writeFile(fullreportname, report->getString(), report->getLength());
+        writeFile(fullreportname, report->str(), report->bytes());
         delete report;
     }
 
@@ -1891,7 +1891,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
         cmdsummary->replace("$DATE", timestr);
         cmdsummary->replace("$APPENDIX_CONTENT", createCTSummary("cmd", false));
         snprintf(cmdreportname, 256, "%s_cmd.html", outputpath);
-        writeFile(cmdreportname, cmdsummary->getString(), cmdsummary->getLength());
+        writeFile(cmdreportname, cmdsummary->str(), cmdsummary->bytes());
         delete cmdsummary;
     }
 
@@ -1906,7 +1906,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
         tlmsummary->replace("$DATE", timestr);
         tlmsummary->replace("$APPENDIX_CONTENT", createCTSummary("tlm", false));
         snprintf(tlmreportname, 256, "%s_tlm.html", outputpath);
-        writeFile(tlmreportname, tlmsummary->getString(), tlmsummary->getLength());
+        writeFile(tlmreportname, tlmsummary->str(), tlmsummary->bytes());
         delete tlmsummary;
     }
 
@@ -1921,7 +1921,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
         mnesummary->replace("$DATE", timestr);
         mnesummary->replace("$APPENDIX_CONTENT", createMNSummary(false));
         sprintf(mnereportname, "%s_mne.html", outputpath);
-        writeFile(mnereportname, mnesummary->getString(), mnesummary->getLength());
+        writeFile(mnereportname, mnesummary->str(), mnesummary->bytes());
         delete mnesummary;
     }
 
@@ -1940,7 +1940,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
             pktsummary->replace("$DATE", timestr);
             pktsummary->replace("$APPENDIX_CONTENT", pkthtml);
             snprintf(pktreportname, 256, "%s_%s.html", outputpath, pktname);
-            writeFile(pktreportname, pktsummary->getString(), pktsummary->getLength());
+            writeFile(pktreportname, pktsummary->str(), pktsummary->bytes());
             delete pktsummary;
         }
     }
@@ -1986,9 +1986,9 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
     {
         cmddoc->replace("$DATE", timestr);
         cmddoc->replace("$SUMMARY", createCTSummary("cmd", true));
-        cmddoc->replace("$DESCRIPTIONS", cmdpktdoc.getString(true));
+        cmddoc->replace("$DESCRIPTIONS", cmdpktdoc.str(true));
         snprintf(cmddocname, 256, "%s/AtlasCommandHandbook.html", outputpath);
-        writeFile(cmddocname, cmddoc->getString(), cmddoc->getLength());
+        writeFile(cmddocname, cmddoc->str(), cmddoc->bytes());
         delete cmddoc;
     }
 
@@ -2002,9 +2002,9 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
     {
         tlmdoc->replace("$DATE", timestr);
         tlmdoc->replace("$SUMMARY", createCTSummary("tlm", true));
-        tlmdoc->replace("$DESCRIPTIONS", tlmpktdoc.getString(true));
+        tlmdoc->replace("$DESCRIPTIONS", tlmpktdoc.str(true));
         snprintf(tlmdocname, 256, "%s/AtlasTelemetryHandbook.html", outputpath);
-        writeFile(tlmdocname, tlmdoc->getString(), tlmdoc->getLength());
+        writeFile(tlmdocname, tlmdoc->str(), tlmdoc->bytes());
         delete tlmdoc;
     }
 
@@ -2020,7 +2020,7 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
         mnedoc->replace("$SUMMARY", createMNSummary(true));
         mnedoc->replace("$DESCRIPTIONS", "");
         sprintf(mnedocname, "%s/AtlasMnemonicHandbook.html", outputpath);
-        writeFile(mnedocname, mnedoc->getString(), mnedoc->getLength());
+        writeFile(mnedocname, mnedoc->str(), mnedoc->bytes());
     }
 }
 
@@ -2053,7 +2053,7 @@ int ItosRecordParser::loadRecFilesCmd(int argc, char argv[][MAX_CMD_SIZE])
             }
             else
             {
-                mlog(DEBUG, " ... size = %ld", fcontents->getLength());
+                mlog(DEBUG, " ... size = %ld", fcontents->bytes());
             }
 
             parseRecTokens(fcontents);
@@ -2078,7 +2078,7 @@ int ItosRecordParser::loadRecFilesCmd(int argc, char argv[][MAX_CMD_SIZE])
         }
         else
         {
-            mlog(DEBUG, " ... size = %ld", fcontents->getLength());
+            mlog(DEBUG, " ... size = %ld", fcontents->bytes());
         }
 
         parseRecTokens(fcontents);
@@ -2111,7 +2111,7 @@ int ItosRecordParser::loadFilterTblCmd(int argc, char argv[][MAX_CMD_SIZE])
     }
     else
     {
-        mlog(DEBUG, " ... size = %ld", fcontents->getLength());
+        mlog(DEBUG, " ... size = %ld", fcontents->bytes());
     }
 
     parseFilterTbl(fcontents);
@@ -2496,7 +2496,7 @@ int ItosRecordParser::printTokensCmd(int argc, char argv[][MAX_CMD_SIZE])
 
     for(int i = 0; i < tokens.length(); i++)
     {
-        print2term("%s\n", tokens[i].getString());
+        print2term("%s\n", tokens[i].str());
     }
 
     return 0;
@@ -2721,7 +2721,7 @@ int ItosRecordParser::listCmd(int argc, char argv[][MAX_CMD_SIZE])
     }
     else
     {
-        print2term("%s", result.getString(false));
+        print2term("%s", result.str(false));
     }
 
     return 0;

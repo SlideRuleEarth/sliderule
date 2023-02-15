@@ -266,7 +266,7 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
     /* Check Sock */
     if(fd == INVALID_RC)
     {
-        if(timeout != IO_CHECK) LocalLib::performIOTimeout();
+        if(timeout != IO_CHECK) OsApi::performIOTimeout();
         return TIMEOUT_RC;
     }
 
@@ -520,7 +520,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                         int connections_left = num_sockets - 1;
                         if(i < connections_left)
                         {
-                            LocalLib::move(&polllist[i], &polllist[i+1], (connections_left - i) * sizeof(struct pollfd));
+                            memmove(&polllist[i], &polllist[i+1], (connections_left - i) * sizeof(struct pollfd));
                         }
 
                         /* Decrement Number of Connections */
@@ -692,7 +692,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                 }
                 else // timeout
                 {
-                    LocalLib::performIOTimeout();
+                    OsApi::performIOTimeout();
                 }
             }
         }
@@ -840,7 +840,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
                 if(status < 0)
                 {
                     dlog("Failed to connect socket to %s:%s... %s", host, serv, strerror(errno));
-                    LocalLib::performIOTimeout();
+                    OsApi::performIOTimeout();
                 }
             } while(status < 0 && block && *block && !signal_exit);
 
