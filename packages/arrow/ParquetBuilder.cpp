@@ -178,7 +178,7 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrow(<filename>, <outq name>, <rec_type>, <id>, <lon_key>, <lat_key>)
+ * luaCreate - :parquet(<filename>, <outq name>, <rec_type>, <id>, <lon_key>, <lat_key>)
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
@@ -191,8 +191,8 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* outq_name       = getLuaString(L, 2);
         const char* rec_type        = getLuaString(L, 3);
         const char* id              = getLuaString(L, 4);
-        const char* lat_key         = getLuaString(L, 5, true, NULL);
-        const char* lon_key         = getLuaString(L, 6, true, NULL);
+        const char* lon_key         = getLuaString(L, 5, true, NULL);
+        const char* lat_key         = getLuaString(L, 6, true, NULL);
 
         /* Build Geometry Fields */
         geo_data_t geo;
