@@ -44,7 +44,6 @@
 #include <string>
 
 #include "MathLib.h"
-#include "LocalLib.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -65,7 +64,7 @@ double MathLib::FFT(double result[], int input[], unsigned long size)
     double maxvalue = 0.0;
 
     /* Zero out Frequency Spectrum - Since Size not power of two */
-    LocalLib::set(frequency_spectrum, 0, sizeof(frequency_spectrum));
+    memset(frequency_spectrum, 0, sizeof(frequency_spectrum));
 
 	/* Load Data into Complex Array */
 	for(unsigned long k = 0; k < size; k++)

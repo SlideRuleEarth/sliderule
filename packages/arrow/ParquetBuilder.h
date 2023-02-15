@@ -152,6 +152,7 @@ class ParquetBuilder: public DispatchObject
         bool                send2Client             (void);
         bool                send2S3                 (const char* s3dst);
         const char*         buildGeoMetaData        (void);
+        const char*         buildServerMetaData     (void);
 };
 
 #endif  /* __parquet_builder__ */

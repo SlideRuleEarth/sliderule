@@ -115,7 +115,7 @@ CcsdsPacketParser::CcsdsPacketParser(lua_State* L, CcsdsParserModule* _parser, C
     parser = _parser;
 
     /* Initialize APID Statistics */
-    LocalLib::set(&apidStats, 0, sizeof(apidStats));
+    memset(&apidStats, 0, sizeof(apidStats));
     for(int i = 0; i <= CCSDS_NUM_APIDS; i++)
     {
         apidStats[i].apid = i;
@@ -384,7 +384,7 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
         /* Clear Stats */
         if(apid >= 0 && apid < CCSDS_NUM_APIDS)
         {
-            LocalLib::set(&lua_obj->apidStats[apid], 0, sizeof(pktStats_t));
+            memset(&lua_obj->apidStats[apid], 0, sizeof(pktStats_t));
             lua_obj->apidStats[apid].apid = apid;
             lua_obj->apidStats[apid].min_bps = DBL_MAX;
         }
@@ -392,7 +392,7 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
         {
             for(int i = 0; i <= CCSDS_NUM_APIDS; i++)
             {
-                LocalLib::set(&lua_obj->apidStats[i], 0, sizeof(pktStats_t));
+                memset(&lua_obj->apidStats[i], 0, sizeof(pktStats_t));
                 lua_obj->apidStats[i].apid = i;
                 lua_obj->apidStats[i].min_bps = DBL_MAX;
             }
@@ -596,7 +596,7 @@ void* CcsdsPacketParser::telemetry_thread (void* parm)
 
     while(parser->telemetryActive)
     {
-        LocalLib::sleep(parser->telemetryWaitSeconds);
+        OsApi::sleep(parser->telemetryWaitSeconds);
 
         /* Calculate Elapsed Time */
         last = now;

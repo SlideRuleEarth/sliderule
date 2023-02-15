@@ -65,25 +65,25 @@ struct ParquetBuilder::impl
     shared_ptr<arrow::Schema>               schema;
     unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
 
-    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, bool as_geo);
-    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset);
+    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo);
+    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset);
 };
 
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type, bool as_geo)
+shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo)
 {
     vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, rec_type, 0);
-    if(as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
+    addFieldsToSchema(schema_vector, field_list, geo, rec_type, 0);
+    if(geo.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
     return make_shared<arrow::Schema>(schema_vector);
 }
 
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const char* rec_type, int offset)
+bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
@@ -92,6 +92,18 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
     for(int i = 0; i < num_fields; i++)
     {
         bool add_field_to_list = true;
+
+        /* Check for Geometry Columns */
+        if(geo.as_geo)
+        {
+            if( (geo.lat_field.offset == (fields[i]->offset + offset)) ||
+                (geo.lon_field.offset == (fields[i]->offset + offset)) )
+            {
+                /* skip over source columns for geometry as they will be added
+                 * separately as a part of the dedicated geometry column */
+                continue;
+            }
+        }
 
         /* Add to Schema */
         switch(fields[i]->type)
@@ -109,7 +121,7 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
             case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
             case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
 
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, fields[i]->exttype, fields[i]->offset);
+            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, geo, fields[i]->exttype, fields[i]->offset);
                                         add_field_to_list = false;
                                         break;
 
@@ -260,7 +272,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     geoData = geo;
 
     /* Define Table Schema */
-    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData.as_geo);
+    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData);
     fieldIterator = new field_iterator_t(fieldList);
 
     /* Create Unique Temporary Filename */
@@ -786,8 +798,91 @@ const char* ParquetBuilder::buildGeoMetaData (void)
         }
     })json");
 
-    geostr.replace("    ", "");
-    geostr.replace("\n", " ");
+    const char* oldtxt[2] = { "    ", "\n" };
+    const char* newtxt[2] = { "",     " " };
+    geostr.inreplace(oldtxt, newtxt, 2);
 
     return geostr.getString(true);
+}
+
+/*----------------------------------------------------------------------------
+ * buildServerMetaData
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::buildServerMetaData (void)
+{
+//    /* Display Version Information on Terminal */
+//    print2term("SlideRule Version:   %s\n", LIBID);
+//    print2term("Build Information:   %s\n", BUILDINFO);
+//    print2term("Environment Version: %s\n", environment_version);
+//
+//    /* Display Timing Information on Terminal */
+//    int64_t duration = TimeLib::gettimems() - launch_time;
+//    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time);
+//    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+//    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+//    print2term("Launch Time: %s\n", timestr.getString());
+//    print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
+//
+//    /* Display Package Information on Terminal */
+//    const char** pkg_list = LuaEngine::getPkgList();
+//    print2term("Packages: [ ");
+//    if(pkg_list)
+//    {
+//        int index = 0;
+//        while(pkg_list[index])
+//        {
+//            print2term("%s", pkg_list[index]);
+//            index++;
+//            if(pkg_list[index]) print2term(", ");
+//        }
+//    }
+//    print2term(" ]\n");
+//
+//    {
+//        "arcticdem":
+//        {   "commit":"v2.0.0-0-g67d5c1f",
+//            "version":"v2.0.0"
+//        },
+//        "server":
+//        {
+//            "environment":"v2.0.0-0-gc9130d9",
+//            "version":"v2.0.0",
+//            "duration":2843438206,
+//            "packages":["core","arrow","aws","geo","h5","netsvc","arcticdem","icesat2"],
+//            "commit":"v2.0.0-0-g67d5c1f",
+//            "launch":"2023-01-12T15:55:31Z"
+//        },
+//        "icesat2":
+//        {
+//            "commit":"v2.0.0-0-g67d5c1f",
+//            "version":"v2.0.0"
+//        }
+//    }
+//    SafeString meta("{\"server\":{");
+//    meta += "\"environment\":\"";
+//    meta += environment_version;
+//    meta += "\",\"version\";
+//
+//    /* Return Information to Lua (and clean up package list) */
+//    lua_pushstring(L, LIBID);
+//    lua_pushstring(L, BUILDINFO);
+//    lua_pushstring(L, environment_version);
+//    lua_pushstring(L, timestr.getString());
+//    lua_pushinteger(L, duration);
+//    lua_newtable(L);
+//    if(pkg_list)
+//    {
+//        int index = 0;
+//        while(pkg_list[index])
+//        {
+//            lua_pushstring(L, pkg_list[index]);
+//            lua_rawseti(L, -2, index+1);
+//            delete [] pkg_list[index];
+//            index++;
+//        }
+//        delete [] pkg_list;
+//    }
+
+    return NULL;
+
 }

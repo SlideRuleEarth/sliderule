@@ -299,7 +299,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     }
     else
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, LocalLib::err2str(errno));
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, strerror(errno));
     }
 
     return bytes_written;
@@ -339,7 +339,7 @@ int File::readBuffer (void* buf, int len, int timeout)
         /* Check Error */
         if(fp == NULL)
         {
-            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], LocalLib::err2str(errno));
+            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], strerror(errno));
             return INVALID_RC;
         }
         else
@@ -537,7 +537,7 @@ bool File::openNewFileForWriting(void)
     /* Check for Errors */
     if(fp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, LocalLib::err2str(errno));
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, strerror(errno));
         return false;
     }
 

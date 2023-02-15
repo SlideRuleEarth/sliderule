@@ -99,7 +99,7 @@ static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *user
     size_t rsps_size = size * nmemb;
     size_t bytes_available = data->size - data->index;
     size_t bytes_to_copy = MIN(rsps_size, bytes_available);
-    LocalLib::copy(&data->buffer[data->index], buffer, bytes_to_copy);
+    memcpy(&data->buffer[data->index], buffer, bytes_to_copy);
     data->index += bytes_to_copy;
     return bytes_to_copy;
 }
@@ -113,7 +113,7 @@ static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *
     streaming_data_t rsps;
     rsps.size = size * nmemb;
     rsps.data = new char [rsps.size];
-    LocalLib::copy(rsps.data, buffer, rsps.size);
+    memcpy(rsps.data, buffer, rsps.size);
     rsps_set->add(rsps);
     return rsps.size;
 }
@@ -474,7 +474,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                 else
                 {
                     mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                    LocalLib::performIOTimeout();
+                    OsApi::performIOTimeout();
                 }
             }
 
@@ -548,7 +548,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 uint8_t* rsps = *data; // reads easier below
                 for(int i = 0; i < rsps_set.length(); i++)
                 {
-                    LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
+                    memcpy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
                     rsps_index += rsps_set[i].size;
                 }
                 rsps[rsps_index] = '\0';
@@ -586,7 +586,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
             else
             {
                 mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                LocalLib::performIOTimeout();
+                OsApi::performIOTimeout();
             }
         }
 
@@ -677,7 +677,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
                 else
                 {
                     mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
-                    LocalLib::performIOTimeout();
+                    OsApi::performIOTimeout();
                 }
             }
 
@@ -690,7 +690,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     }
     else
     {
-        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, LocalLib::err2str(errno));
+        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, strerror(errno));
     }
 
     /* Clean Up Headers */
@@ -775,7 +775,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
                 else
                 {
                     mlog(CRITICAL, "cURL call failed (%d) for put request: %s", res, key_ptr);
-                    LocalLib::performIOTimeout();
+                    OsApi::performIOTimeout();
                 }
             }
 
@@ -791,7 +791,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     }
     else
     {
-        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, LocalLib::err2str(errno));
+        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, strerror(errno));
     }
 
     /* Throw Exception on Failure */

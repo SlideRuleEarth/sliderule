@@ -158,7 +158,7 @@ Gedi04aReader::Gedi04aReader (lua_State* L, Asset* _asset, const char* _resource
     /* Initialize Readers */
     active = true;
     numComplete = 0;
-    LocalLib::set(readerPid, 0, sizeof(readerPid));
+    memset(readerPid, 0, sizeof(readerPid));
 
     /* PRocess Resource */
     try
@@ -648,7 +648,7 @@ int Gedi04aReader::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_RETRIED,      lua_obj->stats.footprints_retried);
 
         /* Clear if Requested */
-        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 
         /* Set Success */
         status = true;

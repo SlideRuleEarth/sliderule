@@ -70,7 +70,7 @@ SafeString::String(long _maxlen)
     if(_maxlen <= 0)    maxlen = DEFAULT_STR_SIZE;
     else                maxlen = _maxlen;
     str = new char[maxlen];
-    LocalLib::set(str, 0, maxlen);
+    memset(str, 0, maxlen);
     len = 1;
 }
 
@@ -96,7 +96,7 @@ SafeString::String(const char* _str, ...)
     {
         maxlen = DEFAULT_STR_SIZE;
         str = new char[maxlen];
-        LocalLib::set(str, 0, maxlen);
+        memset(str, 0, maxlen);
         len = 1;
     }
 }
@@ -108,7 +108,7 @@ SafeString::String(const SafeString& other)
 {
     maxlen = other.maxlen;
     str = new char[maxlen];
-    LocalLib::set(str, 0, maxlen);
+    memset(str, 0, maxlen);
     len = other.len;
     StringLib::copy(str, other.str, len);
 }
@@ -129,7 +129,7 @@ SafeString::String (int base, unsigned char* buffer, int size)
     {
         maxlen = DEFAULT_STR_SIZE;
         str = new char[maxlen];
-        LocalLib::set(str, 0, maxlen);
+        memset(str, 0, maxlen);
         len = 1;
     }
 }
@@ -176,7 +176,7 @@ void SafeString::appendChar(char c)
     {
         maxlen *= 2; // optimization
         char* new_str = new char[maxlen];
-        LocalLib::set(new_str, 0, maxlen);
+        memset(new_str, 0, maxlen);
         StringLib::copy(new_str, str, len);
         delete [] str;
         str = new_str;
@@ -237,11 +237,11 @@ bool SafeString::replace(const char* oldtxt, const char* newtxt)
 
         maxlen += newtxtlen;
         char* newstr = new char[maxlen];
-        LocalLib::set(newstr, 0, maxlen);
+        memset(newstr, 0, maxlen);
 
-        LocalLib::copy(newstr, str, (startptr - str));
-        LocalLib::copy(newstr + (startptr - str), newtxt, newtxtlen);
-        LocalLib::copy(newstr + (startptr - str) + newtxtlen, endptr, len - (endptr - str));
+        memcpy(newstr, str, (startptr - str));
+        memcpy(newstr + (startptr - str), newtxt, newtxtlen);
+        memcpy(newstr + (startptr - str) + newtxtlen, endptr, len - (endptr - str));
 
         delete [] str;
         str = newstr;
@@ -498,7 +498,7 @@ SafeString& SafeString::operator+=(const SafeString& rhs)
     {
         maxlen += rhs.maxlen;
         char* new_str = new char[maxlen];
-        LocalLib::set(new_str, 0, maxlen);
+        memset(new_str, 0, maxlen);
         StringLib::copy(new_str, str, maxlen);
         StringLib::concat(new_str, rhs.str, maxlen);
         len = (int)strlen(new_str) + 1;
@@ -526,7 +526,7 @@ SafeString& SafeString::operator+=(const char* rstr)
         maxlen += rlen + 1;
         maxlen *= 2; // optimization
         char* new_str = new char[maxlen];
-        LocalLib::set(new_str, 0, maxlen);
+        memset(new_str, 0, maxlen);
         StringLib::copy(new_str, str, maxlen);
         StringLib::concat(new_str, rstr, maxlen);
         len = (int)strlen(new_str) + 1;
@@ -583,7 +583,7 @@ SafeString& SafeString::operator=(const char* rstr)
         delete [] str;
         maxlen = DEFAULT_STR_SIZE;
         str = new char[maxlen];
-        LocalLib::set(str, 0, maxlen);
+        memset(str, 0, maxlen);
         len = 1;
     }
 
@@ -607,7 +607,7 @@ void SafeString::reset(void)
     delete [] str;
     maxlen = DEFAULT_STR_SIZE;
     str = new char[maxlen];
-    LocalLib::set(str, 0, maxlen);
+    memset(str, 0, maxlen);
     len = 1;
 }
 

@@ -215,7 +215,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Initialize Readers */
     active = true;
     numComplete = 0;
-    LocalLib::set(readerPid, 0, sizeof(readerPid));
+    memset(readerPid, 0, sizeof(readerPid));
 
     /* Read Global Resource Information */
     try
@@ -893,7 +893,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
         /* Allocate ATL08 Classification Array */
         int32_t num_photons = atl03.dist_ph_along[t].size;
         gt[t] = new uint8_t [num_photons];
-        LocalLib::set(gt[t], 0, num_photons);
+        memset(gt[t], 0, num_photons);
 
         /* Initialize Indices */
         int32_t ph_b0 = 0; // buffer start
@@ -946,7 +946,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
             /* Bin Photons to Calculate Height Span*/
             int num_bins = (int)(hspread / HSPREAD_BINSIZE) + 1;
             int8_t* bins = new int8_t [num_bins];
-            LocalLib::set(bins, 0, num_bins);
+            memset(bins, 0, num_bins);
             for(int n = 0; n < N; n++)
             {
                 unsigned int bin = (unsigned int)((atl03.h_ph[t][n] - min_h) / HSPREAD_BINSIZE);
@@ -2024,7 +2024,7 @@ int Atl03Reader::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_RETRIED,      lua_obj->stats.extents_retried);
 
         /* Clear if Requested */
-        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 
         /* Set Success */
         status = true;

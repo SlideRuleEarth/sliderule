@@ -155,7 +155,7 @@ int HttpServer::getPort (void)
 void HttpServer::initConnection (connection_t* connection)
 {
     long cnt = requestId++;
-    LocalLib::set(&connection->rsps_state, 0, sizeof(rsps_state_t));
+    memset(&connection->rsps_state, 0, sizeof(rsps_state_t));
     connection->start_time = TimeLib::latchtime();
     connection->keep_alive = false;
     connection->id = new char [REQUEST_ID_LEN];
@@ -312,7 +312,7 @@ void* HttpServer::listenerThread(void* parm)
             if(s->active)
             {
                 mlog(INFO, "Attempting to restart http server: %s", s->getName());
-                LocalLib::sleep(5.0); // wait five seconds to prevent spin
+                OsApi::sleep(5.0); // wait five seconds to prevent spin
             }
         }
     }
@@ -436,7 +436,7 @@ int HttpServer::onRead(int fd)
                             connection->request->body = new uint8_t[connection->request->length + 1];
                             connection->request->body[connection->request->length] = '\0';
                             int bytes_to_copy = state->header_size - state->header_index;
-                            LocalLib::copy(connection->request->body, &state->header_buf[state->header_index], bytes_to_copy);
+                            memcpy(connection->request->body, &state->header_buf[state->header_index], bytes_to_copy);
                             state->body_size += bytes_to_copy;
                         }
                         else
@@ -484,7 +484,7 @@ int HttpServer::onRead(int fd)
                 EndpointObject* endpoint = routeTable[connection->request->path];
                 connection->response_type = endpoint->handleRequest(connection->request);
                 connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
-                LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
+                memset(&connection->rqst_state, 0, sizeof(rqst_state_t));
             }
             catch(const RunTimeException& e)
             {
@@ -544,7 +544,7 @@ int HttpServer::onWrite(int fd)
                 if(state->ref.size > 0)
                 {
                     /* Write Message Data */
-                    LocalLib::copy(&state->stream_buf[state->stream_buf_size], state->ref.data, state->ref.size);
+                    memcpy(&state->stream_buf[state->stream_buf_size], state->ref.data, state->ref.size);
                     state->stream_buf_size += state->ref.size;
                 }
 
@@ -667,7 +667,7 @@ int HttpServer::onConnect(int fd)
     /* Create and Initialize New Request */
     connection_t* connection = new connection_t;
     initConnection(connection);
-    LocalLib::set(&connection->rqst_state, 0, sizeof(rqst_state_t));
+    memset(&connection->rqst_state, 0, sizeof(rqst_state_t));
 
     /* Register Connection */
     if(!connections.add(fd, connection, false))
@@ -798,7 +798,7 @@ int HttpServer::luaUntilUp (lua_State* L)
             status = lua_obj->listening;
             if(status) break;
             else if(timeout > 0) timeout--;
-            LocalLib::performIOTimeout();
+            OsApi::performIOTimeout();
         }
         while((timeout == IO_PEND) || (timeout > 0));
     }

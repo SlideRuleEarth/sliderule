@@ -142,7 +142,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
                     rsps = new char [rsps_size + 1];
                     for(int i = 0; i < rsps_set.length(); i++)
                     {
-                        LocalLib::copy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
+                        memcpy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
                         rsps_index += rsps_set[i].size;
                         delete [] rsps_set[i].data;
                     }
@@ -403,7 +403,7 @@ size_t ProvisioningSystemLib::writeData(void *buffer, size_t size, size_t nmemb,
     rsps.size = size * nmemb;
     rsps.data = new char [rsps.size + 1];
 
-    LocalLib::copy(rsps.data, buffer, rsps.size);
+    memcpy(rsps.data, buffer, rsps.size);
     rsps.data[rsps.size] = '\0';
 
     rsps_set->add(rsps);

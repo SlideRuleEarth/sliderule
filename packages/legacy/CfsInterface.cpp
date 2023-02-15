@@ -147,7 +147,7 @@ CfsInterface::CfsInterface(CommandProcessor* cmd_proc, const char* obj_name, con
     PktStats::defineRecord(PktStats::rec_type, "APID", sizeof(pktStats_t), PktStats::rec_def, PktStats::rec_elem);
 
     /* Initialize APID Statistics */
-    LocalLib::set(apidStats, 0, sizeof(apidStats));
+    memset(apidStats, 0, sizeof(apidStats));
     apidStats[CMD_APIDS] = createPktStat(CMD_APIDS);
     apidStats[TLM_APIDS] = createPktStat(TLM_APIDS);
 

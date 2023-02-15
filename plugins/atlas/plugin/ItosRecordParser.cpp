@@ -1165,7 +1165,7 @@ void ItosRecordParser::createMnemonics (void)
                     while(l > 0 && def->source[l] != '.') l--;
                     if(l > 0)
                     {
-                        LocalLib::copy(pkt_name, def->source, l);
+                        memcpy(pkt_name, def->source, l);
                         pkt_name[l] = '\0';
                         l--; // move to next character
                         for(int p = 0; p < packets.length(); p++)
@@ -1196,7 +1196,7 @@ void ItosRecordParser::createMnemonics (void)
                     while(l > 0 && def->name[l] != '.') l--;
                     if(l > 0)
                     {
-                        LocalLib::copy(pkt_name, def->name, l);
+                        memcpy(pkt_name, def->name, l);
                         pkt_name[l] = '\0';
                         l--; // move to next character
                         for(int p = 0; p < packets.length(); p++)

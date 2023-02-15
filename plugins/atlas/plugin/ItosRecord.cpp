@@ -230,7 +230,7 @@ int Record::getNumArrayElements (void)
             #define MAX_CHARS 256
             char num_elements_str[MAX_CHARS];
             memset(num_elements_str, 0, MAX_CHARS);
-            LocalLib::copy(num_elements_str, b1 + 1, b2 - (b1 + 1));
+            memcpy(num_elements_str, b1 + 1, b2 - (b1 + 1));
             long num_elements_tmp = 0;
             if(StringLib::str2long(num_elements_str, &num_elements_tmp))
             {
@@ -490,8 +490,8 @@ bool Field::setProperty (const char* property, const char* _value, int index)
         if(rngstr != NULL) // range specified
         {
             char minstr[Record::MAX_VAL_SIZE], maxstr[Record::MAX_VAL_SIZE]; (void)maxstr;
-            LocalLib::copy(minstr, _value, rngstr - _value); minstr[rngstr - _value] = 0;
-            LocalLib::copy(maxstr, rngstr + 2, strlen(rngstr + 2)); maxstr[strlen(rngstr + 2)] = 0;
+            memcpy(minstr, _value, rngstr - _value); minstr[rngstr - _value] = 0;
+            memcpy(maxstr, rngstr + 2, strlen(rngstr + 2)); maxstr[strlen(rngstr + 2)] = 0;
             bool stat1 = _setProperty("minRange", minstr, index);
             bool stat2 = _setProperty("maxRange", maxstr, index);
             status = stat1 && stat2;

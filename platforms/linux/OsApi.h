@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 #include <poll.h>
 #include <assert.h>
 
@@ -150,14 +151,14 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #define IO_ALIVE_FLAG               (0x100)
 #define IO_CONNECT_FLAG             (0x200)
 #define IO_DISCONNECT_FLAG          (0x400)
-#define SYS_TIMEOUT                 (LocalLib::getIOTimeout()) // ms
-#define SYS_MAXSIZE                 (LocalLib::getIOMaxsize()) // bytes
+#define SYS_TIMEOUT                 (OsApi::getIOTimeout()) // ms
+#define SYS_MAXSIZE                 (OsApi::getIOMaxsize()) // bytes
 
 /* Ordered Keys */
 #define INVALID_KEY                 0xFFFFFFFFFFFFFFFFLL
 
 /* Debug Logging */
-#define dlog(...)                   LocalLib::print(__FILE__,__LINE__,__VA_ARGS__)
+#define dlog(...)                   OsApi::print(__FILE__,__LINE__,__VA_ARGS__)
 #ifdef __terminal__
 #define print2term(...)             printf(__VA_ARGS__)
 #else
@@ -168,13 +169,60 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
  * INCLUDES
  ******************************************************************************/
 
+#include "RunTimeException.h"
 #include "Thread.h"
 #include "Mutex.h"
 #include "Cond.h"
 #include "Sem.h"
 #include "Timer.h"
-#include "LocalLib.h"
 #include "SockLib.h"
 #include "TTYLib.h"
+
+/******************************************************************************
+ * LIBRARY CLASS
+ ******************************************************************************/
+
+class OsApi
+{
+    public:
+
+        typedef void (*print_func_t) (const char* file_name, unsigned int line_number, const char* message);
+
+        static const int MAX_PRINT_MESSAGE = 256;
+        static const int SYS_CLK = 0; // system clock that can be converted into civil time
+        static const int CPU_CLK = 1; // processor clock that only counts ticks
+
+        static void         init                (print_func_t _print_func);
+        static void         deinit              (void);
+        static void         sleep               (double secs); // sleep at highest resolution available on system
+        static void         dupstr              (char** dst, const char* src);
+        static int64_t      time                (int clkid);
+        static int64_t      timeres             (int clkid); // returns the resolution of the clock
+        static uint16_t     swaps               (uint16_t val);
+        static uint32_t     swapl               (uint32_t val);
+        static uint64_t     swapll              (uint64_t val);
+        static float        swapf               (float val);
+        static double       swaplf              (double val);
+        static int          nproc               (void);
+        static double       memusage            (void);
+        static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
+        static bool         setIOMaxsize        (int maxsize);
+        static int          getIOMaxsize        (void);
+        static void         setIOTimeout        (int timeout);
+        static int          getIOTimeout        (void);
+        static int          performIOTimeout    (void);
+        static int64_t      getLaunchTime       (void);
+        static void         setEnvVersion       (const char* verstr);
+        static const char*  getEnvVersion       (void);
+
+    private:
+
+        static int memfd;
+        static print_func_t print_func;
+        static int io_timeout;
+        static int io_maxsize;
+        static int64_t launch_time;
+        static char* environment_version;
+};
 
 #endif  /* __osapi__ */

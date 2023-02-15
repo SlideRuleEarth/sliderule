@@ -29,72 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __corepkg__
-#define __corepkg__
+#ifndef __runtime_exception__
+#define __runtime_exception__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-
-#include "Asset.h"
-#include "AssetIndex.h"
-#include "CaptureDispatch.h"
-#include "ClusterSocket.h"
-#include "CsvDispatch.h"
-#include "DispatchObject.h"
-#include "DeviceIO.h"
-#include "DeviceObject.h"
-#include "DeviceReader.h"
-#include "DeviceWriter.h"
-#include "Dictionary.h"
-#include "EndpointObject.h"
-#include "PointIndex.h"
-#include "File.h"
-#include "FileIODriver.h"
-#include "HttpClient.h"
-#include "HttpServer.h"
-#include "LimitDispatch.h"
-#include "List.h"
-#include "LimitRecord.h"
-#include "EventLib.h"
-#include "LuaEndpoint.h"
-#include "LuaEngine.h"
-#include "LuaLibraryMsg.h"
-#include "LuaLibrarySys.h"
-#include "LuaLibraryTime.h"
-#include "LuaObject.h"
-#include "LuaScript.h"
-#include "MathLib.h"
-#include "MetricDispatch.h"
-#include "MetricRecord.h"
-#include "Monitor.h"
-#include "MsgBridge.h"
-#include "MsgProcessor.h"
-#include "MsgQ.h"
-#include "Ordering.h"
-#include "PublisherDispatch.h"
-#include "RecordObject.h"
-#include "RecordDispatcher.h"
-#include "ReportDispatch.h"
-#include "SpatialIndex.h"
-#include "StringLib.h"
-#include "Table.h"
-#include "TcpSocket.h"
-#include "IntervalIndex.h"
-#include "TimeLib.h"
-#include "Uart.h"
-#include "UdpSocket.h"
+#include <stdexcept>
 
 /******************************************************************************
- * PROTOTYPES
+ * EXCEPTION
  ******************************************************************************/
 
-void    initcore        (void);
-void    deinitcore      (void);
-bool    checkactive     (void);
-void    setinactive     (int errors = 0);
-int     geterrors       (void);
+#define RTE_INFO                        -1
+#define RTE_ERROR                       0
+#define RTE_TIMEOUT                     1
+#define RTE_RESOURCE_DOES_NOT_EXIST     2
+#define RTE_EMPTY_SUBSET                3
 
-#endif  /* __corepkg__ */
+/******************************************************************************
+ * EXCEPTION
+ ******************************************************************************/
+
+class RunTimeException : public std::runtime_error
+{
+    public:
+
+        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...) VARG_CHECK(printf, 4, 5);
+        char const* what() const throw();
+        event_level_t level (void) const;
+        int code (void) const;
+
+    private:
+
+        static const int ERROR_MSG_LEN = 128;
+        char errmsg[ERROR_MSG_LEN];
+        const event_level_t lvl;
+        const int rc;
+};
+
+#endif // __runtime_exception__

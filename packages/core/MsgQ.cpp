@@ -486,10 +486,10 @@ int Publisher::post(void* data, unsigned int mask, void* secondary_data, unsigne
             if(copy)
             {
                 temp->data = ((char*)temp) + sizeof(queue_node_t);
-                LocalLib::copy(temp->data, data, data_size);
+                memcpy(temp->data, data, data_size);
                 if(secondary_data)
                 {
-                    LocalLib::copy(temp->data + data_size, secondary_data, secondary_size);
+                    memcpy(temp->data + data_size, secondary_data, secondary_size);
                 }
             }
             else
@@ -784,7 +784,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
             {
                 if(node_size <= size)
                 {
-                    LocalLib::copy(ref.data, node->data, node_size);
+                    memcpy(ref.data, node->data, node_size);
                 }
                 else
                 {

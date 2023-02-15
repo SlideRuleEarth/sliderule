@@ -37,7 +37,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "RTExcept.h"
 #include "OsApi.h"
 #include <climits>
 #include <assert.h>

@@ -59,7 +59,7 @@ int LimitDispatch::luaCreate (lua_State* L)
     try
     {
         LimitRecord::limit_t rec;
-        LocalLib::set(&rec, 0, sizeof(LimitRecord::limit_t));
+        memset(&rec, 0, sizeof(LimitRecord::limit_t));
 
         /* Initialize Limit Record with Parameters */
         StringLib::format(rec.field_name, LimitRecord::MAX_FIELD_NAME_SIZE, "%s", getLuaString(L, 1));

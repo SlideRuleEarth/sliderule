@@ -192,7 +192,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result));
+    memset(result, 0, sizeof(result));
 
     /* Process Extent */
     for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
@@ -467,7 +467,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 
     /* Bin Photons */
     long* bins = new long[num_bins];
-    LocalLib::set(bins, 0, num_bins * sizeof(long));
+    memset(bins, 0, num_bins * sizeof(long));
     for(long i = 0; i < veg_cnt; i++)
     {
         int bin = (int)floor((ph[veg_index[i]].relief - min_h) / parms->phoreal.binsize);

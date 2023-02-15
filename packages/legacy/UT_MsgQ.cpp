@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -61,14 +61,14 @@ CommandableObject* UT_MsgQ::createObject(CommandProcessor* cmd_proc, const char*
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-UT_MsgQ::UT_MsgQ(CommandProcessor* cmd_proc, const char* obj_name): 
+UT_MsgQ::UT_MsgQ(CommandProcessor* cmd_proc, const char* obj_name):
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
     /* Register Commands */
     registerCommand("BLOCKING_RECEIVE_TEST", (cmdFunc_t)&UT_MsgQ::blockingReceiveUnitTestCmd, 0, "");
     registerCommand("SUBSCRIBE_UNSUBSCRIBE_TEST", (cmdFunc_t)&UT_MsgQ::subscribeUnsubscribeUnitTestCmd, 0, "");
     registerCommand("PERFORMANCE_TEST", (cmdFunc_t)&UT_MsgQ::performanceUnitTestCmd, 0, "[<depth> <size>]");
-    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", (cmdFunc_t)&UT_MsgQ::subscriberOfOpporunityUnitTestCmd, 0, "");    
+    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", (cmdFunc_t)&UT_MsgQ::subscriberOfOpporunityUnitTestCmd, 0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     /* Set Unit Test Parameters (TODO: set from command parameters) */
     parms_t unit_test_parms;
-    LocalLib::set(&unit_test_parms, 0, sizeof(unit_test_parms));
+    memset(&unit_test_parms, 0, sizeof(unit_test_parms));
     unit_test_parms.qname = "testq_02";
     unit_test_parms.qdepth = 10;
     unit_test_parms.numpubs = 1;
@@ -144,7 +144,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         else if(value != data)
         {
             print2term("[%d] ERROR: receive got the wrong value %ld != %ld\n", __LINE__, value, data);
-            unit_test_parms.errorcnt++;            
+            unit_test_parms.errorcnt++;
         }
         data++;
     }
@@ -158,7 +158,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     if(unit_test_parms.errorcnt != 0) test_status = false;
-    
+
     /* Clean Up */
     delete pubq;
     delete subq;
@@ -179,7 +179,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
 
     /* Set Unit Test Parameters (TODO: set from command parameters) */
     parms_t unit_test_parms;
-    LocalLib::set(&unit_test_parms, 0, sizeof(unit_test_parms));
+    memset(&unit_test_parms, 0, sizeof(unit_test_parms));
     unit_test_parms.qname = "testq_01";
     unit_test_parms.loopcnt = 500;
     unit_test_parms.qdepth = 100;
@@ -199,14 +199,14 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
     for(int p = 0; p < unit_test_parms.numpubs; p++)
     {
         pubparms[p] = new parms_t;
-        LocalLib::copy(pubparms[p], &unit_test_parms, sizeof(parms_t));
+        memcpy(pubparms[p], &unit_test_parms, sizeof(parms_t));
         pubparms[p]->threadid = p;
         p_pid[p] = new Thread(publisherThread, (void*)pubparms[p]);
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         subparms[s] = new parms_t;
-        LocalLib::copy(subparms[s], &unit_test_parms, sizeof(parms_t));
+        memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
         s_pid[s] = new Thread(subscriberThread, (void*)subparms[s]);
     }
@@ -218,7 +218,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
         if(pubparms[p]->errorcnt != 0)
         {
             test_status = false;
-        }   
+        }
         delete pubparms[p]->lastvalue;
         delete pubparms[p];
     }
@@ -405,7 +405,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
 
     /* Set Unit Test Parameters (TODO: set from command parameters) */
     parms_t unit_test_parms;
-    LocalLib::set(&unit_test_parms, 0, sizeof(unit_test_parms));
+    memset(&unit_test_parms, 0, sizeof(unit_test_parms));
     unit_test_parms.qname = "testq_04";
     unit_test_parms.loopcnt = 5000;
     unit_test_parms.qdepth = 5000;
@@ -425,14 +425,14 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
     for(int p = 0; p < unit_test_parms.numpubs; p++)
     {
         pubparms[p] = new parms_t;
-        LocalLib::copy(pubparms[p], &unit_test_parms, sizeof(parms_t));
+        memcpy(pubparms[p], &unit_test_parms, sizeof(parms_t));
         pubparms[p]->threadid = p;
         p_pid[p] = new Thread(publisherThread, (void*)pubparms[p]);
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         subparms[s] = new parms_t;
-        LocalLib::copy(subparms[s], &unit_test_parms, sizeof(parms_t));
+        memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
         s_pid[s] = new Thread(opportunityThread, (void*)subparms[s]);
     }
@@ -444,7 +444,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
         if(pubparms[p]->errorcnt != 0)
         {
             test_status = false;
-        }   
+        }
         delete pubparms[p]->lastvalue;
         delete pubparms[p];
     }
@@ -549,7 +549,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
     }
 
     print2term("Subscriber thread %d exited with %d loops to go\n", unit_test_parms->threadid, loops + 1);
-    
+
     /* Clean Up */
     delete [] first_read;
     delete q;
@@ -597,7 +597,7 @@ void* UT_MsgQ::publisherThread(void* parm)
     }
 
     print2term("Publisher thread %d encountered %d timeouts at data %ld\n", unit_test_parms->threadid, timeout_cnt, data & 0xFFFF);
-    
+
     /* Clean Up */
     delete q;
 
@@ -740,5 +740,5 @@ void* UT_MsgQ::opportunityThread(void* parm)
 void UT_MsgQ::randomDelay(long max_milliseconds)
 {
     long us = rand() % (max_milliseconds * 1000);
-    LocalLib::sleep((double)us / 1000000.0);
+    OsApi::sleep((double)us / 1000000.0);
 }

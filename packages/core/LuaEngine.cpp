@@ -1135,7 +1135,7 @@ int LuaEngine::pmain (lua_State *L)
          * lua_writestring(LUA_COPYRIGHT, StringLib::size(LUA_COPYRIGHT));
          * lua_writeline();
          */
-        LocalLib::sleep(1);
+        OsApi::sleep(1);
         li->doREPL();  /* do read-eval-print loop */
     }
 

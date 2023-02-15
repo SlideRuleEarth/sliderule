@@ -36,8 +36,6 @@
 #include "H5Coro.h"
 #include "core.h"
 
-#include <assert.h>
-#include <stdexcept>
 #include <zlib.h>
 
 /******************************************************************************
@@ -252,7 +250,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         if(!meta_found)
         {
             /* Initialize Meta Data */
-            LocalLib::copy(metaData.url, meta_url, MAX_META_NAME_SIZE);
+            memcpy(metaData.url, meta_url, MAX_META_NAME_SIZE);
             metaData.type           = UNKNOWN_TYPE;
             metaData.typesize       = UNKNOWN_VALUE;
             metaData.fill.fill_ll   = 0LL;
@@ -376,7 +374,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                 data_offset = file_position - entry.pos;
 
                 /* Copy Data into Buffer */
-                LocalLib::copy(buffer, &entry.data[data_offset], size);
+                memcpy(buffer, &entry.data[data_offset], size);
             }
             else
             {
@@ -433,7 +431,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
             *  or the purpose was only to cache the entry (prefetch) */
             if(buffer)
             {
-                LocalLib::copy(buffer, &entry.data[data_offset], size);
+                memcpy(buffer, &entry.data[data_offset], size);
             }
 
             /* Select Cache */
@@ -577,7 +575,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
         {
             value = *(uint64_t*)data_ptr;
             #ifdef __be__
-                value = LocalLib::swapll(value);
+                value = OsApi::swapll(value);
             #endif
             break;
         }
@@ -586,7 +584,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
         {
             value = *(uint32_t*)data_ptr;
             #ifdef __be__
-                value = LocalLib::swapl(value);
+                value = OsApi::swapl(value);
             #endif
             break;
         }
@@ -595,7 +593,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
         {
             value = *(uint16_t*)data_ptr;
             #ifdef __be__
-                value = LocalLib::swaps(value);
+                value = OsApi::swaps(value);
             #endif
             break;
         }
@@ -658,7 +656,7 @@ void H5FileBuffer::readDataset (info_t* info)
         {
             for(int64_t i = 0; i < buffer_size; i += metaData.fillsize)
             {
-                LocalLib::copy(&buffer[i], &metaData.fill.fill_ll, metaData.fillsize);
+                memcpy(&buffer[i], &metaData.fill.fill_ll, metaData.fillsize);
             }
         }
     }
@@ -826,7 +824,7 @@ void H5FileBuffer::readDataset (info_t* info)
                     /* Initialize Loop Variables */
                     int ci = FLAT_NDIMS - 1; // chunk dimension index
                     uint64_t dimi[MAX_NDIMS * 2]; // chunk dimension indices
-                    LocalLib::set(dimi, 0, sizeof(dimi));
+                    memset(dimi, 0, sizeof(dimi));
 
                     /* Loop Through Each Chunk */
                     while(true)
@@ -1510,7 +1508,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                         else
                         {
                             /* Copy Data Chunk Buffer into Data Buffer */
-                            LocalLib::copy(&buffer[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
+                            memcpy(&buffer[buffer_index], &dataChunkBuffer[chunk_index], chunk_bytes);
                         }
                     }
 
@@ -2795,7 +2793,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Calculate Meta Data */
     metaData.layout = CONTIGUOUS_LAYOUT;
-    LocalLib::set(metaData.filter, 0, sizeof(metaData.filter));
+    memset(metaData.filter, 0, sizeof(metaData.filter));
     metaData.address = pos;
     metaData.size = size - (pos - starting_position);
 
@@ -3275,7 +3273,7 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
     if(dataset[0] == '/') dataset_name_ptr++;
 
     /* Build URL */
-    LocalLib::set(url, 0, MAX_META_NAME_SIZE);
+    memset(url, 0, MAX_META_NAME_SIZE);
     StringLib::format(url, MAX_META_NAME_SIZE, "%s/%s", filename_ptr, dataset_name_ptr);
 
     /* Check URL Fits (at least 2 null terminators) */
@@ -3372,7 +3370,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             {
                 int64_t tbuf_offset = (row * tbuf_col_size);
                 int64_t data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
-                LocalLib::copy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
+                memcpy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
             }
 
             /* Switch Buffers */

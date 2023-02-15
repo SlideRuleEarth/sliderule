@@ -164,7 +164,7 @@ bool Monitor::processRecord (RecordObject* record, okey_t key)
         /* (Optionally) Tail Event */
         if(eventTailArray)
         {
-            LocalLib::copy(&eventTailArray[eventTailIndex * MAX_EVENT_SIZE], event_buffer, event_size);
+            memcpy(&eventTailArray[eventTailIndex * MAX_EVENT_SIZE], event_buffer, event_size);
             eventTailIndex = (eventTailIndex + 1) % eventTailSize;
         }
     }
@@ -310,7 +310,7 @@ int Monitor::luaTail (lua_State* L)
 
         /* Create Event Tail */
         char* event_tail = new char [tail_size * MAX_EVENT_SIZE];
-        LocalLib::set(event_tail, 0, tail_size * MAX_EVENT_SIZE);
+        memset(event_tail, 0, tail_size * MAX_EVENT_SIZE);
         lua_obj->eventTailArray = event_tail;
         lua_obj->eventTailSize = tail_size;
 

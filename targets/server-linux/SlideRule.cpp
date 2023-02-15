@@ -345,7 +345,7 @@ int main (int argc, char* argv[])
                 displayCount();
             }
         #endif
-        LocalLib::sleep(1);
+        OsApi::sleep(1);
     }
 
     /* Free Interpreter */

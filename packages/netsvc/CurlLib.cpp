@@ -154,7 +154,7 @@ int CurlLib::luaGet (lua_State* L)
                 char* total_rsps = new char [total_rsps_size + 1];
                 for(int i = 0; i < rsps_set.length(); i++)
                 {
-                    LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+                    memcpy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
                     total_rsps_index += rsps_set[i].size;
                     delete [] rsps_set[i].data;
                 }
@@ -253,7 +253,7 @@ int CurlLib::luaPost (lua_State* L)
                 char* total_rsps = new char [total_rsps_size + 1];
                 for(int i = 0; i < rsps_set.length(); i++)
                 {
-                    LocalLib::copy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
+                    memcpy(&total_rsps[total_rsps_index], rsps_set[i].data, rsps_set[i].size);
                     total_rsps_index += rsps_set[i].size;
                     delete [] rsps_set[i].data;
                 }
@@ -300,7 +300,7 @@ size_t CurlLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
     rsps.size = size * nmemb;
     rsps.data = new char [rsps.size + 1];
 
-    LocalLib::copy(rsps.data, buffer, rsps.size);
+    memcpy(rsps.data, buffer, rsps.size);
     rsps.data[rsps.size] = '\0';
 
     rsps_set->add(rsps);
@@ -321,7 +321,7 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
 
     if(bytes_to_copy)
     {
-        LocalLib::copy(buffer, rqst->data, bytes_to_copy);
+        memcpy(buffer, rqst->data, bytes_to_copy);
         rqst->data += bytes_to_copy;
         rqst->size -= bytes_to_copy;
     }
