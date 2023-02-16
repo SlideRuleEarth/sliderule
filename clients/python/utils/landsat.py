@@ -42,6 +42,12 @@ if __name__ == '__main__':
 
     itemsDict = results.get_all_items_as_dict()
 
+    file = 'hls.geojson'
+    print(f"Writing reults to file {file}")
+    with open(file, 'w') as fp:
+        json.dump(itemsDict, fp)
+
+
     for i in reversed(range(len(itemsDict["features"]))):
         del itemsDict["features"][i]["links"]
         del itemsDict["features"][i]["stac_version"]
@@ -49,9 +55,13 @@ if __name__ == '__main__':
         del itemsDict["features"][i]["collection"]
         del itemsDict["features"][i]["assets"]["browse"]
 
+        assetsDict = itemsDict["features"][i]["assets"]
+        for val in assetsDict:
+            if "title" in assetsDict[val]:
+                del assetsDict[val]["title"]
 
-    file = 'trimmed_raster.geojson'
-    print(f"Writing reustls to file {file}")
+    file = 'hls_trimmed.geojson'
+    print(f"Writing reults to file {file}")
     with open(file, 'w') as fp:
         json.dump(itemsDict, fp)
 
