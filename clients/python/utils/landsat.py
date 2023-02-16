@@ -1,6 +1,7 @@
 #
 # HLS LANDSAT test
 from pystac_client import Client
+import json
 
 def BuildSquare(lon, lat, delta):
     c1 = [lon + delta, lat + delta]
@@ -25,23 +26,11 @@ if __name__ == '__main__':
     geometry  = BuildSquare(-178, 50, 1)
     mybbox    = [-179,41,-177,51]
 
-    print("Searching with bbox...")
-
-    results = catalog.search(collections=['HLSS30.v2.0'],
-                             bbox = mybbox,
-                             datetime=timeRange)
-    print(f"HLSS30: {results.matched()} items found")
-
-    results = catalog.search(collections=['HLSL30.v2.0'],
-                             bbox = mybbox,
-                             datetime=timeRange)
-    print(f"HLSL30: {results.matched()} items found")
-
-    results = catalog.search(collections=['HLSS30.v2.0', 'HLSL30.v2.0'],
-                             bbox = mybbox,
-                             datetime=timeRange)
-    print(f"Results matched: {results.matched()}")
-
+    # print("Searching with bbox...")
+    # results = catalog.search(collections=['HLSS30.v2.0', 'HLSL30.v2.0'],
+    #                          bbox = mybbox,
+    #                          datetime=timeRange)
+    # print(f"Results matched: {results.matched()}")
 
     print("Searching with Intersects...")
     results = catalog.search(collections=['HLSS30.v2.0', 'HLSL30.v2.0'],
@@ -50,8 +39,20 @@ if __name__ == '__main__':
 
     # print(f"{results.url_with_parameters()}")
     print(f"Results matched: {results.matched()}")
-    items = [i.to_dict() for i in results.get_items()]
-    print(f"Items fetched:   {len(items)}")
 
+    itemsDict = results.get_all_items_as_dict()
+
+    for i in reversed(range(len(itemsDict["features"]))):
+        del itemsDict["features"][i]["links"]
+        del itemsDict["features"][i]["stac_version"]
+        del itemsDict["features"][i]["stac_extensions"]
+        del itemsDict["features"][i]["collection"]
+        del itemsDict["features"][i]["assets"]["browse"]
+
+
+    file = 'trimmed_raster.geojson'
+    print(f"Writing reustls to file {file}")
+    with open(file, 'w') as fp:
+        json.dump(itemsDict, fp)
 
     print("Done!")
