@@ -72,6 +72,7 @@ if __name__ == '__main__':
         del itemsDict["features"][i]["stac_extensions"]
         del itemsDict["features"][i]["collection"]
         del itemsDict["features"][i]["assets"]["browse"]
+        del itemsDict["features"][i]["assets"]["metadata"]
 
         assetsDict = itemsDict["features"][i]["assets"]
         for val in assetsDict:
