@@ -67,6 +67,8 @@ struct ParquetBuilder::impl
 
     static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo);
     static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset);
+    static void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+    static void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
 };
 
 /*----------------------------------------------------------------------------
@@ -108,18 +110,18 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
         /* Add to Schema */
         switch(fields[i]->type)
         {
-            case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));       break;
-            case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));      break;
-            case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));      break;
-            case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));      break;
-            case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));      break;
-            case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));     break;
-            case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));     break;
-            case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));     break;
-            case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));    break;
-            case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));    break;
-            case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::date64()));     break;
-            case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));       break;
+            case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));                       break;
+            case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));                      break;
+            case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));                      break;
+            case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));                      break;
+            case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));                      break;
+            case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));                     break;
+            case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));                     break;
+            case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));                     break;
+            case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));                    break;
+            case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));                    break;
+            case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::timestamp(arrow::TimeUnit::NANO)));    break;
+            case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));                       break;
 
             case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, geo, fields[i]->exttype, fields[i]->offset);
                                         add_field_to_list = false;
@@ -150,6 +152,125 @@ bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& 
     return true;
 }
 
+/*----------------------------------------------------------------------------
+ * appendGeoMetaData
+ *----------------------------------------------------------------------------*/
+void ParquetBuilder::impl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+{
+    /* Initialize Meta Data String */
+    SafeString geostr(R"json({
+        "version": "1.0.0-beta.1",
+        "primary_column": "geometry",
+        "columns": {
+            "geometry": {
+                "encoding": "WKB",
+                "geometry_types": ["Point"],
+                "crs": {
+                    "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
+                    "type": "GeographicCRS",
+                    "name": "WGS 84 longitude-latitude",
+                    "datum": {
+                        "type": "GeodeticReferenceFrame",
+                        "name": "World Geodetic System 1984",
+                        "ellipsoid": {
+                            "name": "WGS 84",
+                            "semi_major_axis": 6378137,
+                            "inverse_flattening": 298.257223563
+                        }
+                    },
+                    "coordinate_system": {
+                        "subtype": "ellipsoidal",
+                        "axis": [
+                            {
+                                "name": "Geodetic longitude",
+                                "abbreviation": "Lon",
+                                "direction": "east",
+                                "unit": "degree"
+                            },
+                            {
+                                "name": "Geodetic latitude",
+                                "abbreviation": "Lat",
+                                "direction": "north",
+                                "unit": "degree"
+                            }
+                        ]
+                    },
+                    "id": {
+                        "authority": "OGC",
+                        "code": "CRS84"
+                    }
+                },
+                "edges": "planar",
+                "bbox": [-180.0, -90.0, 180.0, 90.0],
+                "epoch": 2018.0
+            }
+        }
+    })json");
+
+    /* Reformat JSON */
+    const char* oldtxt[2] = { "    ", "\n" };
+    const char* newtxt[2] = { "",     " " };
+    geostr.inreplace(oldtxt, newtxt, 2);
+
+    /* Append Meta String */
+    const char* str = geostr.str();
+    metadata->Append("geo", str);
+}
+
+/*----------------------------------------------------------------------------
+ * appendServerMetaData
+ *----------------------------------------------------------------------------*/
+void ParquetBuilder::impl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+{
+    /* Build Launch Time String */
+    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
+    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+
+    /* Build Duration String */
+    int64_t duration = TimeLib::gpstime() - launch_time_gps;
+    SafeString durationstr("%ld", duration);
+
+    /* Build Package String */
+    const char** pkg_list = LuaEngine::getPkgList();
+    SafeString packagestr("[");
+    if(pkg_list)
+    {
+        int index = 0;
+        while(pkg_list[index])
+        {
+            packagestr += pkg_list[index];
+            index++;
+            if(pkg_list[index]) packagestr += ", ";
+        }
+    }
+    packagestr += "]";
+
+    /* Initialize Meta Data String */
+    SafeString metastr(R"json({
+        "server":
+        {
+            "environment":"$1",
+            "version":"$2",
+            "duration":$3,
+            "packages":$4,
+            "commit":"$5",
+            "launch":"$6"
+        }
+    })json");
+
+    /* Fill In Meta Data String */
+    const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
+    const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
+    metastr.inreplace(oldtxt, newtxt, 8);
+
+    /* Append Meta String */
+    const char* str = metastr.str();
+    metadata->Append("sliderule", str);
+}
+
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -178,7 +299,7 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquet(<filename>, <outq name>, <rec_type>, <id>, <lon_key>, <lat_key>)
+ * luaCreate - :parquet(<filename>, <outq name>, <rec_type>, <id>, [<lon_key>, <lat_key>], [<time_key>])
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
@@ -193,6 +314,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* id              = getLuaString(L, 4);
         const char* lon_key         = getLuaString(L, 5, true, NULL);
         const char* lat_key         = getLuaString(L, 6, true, NULL);
+//        const char* time_key        = getLuaString(L, 7, true, NULL);
 
         /* Build Geometry Fields */
         geo_data_t geo;
@@ -293,17 +415,10 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
 
     /* Build GeoParquet MetaData */
-    if(geoData.as_geo)
-    {
-        auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-        const char* geodata_str = buildGeoMetaData();
-        const char* serverdata_str = buildServerMetaData();
-        metadata->Append("geo", geodata_str);
-        metadata->Append("sliderule", serverdata_str);
-        pimpl->schema = pimpl->schema->WithMetadata(metadata);
-        delete [] geodata_str;
-        delete [] serverdata_str;
-    }
+    auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+    if(geoData.as_geo) pimpl->appendGeoMetaData(metadata);
+    pimpl->appendServerMetaData(metadata);
+    pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Parquet Writer */
     #ifdef APACHE_ARROW_10_COMPAT
@@ -494,7 +609,7 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
 
             case RecordObject::TIME8:
             {
-                arrow::Date64Builder builder;
+                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
                 (void)builder.Reserve(num_rows);
                 for(int row = 0; row < num_rows; row++)
                 {
@@ -746,117 +861,4 @@ bool ParquetBuilder::send2Client (void)
 
     /* Return Status */
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * buildGeoMetaData
- *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::buildGeoMetaData (void)
-{
-    SafeString geostr(R"json({
-        "version": "1.0.0-beta.1",
-        "primary_column": "geometry",
-        "columns": {
-            "geometry": {
-                "encoding": "WKB",
-                "geometry_types": ["Point"],
-                "crs": {
-                    "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
-                    "type": "GeographicCRS",
-                    "name": "WGS 84 longitude-latitude",
-                    "datum": {
-                        "type": "GeodeticReferenceFrame",
-                        "name": "World Geodetic System 1984",
-                        "ellipsoid": {
-                            "name": "WGS 84",
-                            "semi_major_axis": 6378137,
-                            "inverse_flattening": 298.257223563
-                        }
-                    },
-                    "coordinate_system": {
-                        "subtype": "ellipsoidal",
-                        "axis": [
-                            {
-                                "name": "Geodetic longitude",
-                                "abbreviation": "Lon",
-                                "direction": "east",
-                                "unit": "degree"
-                            },
-                            {
-                                "name": "Geodetic latitude",
-                                "abbreviation": "Lat",
-                                "direction": "north",
-                                "unit": "degree"
-                            }
-                        ]
-                    },
-                    "id": {
-                        "authority": "OGC",
-                        "code": "CRS84"
-                    }
-                },
-                "edges": "planar",
-                "bbox": [-180.0, -90.0, 180.0, 90.0],
-                "epoch": 2018.0
-            }
-        }
-    })json");
-
-    const char* oldtxt[2] = { "    ", "\n" };
-    const char* newtxt[2] = { "",     " " };
-    geostr.inreplace(oldtxt, newtxt, 2);
-
-    return geostr.str(true);
-}
-
-/*----------------------------------------------------------------------------
- * buildServerMetaData
- *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::buildServerMetaData (void)
-{
-    /* Build Launch Time String */
-    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
-    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-
-    /* Build Duration String */
-    int64_t duration = TimeLib::gpstime() - launch_time_gps;
-    SafeString durationstr("%ld", duration);
-
-    /* Build Package String */
-    const char** pkg_list = LuaEngine::getPkgList();
-    SafeString packagestr("[");
-    if(pkg_list)
-    {
-        int index = 0;
-        while(pkg_list[index])
-        {
-            packagestr += pkg_list[index];
-            index++;
-            if(pkg_list[index]) packagestr += ", ";
-        }
-    }
-    packagestr += "]";
-
-    /* Initialize Meta Data String */
-    SafeString metastr(R"json({
-        "server":
-        {
-            "environment":"$1",
-            "version":"$2",
-            "duration":$3,
-            "packages":$4,
-            "commit":"$5",
-            "launch":"$6"
-        }
-    })json");
-
-    /* Fill In Meta Data String */
-    const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
-    const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
-    metastr.inreplace(oldtxt, newtxt, 8);
-
-    /* Return Copy of Meta String */
-    return metastr.str(true);
 }

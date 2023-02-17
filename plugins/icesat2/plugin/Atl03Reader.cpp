@@ -57,7 +57,7 @@
 
 const char* Atl03Reader::phRecType = "atl03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
-    {"delta_time",      RecordObject::DOUBLE,   offsetof(photon_t, delta_time),     1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
     {"distance",        RecordObject::DOUBLE,   offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
@@ -1431,7 +1431,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Add Photon to Extent */
                             photon_t ph = {
-                                .delta_time = atl03.delta_time[t][current_photon],
+                                .time_ns = parms->deltatime2timestamp(atl03.delta_time[t][current_photon]),
                                 .latitude = atl03.lat_ph[t][current_photon],
                                 .longitude = atl03.lon_ph[t][current_photon],
                                 .distance = along_track_distance - (state.extent_length / 2.0),

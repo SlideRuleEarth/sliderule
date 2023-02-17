@@ -110,6 +110,8 @@ class Icesat2Parms: public LuaObject
 
         static const uint8_t INVALID_FLAG           = 0xFF;
 
+        static const int64_t ATLAS_SDP_EPOCH_GPS    = 1198800018; // seconds to add to ATLAS delta times to get GPS times
+
         static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
@@ -242,9 +244,14 @@ class Icesat2Parms: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static uint8_t      getSpotNumber       (sc_orient_t sc_orient, track_t track, int pair);
-        static uint8_t      getGroundTrack      (sc_orient_t sc_orient, track_t track, int pair);
+        static int                      luaCreate               (lua_State* L);
+        static uint8_t                  getSpotNumber           (sc_orient_t sc_orient, track_t track, int pair);
+        static uint8_t                  getGroundTrack          (sc_orient_t sc_orient, track_t track, int pair);
+        static signal_conf_t            str2atl03cnf            (const char* confidence_str);
+        static quality_ph_t             str2atl03quality        (const char* quality_ph_str);
+        static atl08_classification_t   str2atl08class          (const char* classifiction_str);
+        static phoreal_geoloc_t         str2geoloc              (const char* fmt_str);
+        static int64_t                  deltatime2timestamp     (double delta_time);
 
         /*--------------------------------------------------------------------
          * Data
@@ -286,10 +293,6 @@ class Icesat2Parms: public LuaObject
                                 ~Icesat2Parms              (void);
 
         void                    cleanup                 (void);
-        signal_conf_t           str2atl03cnf            (const char* confidence_str);
-        quality_ph_t            str2atl03quality        (const char* quality_ph_str);
-        atl08_classification_t  str2atl08class          (const char* classifiction_str);
-        phoreal_geoloc_t        str2geoloc              (const char* fmt_str);
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);

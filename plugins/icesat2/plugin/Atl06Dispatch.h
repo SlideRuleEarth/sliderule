@@ -101,7 +101,7 @@ class Atl06Dispatch: public DispatchObject
 
         /* Compact Elevation Measurement */
         typedef struct {
-            double              delta_time;             // seconds from ATLAS SDP epoch
+            int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;
             double              longitude;
             double              h_mean;                 // meters from ellipsoid
@@ -122,10 +122,10 @@ class Atl06Dispatch: public DispatchObject
             uint16_t            cycle;                  // cycle number
             uint8_t             spot;                   // 1 through 6, or 0 if unknown
             uint8_t             gt;                     // gt1l, gt1r, gt2l, gt2r, gt3l, gt3r
-            double              distance;               // distance from the equator
-            double              delta_time;             // seconds from ATLAS SDP epoch
+            int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;
             double              longitude;
+            double              distance;               // distance from the equator
             double              h_mean;                 // meters from ellipsoid
             double              along_track_slope;
             double              across_track_slope;
@@ -158,7 +158,7 @@ class Atl06Dispatch: public DispatchObject
             double      y_sigma;
             double      latitude;
             double      longitude;
-            double      delta_time;
+            double      time_ns;
         } lsf_t;
 
         typedef struct {
@@ -185,7 +185,7 @@ class Atl06Dispatch: public DispatchObject
         Mutex               elevationMutex;
         int                 elevationIndex;
 
-        Icesat2Parms*          parms;
+        Icesat2Parms*       parms;
         stats_t             stats;
 
         /*--------------------------------------------------------------------

@@ -205,6 +205,65 @@ uint8_t Icesat2Parms::getGroundTrack (sc_orient_t sc_orient, track_t track, int 
     return 0;
 }
 
+/*----------------------------------------------------------------------------
+ * str2atl03cnf
+ *----------------------------------------------------------------------------*/
+Icesat2Parms::signal_conf_t Icesat2Parms::str2atl03cnf (const char* confidence_str)
+{
+    if     (StringLib::match(confidence_str, "atl03_tep")               ||  StringLib::match(confidence_str, "tep"))            return CNF_POSSIBLE_TEP;
+    else if(StringLib::match(confidence_str, "atl03_not_considered")    ||  StringLib::match(confidence_str, "not_considered")) return CNF_NOT_CONSIDERED;
+    else if(StringLib::match(confidence_str, "atl03_background")        ||  StringLib::match(confidence_str, "background"))     return CNF_BACKGROUND;
+    else if(StringLib::match(confidence_str, "atl03_within_10m")        ||  StringLib::match(confidence_str, "within_10m"))     return CNF_WITHIN_10M;
+    else if(StringLib::match(confidence_str, "atl03_low")               ||  StringLib::match(confidence_str, "low"))            return CNF_SURFACE_LOW;
+    else if(StringLib::match(confidence_str, "atl03_medium")            ||  StringLib::match(confidence_str, "medium"))         return CNF_SURFACE_MEDIUM;
+    else if(StringLib::match(confidence_str, "atl03_high")              ||  StringLib::match(confidence_str, "high"))           return CNF_SURFACE_HIGH;
+    else                                                                                                                        return ATL03_INVALID_CONFIDENCE;
+}
+
+/*----------------------------------------------------------------------------
+ * str2atl03quality
+ *----------------------------------------------------------------------------*/
+Icesat2Parms::quality_ph_t Icesat2Parms::str2atl03quality (const char* quality_ph_str)
+{
+    if     (StringLib::match(quality_ph_str, "atl03_quality_nominal")           || StringLib::match(quality_ph_str, "nominal"))             return QUALITY_NOMINAL;
+    else if(StringLib::match(quality_ph_str, "atl03_quality_afterpulse")        || StringLib::match(quality_ph_str, "afterpulse"))          return QUALITY_POSSIBLE_AFTERPULSE;
+    else if(StringLib::match(quality_ph_str, "atl03_quality_impulse_response")  || StringLib::match(quality_ph_str, "impulse_response"))    return QUALITY_POSSIBLE_IMPULSE_RESPONSE;
+    else if(StringLib::match(quality_ph_str, "atl03_quality_tep")               || StringLib::match(quality_ph_str, "tep"))                 return QUALITY_POSSIBLE_TEP;
+    else                                                                                                                                    return ATL03_INVALID_QUALITY;
+}
+
+/*----------------------------------------------------------------------------
+ * str2atl08class
+ *----------------------------------------------------------------------------*/
+Icesat2Parms::atl08_classification_t Icesat2Parms::str2atl08class (const char* classifiction_str)
+{
+    if     (StringLib::match(classifiction_str, "atl08_noise")          || StringLib::match(classifiction_str, "noise"))           return ATL08_NOISE;
+    else if(StringLib::match(classifiction_str, "atl08_ground")         || StringLib::match(classifiction_str, "ground"))          return ATL08_GROUND;
+    else if(StringLib::match(classifiction_str, "atl08_canopy")         || StringLib::match(classifiction_str, "canopy"))          return ATL08_CANOPY;
+    else if(StringLib::match(classifiction_str, "atl08_top_of_canopy")  || StringLib::match(classifiction_str, "top_of_canopy"))   return ATL08_TOP_OF_CANOPY;
+    else if(StringLib::match(classifiction_str, "atl08_unclassified")   || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
+    else                                                                                                                           return ATL08_INVALID_CLASSIFICATION;
+}
+
+/*----------------------------------------------------------------------------
+ * str2geoloc
+ *----------------------------------------------------------------------------*/
+Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
+{
+    if     (StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
+    else if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
+    else if(StringLib::match(fmt_str, "center"))    return PHOREAL_CENTER;
+    else                                            return PHOREAL_UNSUPPORTED;
+}
+
+/*----------------------------------------------------------------------------
+ * get_lua_atl03_cnf
+ *----------------------------------------------------------------------------*/
+int64_t Icesat2Parms::deltatime2timestamp (double delta_time)
+{
+    return (int64_t)((delta_time + (double)ATLAS_SDP_EPOCH_GPS) * 1000000000.0);
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -446,57 +505,6 @@ void Icesat2Parms::cleanup (void)
 }
 
 /*----------------------------------------------------------------------------
- * str2atl03cnf
- *----------------------------------------------------------------------------*/
-Icesat2Parms::signal_conf_t Icesat2Parms::str2atl03cnf (const char* confidence_str)
-{
-    if     (StringLib::match(confidence_str, "atl03_tep")               ||  StringLib::match(confidence_str, "tep"))            return CNF_POSSIBLE_TEP;
-    else if(StringLib::match(confidence_str, "atl03_not_considered")    ||  StringLib::match(confidence_str, "not_considered")) return CNF_NOT_CONSIDERED;
-    else if(StringLib::match(confidence_str, "atl03_background")        ||  StringLib::match(confidence_str, "background"))     return CNF_BACKGROUND;
-    else if(StringLib::match(confidence_str, "atl03_within_10m")        ||  StringLib::match(confidence_str, "within_10m"))     return CNF_WITHIN_10M;
-    else if(StringLib::match(confidence_str, "atl03_low")               ||  StringLib::match(confidence_str, "low"))            return CNF_SURFACE_LOW;
-    else if(StringLib::match(confidence_str, "atl03_medium")            ||  StringLib::match(confidence_str, "medium"))         return CNF_SURFACE_MEDIUM;
-    else if(StringLib::match(confidence_str, "atl03_high")              ||  StringLib::match(confidence_str, "high"))           return CNF_SURFACE_HIGH;
-    else                                                                                                                        return ATL03_INVALID_CONFIDENCE;
-}
-
-/*----------------------------------------------------------------------------
- * str2atl03quality
- *----------------------------------------------------------------------------*/
-Icesat2Parms::quality_ph_t Icesat2Parms::str2atl03quality (const char* quality_ph_str)
-{
-    if     (StringLib::match(quality_ph_str, "atl03_quality_nominal")           || StringLib::match(quality_ph_str, "nominal"))             return QUALITY_NOMINAL;
-    else if(StringLib::match(quality_ph_str, "atl03_quality_afterpulse")        || StringLib::match(quality_ph_str, "afterpulse"))          return QUALITY_POSSIBLE_AFTERPULSE;
-    else if(StringLib::match(quality_ph_str, "atl03_quality_impulse_response")  || StringLib::match(quality_ph_str, "impulse_response"))    return QUALITY_POSSIBLE_IMPULSE_RESPONSE;
-    else if(StringLib::match(quality_ph_str, "atl03_quality_tep")               || StringLib::match(quality_ph_str, "tep"))                 return QUALITY_POSSIBLE_TEP;
-    else                                                                                                                                    return ATL03_INVALID_QUALITY;
-}
-
-/*----------------------------------------------------------------------------
- * str2atl08class
- *----------------------------------------------------------------------------*/
-Icesat2Parms::atl08_classification_t Icesat2Parms::str2atl08class (const char* classifiction_str)
-{
-    if     (StringLib::match(classifiction_str, "atl08_noise")          || StringLib::match(classifiction_str, "noise"))           return ATL08_NOISE;
-    else if(StringLib::match(classifiction_str, "atl08_ground")         || StringLib::match(classifiction_str, "ground"))          return ATL08_GROUND;
-    else if(StringLib::match(classifiction_str, "atl08_canopy")         || StringLib::match(classifiction_str, "canopy"))          return ATL08_CANOPY;
-    else if(StringLib::match(classifiction_str, "atl08_top_of_canopy")  || StringLib::match(classifiction_str, "top_of_canopy"))   return ATL08_TOP_OF_CANOPY;
-    else if(StringLib::match(classifiction_str, "atl08_unclassified")   || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
-    else                                                                                                                           return ATL08_INVALID_CLASSIFICATION;
-}
-
-/*----------------------------------------------------------------------------
- * str2geoloc
- *----------------------------------------------------------------------------*/
-Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
-{
-    if     (StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
-    else if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
-    else if(StringLib::match(fmt_str, "center"))    return PHOREAL_CENTER;
-    else                                            return PHOREAL_UNSUPPORTED;
-}
-/*----------------------------------------------------------------------------
-
  * get_lua_atl03_cnf
  *----------------------------------------------------------------------------*/
 void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
