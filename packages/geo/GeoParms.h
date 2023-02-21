@@ -112,7 +112,6 @@ class GeoParms: public LuaObject
         static int  luaCreate   (lua_State* L);
                     GeoParms    (lua_State* L, int index);
                     ~GeoParms   (void);
-        void        fromLua     (lua_State* L, int index);
 
     private:
 

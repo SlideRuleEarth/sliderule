@@ -331,8 +331,8 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
 {
     int top = lua_gettop(l);
 
-    if( prefix ) printf("%s, stack depth is: %d\n", prefix, top );
-    else         printf("stack depth is: %d\n", top );
+    if( prefix ) print2term("%s, stack depth is: %d\n", prefix, top );
+    else         print2term("stack depth is: %d\n", top );
 
     for (int i = top; i >= 1; i--)
     {
@@ -341,20 +341,20 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
         switch (t)
         {
             case LUA_TSTRING:
-                printf("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));
+                print2term("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));
                 break;
             case LUA_TBOOLEAN:
-                printf("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");
+                print2term("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");
                 break;
             case LUA_TNUMBER:
-                printf("--%02d-- number: %g\n", i, lua_tonumber(l, i));
+                print2term("--%02d-- number: %g\n", i, lua_tonumber(l, i));
                 break;
             default:
-                printf("--%02d-- %s\n", i, lua_typename(l, t));
+                print2term("--%02d-- %s\n", i, lua_typename(l, t));
                 break;
         }
     }
-    printf("\n");
+    print2term("\n");
 }
 
 /*----------------------------------------------------------------------------
