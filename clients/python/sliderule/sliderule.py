@@ -940,7 +940,6 @@ def gps2utc (gps_time, as_str=True):
         '2019-02-27 19:34:03'
     '''
     rsps = source("time", {"time": gps_time, "input": "GPS", "output": "DATE"})
-    print(rsps)
     if as_str:
         return rsps["time"]
     else:
