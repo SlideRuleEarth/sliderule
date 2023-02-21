@@ -88,9 +88,6 @@ ATL08_ICE = 3
 P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
       '55': 10, '60': 11, '65': 12, '70': 13, '75': 14, '80': 15, '85': 16, '90': 17, '95': 18 }
 
-# gps-based epoch for delta times
-ATLAS_SDP_EPOCH = datetime.datetime(2018, 1, 1)
-
 ###############################################################################
 # LOCAL FUNCTIONS
 ###############################################################################
@@ -142,7 +139,7 @@ def __calcspot(sc_orient, track, pair):
 #
 #  Dictionary to GeoDataFrame
 #
-def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="lat", **kwargs):
+def __todataframe(columns, time_key="time", lon_key="lon", lat_key="lat", **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -156,9 +153,9 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="lon", lat_key="
         return sliderule.emptyframe(**kwargs)
 
     # Generate Time Column
-    delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
-    atlas_sdp_epoch = numpy.datetime64(ATLAS_SDP_EPOCH)
-    columns['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
+    timestamp = (columns[time_key]*1e9).astype('timedelta64[ns]')
+    gps_epoch = numpy.datetime64(sliderule.gps_epoch)
+    columns['time'] = geopandas.pd.to_datetime(gps_epoch + timestamp)
 
     # Generate Geometry Column
     geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])

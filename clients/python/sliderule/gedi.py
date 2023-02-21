@@ -51,9 +51,6 @@ DEFAULT_ASSET="ornl-s3"
 # default GEDI standard data product version
 DEFAULT_GEDI_SDP_VERSION = '2'
 
-# gps-based epoch for delta times
-GEDI_SDP_EPOCH = datetime.datetime(2018, 1, 1)
-
 # gedi parameters
 ALL_BEAMS = -1
 
@@ -64,7 +61,7 @@ ALL_BEAMS = -1
 #
 #  Dictionary to GeoDataFrame
 #
-def __todataframe(columns, delta_time_key="delta_time", lon_key="longitude", lat_key="latitude", **kwargs):
+def __todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -78,9 +75,9 @@ def __todataframe(columns, delta_time_key="delta_time", lon_key="longitude", lat
         return sliderule.emptyframe(**kwargs)
 
     # Generate Time Column
-    delta_time = (columns[delta_time_key]*1e9).astype('timedelta64[ns]')
-    gedi_sdp_epoch = numpy.datetime64(GEDI_SDP_EPOCH)
-    columns['time'] = geopandas.pd.to_datetime(gedi_sdp_epoch + delta_time)
+    timestamp = (columns[time_key]*1e9).astype('timedelta64[ns]')
+    gps_epoch = numpy.datetime64(sliderule.gps_epoch)
+    columns['time'] = geopandas.pd.to_datetime(gps_epoch + timestamp)
 
     # Generate Geometry Column
     geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
