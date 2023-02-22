@@ -284,7 +284,7 @@ void LuaEngine::setAttrBool (lua_State* l, const char* name, bool val)
 /*----------------------------------------------------------------------------
  * setAttrInt
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrInt (lua_State* l, const char* name, int val)
+void LuaEngine::setAttrInt (lua_State* l, const char* name, long val)
 {
     lua_pushstring(l, name);
     lua_pushinteger(l, val);
@@ -438,7 +438,7 @@ void LuaEngine::setBoolean (const char* name, bool val)
 /*----------------------------------------------------------------------------
  * setInteger
  *----------------------------------------------------------------------------*/
-void LuaEngine::setInteger (const char* name, int val)
+void LuaEngine::setInteger (const char* name, long val)
 {
     engineSignal.lock();
     {

@@ -84,7 +84,7 @@ class RasterSampler: public DispatchObject
         typedef struct {
             double              value;
             double              time;
-            uint32_t            file_id;
+            uint64_t            file_id;
             uint32_t            flags;
         } sample_t;
 
@@ -106,7 +106,7 @@ class RasterSampler: public DispatchObject
 
         /* File Directory Entry Record */
         typedef struct {
-            uint32_t            file_id;
+            uint64_t            file_id;
             char                file_name[];
         } file_directory_entry_t;
 
@@ -137,7 +137,9 @@ class RasterSampler: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        RasterSampler           (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* index_key, const char* lon_key, const char* lat_key);
+                        RasterSampler           (lua_State* L, VrtRaster* _raster, const char* raster_key,
+                                                 const char* outq_name, const char* rec_type,
+                                                 const char* index_key, const char* lon_key, const char* lat_key);
                         ~RasterSampler          (void);
 
         bool            processRecord           (RecordObject* record, okey_t key) override;

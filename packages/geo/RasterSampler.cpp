@@ -49,7 +49,7 @@ const char* RasterSampler::rsSampleRecType = "rsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
     {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),      1,  NULL, NATIVE_FLAGS},
     {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),       1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT32,   offsetof(sample_t, file_id),    1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT64,   offsetof(sample_t, file_id),    1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),      1,  NULL, NATIVE_FLAGS}
 };
 
@@ -65,7 +65,7 @@ const char* RasterSampler::zsSampleRecType = "zsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
     {"value",           RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, value),           1,  NULL, NATIVE_FLAGS},
     {"time",            RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, time),            1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT32,   offsetof(VrtRaster::sample_t, fileId),          1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT64,   offsetof(VrtRaster::sample_t, fileId),          1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, flags),           1,  NULL, NATIVE_FLAGS},
     {"count",           RecordObject::UINT32,   offsetof(VrtRaster::sample_t, stats.count),     1,  NULL, NATIVE_FLAGS},
     {"min",             RecordObject::DOUBLE,   offsetof(VrtRaster::sample_t, stats.min),       1,  NULL, NATIVE_FLAGS},
@@ -86,7 +86,7 @@ const RecordObject::fieldDef_t RasterSampler::zsGeoRecDef[] = {
 
 const char* RasterSampler::fileIdRecType = "fileidrec";
 const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
-    {"file_id",         RecordObject::UINT32,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT64,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS},
     {"file_name",       RecordObject::STRING,   offsetof(file_directory_entry_t, file_name),    0,  NULL, NATIVE_FLAGS} // variable length
 };
 
@@ -95,7 +95,7 @@ const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :sampler(<vrt_raster>, <vrt_raster_index>, <outq name>, <rec_type>, <index_key>, <lon_key>, <lat_key>)
+ * luaCreate - :sampler(<raster>, <raster_key>, <outq name>, <rec_type>, <index_key>, <lon_key>, <lat_key>)
  *----------------------------------------------------------------------------*/
 int RasterSampler::luaCreate (lua_State* L)
 {
@@ -148,7 +148,9 @@ void RasterSampler::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* raster_key, const char* outq_name, const char* rec_type, const char* index_key, const char* lon_key, const char* lat_key):
+RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* raster_key,
+                              const char* outq_name, const char* rec_type,
+                              const char* index_key, const char* lon_key, const char* lat_key):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(_raster);
@@ -304,7 +306,7 @@ bool RasterSampler::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool RasterSampler::processTermination (void)
 {
-    Dictionary<uint32_t>::Iterator iterator(raster->fileDictGet());
+    Dictionary<uint64_t>::Iterator iterator(raster->fileDictGet());
     for(int i = 0; i < iterator.length; i++)
     {
         /* Send File Directory Entry Record for each File in Raster Dictionary */

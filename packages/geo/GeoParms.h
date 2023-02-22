@@ -73,6 +73,7 @@ class GeoParms: public LuaObject
         static const char* URL_SUBSTRING;
         static const char* CLOSEST_TIME;
         static const char* ASSET;
+        static const char* KEY_SPACE;
 
         static const char* NEARESTNEIGHBOUR_ALGO;
         static const char* BILINEAR_ALGO;
@@ -104,6 +105,7 @@ class GeoParms: public LuaObject
         TimeLib::gmt_time_t closest_time;
         const char*         asset_name;
         Asset*              asset;
+        uint64_t            key_space;
 
         /*--------------------------------------------------------------------
         * Methods
@@ -123,6 +125,7 @@ class GeoParms: public LuaObject
         GDALRIOResampleAlg  str2algo        (const char* str);
         static int          luaAssetName    (lua_State* L);
         static int          luaAssetRegion  (lua_State* L);
+        static int          luaSetKeySpace  (lua_State* L);
 };
 
 #endif  /* __geo_parms__ */

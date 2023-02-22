@@ -110,7 +110,7 @@ class GeoRaster: public LuaObject
         typedef struct {
             double    value;
             double    time;
-            uint32_t  fileId;
+            uint64_t  fileId;
             uint32_t  flags;
 
             struct {
@@ -221,7 +221,7 @@ class GeoRaster: public LuaObject
         inline bool    hasAuxiliary    (void) { return parms->auxiliary_files; }
         const char*    getUUID         (char* uuid_str);
         virtual       ~GeoRaster       (void);
-        inline const Dictionary<uint32_t>& fileDictGet(void) {return fileDict;}
+        inline const Dictionary<uint64_t>& fileDictGet(void) {return fileDict;}
 
     protected:
 
@@ -282,7 +282,7 @@ class GeoRaster: public LuaObject
         reader_t*    rasterRreader;
         uint32_t     readerCount;
 
-        Dictionary<uint32_t> fileDict;
+        Dictionary<uint64_t> fileDict;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -304,7 +304,7 @@ class GeoRaster: public LuaObject
         void       readPixel               (Raster* raster);
         void       resamplePixel           (Raster* raster);
         void       computeZonalStats       (Raster* raster);
-        uint32_t   fileDictAdd             (const std::string& fileName);
+        uint64_t   fileDictAdd             (const std::string& fileName);
 
 };
 
