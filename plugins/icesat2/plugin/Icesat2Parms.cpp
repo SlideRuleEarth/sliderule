@@ -257,11 +257,12 @@ Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
 }
 
 /*----------------------------------------------------------------------------
- * get_lua_atl03_cnf
+ * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
  *----------------------------------------------------------------------------*/
 int64_t Icesat2Parms::deltatime2timestamp (double delta_time)
 {
-    return (int64_t)((delta_time + (double)ATLAS_SDP_EPOCH_GPS) * 1000000000.0);
+    double unix_time = delta_time + (double)ATLAS_SDP_EPOCH_GPS + (double)TIME_GPS_EPOCH_START;
+    return (int64_t)(unix_time * 1000000000.0);
 }
 
 /******************************************************************************

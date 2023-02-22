@@ -649,7 +649,7 @@ int TimeLib::getleapms(int64_t current_time, int64_t start_time)
     /* If not GPS_EPOCH_START, find the index of the supplied epoch*/
     if (start_time == TIME_GPS_EPOCH_START)
     {
-       start_index = 10;
+       start_index = TIME_LEAP_SECS_AT_GPS_EPOCH;
     }
     else
     {

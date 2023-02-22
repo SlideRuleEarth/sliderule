@@ -58,7 +58,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS},
     {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
     {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
-    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS}, // TODO: change to "time" and type to TIME8, and then calculate as gps time; then change python client to handle
+    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS},
     {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
     {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},

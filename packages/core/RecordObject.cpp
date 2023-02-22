@@ -645,25 +645,18 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;    break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;   break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;   break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;   break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;   break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;  break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;  break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;   break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = val;          break;
-            case TIME8:     {
-                                double intpart;
-                                uint32_t seconds = (uint32_t)val;
-                                uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + elem_offset) = seconds;
-                                *(uint32_t*)(recordData + elem_offset + 4) = subseconds;
-                                break;
-                            }
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;       break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;      break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;      break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;      break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;      break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;     break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;     break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;          break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = val;                 break;
+            case TIME8:     *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
@@ -673,25 +666,17 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                     break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);   break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);   break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = OsApi::swapll((int64_t)val);  break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                    break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);  break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);  break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val); break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);   break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val); break;
-            case TIME8:     {
-                                double intpart;
-                                uint32_t seconds = (uint32_t)val;
-                                uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + elem_offset) = OsApi::swapl(seconds);
-                                *(uint32_t*)(recordData + elem_offset + 4) = OsApi::swapl(subseconds);
-                                break;
-                            }
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                   break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);    break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);    break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = OsApi::swapll((int64_t)val);   break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                  break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);   break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);   break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);              break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);        break;
+            case DOUBLE:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
@@ -716,25 +701,18 @@ void RecordObject::setValueInteger(const field_t& f, const long val, int element
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;     break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;    break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;    break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;    break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;    break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;   break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;   break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;   break;
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;       break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;      break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;      break;
+            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;      break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;      break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;     break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;     break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;    break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = val;           break;
-            case TIME8:     {
-                                double intpart;
-                                uint32_t seconds = (uint32_t)val;
-                                uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + elem_offset) = seconds;
-                                *(uint32_t*)(recordData + elem_offset + 4) = subseconds;
-                                break;
-                            }
+            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;          break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = val;                 break;
+            case TIME8:     *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
@@ -744,25 +722,18 @@ void RecordObject::setValueInteger(const field_t& f, const long val, int element
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                     break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);   break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);   break;
-            case INT64:     *(int64_t*)(recordData + elem_offset)  = OsApi::swapll((int64_t)val);  break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                    break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);  break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);  break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val); break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);                  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);   break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val); break;
-            case TIME8:     {
-                                double intpart;
-                                uint32_t seconds = (uint32_t)val;
-                                uint32_t subseconds = (uint32_t)modf(val , &intpart);
-                                *(uint32_t*)(recordData + elem_offset) = OsApi::swapl(seconds);
-                                *(uint32_t*)(recordData + elem_offset + 4) = OsApi::swapl(subseconds);
-                                break;
-                            }
+            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                   break;
+            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);    break;
+            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);    break;
+            case INT64:     *(int64_t*)(recordData + elem_offset)  = OsApi::swapll((int64_t)val);   break;
+            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                  break;
+            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);   break;
+            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);   break;
+            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);              break;
+            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);        break;
+            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val);      break;
+            case TIME8:     *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
@@ -855,11 +826,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (double)*(float*) (recordData + elem_offset);
             case DOUBLE:    return *(double*)(recordData + elem_offset);
-            case TIME8:     {
-                                uint32_t seconds = *(uint32_t*)(recordData + elem_offset);
-                                uint32_t subseconds = *(uint32_t*)(recordData + elem_offset + 4);
-                                return ((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
-                            }
+            case TIME8:     return (double)*(uint64_t*)(recordData + elem_offset);
             default:        return 0.0;
         }
     }
@@ -878,11 +845,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (double)OsApi::swapf (*(float*) (recordData + elem_offset));
             case DOUBLE:    return (double)OsApi::swaplf(*(double*)(recordData + elem_offset));
-            case TIME8:     {
-                                uint32_t seconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset));
-                                uint32_t subseconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset + 4));
-                                return (double)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
-                            }
+            case TIME8:     return (double)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
             default:        return 0.0;
         }
     }
@@ -916,11 +879,7 @@ long RecordObject::getValueInteger(const field_t& f, int element)
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (long)*(float*) (recordData + elem_offset);
             case DOUBLE:    return (long)*(double*)(recordData + elem_offset);
-            case TIME8:     {
-                                uint32_t seconds = *(uint32_t*)(recordData + elem_offset);
-                                uint32_t subseconds = *(uint32_t*)(recordData + elem_offset + 4);
-                                return (long)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
-                            }
+            case TIME8:     return (long)*(uint64_t*)(recordData + elem_offset);
             default:        return 0;
         }
     }
@@ -939,11 +898,7 @@ long RecordObject::getValueInteger(const field_t& f, int element)
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
             case FLOAT:     return (long)OsApi::swapf (*(float*) (recordData + elem_offset));
             case DOUBLE:    return (long)OsApi::swaplf(*(double*)(recordData + elem_offset));
-            case TIME8:     {
-                                uint32_t seconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset));
-                                uint32_t subseconds = OsApi::swapl(*(uint32_t*)(recordData + elem_offset + 4));
-                                return (long)((double)seconds + ((double)subseconds / FLOAT_MAX_VALUE));
-                            }
+            case TIME8:     return (long)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
             default:        return 0;
         }
     }
@@ -976,7 +931,7 @@ RecordObject::valType_t RecordObject::getValueType(const field_t& f)
         case BITFIELD:  return INTEGER;
         case FLOAT:     return REAL;
         case DOUBLE:    return REAL;
-        case TIME8:     return REAL;
+        case TIME8:     return INTEGER;
         case STRING:    return TEXT;
         case USER:      return DYNAMIC;
         default:        return DYNAMIC;

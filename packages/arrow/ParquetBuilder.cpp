@@ -69,6 +69,7 @@ struct ParquetBuilder::impl
     static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset);
     static void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
     static void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+    static void appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const shared_ptr<arrow::Schema>& _schema, const field_iterator_t* field_iterator, const char* index_key);
 };
 
 /*----------------------------------------------------------------------------
@@ -270,6 +271,99 @@ void ParquetBuilder::impl::appendServerMetaData (const std::shared_ptr<arrow::Ke
     metadata->Append("sliderule", str);
 }
 
+/*----------------------------------------------------------------------------
+ * appendServerMetaData
+ *----------------------------------------------------------------------------*/
+void ParquetBuilder::impl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata,
+                                                 const shared_ptr<arrow::Schema>& _schema,
+                                                 const field_iterator_t* field_iterator,
+                                                 const char* index_key)
+{
+    /* Initialize Pandas Meta Data String */
+    SafeString pandasstr(R"json({
+        "index_columns": [$INDEX],
+        "column_indexes": [
+            {
+                "name": null,
+                "field_name": null,
+                "pandas_type": "unicode",
+                "numpy_type": "object",
+                "metadata": {"encoding": "UTF-8"}
+            }
+        ],
+        "columns": [$COLUMNS],
+        "creator": {"library": "pyarrow", "version": "10.0.1"},
+        "pandas_version": "1.5.3"
+    })json");
+
+    /* Build Columns String */
+    SafeString columns;
+    int index = 0;
+    for(const std::string& field_name: _schema->field_names())
+    {
+        /* Initialize Column String */
+        SafeString columnstr(R"json({"name": "$NAME", "field_name": "$NAME", "pandas_type": "$PTYPE", "numpy_type": "$NTYPE", "metadata": null})json");
+        const char* pandas_type = "";
+        const char* numpy_type = "";
+        bool is_last_entry = false;
+
+        if(index < field_iterator->length)
+        {
+            /* Add Column from Field List */
+            RecordObject::field_t field = (*field_iterator)[index++];
+            switch(field.type)
+            {
+                case RecordObject::DOUBLE:  pandas_type = "float64";    numpy_type = "float64";         break;
+                case RecordObject::FLOAT:   pandas_type = "float32";    numpy_type = "float32";         break;
+                case RecordObject::INT8:    pandas_type = "int8";       numpy_type = "int8";            break;
+                case RecordObject::INT16:   pandas_type = "int16";      numpy_type = "int16";           break;
+                case RecordObject::INT32:   pandas_type = "int32";      numpy_type = "int32";           break;
+                case RecordObject::INT64:   pandas_type = "int64";      numpy_type = "int64";           break;
+                case RecordObject::UINT8:   pandas_type = "uint8";      numpy_type = "uint8";           break;
+                case RecordObject::UINT16:  pandas_type = "uint16";     numpy_type = "uint16";          break;
+                case RecordObject::UINT32:  pandas_type = "uint32";     numpy_type = "uint32";          break;
+                case RecordObject::UINT64:  pandas_type = "uint64";     numpy_type = "uint64";          break;
+                case RecordObject::TIME8:   pandas_type = "datetime";   numpy_type = "datetime64[ns]";  break;
+                case RecordObject::STRING:  pandas_type = "bytes";      numpy_type = "object";          break;
+                default:                    pandas_type = "bytes";      numpy_type = "object";          break;
+            }
+        }
+        else if(StringLib::match(field_name.c_str(), "geometry"))
+        {
+            /* Add Column for Geometry */
+            pandas_type = "bytes";
+            numpy_type = "object";
+            is_last_entry = true;
+        }
+
+        /* Fill In Column String */
+        const char* oldtxt[3] = { "$NAME", "$PTYPE", "$NTYPE" };
+        const char* newtxt[3] = { field_name.c_str(), pandas_type, numpy_type };
+        columnstr.inreplace(oldtxt, newtxt, 3);
+
+        /* Add Comma */
+        if(!is_last_entry)
+        {
+            columnstr += ", ";
+        }
+
+        /* Add Column String to Columns */
+        columns += columnstr;
+    }
+
+    /* Build Index String */
+    SafeString indexstr("\"%s\"", index_key ? index_key : "");
+    if(!index_key) indexstr = "";
+
+    /* Fill In Pandas Meta Data String */
+    const char* oldtxt[4] = { "    ", "\n", "$INDEX", "$COLUMNS" };
+    const char* newtxt[4] = { "", " ", indexstr.str(), columns.str() };
+    pandasstr.inreplace(oldtxt, newtxt, 4);
+
+    /* Append Meta String */
+    const char* str = pandasstr.str();
+    metadata->Append("pandas", str);
+}
 
 /******************************************************************************
  * STATIC DATA
@@ -314,7 +408,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* id              = getLuaString(L, 4);
         const char* lon_key         = getLuaString(L, 5, true, NULL);
         const char* lat_key         = getLuaString(L, 6, true, NULL);
-//        const char* time_key        = getLuaString(L, 7, true, NULL);
+        const char* index_key       = getLuaString(L, 7, true, NULL);
 
         /* Build Geometry Fields */
         geo_data_t geo;
@@ -337,7 +431,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, parms, outq_name, rec_type, id, geo));
+        return createLuaObject(L, new ParquetBuilder(L, parms, outq_name, rec_type, id, geo, index_key));
     }
     catch(const RunTimeException& e)
     {
@@ -370,7 +464,7 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo):
+ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo, const char* index_key):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(parms);
@@ -392,6 +486,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
 
     /* Initialize GeoParquet Option */
     geoData = geo;
+
+    /* Initialize Index Key */
+    indexKey = StringLib::duplicate(index_key);
 
     /* Define Table Schema */
     pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData);
@@ -418,6 +515,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
     if(geoData.as_geo) pimpl->appendGeoMetaData(metadata);
     pimpl->appendServerMetaData(metadata);
+    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, indexKey);
     pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Parquet Writer */
@@ -445,6 +543,7 @@ ParquetBuilder::~ParquetBuilder(void)
 {
     parms->releaseLuaObject();
     delete [] fileName;
+    if(indexKey) delete [] indexKey;
     delete outQ;
     delete fieldIterator;
     delete pimpl;
