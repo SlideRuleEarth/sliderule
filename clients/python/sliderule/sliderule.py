@@ -119,7 +119,7 @@ basictypes = {
     "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte   },  # unsupported
     "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
     "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
-    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.datetime64 },
+    "TIME8":    { "fmt": 'q', "size": 8, "nptype": numpy.int64  }, # numpy.datetime64
     "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte   }
 }
 

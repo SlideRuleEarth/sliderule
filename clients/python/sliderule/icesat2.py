@@ -153,9 +153,7 @@ def __todataframe(columns, time_key="time", lon_key="lon", lat_key="lat", **kwar
         return sliderule.emptyframe(**kwargs)
 
     # Generate Time Column
-    timestamp = (columns[time_key]*1e9).astype('timedelta64[ns]')
-    gps_epoch = numpy.datetime64(sliderule.gps_epoch)
-    columns['time'] = geopandas.pd.to_datetime(gps_epoch + timestamp)
+    columns['time'] = columns[time_key].astype('datetime64[ns]')
 
     # Generate Geometry Column
     geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
