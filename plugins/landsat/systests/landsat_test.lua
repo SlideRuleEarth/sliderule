@@ -10,25 +10,29 @@ json = require("json")
 
 -- Unit Test --
 
-local  lon = 180.00
-local  lat = 66.34  -- Arctic Circle lat
+local  lon = -179.0
+local  lat = 51.0
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test\n-------------------------------------------------"))
 
-local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
 local demType = "landsat-hls"
-local dem = geo.raster(demType, samplingAlgs[i], 0)
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0 }))
 
-local tbl, status = dem:sample(lon, lat)
-if status ~= true then
-    print(string.format("======> FAILED to read",lon, lat))
-else
-    local el, fname
-    for j, v in ipairs(tbl) do
-        el = v["value"]
-        fname = v["file"]
+for i = 1, 1, 1 do
+    local tbl, status = dem:sample(lon, lat)
+    if status ~= true then
+        print(string.format("======> FAILED to read",lon, lat))
+    else
+        local el, fname
+        for j, v in ipairs(tbl) do
+            el = v["value"]
+            fname = v["file"]
+        end
+        print(string.format("%15f, fname", el, fname))
     end
-    print(string.format("%20s (%02d) %15f", samplingAlgs[0], el, fname))
+
+    lon = lon + 0.1
+    -- lat = lat + 0.1
 end
 
 os.exit()

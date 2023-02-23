@@ -66,7 +66,9 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
-#if 0
+#if 1
+    file = "/home/elidwa/ICESat2/sliderule-python/hls_trimmed.geojson";
+#else
     /* Round to geocell location */
     int _lon = static_cast<int>(floor(lon));
     int _lat = static_cast<int>(floor(lat));
@@ -91,7 +93,7 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * getRasterDate
+ * getIndexBbox
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
@@ -113,13 +115,12 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
-    bool foundFile = false;
-#if 0
+#if 1
 
-    const std::string fileToken = "arcticdem";
-    const std::string vsisPath  = "/vsis3/pgc-opendata-dems/";
-    const char *demField  = "dem";
-    const char* dateField = "end_datetime";
+    const std::string fileToken = "lp-prod-protected";
+    const std::string vsisPath  = "/vsis3/lp-prod-protected/";
+    const char *demField  = "properties";
+    const char* dateField = "datetime";
 
     try
     {
@@ -132,6 +133,9 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
             OGRGeometry *geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
+            std::string geometryStr = geo->getGeometryName();
+            print2term("%s\n", geometryStr.c_str());
+
             if(!geo->Contains(&p)) continue;
 
             const char *fname = feature->GetFieldAsString(demField);
@@ -143,7 +147,6 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                     throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
 
                 fileName = vsisPath + fileName.substr(pos);
-                foundFile = true; /* There may be more than one file.. */
 
                 raster_info_t rinfo;
                 rinfo.fileName = fileName;
@@ -173,21 +176,22 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                         rinfo.gmtDate.minute = minute;
                         rinfo.gmtDate.second = second;
                         rinfo.gmtDate.millisecond = 0;
+                        rinfo.gps = TimeLib::gmt2gpstime(rinfo.gmtDate);
                     }
                     else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                 }
-                rastersList->add(rinfo);
+                rastersList->add(rastersList->length(), rinfo);
             }
             OGRFeature::DestroyFeature(feature);
         }
-        mlog(DEBUG, "Found %d rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 #endif
-    return foundFile;
+    return (rastersList->length() > 0);
 }
 
 

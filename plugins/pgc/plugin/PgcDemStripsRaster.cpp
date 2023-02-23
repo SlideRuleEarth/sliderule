@@ -108,7 +108,7 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * getRasterDate
+ * getIndexBbox
  *----------------------------------------------------------------------------*/
 void PgcDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
@@ -205,7 +205,9 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                     // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
                     gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
-                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime/DATES_CNT));
+                gpsTime = gpsTime/DATES_CNT;
+                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime));
+                rinfo.gps = static_cast<int64_t>(gpsTime);
                 rastersList->add(rastersList->length(), rinfo);
             }
             OGRFeature::DestroyFeature(feature);

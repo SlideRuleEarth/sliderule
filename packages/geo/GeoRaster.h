@@ -160,6 +160,7 @@ class GeoRaster: public LuaObject
             std::string         fileName;
             std::string         auxFileName;
             TimeLib::gmt_time_t gmtDate;
+            int64_t             gps;
         } raster_info_t;
 
 

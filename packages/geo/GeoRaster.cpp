@@ -989,7 +989,7 @@ void GeoRaster::updateCache(OGRPoint& p)
                 raster->point = p;
                 raster->sample.value = INVALID_SAMPLE_VALUE;
                 raster->fileName = key;
-                raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
+                raster->gpsTime = static_cast<double>(rinfo.gps / 1000);
                 rasterDict.add(key, raster);
             }
         }
@@ -1065,33 +1065,35 @@ bool GeoRaster::filterRasters(void)
         }
     }
 
-    /* Closest time filter */
+    /* Closest time filter. */
     if(parms->filter_closest_time)
     {
         int64_t closestGps = TimeLib::gmt2gpstime(parms->closest_time);
         int64_t minDelta   = abs(std::numeric_limits<int64_t>::max() - closestGps);
-        unsigned long closest_key = INVALID_KEY;
 
+        /* Find the closesest time */
         Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
         for(int i = 0; i < raster_iter.length; i++)
         {
-            int64_t gps   = TimeLib::gmt2gpstime(raster_iter[i].value.gmtDate);
+            int64_t gps   = raster_iter[i].value.gps;
             int64_t delta = abs(closestGps - gps);
 
             if(delta < minDelta)
             {
-                /* Keep track of raster with closest time */
                 minDelta = delta;
-                closest_key  = raster_iter[i].key;
             }
         }
 
-        if(closest_key != INVALID_KEY)
+        /* Remove all rasters with greater time (there may be multiple rasters with the same 'closest' time) */
+        for(int i = 0; i < raster_iter.length; i++)
         {
-            /* Return list with only one (closest) raster */
-            raster_info_t ri = rastersList->get(closest_key);
-            rastersList->clear();
-            rastersList->add(0, ri);
+            int64_t gps   = raster_iter[i].value.gps;
+            int64_t delta = abs(closestGps - gps);
+
+            if(delta > minDelta)
+            {
+                rastersList->remove(raster_iter[i].key);
+            }
         }
     }
 
