@@ -597,3 +597,15 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
         throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
     }
 }
+
+/*----------------------------------------------------------------------------
+ * referenceLuaObject
+ *----------------------------------------------------------------------------*/
+void LuaObject::referenceLuaObject (LuaObject* lua_obj)
+{
+    lua_obj->globalMut.lock();
+    {
+        lua_obj->referenceCount++;
+    }
+    lua_obj->globalMut.unlock();
+}

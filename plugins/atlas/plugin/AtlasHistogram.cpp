@@ -87,7 +87,7 @@ AtlasHistogram::AtlasHistogram(const char* _rec_type, type_t _type,
     if(_mfdata != NULL)
     {
         hist->majorFramePresent = true;
-        LocalLib::copy(&hist->majorFrameData, _mfdata, sizeof(mfdata_t));
+        memcpy(&hist->majorFrameData, _mfdata, sizeof(mfdata_t));
     }
     else
     {

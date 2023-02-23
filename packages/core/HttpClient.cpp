@@ -243,12 +243,12 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
                                 content_length);
 
             /* Build Request */
-            int hdr_len = rqst_hdr.getLength() - 1; // minus one to remove null termination of rqst_hdr
+            int hdr_len = rqst_hdr.length();
             rqst_len = content_length + hdr_len;
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
-                LocalLib::copy(rqstBuf, rqst_hdr.getString(), hdr_len);
-                LocalLib::copy(&rqstBuf[hdr_len], data, content_length);
+                memcpy(rqstBuf, rqst_hdr.str(), hdr_len);
+                memcpy(&rqstBuf[hdr_len], data, content_length);
             }
             else
             {
@@ -261,7 +261,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             rqst_len = content_length;
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
-                LocalLib::copy(rqstBuf, data, content_length);
+                memcpy(rqstBuf, data, content_length);
             }
             else
             {
@@ -391,7 +391,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         else // header line not complete (line_term == 0)
                         {
                             int bytes_remaining = bytes_read - line_start;
-                            LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
+                            memmove(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
                             line_start += bytes_remaining;
                         }
@@ -424,7 +424,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         else // chunk header not complete
                         {
                             int bytes_remaining = bytes_read - line_start;
-                            LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
+                            memmove(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
                             line_start += bytes_remaining;
                         }
@@ -450,7 +450,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         /* Populate Response */
                         if(rsps_bytes > 0)
                         {
-                            LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
+                            memcpy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
                             rsps.response[rsps_index + rsps_bytes] = '\0'; // ensure termination
                         }
 
@@ -484,7 +484,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         rsps_bytes = MIN(rsps_bytes, chunk_remaining);
                         if(rsps_bytes > 0)
                         {
-                            LocalLib::copy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
+                            memcpy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
                         }
 
                         /* Update Indices */
@@ -537,7 +537,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout)
                         else // chunk trailer not complete
                         {
                             int bytes_remaining = bytes_read - line_start;
-                            LocalLib::move(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
+                            memmove(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
                             line_start += bytes_remaining;
                         }

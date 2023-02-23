@@ -58,7 +58,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS},
     {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
     {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
-    {"delta_time",              RecordObject::DOUBLE,   offsetof(vegetation_t, delta_time),             1, NULL, NATIVE_FLAGS},
+    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS},
     {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
     {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},
@@ -192,7 +192,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Clear Results */
-    LocalLib::set(result, 0, sizeof(result));
+    memset(result, 0, sizeof(result));
 
     /* Process Extent */
     for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
@@ -265,7 +265,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     /* Calculate Geolocation Fields */
     if(num_ph == 0)
     {
-        result[t].delta_time = 0.0;
+        result[t].time_ns = 0;
         result[t].latitude = 0.0;
         result[t].longitude = 0.0;
         result[t].distance = extent->segment_distance[t];
@@ -273,25 +273,25 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
         /* Calculate Sums */
-        double delta_time_min = DBL_MAX, delta_time_max = -DBL_MAX;
+        double time_ns_min = DBL_MAX, time_ns_max = -DBL_MAX;
         double latitude_min = DBL_MAX, latitude_max = -DBL_MAX;
         double longitude_min = DBL_MAX, longitude_max = -DBL_MAX;
         double distance_min = DBL_MAX, distance_max = -DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            if(ph[i].delta_time < delta_time_min)   delta_time_min  = ph[i].delta_time;
-            if(ph[i].latitude   < latitude_min)     latitude_min    = ph[i].delta_time;
-            if(ph[i].longitude  < longitude_min)    longitude_min   = ph[i].delta_time;
-            if(ph[i].distance   < distance_min)     distance_min    = ph[i].delta_time;
+            if(ph[i].time_ns    < time_ns_min)      time_ns_min     = ph[i].time_ns;
+            if(ph[i].latitude   < latitude_min)     latitude_min    = ph[i].latitude;
+            if(ph[i].longitude  < longitude_min)    longitude_min   = ph[i].longitude;
+            if(ph[i].distance   < distance_min)     distance_min    = ph[i].distance;
 
-            if(ph[i].delta_time > delta_time_max)   delta_time_max  = ph[i].delta_time;
-            if(ph[i].latitude   > latitude_max)     latitude_max    = ph[i].delta_time;
-            if(ph[i].longitude  > longitude_max)    longitude_max   = ph[i].delta_time;
-            if(ph[i].distance   > distance_max)     distance_max    = ph[i].delta_time;
+            if(ph[i].time_ns    > time_ns_max)      time_ns_max     = ph[i].time_ns;
+            if(ph[i].latitude   > latitude_max)     latitude_max    = ph[i].latitude;
+            if(ph[i].longitude  > longitude_max)    longitude_max   = ph[i].longitude;
+            if(ph[i].distance   > distance_max)     distance_max    = ph[i].distance;
         }
 
         /* Calculate Averages */
-        result[t].delta_time = (delta_time_min + delta_time_max) / 2.0;
+        result[t].time_ns = (int64_t)((time_ns_min + time_ns_max) / 2.0);
         result[t].latitude = (latitude_min + latitude_max) / 2.0;
         result[t].longitude = (longitude_min + longitude_max) / 2.0;
         result[t].distance = ((distance_min + distance_max) / 2.0) + extent->segment_distance[t];
@@ -299,20 +299,20 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEAN)
     {
         /* Calculate Sums */
-        double sum_delta_time = 0.0;
+        double sum_time_ns = 0.0;
         double sum_latitude = 0.0;
         double sum_longitude = 0.0;
         double sum_distance = 0.0;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            sum_delta_time += ph[i].delta_time;
+            sum_time_ns += ph[i].time_ns;
             sum_latitude += ph[i].latitude;
             sum_longitude += ph[i].longitude;
             sum_distance += ph[i].distance + extent->segment_distance[t];
         }
 
         /* Calculate Averages */
-        result[t].delta_time = sum_delta_time / num_ph;
+        result[t].time_ns = (int64_t)(sum_time_ns / num_ph);
         result[t].latitude = sum_latitude / num_ph;
         result[t].longitude = sum_longitude / num_ph;
         result[t].distance = sum_distance / num_ph;
@@ -320,23 +320,16 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
         uint32_t center_ph = num_ph / 2;
-        if(num_ph == 0) // No Photons
+        if(num_ph % 2 == 1) // Odd Number of Photons
         {
-            result[t].delta_time = ph[0].delta_time;
-            result[t].latitude = ph[0].latitude;
-            result[t].longitude = ph[0].longitude;
-            result[t].distance = ph[0].distance + extent->segment_distance[t];
-        }
-        else if(num_ph % 2 == 1) // Odd Number of Photons
-        {
-            result[t].delta_time = ph[center_ph].delta_time;
+            result[t].time_ns = ph[center_ph].time_ns;
             result[t].latitude = ph[center_ph].latitude;
             result[t].longitude = ph[center_ph].longitude;
             result[t].distance = ph[center_ph].distance + extent->segment_distance[t];
         }
         else // Even Number of Photons
         {
-            result[t].delta_time = (ph[center_ph].delta_time + ph[center_ph - 1].delta_time) / 2;
+            result[t].time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
             result[t].latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
             result[t].longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
             result[t].distance = ((ph[center_ph].distance + ph[center_ph - 1].distance) / 2) + extent->segment_distance[t];
@@ -356,7 +349,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            double diff = abs(ph[i].delta_time - result[t].delta_time);
+            double diff = abs(ph[i].time_ns - result[t].time_ns);
             if(diff < diff_min)
             {
                 diff_min = diff;
@@ -467,7 +460,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 
     /* Bin Photons */
     long* bins = new long[num_bins];
-    LocalLib::set(bins, 0, num_bins * sizeof(long));
+    memset(bins, 0, num_bins * sizeof(long));
     for(long i = 0; i < veg_cnt; i++)
     {
         int bin = (int)floor((ph[veg_index[i]].relief - min_h) / parms->phoreal.binsize);

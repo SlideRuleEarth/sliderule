@@ -97,7 +97,7 @@ class Atl08Dispatch: public DispatchObject
             uint32_t            vegetation_photon_count;// number of photons labeled as canopy or top of canopy in segment
             uint8_t             landcover;              // atl08 land_segments/segments_landcover
             uint8_t             snowcover;              // atl08 land_segments/segments_snowcover
-            double              delta_time;             // seconds from ATLAS SDP epoch
+            int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
             double              distance;               // distance from the equator
@@ -144,7 +144,7 @@ class Atl08Dispatch: public DispatchObject
         Mutex               batchMutex;
         int                 batchIndex;
 
-        Icesat2Parms*          parms;
+        Icesat2Parms*       parms;
 
         /*--------------------------------------------------------------------
          * Methods

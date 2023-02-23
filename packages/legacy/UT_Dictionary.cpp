@@ -104,7 +104,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     bool failure=false;
 
     /* Start Timer */
-    int64_t start_time = TimeLib::gettimems();
+    int64_t start_time = TimeLib::gpstime();
 
     /* Get Word List */
     const char* wordset_name = argv[0];
@@ -132,9 +132,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < numwords; i++)
     {
         seq = i;
-        if(!d1.add(wordset[i]->getString(), seq))
+        if(!d1.add(wordset[i]->str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->str());
             failure = true;
         }
     }
@@ -142,9 +142,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Find Entries */
     for(int i = 0; i < numwords; i++)
     {
-        if(!d1.find(wordset[i]->getString()))
+        if(!d1.find(wordset[i]->str()))
         {
-            print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i]->str());
             failure = true;
         }
     }
@@ -154,16 +154,16 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         try
         {
-            long data = d1.get(wordset[i]->getString());
+            long data = d1.get(wordset[i]->str());
             if(data != i)
             {
-                print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i]->getString());
+                print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i]->str());
                 failure = true;
             }
         }
         catch(RunTimeException& e)
         {
-            print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i]->getString(), e.what());
+            print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i]->str(), e.what());
             failure = true;
         }
     }
@@ -193,7 +193,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         const char** true_list = new const char* [numwords];
         for(int i = 0; i < numwords; i++)
         {
-            true_list[i] = wordset[i]->getString();
+            true_list[i] = wordset[i]->str();
         }
 
         for(int i = 0; i < numwords; i++)
@@ -215,7 +215,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
                 }
                 if(!found)
                 {
-                    print2term("[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->getString());
+                    print2term("[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->str());
                     failure = true;
                 }
 
@@ -229,9 +229,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Remove Entries */
     for(int i = 0; i < numwords; i++)
     {
-        if(d1.remove(wordset[i]->getString()) != true)
+        if(d1.remove(wordset[i]->str()) != true)
         {
-            print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i]->getString(), i);
+            print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i]->str(), i);
             failure = true;
         }
     }
@@ -251,9 +251,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < numwords; i++)
     {
         seq = i;
-        if(!d1.add(wordset[i]->getString(), seq))
+        if(!d1.add(wordset[i]->str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->str());
             failure = true;
         }
     }
@@ -264,9 +264,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Find Entries - Should Not Find Them */
     for(int i = 0; i < numwords; i++)
     {
-        if(d1.find(wordset[i]->getString()))
+        if(d1.find(wordset[i]->str()))
         {
-            print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i]->str());
             failure = true;
         }
     }
@@ -283,7 +283,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Start Timer */
-    int64_t stop_time = TimeLib::gettimems();
+    int64_t stop_time = TimeLib::gpstime();
     double elapsed_time = (double)(stop_time - start_time) / 1000.0;
     print2term("Time to complete: %lf seconds\n", elapsed_time);
 
@@ -331,9 +331,9 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         seq = i;
         sum += i;
-        if(!d1.add(wordset[i]->getString(), seq))
+        if(!d1.add(wordset[i]->str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->getString());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->str());
             failure = true;
         }
     }

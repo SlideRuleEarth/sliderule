@@ -41,8 +41,6 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 
-#include <exception>
-#include <stdexcept>
 
 /******************************************************************************
  * DEFINES
@@ -86,7 +84,7 @@ class RecordObject
             BITFIELD        = 8,
             FLOAT           = 9,
             DOUBLE          = 10,
-            TIME8           = 11,
+            TIME8           = 11,   // nanoseconds from Unix epoch, no leap seconds
             STRING          = 12,
             USER            = 13,
             INVALID_FIELD   = 14,

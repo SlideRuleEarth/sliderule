@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -41,7 +41,7 @@
 #include <ws2tcpip.h>
 
 #pragma comment (lib, "Ws2_32.lib")
-#pragma comment (lib, "Mswsock.lib") 
+#pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
 
 /******************************************************************************
@@ -87,10 +87,10 @@ Thread::Thread(thread_func_t function, void* parm, bool _join)
 
     join = _join;
     threadId = CreateThread(NULL,               // default security attributes
-                            0,                  // use default stack size  
+                            0,                  // use default stack size
                             ThreadProc,         // thread function name
-                            info,               // argument to thread function 
-                            0,                  // use default creation flags 
+                            info,               // argument to thread function
+                            0,                  // use default creation flags
                             &thread_num);       // returns the thread identifier
 
     assert(threadId);
@@ -297,7 +297,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
 
     /* Start Handler Thread */
     handlerPid = new Thread(_handler, this);
-    
+
     /* Set Timer */
     LARGE_INTEGER liDueTime;
     liDueTime.QuadPart = -1 * period_ms * 10000LL;
@@ -311,7 +311,7 @@ Timer::~Timer()
 {
     assert(CloseHandle(timerId) != 0);
     alive = false;
-    delete handlerPid;    
+    delete handlerPid;
 }
 
 /*----------------------------------------------------------------------------
@@ -371,7 +371,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
     {
         return sockclient(ip_addr, port, 1);
     }
-}   
+}
 
 /*----------------------------------------------------------------------------
  * sockdatagram
@@ -386,8 +386,8 @@ int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, bool* b
     (void)block;
     (void)multicast_group;
 
-    return INVALID_RC;    
-}   
+    return INVALID_RC;
+}
 
 /*----------------------------------------------------------------------------
  * socksend
@@ -420,7 +420,7 @@ int SockLib::socksend (int fd, const void* buf, int size, int timeout)
 int SockLib::sockrecv (int fd, void* buf, int size, int timeout)
 {
     int iResult = recv((SOCKET)fd, (char*)buf, size, timeout);
-    
+
     if(iResult == 0)
     {
         dlog("Socket connection closed...");
@@ -445,7 +445,7 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     (void)local_port;
     (void)remote_ipaddr;
     (void)remote_port;
-    
+
     return 0;
 }
 
@@ -529,7 +529,7 @@ int SockLib::sockclient(const char* ip_addr, int port, int retries)
     {
         // Create a SOCKET for connecting to server
         ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-        if (ConnectSocket == INVALID_SOCKET) 
+        if (ConnectSocket == INVALID_SOCKET)
         {
             dlog("socket failed with error: %ld", WSAGetLastError());
             return INVALID_RC;
@@ -549,7 +549,7 @@ int SockLib::sockclient(const char* ip_addr, int port, int retries)
     freeaddrinfo(result);
 
     // Check status of connection
-    if (ConnectSocket == INVALID_SOCKET) 
+    if (ConnectSocket == INVALID_SOCKET)
     {
         dlog("unable to connect to %s:%d!", ip_addr, port);
         return INVALID_RC;
@@ -590,7 +590,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
 
     // Create a SOCKET for connecting to server
     SOCKET ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-    if (ListenSocket == INVALID_SOCKET) 
+    if (ListenSocket == INVALID_SOCKET)
     {
         dlog("socket failed with error: %ld", WSAGetLastError());
         freeaddrinfo(result);
@@ -599,7 +599,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
 
     // Setup the TCP listening socket
     iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
-    if (iResult == SOCKET_ERROR) 
+    if (iResult == SOCKET_ERROR)
     {
         dlog("bind failed with error: %d", WSAGetLastError());
         freeaddrinfo(result);
@@ -612,7 +612,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
 
     // Listen for connection
     iResult = listen(ListenSocket, SOMAXCONN);
-    if (iResult == SOCKET_ERROR) 
+    if (iResult == SOCKET_ERROR)
     {
         dlog("listen failed with error: %d", WSAGetLastError());
         closesocket(ListenSocket);
@@ -621,7 +621,7 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
 
     // Accept a client socket
     SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
-    if (ClientSocket == INVALID_SOCKET) 
+    if (ClientSocket == INVALID_SOCKET)
     {
         dlog("accept failed with error: %d", WSAGetLastError());
         closesocket(ListenSocket);
@@ -643,28 +643,28 @@ int SockLib::sockserver(const char* ip_addr, int port, int retries)
  * Static DAta
  *----------------------------------------------------------------------------*/
 WSADATA wsaData;
-LocalLib::print_func_t LocalLib::print_func = NULL;
-int LocalLib::io_timeout = IO_DEFAULT_TIMEOUT;
-int LocalLib::io_timeout = IO_DEFAULT_MAXSIZE;
+OsApi::print_func_t OsApi::print_func = NULL;
+int OsApi::io_timeout = IO_DEFAULT_TIMEOUT;
+int OsApi::io_timeout = IO_DEFAULT_MAXSIZE;
 
 /*----------------------------------------------------------------------------
  * initLib
  *----------------------------------------------------------------------------*/
-void LocalLib::initLib(void)
+void OsApi::initLib(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * deinitLib
  *----------------------------------------------------------------------------*/
-void LocalLib::deinitLib(void)
+void OsApi::deinitLib(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * setPrint
  *----------------------------------------------------------------------------*/
-void LocalLib::setPrint(print_func_t _print_func)
+void OsApi::setPrint(print_func_t _print_func)
 {
     assert(_print_func); // do not allow function to be set to NULL
     print_func = _print_func;
@@ -673,7 +673,7 @@ void LocalLib::setPrint(print_func_t _print_func)
 /*----------------------------------------------------------------------------
  * print
  *----------------------------------------------------------------------------*/
-void LocalLib::print(const char* file_name, unsigned int line_number, const char* format_string, ...)
+void OsApi::print(const char* file_name, unsigned int line_number, const char* format_string, ...)
 {
     if (print_func)
     {
@@ -695,7 +695,7 @@ void LocalLib::print(const char* file_name, unsigned int line_number, const char
 /*----------------------------------------------------------------------------
  * sleep
  *----------------------------------------------------------------------------*/
-void LocalLib::sleep(int secs)
+void OsApi::sleep(int secs)
 {
     ::Sleep(secs * 1000);
 }
@@ -703,7 +703,7 @@ void LocalLib::sleep(int secs)
 /*----------------------------------------------------------------------------
  * copy
  *----------------------------------------------------------------------------*/
-void* LocalLib::copy(void* dst, const void* src, int len)
+void* memcpy(void* dst, const void* src, int len)
 {
     return memcpy(dst, src, len);
 }
@@ -711,7 +711,7 @@ void* LocalLib::copy(void* dst, const void* src, int len)
 /*----------------------------------------------------------------------------
  * move
  *----------------------------------------------------------------------------*/
-void* LocalLib::move(void* dst, const void* src, int len)
+void* memmove(void* dst, const void* src, int len)
 {
     return memmove(dst, src, len);
 }
@@ -719,7 +719,7 @@ void* LocalLib::move(void* dst, const void* src, int len)
 /*----------------------------------------------------------------------------
  * set
  *----------------------------------------------------------------------------*/
-void* LocalLib::set(void* buf, int val, int len)
+void* memset(void* buf, int val, int len)
 {
     return memset(buf, val, len);
 }
@@ -727,18 +727,18 @@ void* LocalLib::set(void* buf, int val, int len)
 /*----------------------------------------------------------------------------
  * err2str
  *----------------------------------------------------------------------------*/
-const char* LocalLib::err2str(int errnum)
+const char* strerror(int errnum)
 {
     return strerror(errnum);
 }
 
 /*----------------------------------------------------------------------------
  * time
- * 
+ *
  *  SYS_CLK returns microseconds since unix epoch
  *  CPU_CLK returns monotonically incrementing time normalized number
  *----------------------------------------------------------------------------*/
-int64_t LocalLib::time(int clkid)
+int64_t OsApi::time(int clkid)
 {
     int64_t now;
 
@@ -768,9 +768,9 @@ int64_t LocalLib::time(int clkid)
 /*----------------------------------------------------------------------------
  * timeres
  *
- *  Returns: resolution of specified clock in number of ticks per second 
+ *  Returns: resolution of specified clock in number of ticks per second
  *----------------------------------------------------------------------------*/
-int64_t LocalLib::timeres(int clkid)
+int64_t OsApi::timeres(int clkid)
 {
     if (clkid == SYS_CLK)
     {
@@ -791,7 +791,7 @@ int64_t LocalLib::timeres(int clkid)
 /*----------------------------------------------------------------------------
  * swaps
  *----------------------------------------------------------------------------*/
-uint16_t LocalLib::swaps(uint16_t val)
+uint16_t OsApi::swaps(uint16_t val)
 {
     return _byteswap_ushort(val);
 }
@@ -799,7 +799,7 @@ uint16_t LocalLib::swaps(uint16_t val)
 /*----------------------------------------------------------------------------
  * swapl
  *----------------------------------------------------------------------------*/
-uint32_t LocalLib::swapl(uint32_t val)
+uint32_t OsApi::swapl(uint32_t val)
 {
     return _byteswap_ulong(val);
 }
@@ -807,7 +807,7 @@ uint32_t LocalLib::swapl(uint32_t val)
 /*----------------------------------------------------------------------------
  * swapll
  *----------------------------------------------------------------------------*/
-uint64_t LocalLib::swapll(uint64_t val)
+uint64_t OsApi::swapll(uint64_t val)
 {
     return _byteswap_uint64(val);
 }
@@ -815,7 +815,7 @@ uint64_t LocalLib::swapll(uint64_t val)
 /*----------------------------------------------------------------------------
  * swapf
  *----------------------------------------------------------------------------*/
-float LocalLib::swapf(float val)
+float OsApi::swapf(float val)
 {
     float rtrndata = 0.0;
     uint8_t* dataptr = (uint8_t*)&rtrndata;
@@ -827,7 +827,7 @@ float LocalLib::swapf(float val)
 /*----------------------------------------------------------------------------
  * swaplf
  *----------------------------------------------------------------------------*/
-double LocalLib::swaplf(double val)
+double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
     uint8_t* dataptr = (uint8_t*)&rtrndata;
@@ -839,7 +839,7 @@ double LocalLib::swaplf(double val)
 /*----------------------------------------------------------------------------
  * nproc
  *----------------------------------------------------------------------------*/
-int LocalLib::nproc (void)
+int OsApi::nproc (void)
 {
     // STILL TODO
 
@@ -849,7 +849,7 @@ int LocalLib::nproc (void)
 /*----------------------------------------------------------------------------
  * setIOMaxsize
  *----------------------------------------------------------------------------*/
-void LocalLib::setIOMaxsize(int maxsize)
+void OsApi::setIOMaxsize(int maxsize)
 {
     io_maxsize = maxsize;
 }
@@ -857,7 +857,7 @@ void LocalLib::setIOMaxsize(int maxsize)
 /*----------------------------------------------------------------------------
  * getIOMaxsize
  *----------------------------------------------------------------------------*/
-int LocalLib::getIOMaxsize(void)
+int OsApi::getIOMaxsize(void)
 {
     return io_maxsize;
 }
@@ -865,7 +865,7 @@ int LocalLib::getIOMaxsize(void)
 /*----------------------------------------------------------------------------
  * setIOTimeout
  *----------------------------------------------------------------------------*/
-void LocalLib::setIOTimeout(int timeout)
+void OsApi::setIOTimeout(int timeout)
 {
     io_timeout = timeout;
 }
@@ -873,7 +873,7 @@ void LocalLib::setIOTimeout(int timeout)
 /*----------------------------------------------------------------------------
  * getIOTimeout
  *----------------------------------------------------------------------------*/
-int LocalLib::getIOTimeout(void)
+int OsApi::getIOTimeout(void)
 {
     return io_timeout;
 }
@@ -881,10 +881,10 @@ int LocalLib::getIOTimeout(void)
 /*----------------------------------------------------------------------------
  * performIOTimeout
  *----------------------------------------------------------------------------*/
-int LocalLib::performIOTimeout(void)
+int OsApi::performIOTimeout(void)
 {
-    if (io_timeout >= 1000) LocalLib::sleep(io_timeout / 1000);
-    else                    LocalLib::sleep(1);
+    if (io_timeout >= 1000) OsApi::sleep(io_timeout / 1000);
+    else                    OsApi::sleep(1);
     return TIMEOUT_RC;
 }
 

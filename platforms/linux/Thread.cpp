@@ -42,8 +42,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <exception>
-#include <stdexcept>
 
 
 /*****************************************************************************
@@ -72,7 +70,7 @@ Thread::Thread(thread_func_t function, void* parm, bool _join)
     if(ret != 0)
     {
         dlog("Failed to create thread (%d): %s", ret, strerror(ret));
-        throw std::runtime_error("pthread_create failed");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "pthread_create failed");
     }
 }
 

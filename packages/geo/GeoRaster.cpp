@@ -1191,13 +1191,13 @@ int GeoRaster::getSampledRastersCount(void)
 /*----------------------------------------------------------------------------
  * fileDictAdd
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::fileDictAdd(const std::string& fileName)
+uint64_t GeoRaster::fileDictAdd(const std::string& fileName)
 {
-    uint32_t id;
+    uint64_t id;
 
     if(!fileDict.find(fileName.c_str(), &id))
     {
-        id = fileDict.length();
+        id = (parms->key_space << 32) | fileDict.length();
         fileDict.add(fileName.c_str(), id);
     }
 
@@ -1356,7 +1356,7 @@ int GeoRaster::luaSamples(lua_State *L)
                         LuaEngine::setAttrNum(L, "flags", raster->sample.flags);
                     }
 
-                    LuaEngine::setAttrNum(L, "fileid",raster->sample.fileId);
+                    LuaEngine::setAttrInt(L, "fileid",raster->sample.fileId);
                     LuaEngine::setAttrNum(L, "time",  raster->sample.time);
                     LuaEngine::setAttrNum(L, "value", raster->sample.value);
                     lua_rawseti(L, -2, ++i);

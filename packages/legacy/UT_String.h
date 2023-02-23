@@ -29,20 +29,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __lua_library_time__
-#define __lua_library_time__
+#ifndef __ut_string__
+#define __ut_string__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaEngine.h"
+#include "CommandableObject.h"
+#include "core.h"
 
 /******************************************************************************
- * LUA LIBRARY TIME CLASS
+ * UNIT TEST STRING CLASS
  ******************************************************************************/
 
-class LuaLibraryTime
+class UT_String: public CommandableObject
 {
     public:
 
@@ -50,14 +51,14 @@ class LuaLibraryTime
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LUA_TIMELIBNAME;
+        static const char* TYPE;
+        static const int UT_MAX_ASSERT = 256;
 
         /*--------------------------------------------------------------------
-         * MEthods
+         * Methods
          *--------------------------------------------------------------------*/
 
-        static void     ltime_init          (void);
-        static int      luaopen_timelib     (lua_State* L);
+        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
 
     private:
 
@@ -65,19 +66,18 @@ class LuaLibraryTime
          * Data
          *--------------------------------------------------------------------*/
 
-        static const struct luaL_Reg timeLibs [];
+        int failures;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      ltime_latch         (lua_State* L);
-        static int      ltime_getgps        (lua_State* L);
-        static int      ltime_getgmt        (lua_State* L);
-        static int      ltime_gps2gmt       (lua_State* L);
-        static int      ltime_cds2gmt       (lua_State* L);
-        static int      ltime_gmt2gps       (lua_State* L);
-        static int      ltime_gps2date      (lua_State* L);
+            UT_String           (CommandProcessor* cmd_proc, const char* obj_name);
+            ~UT_String          (void);
+
+    bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
+
+	int     testReplace         (int argc, char argv[][MAX_CMD_SIZE]);
 };
 
-#endif  /* __lua_library_time__ */
+#endif  /* __ut_string__ */

@@ -147,7 +147,7 @@ CfsInterface::CfsInterface(CommandProcessor* cmd_proc, const char* obj_name, con
     PktStats::defineRecord(PktStats::rec_type, "APID", sizeof(pktStats_t), PktStats::rec_def, PktStats::rec_elem);
 
     /* Initialize APID Statistics */
-    LocalLib::set(apidStats, 0, sizeof(apidStats));
+    memset(apidStats, 0, sizeof(apidStats));
     apidStats[CMD_APIDS] = createPktStat(CMD_APIDS);
     apidStats[TLM_APIDS] = createPktStat(TLM_APIDS);
 
@@ -553,7 +553,7 @@ void CfsInterface::measurePkt (unsigned char* pktbuf, int bytes)
     if(pktbuf == NULL || bytes < 6) return;
 
     unsigned int apid = CCSDS_GET_APID(pktbuf);
-    int64_t        now  = TimeLib::gettimems();
+    int64_t        now  = TimeLib::gpstime();
     bool         cmd  = CCSDS_IS_CMD(pktbuf);
     unsigned int seg  = CCSDS_GET_SEQFLG(pktbuf);
 
@@ -573,7 +573,7 @@ void CfsInterface::measurePkt (unsigned char* pktbuf, int bytes)
     /* Calculate Packet Average Bits per Second */
     if(stat->first_pkt_time == 0)
     {
-        stat->first_pkt_time = TimeLib::gettimems();
+        stat->first_pkt_time = TimeLib::gpstime();
     }
     else
     {
@@ -584,7 +584,7 @@ void CfsInterface::measurePkt (unsigned char* pktbuf, int bytes)
     /* Calculate Total Average Bits per Second */
     if(all->first_pkt_time == 0)
     {
-        all->first_pkt_time = TimeLib::gettimems();
+        all->first_pkt_time = TimeLib::gpstime();
     }
     else
     {

@@ -274,7 +274,7 @@ int ClusterSocket::pollHandler(int fd, short* events, void* parm)
     if(s->spin_block)
     {
         mlog(WARNING, "Executing spin block for cluster socket<%d> %s:%d", s->role, s->getIpAddr(), s->getPort());
-        LocalLib::sleep(1);
+        OsApi::sleep(1);
     }
     else
     {
@@ -386,7 +386,7 @@ int ClusterSocket::onWrite(int fd)
                     uint32_t cpylen = connection->payload_left < bytes_left ? connection->payload_left : bytes_left;
                     int payload_index = connection->payload_ref.size - connection->payload_left;
                     uint8_t* payload_buffer = (uint8_t*)connection->payload_ref.data;
-                    LocalLib::copy(&connection->buffer[connection->buffer_index], &payload_buffer[payload_index], cpylen);
+                    memcpy(&connection->buffer[connection->buffer_index], &payload_buffer[payload_index], cpylen);
                     connection->buffer_index += cpylen;
                     connection->payload_left -= cpylen;
                 }
@@ -407,7 +407,7 @@ int ClusterSocket::onWrite(int fd)
                         /* Populate Rest of Buffer */
                         int bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
                         int cpylen = connection->payload_ref.size < bytes_left ? connection->payload_ref.size : bytes_left;
-                        LocalLib::copy(&connection->buffer[connection->buffer_index], connection->payload_ref.data, cpylen);
+                        memcpy(&connection->buffer[connection->buffer_index], connection->payload_ref.data, cpylen);
                         connection->buffer_index += cpylen;
 
                         /* Calculate Payload Left and Dereference if Payload Fully Buffered */
@@ -505,7 +505,7 @@ int ClusterSocket::onAlive(int fd)
             read_connection_t* connection = read_connections[fd];
 
             /* Send Meter */
-            int64_t now = TimeLib::gettimems();
+            int64_t now = TimeLib::gpstime();
             if((now - connection->prev) > METER_PERIOD_MS)
             {
                 uint8_t meter = 0;
@@ -544,7 +544,7 @@ int ClusterSocket::onAlive(int fd)
                     int bytes_left = connection->buffer_size - connection->buffer_index;
                     int pay_bytes_left = connection->payload_size - connection->payload_index;
                     int cpylen = MIN(pay_bytes_left, bytes_left);
-                    LocalLib::copy(&connection->payload[connection->payload_index], &connection->buffer[connection->buffer_index], cpylen);
+                    memcpy(&connection->payload[connection->payload_index], &connection->buffer[connection->buffer_index], cpylen);
                     connection->buffer_index += cpylen;
                     connection->payload_index += cpylen;
 
@@ -596,7 +596,7 @@ int ClusterSocket::onConnect(int fd)
     {
         /* Populate Read Connection Structure */
         read_connection_t* connection = new read_connection_t;
-        LocalLib::set(connection, 0, sizeof(read_connection_t));
+        memset(connection, 0, sizeof(read_connection_t));
         connection->payload_index = -MSG_HDR_SIZE;
 
         /* Add to Read Connections */
@@ -609,7 +609,7 @@ int ClusterSocket::onConnect(int fd)
     else if(role == WRITER)
     {
         write_connection_t* connection = new write_connection_t;
-        LocalLib::set(connection, 0, sizeof(write_connection_t));
+        memset(connection, 0, sizeof(write_connection_t));
         connection->meter = METER_SEND_THRESH;
 
         /* Initialize Subscriber for Connection */

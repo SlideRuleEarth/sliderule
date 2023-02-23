@@ -103,7 +103,8 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 
     /* Get Geo Parameters */
     lua_getfield(L, index, GeoParms::SELF);
-    GeoParms* _parms = new GeoParms(L, index + 1);
+    GeoParms* _parms = new GeoParms(L, lua_gettop(L));
+    LuaObject::referenceLuaObject(_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
     lua_pop(L, 1);
 
     /* Create GeoJsonRaster */
@@ -238,7 +239,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
 
         /* Store raster creation time */
-        gmtDate = TimeLib::gettime();
+        gmtDate = TimeLib::gmttime();
 
         /* Must close raster to flush it into file */
         GDALClose((GDALDatasetH)rasterDset);

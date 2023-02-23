@@ -90,13 +90,6 @@ class LuaLibrarySys
         static int      lsys_lsrec          (lua_State* L);
         static int      lsys_cwd            (lua_State* L);
         static int      lsys_memu           (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static int64_t launch_time;
-        static const char* environment_version;
 };
 
 #endif  /* __lua_library_sys__ */

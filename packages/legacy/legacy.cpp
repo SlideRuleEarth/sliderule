@@ -260,6 +260,7 @@ void initlegacy (void)
     cmdProc->registerHandler("UT_ORDERING",                 UT_Ordering::createObject,                      0,  "");
     cmdProc->registerHandler("UT_TABLE"  ,                  UT_Table::createObject,                         0,  "");
     cmdProc->registerHandler("UT_TIMELIB",                  UT_TimeLib::createObject,                       0,  "");
+    cmdProc->registerHandler("UT_STRING",                   UT_String::createObject,                        0,  "");
 
     /* Add Lua Extension */
     LuaLibraryCmd::lcmd_init(cmdProc);

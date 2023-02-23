@@ -109,7 +109,7 @@ TimeTagHistogram::TimeTagHistogram( AtlasHistogram::type_t _type, int _intperiod
     tt->numDownlinkBands = _numbands;
     for(int b = 0; b < tt->numDownlinkBands; b++)
     {
-        LocalLib::copy(&tt->downlinkBands[b], &_bands[b], sizeof(band_t));
+        memcpy(&tt->downlinkBands[b], &_bands[b], sizeof(band_t));
     }
     for(int b = tt->numDownlinkBands; b < MAX_NUM_DLBS; b++)
     {

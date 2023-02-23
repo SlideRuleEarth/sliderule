@@ -57,7 +57,7 @@
 
 const char* Atl03Reader::phRecType = "atl03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
-    {"delta_time",      RecordObject::DOUBLE,   offsetof(photon_t, delta_time),     1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
     {"distance",        RecordObject::DOUBLE,   offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
@@ -199,7 +199,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Generate ATL08 Resource Name */
     SafeString atl08_resource("%s", resource);
     atl08_resource.setChar('8', 4);
-    resource08 = atl08_resource.getString(true);
+    resource08 = atl08_resource.str(true);
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -215,7 +215,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Initialize Readers */
     active = true;
     numComplete = 0;
-    LocalLib::set(readerPid, 0, sizeof(readerPid));
+    memset(readerPid, 0, sizeof(readerPid));
 
     /* Read Global Resource Information */
     try
@@ -574,7 +574,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     {
         for(int i = 0; i < geo_fields->length(); i++)
         {
-            const char* field_name = (*geo_fields)[i].getString();
+            const char* field_name = (*geo_fields)[i].str();
             const char* group_name = "geolocation";
             if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
                 (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
@@ -584,7 +584,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
                 group_name = "geophys_corr";
             }
             SafeString dataset_name("%s/%s", group_name, field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.str(), &info->reader->context, 0, region.first_segment, region.num_segments);
             anc_geo_data.add(field_name, array);
         }
     }
@@ -594,9 +594,9 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     {
         for(int i = 0; i < photon_fields->length(); i++)
         {
-            const char* field_name = (*photon_fields)[i].getString();
+            const char* field_name = (*photon_fields)[i].str();
             SafeString dataset_name("heights/%s", field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.getString(), &info->reader->context, 0, region.first_photon,  region.num_photons);
+            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
             anc_ph_data.add(field_name, array);
         }
     }
@@ -893,7 +893,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
         /* Allocate ATL08 Classification Array */
         int32_t num_photons = atl03.dist_ph_along[t].size;
         gt[t] = new uint8_t [num_photons];
-        LocalLib::set(gt[t], 0, num_photons);
+        memset(gt[t], 0, num_photons);
 
         /* Initialize Indices */
         int32_t ph_b0 = 0; // buffer start
@@ -946,7 +946,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
             /* Bin Photons to Calculate Height Span*/
             int num_bins = (int)(hspread / HSPREAD_BINSIZE) + 1;
             int8_t* bins = new int8_t [num_bins];
-            LocalLib::set(bins, 0, num_bins);
+            memset(bins, 0, num_bins);
             for(int n = 0; n < N; n++)
             {
                 unsigned int bin = (unsigned int)((atl03.h_ph[t][n] - min_h) / HSPREAD_BINSIZE);
@@ -1431,7 +1431,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                             /* Add Photon to Extent */
                             photon_t ph = {
-                                .delta_time = atl03.delta_time[t][current_photon],
+                                .time_ns = parms->deltatime2timestamp(atl03.delta_time[t][current_photon]),
                                 .latitude = atl03.lat_ph[t][current_photon],
                                 .longitude = atl03.lon_ph[t][current_photon],
                                 .distance = along_track_distance - (state.extent_length / 2.0),
@@ -1770,7 +1770,7 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::str
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict->get((*field_list)[i].getString());
+            GTDArray* array = field_dict->get((*field_list)[i].str());
 
             /* Create Ancillary Record */
             int record_size = offsetof(anc_extent_t, data) + array->gt[Icesat2Parms::RPT_L].elementSize() + array->gt[Icesat2Parms::RPT_R].elementSize();
@@ -1808,7 +1808,7 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::stri
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict->get((*field_list)[i].getString());
+            GTDArray* array = field_dict->get((*field_list)[i].str());
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_photon_t, data) +
@@ -2024,7 +2024,7 @@ int Atl03Reader::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_RETRIED,      lua_obj->stats.extents_retried);
 
         /* Clear if Requested */
-        if(with_clear) LocalLib::set(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 
         /* Set Success */
         status = true;

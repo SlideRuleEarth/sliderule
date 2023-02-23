@@ -53,6 +53,7 @@ const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
 const char* GeoParms::ASSET                 = "asset";
+const char* GeoParms::KEY_SPACE             = "key_space";
 
 const char* GeoParms::NEARESTNEIGHBOUR_ALGO = "NearestNeighbour";
 const char* GeoParms::BILINEAR_ALGO         = "Bilinear";
@@ -68,6 +69,7 @@ const char* GeoParms::LuaMetaName           = "GeoParms";
 const struct luaL_Reg GeoParms::LuaMetaTable[] = {
     {"name",        luaAssetName},
     {"region",      luaAssetRegion},
+    {"keyspace",    luaSetKeySpace},
     {NULL,          NULL}
 };
 
@@ -111,27 +113,9 @@ GeoParms::GeoParms (lua_State* L, int index):
     url_substring       (NULL),
     filter_closest_time (false),
     asset_name          (NULL),
-    asset               (NULL)
+    asset               (NULL),
+    key_space           (0)
 {
-    fromLua(L, index);
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoParms::~GeoParms (void)
-{
-    cleanup();
-}
-
-/*----------------------------------------------------------------------------
- * fromLua
- *----------------------------------------------------------------------------*/
-void GeoParms::fromLua (lua_State* L, int index)
-{
-    /* Reset Object */
-    cleanup();
-
     /* Populate Object */
     try
     {
@@ -200,7 +184,7 @@ void GeoParms::fromLua (lua_State* L, int index)
             /* Start and Stop Time Special Cases */
             if(t0_str && !t1_str) // only start time supplied
             {
-                int64_t now = TimeLib::gettimems();
+                int64_t now = TimeLib::gpstime();
                 stop_time = TimeLib::gps2gmttime(now);
                 TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
@@ -239,6 +223,12 @@ void GeoParms::fromLua (lua_State* L, int index)
             asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
             mlog(DEBUG, "Setting %s to %s", asset ? ASSET : "name", asset_name);
             lua_pop(L, 1);
+
+            /* Key Space */
+            lua_getfield(L, index, KEY_SPACE);
+            key_space = (uint64_t)LuaObject::getLuaInteger(L, -1, true, key_space, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %lu", KEY_SPACE, (unsigned long)key_space);
+            lua_pop(L, 1);
         }
     }
     catch(const RunTimeException& e)
@@ -247,6 +237,15 @@ void GeoParms::fromLua (lua_State* L, int index)
         throw;
     }
 }
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoParms::~GeoParms (void)
+{
+    cleanup();
+}
+
 
 /*----------------------------------------------------------------------------
  * cleanup
@@ -318,6 +317,26 @@ int GeoParms::luaAssetRegion (lua_State* L)
         if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getName());
         else lua_pushnil(L);
         return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaSetKeySpace
+ *----------------------------------------------------------------------------*/
+int GeoParms::luaSetKeySpace (lua_State* L)
+{
+    try
+    {
+        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        uint64_t key_space = (uint64_t)getLuaInteger(L, 2);
+
+        lua_obj->key_space = key_space;
+
+        return returnLuaStatus(L, true);
     }
     catch(const RunTimeException& e)
     {

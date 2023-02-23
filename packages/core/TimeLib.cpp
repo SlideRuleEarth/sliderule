@@ -92,16 +92,14 @@ void TimeLib::init(void)
 {
     /* Setup Base Time */
     parsenistfile();
-    lastTime = LocalLib::time(LocalLib::SYS_CLK);
-    baseTimeMs = lastTime / 1000;
-    baseTimeMs += getleapms(baseTimeMs);
-    baseTimeMs -= LocalGpsEpochMs;
+    lastTime = OsApi::time(OsApi::SYS_CLK);
+    baseTimeMs = sys2gpstime(lastTime);
     currentTimeMs = baseTimeMs;
     runningTimeUs = 0;
     stepTimeUs = 1000;
 
     /* Initialize Tick Frequency */
-    tickFreq = LocalLib::timeres(LocalLib::CPU_CLK);
+    tickFreq = OsApi::timeres(OsApi::CPU_CLK);
 
     /* Start Heart Beat */
     try
@@ -133,7 +131,7 @@ void TimeLib::deinit(void)
  *----------------------------------------------------------------------------*/
 double TimeLib::latchtime(void)
 {
-    return (double)LocalLib::time(LocalLib::CPU_CLK) / (double)tickFreq;
+    return (double)OsApi::time(OsApi::CPU_CLK) / (double)tickFreq;
 }
 
 /*----------------------------------------------------------------------------
@@ -141,24 +139,13 @@ double TimeLib::latchtime(void)
  *
  *  grabs the current number of ms that have elapsed since gps time epoch
  *----------------------------------------------------------------------------*/
-int64_t TimeLib::gettimems(int64_t now)
+int64_t TimeLib::gpstime(void)
 {
-    if(now == USE_CURRENT_TIME)
-    {
-        #ifdef TIME_HEARTBEAT
-            return currentTimeMs;
-        #else
-            int64_t sysnow = LocalLib::time(LocalLib::SYS_CLK);
-            sysnow /= 1000; // to milliseconds
-            sysnow += getleapms(sysnow);
-            sysnow -= LocalGpsEpochMs; // to gps epoch
-            return sysnow;
-        #endif
-    }
-    else
-    {
-        return now + getleapms(now) - LocalGpsEpochMs;
-    }
+    #ifdef TIME_HEARTBEAT
+        return currentTimeMs;
+    #else
+        return sys2gpstime(OsApi::time(OsApi::SYS_CLK));
+    #endif
 }
 
 /*----------------------------------------------------------------------------
@@ -166,22 +153,32 @@ int64_t TimeLib::gettimems(int64_t now)
  *
  *  grabs the current GMT system time
  *----------------------------------------------------------------------------*/
-TimeLib::gmt_time_t TimeLib::gettime(int64_t now)
+TimeLib::gmt_time_t TimeLib::gmttime(void)
 {
-#ifdef _USE_WINDOWS_TIME_
-    SYSTEMTIME systime;
-    GetSystemTime(&systime);
-    gmt_time_t gmttime;
-    gmttime.year = systime.wYear;
-    gmttime.doy = dayofyear(systime.wYear, systime.wMonth, systime.wDay);
-    gmttime.hour = systime.wHour;
-    gmttime.minute = systime.wMinute;
-    gmttime.second = systime.wSecond;
-    gmttime.millisecond = systime.wMilliseconds;
-    return gmttime;
-#else
-    return gps2gmttime(gettimems(now));
-#endif
+    return gps2gmttime(gpstime());
+}
+
+/*----------------------------------------------------------------------------
+ * sys2gpstime
+ *
+ *  converts system time (microseconds) to milliseconds since gps epoch
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::sys2gpstime (int64_t sysnow)
+{
+    sysnow /= 1000; // to milliseconds
+    sysnow += getleapms(sysnow);
+    sysnow -= LocalGpsEpochMs; // to gps epoch
+    return sysnow;
+}
+
+/*----------------------------------------------------------------------------
+ * sys2gmttime
+ *
+ *  converts system time (microseconds) to milliseconds since gps epoch
+ *----------------------------------------------------------------------------*/
+TimeLib::gmt_time_t TimeLib::sys2gmttime (int64_t sysnow)
+{
+    return(gps2gmttime(sys2gpstime(sysnow)));
 }
 
 /*----------------------------------------------------------------------------
@@ -652,7 +649,7 @@ int TimeLib::getleapms(int64_t current_time, int64_t start_time)
     /* If not GPS_EPOCH_START, find the index of the supplied epoch*/
     if (start_time == TIME_GPS_EPOCH_START)
     {
-       start_index = 10;
+       start_index = TIME_LEAP_SECS_AT_GPS_EPOCH;
     }
     else
     {
@@ -715,7 +712,7 @@ void TimeLib::heartbeat(void)
         counter = 0;
 
         /* Calculate Microseconds per Second */
-        int64_t now = LocalLib::time(LocalLib::SYS_CLK);
+        int64_t now = OsApi::time(OsApi::SYS_CLK);
         int64_t usec_per_sec = now - lastTime;
         if(usec_per_sec > 500000 && usec_per_sec < 1500000)
         {
@@ -726,9 +723,7 @@ void TimeLib::heartbeat(void)
         {
             /* Detect Gross Adjustment */
             mlog(CRITICAL, "Gross adjustment detected in step time: %lld", (long long)usec_per_sec);
-            baseTimeMs = now / 1000;
-            baseTimeMs += getleapms(baseTimeMs);
-            baseTimeMs -= LocalGpsEpochMs; // moves time up to GPS epoch
+            baseTimeMs = sys2gpstime(now);
             runningTimeUs = 0;
             stepTimeUs = 1000;
         }
@@ -753,7 +748,7 @@ void TimeLib::parsenistfile(void)
     leap_second_file_name += CONFDIR;
     leap_second_file_name.appendChar(PATH_DELIMETER);
     leap_second_file_name += TIME_NIST_LIST_FILENAME;
-    FILE* fd = fopen( leap_second_file_name.getString(), "r" );
+    FILE* fd = fopen( leap_second_file_name.str(), "r" );
     if( fd != NULL )
     {
         char line[MAX_STR_SIZE];

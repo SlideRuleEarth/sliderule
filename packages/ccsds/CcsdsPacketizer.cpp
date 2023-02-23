@@ -91,7 +91,7 @@ CcsdsPacketizer::CcsdsPacketizer(lua_State* L, const char* inq_name, const char*
     if(pktType == TLM_PKT) hdrLength = CcsdsSpacePacket::CCSDS_TLMPAY_OFFSET;
     else if(pktType == CMD_PKT) hdrLength = CcsdsSpacePacket::CCSDS_CMDPAY_OFFSET;
     else hdrLength = 0;
-    LocalLib::set(seqTable, 0, sizeof(seqTable));
+    memset(seqTable, 0, sizeof(seqTable));
 
     /* Set Streams - Required: names cannot be NULL */
     outQ = new Publisher(outq_name);

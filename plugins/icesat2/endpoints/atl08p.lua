@@ -43,7 +43,7 @@ if parms[arrow.PARMS] then
         rsps_from_nodes = rspq .. "-parquet"
         terminate_proxy_stream = true
         local except_pub = core.publish(rspq)
-        local parquet_builder = arrow.parquet(output_parms, rspq, "atl08rec.vegetation", rqstid, "lon", "lat")
+        local parquet_builder = arrow.parquet(output_parms, rspq, "atl08rec.vegetation", rqstid, "lon", "lat", "time")
         output_dispatch = core.dispatcher(rsps_from_nodes)
         output_dispatch:attach(parquet_builder, "atl08rec")
         output_dispatch:attach(except_pub, "exceptrec") -- exception records

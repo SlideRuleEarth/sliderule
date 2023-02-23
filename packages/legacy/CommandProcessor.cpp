@@ -414,7 +414,7 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
                 }
 
                 /* Copy Global Data */
-                LocalLib::copy(data, cvt_entry->data, size);
+                memcpy(data, cvt_entry->data, size);
                 ret_size = size;
 
                 /* Remove Entry */
@@ -1355,7 +1355,7 @@ int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE])
         return -1;
     }
 
-    LocalLib::sleep(secs);
+    OsApi::sleep(secs);
 
     return 0;
 }
@@ -1408,7 +1408,7 @@ int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
 
         mlog(CRITICAL, "Waiting... %s is %d of %ld seconds empty (%d)", qname, q_empty_count, wait, q_count);
-        LocalLib::sleep(1);
+        OsApi::sleep(1);
     }
 
     delete q;
@@ -1565,7 +1565,7 @@ int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE])
         return -1;
     }
 
-    LocalLib::setIOTimeout(timeout);
+    OsApi::setIOTimeout(timeout);
 
     return 0;
 }
@@ -1591,7 +1591,7 @@ int CommandProcessor::setIOMaxsizeCmd (int argc, char argv[][MAX_CMD_SIZE])
         return -1;
     }
 
-    LocalLib::setIOMaxsize(maxsize);
+    OsApi::setIOMaxsize(maxsize);
 
     return 0;
 }

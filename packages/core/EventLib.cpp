@@ -37,6 +37,7 @@
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "MsgQ.h"
+#include "StringLib.h"
 #include "RecordObject.h"
 #include "Dictionary.h"
 #include "List.h"
@@ -237,7 +238,7 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     if(lvl < trace_level) return parent;
 
     /* Initialize Trace */
-    event.systime   = TimeLib::gettimems();
+    event.systime   = TimeLib::gpstime();
     event.tid       = Thread::getId();
     event.id        = trace_id++;;
     event.parent    = parent;
@@ -279,7 +280,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
     if(lvl < trace_level) return;
 
     /* Initialize Trace */
-    event.systime   = TimeLib::gettimems();
+    event.systime   = TimeLib::gpstime();
     event.tid       = 0;
     event.id        = id;
     event.parent    = ORIGIN;
@@ -325,7 +326,7 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
     if(lvl < log_level) return;
 
     /* Initialize Log Message */
-    event.systime   = TimeLib::gettimems();
+    event.systime   = TimeLib::gpstime();
     event.tid       = Thread::getId();
     event.id        = ORIGIN;
     event.parent    = ORIGIN;
@@ -488,7 +489,7 @@ void EventLib::generateMetric (int32_t id, event_level_t lvl)
     if (metric.id == INVALID_METRIC) return;
 
     /* Initialize Log Message */
-    event.systime   = TimeLib::gettimems();
+    event.systime   = TimeLib::gpstime();
     event.tid       = Thread::getId();
     event.id        = metric.id;
     event.parent    = metric.subtype;
@@ -565,6 +566,6 @@ int EventLib::sendEvent (event_t* event, int attr_size)
     int event_record_size = offsetof(event_t, attr) + attr_size;
     RecordObject record(rec_type, event_record_size, false);
     event_t* data = (event_t*)record.getRecordData();
-    LocalLib::copy(data, event, event_record_size);
+    memcpy(data, event, event_record_size);
     return record.post(outq, 0, NULL, false);
 }

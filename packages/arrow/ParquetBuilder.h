@@ -135,6 +135,7 @@ class ParquetBuilder: public DispatchObject
         int                 rowSizeBytes;
         const char*         fileName; // used locally to build file
         geo_data_t          geoData;
+        const char*         indexKey;
 
         struct impl; // arrow implementation
         impl* pimpl; // private arrow data
@@ -143,7 +144,7 @@ class ParquetBuilder: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, ArrowParms* parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo);
+                            ParquetBuilder          (lua_State* L, ArrowParms* parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo, const char* index_key);
                             ~ParquetBuilder         (void);
 
         bool                processRecord           (RecordObject* record, okey_t key) override;
@@ -152,6 +153,7 @@ class ParquetBuilder: public DispatchObject
         bool                send2Client             (void);
         bool                send2S3                 (const char* s3dst);
         const char*         buildGeoMetaData        (void);
+        const char*         buildServerMetaData     (void);
 };
 
 #endif  /* __parquet_builder__ */

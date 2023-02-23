@@ -123,7 +123,7 @@ class LuaObject
         static int          createLuaObject     (lua_State* L, LuaObject* lua_obj);
         static LuaObject*   getLuaObject        (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
-
+        static void         referenceLuaObject  (LuaObject* lua_obj);
 
         /*--------------------------------------------------------------------
          * Data

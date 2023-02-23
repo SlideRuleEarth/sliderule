@@ -83,7 +83,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         {
             /* Allocate Resource Array */
             _resources = new const char* [_num_resources];
-            LocalLib::set(_resources, 0, _num_resources * sizeof(const char*));
+            memset(_resources, 0, _num_resources * sizeof(const char*));
 
             /* Build Resource Array */
             for(int i = 0; i < _num_resources; i++)
@@ -100,7 +100,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         int         _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
         const char* _outq_name          = getLuaString(L, 5); // get output queue
         bool        _send_terminator    = getLuaBoolean(L, 6, true, false); // get send terminator flag
-        long        _num_threads        = getLuaInteger(L, 7, true, LocalLib::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
+        long        _num_threads        = getLuaInteger(L, 7, true, OsApi::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
         long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
 
         /* Check Parameters */
@@ -174,7 +174,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
 
     /* Initialize Nodes Array */
     nodes = new OrchestratorLib::Node* [numResources];
-    LocalLib::set(nodes, 0, sizeof(OrchestratorLib::Node*)); // set all to NULL
+    memset(nodes, 0, sizeof(OrchestratorLib::Node*)); // set all to NULL
 
     /* Start Collator Thread */
     collatorPid = new Thread(collatorThread, this);
@@ -258,7 +258,7 @@ void* EndpointProxy::collatorThread (void* parm)
             /*  If No Nodes Available */
             if(nodes->length() <= 0)
             {
-                LocalLib::sleep(0.20); // 5Hz
+                OsApi::sleep(0.20); // 5Hz
             }
 
             /* Free Node List (individual nodes still remain) */
@@ -318,9 +318,9 @@ void* EndpointProxy::proxyThread (void* parm)
                 try
                 {
                     SafeString path("/source/%s", proxy->endpoint);
-                    SafeString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d}", resource, proxy->parameters, proxy->timeout);
+                    SafeString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
                     HttpClient client(NULL, node->member);
-                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.getString(), data.getString(), false, proxy->outQ, proxy->timeout * 1000);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.str(), data.str(), false, proxy->outQ, proxy->timeout * 1000);
                     if(rsps.code == EndpointObject::OK) valid = true;
                     else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
                 }

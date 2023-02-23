@@ -135,7 +135,7 @@ bool CmdEchoProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
         /* Pull Out Fields */
         memset(task_prefix, 0, 8);
-        LocalLib::copy(task_prefix, pktbuf + 12, 7);
+        memcpy(task_prefix, pktbuf + 12, 7);
         status = pktbuf[19] == 0 ? false : true;
         cmd_pkt = &pktbuf[20];
 

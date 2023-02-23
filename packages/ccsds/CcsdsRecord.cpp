@@ -79,7 +79,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
     try
     {
         pktDef = pktDefs[recordDefinition->type_name];
-        LocalLib::set(recordMemory, 0, recordDefinition->data_size);
+        memset(recordMemory, 0, recordDefinition->data_size);
         populateHeader();
     }
     catch(RunTimeException& e)
@@ -107,7 +107,7 @@ CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
         memoryAllocated = MAX(recordDefinition->data_size, size);
         recordMemory = new unsigned char[memoryAllocated];
         recordData = recordMemory;
-        LocalLib::copy(recordData, buffer, MIN(recordDefinition->data_size, size));
+        memcpy(recordData, buffer, MIN(recordDefinition->data_size, size));
         memoryOwner = true;
     }
     else
@@ -134,7 +134,7 @@ bool CcsdsRecord::deserialize (unsigned char* buffer, int size)
     else if(size > memoryAllocated)                     return false;   // buffer passed in too large
 
     /* Copy in Data */
-    LocalLib::copy(recordData, buffer, size);
+    memcpy(recordData, buffer, size);
     return true;
 }
 
@@ -151,7 +151,7 @@ int CcsdsRecord::serialize (unsigned char** buffer, serialMode_t mode, int size)
     if (mode == ALLOCATE)
     {
         *buffer = new unsigned char[recordDefinition->data_size];
-        LocalLib::copy(*buffer, recordData, recordDefinition->data_size);
+        memcpy(*buffer, recordData, recordDefinition->data_size);
     }
     else
     {

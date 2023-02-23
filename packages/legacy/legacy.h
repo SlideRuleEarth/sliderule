@@ -58,6 +58,7 @@
 #include "UT_Ordering.h"
 #include "UT_Table.h"
 #include "UT_TimeLib.h"
+#include "UT_String.h"
 
 /******************************************************************************
  * DEFINES

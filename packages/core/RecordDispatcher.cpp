@@ -65,7 +65,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* qname           = getLuaString(L, 1);
-        long        num_threads     = getLuaInteger(L, 2, true, LocalLib::nproc());
+        long        num_threads     = getLuaInteger(L, 2, true, OsApi::nproc());
         const char* key_mode_str    = getLuaString(L, 3, true, "RECEIPT_KEY");
 
         /* Check Number of Threads */

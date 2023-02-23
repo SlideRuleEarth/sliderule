@@ -58,7 +58,7 @@ CcsdsSpacePacket::CcsdsSpacePacket(int len): CcsdsPacket(SPACE_PACKET)
     else
     {
         buffer = new unsigned char[len];
-        LocalLib::set(buffer, 0, len);
+        memset(buffer, 0, len);
         index = 0; // allocate the space but start at beginning
         is_malloced = true;
         max_pkt_len = len;
@@ -96,7 +96,7 @@ CcsdsSpacePacket::CcsdsSpacePacket(unsigned char* buf, int size, bool copy): Ccs
     else if(copy)
     {
         buffer = new unsigned char[size];
-        LocalLib::copy(buffer, buf, size);
+        memcpy(buffer, buf, size);
         max_pkt_len = size;
     }
     else
@@ -504,11 +504,11 @@ void CcsdsSpacePacket::initPkt(int apid, int len, bool clear)
 {
     if(clear)
     {
-        LocalLib::set(buffer, 0, len);
+        memset(buffer, 0, len);
     }
     else
     {
-        LocalLib::set(buffer, 0, CCSDS_SPACE_HEADER_SIZE);    /* clear primary header only */
+        memset(buffer, 0, CCSDS_SPACE_HEADER_SIZE);    /* clear primary header only */
     }
 
     index = 0; // restart at beginning of packet
@@ -522,7 +522,7 @@ void CcsdsSpacePacket::initPkt(int apid, int len, bool clear)
  *----------------------------------------------------------------------------*/
 void CcsdsSpacePacket::resetPkt(void)
 {
-    LocalLib::set(buffer, 0, CCSDS_SPACE_HEADER_SIZE);
+    memset(buffer, 0, CCSDS_SPACE_HEADER_SIZE);
     index = 0; // restart at beginning of packet
 }
 
@@ -628,7 +628,7 @@ int CcsdsSpacePacket::appendStream(unsigned char* bytes, int len)
         hdr_bytes_copied = len < hdr_left ? len : hdr_left;
         if(hdr_bytes_copied >= 0)
         {
-            LocalLib::copy(&buffer[index], bytes, hdr_bytes_copied);
+            memcpy(&buffer[index], bytes, hdr_bytes_copied);
             index += hdr_bytes_copied;
         }
         else
@@ -648,7 +648,7 @@ int CcsdsSpacePacket::appendStream(unsigned char* bytes, int len)
             ((pay_bytes_copied + hdr_bytes_copied) <= len) &&
             (pay_bytes_copied >= 0)) )
         {
-            LocalLib::copy(&buffer[index], &bytes[hdr_bytes_copied], pay_bytes_copied);
+            memcpy(&buffer[index], &bytes[hdr_bytes_copied], pay_bytes_copied);
             index += pay_bytes_copied;
         }
         else
@@ -718,7 +718,7 @@ CcsdsSpacePacket& CcsdsSpacePacket::operator=(const CcsdsSpacePacket& rhp)
     }
 
     /* Copy Data Into Buffer and Reset Index */
-    LocalLib::copy(buffer, rhp.buffer, rhp.getLEN());
+    memcpy(buffer, rhp.buffer, rhp.getLEN());
     index = rhp.getLEN();
 
     /* Return This Object */
@@ -760,7 +760,7 @@ CcsdsEncapPacket::CcsdsEncapPacket(int len): CcsdsPacket(ENCAPSULATION_PACKET)
     else
     {
         buffer = new unsigned char[len];
-        LocalLib::set(buffer, 0, len);
+        memset(buffer, 0, len);
         index = 0; // allocate the space but start at beginning
         is_malloced = true;
         max_pkt_len = len;
@@ -925,8 +925,8 @@ void CcsdsEncapPacket::setLEN(int value)
  *----------------------------------------------------------------------------*/
 void CcsdsEncapPacket::initPkt(int apid, int len, bool clear)
 {
-    if(clear) LocalLib::set(buffer, 0, len);
-    else LocalLib::set(buffer, 0, CCSDS_ENCAP_HEADER_SIZE);    /* clear header only */
+    if(clear) memset(buffer, 0, len);
+    else memset(buffer, 0, CCSDS_ENCAP_HEADER_SIZE);    /* clear header only */
 
     index = 0; // restart at beginning of packet
 
@@ -939,7 +939,7 @@ void CcsdsEncapPacket::initPkt(int apid, int len, bool clear)
  *----------------------------------------------------------------------------*/
 void CcsdsEncapPacket::resetPkt(void)
 {
-    LocalLib::set(buffer, 0, CCSDS_ENCAP_HEADER_SIZE);
+    memset(buffer, 0, CCSDS_ENCAP_HEADER_SIZE);
     index = 0; // restart at beginning of packet
 }
 
@@ -994,7 +994,7 @@ int CcsdsEncapPacket::appendStream(unsigned char* bytes, int len)
             hdr_bytes_copied = stream_left < hdr_left ? stream_left : hdr_left;
             if(hdr_bytes_copied >= 0)
             {
-                LocalLib::copy(&buffer[index], &bytes[len_bytes_copied], hdr_bytes_copied);
+                memcpy(&buffer[index], &bytes[len_bytes_copied], hdr_bytes_copied);
                 index += hdr_bytes_copied;
             }
             else
@@ -1014,7 +1014,7 @@ int CcsdsEncapPacket::appendStream(unsigned char* bytes, int len)
             ((pay_bytes_copied + hdr_bytes_copied + len_bytes_copied) <= len) &&
             (pay_bytes_copied >= 0)) )
         {
-            LocalLib::copy(&buffer[index], &bytes[hdr_bytes_copied + len_bytes_copied], pay_bytes_copied);
+            memcpy(&buffer[index], &bytes[hdr_bytes_copied + len_bytes_copied], pay_bytes_copied);
             index += pay_bytes_copied;
         }
         else

@@ -275,7 +275,7 @@ void* CosmosInterface::telemetryThread (void* parm)
     CosmosInterface* ci = rqst->ci;
 
     unsigned char* buffer = new unsigned char[MAX_PACKET_SIZE + HEADER_SIZE];
-    LocalLib::copy(buffer, SYNC_PATTERN, SYNC_SIZE);
+    memcpy(buffer, SYNC_PATTERN, SYNC_SIZE);
 
     while(ci->interfaceActive)
     {
@@ -362,14 +362,14 @@ void* CosmosInterface::commandThread (void* parm)
                     if(!in_sync)
                     {
                         mlog(CRITICAL, "Lost synchronization to COSMOS command interface in %s", c->ci->getName());
-                        LocalLib::move(&header_buf[0], &header_buf[1], HEADER_SIZE - 1);
+                        memmove(&header_buf[0], &header_buf[1], HEADER_SIZE - 1);
                         header_index--;  // shift down
                     }
                 }
             }
             else if(!c->sock->isConnected())
             {
-                LocalLib::sleep(1);
+                OsApi::sleep(1);
             }
             else if(bytes != TIMEOUT_RC)
             {
@@ -406,7 +406,7 @@ void* CosmosInterface::commandThread (void* parm)
             }
             else if(!c->sock->isConnected())
             {
-                LocalLib::sleep(1);
+                OsApi::sleep(1);
             }
             else if(bytes != TIMEOUT_RC)
             {

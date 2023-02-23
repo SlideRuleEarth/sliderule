@@ -29,45 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __runtime_exception__
-#define __runtime_exception__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include <stdexcept>
+#include <stdarg.h>
 
 /******************************************************************************
- * EXCEPTION
+ * PUBLIC METHODS
  ******************************************************************************/
 
-#define RTE_INFO                        -1
-#define RTE_ERROR                       0
-#define RTE_TIMEOUT                     1
-#define RTE_RESOURCE_DOES_NOT_EXIST     2
-#define RTE_EMPTY_SUBSET                3
-
-/******************************************************************************
- * EXCEPTION
- ******************************************************************************/
-
-class RunTimeException : public std::runtime_error
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+RunTimeException::RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...):
+    std::runtime_error("RunTimeException"),
+    lvl(_lvl),
+    rc(_rc)
 {
-    public:
+    errmsg[0] = '\0';
 
-        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...) VARG_CHECK(printf, 4, 5);
-        char const* what() const throw();
-        event_level_t level (void) const;
-        int code (void) const;
+    va_list args;
+    va_start(args, _errmsg);
+    int vlen = vsnprintf(errmsg, ERROR_MSG_LEN - 1, _errmsg, args);
+    int msglen = MIN(vlen, ERROR_MSG_LEN - 1);
+    va_end(args);
 
-    private:
+    if (msglen >= 0) errmsg[msglen] = '\0';
+}
 
-        static const int ERROR_MSG_LEN = 128;
-        char errmsg[ERROR_MSG_LEN];
-        const event_level_t lvl;
-        const int rc;
+/*----------------------------------------------------------------------------
+ * what
+ *----------------------------------------------------------------------------*/
+char const* RunTimeException::what() const throw()
+{
+    return errmsg;
 };
 
-#endif // __runtime_exception__
+/*----------------------------------------------------------------------------
+ * level
+ *----------------------------------------------------------------------------*/
+event_level_t RunTimeException::level(void) const
+{
+    return lvl;
+};
+
+/*----------------------------------------------------------------------------
+ * code
+ *----------------------------------------------------------------------------*/
+int RunTimeException::code (void) const
+{
+    return rc;
+}

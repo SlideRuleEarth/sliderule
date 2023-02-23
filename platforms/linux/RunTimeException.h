@@ -29,55 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __lua_library_time__
-#define __lua_library_time__
+#ifndef __runtime_exception__
+#define __runtime_exception__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaEngine.h"
+#include <stdexcept>
 
 /******************************************************************************
- * LUA LIBRARY TIME CLASS
+ * EXCEPTION
  ******************************************************************************/
 
-class LuaLibraryTime
+#define RTE_INFO                        -1
+#define RTE_ERROR                       0
+#define RTE_TIMEOUT                     1
+#define RTE_RESOURCE_DOES_NOT_EXIST     2
+#define RTE_EMPTY_SUBSET                3
+
+/******************************************************************************
+ * EXCEPTION
+ ******************************************************************************/
+
+class RunTimeException : public std::runtime_error
 {
     public:
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* LUA_TIMELIBNAME;
-
-        /*--------------------------------------------------------------------
-         * MEthods
-         *--------------------------------------------------------------------*/
-
-        static void     ltime_init          (void);
-        static int      luaopen_timelib     (lua_State* L);
+        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...) VARG_CHECK(printf, 4, 5);
+        char const* what() const throw();
+        event_level_t level (void) const;
+        int code (void) const;
 
     private:
 
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static const struct luaL_Reg timeLibs [];
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static int      ltime_latch         (lua_State* L);
-        static int      ltime_getgps        (lua_State* L);
-        static int      ltime_getgmt        (lua_State* L);
-        static int      ltime_gps2gmt       (lua_State* L);
-        static int      ltime_cds2gmt       (lua_State* L);
-        static int      ltime_gmt2gps       (lua_State* L);
-        static int      ltime_gps2date      (lua_State* L);
+        static const int ERROR_MSG_LEN = 128;
+        char errmsg[ERROR_MSG_LEN];
+        const event_level_t lvl;
+        const int rc;
 };
 
-#endif  /* __lua_library_time__ */
+#endif // __runtime_exception__

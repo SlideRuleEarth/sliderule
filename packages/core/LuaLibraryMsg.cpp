@@ -99,7 +99,7 @@ const char* LuaLibraryMsg::REC_ID_ATTR = "_id";
  *----------------------------------------------------------------------------*/
 void LuaLibraryMsg::lmsg_init (void)
 {
-    LocalLib::set(prefixLookUp, 0, sizeof(prefixLookUp));
+    memset(prefixLookUp, 0, sizeof(prefixLookUp));
 }
 
 /*----------------------------------------------------------------------------
@@ -164,7 +164,7 @@ RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
     if(type_len > 0 && type_len < MAX_STR_SIZE)
     {
         /* Copy Out Record Type */
-        LocalLib::copy(rec_type, population_string, type_len);
+        memcpy(rec_type, population_string, type_len);
         rec_type[type_len] = '\0';
 
         /* Point to Population String */
@@ -458,8 +458,8 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
 
     /* Construct Log Record */
     EventLib::event_t event;
-    LocalLib::set(&event, 0, sizeof(event));
-    event.systime = TimeLib::gettimems();
+    memset(&event, 0, sizeof(event));
+    event.systime = TimeLib::gpstime();
     event.tid     = Thread::getId();
     event.id      = ORIGIN;
     event.parent  = ORIGIN;
@@ -473,7 +473,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     /* Post Record */
     int rec_size = offsetof(EventLib::event_t, attr) + attr_size + 1;
     RecordObject record(EventLib::rec_type, rec_size);
-    LocalLib::copy(record.getRecordData(), &event, rec_size);
+    memcpy(record.getRecordData(), &event, rec_size);
     uint8_t* rec_buf = NULL;
     int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
     int bytes_sent = msg_data->pub->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);

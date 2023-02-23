@@ -1,8 +1,8 @@
 local runner = require("test_executive")
 local console = require("console")
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+--console.monitor:config(core.LOG, core.DEBUG)
+--sys.setlvl(core.LOG, core.DEBUG)
 
 -- Table Unit Test --
 

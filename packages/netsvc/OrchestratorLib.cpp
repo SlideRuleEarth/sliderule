@@ -75,7 +75,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
     HttpClient orchestrator(NULL, URL);
     SafeString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.getString(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -121,7 +121,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
     HttpClient orchestrator(NULL, URL);
     SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.getString(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -194,7 +194,7 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
     for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(txstrbuf, 64, ",%ld", transactions[t]);
     rqst += "]}";
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/unlock", rqst.getString(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/unlock", rqst.str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -324,7 +324,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         for(int i = 0; i < nodes->length(); i++)
         {
             SafeString txidstr("%ld", nodes->get(i)->transaction);
-            LuaEngine::setAttrStr(L, txidstr.getString(), nodes->get(i)->member);
+            LuaEngine::setAttrStr(L, txidstr.str(), nodes->get(i)->member);
             delete nodes->get(i); // free node after using it
         }
     }

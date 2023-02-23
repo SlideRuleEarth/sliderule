@@ -284,7 +284,7 @@ void LuaEngine::setAttrBool (lua_State* l, const char* name, bool val)
 /*----------------------------------------------------------------------------
  * setAttrInt
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrInt (lua_State* l, const char* name, int val)
+void LuaEngine::setAttrInt (lua_State* l, const char* name, long val)
 {
     lua_pushstring(l, name);
     lua_pushinteger(l, val);
@@ -331,8 +331,8 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
 {
     int top = lua_gettop(l);
 
-    if( prefix ) printf("%s, stack depth is: %d\n", prefix, top );
-    else         printf("stack depth is: %d\n", top );
+    if( prefix ) print2term("%s, stack depth is: %d\n", prefix, top );
+    else         print2term("stack depth is: %d\n", top );
 
     for (int i = top; i >= 1; i--)
     {
@@ -341,20 +341,20 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
         switch (t)
         {
             case LUA_TSTRING:
-                printf("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));
+                print2term("--%02d-- string: \'%s\'\n", i, lua_tostring(l, i));
                 break;
             case LUA_TBOOLEAN:
-                printf("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");
+                print2term("--%02d-- boolean: %s\n", i, lua_toboolean(l, i) ? "true" : "false");
                 break;
             case LUA_TNUMBER:
-                printf("--%02d-- number: %g\n", i, lua_tonumber(l, i));
+                print2term("--%02d-- number: %g\n", i, lua_tonumber(l, i));
                 break;
             default:
-                printf("--%02d-- %s\n", i, lua_typename(l, t));
+                print2term("--%02d-- %s\n", i, lua_typename(l, t));
                 break;
         }
     }
-    printf("\n");
+    print2term("\n");
 }
 
 /*----------------------------------------------------------------------------
@@ -366,9 +366,9 @@ const char* LuaEngine::sanitize (const char* filename)
 {
     SafeString delimeter("%c", PATH_DELIMETER);
     SafeString safe_filename("%s", filename);
-    safe_filename.replace(delimeter.getString(), "_");
-    SafeString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.getString());
-    return safe_pathname.getString(true);
+    safe_filename.replace(delimeter.str(), "_");
+    SafeString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.str());
+    return safe_pathname.str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -438,7 +438,7 @@ void LuaEngine::setBoolean (const char* name, bool val)
 /*----------------------------------------------------------------------------
  * setInteger
  *----------------------------------------------------------------------------*/
-void LuaEngine::setInteger (const char* name, int val)
+void LuaEngine::setInteger (const char* name, long val)
 {
     engineSignal.lock();
     {
@@ -648,7 +648,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
     lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5
-    lua_pushstring(l, lpath.getString(false)); // push the new one
+    lua_pushstring(l, lpath.str(false)); // push the new one
     lua_setfield(l, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
     lua_pop(l, 1 ); // get rid of package table from top of stack
 
@@ -1135,7 +1135,7 @@ int LuaEngine::pmain (lua_State *L)
          * lua_writestring(LUA_COPYRIGHT, StringLib::size(LUA_COPYRIGHT));
          * lua_writeline();
          */
-        LocalLib::sleep(1);
+        OsApi::sleep(1);
         li->doREPL();  /* do read-eval-print loop */
     }
 
