@@ -171,11 +171,11 @@ int Atl03Reader::luaCreate (lua_State* L)
 void Atl03Reader::init (void)
 {
     RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
-    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       "extent_id");
-    RECDEF(phFlatRecType,   phFlatRecDef,   sizeof(flat_photon_t),  "extent_id");
+    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
+    RECDEF(phFlatRecType,   phFlatRecDef,   sizeof(flat_photon_t),  NULL /* "extent_id" */);
     RECDEF(exFlatRecType,   exFlatRecDef,   1,                      NULL);
-    RECDEF(phAncRecType,    phAncRecDef,    sizeof(anc_photon_t),   "extent_id");
-    RECDEF(exAncRecType,    exAncRecDef,    sizeof(anc_extent_t),   "extent_id");
+    RECDEF(phAncRecType,    phAncRecDef,    sizeof(anc_photon_t),   NULL /* "extent_id" */);
+    RECDEF(exAncRecType,    exAncRecDef,    sizeof(anc_extent_t),   NULL /* "extent_id" */);
 }
 
 /*----------------------------------------------------------------------------
