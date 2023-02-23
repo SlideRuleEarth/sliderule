@@ -65,8 +65,8 @@ struct ParquetBuilder::impl
     shared_ptr<arrow::Schema>               schema;
     unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
 
-    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo);
-    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset);
+    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* batch_rec_type, const geo_data_t& geo);
+    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* batch_rec_type, int offset);
     static void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
     static void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
     static void appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const shared_ptr<arrow::Schema>& _schema, const field_iterator_t* field_iterator, const char* index_key);
@@ -75,10 +75,10 @@ struct ParquetBuilder::impl
 /*----------------------------------------------------------------------------
  * defineTableSchema
  *----------------------------------------------------------------------------*/
-shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* rec_type, const geo_data_t& geo)
+shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* batch_rec_type, const geo_data_t& geo)
 {
     vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, geo, rec_type, 0);
+    addFieldsToSchema(schema_vector, field_list, geo, batch_rec_type, 0);
     if(geo.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
     return make_shared<arrow::Schema>(schema_vector);
 }
@@ -86,12 +86,12 @@ shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t&
 /*----------------------------------------------------------------------------
  * addFieldsToSchema
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* rec_type, int offset)
+bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* batch_rec_type, int offset)
 {
     /* Loop Through Fields in Record */
     char** field_names = NULL;
     RecordObject::field_t** fields = NULL;
-    int num_fields = RecordObject::getRecordFields(rec_type, &field_names, &fields);
+    int num_fields = RecordObject::getRecordFields(batch_rec_type, &field_names, &fields);
     for(int i = 0; i < num_fields; i++)
     {
         bool add_field_to_list = true;
@@ -369,6 +369,7 @@ void ParquetBuilder::impl::appendPandasMetaData (const std::shared_ptr<arrow::Ke
  * STATIC DATA
  ******************************************************************************/
 
+const char* ParquetBuilder::OBJECT_TYPE = "ParquetBuilder";
 const char* ParquetBuilder::LuaMetaName = "ParquetBuilder";
 const struct luaL_Reg ParquetBuilder::LuaMetaTable[] = {
     {NULL,          NULL}
@@ -393,7 +394,7 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquet(<filename>, <outq name>, <rec_type>, <id>, [<lon_key>, <lat_key>], [<time_key>])
+ * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <batch_rec_type>, <id>, [<lon_key>, <lat_key>], [<time_key>])
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
@@ -404,11 +405,13 @@ int ParquetBuilder::luaCreate (lua_State* L)
         /* Get Parameters */
         parms                       = (ArrowParms*)getLuaObject(L, 1, ArrowParms::OBJECT_TYPE);
         const char* outq_name       = getLuaString(L, 2);
-        const char* rec_type        = getLuaString(L, 3);
-        const char* id              = getLuaString(L, 4);
-        const char* lon_key         = getLuaString(L, 5, true, NULL);
-        const char* lat_key         = getLuaString(L, 6, true, NULL);
-        const char* index_key       = getLuaString(L, 7, true, NULL);
+        const char* inq_name        = getLuaString(L, 3);
+        const char* rec_type        = getLuaString(L, 4);
+        const char* batch_rec_type  = getLuaString(L, 5);
+        const char* id              = getLuaString(L, 6);
+        const char* lon_key         = getLuaString(L, 7, true, NULL);
+        const char* lat_key         = getLuaString(L, 8, true, NULL);
+        const char* index_key       = getLuaString(L, 9, true, NULL);
 
         /* Build Geometry Fields */
         geo_data_t geo;
@@ -417,21 +420,21 @@ int ParquetBuilder::luaCreate (lua_State* L)
         {
             geo.as_geo = true;
 
-            geo.lon_field = RecordObject::getDefinedField(rec_type, lon_key);
+            geo.lon_field = RecordObject::getDefinedField(batch_rec_type, lon_key);
             if(geo.lon_field.type == RecordObject::INVALID_FIELD)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract longitude field [%s] from record type <%s>", lon_key, rec_type);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract longitude field [%s] from record type <%s>", lon_key, batch_rec_type);
             }
 
-            geo.lat_field = RecordObject::getDefinedField(rec_type, lat_key);
+            geo.lat_field = RecordObject::getDefinedField(batch_rec_type, lat_key);
             if(geo.lat_field.type == RecordObject::INVALID_FIELD)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract latitude field [%s] from record type <%s>", lat_key, rec_type);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract latitude field [%s] from record type <%s>", lat_key, batch_rec_type);
             }
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, parms, outq_name, rec_type, id, geo, index_key));
+        return createLuaObject(L, new ParquetBuilder(L, parms, outq_name, inq_name, rec_type, batch_rec_type, id, geo, index_key));
     }
     catch(const RunTimeException& e)
     {
@@ -464,12 +467,17 @@ void ParquetBuilder::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo, const char* index_key):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
+                                const char* outq_name, const char* inq_name,
+                                const char* rec_type, const char* batch_rec_type,
+                                const char* id, geo_data_t geo, const char* index_key):
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     assert(parms);
     assert(outq_name);
+    assert(inq_name);
     assert(rec_type);
+    assert(batch_rec_type);
     assert(id);
 
     /* Save Parms */
@@ -478,11 +486,17 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     /* Allocate Private Implementation */
     pimpl = new ParquetBuilder::impl;
 
-    /* Initialize Publisher */
-    outQ = new Publisher(outq_name);
+    /* Row Based Parameters */
+    rowSizeBytes = RecordObject::getRecordDataSize(batch_rec_type);
+    maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
 
-    /* Row Size */
-    rowSizeBytes = RecordObject::getRecordDataSize(rec_type);
+    /* Initialize Record Type */
+    recType = StringLib::duplicate(rec_type);
+
+    /* Initialize Queues */
+    int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
+    outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
+    inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Initialize GeoParquet Option */
     geoData = geo;
@@ -491,7 +505,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
     indexKey = StringLib::duplicate(index_key);
 
     /* Define Table Schema */
-    pimpl->schema = pimpl->defineTableSchema(fieldList, rec_type, geoData);
+    pimpl->schema = pimpl->defineTableSchema(fieldList, batch_rec_type, geoData);
     fieldIterator = new field_iterator_t(fieldList);
 
     /* Create Unique Temporary Filename */
@@ -534,6 +548,10 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
         if(result.ok()) pimpl->parquetWriter = std::move(result).ValueOrDie();
         else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
     #endif
+
+    /* Start Builder Thread */
+    active = true;
+    builderPid = new Thread(builderThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -541,30 +559,139 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms, const char* ou
  *----------------------------------------------------------------------------*/
 ParquetBuilder::~ParquetBuilder(void)
 {
+    active = false;
+    delete builderPid;
     parms->releaseLuaObject();
     delete [] fileName;
     if(indexKey) delete [] indexKey;
+    delete [] recType;
     delete outQ;
+    delete inQ;
     delete fieldIterator;
     delete pimpl;
 }
 
 /*----------------------------------------------------------------------------
- * processRecord
+ * builderThread
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
+void* ParquetBuilder::builderThread(void* parm)
 {
-    (void)key;
+    ParquetBuilder* builder = (ParquetBuilder*)parm;
+    int row_cnt = 0;
 
-    /* Determine Number of Rows in Record */
-    int record_size_bytes = record->getAllocatedDataSize();
-    int num_rows = record_size_bytes / rowSizeBytes;
-    int left_over = record_size_bytes % rowSizeBytes;
-    if(left_over > 0)
+    /* Early Exit on No Writer */
+    if(!builder->pimpl->parquetWriter)
     {
-        mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, rowSizeBytes);
-        return false;
+        return NULL;
     }
+
+    /* Loop Forever */
+    while(builder->active)
+    {
+        /* Receive Message */
+        Subscriber::msgRef_t ref;
+        int recv_status = builder->inQ->receiveRef(ref, SYS_TIMEOUT);
+        if(recv_status > 0)
+        {
+            /* Process Record */
+            if(ref.size > 0)
+            {
+                /* Get Record and Match to Type being Processed */
+                RecordInterface* record = new RecordInterface((unsigned char*)ref.data, ref.size);
+                if(!StringLib::match(record->getRecordType(), builder->recType))
+                {
+                    delete record;
+                    builder->outQ->postCopy(ref.data, ref.size);
+                    builder->inQ->dereference(ref);
+                    continue;
+                }
+
+                /* Determine Rows in Record */
+                int record_size_bytes = record->getAllocatedDataSize();
+                int num_rows = record_size_bytes / builder->rowSizeBytes;
+                int left_over = record_size_bytes % builder->rowSizeBytes;
+                if(left_over > 0)
+                {
+                    mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, builder->rowSizeBytes);
+                    delete record; // record is not batched, so must delete here
+                    builder->inQ->dereference(ref); // record is not batched, so must dereference here
+                    continue;
+                }
+
+                /* Create Batch Structure */
+                batch_t batch = {
+                    .ref = ref,
+                    .record = record,
+                    .rows = num_rows
+                };
+
+                /* Add Batch to Ordering */
+                builder->recordBatch.add(row_cnt, batch);
+                row_cnt += num_rows;
+                if(row_cnt >= builder->maxRowsInGroup)
+                {
+                    builder->processRecordBatch(row_cnt);
+                    row_cnt = 0;
+                }
+            }
+            else
+            {
+                /* Terminating Message */
+                mlog(DEBUG, "Terminator received on %s, exiting parquet builder", builder->inQ->getName());
+                builder->active = false; // breaks out of loop
+                builder->inQ->dereference(ref); // terminator is not batched, so must dereference here
+            }
+        }
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        {
+            /* Break Out on Failure */
+            mlog(CRITICAL, "Failed queue receive on %s with error %d", builder->inQ->getName(), recv_status);
+            builder->active = false; // breaks out of loop
+        }
+    }
+
+    /* Process Remaining Records */
+    builder->processRecordBatch(row_cnt);
+    row_cnt = 0;
+
+    /* Close Parquet Writer */
+    (void)builder->pimpl->parquetWriter->Close();
+
+    /* Send File to User */
+    const char* _path = builder->parms->path;
+    int _path_len = StringLib::size(_path);
+    if((_path_len > 5) &&
+        (_path[0] == 's') &&
+        (_path[1] == '3') &&
+        (_path[2] == ':') &&
+        (_path[3] == '/') &&
+        (_path[4] == '/'))
+    {
+        #ifdef __aws__
+        builder->send2S3(&_path[5]);
+        #else
+        LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
+        #endif
+    }
+    else
+    {
+        /* Stream Back to Client */
+        builder->send2Client();
+    }
+
+    /* Signal Completion */
+    builder->signalComplete();
+
+    /* Exit Thread */
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * processRecordBatch
+ *----------------------------------------------------------------------------*/
+void ParquetBuilder::processRecordBatch (int num_rows)
+{
+    batch_t batch;
 
     /* Loop Through Fields in Schema */
     vector<shared_ptr<arrow::Array>> columns;
@@ -580,10 +707,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::DoubleBuilder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((double)record->getValueReal(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((double)batch.record->getValueReal(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -593,10 +727,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::FloatBuilder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((float)record->getValueReal(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((float)batch.record->getValueReal(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -606,10 +747,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::Int8Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((int8_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((int8_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -619,10 +767,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::Int16Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((int16_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((int16_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -632,10 +787,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::Int32Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((int32_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((int32_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -645,10 +807,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::Int64Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((int64_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -658,10 +827,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::UInt8Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((uint8_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((uint8_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -671,10 +847,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::UInt16Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((uint16_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((uint16_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -684,10 +867,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::UInt32Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((uint32_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((uint32_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -697,10 +887,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::UInt64Builder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((uint64_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((uint64_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -710,10 +907,17 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    builder.UnsafeAppend((int64_t)record->getValueInteger(field));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -723,11 +927,18 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
             {
                 arrow::StringBuilder builder;
                 (void)builder.Reserve(num_rows);
-                for(int row = 0; row < num_rows; row++)
+                unsigned long key = recordBatch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
                 {
-                    const char* str = record->getValueText(field);
-                    builder.UnsafeAppend(str, StringLib::size(str));
-                    field.offset += rowSizeBytes * 8;
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        const char* str = batch.record->getValueText(field);
+                        builder.UnsafeAppend(str, StringLib::size(str));
+                        field.offset += rowSizeBytes * 8;
+                    }
+                    field.offset = starting_offset;
+                    key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -750,83 +961,51 @@ bool ParquetBuilder::processRecord (RecordObject* record, okey_t key)
         RecordObject::field_t lat_field = geoData.lat_field;
         shared_ptr<arrow::Array> column;
         arrow::BinaryBuilder builder;
-        for(int row = 0; row < num_rows; row++)
+        unsigned long key = recordBatch.first(&batch);
+        while(key != (unsigned long)INVALID_KEY)
         {
-            wkbpoint_t point = {
-                #ifdef __be__
-                .byteOrder = 0,
-                #else
-                .byteOrder = 1,
-                #endif
-                .wkbType = 1,
-                .x = record->getValueReal(lon_field),
-                .y = record->getValueReal(lat_field)
-            };
-            (void)builder.Append((uint8_t*)&point, sizeof(wkbpoint_t));
-            lon_field.offset += rowSizeBytes * 8;
-            lat_field.offset += rowSizeBytes * 8;
+            int32_t starting_lon_offset = lon_field.offset;
+            int32_t starting_lat_offset = lat_field.offset;
+            for(int row = 0; row < batch.rows; row++)
+            {
+                wkbpoint_t point = {
+                    #ifdef __be__
+                    .byteOrder = 0,
+                    #else
+                    .byteOrder = 1,
+                    #endif
+                    .wkbType = 1,
+                    .x = batch.record->getValueReal(lon_field),
+                    .y = batch.record->getValueReal(lat_field)
+                };
+                (void)builder.Append((uint8_t*)&point, sizeof(wkbpoint_t));
+                lon_field.offset += rowSizeBytes * 8;
+                lat_field.offset += rowSizeBytes * 8;
+            }
+            lon_field.offset = starting_lon_offset;
+            lat_field.offset = starting_lat_offset;
+            key = recordBatch.next(&batch);
         }
         (void)builder.Finish(&column);
         columns.push_back(column);
     }
 
-    /* Write Table */
+    /* Build and Write Table */
     if(pimpl->parquetWriter)
     {
-        tableMut.lock();
-        {
-            /* Build and Write Table */
-            shared_ptr<arrow::Table> table = arrow::Table::Make(pimpl->schema, columns);
-            (void)pimpl->parquetWriter->WriteTable(*table, num_rows);
-        }
-        tableMut.unlock();
+        shared_ptr<arrow::Table> table = arrow::Table::Make(pimpl->schema, columns);
+        (void)pimpl->parquetWriter->WriteTable(*table, num_rows);
     }
 
-    /* Return Success */
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * processTimeout
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::processTimeout (void)
-{
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * processTermination
- *
- *  Note that RecordDispatcher will only call this once
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::processTermination (void)
-{
-    /* Early Exit on No Writer */
-    if(!pimpl->parquetWriter) return false;
-
-    /* Close Parquet Writer */
-    (void)pimpl->parquetWriter->Close();
-
-    /* Send File to User */
-    int file_path_len = StringLib::size(parms->path);
-    if((file_path_len > 5) &&
-       (parms->path[0] == 's') &&
-       (parms->path[1] == '3') &&
-       (parms->path[2] == ':') &&
-       (parms->path[3] == '/') &&
-       (parms->path[4] == '/'))
+    /* Clear Record Batch */
+    unsigned long key = recordBatch.first(&batch);
+    while(key != (unsigned long)INVALID_KEY)
     {
-        #ifdef __aws__
-        return send2S3(&parms->path[5]);
-        #else
-        LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server not compiled with AWS support");
-        #endif
+        delete batch.record;
+        inQ->dereference(batch.ref);
+        key = recordBatch.next(&batch);
     }
-    else
-    {
-        /* Stream Back to Client */
-        return send2Client();
-    }
+    recordBatch.clear();
 }
 
 /*----------------------------------------------------------------------------

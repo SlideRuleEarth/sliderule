@@ -83,6 +83,17 @@
  * DEFINES
  ******************************************************************************/
 
+typedef enum {
+    DEBUG               = 0,
+    INFO                = 1,
+    WARNING             = 2,
+    ERROR               = 3,
+    CRITICAL            = 4,
+    INVALID_EVENT_LEVEL = 5
+} event_level_t;
+
+typedef unsigned long               okey_t;
+
 #define fileno                      _fileno
 
 #define PATH_DELIMETER              '\\'
