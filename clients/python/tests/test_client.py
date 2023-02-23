@@ -13,9 +13,10 @@ class TestLocal:
         with pytest.raises(TypeError, match=('url')):
             sliderule.set_url()
 
-    def test_gps2utc(self):
-        utc = sliderule.gps2utc(1235331234)
-        assert utc == '2019-02-27 19:34:03'
+    def test_gps2utc(self, domain, organization):
+        sliderule.init(domain, organization=organization)
+        utc = sliderule.gps2utc(1235331234000)
+        assert utc == '2019-02-27T19:33:36Z'
 
 @pytest.mark.network
 class TestRemote:

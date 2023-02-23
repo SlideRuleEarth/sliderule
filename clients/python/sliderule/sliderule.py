@@ -119,7 +119,7 @@ basictypes = {
     "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte   },  # unsupported
     "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
     "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
-    "TIME8":    { "fmt": 'Q', "size": 8, "nptype": numpy.byte   },
+    "TIME8":    { "fmt": 'q', "size": 8, "nptype": numpy.int64  }, # numpy.datetime64
     "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte   }
 }
 
@@ -917,7 +917,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
 #
 # gps2utc
 #
-def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
+def gps2utc (gps_time, as_str=True):
     '''
     Convert a GPS based time returned from SlideRule into a UTC time.
 
@@ -927,8 +927,6 @@ def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
                     number of seconds since GPS epoch (January 6, 1980)
         as_str:     bool
                     if True, returns the time as a string; if False, returns the time as datatime object
-        epoch:      datetime
-                    the epoch used in the conversion, defaults to GPS epoch (Jan 6, 1980)
 
     Returns
     -------
@@ -941,15 +939,11 @@ def gps2utc (gps_time, as_str=True, epoch=gps_epoch):
         >>> sliderule.gps2utc(1235331234)
         '2019-02-27 19:34:03'
     '''
-    gps_time = epoch + timedelta(seconds=gps_time)
-    tai_time = gps_time + timedelta(seconds=19)
-    tai_timestamp = (tai_time - tai_epoch).total_seconds()
-    utc_timestamp = datetime.utcfromtimestamp(tai_timestamp)
+    rsps = source("time", {"time": gps_time, "input": "GPS", "output": "DATE"})
     if as_str:
-        return str(utc_timestamp)
+        return rsps["time"]
     else:
-        return utc_timestamp
-
+        return datetime.strptime(rsps["time"], '%Y-%m-%dT%H:%M:%SZ')
 #
 # get_definition
 #

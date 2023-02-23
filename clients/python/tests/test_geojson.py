@@ -10,7 +10,7 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestGeoJson:
-    def test_atl06(self, domain, asset, organization):
+    def test_atl03(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
         for testfile in ["data/grandmesa.geojson", "data/grandmesa.shp"]:
             region = sliderule.toregion(os.path.join(TESTDIR, testfile))
