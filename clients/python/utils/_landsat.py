@@ -17,7 +17,8 @@ def BuildSquare(lon, lat, delta):
     c4 = [lon - delta, lat + delta]
 
     # This order matters for query to use 'inside of polygon' area
-    geometry = {"type": "Polygon", "coordinates": [[ c1, c4, c3, c2, c1 ]]}
+    # geometry = {"type": "Polygon", "coordinates": [[ c1, c4, c3, c2, c1 ]]}
+    geometry = {"type": "Polygon", "coordinates": [[ c2, c1, c4, c3, c2 ]]}
     return geometry
 
 
@@ -36,33 +37,11 @@ def get_temp_creds(provider):
 
 if __name__ == '__main__':
 
-    catalog = Client.open("https://cmr.earthdata.nasa.gov/stac/LPCLOUD")
-
-    timeRange = '2021-01-01/2022-01-01'
-    geometry  = BuildSquare(-178, 50, 1)
-    mybbox    = [-179,41,-177,51]
-
-    # print("Searching with bbox...")
-    # results = catalog.search(collections=['HLSS30.v2.0', 'HLSL30.v2.0'],
-    #                          bbox = mybbox,
-    #                          datetime=timeRange)
-    # print(f"Results matched: {results.matched()}")
-
-    print("Searching with Intersects...")
-    results = catalog.search(collections=['HLSS30.v2.0', 'HLSL30.v2.0'],
-                             datetime=timeRange,
-                             intersects=geometry)
-
-    # print(f"{results.url_with_parameters()}")
-    print(f"Results matched: {results.matched()}")
-
-    itemsDict = results.get_all_items_as_dict()
-
     # Dumped original stack item collection to file, for testing
     file = 'hls.geojson'
-    print(f"Writing reults to file {file}")
-    with open(file, 'w') as fp:
-        json.dump(itemsDict, fp)
+    print(f"Reading reults from file {file}")
+    with open(file, 'r') as fp:
+        itemsDict = json.load(fp)
 
     urlList = []
 
@@ -85,8 +64,6 @@ if __name__ == '__main__':
                 urlList.append(assetsDict[val]["href"])
 
         del itemsDict["features"][i]["assets"]
-
-
 
     # Dumped trimmed dictionary as geojson file, for testing
     file = 'hls_trimmed.geojson'
