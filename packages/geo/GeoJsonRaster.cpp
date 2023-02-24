@@ -286,7 +286,7 @@ void GeoJsonRaster::getIndexFile(std::string &file, double lon, double lat)
 bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
 {
     rinfo.gmtDate = gmtDate;
-    rinfo.gps = TimeLib::gmt2gpstime(gmtDate);
+    rinfo.gpsTime = TimeLib::gmt2gpstime(gmtDate);
     return true;
 }
 

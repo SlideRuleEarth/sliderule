@@ -119,7 +119,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
     const std::string fileToken = "lp-prod-protected";
     const std::string vsisPath  = "/vsis3/lp-prod-protected/";
-    const char *demField  = "properties";
+    const char *demField  = "B04";
     const char* dateField = "datetime";
 
     try
@@ -151,6 +151,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                 raster_info_t rinfo;
                 rinfo.fileName = fileName;
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
+                rinfo.gpsTime = 0;
 
                 const std::string endToken    = "_dem.tif";
                 const std::string newEndToken = "_bitmask.tif";
@@ -176,7 +177,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                         rinfo.gmtDate.minute = minute;
                         rinfo.gmtDate.second = second;
                         rinfo.gmtDate.millisecond = 0;
-                        rinfo.gps = TimeLib::gmt2gpstime(rinfo.gmtDate);
+                        rinfo.gpsTime = TimeLib::gmt2gpstime(rinfo.gmtDate);
                     }
                     else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                 }

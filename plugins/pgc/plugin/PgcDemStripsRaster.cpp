@@ -169,6 +169,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 raster_info_t rinfo;
                 rinfo.fileName = fileName;
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
+                rinfo.gpsTime = 0;
 
                 const std::string endToken    = "_dem.tif";
                 const std::string newEndToken = "_bitmask.tif";
@@ -179,7 +180,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 } else fileName.clear();
                 rinfo.auxFileName = fileName;
 
-                double gpsTime = 0;
+                double gps = 0;
                 for(int i=0; i<DATES_CNT; i++)
                 {
                     TimeLib::gmt_time_t gmtDate;
@@ -203,11 +204,11 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                         else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                     }
                     // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
-                    gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
+                    gps += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
-                gpsTime = gpsTime/DATES_CNT;
-                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime));
-                rinfo.gps = static_cast<int64_t>(gpsTime);
+                gps = gps/DATES_CNT;
+                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
+                rinfo.gpsTime = static_cast<int64_t>(gps);
                 rastersList->add(rastersList->length(), rinfo);
             }
             OGRFeature::DestroyFeature(feature);

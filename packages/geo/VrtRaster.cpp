@@ -251,8 +251,9 @@ bool VrtRaster::findRasters(OGRPoint& p)
  *----------------------------------------------------------------------------*/
 bool VrtRaster::findCachedRasters(OGRPoint& p)
 {
-    bool foundRaster = false;
     Raster *raster = NULL;
+
+    rastersList->clear();
 
     const char *key = rasterDict.first(&raster);
     while (key != NULL)
@@ -262,12 +263,21 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
         {
             raster->enabled = true;
             raster->point = p;
-            foundRaster = true;
+
+            /* Store cached raster info, fileName is enough */
+            raster_info_t rinfo;
+            rinfo.fileName = raster->fileName;
+            rinfo.auxFileName.clear();
+            bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
+            rinfo.gpsTime = 0;
+            rastersList->add(rastersList->length(), rinfo);
+
             break; /* Only one raster with this point in VRT */
         }
         key = rasterDict.next(&raster);
     }
-    return foundRaster;
+
+    return (rastersList->length() > 0);
 }
 
 

@@ -160,7 +160,7 @@ class GeoRaster: public LuaObject
             std::string         fileName;
             std::string         auxFileName;
             TimeLib::gmt_time_t gmtDate;
-            int64_t             gps;
+            int64_t             gpsTime;
         } raster_info_t;
 
 
@@ -174,9 +174,6 @@ class GeoRaster: public LuaObject
             OGRSpatialReference* sref;
             std::string     fileName;
             GDALDataType    dataType;
-            Raster*         peerRaster;
-            bool            isAuxuliary;
-
             uint32_t        rows;
             uint32_t        cols;
             bbox_t          bbox;
@@ -191,7 +188,6 @@ class GeoRaster: public LuaObject
             OGRPoint        point;
             sample_t        sample;
 
-            uint32_t getPeerValue(void);
             void clear(bool close = true);
             Raster(void) { clear(false); }
            ~Raster (void) { clear(); }
