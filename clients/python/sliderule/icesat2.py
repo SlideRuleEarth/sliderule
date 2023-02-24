@@ -402,7 +402,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
 #
 def atl06 (parm, resource, asset=DEFAULT_ASSET):
     '''
-    Performs ATL06-SR processing on ATL03 data and returns gridded elevations
+    Performs ATL06-SR processing on ATL03 data and returns geolocated elevations
 
     Parameters
     ----------
@@ -416,7 +416,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
+        geolocated elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
     '''
     return atl06p(parm, asset=asset, resources=[resource])
 
@@ -425,7 +425,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
     '''
-    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  This function expects that the **parm** argument
+    Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
     then any polygon or resource filtering options supplied in **parm** are ignored.
 
@@ -454,7 +454,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
+        geolocated elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
 
     Examples
     --------
@@ -722,7 +722,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
 #
 def atl08 (parm, resource, asset=DEFAULT_ASSET):
     '''
-    Performs ATL08-PhoREAL processing on ATL03 and ATL08 data and returns gridded elevations
+    Performs ATL08-PhoREAL processing on ATL03 and ATL08 data and returns geolocated elevations
 
     Parameters
     ----------
@@ -736,7 +736,7 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
     Returns
     -------
     GeoDataFrame
-        gridded vegatation statistics
+        geolocated vegatation statistics
     '''
     return atl08p(parm, asset=asset, resources=[resource])
 
@@ -745,7 +745,7 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
 #
 def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
     '''
-    Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns gridded vegatation statistics.  This function expects that the **parm** argument
+    Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns geolocated vegatation statistics.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
     then any polygon or resource filtering options supplied in **parm** are ignored.
 
@@ -774,7 +774,7 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Returns
     -------
     GeoDataFrame
-        gridded vegetation statistics
+        geolocated vegetation statistics
     '''
     try:
         tstart = time.perf_counter()

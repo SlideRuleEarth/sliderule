@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 #
 def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     """
-    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  The list of granules to be processed is identified by the ipx_region object.
+    Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  The list of granules to be processed is identified by the ipx_region object.
 
     See the `atl06p <../api_reference/icesat2.html#atl06p>`_ function for more details.
 
@@ -62,7 +62,7 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+        geolocated elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
     """
     try:
         version = ipx_region.product_version
