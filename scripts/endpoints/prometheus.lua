@@ -3,7 +3,7 @@
 --
 -- INPUT:       N/A
 --
--- OUTPUT:      OpentMetrics Text Format (used by prometheus)
+-- OUTPUT:      OpenMetrics Text Format (used by prometheus)
 --
 
 local rsp_str = ""
