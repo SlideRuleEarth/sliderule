@@ -38,6 +38,8 @@
 
 #include "ArcticDemMosaicRaster.h"
 #include "ArcticDemStripsRaster.h"
+#include "RemaDemMosaicRaster.h"
+#include "RemaDemStripsRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
