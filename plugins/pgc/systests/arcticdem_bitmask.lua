@@ -75,4 +75,4 @@ for d = 1, 2 do
     print(string.format("%d points sampled, ExecTime: %f, failed raster reads: %d", maxPoints, dtime, failedSamples))
 end
 
-os.exit()
+sys.quit()
