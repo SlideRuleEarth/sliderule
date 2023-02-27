@@ -33,8 +33,8 @@
 #define __parquet_builder__
 
 /*
- * ParquetBuilder works on batches of records.  It expects the `rec_type` passed
- * into the constructor to be the type that defines each of the column headings,
+ * ParquetBuilder works on batches of records.  It expects the `batch_rec_type`
+ * passed into the constructor to be the type that defines each of the column headings,
  * then it expects to receive records that are arrays (or batches) of that record
  * type.  The field defined as an array is transparent to this class - it just
  * expects the record to be a single array.
@@ -46,8 +46,8 @@
 
 #include "MsgQ.h"
 #include "LuaObject.h"
+#include "Ordering.h"
 #include "RecordObject.h"
-#include "DispatchObject.h"
 #include "ArrowParms.h"
 #include "OsApi.h"
 #include "MsgQ.h"
@@ -56,7 +56,7 @@
  * PARQUET BUILDER DISPATCH CLASS
  ******************************************************************************/
 
-class ParquetBuilder: public DispatchObject
+class ParquetBuilder: public LuaObject
 {
     public:
 
@@ -67,7 +67,10 @@ class ParquetBuilder: public DispatchObject
         static const int LIST_BLOCK_SIZE = 32;
         static const int FILE_NAME_MAX_LEN = 128;
         static const int FILE_BUFFER_RSPS_SIZE = 0x1000000; // 16MB
+        static const int ROW_GROUP_SIZE = 0x4000000; // 64MB
+        static const int QUEUE_BUFFER_FACTOR = 3;
 
+        static const char* OBJECT_TYPE;
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
@@ -123,16 +126,27 @@ class ParquetBuilder: public DispatchObject
             double  y;
         } ALIGN_PACKED wkbpoint_t;
 
+        typedef struct {
+            Subscriber::msgRef_t    ref;
+            RecordObject*           record;
+            int                     rows;
+        } batch_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
+        Thread*             builderPid;
+        bool                active;
+        Subscriber*         inQ;
+        const char*         recType;
+        Ordering<batch_t>   recordBatch;
         ArrowParms*         parms;
         field_list_t        fieldList;
         field_iterator_t*   fieldIterator;
-        Mutex               tableMut;
         Publisher*          outQ;
         int                 rowSizeBytes;
+        int                 maxRowsInGroup;
         const char*         fileName; // used locally to build file
         geo_data_t          geoData;
         const char*         indexKey;
@@ -144,16 +158,16 @@ class ParquetBuilder: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, ArrowParms* parms, const char* outq_name, const char* rec_type, const char* id, geo_data_t geo, const char* index_key);
+                            ParquetBuilder          (lua_State* L, ArrowParms* parms,
+                                                     const char* outq_name, const char* inq_name,
+                                                     const char* rec_type, const char* batch_rec_type,
+                                                     const char* id, geo_data_t geo, const char* index_key);
                             ~ParquetBuilder         (void);
 
-        bool                processRecord           (RecordObject* record, okey_t key) override;
-        bool                processTimeout          (void) override;
-        bool                processTermination      (void) override;
-        bool                send2Client             (void);
+        static void*        builderThread           (void* parm);
+        void                processRecordBatch      (int num_rows);
         bool                send2S3                 (const char* s3dst);
-        const char*         buildGeoMetaData        (void);
-        const char*         buildServerMetaData     (void);
+        bool                send2Client             (void);
 };
 
 #endif  /* __parquet_builder__ */

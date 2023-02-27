@@ -82,7 +82,7 @@ void PgcDemMosaicRaster::getIndexFile(std::string& file, double lon, double lat)
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-bool PgcDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
+bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, const char* token)
 {
     /*
      * There is a metadata .json file in s3 bucket where raster is located.
@@ -97,7 +97,7 @@ bool PgcDemMosaicRaster::getRasterDate(raster_info_t& rinfo)
 
     GDALDataset *dset = NULL;
 
-    const std::string key       = "_reg_dem.tif";
+    const std::string key       = token;
     const std::string fileType  = ".json";
     const char* dateField       = "end_datetime";
 

@@ -25,11 +25,11 @@ $ make install
 
 The plugin supplies the following endpoints:
 * [atl06](endpoints/atl06.lua): process a single granule of ATL03 photon data segments to produce elevations
-* [atl06p](endpoints/atl06p.lua): parallel process ATL03 photon data segments to produce gridded elevations
+* [atl06p](endpoints/atl06p.lua): parallel process ATL03 photon data segments to produce geolocated elevations
 * [atl03s](endpoints/atl03s.lua): create and return ATL03 photon data segments from a single granule
 * [atl03sp](endpoints/atl03sp.lua): create and return ATL03 photon data segments in parallel
 * [atl06](endpoints/atl08.lua): process a single granule of ATL03 photon data segments to produce vegetation metrics
-* [atl06p](endpoints/atl08p.lua): parallel process ATL03 photon data segments to produce gridded vegetation metrics
+* [atl06p](endpoints/atl08p.lua): parallel process ATL03 photon data segments to produce geolocated vegetation metrics
 * [indexer](endpoints/idnexer.lua): process ATL03 resource and produce an index record (used with [build_indexes.py](utils/build_indexes.py))
 
 This plugin supplies the following record types:
