@@ -11,6 +11,7 @@ runner.command("ut_ordering::ADD_REMOVE")
 runner.command("ut_ordering::DUPLICATES")
 runner.command("ut_ordering::SORT")
 runner.command("ut_ordering::ITERATE")
+runner.command("ut_ordering::ASSIGN")
 runner.command("DELETE ut_ordering")
 
 -- Report Results --
