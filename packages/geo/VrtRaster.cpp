@@ -98,7 +98,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
 
         geoIndex.dset = (GDALDataset *)GDALOpenEx(newVrtFile.c_str(), GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
         if (geoIndex.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT index file: %s:", newVrtFile.c_str());
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT index file: %s", newVrtFile.c_str());
 
 
         geoIndex.fileName = newVrtFile;

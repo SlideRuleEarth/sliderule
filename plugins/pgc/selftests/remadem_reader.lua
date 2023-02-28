@@ -14,7 +14,7 @@ local assets = asset.loaddir(nil,true) -- looks for asset_directory.csv in same 
 local lon = -80.0   -- DO NOT CHANGE lon and lat, later tests are hardcoded to these values!!!
 local lat = -80.0
 
-local demTypes = {"remadem-mosaic", "remadem-strips"}
+local demTypes = {"rema-mosaic", "rema-strips"}
 local demTypeCnt = 1
 
 for i = 1, demTypeCnt do
@@ -38,7 +38,7 @@ for i = 1, demTypeCnt do
         sampleCnt = sampleCnt + 1
     end
 
-    if demType == "remadem-mosaic" then
+    if demType == "rema-mosaic" then
         runner.check(sampleCnt == 1)
     else
         runner.check(sampleCnt == 14)
@@ -62,7 +62,7 @@ for i = 1, demTypeCnt do
     local cellsize = dem:cell()
     print(string.format("cellsize: %d", cellsize))
 
-    if demType == "remadem-mosaic" then
+    if demType == "rema-mosaic" then
         runner.check(cellsize == 2.0)
     else
         runner.check(cellsize == 0.0)
@@ -108,7 +108,7 @@ for i = 1, demTypeCnt do
         sampleCnt = sampleCnt + 1
     end
 
-    if demType == "remadem-mosaic" then
+    if demType == "rema-mosaic" then
         runner.check(sampleCnt == 1)
     else
         runner.check(sampleCnt == 14)
