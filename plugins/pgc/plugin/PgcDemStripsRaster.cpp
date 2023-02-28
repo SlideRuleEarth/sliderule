@@ -168,6 +168,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 rasters_group_t rgroup;
                 raster_info_t rinfo;
                 raster_info_t flagsRinfo;
+
                 rinfo.fileName = fileName;
                 rinfo.tag = "dem";
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
@@ -210,8 +211,8 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                     gps += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
                 gps = gps/DATES_CNT;
-                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
-                rinfo.gpsTime = static_cast<int64_t>(gps);
+                rgroup.gmtDate = rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
+                rgroup.gpsTime = rinfo.gpsTime = static_cast<int64_t>(gps);
                 rgroup.list.add(rgroup.list.length(), rinfo);
 
                 if(flagsRinfo.fileName.length() > 0)

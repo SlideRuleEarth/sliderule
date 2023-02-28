@@ -189,7 +189,8 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
                         {
                             /* Get flags */
                             assert(raster);
-                            rasterOfIntrest->sample.flags = raster->sample.value;
+                            if(rasterOfIntrest)
+                                rasterOfIntrest->sample.flags = raster->sample.value;
                         }
                     }
                 }
@@ -1042,7 +1043,7 @@ bool GeoRaster::filterRasters(void)
             }
 
             if(removeGroup)
-                rasterGroupList->remove(raster_iter[i].key);
+                rasterGroupList->remove(group_iter[i].key);
         }
     }
 

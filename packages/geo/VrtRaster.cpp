@@ -275,8 +275,9 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
             raster_info_t rinfo;
 
             rinfo.fileName = raster->fileName;
-            bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
-            rinfo.gpsTime = 0;
+            rinfo.tag = "dem";
+            rinfo.gpsTime = raster->gpsTime;
+            rinfo.gmtDate = TimeLib::gps2gmttime(raster->gpsTime * 1000);
             rgroup.list.add(rgroup.list.length(), rinfo);
             rgroup.gpsTime = rinfo.gpsTime;
             rgroup.gmtDate = rinfo.gmtDate;
