@@ -48,14 +48,6 @@ class VctRaster: public GeoRaster
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -68,14 +60,12 @@ class VctRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-
                      VctRaster         (lua_State* L, GeoParms* _parms, const int target_crs);
         void         openGeoIndex      (double lon=0, double lat=0);
         void         transformCRS      (OGRPoint& p);
         virtual void getIndexFile      (std::string& file, double lon, double lat) = 0;
         virtual void getIndexBbox      (bbox_t& bbox, double lon, double lat) = 0;
         bool         findCachedRasters (OGRPoint &p);
-
 
         /*--------------------------------------------------------------------
          * Data
@@ -88,11 +78,6 @@ class VctRaster: public GeoRaster
          * Data
          *--------------------------------------------------------------------*/
         int targetCrs;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
 };
 
 #endif  /* __vct_raster__ */

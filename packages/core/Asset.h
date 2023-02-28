@@ -67,12 +67,11 @@ class Asset: public LuaObject
         class IODriver
         {
             public:
-                const char*     FORMAT;
-
-                                IODriver    (void) {};
-                virtual         ~IODriver   (void) {};
-
-                virtual int64_t ioRead      (uint8_t* data, int64_t size, uint64_t pos);
+                static const char*  FORMAT;
+                static IODriver*    create      (const Asset* _asset, const char* resource);
+                                    IODriver    (void);
+                virtual             ~IODriver   (void);
+                virtual int64_t     ioRead      (uint8_t* data, int64_t size, uint64_t pos);
         };
 
         /*--------------------------------------------------------------------

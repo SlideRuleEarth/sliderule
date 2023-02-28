@@ -63,7 +63,7 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
          *--------------------------------------------------------------------*/
 
         RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         PgcDemMosaicRaster(L, _parms, "rema/mosaics/v2.0/2m/2m_dem_tiles.vrt") {}
+         PgcDemMosaicRaster(L, _parms) {}
 };
 
 #endif  /* __remadem_mosaic_raster__ */

@@ -48,14 +48,6 @@ class VrtRaster: public GeoRaster
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -68,23 +60,22 @@ class VrtRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-
-                     VrtRaster          (lua_State* L, GeoParms* _parms);
+                     VrtRaster          (lua_State* L, GeoParms* _parms, const char* vrt_file=NULL);
         void         openGeoIndex       (double lon=0, double lat=0);
         void         transformCRS       (OGRPoint& p);
-        virtual void getIndexFile       (std::string& file, double lon=0, double lat=0) = 0;
+        virtual void getIndexFile       (std::string& file, double lon=0, double lat=0);
         virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
         bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
                                          void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
 
         bool         findRasters        (OGRPoint &p);
         bool         findCachedRasters  (OGRPoint &p);
-        void         buildVRT           (std::string& vrtFile, List<std::string>& rlist);
-
+        void         buildVRT           (std::string& vrt_file, List<std::string>& rlist);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        std::string     vrtFile;
 
     private:
 
@@ -93,11 +84,6 @@ class VrtRaster: public GeoRaster
          *--------------------------------------------------------------------*/
         GDALRasterBand *band;
         double          invGeot[6];
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
 };
 
 #endif  /* __vrt_raster__ */

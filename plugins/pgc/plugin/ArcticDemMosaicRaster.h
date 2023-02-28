@@ -62,8 +62,7 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
          *--------------------------------------------------------------------*/
 
         ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         PgcDemMosaicRaster(L, _parms, SafeString("%s/%s", _parms->asset ? _parms->asset->getPath() : "arcticdem/mosaics/v3.0/2m",
-                                                           _parms->asset ? _parms->asset->getIndex() : "2m_dem_tiles.vrt").str()) {}
+         PgcDemMosaicRaster(L, _parms) {}
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */
