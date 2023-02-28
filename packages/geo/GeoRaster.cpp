@@ -44,6 +44,7 @@
 #include <ogr_spatialref.h>
 #include <gdal_priv.h>
 #include <algorithm>
+#include <cstring>
 
 #include "cpl_minixml.h"
 #include "cpl_string.h"
@@ -153,38 +154,46 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
         /* Get samples */
         if (sample(lon, lat) > 0)
         {
-            Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-            for(int i = 0; i < raster_iter.length; i++)
+            Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+            for(int i = 0; i < group_iter.length; i++)
             {
-                const raster_info_t& rinfo = raster_iter[i].value;
-                const char* key            = rinfo.fileName.c_str();
-                Raster* raster             = NULL;
+                const rasters_group_t& rgroup = group_iter[i].value;
+                Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+                Raster* rasterOfIntrest = NULL;
 
-                if(rasterDict.find(key, &raster))
+                for(int j = 0; j < raster_iter.length; j++)
                 {
-                    assert(raster);
-                    if(raster->enabled && raster->sampled)
-                    {
-                        /* Update dictionary of used raster files */
-                        std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
-                        raster->sample.fileId = fileDictAdd(fileName);
-                        raster->sample.flags  = 0;
+                    const raster_info_t& rinfo = raster_iter[j].value;
+                    const char* key            = rinfo.fileName.c_str();
+                    Raster* raster             = NULL;
 
-                        /* Get flags from aux raster */
-                        if( rinfo.auxFileName.length() > 0)
+                    if(strcmp("dem", rinfo.tag.c_str()) == 0)
+                    {
+                        if(rasterDict.find(key, &raster))
                         {
-                            const char* auxkey = rinfo.auxFileName.c_str();
-                            Raster* auxraster  = NULL;
-                            if(rasterDict.find(auxkey, &auxraster))
+                            assert(raster);
+                            if(raster->enabled && raster->sampled)
                             {
-                                assert(auxraster);
-                                raster->sample.flags = auxraster->sample.value;
+                                /* Update dictionary of used raster files */
+                                std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
+                                raster->sample.fileId = fileDictAdd(fileName);
+                                raster->sample.flags  = 0;
+                                rasterOfIntrest = raster;
+
                             }
                         }
-
-                        slist.add(raster->sample);
+                    }
+                    else if(strcmp("flags", rinfo.tag.c_str()) == 0)
+                    {
+                        if(rasterDict.find(key, &raster))
+                        {
+                            /* Get flags */
+                            assert(raster);
+                            rasterOfIntrest->sample.flags = raster->sample.value;
+                        }
                     }
                 }
+                if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
             }
         }
     }
@@ -236,7 +245,7 @@ GeoRaster::~GeoRaster(void)
         key = rasterDict.next(&raster);
     }
 
-    if (rastersList) delete rastersList;
+    if (rasterGroupList) delete rasterGroupList;
 
     /* Release GeoParms LuaObject */
     parms->releaseLuaObject();
@@ -308,7 +317,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     parms(_parms)
 {
     /* Initialize Class Data Members */
-    rastersList = new Ordering<raster_info_t>;
+    rasterGroupList = new Ordering<rasters_group_t>;
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
@@ -934,35 +943,30 @@ void GeoRaster::invalidateCache(void)
  *----------------------------------------------------------------------------*/
 void GeoRaster::updateCache(OGRPoint& p)
 {
-    if (rastersList->length() == 0)
+    if (rasterGroupList->length() == 0)
         return;
 
     const char *key  = NULL;
     Raster *raster = NULL;
 
     /* Check new tif file list against rasters in dictionary */
-    Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-    for (int i = 0; i < raster_iter.length; i++)
+    Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+    for (int i = 0; i < group_iter.length; i++)
     {
-        const raster_info_t &rinfo   = raster_iter[i].value;
-        const char* rasterFile = rinfo.fileName.c_str();
-        const char* auxFile    = rinfo.auxFileName.c_str();;
+        const rasters_group_t& rgroup = group_iter[i].value;
+        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
 
-        /* For now code supports only one auxiliary raster */
-        const char* keys[2] = {rasterFile, auxFile};
-        const int CNT = parms->auxiliary_files ? 2 : 1;
-
-        for (int j = 0; j < CNT; j++)
+        for(int j = 0; j < raster_iter.length; j++)
         {
-            key = keys[j];
-            if(strlen(key) == 0) break;
+            const raster_info_t& rinfo = raster_iter[j].value;
+            key = rinfo.fileName.c_str();
 
-            if (rasterDict.find(key, &raster))
+            if(rasterDict.find(key, &raster))
             {
                 /* Update point to be sampled, mark raster enabled for next sampling */
                 assert(raster);
                 raster->enabled = true;
-                raster->point = p;
+                raster->point   = p;
             }
             else
             {
@@ -970,30 +974,30 @@ void GeoRaster::updateCache(OGRPoint& p)
                 raster = new Raster;
                 assert(raster);
 
-                raster->enabled = true;
-                raster->point = p;
+                raster->enabled      = true;
+                raster->point        = p;
                 raster->sample.value = INVALID_SAMPLE_VALUE;
-                raster->fileName = key;
-                raster->gpsTime = static_cast<double>(rinfo.gpsTime / 1000);
+                raster->fileName     = key;
+                raster->gpsTime      = static_cast<double>(rinfo.gpsTime / 1000);
                 rasterDict.add(key, raster);
             }
         }
-    }
 
-    /* Maintain cache from getting too big */
-    key = rasterDict.first(&raster);
-    while (key != NULL)
-    {
-        if (rasterDict.length() <= MAX_CACHED_RASTERS)
-            break;
-
-        assert(raster);
-        if (raster->enabled)
+        /* Maintain cache from getting too big */
+        key = rasterDict.first(&raster);
+        while(key != NULL)
         {
-            rasterDict.remove(key);
-            delete raster;
+            if(rasterDict.length() <= MAX_CACHED_RASTERS)
+                break;
+
+            assert(raster);
+            if(raster->enabled)
+            {
+                rasterDict.remove(key);
+                delete raster;
+            }
+            key = rasterDict.next(&raster);
         }
-        key = rasterDict.next(&raster);
     }
 }
 
@@ -1002,69 +1006,75 @@ void GeoRaster::updateCache(OGRPoint& p)
  *----------------------------------------------------------------------------*/
 bool GeoRaster::filterRasters(void)
 {
-    /* Temporal and URL filters - remove unwanted rasters from the list */
+    /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
     {
-        Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-        for(int i = 0; i < raster_iter.length; i++)
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            const raster_info_t& rinfo = raster_iter[i].value;
-            bool removeRaster    = false;
+            const rasters_group_t& rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            bool removeGroup = false;
 
-            /* URL filter */
-            if(parms->url_substring)
+            for(int j = 0; j < raster_iter.length; j++)
             {
-                if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
-                    removeRaster = true;
+                const raster_info_t& rinfo = raster_iter[j].value;
+
+                /* URL filter */
+                if(parms->url_substring)
+                {
+                    if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
+                    {
+                        removeGroup = true;
+                        break;
+                    }
+                }
+
+                /* Temporal filter */
+                if(parms->filter_time)
+                {
+                    if(!TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
+                    {
+                        removeGroup = true;
+                        break;
+                    }
+                }
             }
 
-            /* Temporal filter */
-            if(!removeRaster && parms->filter_time)
-            {
-                if(!TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
-                    removeRaster = true;
-            }
-
-            if(removeRaster)
-            {
-                rastersList->remove(raster_iter[i].key);
-            }
+            if(removeGroup)
+                rasterGroupList->remove(raster_iter[i].key);
         }
     }
 
-    /* Closest time filter. */
+    /* Closest time filter - using raster group time, not individual reaster time */
     if(parms->filter_closest_time)
     {
         int64_t closestGps = TimeLib::gmt2gpstime(parms->closest_time);
         int64_t minDelta   = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
-        /* Find the closesest time */
-        Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-        for(int i = 0; i < raster_iter.length; i++)
+        /* Find raster group with the closesest time */
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gps   = raster_iter[i].value.gpsTime;
+            int64_t gps   = group_iter[i].value.gpsTime;
             int64_t delta = abs(closestGps - gps);
 
             if(delta < minDelta)
-            {
                 minDelta = delta;
-            }
         }
 
-        /* Remove all rasters with greater time (there may be multiple rasters with the same 'closest' time) */
-        for(int i = 0; i < raster_iter.length; i++)
+        /* Remove all groups with greater delta */
+        for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gps   = raster_iter[i].value.gpsTime;
+            int64_t gps   = group_iter[i].value.gpsTime;
             int64_t delta = abs(closestGps - gps);
 
             if(delta > minDelta)
-            {
-                rastersList->remove(raster_iter[i].key);
-            }
+                rasterGroupList->remove(group_iter[i].key);
         }
     }
 
-    return (rastersList->length() > 0);
+    return (rasterGroupList->length() > 0);
 }
 
 /*----------------------------------------------------------------------------

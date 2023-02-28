@@ -157,11 +157,17 @@ class GeoRaster: public LuaObject
 
 
         typedef struct {
+            std::string         tag;
             std::string         fileName;
-            std::string         auxFileName;
             TimeLib::gmt_time_t gmtDate;
             int64_t             gpsTime;
         } raster_info_t;
+
+        typedef struct {
+            Ordering<raster_info_t> list;
+            TimeLib::gmt_time_t     gmtDate;
+            int64_t                 gpsTime;
+        } rasters_group_t;
 
 
         class Raster
@@ -252,7 +258,7 @@ class GeoRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Ordering<raster_info_t>*    rastersList;
+        Ordering<rasters_group_t>*  rasterGroupList;
         GeoIndex                    geoIndex;
         CoordTransform              cord;
         GeoParms*                   parms;

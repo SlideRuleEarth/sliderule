@@ -137,15 +137,14 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
      * The date in the filename is the date of the earliest image of the stereo pair.
      * For intrack pairs (pairs collected intended for stereo) the two images are acquired within a few minutes of each other.
      * For cross-track images (opportunistic stereo pairs made from mono collects)
-     * the two images can be from up to 20 days apart.
+     * the two images can be from up to 30 days apart.
      *
      */
-    const char* demField         = "dem";
     const int DATES_CNT          = 2;
     const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
     try
     {
-        rastersList->clear();
+        rasterGroupList->clear();
 
         /* For now assume the first layer has the feature we need */
         layer->ResetReading();
@@ -156,7 +155,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
-            const char *fname = feature->GetFieldAsString(demField);
+            const char *fname = feature->GetFieldAsString("dem");
             if (fname)
             {
                 std::string fileName(fname);
@@ -166,8 +165,11 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
                 fileName = vsis3Path + fileName.substr(pos);
 
+                rasters_group_t rgroup;
                 raster_info_t rinfo;
+                raster_info_t flagsRinfo;
                 rinfo.fileName = fileName;
+                rinfo.tag = "dem";
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
                 rinfo.gpsTime = 0;
 
@@ -178,7 +180,8 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 {
                     fileName.replace(pos, endToken.length(), newEndToken.c_str());
                 } else fileName.clear();
-                rinfo.auxFileName = fileName;
+
+                flagsRinfo.fileName = fileName;
 
                 double gps = 0;
                 for(int i=0; i<DATES_CNT; i++)
@@ -209,18 +212,27 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 gps = gps/DATES_CNT;
                 rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rinfo.gpsTime = static_cast<int64_t>(gps);
-                rastersList->add(rastersList->length(), rinfo);
+                rgroup.list.add(rgroup.list.length(), rinfo);
+
+                if(flagsRinfo.fileName.length() > 0)
+                {
+                    flagsRinfo.tag = "flags";
+                    flagsRinfo.gmtDate = rinfo.gmtDate;
+                    flagsRinfo.gpsTime = rinfo.gpsTime;
+                    rgroup.list.add(rgroup.list.length(), flagsRinfo);
+                }
+                rasterGroupList->add(rasterGroupList->length(), rgroup);
             }
             OGRFeature::DestroyFeature(feature);
         }
-        mlog(DEBUG, "Found %ld rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (rastersList->length() > 0);
+    return (rasterGroupList->length() > 0);
 }
 
 
