@@ -82,6 +82,7 @@ UT_Ordering::UT_Ordering(CommandProcessor* cmd_proc, const char* obj_name):
     registerCommand("DUPLICATES", (cmdFunc_t)&UT_Ordering::testDuplicates, 0, "");
     registerCommand("SORT",       (cmdFunc_t)&UT_Ordering::testSort,       0, "");
     registerCommand("ITERATE",    (cmdFunc_t)&UT_Ordering::testIterator,   0, "");
+    registerCommand("ASSIGN",     (cmdFunc_t)&UT_Ordering::testAssignment, 0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -295,5 +296,51 @@ int UT_Ordering::testIterator(int argc, char argv[][MAX_CMD_SIZE])
         ut_assert(iterator[i].value == (i + 1), "failed to iterate value %d\n", i + 1);
     }
 
+    return failures == 0 ? 0 : -1;
+}
+
+/*--------------------------------------------------------------------------------------
+ * testAssignment
+ *--------------------------------------------------------------------------------------*/
+int UT_Ordering::testAssignment(int argc, char argv[][MAX_CMD_SIZE])
+{
+    (void)argc;
+    (void)argv;
+
+    failures = 0;
+    Ordering<int,int> mylist;
+
+    // add initial set
+    for(int i = 0; i < 75; i++)
+    {
+        mylist.add(i,i);
+    }
+
+    // remove a handful of items
+    mylist.remove(66);
+    mylist.remove(55);
+    mylist.remove(44);
+    mylist.remove(33);
+    mylist.remove(22);
+    mylist.remove(11);
+    mylist.remove(0);
+
+    // assign / copy to another list
+    Ordering<int,int> copiedlist;
+    copiedlist = mylist;
+
+    // check new size
+    ut_assert(copiedlist.length() == 68, "failed length check %d\n", copiedlist.length());
+
+    // check final set
+    for(int i =  1; i < 11; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 12; i < 22; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 23; i < 33; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 34; i < 44; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 45; i < 55; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 56; i < 66; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 67; i < 75; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+
+    // return success or failure
     return failures == 0 ? 0 : -1;
 }
