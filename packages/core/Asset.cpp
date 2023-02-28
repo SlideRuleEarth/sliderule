@@ -60,7 +60,7 @@ Dictionary<Asset::new_driver_t> Asset::drivers;
  * VOID IO DRIVER CLASS
  ******************************************************************************/
 
-const char* Asset::IODriver::FORMAT = "void";
+const char* Asset::IODriver::FORMAT = "nil";
 
 /*----------------------------------------------------------------------------
  * create
