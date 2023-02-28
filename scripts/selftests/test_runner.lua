@@ -75,6 +75,7 @@ end
 if __pgc__ then
     local pgc_td = td .. "../../plugins/pgc/selftests/"
     runner.script(pgc_td .. "arcticdem_reader.lua")
+    runner.script(pgc_td .. "remadem_reader.lua")
 end
 
 -- Report Results --

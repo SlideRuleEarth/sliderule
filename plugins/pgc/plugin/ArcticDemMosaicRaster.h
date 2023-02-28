@@ -53,6 +53,8 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
         static GeoRaster* create(lua_State* L, GeoParms* _parms)
         { return new ArcticDemMosaicRaster(L, _parms); }
 
+        bool getRasterDate(raster_info_t& rinfo)
+        { return mosaicGetRasterDate(rinfo, "_reg_dem.tif"); }
     protected:
 
         /*--------------------------------------------------------------------

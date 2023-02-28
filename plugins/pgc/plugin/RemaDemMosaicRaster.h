@@ -53,6 +53,9 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
         static GeoRaster* create(lua_State* L, GeoParms* _parms)
         { return new RemaDemMosaicRaster(L, _parms); }
 
+        bool getRasterDate(raster_info_t& rinfo)
+        { return mosaicGetRasterDate(rinfo, "_dem.tif"); }
+
     protected:
 
         /*--------------------------------------------------------------------
