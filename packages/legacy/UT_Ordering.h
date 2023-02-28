@@ -81,6 +81,7 @@ class UT_Ordering: public CommandableObject
 	int     testDuplicates      (int argc, char argv[][MAX_CMD_SIZE]);
 	int     testSort            (int argc, char argv[][MAX_CMD_SIZE]);
 	int     testIterator        (int argc, char argv[][MAX_CMD_SIZE]);
+	int     testAssignment      (int argc, char argv[][MAX_CMD_SIZE]);
 };
 
 #endif  /* __ut_ordering__ */

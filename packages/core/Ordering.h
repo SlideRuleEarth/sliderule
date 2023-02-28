@@ -536,12 +536,11 @@ Ordering<T,K>& Ordering<T,K>::operator=(const Ordering& other)
     postParm = other.postParm;
 
     /* build new list */
-    T data;
-    K key = first(&data);
-    while (key != (K)INVALID_KEY)
+    sorted_node_t* tmp_node = other.firstNode;
+    while(tmp_node != NULL)
     {
-        add(key, data);
-        key = next(&data);
+        addNode(tmp_node->key, tmp_node->data, false);
+        tmp_node = tmp_node->next;
     }
 
     /* return */
