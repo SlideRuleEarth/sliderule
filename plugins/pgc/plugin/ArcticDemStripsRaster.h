@@ -66,7 +66,7 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, ARCTIC_DEM_EPSG, "arcticdem", "s2s041/2m/n") {}
+          PgcDemStripsRaster(L, _parms, ARCTIC_DEM_EPSG, "arcticdem", "/n") {}
 };
 
 #endif  /* __arcticdem_strips_raster__ */

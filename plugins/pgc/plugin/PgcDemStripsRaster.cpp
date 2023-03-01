@@ -37,31 +37,21 @@
 #include "TimeLib.h"
 
 /******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
-/******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geocells):
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geo_suffix):
     VctRaster(L, _parms, target_crs),
-    demName(dem_name),
-    vsis3Path("/vsis3/pgc-opendata-dems/")
+    demName(dem_name)
 {
-    path2geocells = vsis3Path;
-    path2geocells.append(dem_name).append("/strips/").append(geocells);
+    path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
+    std::size_t pos = path2geocells.find(demName);
+    if (pos == std::string::npos)
+        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path supplied to geocells: %s", path2geocells.c_str());
+    filePath = path2geocells.substr(0, pos);
 }
 
 /*----------------------------------------------------------------------------
@@ -164,7 +154,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 if (pos == std::string::npos)
                     throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", demName.c_str());
 
-                fileName = vsis3Path + fileName.substr(pos);
+                fileName = filePath + fileName.substr(pos);
 
                 raster_info_t rinfo;
                 rinfo.fileName = fileName;

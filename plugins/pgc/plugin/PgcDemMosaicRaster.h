@@ -45,28 +45,14 @@
 
 class PgcDemMosaicRaster: public VrtRaster
 {
-    public:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
     protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                PgcDemMosaicRaster    (lua_State* L, GeoParms* _parms, const char* vrt_file);
+                PgcDemMosaicRaster    (lua_State* L, GeoParms* _parms);
         bool    mosaicGetRasterDate   (raster_info_t& rinfo, const char* token);
-        void    getIndexFile          (std::string& file, double lon=0, double lat=0);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-        std::string vrtFile;
 };
 
 #endif  /* __pgcdem_mosaic_raster__ */

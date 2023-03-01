@@ -37,45 +37,19 @@
 #include "TimeLib.h"
 
 /******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
-/******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
-    VrtRaster(L, _parms),
-    vrtFile("/vsis3/pgc-opendata-dems/")
+PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
+    VrtRaster(L, _parms)
 {
-    vrtFile.append(vrt_file);
-
     /*
      * PgcDemMosaicRaster uses one mosaics VRT file;
      */
     openGeoIndex();
-}
-
-
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void PgcDemMosaicRaster::getIndexFile(std::string& file, double lon, double lat)
-{
-    std::ignore = lon = lat;
-    file = vrtFile;
-    mlog(DEBUG, "Using %s", file.c_str());
 }
 
 
@@ -157,11 +131,4 @@ bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, const char* t
 
     return foundDate;
 }
-
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
-
-
 

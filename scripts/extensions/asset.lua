@@ -54,6 +54,11 @@ end
 --------------------------------------------------------------------------------------
 local function _loadindex(asset, file, quiet)
 
+    -- check for no index
+    if file == "nil" then -- special value representing no index
+        return false
+    end
+
     -- try to open index file
     local raw_index = csv.open(file, {header=true})
     if not raw_index then

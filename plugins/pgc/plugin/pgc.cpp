@@ -43,8 +43,8 @@
 #define LUA_PGC_LIBNAME                    "pgc"
 #define LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME  "arcticdem-mosaic"
 #define LUA_ARCTIC_DEM_STRIPS_RASTER_NAME  "arcticdem-strips"
-#define LUA_REMA_DEM_MOSAIC_RASTER_NAME    "remadem-mosaic"
-#define LUA_REMA_DEM_STRIPS_RASTER_NAME    "remadem-strips"
+#define LUA_REMA_DEM_MOSAIC_RASTER_NAME    "rema-mosaic"
+#define LUA_REMA_DEM_STRIPS_RASTER_NAME    "rema-strips"
 
 
 /******************************************************************************

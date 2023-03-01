@@ -464,8 +464,7 @@ void GeoRaster::sampleRasters(void)
     {
         if (!raster->isAuxuliary && raster->enabled && raster->sampled)
         {
-            std::string fileName = raster->fileName.substr(strlen("/vsis3/"));
-            raster->sample.fileId = fileDictAdd(fileName);
+            raster->sample.fileId = fileDictAdd(raster->fileName);
             raster->sample.flags = raster->getPeerValue();
         }
         key = rasterDict.next(&raster);
@@ -1333,10 +1332,8 @@ int GeoRaster::luaSamples(lua_State *L)
                 assert(raster);
                 if (!raster->isAuxuliary && raster->enabled && raster->sampled)
                 {
-                    std::string fileName = raster->fileName.substr(strlen("/vsis3/"));
-
                     lua_createtable(L, 0, 2);
-                    LuaEngine::setAttrStr(L, "file", fileName.c_str());
+                    LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
 
                     if (lua_obj->parms->zonal_stats) /* Include all zonal stats */
                     {
