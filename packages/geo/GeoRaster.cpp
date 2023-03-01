@@ -175,11 +175,9 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
                             if(raster->enabled && raster->sampled)
                             {
                                 /* Update dictionary of used raster files */
-                                std::string fileName  = raster->fileName.substr(strlen("/vsis3/"));
-                                raster->sample.fileId = fileDictAdd(fileName);
+                                raster->sample.fileId = fileDictAdd(raster->fileName);
                                 raster->sample.flags  = 0;
                                 rasterOfIntrest = raster;
-
                             }
                         }
                     }
