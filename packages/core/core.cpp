@@ -169,7 +169,8 @@ void initcore (void)
     EventLib::init(EVENTQ);
     LuaEngine::init();
 
-    /* Register File IO Driver */
+    /* Register IO Drivers */
+    Asset::registerDriver(Asset::IODriver::FORMAT, Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
 
     /* Initialize Modules */

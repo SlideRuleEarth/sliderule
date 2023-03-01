@@ -119,7 +119,7 @@ void VctRaster::openGeoIndex(double lon, double lat)
         /* Open new vector data set*/
         geoIndex.dset = (GDALDataset *)GDALOpenEx(newVctFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (geoIndex.dset == NULL)
-            throw RunTimeException(DEBUG, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newVctFile.c_str());
+            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newVctFile.c_str());
 
         geoIndex.fileName = newVctFile;
         layer = geoIndex.dset->GetLayer(0);

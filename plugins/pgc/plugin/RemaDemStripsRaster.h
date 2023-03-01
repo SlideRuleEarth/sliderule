@@ -66,7 +66,7 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         RemaDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, REMA_DEM_EPSG, "rema", "s2s041/2m/s") {}
+          PgcDemStripsRaster(L, _parms, REMA_DEM_EPSG, "rema", "/s") {}
 };
 
 #endif  /* __remadem_strips_raster__ */

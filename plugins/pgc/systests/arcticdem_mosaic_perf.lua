@@ -6,6 +6,7 @@ json = require("json")
 console.monitor:config(core.LOG, core.DEBUG)
 sys.setlvl(core.LOG, core.DEBUG)
 
+local assets = asset.loaddir(nil,true) -- looks for asset_directory.csv in same directory this script is located in
 
 -- Setup --
 

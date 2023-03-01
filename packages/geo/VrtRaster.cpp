@@ -39,10 +39,6 @@
 
 
 /******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
@@ -67,11 +63,15 @@ void VrtRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms):
+VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
     GeoRaster(L, _parms)
 {
     band = NULL;
     bzero(invGeot, sizeof(invGeot));
+    if(vrt_file)
+        vrtFile = vrt_file;
+    else if(_parms->asset)
+        vrtFile.append(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex());
 }
 
 /*----------------------------------------------------------------------------
@@ -98,7 +98,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
 
         geoIndex.dset = (GDALDataset *)GDALOpenEx(newVrtFile.c_str(), GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
         if (geoIndex.dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT index file: %s:", newVrtFile.c_str());
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT index file: %s", newVrtFile.c_str());
 
 
         geoIndex.fileName = newVrtFile;
@@ -172,6 +172,17 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         }
         throw;
     }
+}
+
+
+/*----------------------------------------------------------------------------
+ * getIndexFile
+ *----------------------------------------------------------------------------*/
+void VrtRaster::getIndexFile(std::string &file, double lon, double lat)
+{
+    std::ignore = lon;
+    std::ignore = lat;
+    file = vrtFile;
 }
 
 
@@ -314,7 +325,7 @@ bool VrtRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffs
 /*----------------------------------------------------------------------------
  * buildVRT
  *----------------------------------------------------------------------------*/
-void VrtRaster::buildVRT(std::string& vrtFile, List<std::string>& rlist)
+void VrtRaster::buildVRT(std::string& vrt_file, List<std::string>& rlist)
 {
     GDALDataset* vrtDset = NULL;
     std::vector<const char*> rasters;
@@ -324,10 +335,10 @@ void VrtRaster::buildVRT(std::string& vrtFile, List<std::string>& rlist)
         rasters.push_back(rlist[i].c_str());
     }
 
-    vrtDset = (GDALDataset*) GDALBuildVRT(vrtFile.c_str(), rasters.size(), NULL, rasters.data(), NULL, NULL);
+    vrtDset = (GDALDataset*) GDALBuildVRT(vrt_file.c_str(), rasters.size(), NULL, rasters.data(), NULL, NULL);
     CHECKPTR(vrtDset);
     GDALClose(vrtDset);
-    mlog(DEBUG, "Created %s", vrtFile.c_str());
+    mlog(DEBUG, "Created %s", vrt_file.c_str());
 }
 
 

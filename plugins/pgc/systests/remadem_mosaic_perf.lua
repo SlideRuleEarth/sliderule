@@ -6,6 +6,7 @@ json = require("json")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
+local assets = asset.loaddir(nil,true) -- looks for asset_directory.csv in same directory this script is located in
 
 -- Setup --
 
@@ -19,7 +20,7 @@ local _lon = lon
 local _lat = lat
 
 print('\n------------------\nTest: AWS mosaic\n------------')
-local dem = geo.raster(geo.parms({asset="remadem-mosaic", algorithm="NearestNeighbour", radius=0}))
+local dem = geo.raster(geo.parms({asset="rema-mosaic", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat)
 local stoptime = time.latch();

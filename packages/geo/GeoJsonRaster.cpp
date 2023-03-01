@@ -36,16 +36,9 @@
 #include "core.h"
 #include "GeoJsonRaster.h"
 
-#include <uuid/uuid.h>
 #include <gdalwarper.h>
 
 
-/******************************************************************************
- * LOCAL DEFINES AND MACROS
- ******************************************************************************/
-/******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -157,9 +150,8 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
-    VrtRaster(L, _parms)
+    VrtRaster(L, _parms, std::string("/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt").c_str())
 {
-    char uuid_str[UUID_STR_LEN] = {0};
     bool rasterCreated = false;
     GDALDataset *rasterDset = NULL;
     GDALDataset *jsonDset   = NULL;
@@ -167,7 +159,6 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
     jsonFile   = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
     rasterFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".tif";
-    vrtFile    = "/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt";
 
     /* Initialize Class Data Members */
     bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
@@ -271,16 +262,6 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
 
 /*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void GeoJsonRaster::getIndexFile(std::string &file, double lon, double lat)
-{
-    std::ignore = lon;
-    std::ignore = lat;
-    file = vrtFile;
-}
-
-/*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
@@ -289,7 +270,3 @@ bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
     rinfo.gpsTime = TimeLib::gmt2gpstime(gmtDate);
     return true;
 }
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/

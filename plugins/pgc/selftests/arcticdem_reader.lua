@@ -7,6 +7,7 @@ json = require("json")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
+local assets = asset.loaddir(nil,true) -- looks for asset_directory.csv in same directory this script is located in
 
 -- Unit Test --
 
@@ -228,7 +229,7 @@ end
 runner.check(sampleCnt == 10)
 
 local tstr = "2021:2:4:23:3:0"
-local expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
+local expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
@@ -248,7 +249,7 @@ runner.check(sampleCnt == 1)
 
 
 tstr = "2016:6:0:0:0:0"
-expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV02_20160602_1030010057849C00_103001005607CA00_2m_lsf_seg1_dem.tif"
+expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV02_20160602_1030010057849C00_103001005607CA00_2m_lsf_seg1_dem.tif"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
@@ -269,7 +270,7 @@ runner.check(sampleCnt == 1)
 
 tstr  = "2016:6:0:0:0:0"
 t0str = "2021:2:3:1:0:0"
-expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
+expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, closest_time=%s\n--------------------------------", demType, t0str, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, closest_time=tstr}))
 runner.check(dem ~= nil)
