@@ -156,7 +156,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
             if(!geo->Contains(&p)) continue;
 
             const char *fname = feature->GetFieldAsString("dem");
-            if (fname)
+            if(fname && strlen(fname) > 0)
             {
                 std::string fileName(fname);
                 std::size_t pos = fileName.find(demName);

@@ -115,16 +115,19 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
-#if 1
-
     const std::string fileToken = "lp-prod-protected";
     const std::string vsisPath  = "/vsis3/lp-prod-protected/";
-    const char *demField  = "B04";
-    const char* dateField = "datetime";
+
+    const char* tags[] = {"B01", "B02", "B03", "B04", "B05",
+                          "B06", "B07", "B08", "B09", "B10",
+                          "B11", "B12", "B8A", "SAA", "SZA",
+                          "VAA", "VZA", "Fmask"};
+
+#define tagsCnt (sizeof (tags) / sizeof (const char *))
 
     try
     {
-        rastersList->clear();
+        rasterGroupList->clear();
 
         /* For now assume the first layer has the feature we need */
         layer->ResetReading();
@@ -133,66 +136,75 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
             OGRGeometry *geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            std::string geometryStr = geo->getGeometryName();
-            print2term("%s\n", geometryStr.c_str());
-
             if(!geo->Contains(&p)) continue;
+#if 0
+            int fieldCnt = feature->GetFieldCount();
+            mlog(DEBUG, "Feature fields: %d", fieldCnt);
 
-            const char *fname = feature->GetFieldAsString(demField);
-            if (fname)
+            for(int i=0; i<fieldCnt; i++)
             {
-                std::string fileName(fname);
-                std::size_t pos = fileName.find(fileToken);
-                if (pos == std::string::npos)
-                    throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
-
-                fileName = vsisPath + fileName.substr(pos);
-
-                raster_info_t rinfo;
-                rinfo.fileName = fileName;
-                bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
-                rinfo.gpsTime = 0;
-
-                const std::string endToken    = "_dem.tif";
-                const std::string newEndToken = "_bitmask.tif";
-                pos = fileName.rfind(endToken);
-                if (pos != std::string::npos)
-                {
-                    fileName.replace(pos, endToken.length(), newEndToken.c_str());
-                } else fileName.clear();
-                rinfo.auxFileName = fileName;
-
-                int year, month, day, hour, minute, second, timeZone;
-                int i = feature->GetFieldIndex(dateField);
-                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
-                {
-                    /*
-                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
-                     */
-                    if (timeZone == 100)
-                    {
-                        rinfo.gmtDate.year = year;
-                        rinfo.gmtDate.doy = TimeLib::dayofyear(year, month, day);
-                        rinfo.gmtDate.hour = hour;
-                        rinfo.gmtDate.minute = minute;
-                        rinfo.gmtDate.second = second;
-                        rinfo.gmtDate.millisecond = 0;
-                        rinfo.gpsTime = TimeLib::gmt2gpstime(rinfo.gmtDate);
-                    }
-                    else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
-                }
-                rastersList->add(rastersList->length(), rinfo);
+                const char* fieldStr = feature->GetFieldAsString(i);
+                mlog(DEBUG, "%s", fieldStr);
             }
+#endif
+            rasters_group_t rgroup;
+            rgroup.id = feature->GetFieldAsString("id");
+
+            int year, month, day, hour, minute, second, timeZone;
+            int i = feature->GetFieldIndex("datetime");
+            if(feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+            {
+                /*
+                 * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
+                 */
+                if(timeZone == 100)
+                {
+                    rgroup.gmtDate.year        = year;
+                    rgroup.gmtDate.doy         = TimeLib::dayofyear(year, month, day);
+                    rgroup.gmtDate.hour        = hour;
+                    rgroup.gmtDate.minute      = minute;
+                    rgroup.gmtDate.second      = second;
+                    rgroup.gmtDate.millisecond = 0;
+                    rgroup.gpsTime             = TimeLib::gmt2gpstime(rgroup.gmtDate);
+                }
+                else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
+            }
+
+
+            for(int i=0; i<tagsCnt; i++)
+            {
+                const char* tag = tags[i];
+                const char* fname = feature->GetFieldAsString(tag);
+                if(fname && strlen(fname) > 0)
+                {
+                    std::string fileName(fname);
+                    std::size_t pos = fileName.find(fileToken);
+                    if(pos == std::string::npos)
+                        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
+
+                    fileName = vsisPath + fileName.substr(pos);
+
+                    raster_info_t rinfo;
+                    rinfo.fileName = fileName;
+                    rinfo.tag = tag;
+                    rinfo.gpsTime = rgroup.gpsTime;
+                    rinfo.gmtDate = rgroup.gmtDate;
+
+                    rgroup.list.add(rgroup.list.length(), rinfo);
+                }
+            }
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
             OGRFeature::DestroyFeature(feature);
+            rasterGroupList->add(rasterGroupList->length(), rgroup);
         }
-        mlog(DEBUG, "Found %ld rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
-#endif
-    return (rastersList->length() > 0);
+
+    return (rasterGroupList->length() > 0);
 }
 
 

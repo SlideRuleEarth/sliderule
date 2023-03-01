@@ -164,6 +164,7 @@ class GeoRaster: public LuaObject
         } raster_info_t;
 
         typedef struct {
+            std::string             id;
             Ordering<raster_info_t> list;
             TimeLib::gmt_time_t     gmtDate;
             int64_t                 gpsTime;
