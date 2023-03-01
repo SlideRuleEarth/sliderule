@@ -216,15 +216,16 @@ class GeoRaster: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void    init            (void);
-        static void    deinit          (void);
-        static int     luaCreate       (lua_State* L);
-        static bool    registerRaster  (const char* _name, factory_t create);
-        int            sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
-        inline bool    hasZonalStats   (void) { return parms->zonal_stats; }
-        inline bool    hasAuxiliary    (void) { return parms->auxiliary_files; }
-        const char*    getUUID         (char* uuid_str);
-        virtual       ~GeoRaster       (void);
+        static void      init            (void);
+        static void      deinit          (void);
+        static int       luaCreate       (lua_State* L);
+        static bool      registerRaster  (const char* _name, factory_t create);
+        virtual int      sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        virtual uint32_t getFlags        (const raster_info_t& rinfo);
+        inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
+        inline bool      hasAuxiliary    (void) { return parms->auxiliary_files; }
+        const char*      getUUID         (char* uuid_str);
+        virtual         ~GeoRaster       (void);
         inline const Dictionary<uint64_t>& fileDictGet(void) {return fileDict;}
 
     protected:

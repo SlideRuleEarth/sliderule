@@ -45,6 +45,7 @@
 #include <gdal_priv.h>
 #include <algorithm>
 #include <cstring>
+#include <tuple>
 
 #include "cpl_minixml.h"
 #include "cpl_string.h"
@@ -139,6 +140,17 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
     return status;
 }
 
+
+/*----------------------------------------------------------------------------
+ * getFlags
+ *----------------------------------------------------------------------------*/
+uint32_t GeoRaster::getFlags(const raster_info_t& rinfo)
+{
+    std::ignore = rinfo;
+    return 0;
+}
+
+
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
@@ -181,16 +193,7 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
                             }
                         }
                     }
-                    else if(strcmp("flags", rinfo.tag.c_str()) == 0)
-                    {
-                        if(rasterDict.find(key, &raster))
-                        {
-                            /* Get flags */
-                            assert(raster);
-                            if(rasterOfIntrest)
-                                rasterOfIntrest->sample.flags = raster->sample.value;
-                        }
-                    }
+                    if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
                 }
                 if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
             }

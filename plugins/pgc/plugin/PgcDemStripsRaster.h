@@ -50,10 +50,11 @@ class PgcDemStripsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geo_suffix);
-        void    getIndexFile       (std::string& file, double lon=0, double lat=0 );
-        void    getIndexBbox       (bbox_t& bbox, double lon=0, double lat=0);
-        bool    findRasters        (OGRPoint &p);
+                 PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geo_suffix);
+        void     getIndexFile       (std::string& file, double lon=0, double lat=0 );
+        void     getIndexBbox       (bbox_t& bbox, double lon=0, double lat=0);
+        uint32_t getFlags           (const raster_info_t& rinfo);
+        bool     findRasters        (OGRPoint &p);
 
     private:
 
