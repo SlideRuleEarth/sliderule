@@ -56,6 +56,8 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
     "ATL03":                                {"provider": "NSIDC_ECS",   "version": "005"},
+    "ATL06":                                {"provider": "NSIDC_ECS",   "version": "005"},
+    "ATL08":                                {"provider": "NSIDC_ECS",   "version": "005"},
     "GEDI01_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
     "GEDI02_A":                             {"provider": "LPDAAC_ECS",  "version": "002"},
     "GEDI02_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},

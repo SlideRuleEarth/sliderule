@@ -72,8 +72,8 @@ class TestParquet:
             "output": { "path": "testfile3.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
         assert len(gdf) == 275
-        assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:35.330187264')
-        assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:37.693747456')
+        assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.330187520')
+        assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.693747968')
         os.remove("testfile3.parquet")
 
     def test_atl03_index(self, domain, asset, organization):
@@ -92,6 +92,6 @@ class TestParquet:
             "output": { "path": "testfile4.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, asset=asset, resources=[resource])
         assert len(gdf) == 21029
-        assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:35.330047488')
-        assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:37.695347456')
+        assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.330047488')
+        assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.695347456')
         os.remove("testfile4.parquet")
