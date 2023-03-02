@@ -138,9 +138,9 @@ class TimeLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int LEAP_SECS_AT_GPS_EPOCH  = 10;                                  // seconds
-        static const int GPS_EPOCH_START = 315964800;                           // seconds
-        static const char* NIST_LIST_FILENAME = "leap-seconds.list";
+        static const int LEAP_SECS_AT_GPS_EPOCH  = 10; // seconds
+        static const int GPS_EPOCH_START = 315964800; // seconds
+        static const char* NIST_LIST_FILENAME;
 
         static const int HEARTBEAT_PERIOD_MS = 1;
         static const int HEARTBEATS_PER_SECOND = 1000; // must be consistent with HEARTBEAT_PERIOD
@@ -169,13 +169,13 @@ class TimeLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int getleapsecs (int64_t sysnow, int64_t sysstart);
+        static int getleapsecs (int64_t sysnow, int64_t start_secs);
         static void heartbeat (void);
         static void parsenistfile (void);
 
         static inline int64_t GPS_TO_SYS (int64_t gpsnow) { return (((gpsnow) + 315964800000LL) * 1000); }   // IN: milliseconds, OUT: microseconds
         static inline int64_t SYS_TO_GPS (int64_t sysnow) { return (((sysnow) - 315964800000000LL) / 1000); } // IN: microseconds, OUT: milliseconds
-        static inline int64_t NTP_TO_SYS (int64_t ntpnow) { return (((ntpnow) - 2208988800LL); } // IN: seconds, OUT: seconds
+        static inline int64_t NTP_TO_SYS (int64_t ntpnow) { return (((ntpnow) - 2208988800LL)); } // IN: seconds, OUT: seconds
         static inline double GPS_TO_SYS_EX (double gps_secs) { return (((gps_secs) + 315964800.0)); }   // IN: seconds, OUT: seconds
 };
 

@@ -190,7 +190,7 @@ int64_t TimeLib::gps2systime (int64_t gpsnow)
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::gps2systimeex (double gps_secs)
 {
-    double sys_secs = GPS_TO_SYS_EX(gps_sec);
+    double sys_secs = GPS_TO_SYS_EX(gps_secs);
     sys_secs -= getleapsecs((uint64_t)(sys_secs * 1000000.0), GPS_EPOCH_START);
     return (int64_t)(sys_secs * 1000000000.0);
 }
@@ -688,12 +688,11 @@ bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start
 /*----------------------------------------------------------------------------
  * getleapsecs
  *----------------------------------------------------------------------------*/
-int TimeLib::getleapsecs(int64_t sysnow, int64_t sysstart)
+int TimeLib::getleapsecs(int64_t sysnow, int64_t start_secs)
 {
     int start_index = leapCount;
     int current_index = 0;
     int64_t sys_secs = sysnow / 1000000;
-    int64_t start_secs = sysstart / 1000000;
 
     /* Find the index of the last leap second before the current time */
     for (int i = leapCount - 1; i > 0; i--)
