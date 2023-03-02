@@ -154,7 +154,7 @@ uint32_t GeoRaster::getFlags(const raster_info_t& rinfo)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param)
+int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
     slist.clear();
@@ -252,48 +252,6 @@ GeoRaster::~GeoRaster(void)
     /* Release GeoParms LuaObject */
     parms->releaseLuaObject();
 }
-
-/*----------------------------------------------------------------------------
- * sample
- *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat)
-{
-    invalidateCache();
-
-    /* Initial call, open raster index data set if not already opened */
-    if (geoIndex.dset == NULL)
-        openGeoIndex(lon, lat);
-
-    OGRPoint p(lon, lat);
-    transformCRS(p);
-
-    /* If point is not in current geoindex, find a new one */
-    if (!geoIndex.containsPoint(p))
-    {
-        openGeoIndex(lon, lat);
-
-        /* Check against newly opened geoindex */
-        if (!geoIndex.containsPoint(p))
-            return 0;
-    }
-
-    if (findCachedRasters(p))
-    {
-        /* Rasters alredy in cache have been previously filtered  */
-        sampleRasters();
-    }
-    else
-    {
-        if(findRasters(p) && filterRasters())
-        {
-            updateCache(p);
-            sampleRasters();
-        }
-    }
-
-    return getSampledRastersCount();
-}
-
 
 /*----------------------------------------------------------------------------
  * getUUID
@@ -511,6 +469,64 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
     if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
 }
 
+
+/*----------------------------------------------------------------------------
+ * sample
+ *----------------------------------------------------------------------------*/
+int GeoRaster::sample(double lon, double lat)
+{
+    invalidateCache();
+
+    /* Initial call, open raster index data set if not already opened */
+    if (geoIndex.dset == NULL)
+        openGeoIndex(lon, lat);
+
+    OGRPoint p(lon, lat);
+    transformCRS(p);
+
+    /* If point is not in current geoindex, find a new one */
+    if (!geoIndex.containsPoint(p))
+    {
+        openGeoIndex(lon, lat);
+
+        /* Check against newly opened geoindex */
+        if (!geoIndex.containsPoint(p))
+            return 0;
+    }
+
+    if (findCachedRasters(p))
+    {
+        /* Rasters alredy in cache have been previously filtered  */
+        sampleRasters();
+    }
+    else
+    {
+        if(findRasters(p) && filterRasters())
+        {
+            updateCache(p);
+            sampleRasters();
+        }
+    }
+
+    return getSampledRastersCount();
+}
+
+
+/*----------------------------------------------------------------------------
+ * fileDictAdd
+ *----------------------------------------------------------------------------*/
+uint64_t GeoRaster::fileDictAdd(const std::string& fileName)
+{
+    uint64_t id;
+
+    if(!fileDict.find(fileName.c_str(), &id))
+    {
+        id = (parms->key_space << 32) | fileDict.length();
+        fileDict.add(fileName.c_str(), id);
+    }
+
+    return id;
+}
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -1168,22 +1184,6 @@ int GeoRaster::getSampledRastersCount(void)
 
 
 /*----------------------------------------------------------------------------
- * fileDictAdd
- *----------------------------------------------------------------------------*/
-uint64_t GeoRaster::fileDictAdd(const std::string& fileName)
-{
-    uint64_t id;
-
-    if(!fileDict.find(fileName.c_str(), &id))
-    {
-        id = (parms->key_space << 32) | fileDict.length();
-        fileDict.add(fileName.c_str(), id);
-    }
-
-    return id;
-}
-
-/*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
  *----------------------------------------------------------------------------*/
 int GeoRaster::luaDimensions(lua_State *L)
@@ -1298,7 +1298,7 @@ int GeoRaster::luaSamples(lua_State *L)
 
         /* Get samples */
         List<sample_t> slist;
-        if(lua_obj->sample(lon, lat, slist, NULL) > 0)
+        if(lua_obj->getSamples(lon, lat, slist, NULL) > 0)
         {
             /* Create return table */
             lua_createtable(L, slist.length(), 0);

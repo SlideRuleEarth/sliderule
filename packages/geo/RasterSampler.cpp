@@ -244,7 +244,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
 
         /* Sample Raster */
         List<VrtRaster::sample_t> slist;
-        int num_samples = raster->sample(lon_val, lat_val, slist);
+        int num_samples = raster->getSamples(lon_val, lat_val, slist);
 
         if(raster->hasZonalStats())
         {

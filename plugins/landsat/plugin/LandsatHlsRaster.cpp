@@ -208,6 +208,65 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 }
 
 
+/*----------------------------------------------------------------------------
+ * sample
+ *----------------------------------------------------------------------------*/
+int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
+{
+    std::ignore = param;
+    slist.clear();
+
+    samplingMutex.lock(); /* Serialize sampling on the same object */
+
+    try
+    {
+        /* Get samples */
+        if (sample(lon, lat) > 0)
+        {
+            Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+            for(int i = 0; i < group_iter.length; i++)
+            {
+                const rasters_group_t& rgroup = group_iter[i].value;
+                Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+                Raster* rasterOfIntrest = NULL;
+
+                for(int j = 0; j < raster_iter.length; j++)
+                {
+                    const raster_info_t& rinfo = raster_iter[j].value;
+                    const char* key            = rinfo.fileName.c_str();
+                    Raster* raster             = NULL;
+
+                    if(strcmp("dem", rinfo.tag.c_str()) == 0)
+                    {
+                        if(rasterDict.find(key, &raster))
+                        {
+                            assert(raster);
+                            if(raster->enabled && raster->sampled)
+                            {
+                                /* Update dictionary of used raster files */
+                                raster->sample.fileId = fileDictAdd(raster->fileName);
+                                raster->sample.flags  = 0;
+                                rasterOfIntrest = raster;
+                            }
+                        }
+                    }
+                    if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
+                }
+                if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
+            }
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting samples: %s", e.what());
+    }
+
+    samplingMutex.unlock();
+
+    return slist.length();
+}
+
+
 
 
 

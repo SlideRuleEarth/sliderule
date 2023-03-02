@@ -111,7 +111,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 bool GeoJsonRaster::includes(double lon, double lat)
 {
     List<sample_t> slist;
-    int sampleCnt = sample (lon, lat, slist);
+    int sampleCnt = getSamples(lon, lat, slist);
 
     if( sampleCnt == 0 ) return false;
     if( sampleCnt > 1  ) mlog(ERROR, "Multiple samples returned for lon: %.2lf, lat: %.2lf, using first sample", lon, lat);

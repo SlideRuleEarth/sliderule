@@ -71,6 +71,7 @@ class LandsatHlsRaster: public VctRaster
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
         void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters      (OGRPoint &p);
+        int     getSamples       (double lon, double lat, List<sample_t>& slist, void* param=NULL);
 };
 
 #endif  /* __landsat_hls_raster__ */

@@ -220,7 +220,7 @@ class GeoRaster: public LuaObject
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_t create);
-        virtual int      sample          (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        virtual int      getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         virtual uint32_t getFlags        (const raster_info_t& rinfo);
         inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
         inline bool      hasAuxiliary    (void) { return parms->auxiliary_files; }
@@ -246,6 +246,9 @@ class GeoRaster: public LuaObject
         void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
+        int             sample                (double lon, double lat);
+        uint64_t        fileDictAdd           (const std::string& fileName);
+
         virtual bool    readGeoIndexData      (OGRPoint* point, int srcWindowSize, int srcOffset,
                                                void* data, int dstWindowSize, GDALRasterIOExtraArg* args);
 
@@ -265,6 +268,7 @@ class GeoRaster: public LuaObject
         CoordTransform              cord;
         GeoParms*                   parms;
         Dictionary<Raster*>         rasterDict;
+        Mutex                       samplingMutex;
 
     private:
 
@@ -283,7 +287,6 @@ class GeoRaster: public LuaObject
         static Mutex factoryMut;
         static Dictionary<factory_t> factories;
 
-        Mutex        samplingMutex;
         reader_t*    rasterRreader;
         uint32_t     readerCount;
 
@@ -303,13 +306,11 @@ class GeoRaster: public LuaObject
         bool       filterRasters           (void);
         void       createThreads           (void);
         void       updateCache             (OGRPoint& p);
-        int        sample                  (double lon, double lat);
         void       invalidateCache         (void);
         int        getSampledRastersCount  (void);
         void       readPixel               (Raster* raster);
         void       resamplePixel           (Raster* raster);
         void       computeZonalStats       (Raster* raster);
-        uint64_t   fileDictAdd             (const std::string& fileName);
 
 };
 
