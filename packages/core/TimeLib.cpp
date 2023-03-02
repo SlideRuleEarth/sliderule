@@ -184,6 +184,18 @@ int64_t TimeLib::gps2systime (int64_t gpsnow)
 }
 
 /*----------------------------------------------------------------------------
+ * gps2systimeex
+ *
+ *  converts gps time (seconds) to extended precision system time (nanoseconds)
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::gps2systimeex (double gps_secs)
+{
+    double sys_secs = GPS_TO_SYS_EX(gps_sec);
+    sys_secs -= getleapsecs((uint64_t)(sys_secs * 1000000.0), GPS_EPOCH_START);
+    return (int64_t)(sys_secs * 1000000000.0);
+}
+
+/*----------------------------------------------------------------------------
  * sys2gmttime
  *
  *  converts system time (microseconds) to milliseconds since gps epoch
@@ -641,6 +653,39 @@ int TimeLib::daysinmonth (int year, int month)
 }
 
 /*----------------------------------------------------------------------------
+ * getmonthname
+ *----------------------------------------------------------------------------*/
+const char* TimeLib::getmonthname (int month)
+{
+    int month_index = month - 1;
+    if(month_index >= 0 && month_index < MONTHS_IN_YEAR)
+    {
+        return MonthNames[month_index];
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * gmtinrange
+ *----------------------------------------------------------------------------*/
+bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end)
+{
+    int64_t gpsTime  = TimeLib::gmt2gpstime(gmt_time);
+    int64_t gpsStart = TimeLib::gmt2gpstime(gmt_start);
+    int64_t gpsEnd   = TimeLib::gmt2gpstime(gmt_end);
+
+   return ((gpsTime >= gpsStart) && (gpsTime <= gpsEnd));
+}
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
  * getleapsecs
  *----------------------------------------------------------------------------*/
 int TimeLib::getleapsecs(int64_t sysnow, int64_t sysstart)
@@ -680,39 +725,6 @@ int TimeLib::getleapsecs(int64_t sysnow, int64_t sysstart)
     /* Leap seconds elapsed between start time and current time */
     return ((current_index - start_index) + 1);
 }
-
-/*----------------------------------------------------------------------------
- * getmonthname
- *----------------------------------------------------------------------------*/
-const char* TimeLib::getmonthname (int month)
-{
-    int month_index = month - 1;
-    if(month_index >= 0 && month_index < MONTHS_IN_YEAR)
-    {
-        return MonthNames[month_index];
-    }
-    else
-    {
-        return NULL;
-    }
-}
-
-
-/*----------------------------------------------------------------------------
- * gmtinrange
- *----------------------------------------------------------------------------*/
-bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end)
-{
-    int64_t gpsTime  = TimeLib::gmt2gpstime(gmt_time);
-    int64_t gpsStart = TimeLib::gmt2gpstime(gmt_start);
-    int64_t gpsEnd   = TimeLib::gmt2gpstime(gmt_end);
-
-   return ((gpsTime >= gpsStart) && (gpsTime <= gpsEnd));
-}
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * handler - 1KHz Signal Handler for LocalLib Time Keeping

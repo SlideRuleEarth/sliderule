@@ -30,7 +30,7 @@
  */
 
 /*
- * There are four types of time available in SlideRule
+ * There are five types of time available in SlideRule
  *
  *  (1) CPU
  *      monotonically incrementing clock with unspecified starting point
@@ -119,7 +119,8 @@ class TimeLib
         static int64_t      gpstime         (void); // optimized, returns milliseconds since gps epoch
         static gmt_time_t   gmttime         (void); // returns GMT time (includes leap seconds)
         static int64_t      sys2gpstime     (int64_t sysnow); // takes system time (microseconds), returns milliseconds from gps epoch
-        static int64_t      gps2systime     (int64_t gpsnow); // takes gps time (milliseconds), return ssystem time (microseconds)
+        static int64_t      gps2systime     (int64_t gpsnow); // takes gps time (milliseconds), return system time (microseconds)
+        static int64_t      gps2systimeex   (double gps_secs); // takes gps time (seconds), return extended precision system time (nanoseconds)
         static gmt_time_t   sys2gmttime     (int64_t sysnow); // takes system time (microseconds), returns GMT time (includes leap seconds)
         static gmt_time_t   gps2gmttime     (int64_t ms); // returns GMT time (includes leap seconds), takes gps time as milliseconds since gps epoch
         static gmt_time_t   cds2gmttime     (int days, int msecs); // returns GMT time (includes leap seconds)
@@ -128,7 +129,6 @@ class TimeLib
         static int64_t      str2gpstime     (const char* time_str); // returns milliseconds from gps epoch to time specified in time_str
         static int          dayofyear       (int year, int month, int day_of_month);
         static int          daysinmonth     (int year, int month);
-        static int          getleapsecs     (int64_t sysnow, int64_t sysstart);
         static const char*  getmonthname    (int month); // [1..12] --> ["January".."December"]
         static bool         gmtinrange      (const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end); // returns true if in range
 
@@ -169,12 +169,14 @@ class TimeLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void heartbeat(void);
-        static void parsenistfile(void);
+        static int getleapsecs (int64_t sysnow, int64_t sysstart);
+        static void heartbeat (void);
+        static void parsenistfile (void);
 
         static inline int64_t GPS_TO_SYS (int64_t gpsnow) { return (((gpsnow) + 315964800000LL) * 1000); }   // IN: milliseconds, OUT: microseconds
         static inline int64_t SYS_TO_GPS (int64_t sysnow) { return (((sysnow) - 315964800000000LL) / 1000); } // IN: microseconds, OUT: milliseconds
         static inline int64_t NTP_TO_SYS (int64_t ntpnow) { return (((ntpnow) - 2208988800LL); } // IN: seconds, OUT: seconds
+        static inline double GPS_TO_SYS_EX (double gps_secs) { return (((gps_secs) + 315964800.0)); }   // IN: seconds, OUT: seconds
 };
 
 #endif  /* __time_lib__ */
