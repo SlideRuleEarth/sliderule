@@ -45,34 +45,37 @@ jobs:
         sudo apt install -y libparquet-dev                                                #arrow
 
         # Build proj9
+        pwd
         wget http://download.osgeo.org/proj/proj-9.2.0.tar.gz
         tar xfz proj-9.2.0.tar.gz
         cd proj-9.2.0
         mkdir build && cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
-        make
+        make -j 8
         sudo make install
         sudo ldconfig
         pwd
 
         # Build GEOS
+        pwd
         wget http://download.osgeo.org/geos/geos-3.11.1.tar.bz2
         tar xfj geos-3.11.1.tar.bz2
         cd geos-3.11.1
         mkdir build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
-        make
+        make -j 8
         sudo make install
         sudo ldconfig
         pwd
 
         # Build GDAL
+        pwd
         wget http://download.osgeo.org/gdal/3.6.2/gdal-3.6.2.tar.gz
         tar xfz gdal-3.6.2.tar.gz
         cd gdal-3.6.2
         mkdir build && cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF
-        make
+        make -j 8
         sudo make install
         sudo ldconfig
         pwd
