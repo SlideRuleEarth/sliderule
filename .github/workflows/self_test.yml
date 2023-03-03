@@ -80,7 +80,6 @@ jobs:
         # Cleanup
         sudo rm -rf proj-9.2.0 geos-3.11.1 gdal-3.6.2
 
-
     - name: Checkout sliderule repository
       uses: actions/checkout@v2
 
