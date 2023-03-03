@@ -68,7 +68,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
 #if 1
-    file = "/data/hsl/hls_trimmed.geojson";
+    file = "/data/hls/hls_trimmed.geojson";
 #else
     /* Round to geocell location */
     int _lon = static_cast<int>(floor(lon));
