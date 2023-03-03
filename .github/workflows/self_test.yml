@@ -47,6 +47,7 @@ jobs:
         # Build proj9
         wget http://download.osgeo.org/proj/proj-9.2.0.tar.gz
         tar xvfz proj-9.2.0.tar.gz
+        cd proj-9.2.0
         mkdir build && cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
         cmake --build .
