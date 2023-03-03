@@ -56,6 +56,8 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
     "ATL03":                                {"provider": "NSIDC_ECS",   "version": "005"},
+    "ATL06":                                {"provider": "NSIDC_ECS",   "version": "005"},
+    "ATL08":                                {"provider": "NSIDC_ECS",   "version": "005"},
     "GEDI01_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
     "GEDI02_A":                             {"provider": "LPDAAC_ECS",  "version": "002"},
     "GEDI02_B":                             {"provider": "LPDAAC_ECS",  "version": "002"},
@@ -260,7 +262,7 @@ def cmr(provider=None, short_name=None, version=None, polygon=None, time_start='
     Parameters
     ----------
         polygon:    list
-                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/ICESat-2.html#id1>`_), or a list of such lists when the region includes more than one polygon
+                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
         time_start: str
                     starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         time_end:   str

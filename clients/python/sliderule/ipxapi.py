@@ -27,7 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sliderule import icesat2
+from sliderule import icesat2, sliderule
 import logging
 
 ###############################################################################
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 #
 def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     """
-    Performs ATL06-SR processing in parallel on ATL03 data and returns gridded elevations.  The list of granules to be processed is identified by the ipx_region object.
+    Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  The list of granules to be processed is identified by the ipx_region object.
 
     See the `atl06p <../api_reference/icesat2.html#atl06p>`_ function for more details.
 
@@ -62,14 +62,14 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     Returns
     -------
     GeoDataFrame
-        gridded elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
+        geolocated elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
     """
     try:
         version = ipx_region.product_version
         resources = ipx_region.avail_granules(ids=True)[0]
     except:
         logger.critical("must supply an icepyx query as region")
-        return icesat2.emptyframe()
+        return sliderule.emptyframe()
     # try to get the subsetting region
     if ipx_region.extent_type in ('bbox','polygon'):
         parm.update({'poly': to_region(ipx_region)})
@@ -104,7 +104,7 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         resources = ipx_region.avail_granules(ids=True)[0]
     except:
         logger.critical("must supply an icepyx query as region")
-        return icesat2.emptyframe()
+        return sliderule.emptyframe()
     # try to get the subsetting region
     if ipx_region.extent_type in ('bbox','polygon'):
         parm.update({'poly': to_region(ipx_region)})

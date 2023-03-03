@@ -379,7 +379,7 @@ local_dns = {}
 socket_getaddrinfo = socket.getaddrinfo
 def __override_getaddrinfo(*args):
     if args[0] in local_dns:
-        logger.info("Overriding {} to {}".format(args[0], local_dns[args[0]]))
+        logger.debug("getaddrinfo returned {} for {}".format(local_dns[args[0]], args[0]))
         return socket_getaddrinfo(local_dns[args[0]], *args[1:])
     else:
         return socket_getaddrinfo(*args)
@@ -827,7 +827,9 @@ def scaleout(desired_nodes, time_to_live):
             rsps = session.get(host, headers=headers, timeout=request_timeout).json()
             if rsps["status"] == "SUCCESS":
                 dns_overridden = True
-                local_dns[service_org + "." + service_url] = rsps["ip_address"]
+                url_to_override = service_org + "." + service_url
+                local_dns[url_to_override] = rsps["ip_address"]
+                logger.info("Overriding DNS for {} with {}".format(url_to_override, rsps["ip_address"]))
         # Timeout Occurred
         if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
             logger.error("Maximum time allowed waiting for cluster has been exceeded")
