@@ -1,0 +1,9 @@
+asset,              format,     path,                                                               index,              region,     endpoint
+nsidc-s3,           cumulus,    nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+atlas-s3,           s3,         sliderule/data/ATLAS,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+atlas-local,        file,       /data/ATLAS,                                                        nil,                local,      local
+ornl-s3,            s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+landsat-hls,        nil,        /vsis3/lp-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+arcticdem-mosaic,   nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m,                 2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
+arcticdem-strips,   nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+rema-mosaic,        nil,        /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m,                      2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com

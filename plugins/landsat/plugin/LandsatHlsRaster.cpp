@@ -58,6 +58,7 @@
 LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     VctRaster(L, _parms, LANDSAT_HLS_EPSG)
 {
+    filePath.append(_parms->asset->getPath()).append("/");
 }
 
 
@@ -67,7 +68,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
 #if 1
-    file = "/home/elidwa/ICESat2/sliderule-python/hls_trimmed.geojson";
+    file = "/data/hsl/hls_trimmed.geojson";
 #else
     /* Round to geocell location */
     int _lon = static_cast<int>(floor(lon));
@@ -115,9 +116,7 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
-    const std::string fileToken = "lp-prod-protected";
-    const std::string vsisPath  = "/vsis3/lp-prod-protected/";
-
+    const std::string fileToken = "HLS";
     const char* tags[] = {"B01", "B02", "B03", "B04", "B05",
                           "B06", "B07", "B08", "B09", "B10",
                           "B11", "B12", "B8A", "SAA", "SZA",
@@ -182,7 +181,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                     if(pos == std::string::npos)
                         throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
 
-                    fileName = vsisPath + fileName.substr(pos);
+                    fileName = filePath + fileName.substr(pos);
 
                     raster_info_t rinfo;
                     rinfo.fileName = fileName;
