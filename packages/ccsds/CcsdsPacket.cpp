@@ -464,7 +464,7 @@ double CcsdsSpacePacket::getCdsTime(void) const
     double days = getCdsDays();
     double ms = getCdsMsecs();
 
-    return (days * (double)TIME_SECS_IN_A_DAY) + (ms / (double)TIME_MILLISECS_IN_A_SECOND);
+    return (days * (double)TIME_SECS_IN_A_DAY) + (ms / (double)1000);
 }
 
 /*----------------------------------------------------------------------------
@@ -484,7 +484,7 @@ bool CcsdsSpacePacket::setCdsTime(double gps)
     uint32_t subseconds       = (uint32_t)((TIME_32BIT_FLOAT_MAX_VALUE) * (gps - (double)seconds));
     uint16_t days             = (uint16_t)(seconds / TIME_SECS_IN_A_DAY);
     uint32_t leftoverseconds  = seconds % TIME_SECS_IN_A_DAY;
-    uint32_t milliseconds     = (TIME_MILLISECS_IN_A_SECOND * leftoverseconds) + (uint32_t) ( (double)(subseconds) / pow(2,32) * 1.0E+3 );;
+    uint32_t milliseconds     = (1000 * leftoverseconds) + (uint32_t) ( (double)(subseconds) / pow(2,32) * 1.0E+3 );;
 
     if(setCdsDays(days))
     {

@@ -132,7 +132,7 @@ bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
         pkt.setTLM();
         pkt.setSEQFLG(CcsdsSpacePacket::SEG_NONE);
         pkt.setSEQ(seqTable[pkt.getAPID()]++);
-        pkt.setCdsTime(getCurrGPSTime());
+        pkt.setCdsTime(TimeLib::gpstime() / 1000);
         pkt.appendStream(msg, bytes);
     }
     else
@@ -155,22 +155,4 @@ bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
     }
 
     return true;
-}
-
-/*----------------------------------------------------------------------------
- * getCurrGPSTime
- *----------------------------------------------------------------------------*/
-double CcsdsPacketizer::getCurrGPSTime(void)
-{
-    /* Get current unix/UTC time */
-    double unix_secs = (double)time(NULL);
-
-    /* There was an offset of 315964800 secs between Unix and GPS time when GPS time began */
-    double gps_secs = unix_secs - 315964800;
-
-    /* Get count of leap seconds between start of GPS epoch and now */
-    int leap_secs = (TimeLib::getleapms((int64_t)unix_secs * TIME_MILLISECS_IN_A_SECOND) / TIME_MILLISECS_IN_A_SECOND);
-
-    /* Return GPS Seconds */
-    return gps_secs - (double)leap_secs;
 }

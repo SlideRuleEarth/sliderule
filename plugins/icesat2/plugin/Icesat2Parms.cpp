@@ -261,8 +261,7 @@ Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
  *----------------------------------------------------------------------------*/
 int64_t Icesat2Parms::deltatime2timestamp (double delta_time)
 {
-    double unix_time = delta_time + (double)ATLAS_SDP_EPOCH_GPS + (double)TIME_GPS_EPOCH_START;
-    return (int64_t)(unix_time * 1000000000.0);
+    return TimeLib::gps2systimeex(delta_time + (double)ATLAS_SDP_EPOCH_GPS);
 }
 
 /******************************************************************************

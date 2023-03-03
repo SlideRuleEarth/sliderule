@@ -125,7 +125,7 @@ void VctRaster::openGeoIndex(double lon, double lat)
         layer = geoIndex.dset->GetLayer(0);
         CHECKPTR(layer);
 
-        OGRSpatialReference *sref = layer->GetSpatialRef();
+        OGRSpatialReference* sref = layer->GetSpatialRef();
         CHECKPTR(sref);
         int epsg = sref->GetEPSGGeogCS();
         if((epsg != DEFAULT_EPSG) && (epsg != 4979))

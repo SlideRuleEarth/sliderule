@@ -43,6 +43,8 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* TimeLib::NIST_LIST_FILENAME = "leap-seconds.list";
+
 /*
  *  Number of Days to the start of the GPS year, accounts for leap years.
  * 1980 = 0 years, 0 days
@@ -161,14 +163,36 @@ TimeLib::gmt_time_t TimeLib::gmttime(void)
 /*----------------------------------------------------------------------------
  * sys2gpstime
  *
- *  converts system time (microseconds) to milliseconds since gps epoch
+ *  converts system time (microseconds) to gps time (milliseconds)
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::sys2gpstime (int64_t sysnow)
 {
-    sysnow /= 1000; // to milliseconds
-    sysnow += getleapms(sysnow);
-    sysnow -= LocalGpsEpochMs; // to gps epoch
+    sysnow += (getleapsecs(sysnow, GPS_EPOCH_START) * 1000000);
+    return SYS_TO_GPS(sysnow);
+}
+
+/*----------------------------------------------------------------------------
+ * gps2systime
+ *
+ *  converts gps time (milliseconds) to system time (microseconds)
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::gps2systime (int64_t gpsnow)
+{
+    int64_t sysnow = GPS_TO_SYS(gpsnow);
+    sysnow -= (getleapsecs(sysnow, GPS_EPOCH_START) * 1000000);
     return sysnow;
+}
+
+/*----------------------------------------------------------------------------
+ * gps2systimeex
+ *
+ *  converts gps time (seconds) to extended precision system time (nanoseconds)
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::gps2systimeex (double gps_secs)
+{
+    double sys_secs = GPS_TO_SYS_EX(gps_secs);
+    sys_secs -= getleapsecs((uint64_t)(sys_secs * 1000000.0), GPS_EPOCH_START);
+    return (int64_t)(sys_secs * 1000000000.0);
 }
 
 /*----------------------------------------------------------------------------
@@ -202,9 +226,9 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     int64_t gps_msecs  = msecs;
 
     /* Calculate Leap Seconds */
-    int64_t unix_msecs = (gps_days * (int64_t)TIME_MILLISECS_IN_A_DAY) + gps_msecs;
-    unix_msecs         = TIME_GPS_TO_UNIX(unix_msecs);
-    gps_msecs         -= getleapms(unix_msecs);
+    int64_t gps_ms  = (gps_days * (int64_t)TIME_MILLISECS_IN_A_DAY) + gps_msecs;
+    int64_t unix_us = GPS_TO_SYS(gps_ms);
+    gps_msecs      -= (getleapsecs(unix_us, GPS_EPOCH_START) * 1000);
 
     if(gps_msecs >= 0)
     {
@@ -271,8 +295,8 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     minutes     = (int)(gps_msecs/TIME_MILLISECS_IN_A_MINUTE);
     gps_msecs  %= TIME_MILLISECS_IN_A_MINUTE;
 
-    secs        = (int)(gps_msecs/TIME_MILLISECS_IN_A_SECOND);
-    gps_msecs  %= TIME_MILLISECS_IN_A_SECOND;
+    secs        = (int)(gps_msecs/1000);
+    gps_msecs  %= 1000;
 
     /* Populate GMT Structure */
     gmt_time_t gmt;
@@ -361,11 +385,11 @@ int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
     gps_seconds  += gmt_time.second;
 
     /* Calculate Milliseconds Since Epoch */
-    int64_t gps_msecs = (gps_seconds * TIME_MILLISECS_IN_A_SECOND) + gmt_time.millisecond;
+    int64_t gps_msecs = (gps_seconds * 1000) + gmt_time.millisecond;
 
     /* Calculate and add Leap Seconds */
-    int64_t unix_mseconds = TIME_GPS_TO_UNIX(gps_msecs);
-    gps_msecs  += getleapms(unix_mseconds);
+    int64_t unix_us = GPS_TO_SYS(gps_msecs);
+    gps_msecs += (getleapsecs(unix_us, GPS_EPOCH_START) * 1000);
 
     return gps_msecs;
 }
@@ -629,45 +653,6 @@ int TimeLib::daysinmonth (int year, int month)
 }
 
 /*----------------------------------------------------------------------------
- * getleapms
- *----------------------------------------------------------------------------*/
-int TimeLib::getleapms(int64_t current_time, int64_t start_time)
-{
-    int start_index = leapCount;
-    int current_index = 0;
-
-    /* Find the index of the last leap second before the current time */
-    for (int i = leapCount - 1; i > 0; i--)
-    {
-        if (current_time > leapSeconds[i])
-        {
-            current_index = i;
-            break;
-        }
-    }
-
-    /* If not GPS_EPOCH_START, find the index of the supplied epoch*/
-    if (start_time == TIME_GPS_EPOCH_START)
-    {
-       start_index = TIME_LEAP_SECS_AT_GPS_EPOCH;
-    }
-    else
-    {
-       for (int i = 0; i < leapCount; i++)
-       {
-            if (start_time < leapSeconds[i])
-            {
-                start_index = i;
-                break;
-            }
-        }
-    }
-
-    /* Leap seconds elapsed between start time and current time */
-    return ((current_index - start_index) + 1) * TIME_MILLISECS_IN_A_SECOND;
-}
-
-/*----------------------------------------------------------------------------
  * getmonthname
  *----------------------------------------------------------------------------*/
 const char* TimeLib::getmonthname (int month)
@@ -699,6 +684,46 @@ bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * getleapsecs
+ *----------------------------------------------------------------------------*/
+int TimeLib::getleapsecs(int64_t sysnow, int64_t start_secs)
+{
+    int start_index = leapCount;
+    int current_index = 0;
+    int64_t sys_secs = sysnow / 1000000;
+
+    /* Find the index of the last leap second before the current time */
+    for (int i = leapCount - 1; i > 0; i--)
+    {
+        if (sys_secs > leapSeconds[i])
+        {
+            current_index = i;
+            break;
+        }
+    }
+
+    /* If not GPS_EPOCH_START, find the index of the supplied epoch*/
+    if (start_secs == GPS_EPOCH_START)
+    {
+       start_index = LEAP_SECS_AT_GPS_EPOCH;
+    }
+    else
+    {
+       for (int i = 0; i < leapCount; i++)
+       {
+            if (start_secs < leapSeconds[i])
+            {
+                start_index = i;
+                break;
+            }
+        }
+    }
+
+    /* Leap seconds elapsed between start time and current time */
+    return ((current_index - start_index) + 1);
+}
 
 /*----------------------------------------------------------------------------
  * handler - 1KHz Signal Handler for LocalLib Time Keeping
@@ -747,7 +772,7 @@ void TimeLib::parsenistfile(void)
     SafeString leap_second_file_name;
     leap_second_file_name += CONFDIR;
     leap_second_file_name.appendChar(PATH_DELIMETER);
-    leap_second_file_name += TIME_NIST_LIST_FILENAME;
+    leap_second_file_name += NIST_LIST_FILENAME;
     FILE* fd = fopen( leap_second_file_name.str(), "r" );
     if( fd != NULL )
     {
@@ -792,7 +817,6 @@ void TimeLib::parsenistfile(void)
     /* Populate Leap Second Array - Convert from NTP to UNIX epoch */
     for (int i = 0; i < leapCount; i++)
     {
-        leapSeconds[i]  = (int64_t)TIME_NTP_TO_UNIX(ntp_leap_seconds[i]);
-        leapSeconds[i] *= TIME_MILLISECS_IN_A_SECOND;
+        leapSeconds[i]  = NTP_TO_SYS(ntp_leap_seconds[i]);
     }
 }
