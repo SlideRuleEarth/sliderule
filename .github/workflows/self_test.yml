@@ -55,8 +55,9 @@ jobs:
         sudo ldconfig
 
         # Build GEOS
-        git clone git@github.com:libgeos/geos.git
-        cd geos
+        wget http://download.osgeo.org/geos/geos-3.11.1.tar.bz2
+        tar xvfj geos-3.11.1.tar.bz2
+        cd geos-3.11.1
         mkdir build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
         cmake --build .
