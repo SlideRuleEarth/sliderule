@@ -101,7 +101,7 @@ void initlandsat(void)
     print2term("%s plugin initialized (%s)\n", LUA_LANDSAT_LIBNAME, BINID);
 }
 
-void deinitarcticdem (void)
+void deinitlandsat (void)
 {
     /* Uninitialize Modules */
     LandsatHlsRaster::deinit();

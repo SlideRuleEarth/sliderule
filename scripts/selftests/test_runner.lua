@@ -3,11 +3,9 @@ local td = runner.rootdir(arg[0]) -- root directory
 local console = require("console")
 
 -- Initial Configuration --
-
 sys.setlvl(core.LOG, core.INFO)
 
 -- Run Core Self Tests --
-
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")
@@ -22,32 +20,27 @@ if __core__ then
 end
 
 -- Run AWS Self Tests --
-
 if __aws__ then
     runner.script(td .. "asset_index.lua")
     runner.script(td .. "credential_store.lua")
 end
 
 -- Run H5 Self Tests --
-
 if __h5__ then
     runner.script(td .. "hdf5_file.lua")
 end
 
 -- Run Pistache Self Tests --
-
 if __pistache__ then
     runner.script(td .. "pistache_endpoint.lua")
 end
 
 -- Run Raster Self Tests --
-
 if __geo__ then
     runner.script(td .. "geojson_raster.lua")
 end
 
 -- Run Legacy Self Tests --
-
 if __legacy__ then
     runner.script(td .. "message_queue.lua")
     runner.script(td .. "list.lua")
@@ -79,9 +72,7 @@ if __pgc__ then
 end
 
 -- Report Results --
-
 local errors = runner.report()
 
 -- Cleanup and Exit --
-
 sys.quit( errors )

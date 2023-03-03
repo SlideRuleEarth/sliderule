@@ -36,6 +36,10 @@
 #include "core.h"
 #include "GeoRaster.h"
 
+#ifdef __aws__
+#include "aws.h"
+#endif
+
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
@@ -49,6 +53,7 @@
 
 #include "cpl_minixml.h"
 #include "cpl_string.h"
+#include "cpl_vsi.h"
 #include "gdal.h"
 #include "ogr_spatialref.h"
 
@@ -281,6 +286,22 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
+
+    /* Establish Credentials */
+    #ifdef __aws__
+    if(_parms->asset)
+    {
+        const char* identity = _parms->asset->getName();
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        if(credentials.provided)
+        {
+            const char* path = _parms->asset->getPath();
+            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
+            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
+            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
+        }
+    }
+    #endif
 }
 
 

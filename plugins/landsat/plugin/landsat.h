@@ -44,6 +44,7 @@
 
 extern "C" {
 void initlandsat(void);
+void deinitlandsat(void);
 }
 
 #endif  /* __landsat_plugin__ */

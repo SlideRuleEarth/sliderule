@@ -19,7 +19,7 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 default-build: ## default build of sliderule
 	make -j4 -C $(BUILD)
 
-all: default-build atlas pgc gedi icesat2 ## build everything
+all: default-build atlas pgc gedi icesat2 landsat ## build everything
 
 config: config-release ## configure make for default build
 
