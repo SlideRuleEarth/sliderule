@@ -125,9 +125,10 @@ void VctRaster::openGeoIndex(double lon, double lat)
         layer = geoIndex.dset->GetLayer(0);
         CHECKPTR(layer);
 
-        OGRSpatialReference *sref = layer->GetSpatialRef();
+        OGRSpatialReference* sref = layer->GetSpatialRef();
         CHECKPTR(sref);
-        if(!cord.source.IsSame(sref))
+        int epsg = sref->GetEPSGGeogCS();
+        if((epsg != DEFAULT_EPSG) && (epsg != 4979))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Vector index file has wrong CRS: %s", newVctFile.c_str());
 
         geoIndex.cols = geoIndex.dset->GetRasterXSize();
