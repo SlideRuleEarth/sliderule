@@ -45,7 +45,6 @@ jobs:
         sudo apt install -y libparquet-dev                                                #arrow
 
         # Build proj9
-        pwd
         wget http://download.osgeo.org/proj/proj-9.2.0.tar.gz
         tar xfz proj-9.2.0.tar.gz
         cd proj-9.2.0
@@ -54,10 +53,9 @@ jobs:
         make -j 8
         sudo make install
         sudo ldconfig
-        pwd
+        cd ../..
 
         # Build GEOS
-        pwd
         wget http://download.osgeo.org/geos/geos-3.11.1.tar.bz2
         tar xfj geos-3.11.1.tar.bz2
         cd geos-3.11.1
@@ -66,10 +64,9 @@ jobs:
         make -j 8
         sudo make install
         sudo ldconfig
-        pwd
+        cd ../..
 
         # Build GDAL
-        pwd
         wget http://download.osgeo.org/gdal/3.6.2/gdal-3.6.2.tar.gz
         tar xfz gdal-3.6.2.tar.gz
         cd gdal-3.6.2
@@ -78,7 +75,7 @@ jobs:
         make -j 8
         sudo make install
         sudo ldconfig
-        pwd
+        cd ../..
 
         # Cleanup
         sudo rm -rf proj-9.2.0 geos-3.11.1 gdal-3.6.2
