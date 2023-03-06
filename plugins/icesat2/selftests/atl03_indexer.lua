@@ -71,17 +71,17 @@ asset_index_file:close()
 
 -- check records against index file
 local i = 1
-local raw_index = csv.open(index_filename, {header=true})
-for fields in raw_index:lines() do
-    runner.check(indexlist[i]["name"] == fields["name"])
-    runner.check(runner.cmpfloat(indexlist[i]["t0"], fields["t0"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["t1"], fields["t1"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lat0"], fields["lat0"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lon0"], fields["lon0"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lat1"], fields["lat1"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lon1"], fields["lon1"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["cycle"], fields["cycle"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["rgt"], fields["rgt"], 0.0001))
+local raw_index = csv.open(index_filename)
+for _,line in ipairs(raw_index) do
+    runner.check(indexlist[i]["name"] == line["name"])
+    runner.check(runner.cmpfloat(indexlist[i]["t0"], line["t0"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["t1"], line["t1"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["lat0"], line["lat0"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["lon0"], line["lon0"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["lat1"], line["lat1"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["lon1"], line["lon1"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["cycle"], line["cycle"], 0.0001))
+    runner.check(runner.cmpfloat(indexlist[i]["rgt"], line["rgt"], 0.0001))
     i = i + 1
 end
 
