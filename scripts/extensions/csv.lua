@@ -26,7 +26,7 @@ local function open (filename)
   -- open file
   local f,err = io.open(filename)
 	if not f then
-		sys.log(core.CRITICAL, string.format("Unable to open csv file %s: %s", filename, tostring(err)))
+		sys.log(core.DEBUG, string.format("Unable to open csv file %s: %s", filename, tostring(err)))
 		return
 	end
   -- read file

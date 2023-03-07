@@ -40,7 +40,7 @@ end
 local function _loadindex(asset, file)
 
     -- check for no index
-    if file == "nil" then -- special value representing no index
+    if file:match("[^/]*$") == "nil" then -- special value representing no index
         return false
     end
 
