@@ -125,24 +125,6 @@ class GeoRaster: public LuaObject
         } sample_t;
 
 
-        class GeoIndex
-        {
-        public:
-            std::string fileName;
-            GDALDataset *dset;
-            uint32_t     rows;
-            uint32_t     cols;
-            double       cellSize;
-            bbox_t       bbox;
-
-            void clear(bool close = true);
-            inline bool containsPoint(OGRPoint& p);
-
-            GeoIndex(void) { clear(false); }
-           ~GeoIndex(void) { clear(); }
-        };
-
-
         class CoordTransform
         {
         public:
@@ -152,7 +134,26 @@ class GeoRaster: public LuaObject
 
             void clear(bool close = true);
             CoordTransform(void) { clear(false); }
-           ~CoordTransform(void) { clear(true); }
+           ~CoordTransform(void) { clear(); }
+        };
+
+
+        class GeoIndex
+        {
+        public:
+            std::string     fileName;
+            GDALDataset    *dset;
+            uint32_t        rows;
+            uint32_t        cols;
+            double          cellSize;
+            bbox_t          bbox;
+            CoordTransform  cord;
+
+            void clear(bool close = true);
+            inline bool containsPoint(OGRPoint& p);
+
+            GeoIndex(void) { clear(false); }
+           ~GeoIndex(void) { clear(); }
         };
 
 
@@ -178,7 +179,7 @@ class GeoRaster: public LuaObject
             bool            sampled;
             GDALDataset*    dset;
             GDALRasterBand* band;
-            OGRSpatialReference* sref;
+            CoordTransform  cord;
             std::string     fileName;
             GDALDataType    dataType;
             uint32_t        rows;
@@ -237,7 +238,7 @@ class GeoRaster: public LuaObject
                         GeoRaster             (lua_State* L, GeoParms* _parms);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
-        virtual void    transformCRS          (OGRPoint& p) = 0;
+        virtual void    transformCRS          (OGRPoint& p);
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
@@ -265,7 +266,6 @@ class GeoRaster: public LuaObject
 
         Ordering<rasters_group_t>*  rasterGroupList;
         GeoIndex                    geoIndex;
-        CoordTransform              cord;
         GeoParms*                   parms;
         Dictionary<Raster*>         rasterDict;
         Mutex                       samplingMutex;

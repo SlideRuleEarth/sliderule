@@ -105,7 +105,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         band = geoIndex.dset->GetRasterBand(1);
         CHECKPTR(band);
 
-        /* Get inverted geo transfer for vrt */
+        /* Get inverted geo transform for vrt */
         double geot[6] = {0};
         CPLErr err = GDALGetGeoTransform(geoIndex.dset, geot);
         CHECK_GDALERR(err);
@@ -139,9 +139,10 @@ void VrtRaster::openGeoIndex(double lon, double lat)
                                    parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
         }
 
-        /* Create coordinates transformation */
-        if (cord.transf == NULL )
+        /* Create coordinates transform for geoIndex */
+        if (geoIndex.cord.transf == NULL )
         {
+            CoordTransform& cord = geoIndex.cord;
             OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
             CHECK_GDALERR(ogrerr);
             const char *projref = geoIndex.dset->GetProjectionRef();
@@ -166,7 +167,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.dset)
         {
             geoIndex.clear();
-            cord.clear();
+            geoIndex.cord.clear();
             bzero(invGeot, sizeof(invGeot));
             band = NULL;
         }
@@ -185,20 +186,6 @@ void VrtRaster::getIndexFile(std::string &file, double lon, double lat)
     file = vrtFile;
 }
 
-
-/*----------------------------------------------------------------------------
- * transformCRS
- *----------------------------------------------------------------------------*/
-void VrtRaster::transformCRS(OGRPoint &p)
-{
-    if (cord.transf &&
-        (p.transform(cord.transf) == OGRERR_NONE))
-    {
-        return;
-    }
-
-    throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
-}
 
 /*----------------------------------------------------------------------------
  * findRasters

@@ -378,25 +378,36 @@ void GeoRaster::processRaster(Raster* raster)
             /* Get raster data type */
             raster->dataType = raster->band->GetRasterDataType();
 
-            /* Get raster spatial reference */
-            raster->sref = const_cast<OGRSpatialReference*>(raster->dset->GetSpatialRef());
-            CHECKPTR(raster->sref);
+            /* Create coordinates transform for raster */
+            if(raster->cord.transf == NULL)
+            {
+                CoordTransform& cord = raster->cord;
+                OGRErr ogrerr        = cord.source.importFromEPSG(DEFAULT_EPSG);
+                CHECK_GDALERR(ogrerr);
+
+                const char* projref = raster->dset->GetProjectionRef();
+                CHECKPTR(projref);
+                mlog(DEBUG, "%s", projref);
+                ogrerr = cord.target.importFromProj4(projref);
+                CHECK_GDALERR(ogrerr);
+
+                /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+                cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+                cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+                cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+                if(cord.transf == NULL)
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+            }
         }
 
-        /* Make sure point of interest and raster are in the same CRS */
+        /* If point has not been projected yet, do it now */
         OGRSpatialReference *psref = raster->point.getSpatialReference();
         CHECKPTR(psref);
-        if (!raster->sref->IsSame(psref))
+        if(!psref->IsProjected())
         {
-            if (cord.source.IsSame(psref) && !psref->IsProjected())
-            {
-                /* Transform point to raster's CRS */
-                double lon = raster->point.getX();
-                double lat = raster->point.getY();
-                if (raster->point.transform(cord.transf) != OGRERR_NONE)
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", lon, lat);
-            }
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "POI and raster CRS are not the same");
+            if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", raster->point.getX(), raster->point.getY());
         }
 
         /*
@@ -415,7 +426,6 @@ void GeoRaster::processRaster(Raster* raster)
 
         if (parms->zonal_stats)
             computeZonalStats(raster);
-
     }
     catch (const RunTimeException &e)
     {
@@ -659,6 +669,19 @@ void GeoRaster::readPixel(Raster *raster)
     }
 }
 
+
+/*----------------------------------------------------------------------------
+ * transformCRS
+ *----------------------------------------------------------------------------*/
+void GeoRaster::transformCRS(OGRPoint &p)
+{
+    if (geoIndex.cord.transf && (p.transform(geoIndex.cord.transf) == OGRERR_NONE))
+    {
+        return;
+    }
+
+    throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
+}
 
 /*----------------------------------------------------------------------------
  * containsWindow
@@ -939,7 +962,7 @@ void GeoRaster::Raster::clear(bool close)
     if(close && dset) GDALClose((GDALDatasetH)dset);
     dset = NULL;
     band = NULL;
-    sref = NULL;
+    cord.clear();
     enabled = false;
     sampled = false;
     fileName.clear();
@@ -1021,22 +1044,23 @@ void GeoRaster::updateCache(OGRPoint& p)
                 rasterDict.add(key, raster);
             }
         }
+    }
 
-        /* Maintain cache from getting too big */
-        key = rasterDict.first(&raster);
-        while(key != NULL)
+    /* Maintain cache from getting too big */
+    key = rasterDict.first(&raster);
+    while(key != NULL)
+    {
+        if(rasterDict.length() <= MAX_CACHED_RASTERS)
+            break;
+
+        assert(raster);
+        if(!raster->enabled)
         {
-            if(rasterDict.length() <= MAX_CACHED_RASTERS)
-                break;
-
-            assert(raster);
-            if(raster->enabled)
-            {
-                rasterDict.remove(key);
-                delete raster;
-            }
-            key = rasterDict.next(&raster);
+            /* TODO: remove all rasters from the same group */
+            rasterDict.remove(key);
+            delete raster;
         }
+        key = rasterDict.next(&raster);
     }
 }
 
@@ -1126,11 +1150,11 @@ void GeoRaster::createThreads(void)
         return;
 
     uint32_t newThreadsCnt = threadsNeeded - readerCount;
-    // print2term("Creating %d new threads, readerCount: %d, neededThreads: %d\n", newThreadsCnt, readerCount, threadsNeeded);
+    mlog(DEBUG, "Creating %d new threads, readerCount: %d, neededThreads: %d\n", newThreadsCnt, readerCount, threadsNeeded);
 
     for (uint32_t i=0; i < newThreadsCnt; i++)
     {
-        if (readerCount < MAX_READER_THREADS)
+        if (readerCount <= MAX_READER_THREADS)
         {
             reader_t *reader = &rasterRreader[readerCount];
             reader->raster = NULL;
@@ -1143,7 +1167,7 @@ void GeoRaster::createThreads(void)
         else
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
-                                   "number of rasters to read: %d, is greater than max reading threads %d\n",
+                                   "Too many rasters to read: %d, max reading threads allowed: %d\n",
                                    rasterDict.length(), MAX_READER_THREADS);
         }
     }

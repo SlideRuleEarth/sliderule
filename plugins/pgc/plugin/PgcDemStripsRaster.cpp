@@ -43,8 +43,8 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geo_suffix):
-    VctRaster(L, _parms, target_crs),
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix):
+    VctRaster(L, _parms),
     demName(dem_name)
 {
     path2geocells.append(_parms->asset->getPath()).append(geo_suffix);

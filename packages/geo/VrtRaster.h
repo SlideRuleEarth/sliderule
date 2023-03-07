@@ -62,7 +62,6 @@ class VrtRaster: public GeoRaster
 
                      VrtRaster          (lua_State* L, GeoParms* _parms, const char* vrt_file=NULL);
         void         openGeoIndex       (double lon=0, double lat=0);
-        void         transformCRS       (OGRPoint& p);
         virtual void getIndexFile       (std::string& file, double lon=0, double lat=0);
         virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
         bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,

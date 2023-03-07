@@ -60,9 +60,8 @@ class VctRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                     VctRaster         (lua_State* L, GeoParms* _parms, const int target_crs);
+                     VctRaster         (lua_State* L, GeoParms* _parms);
         void         openGeoIndex      (double lon=0, double lat=0);
-        void         transformCRS      (OGRPoint& p);
         virtual void getIndexFile      (std::string& file, double lon, double lat) = 0;
         virtual void getIndexBbox      (bbox_t& bbox, double lon, double lat) = 0;
         bool         findCachedRasters (OGRPoint &p);
@@ -77,7 +76,6 @@ class VctRaster: public GeoRaster
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        int targetCrs;
 };
 
 #endif  /* __vct_raster__ */

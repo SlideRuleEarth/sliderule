@@ -56,7 +56,7 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
-    VctRaster(L, _parms, LANDSAT_HLS_EPSG)
+    VctRaster(L, _parms)
 {
     filePath.append(_parms->asset->getPath()).append("/");
 }
@@ -117,10 +117,17 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
     const std::string fileToken = "HLS";
+#if 1
     const char* tags[] = {"B01", "B02", "B03", "B04", "B05",
                           "B06", "B07", "B08", "B09", "B10",
                           "B11", "B12", "B8A", "SAA", "SZA",
                           "VAA", "VZA", "Fmask"};
+#else
+    // const char* tags[] = {"B01", "B02", "B03", "B04", "B05"};
+    // const char* tags[] = {"B06", "B07", "B08", "B09", "B10"};
+    // const char* tags[] = {"B11", "B12", "B8A", "SAA", "SZA"};
+    const char* tags[] = {"VAA", "VZA", "Fmask"};
+#endif
 
 #define tagsCnt (sizeof (tags) / sizeof (const char *))
 
@@ -168,7 +175,6 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                 }
                 else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
             }
-
 
             for(int i=0; i<tagsCnt; i++)
             {
