@@ -118,6 +118,8 @@ class GediParms: public LuaObject
         static const int DEFAULT_NODE_TIMEOUT       = 600; // seconds
         static const int DEFAULT_READ_TIMEOUT       = 600; // seconds
 
+        static const int64_t GEDI_SDP_EPOCH_GPS     = 1198800018; // seconds to add to GEDI delta times to get GPS times
+
         static const uint8_t BEAM_NUMBER[NUM_BEAMS];
 
         static const char* OBJECT_TYPE;
@@ -130,6 +132,7 @@ class GediParms: public LuaObject
 
         static int          luaCreate           (lua_State* L);
         static const char*  beam2group          (int beam);
+        static int64_t      deltatime2timestamp (double delta_time);
 
         /*--------------------------------------------------------------------
          * Data

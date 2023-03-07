@@ -109,6 +109,15 @@ const char* GediParms::beam2group (int beam)
         default:        return "UNKNOWN";
     }
 }
+
+/*----------------------------------------------------------------------------
+ * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
+ *----------------------------------------------------------------------------*/
+int64_t GediParms::deltatime2timestamp (double delta_time)
+{
+    return TimeLib::gps2systimeex(delta_time + (double)GEDI_SDP_EPOCH_GPS);
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
