@@ -54,6 +54,7 @@ parms = {
 
 # make request
 rsps = icesat2.atl06p(parms, "nsidc-s3")
+print(f"{rsps}")
 ```
 
 More extensive examples in the form of Jupyter Notebooks can be found in the [examples](examples/) folder.
