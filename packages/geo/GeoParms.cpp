@@ -52,6 +52,7 @@ const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
+const char* GeoParms::CATALOG               = "catalog";
 const char* GeoParms::ASSET                 = "asset";
 const char* GeoParms::KEY_SPACE             = "key_space";
 
@@ -112,6 +113,7 @@ GeoParms::GeoParms (lua_State* L, int index):
     filter_time         (false),
     url_substring       (NULL),
     filter_closest_time (false),
+    catalog             (NULL),
     asset_name          (NULL),
     asset               (NULL),
     key_space           (0)
@@ -217,6 +219,13 @@ GeoParms::GeoParms (lua_State* L, int index):
             }
             lua_pop(L, 1);
 
+            /* Catalog */
+            lua_getfield(L, index, CATALOG);
+            const char* catalog_str = LuaObject::getLuaString(L, -1, true, NULL);
+            catalog = StringLib::duplicate(catalog_str, 0);
+            if(catalog) mlog(DEBUG, "Setting %s to user provided geojson", CATALOG);
+            lua_pop(L, 1);
+
             /* Asset */
             lua_getfield(L, index, ASSET);
             asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1));
@@ -256,6 +265,12 @@ void GeoParms::cleanup (void)
     {
         delete [] url_substring;
         url_substring = NULL;
+    }
+
+    if(catalog)
+    {
+        delete [] catalog;
+        catalog = NULL;
     }
 
     if(asset_name)
