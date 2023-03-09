@@ -1,3 +1,4 @@
+#!/bin/bash
 
 #
 # Acceptable version identifier is x.y.z, e.g. 1.0.4

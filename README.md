@@ -1,5 +1,6 @@
 # sliderule
 [![DOI](https://zenodo.org/badge/261318746.svg)](https://zenodo.org/badge/latestdoi/261318746)
+[![Tests](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml)
 
 A C++/Lua framework for on-demand science data processing.
 
