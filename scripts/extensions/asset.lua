@@ -81,14 +81,22 @@ local function loaddir(file)
 
     local assets = {}
 
-    -- if not provided then look for asset directory local to calling script
-    if not file then
-        local info = debug.getinfo(2,'S')
-        local offset = string.find(info.source, "/[^/]*$")
-        local root_path = info.source:sub(2,offset)
-        file = root_path.."asset_directory.csv" -- by convention
-    -- if not an absolute path then look for file in the configuration directory
-    elseif file:find("/") ~= 1 then
+    -- find asset directory file
+    file = file or "./asset_directory.csv"
+    local _, count = string.gsub(file, "/", "/")
+    if count > 0 then
+        if file:find("/") ~= 1 then
+            -- relative path provided - prepend calling script location
+            local info = debug.getinfo(2,'S')
+            local offset = string.find(info.source, "/[^/]*$")
+            local root_path = info.source:sub(2,offset)
+            file = root_path..file
+        else
+            -- absolute path provided - leave as is
+            file = file
+        end
+    else
+        -- only filename provided - prepend configuration directory
         file = __confdir.."/"..file
     end
 
