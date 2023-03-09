@@ -29,7 +29,7 @@ jobs:
             ${{ format('{0}-conda-{1}-{2}',
             runner.os,
             env.CACHE_NUMBER,
-            hashFiles(format('ci/environment-{0}.yml', matrix.CONDA_ENV))) }}
+            hashFiles(format('clients/python/ci/environment-{0}.yml', matrix.CONDA_ENV))) }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
@@ -37,14 +37,14 @@ jobs:
           auto-update-conda: true
           auto-activate-base: false
           activate-environment: sliderule-ci
-          environment-file: ci/environment-${{ matrix.CONDA_ENV }}.yml
+          environment-file: clients/python/ci/environment-${{ matrix.CONDA_ENV }}.yml
           use-only-tar-bz2: true
 
       - name: Install sliderule from current commit
         shell: bash -l {0}
         run: |
-          python -m pip install .
-          conda list
+          cd clients/python && python -m pip install .
+          cd clients/python && conda list
 
       - name: Install netrc for authentication
         shell: bash -l {0}
@@ -55,4 +55,4 @@ jobs:
       - name: Run tests
         shell: bash -l {0}
         run: |
-          python -m pytest --verbose
+          cd clients/python && python -m pytest --verbose

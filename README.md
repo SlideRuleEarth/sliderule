@@ -1,12 +1,13 @@
 # sliderule
 [![DOI](https://zenodo.org/badge/261318746.svg)](https://zenodo.org/badge/latestdoi/261318746)
-[![Tests](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule-python/actions/workflows/test.yml)
+[![Tests](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/test.yml)
 
-A C++/Lua framework for on-demand science data processing.
+A cloud-native framework for on-demand science data processing.
 
-This repository is for SlideRule developers and contains the source code for the SlideRule server application. The server is intended to be deployed alongside plugins containing project specific algorithms for processing science data.  If you are a developer interested in the ICESat-2 plugin for SlideRule, please see the [sliderule-icesat2 plugin](https://github.com/ICESat2-SlideRule/sliderule-icesat2).
+This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website.
 
-If you are a science user interested in processing ICESat-2 data with SlideRule, please see the [sliderule-python client](https://github.com/ICESat2-SlideRule/sliderule-python).
+If you are a science data user interested in processing Earth science data with SlideRule, you can get started right away by checking out the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) at https://slideruleearth.io/rtd/getting_started/Install.html.
+
 
 ## I. Prerequisites
 
@@ -138,6 +139,14 @@ Alternatively, SlideRule can be run as an interactive Lua interpreter.  Just typ
 
 This section details the directory structure of the SlideRule repository to help you navigate where different functionality resides.
 
+### clients
+
+Contains the source code for the different clients that make interacting with SlideRule easier.  These clients often support additional functionality to aid science data investigations.  See https://slideruleearth.io/rtd/ for more details.
+
+### docs
+
+Contains the source files to build the documentation website hosted at https://slideruleearth.io.
+
 ### platforms
 
 Contains the C++ modules that implement an operating system abstraction layer which enables the framework to run on various platforms.
@@ -169,7 +178,7 @@ Once the shared object is built, the build system must copy the shared object in
 
 ## VI. Delivering the Code
 
-Run [RELEASE.sh](RELEASE.sh) to tag the repository and create a tarball that can be distributed: `./RELEASE.sh X.Y.Z`
+Run [RELEASE.sh](RELEASE.sh) to tag the repository and create a tarball that can be distributed: `./RELEASE.sh vX.Y.Z`
 
 The three number version identifier X.Y.Z has the following convention: Incrementing X indicates an interface change and does not guarantee the preservation of backward compatibility.  Incrementing Y indicates additional or modified functionality that maintains compile-time compatibility but may change a run-time behavior.  Incrementing Z indicates a bug fix or code cleanup and maintains both compile-time and run-time compatibility.
 
@@ -186,6 +195,7 @@ corresponding source files.
 * `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git (MIT license)
 * `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html (BSD-style license)
 * `scripts/extensions/base64.lua`: base64 encode/decode code based off of https://github.com/iskolbin/lbase64
+* `clients/python/sliderule/icesat2.py`: subsetting code sourced from NSIDC download script (Regents of the University of Colorado)
 
 The following third-party libraries can be linked to by SlideRule:
 * __Lua__: https://www.lua.org/ (MIT license)

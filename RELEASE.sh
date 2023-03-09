@@ -1,12 +1,10 @@
 #!/bin/bash
 
 #
-# Acceptable version identifier is x.y.z, e.g. 1.0.4
-# the version number is then prepended with 'v' for
-# the tags annotation in git.
+# Acceptable version identifier is vX.Y.Z, e.g. v1.0.4
 #
 VERSION=$1
-if [[ "$VERSION" != *"."*"."* ]]; then
+if [[ "$VERSION" != "v"*"."*"."* ]]; then
     echo "Invalid version number"
     exit 1
 fi

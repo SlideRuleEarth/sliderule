@@ -200,13 +200,9 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 
 cluster-release: ## release a version of the cluster; needs VERSION
 	# release repositories
-	cd $(SLIDERULE_SOURCE_DIR); ./RELEASE.sh $(VERSION); git push --tags; git push
-	cd $(PYTHON_SOURCE_DIR); ./RELEASE.sh $(VERSION); git push --tags; git push
-	cd $(STATIC_WEB_SOURCE_DIR); ./RELEASE.sh $(VERSION); git push --tags; git push
 	gh auth login
+	cd $(SLIDERULE_SOURCE_DIR); ./RELEASE.sh $(VERSION); git push --tags; git push
 	cd $(SLIDERULE_SOURCE_DIR); gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
-	cd $(PYTHON_SOURCE_DIR); gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
-	cd $(STATIC_WEB_SOURCE_DIR); gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
 	# docker images
 	make DOCKEROPTS=--no-cache sliderule-docker
 	make DOCKEROPTS=--no-cache monitor-docker
