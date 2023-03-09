@@ -252,11 +252,6 @@ GeoParms::GeoParms (lua_State* L, int index):
         cleanup();
         throw;
     }
-
-    for (int i = 0; i < bands.length(); i++)
-    {
-        printf("BAND[%d]: %s\n", i, bands[i]);
-    }
 }
 
 /*----------------------------------------------------------------------------
