@@ -58,7 +58,7 @@
 const char* Gedi04aReader::fpRecType = "gedi04arec.footprint";
 const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),     1,  NULL, NATIVE_FLAGS},
-    {"delta_time",      RecordObject::DOUBLE,   offsetof(footprint_t, delta_time),      1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(footprint_t, time_ns),         1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(footprint_t, latitude),        1,  NULL, NATIVE_FLAGS},
     {"longitude",       RecordObject::DOUBLE,   offsetof(footprint_t, longitude),       1,  NULL, NATIVE_FLAGS},
     {"agbd",            RecordObject::DOUBLE,   offsetof(footprint_t, agbd),            1,  NULL, NATIVE_FLAGS},
@@ -543,7 +543,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 /* Populate Entry in Batch Structure */
                 footprint_t* fp     = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number     = gedi04a.shot_number[footprint];
-                fp->delta_time      = gedi04a.delta_time[footprint];
+                fp->time_ns         = parms->deltatime2timestamp(gedi04a.delta_time[footprint]);
                 fp->latitude        = region.lat_lowestmode[footprint];
                 fp->longitude       = region.lon_lowestmode[footprint];
                 fp->agbd            = gedi04a.agbd[footprint];

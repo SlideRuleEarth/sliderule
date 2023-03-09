@@ -183,7 +183,6 @@ that is distributed under various open source licenses. The appropriate copyrigh
 corresponding source files.
 * `packages/core/LuaEngine.cpp`: partial code sourced from https://www.lua.org/ (MIT license)
 * `scripts/extensions/json.lua`: code sourced from https://github.com/rxi/json.lua.git (MIT license)
-* `scripts/extensions/csv.lua`: code sourced from https://github.com/geoffleyland/lua-csv (MIT license)
 * `packages/core/MathLib.cpp`: point inclusion code based off of https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html (BSD-style license)
 * `scripts/extensions/base64.lua`: base64 encode/decode code based off of https://github.com/iskolbin/lbase64
 

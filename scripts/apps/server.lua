@@ -77,7 +77,7 @@ dispatcher:attach(monitor, "eventrec")
 dispatcher:run()
 
 -- Configure Assets --
-local assets = asset.loaddir(asset_directory, true)
+local assets = asset.loaddir(asset_directory)
 
 -- Run IAM Role Authentication Script -
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")

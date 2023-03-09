@@ -52,6 +52,8 @@ const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
+const char* GeoParms::CATALOG               = "catalog";
+const char* GeoParms::BANDS                 = "bands";
 const char* GeoParms::ASSET                 = "asset";
 const char* GeoParms::KEY_SPACE             = "key_space";
 
@@ -112,6 +114,7 @@ GeoParms::GeoParms (lua_State* L, int index):
     filter_time         (false),
     url_substring       (NULL),
     filter_closest_time (false),
+    catalog             (NULL),
     asset_name          (NULL),
     asset               (NULL),
     key_space           (0)
@@ -217,6 +220,19 @@ GeoParms::GeoParms (lua_State* L, int index):
             }
             lua_pop(L, 1);
 
+            /* Catalog */
+            lua_getfield(L, index, CATALOG);
+            const char* catalog_str = LuaObject::getLuaString(L, -1, true, NULL);
+            catalog = StringLib::duplicate(catalog_str, 0);
+            if(catalog) mlog(DEBUG, "Setting %s to user provided geojson", CATALOG);
+            lua_pop(L, 1);
+
+            /* Bands */
+            lua_getfield(L, index, BANDS);
+            getLuaBands(L, -1, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to user provided selection", BANDS);
+            lua_pop(L, 1);
+
             /* Asset */
             lua_getfield(L, index, ASSET);
             asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1));
@@ -258,6 +274,12 @@ void GeoParms::cleanup (void)
         url_substring = NULL;
     }
 
+    if(catalog)
+    {
+        delete [] catalog;
+        catalog = NULL;
+    }
+
     if(asset_name)
     {
         delete [] asset_name;
@@ -286,6 +308,44 @@ GDALRIOResampleAlg GeoParms::str2algo (const char* str)
     else if (StringLib::match(str, MODE_ALGO))              return GRIORA_Mode;
     else if (StringLib::match(str, GAUSS_ALGO))             return GRIORA_Gauss;
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaBands
+ *----------------------------------------------------------------------------*/
+void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    *provided = false;
+
+    if(lua_istable(L, index))
+    {
+        /* Get number of bands in table */
+        int num_bands = lua_rawlen(L, index);
+        if(num_bands > 0 && provided) *provided = true;
+
+        /* Iterate through each band in table */
+        for(int i = 0; i < num_bands; i++)
+        {
+            /* Add band */
+            lua_rawgeti(L, index, i+1);
+            const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            bands.add(band_str);
+            lua_pop(L, 1);
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        *provided = true;
+
+        /* Add band */
+        const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+        bands.add(band_str);
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "Bands must be provided as a table or string");
+    }
 }
 
 /*----------------------------------------------------------------------------

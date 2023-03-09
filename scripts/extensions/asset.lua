@@ -16,27 +16,12 @@ csv = require("csv")
 --      "lat1": northern latitude (N: 90, S: -90)
 --      "lon0": western longitutde (E: 180, W: -180)
 --      "lon1": eastern longitutde (E: 180, W: -180)
---
---  quiet: boolean whether to print a message for each resource loaded [optional]
 --------------------------------------------------------------------------------------
-local function loadresource(asset, resource, attributes, quiet)
+local function loadresource(asset, resource, attributes)
 
     if not asset then
         return false
     end
-
---    if not attributes["t0"]     then attributes["t0"]   = 0.0 end
---    if not attributes["t1"]     then attributes["t1"]   = 0.0 end
---    if not attributes["lat0"]   then attributes["lat0"] = 0.0 end
---    if not attributes["lon0"]   then attributes["lon0"] = 0.0 end
---    if not attributes["lat1"]   then attributes["lat1"] = 0.0 end
---    if not attributes["lon1"]   then attributes["lon1"] = 0.0 end
---
---    if not quiet then
---        print(string.format("Loading resource %s in asset %s: time <%s, %s>, spatial <%s, %s, %s, %s>",
---            resource, asset:name(), attributes["t0"], attributes["t1"],
---            attributes["lat0"], attributes["lon0"], attributes["lat1"], attributes["lon1"]))
---    end
 
     return asset:load(resource, attributes)
 
@@ -52,38 +37,34 @@ end
 --
 --  quiet: boolean whether to print a message for each asset loaded [optional]
 --------------------------------------------------------------------------------------
-local function _loadindex(asset, file, quiet)
+local function _loadindex(asset, file)
 
     -- check for no index
-    if file == "nil" then -- special value representing no index
+    if file:match("[^/]*$") == "nil" then -- special value representing no index
         return false
     end
 
     -- try to open index file
-    local raw_index = csv.open(file, {header=true})
+    local raw_index = csv.open(file)
     if not raw_index then
-        if not quiet then
-            print(string.format("Attempting to find index file %s", file))
-        end
+        sys.log(core.DEBUG, string.format("Attempting to find index file %s", file))
         -- look for index local to calling script (if not provided)
         local info = debug.getinfo(3,'S');
         local offset = string.find(info.source, "/[^/]*$")
         local root_path = info.source:sub(2,offset)
         local new_file = root_path..file
-        raw_index = csv.open(new_file, {header=true})
+        raw_index = csv.open(new_file)
     end
 
     -- check if index file found and opened
     if not raw_index then
-        if not quiet then
-            print(string.format("Unable to open index file %s", file))
-        end
+        sys.log(core.DEBUG, string.format("Unable to open index file %s", file))
         return false
     end
 
     -- load resource for each entry in index
-    for fields in raw_index:lines() do
-        loadresource(asset, fields["name"], fields, quiet)
+    for _,line in ipairs(raw_index) do
+        loadresource(asset, line["name"], line)
     end
 
 end
@@ -95,10 +76,8 @@ end
 --
 --  file: name of .csv file with the following header row
 --      asset,      format,     path,       index,      region,     endpoint
---
---  quiet: boolean whether to print a message for each asset loaded [optional]
 --------------------------------------------------------------------------------------
-local function loaddir(file, quiet)
+local function loaddir(file)
 
     local assets = {}
 
@@ -115,13 +94,13 @@ local function loaddir(file, quiet)
 
     -- build directory from csv file
     local directory = {}
-    local raw_directory = csv.open(file, {header=true})
+    local raw_directory = csv.open(file)
     if raw_directory then
-        for fields in raw_directory:lines() do
-            directory[fields["asset"]] = fields
+        for _,line in ipairs(raw_directory) do
+            directory[line["asset"]] = line
         end
     else
-        print(string.format("Unable to load asset directory: %s", file))
+        sys.log(core.DEBUG, string.format("Unable to load asset directory: %s", file))
     end
 
     -- create asset for each entry in directory
@@ -136,14 +115,12 @@ local function loaddir(file, quiet)
         path_prefix = file:sub(1, offset)
     end
     for k,v in pairs(directory) do
-        if(not quiet) then
-            print(string.format("Building %s (%s) index at %s", k, v["format"], v["path"]))
-        end
+        sys.log(core.DEBUG, string.format("Building %s (%s) index at %s", k, v["format"], v["path"]))
         if v["index"] then
             if v["index"]:sub(1,1) == "/" then -- absolute path
-                _loadindex(assets[k], v["index"], quiet)
+                _loadindex(assets[k], v["index"])
             else -- relative path
-                _loadindex(assets[k], path_prefix..v["index"], quiet)
+                _loadindex(assets[k], path_prefix..v["index"])
             end
         end
     end

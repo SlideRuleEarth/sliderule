@@ -782,6 +782,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
         int classification = LuaObject::getLuaInteger(L, -1);
         if(classification >= 0 && classification < NUM_ATL08_CLASSES)
         {
+            if(provided) *provided = true;
             atl08_class[classification] = true;
             mlog(DEBUG, "Selecting classification %d", classification);
         }

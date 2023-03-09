@@ -112,6 +112,7 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
     {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                  1,  NULL, NATIVE_FLAGS},
     {"distance",                RecordObject::DOUBLE,   offsetof(elevation_t, distance),            1,  NULL, NATIVE_FLAGS},
     {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),             1,  NULL, NATIVE_FLAGS},
+    {"delta_time",              RecordObject::INT64,    offsetof(elevation_t, time_ns),             1,  NULL, NATIVE_FLAGS}, // temporary to maintain backward compatibility
     {"lat",                     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
     {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS},
