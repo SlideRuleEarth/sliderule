@@ -9,7 +9,7 @@ from sliderule import icesat2
 TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
-class TestVrt:
+class TestMosaic:
     def test_vrt(self, domain, organization):
         icesat2.init(domain, organization=organization)
         rqst = {"samples": {"asset": "arcticdem-mosaic"}, "coordinates": [[-178.0,51.7]]}

@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     catalog = Client.open("https://cmr.earthdata.nasa.gov/stac/LPCLOUD")
 
-    timeRange = '2021-01-01/2022-01-01'
+    timeRange = '2021-01-01/2021-02-01'
     geometry  = BuildSquare(-178, 50, 1)
     mybbox    = [-179,41,-177,51]
 
@@ -48,10 +48,12 @@ if __name__ == '__main__':
     #                          datetime=timeRange)
     # print(f"Results matched: {results.matched()}")
 
+
     print("Searching with Intersects...")
     results = catalog.search(collections=['HLSS30.v2.0', 'HLSL30.v2.0'],
                              datetime=timeRange,
-                             intersects=geometry)
+                             intersects=geometry,
+                             fields=['HORIZONTAL_CS_CODE', 'HORIZONTAL_CS_NAME'])
 
     # print(f"{results.url_with_parameters()}")
     print(f"Results matched: {results.matched()}")
@@ -66,6 +68,7 @@ if __name__ == '__main__':
 
     urlList = []
 
+
     for i in reversed(range(len(itemsDict["features"]))):
         del itemsDict["features"][i]["links"]
         del itemsDict["features"][i]["stac_version"]
@@ -73,10 +76,16 @@ if __name__ == '__main__':
         del itemsDict["features"][i]["collection"]
         del itemsDict["features"][i]["bbox"]
         del itemsDict["features"][i]["assets"]["browse"]
-        del itemsDict["features"][i]["assets"]["metadata"]
 
         propertiesDict = itemsDict["features"][i]["properties"]
         assetsDict     = itemsDict["features"][i]["assets"]
+        metaFileUrl    = assetsDict["metadata"]["href"]
+        # we may have to read metaFile, get some algo related attributes from it
+        # and add them to properties ie:
+        # propertiesDict['algo1'] = someAlgo1value
+
+        del itemsDict["features"][i]["assets"]["metadata"]
+
         for val in assetsDict:
             if "href" in assetsDict[val]:
                 # add raster url to properties
@@ -88,7 +97,7 @@ if __name__ == '__main__':
 
 
 
-    # Dumped trimmed dictionary as geojson file, for testing
+    # Dump trimmed dictionary as geojson file, for testing
     file = 'hls_trimmed.geojson'
     print(f"Writing reults to file {file}")
     with open(file, 'w') as fp:

@@ -1066,7 +1066,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     dict
         a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule.
 
-        region = {"poly": [{"lat": <lat1>, "lon": <lon1>, ... }], "clusters": [{"lat": <lat1>, "lon": <lon1>, ... }, {"lat": <lat1>, "lon": <lon1>, ... }, ...], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
+        region = {"poly": [{"lat": <lat1>, "lon": <lon1> }, ...], "clusters": [[{"lat": <lat1>, "lon": <lon1>}, ...], [{"lat": <lat1>, "lon": <lon1>}, ...]], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
 
     Examples
     --------
