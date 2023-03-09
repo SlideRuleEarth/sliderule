@@ -76,7 +76,18 @@ class LandsatHlsRaster: public VctRaster
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
         std::string filePath;
+        std::string indexFile;
+
+        bool calculateNDSI;
+        bool calculateNDVI;
+        bool calculateNDWI;
 };
 
 #endif  /* __landsat_hls_raster__ */

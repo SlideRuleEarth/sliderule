@@ -225,7 +225,6 @@ class GeoRaster: public LuaObject
         virtual int      getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         virtual uint32_t getFlags        (const raster_info_t& rinfo);
         inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
-        inline bool      hasAuxiliary    (void) { return parms->auxiliary_files; }
         const char*      getUUID         (char* uuid_str);
         virtual         ~GeoRaster       (void);
         inline const Dictionary<uint64_t>& fileDictGet(void) {return fileDict;}

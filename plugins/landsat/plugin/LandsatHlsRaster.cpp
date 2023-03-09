@@ -36,6 +36,10 @@
 #include "LandsatHlsRaster.h"
 #include "TimeLib.h"
 
+#include <strings.h>
+#include <uuid/uuid.h>
+#include <cstring>
+
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
  ******************************************************************************/
@@ -73,7 +77,30 @@ const char* LandsatHlsRaster::S2_tags[] = {"B01", "B02", "B03", "B04", "B05",
 LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     VctRaster(L, _parms)
 {
+    char uuid_str[UUID_STR_LEN];
+
+    calculateNDSI = calculateNDVI = calculateNDWI = false;
+
     filePath.append(_parms->asset->getPath()).append("/");
+    indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
+
+    /* Create in memory index file (geojson) */
+
+#warning !!! VERY DANGEROUS, strlen on unterminated geojson string will crash the app!!!
+    if(_parms->catalog)
+    {
+        int len      = strlen(_parms->catalog);
+        VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)len, FALSE);
+        CHECKPTR(fp);
+        VSIFCloseL(fp);
+    }
+
+    for(int i = 0; i < _parms->bands.length(); i++)
+    {
+        if(strcasecmp(_parms->bands[i], "NDSI") == 0) calculateNDSI = true;
+        if(strcasecmp(_parms->bands[i], "NDVI") == 0) calculateNDVI = true;
+        if(strcasecmp(_parms->bands[i], "NDWI") == 0) calculateNDWI = true;
+    }
 }
 
 
@@ -82,28 +109,8 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
-#if 1
-    file = "/data/hls/hls_trimmed.geojson";
-#else
-    /* Round to geocell location */
-    int _lon = static_cast<int>(floor(lon));
-    int _lat = static_cast<int>(floor(lat));
-
-    char lonBuf[32];
-    char latBuf[32];
-
-    sprintf(lonBuf, "%03d", abs(_lon));
-    sprintf(latBuf, "%02d", _lat);
-
-    std::string lonStr(lonBuf);
-    std::string latStr(latBuf);
-
-    file = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n" +
-           latStr +
-           ((_lon < 0) ? "w" : "e") +
-           lonStr +
-           ".geojson";
-#endif
+    // file = "/data/hls/hls_trimmed.geojson";
+    file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
 
@@ -113,16 +120,19 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
-    /* ArcticDEM geocells are 1x1 degree */
-    const double geocellSize = 1.0;
+    /*
+     * Acording to:
+     * https://lpdaac.usgs.gov/data/get-started-data/collection-overview/missions/harmonized-landsat-sentinel-2-hls-overview/#hls-tiling-system
+     * each UTM zone has a vertical width of 6° of longitude and horizontal width of 8° of latitude.
+     */
 
     lat = floor(lat);
     lon = floor(lon);
 
     bbox.lon_min = lon;
     bbox.lat_min = lat;
-    bbox.lon_max = lon + geocellSize;
-    bbox.lat_max = lat + geocellSize;
+    bbox.lon_max = lon + 6.0;
+    bbox.lat_max = lat + 8.0;
 }
 
 
@@ -173,6 +183,9 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
             const std::string fileToken = "HLS";
 
+            //TODO: only tags/bands provided by params
+            //      if algos, automagicly look for nessary bands
+            //      validate bands received agains actuall allowed for L8 and S2
             for(int i=0; i<tagsCnt; i++)
             {
                 const char* tag = tags[i];
@@ -195,10 +208,12 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                     rgroup.list.add(rgroup.list.length(), rinfo);
                 }
             }
+            print2term("Added group: %s with %ld rasters\n", rgroup.id.c_str(), rgroup.list.length());
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
             OGRFeature::DestroyFeature(feature);
             rasterGroupList->add(rasterGroupList->length(), rgroup);
         }
+        print2term("Found %ld raster groups for (%.2lf, %.2lf)\n", rasterGroupList->length(), p.getX(), p.getY());
         mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
@@ -232,7 +247,7 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
             Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
             uint32_t flags   = 0;
 
-            if(parms->auxiliary_files)
+            if(parms->flags_file)
             {
                 /* Get flags value for this group of rasters */
                 for(int j = 0; j < raster_iter.length; j++)
@@ -301,34 +316,33 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
                 }
             }
 
-            //TODO: must come from params if calculated and returned
             sample_t sample;
-            std::string str = rgroup.id + " {\"algo\": \"";
+            std::string groupName = rgroup.id + " {\"algo\": \"";
 
-            if(1)
+            if(calculateNDSI)
             {
                 double ndsi = (green - swir16) / (green + swir16);
                 bzero(&sample, sizeof(sample));
                 sample.value  = ndsi;
-                sample.fileId = fileDictAdd(str + "NDSI\"}");
+                sample.fileId = fileDictAdd(groupName + "NDSI\"}");
                 slist.add(sample);
             }
 
-            if(1)
+            if(calculateNDVI)
             {
                 double ndvi = (nir08 - red) / (nir08 + red);
                 bzero(&sample, sizeof(sample));
                 sample.value  = ndvi;
-                sample.fileId = fileDictAdd(str + "NDVI\"}");
+                sample.fileId = fileDictAdd(groupName + "NDVI\"}");
                 slist.add(sample);
             }
 
-            if(1)
+            if(calculateNDWI)
             {
                 double ndwi = (nir08 - swir16) / (nir08 + swir16);
                 bzero(&sample, sizeof(sample));
                 sample.value  = ndwi;
-                sample.fileId = fileDictAdd(str + "NDWI\"}");
+                sample.fileId = fileDictAdd(groupName + "NDWI\"}");
                 slist.add(sample);
             }
         }

@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
 #include "core.h"
 #include "GeoRaster.h"
 
@@ -1362,6 +1363,7 @@ int GeoRaster::luaSamples(lua_State *L)
                 lua_createtable(L, 0, 2);
                 LuaEngine::setAttrStr(L, "file", fileName);
 
+
                 if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
                 {
                     LuaEngine::setAttrNum(L, "mad", sample.stats.mad);
@@ -1373,7 +1375,7 @@ int GeoRaster::luaSamples(lua_State *L)
                     LuaEngine::setAttrNum(L, "count", sample.stats.count);
                 }
 
-                if(lua_obj->parms->auxiliary_files) /* Include auxuliary raster value (flags) */
+                if(lua_obj->parms->flags_file) /* Include flags */
                 {
                     LuaEngine::setAttrNum(L, "flags", sample.flags);
                 }
@@ -1382,6 +1384,8 @@ int GeoRaster::luaSamples(lua_State *L)
                 LuaEngine::setAttrNum(L, "time", sample.time);
                 LuaEngine::setAttrNum(L, "value", sample.value);
                 lua_rawseti(L, -2, i+1);
+
+                print2term("%8.3lf, %s\n", sample.value, fileName);
             }
             num_ret++;
             status = true;
