@@ -8,27 +8,89 @@
 #	* Terraform & Packer
 
 ROOT = $(shell pwd)/../..
+BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
+
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 SLIDERULE_SOURCE_DIR = $(ROOT)
+SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
+ICESAT2_BUILD_DIR = $(BUILD)/icesat2
+PGC_BUILD_DIR = $(BUILD)/pgc
+GEDI_BUILD_DIR = $(BUILD)/gedi
 PYTHON_SOURCE_DIR = $(ROOT)/../sliderule-python
 SERVER_STAGE_DIR = $(STAGE)/sliderule
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
 TF_STAGE_DIR = $(STAGE)/tf
+
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
 MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
 REPO ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
 DOCKEROPTS ?=
 ARCH ?= arm
-ENVVER = $(shell git --git-dir .git --work-tree . describe --abbrev --dirty --always --tags --long)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 DOMAIN_NAME = $(subst .,-,$(DOMAIN))
+CLANG_VER = "-12"
+CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
+ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
+TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
 
-all: help
+SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
+SLIDERULECFG += -DUSE_ARROW_PACKAGE=ON
+SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
+SLIDERULECFG += -DUSE_H5_PACKAGE=ON
+SLIDERULECFG += -DUSE_NETSVC_PACKAGE=ON
+SLIDERULECFG += -DUSE_GEO_PACKAGE=ON
+SLIDERULECFG += -DUSE_LEGACY_PACKAGE=OFF
+SLIDERULECFG += -DUSE_CCSDS_PACKAGE=OFF
+
+all: sliderule
+
+prep: ## create temporary directories needed for build
+	mkdir -p $(SLIDERULE_BUILD_DIR)
+	mkdir -p $(ICESAT2_BUILD_DIR)
+	mkdir -p $(PGC_BUILD_DIR)
+	mkdir -p $(GEDI_BUILD_DIR)
+
+config-debug: prep ## configure the server for running locally with debug symbols
+	cd $(SLIDERULE_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(GEDI_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+
+config-release: prep ## configure server to run release version locally (useful for using valgrind)
+	cd $(SLIDERULE_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(GEDI_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+
+config-asan: prep ## configure server to run with address sanitizer locally
+	cd $(SLIDERULE_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(GEDI_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+
+sliderule: ## build the server using the local configuration
+	make -j4 -C $(SLIDERULE_BUILD_DIR)
+	make -C $(SLIDERULE_BUILD_DIR) install
+	make -j4 -C $(ICESAT2_BUILD_DIR)
+	make -C $(ICESAT2_BUILD_DIR) install
+	make -j4 -C $(PGC_BUILD_DIR)
+	make -C $(PGC_BUILD_DIR) install
+	make -j4 -C $(GEDI_BUILD_DIR)
+	make -C $(GEDI_BUILD_DIR) install
+	cp $(ROOT)/docker/sliderule/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
+	cp $(ROOT)/docker/sliderule/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
+
+run: ## run the server locally
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json
+
+selftest: ## run the self test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
