@@ -19,7 +19,7 @@ class TestHLS:
                     {"lon": -177.0000000001, "lat": 49.0000000001},
                     {"lon": -177.0000000001, "lat": 51.0000000001} ]
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
-        rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 51.7]]}
+        rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
         rsps = sliderule.source("samples", rqst)
 
     def test_ndvi(self, domain, asset, organization):
