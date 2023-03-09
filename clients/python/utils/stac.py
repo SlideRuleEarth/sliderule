@@ -15,13 +15,6 @@ limit = 200
 collections = ["HLSS30.v2.0", "HLSL30.v2.0"]
 time_start = "2021-01-01T00:00:00Z"
 time_end = "2022-01-01T23:59:59Z"
-
-polygons = [[{"lon": -177.0000000001, "lat": 51.0000000001},
-             {"lon": -179.0000000001, "lat": 51.0000000001},
-             {"lon": -179.0000000001, "lat": 49.0000000001},
-             {"lon": -177.0000000001, "lat": 49.0000000001},
-             {"lon": -177.0000000001, "lat": 51.0000000001}]]
-coordinates = [[[coord["lon"], coord["lat"]] for coord in polygon] for polygon in polygons]
 coordinates = [[[coord["lon"], coord["lat"]] for coord in polygon] for polygon in [sliderule.toregion("examples/grandmesa.geojson")["poly"]]]
 
 # debug output
