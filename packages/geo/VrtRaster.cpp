@@ -68,6 +68,7 @@ VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
 {
     band = NULL;
     bzero(invGeot, sizeof(invGeot));
+    groupId = 0;
     if(vrt_file)
         vrtFile = vrt_file;
     else if(_parms->asset)
@@ -228,6 +229,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
                     rgroup.gmtDate = rinfo.gmtDate;
                     rgroup.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), rinfo);
+                    rgroup.id = std::to_string(groupId++);
                     rasterGroupList->add(rasterGroupList->length(), rgroup);
                     CPLFree(fname);
                     /*

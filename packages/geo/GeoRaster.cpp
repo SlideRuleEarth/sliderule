@@ -164,44 +164,41 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
     std::ignore = param;
     slist.clear();
 
-    samplingMutex.lock(); /* Serialize sampling on the same object */
-
     try
     {
-        /* Get samples */
-        if (sample(lon, lat) > 0)
+        /* Get samples, if none found, return */
+        if(sample(lon, lat) == 0) return 0;
+
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
-            for(int i = 0; i < group_iter.length; i++)
+            const rasters_group_t& rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            Raster* rasterOfIntrest = NULL;
+
+            for(int j = 0; j < raster_iter.length; j++)
             {
-                const rasters_group_t& rgroup = group_iter[i].value;
-                Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-                Raster* rasterOfIntrest = NULL;
+                const raster_info_t& rinfo = raster_iter[j].value;
+                const char* key            = rinfo.fileName.c_str();
+                Raster* raster             = NULL;
 
-                for(int j = 0; j < raster_iter.length; j++)
+                if(strcmp("dem", rinfo.tag.c_str()) == 0)
                 {
-                    const raster_info_t& rinfo = raster_iter[j].value;
-                    const char* key            = rinfo.fileName.c_str();
-                    Raster* raster             = NULL;
-
-                    if(strcmp("dem", rinfo.tag.c_str()) == 0)
+                    if(rasterDict.find(key, &raster))
                     {
-                        if(rasterDict.find(key, &raster))
+                        assert(raster);
+                        if(raster->enabled && raster->sampled)
                         {
-                            assert(raster);
-                            if(raster->enabled && raster->sampled)
-                            {
-                                /* Update dictionary of used raster files */
-                                raster->sample.fileId = fileDictAdd(raster->fileName);
-                                raster->sample.flags  = 0;
-                                rasterOfIntrest = raster;
-                            }
+                            /* Update dictionary of used raster files */
+                            raster->sample.fileId = fileDictAdd(raster->fileName);
+                            raster->sample.flags  = 0;
+                            rasterOfIntrest       = raster;
                         }
                     }
-                    if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
                 }
-                if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
+                if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
             }
+            if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
         }
     }
     catch (const RunTimeException &e)
@@ -209,7 +206,6 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
 
-    samplingMutex.unlock();
 
     return slist.length();
 }
@@ -963,6 +959,7 @@ void GeoRaster::Raster::clear(bool close)
     dset = NULL;
     band = NULL;
     cord.clear();
+    groupId.clear();
     enabled = false;
     sampled = false;
     fileName.clear();
@@ -1335,8 +1332,6 @@ int GeoRaster::luaSamples(lua_State *L)
         /* Get Self */
         lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
-        lua_obj->samplingMutex.lock(); /* Serialize sampling on the same object */
-
         /* Get Coordinates */
         double lon = getLuaFloat(L, 2);
         double lat = getLuaFloat(L, 3);
@@ -1396,8 +1391,6 @@ int GeoRaster::luaSamples(lua_State *L)
     {
         mlog(e.level(), "Failed to read samples: %s", e.what());
     }
-
-    if (lua_obj) lua_obj->samplingMutex.unlock();
 
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);

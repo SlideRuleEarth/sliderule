@@ -64,6 +64,7 @@ class PgcDemStripsRaster: public VctRaster
         std::string filePath;
         std::string demName;
         std::string path2geocells;
+        uint32_t    groupId;
 };
 
 #endif  /* __pgcdem_strips_raster__ */

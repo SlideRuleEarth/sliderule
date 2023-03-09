@@ -180,6 +180,7 @@ class GeoRaster: public LuaObject
             GDALDataset*    dset;
             GDALRasterBand* band;
             CoordTransform  cord;
+            std::string     groupId;
             std::string     fileName;
             GDALDataType    dataType;
             uint32_t        rows;
@@ -268,7 +269,6 @@ class GeoRaster: public LuaObject
         GeoIndex                    geoIndex;
         GeoParms*                   parms;
         Dictionary<Raster*>         rasterDict;
-        Mutex                       samplingMutex;
 
     private:
 

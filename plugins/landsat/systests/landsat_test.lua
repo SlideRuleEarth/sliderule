@@ -4,8 +4,8 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
 
@@ -33,8 +33,9 @@ for i = 1, 1, 1 do
         for j, v in ipairs(tbl) do
             el = v["value"]
             fname = v["file"]
+            print(string.format("%15f, fname: %s", el, fname))
         end
-        print(string.format("%15f, fname", el, fname))
+        -- print(string.format("%15f, fname: %s", el, fname))
     end
 
     lon = lon + 0.1

@@ -52,6 +52,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path supplied to geocells: %s", path2geocells.c_str());
     filePath = path2geocells.substr(0, pos);
+    groupId = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -225,6 +226,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 gps = gps/DATES_CNT;
                 rgroup.gmtDate = rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup.gpsTime = rinfo.gpsTime = static_cast<int64_t>(gps);
+                rgroup.id = std::to_string(groupId++);
                 rgroup.list.add(rgroup.list.length(), rinfo);
 
                 if(flagsRinfo.fileName.length() > 0)

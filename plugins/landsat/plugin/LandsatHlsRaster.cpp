@@ -44,6 +44,21 @@
  * STATIC DATA
  ******************************************************************************/
 
+/* Landsat 8 */
+const char* LandsatHlsRaster::L8_tags[] = {"B01", "B02", "B03", "B04", "B05",
+                                           "B06", "B07", "B09", "B10", "B11",
+                                           "SAA", "SZA", "VAA", "VZA", "Fmask"};
+
+/* Sentinel 2 */
+const char* LandsatHlsRaster::S2_tags[] = {"B01", "B02", "B03", "B04", "B05",
+                                           "B06", "B07", "B08", "B09", "B10",
+                                           "B11", "B12", "B8A", "SAA", "SZA",
+                                           "VAA", "VZA", "Fmask"};
+
+#define L8_tagsCnt (sizeof (L8_tags) / sizeof (const char *))
+#define S2_tagsCnt (sizeof (S2_tags) / sizeof (const char *))
+
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -116,20 +131,9 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
-    const std::string fileToken = "HLS";
-#if 1
-    const char* tags[] = {"B01", "B02", "B03", "B04", "B05",
-                          "B06", "B07", "B08", "B09", "B10",
-                          "B11", "B12", "B8A", "SAA", "SZA",
-                          "VAA", "VZA", "Fmask"};
-#else
-    // const char* tags[] = {"B01", "B02", "B03", "B04", "B05"};
-    // const char* tags[] = {"B06", "B07", "B08", "B09", "B10"};
-    // const char* tags[] = {"B11", "B12", "B8A", "SAA", "SZA"};
-    const char* tags[] = {"VAA", "VZA", "Fmask"};
-#endif
-
-#define tagsCnt (sizeof (tags) / sizeof (const char *))
+    /* L8 tags are a subset of S2 */
+    const char** tags = S2_tags;
+    const int tagsCnt = S2_tagsCnt;
 
     try
     {
@@ -143,16 +147,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
             CHECKPTR(geo);
 
             if(!geo->Contains(&p)) continue;
-#if 0
-            int fieldCnt = feature->GetFieldCount();
-            mlog(DEBUG, "Feature fields: %d", fieldCnt);
 
-            for(int i=0; i<fieldCnt; i++)
-            {
-                const char* fieldStr = feature->GetFieldAsString(i);
-                mlog(DEBUG, "%s", fieldStr);
-            }
-#endif
             rasters_group_t rgroup;
             rgroup.id = feature->GetFieldAsString("id");
 
@@ -175,6 +170,8 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                 }
                 else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
             }
+
+            const std::string fileToken = "HLS";
 
             for(int i=0; i<tagsCnt; i++)
             {
@@ -221,43 +218,118 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
     std::ignore = param;
     slist.clear();
 
-    samplingMutex.lock(); /* Serialize sampling on the same object */
-
     try
     {
-        /* Get samples */
-        if (sample(lon, lat) > 0)
-        {
-            Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
-            for(int i = 0; i < group_iter.length; i++)
-            {
-                const rasters_group_t& rgroup = group_iter[i].value;
-                Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-                Raster* rasterOfIntrest = NULL;
+        /* Get samples, if none found, return */
+        if(sample(lon, lat) == 0) return 0;
 
+        Raster* raster = NULL;
+
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
+        {
+            const rasters_group_t& rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            uint32_t flags   = 0;
+
+            if(parms->auxiliary_files)
+            {
+                /* Get flags value for this group of rasters */
                 for(int j = 0; j < raster_iter.length; j++)
                 {
                     const raster_info_t& rinfo = raster_iter[j].value;
-                    const char* key            = rinfo.fileName.c_str();
-                    Raster* raster             = NULL;
-
-                    if(strcmp("dem", rinfo.tag.c_str()) == 0)
+                    if(strcmp("Fmask", rinfo.tag.c_str()) == 0)
                     {
+                        const char* key = rinfo.fileName.c_str();
                         if(rasterDict.find(key, &raster))
                         {
                             assert(raster);
-                            if(raster->enabled && raster->sampled)
-                            {
-                                /* Update dictionary of used raster files */
-                                raster->sample.fileId = fileDictAdd(raster->fileName);
-                                raster->sample.flags  = 0;
-                                rasterOfIntrest = raster;
-                            }
+                            flags = raster->sample.value;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            /* Which group is it? Landsat8 or Sentinel2 */
+            bool isL8 = false;
+            bool isS2 = false;
+            std::size_t pos;
+
+            pos = rgroup.id.find("HLS.L30");
+            if(pos != std::string::npos) isL8 = true;
+
+            pos = rgroup.id.find("HLS.S30");
+            if(pos != std::string::npos) isS2 = true;
+
+            if(!isL8 && !isS2)
+                throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
+
+            double green, red, nir08, swir16;
+            green = red = nir08 = swir16 = 0;
+
+            /* Collect samples for all rasters */
+            for(int j = 0; j < raster_iter.length; j++)
+            {
+                const raster_info_t& rinfo = raster_iter[j].value;
+                const char* key = rinfo.fileName.c_str();
+                if(rasterDict.find(key, &raster))
+                {
+                    assert(raster);
+                    if(raster->enabled && raster->sampled)
+                    {
+                        /* Update dictionary of used raster files */
+                        raster->sample.fileId = fileDictAdd(raster->fileName);
+                        raster->sample.flags  = flags;
+                        slist.add(raster->sample);
+
+                        /* green and red bands are the same for L8 and S2 */
+                        if(rinfo.tag == "B03") green = raster->sample.value;
+                        if(rinfo.tag == "B04") red = raster->sample.value;
+
+                        if(isL8)
+                        {
+                            if(rinfo.tag == "B05") nir08  = raster->sample.value;
+                            if(rinfo.tag == "B06") swir16 = raster->sample.value;
+                        }
+                        else /* Must be Sentinel2 */
+                        {
+                            if(rinfo.tag == "B8A") nir08  = raster->sample.value;
+                            if(rinfo.tag == "B11") swir16 = raster->sample.value;
                         }
                     }
-                    if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
                 }
-                if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
+            }
+
+            //TODO: must come from params if calculated and returned
+            sample_t sample;
+            std::string str = rgroup.id + " {\"algo\": \"";
+
+            if(1)
+            {
+                double ndsi = (green - swir16) / (green + swir16);
+                bzero(&sample, sizeof(sample));
+                sample.value  = ndsi;
+                sample.fileId = fileDictAdd(str + "NDSI\"}");
+                slist.add(sample);
+            }
+
+            if(1)
+            {
+                double ndvi = (nir08 - red) / (nir08 + red);
+                bzero(&sample, sizeof(sample));
+                sample.value  = ndvi;
+                sample.fileId = fileDictAdd(str + "NDVI\"}");
+                slist.add(sample);
+            }
+
+            if(1)
+            {
+                double ndwi = (nir08 - swir16) / (nir08 + swir16);
+                bzero(&sample, sizeof(sample));
+                sample.value  = ndwi;
+                sample.fileId = fileDictAdd(str + "NDWI\"}");
+                slist.add(sample);
             }
         }
     }
@@ -265,8 +337,6 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
-
-    samplingMutex.unlock();
 
     return slist.length();
 }

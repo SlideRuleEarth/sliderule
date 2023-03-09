@@ -83,6 +83,7 @@ class VrtRaster: public GeoRaster
          *--------------------------------------------------------------------*/
         GDALRasterBand *band;
         double          invGeot[6];
+        uint32_t        groupId;
 };
 
 #endif  /* __vrt_raster__ */
