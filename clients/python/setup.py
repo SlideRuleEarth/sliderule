@@ -10,7 +10,7 @@ with open('requirements.txt') as fh:
     install_requires = fh.read().splitlines()
 
 # get version
-with open('version.txt') as fh:
+with open('../../version.txt') as fh:
     version = fh.read().strip()
     if version[0] == 'v':
         version = version[1:]
