@@ -236,14 +236,10 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
 # CMR UTILITIES
 ###############################################################################
 
+#
+# Perform a CMR Search Request
+#
 def __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter):
-
-    # attempt to fill in version
-    if version == None:
-        if short_name in DATASETS:
-            version = DATASETS[short_name]["version"]
-        else:
-            raise sliderule.FatalError("Unable to determine version for CMR query")
 
     # initialize return value
     resources = {} # [<url>] = <polygon>
@@ -304,10 +300,9 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
     else:
         return url_list
 
-###############################################################################
-# STAC UTILITIES
-###############################################################################
-
+#
+# Build a GeoJSON Response from STAC Query Response
+#
 def __build_geojson(rsps):
     geojson = rsps.json()
     del geojson["links"]
@@ -331,6 +326,11 @@ def __build_geojson(rsps):
         del geojson["features"][i]["assets"]
     return geojson
 
+#
+# Perform a STAC Query
+#
+#   See https://cmr.earthdata.nasa.gov/stac/docs/index.html for details on API
+#
 def __stac_search(provider, short_name, collections, polygons, time_start, time_end):
     global max_requested_resources
 
@@ -380,9 +380,46 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
         _geojson = __build_geojson(data)
         geojson["features"] += _geojson["features"]
     geojson["context"]["returned"] = num_matched
+    geojson["context"]["limit"] = max_requested_resources
 
     # return geojson dictionary
     return geojson
+
+#
+# Get Provider from DATASETS
+#
+def __get_provider(short_name):
+
+    # check parameters
+    if short_name == None:
+        raise sliderule.FatalError("Must supply short name to CMR query")
+    elif short_name not in DATASETS:
+        raise sliderule.FatalError("Must supply a supported dataset: " + short_name)
+
+    # attempt to fill in provider
+    provider = DATASETS[short_name]["provider"]
+    if provider == None:
+        raise sliderule.FatalError("Unable to determine provider for CMR query")
+
+    # return provider string (cannot be None)
+    return provider
+
+#
+# Format Polygons for Request
+#
+def __format_polygons(polygon):
+
+    polygons = [None]
+
+    # create list of polygons
+    if polygon and len(polygon) > 0:
+        if type(polygon[0]) == dict:
+            polygons = [copy.deepcopy(polygon)]
+        elif type(polygon[0] == list):
+            polygons = copy.deepcopy(polygon)
+
+    # return list of polygons
+    return polygons
 
 ###############################################################################
 # APIs
@@ -411,26 +448,22 @@ def set_max_resources (max_resources):
 #
 #  Common Metadata Repository
 #
-def cmr(provider=None, short_name=None, version=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None, collections=None):
+def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):
     '''
     Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov>`_ for a list of data within temporal and spatial parameters
 
     Parameters
     ----------
-        short_name: str
-                    dataset short name as defined in the `NASA CMR Directory <https://cmr.earthdata.nasa.gov/search/site/collections/directory/eosdis>`_
-        provider: str
-                    dataset provider as specified by CMR, leave as None to use default provider associated with short_name
-        version: str
-                    dataset version string, leave as None to get latest support version
-        polygon:    list
-                    either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
-        time_start: str
-                    starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
-        time_end:   str
-                    ending time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
-        collections:        list
-                            list of dataset collections as specified by CMR, leave as None to use defaults
+        short_name:         str
+                            dataset short name as defined in the `NASA CMR Directory <https://cmr.earthdata.nasa.gov/search/site/collections/directory/eosdis>`_
+        version:            str
+                            dataset version string, leave as None to get latest support version
+        polygon:            list
+                            either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+        time_start:         str
+                            starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
+        time_end:           str
+                            ending time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         return_metadata:    bool
                             flag indicating whether metadata associated with the query is returned back to the user
         name_filter:        str
@@ -443,37 +476,109 @@ def cmr(provider=None, short_name=None, version=None, polygon=None, time_start='
 
     Examples
     --------
-        >>> from sliderule import icesat2
+        >>> from sliderule import earthdata
         >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
         ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
         ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
         ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
         ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
-        >>> granules = icesat2.cmr(polygon=region)
+        >>> granules = earthdata.cmr(short_name='ATL06', polygon=region)
         >>> granules
         ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
     '''
-    # check parameters
-    if short_name == None:
-        raise sliderule.FatalError("Must supply short name to CMR query")
 
-    # attempt to fil in provider
-    if provider == None:
-        if short_name in DATASETS:
-            provider = DATASETS[short_name]["provider"]
-        else:
-            raise sliderule.FatalError("Unable to determine provider for CMR query")
+    # get provider
+    provider = __get_provider(short_name)
+
+    # attempt to fill in version
+    if version == None:
+        version = DATASETS[short_name]["version"]
 
     # create list of polygons
-    polygons = [None]
-    if polygon and len(polygon) > 0:
-        if type(polygon[0]) == dict:
-            polygons = [copy.deepcopy(polygon)]
-        elif type(polygon[0] == list):
-            polygons = copy.deepcopy(polygon)
+    polygons = __format_polygons(polygon)
 
     # perform query
-    if short_name in DATASETS and DATASETS[short_name]["stac"]:
-        return __stac_search(provider, short_name, collections, polygons, time_start, time_end)
+    return __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter)
+
+#
+#  SpatioTemporal Asset Catalog
+#
+def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), as_str=False):
+    '''
+    Perform a STAC query of the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov>`_ catalog for a list of data within temporal and spatial parameters
+
+    Parameters
+    ----------
+        short_name:     str
+                        dataset short name as defined in the `NASA CMR Directory <https://cmr.earthdata.nasa.gov/search/site/collections/directory/eosdis>`_
+        collections:    list
+                        list of dataset collections as specified by CMR, leave as None to use defaults
+        polygon:        list
+                        either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+        time_start:     str
+                        starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
+        time_end:       str
+                        ending time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
+        as_str:         bool
+                        whether to return geojson as a dictionary or string
+
+    Returns
+    -------
+    str
+        geojson of the feature set returned by the query
+        {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "id": "<id>",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [..]
+                    },
+                    "properties": {
+                        "datetime": "YYYY-MM-DDTHH:MM:SS.SSSZ",
+                        "start_datetime": "YYYY-MM-DDTHH:MM:SS.SSSZ",
+                        "end_datetime": "YYYY-MM-DDTHH:MM:SS.SSSZ",
+                        "<tag>": "<url>",
+                        ..
+                    }
+                },
+                ..
+            ],
+            "stac_version": "<version>"
+            "context": {
+                "returned": <returned>,
+                "limit": <limit>,
+                "matched": <matched>
+            }
+        }
+
+    Examples
+    --------
+        >>> from sliderule import earthdata
+        >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+        ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
+        ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
+        ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
+        ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        >>> geojson = earthdata.stac(short_name='HLS', polygon=region)
+    '''
+    # get provider
+    provider = __get_provider(short_name)
+
+    # check collections
+    if collections == None:
+        collections = DATASETS[short_name]["collections"]
+
+    # create list of polygons
+    polygons = __format_polygons(polygon)
+
+    # perform query
+    geojson = __stac_search(provider, short_name, collections, polygons, time_start, time_end)
+
+    # return
+    if as_str:
+        return json.dumps(geojson)
     else:
-        return __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter)
+        return geojson

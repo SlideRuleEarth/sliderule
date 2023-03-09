@@ -18,7 +18,6 @@ if __name__ == '__main__':
         "tolerance": 0.0,
         "dataset": "ATL03",
         "version": "005",
-        "provider": "NSIDC_ECS"
     }
 
     # Command line parameters
@@ -28,7 +27,7 @@ if __name__ == '__main__':
     region = sliderule.toregion(cfg["region"], cfg["tolerance"])
 
     # Query CMR for list of resources
-    resources = earthdata.cmr(provider=cfg["provider"], short_name=cfg["dataset"], version=cfg["version"], polygon=region["poly"])
+    resources = earthdata.cmr(short_name=cfg["dataset"], version=cfg["version"], polygon=region["poly"])
     print("Region: {} points, {} files".format(len(region["poly"]), len(resources)))
     for resource in resources:
         print(resource)

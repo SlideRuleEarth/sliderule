@@ -29,7 +29,7 @@ if __name__ == '__main__':
     polygon = sliderule.toregion(cfg["region"])["poly"]
 
     # Query CMR for list of resources
-    geojson = earthdata.cmr(short_name=cfg["dataset"], polygon=polygon, time_start=cfg["time_start"], time_end=cfg["time_end"])
+    geojson = earthdata.stac(short_name=cfg["dataset"], polygon=polygon, time_start=cfg["time_start"], time_end=cfg["time_end"])
 
     # Display Results
     print("Returned {} features".format(geojson["context"]["returned"]))
