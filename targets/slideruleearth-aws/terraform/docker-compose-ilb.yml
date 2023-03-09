@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  ilb:
+    image: ${ILB_IMAGE}
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /haproxy:/haproxy
+      - /etc/ssl/private:/etc/ssl/private
+    environment:
+      - CLUSTER=$CLUSTER
+      - DOMAIN=$DOMAIN
+      - OAUTH_HMAC_SECRET=$OAUTH_HMAC_SECRET
+    healthcheck:
+      test: curl http://localhost:8050/discovery/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
+  autoheal:
+    image: willfarrell/autoheal:latest
+    tty: true
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

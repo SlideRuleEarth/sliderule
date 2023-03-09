@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+  node:
+    image: ${SLIDERULE_IMAGE}
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs
+      - /data:/data
+    environment:
+      - IPV4=${IPV4}
+      - ORCHESTRATOR=http://10.0.1.5:8050
+      - CLUSTER=$CLUSTER
+      - PROVISIONING_SYSTEM=$PROVISIONING_SYSTEM
+      - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
+    healthcheck:
+      test: curl -X GET -d "{}" http://localhost:10081/probe/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
+  autoheal:
+    image: willfarrell/autoheal:latest
+    tty: true
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

@@ -1,0 +1,11 @@
+main:
+  - title: "Documentation"
+    url: /rtd/
+  - title: "Demo"
+    url: https://demo.slideruleearth.io
+  - title: "Accounts"
+    url: https://ps.slideruleearth.io
+  - title: "Contact Us"
+    url: /contact/
+  - title: "About"
+    url: /about/

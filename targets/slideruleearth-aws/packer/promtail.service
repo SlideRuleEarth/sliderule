@@ -1,0 +1,15 @@
+[Unit]
+Description=Promtail service
+After=network.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail.yml
+Restart=on-failure
+RestartSec=15s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,52 @@
+FROM ubuntu:22.04
+MAINTAINER JP Swinski (jp.swinski@nasa.gov)
+
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive \
+  apt-get install -y --no-install-recommends \
+  ruby-full \
+  build-essential \
+  zlib1g-dev \
+  libgdal-dev \
+  libgeos-dev \
+  python3 \
+  python3-pip \
+  python3-dev \
+  git \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install RTD Dependencies
+RUN pip3 install -U Sphinx docutils==0.16 sphinx_markdown_tables sphinx_panels sphinx_rtd_theme
+RUN pip3 install recommonmark
+
+# Install Jekyll
+RUN gem install webrick
+RUN gem install jekyll bundler
+
+# Install SlideRule Client Build Dependencies
+RUN pip3 install Cython shapely==1.8.4 numpy fiona
+
+# Build Jekyll Website
+COPY jekyll /jekyll
+RUN chmod -R 777 /jekyll
+RUN cd /jekyll && bundle install
+RUN cd /jekyll && bundle exec jekyll build
+RUN chmod -R 744 /jekyll
+
+# Install SlideRule Client
+COPY sliderule-python /sliderule-python
+RUN cd /sliderule-python && python3 setup.py install
+
+# Build RTD Website
+COPY rtd /rtd
+RUN chmod -R 777 /rtd
+RUN make -C /rtd html
+RUN chmod -R 744 /rtd
+
+# Combine Outputs to Well Known Jekyll Directory
+RUN mkdir -p /srv/jekyll/_site \
+ && cp -R /jekyll/_site/* /srv/jekyll/_site \
+ && cp -R /rtd/build/html /srv/jekyll/_site/rtd
+
+WORKDIR /jekyll
+ENTRYPOINT bundle exec jekyll serve -d /srv/jekyll/_site --host=0.0.0.0 --skip-initial-build

@@ -1,0 +1,11 @@
+{
+    "event_format": "FMT_CLOUD",
+    "event_level": "INFO",
+    "app_port": 9081,
+    "probe_port": 10081,
+    "authenticate_to_nsidc": true,
+    "authenticate_to_ornldaac": true,
+    "authenticate_to_lpdaac": true,
+    "register_as_service": true,
+    "authenticate_to_ps": false
+}

@@ -1,0 +1,23 @@
+=========
+h5
+=========
+
+The SlideRule Python API ``h5.py`` is used to access the H5Coro services provided by SlideRule. From Python, the module can be imported via:
+
+.. code-block:: python
+
+    from sliderule import h5
+
+
+""""""""""""""""
+
+h5
+---
+.. autofunction:: sliderule.h5.h5
+
+""""""""""""""""
+
+h5p
+---
+.. autofunction:: sliderule.h5.h5p
+

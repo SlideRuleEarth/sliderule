@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  node:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs
+      - /data:/data
+    environment:
+      - IPV4=127.0.0.1
+      - ORCHESTRATOR=http://127.0.0.1:8050
+      - CLUSTER=sliderule
+      - PROVISIONING_SYSTEM=https://ps.localhost
+      - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
+    healthcheck:
+      test: curl -X GET -d "{}" http://localhost:10081/probe/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
+  monitor:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+  ilb:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ilb:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - ./:/haproxy
+      - /etc/ssl/private:/etc/ssl/private
+    environment:
+      - CLUSTER=sliderule
+    healthcheck:
+      test: curl http://localhost:8050/discovery/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s

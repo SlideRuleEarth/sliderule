@@ -1,0 +1,15 @@
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/node_exporter
+Restart=on-failure
+RestartSec=15s
+
+[Install]
+WantedBy=default.target

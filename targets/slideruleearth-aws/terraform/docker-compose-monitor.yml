@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  monitor:
+    image: ${MONITOR_IMAGE}
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+  autoheal:
+    image: willfarrell/autoheal:latest
+    tty: true
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
