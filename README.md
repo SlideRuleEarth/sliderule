@@ -1,12 +1,13 @@
 # sliderule
 [![DOI](https://zenodo.org/badge/261318746.svg)](https://zenodo.org/badge/latestdoi/261318746)
+[![Read the Docs](https://readthedocs.org/projects/sliderule-python/badge/?version=latest)](https://slideruleearth.io/rtd/)
 [![Tests](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/test.yml)
 
 A cloud-native framework for on-demand science data processing.
 
 This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website.
 
-If you are a science data user interested in processing Earth science data with SlideRule, you can get started right away by checking out the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) at https://slideruleearth.io/rtd/getting_started/Install.html.
+If you are a science data user interested in using SlideRule to process Earth science data, you can get started right away by checking out the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) at https://slideruleearth.io/rtd/getting_started/Install.html.
 
 
 ## I. Prerequisites

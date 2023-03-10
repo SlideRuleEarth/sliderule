@@ -11,8 +11,6 @@ ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
-STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
-STATIC_WEB_STAGE_DIR = $(STAGE)/website
 SLIDERULE_SOURCE_DIR = $(ROOT)
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 ICESAT2_BUILD_DIR = $(BUILD)/icesat2
@@ -23,6 +21,10 @@ SERVER_STAGE_DIR = $(STAGE)/sliderule
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
 TF_STAGE_DIR = $(STAGE)/tf
+STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
+STATIC_WEB_STAGE_DIR = $(STAGE)/website
+DEMO_STAGE_DIR = $(STAGE)/demo
+DEMO_NGINX_STAGE_DIR = $(STAGE)/nginx
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -93,12 +95,12 @@ selftest: ## run the self test on the server code
 	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
 
 static-website: ## make the website locally
-	cd jekyll; bundle install
-	cd docs/jekyll; bundle exec jekyll build
-	make -C rtd html
+	cd $(STATIC_WEB_SOURCE_DIR)/jekyll && bundle install
+	cd $(STATIC_WEB_SOURCE_DIR)/jekyll && bundle exec jekyll build
+	make -C $(STATIC_WEB_SOURCE_DIR)/rtd html
 	mkdir -p $(WEBSITE_STAGE_DIR)
-	cp -R jekyll/_site/* $(WEBSITE_STAGE_DIR)
-	cp -R rtd/build/html $(WEBSITE_STAGE_DIR)/rtd
+	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll/_site/* $(WEBSITE_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd/build/html $(WEBSITE_STAGE_DIR)/rtd
 
 static-website-run-local: ## run the website locally
 	cd jekyll; bundle exec jekyll serve -d $(WEBSITE_STAGE_DIR) --skip-initial-build
