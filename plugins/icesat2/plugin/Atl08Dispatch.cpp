@@ -404,8 +404,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
     }
 
     /* Sort Ground and Vegetation Photon Index Arrays */
-    quicksort(gnd_index, ph, 0, gnd_cnt - 1);
-    quicksort(veg_index, ph, 0, veg_cnt - 1);
+    quicksort(gnd_index, ph, &Atl03Reader::photon_t::height, 0, gnd_cnt - 1);
+    quicksort(veg_index, ph, &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
 
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
@@ -501,12 +501,12 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         {
             long i0 = (gnd_cnt - 1) / 2;
             long i1 = ((gnd_cnt - 1) / 2) + 1;
-            h_te_median = (ph[gnd_index[i0]].relief + ph[gnd_index[i1]].relief) / 2.0;
+            h_te_median = (ph[gnd_index[i0]].height + ph[gnd_index[i1]].height) / 2.0;
         }
         else // odd
         {
             long i0 = (gnd_cnt - 1) / 2;
-            h_te_median = ph[gnd_index[i0]].relief;
+            h_te_median = ph[gnd_index[i0]].height;
         }
     }
     result[t].h_te_median = h_te_median;
@@ -581,29 +581,29 @@ void Atl08Dispatch::postResult (int t, vegetation_t* result)
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end)
+void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
 {
     if(start < end)
     {
-        int partition = quicksortpartition(index_array, ph_array, start, end);
-        quicksort(index_array, ph_array, start, partition);
-        quicksort(index_array, ph_array, partition + 1, end);
+        int partition = quicksortpartition(index_array, ph_array, field, start, end);
+        quicksort(index_array, ph_array, field, start, partition);
+        quicksort(index_array, ph_array, field, partition + 1, end);
     }
 }
 
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end)
+int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
 {
-    double pivot = ph_array[index_array[(start + end) / 2]].relief;
+    double pivot = ph_array[index_array[(start + end) / 2]].*field;
 
     start--;
     end++;
     while(true)
     {
-        while (ph_array[index_array[++start]].relief < pivot);
-        while (ph_array[index_array[--end]].relief > pivot);
+        while (ph_array[index_array[++start]].*field < pivot);
+        while (ph_array[index_array[--end]].*field > pivot);
         if (start >= end) return end;
 
         long tmp = index_array[start];

@@ -160,8 +160,8 @@ class Atl08Dispatch: public DispatchObject
         void            geolocateResult                 (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
         void            phorealAlgorithm                (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
         void            postResult                      (int t, vegetation_t* result);
-        static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end);
-        static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, int start, int end);
+        static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
+        static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
 
         /*--------------------------------------------------------------------
          * Inline Methods
