@@ -442,7 +442,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         double delta = (ph[veg_index[i]].relief - result[t].h_mean_canopy);
         std_h += delta * delta;
     }
-    result[t].canopy_openness = sqrt(std_h);
+    result[t].canopy_openness = sqrt(std_h / (double)veg_cnt);
 
     /* Calculate Number of Bins */
     int num_bins = (int)ceil((max_h - min_h) / parms->phoreal.binsize);
