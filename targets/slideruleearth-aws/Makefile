@@ -57,28 +57,29 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
 	mkdir -p $(ICESAT2_BUILD_DIR)
 	mkdir -p $(PGC_BUILD_DIR)
+	mkdir -p $(LANDSAT_BUILD_DIR)
 	mkdir -p $(GEDI_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols
-	cd $(SLIDERULE_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
+	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 
 config-release: prep ## configure server to run release version locally (useful for using valgrind)
-	cd $(SLIDERULE_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
+	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 
 config-asan: prep ## configure server to run with address sanitizer locally
-	cd $(SLIDERULE_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(SLIDERULE_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
+	cd $(GEDI_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
@@ -109,7 +110,7 @@ static-website: ## make the website locally
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd/build/html $(WEBSITE_STAGE_DIR)/rtd
 
 static-website-run-local: ## run the website locally
-	cd jekyll; bundle exec jekyll serve -d $(WEBSITE_STAGE_DIR) --skip-initial-build
+	cd jekyll && bundle exec jekyll serve -d $(WEBSITE_STAGE_DIR) --skip-initial-build
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -197,7 +198,7 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(SLIDERULE_SOURCE_DIR)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR); docker build $(DOCKEROPTS) -t $(REPO)/ilb:latest .
+	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(REPO)/ilb:latest .
 	docker tag $(REPO)/ilb:latest $(REPO)/ilb:$(VERSION)
 	docker tag $(REPO)/ilb:latest $(REPO)/ilb:$(MAJOR_VERSION)
 
@@ -219,8 +220,8 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 cluster-release: ## release a version of the cluster; needs VERSION
 	# release repositories
 	gh auth login
-	cd $(SLIDERULE_SOURCE_DIR); $(ROOT)/RELEASE.sh $(VERSION); git push --tags; git push
-	cd $(SLIDERULE_SOURCE_DIR); gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
+	cd $(SLIDERULE_SOURCE_DIR) && $(ROOT)/RELEASE.sh $(VERSION) && git push --tags && git push
+	cd $(SLIDERULE_SOURCE_DIR) && gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
 	# docker images
 	make DOCKEROPTS=--no-cache sliderule-docker
 	make DOCKEROPTS=--no-cache monitor-docker
@@ -267,7 +268,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/jekyll/_site
 	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/jekyll/.jekyll-cache
 	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/rtd/build
-	- $(PYTHON_SOURCE_DIR)/clean.sh
+	- $(ROOT)/clients/python/clean.sh
 
 help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
