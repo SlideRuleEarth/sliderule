@@ -28,10 +28,10 @@ for i = 1, 2 do
 
     local sampleCnt = 0
 
-    for i, v in ipairs(tbl) do
+    for j, v in ipairs(tbl) do
         local el = v["value"]
         local fname = v["file"]
-        print(string.format("(%02d) %8.2f %s", i, el, fname))
+        print(string.format("(%02d) %8.2f %s", j, el, fname))
         runner.check(el ~= -1000000)  --INVALID_SAMPLE_VALUE from VrtRaster.h
         runner.check(string.len(fname) > 0)
         sampleCnt = sampleCnt + 1
@@ -377,12 +377,15 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
 runner.check(dem ~= nil)
 tbl, status = dem:sample(lon, lat)
 sampleCnt = 0
-local el, fname
+local el, fname, testElevation
 for i, v in ipairs(tbl) do
     el = v["value"]
     fname = v["file"]
     print(string.format("(%02d)  value: %6.2f   %s", i, el, fname))
     sampleCnt = sampleCnt + 1
+    if sampleCnt == 2 then
+       testElevation = el
+    end
 end
 runner.check(sampleCnt == 14)
 
@@ -394,7 +397,7 @@ expected_mosaic_value = 632.90625 -- read using gdallocationinfo
 expected_max = expected_mosaic_value + 0.000000001
 expected_min = expected_mosaic_value - 0.000000001
 
-runner.check(el <= expected_max and el >= expected_min)
+runner.check(testElevation <= expected_max and testElevation >= expected_min)
 
 
 -- Report Results --

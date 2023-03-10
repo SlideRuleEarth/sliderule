@@ -50,8 +50,6 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int REMA_DEM_EPSG = 3031;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -66,7 +64,7 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         RemaDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, REMA_DEM_EPSG, "rema", "/s") {}
+          PgcDemStripsRaster(L, _parms, "rema", "/s") {}
 };
 
 #endif  /* __remadem_strips_raster__ */

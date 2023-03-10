@@ -68,6 +68,7 @@ VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
 {
     band = NULL;
     bzero(invGeot, sizeof(invGeot));
+    groupId = 0;
     if(vrt_file)
         vrtFile = vrt_file;
     else if(_parms->asset)
@@ -105,7 +106,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         band = geoIndex.dset->GetRasterBand(1);
         CHECKPTR(band);
 
-        /* Get inverted geo transfer for vrt */
+        /* Get inverted geo transform for vrt */
         double geot[6] = {0};
         CPLErr err = GDALGetGeoTransform(geoIndex.dset, geot);
         CHECK_GDALERR(err);
@@ -139,9 +140,10 @@ void VrtRaster::openGeoIndex(double lon, double lat)
                                    parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
         }
 
-        /* Create coordinates transformation */
-        if (cord.transf == NULL )
+        /* Create coordinates transform for geoIndex */
+        if (geoIndex.cord.transf == NULL )
         {
+            CoordTransform& cord = geoIndex.cord;
             OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
             CHECK_GDALERR(ogrerr);
             const char *projref = geoIndex.dset->GetProjectionRef();
@@ -166,7 +168,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.dset)
         {
             geoIndex.clear();
-            cord.clear();
+            geoIndex.cord.clear();
             bzero(invGeot, sizeof(invGeot));
             band = NULL;
         }
@@ -187,20 +189,6 @@ void VrtRaster::getIndexFile(std::string &file, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * transformCRS
- *----------------------------------------------------------------------------*/
-void VrtRaster::transformCRS(OGRPoint &p)
-{
-    if (cord.transf &&
-        (p.transform(cord.transf) == OGRERR_NONE))
-    {
-        return;
-    }
-
-    throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
-}
-
-/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool VrtRaster::findRasters(OGRPoint& p)
@@ -208,7 +196,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
     const int32_t col = static_cast<int32_t>(floor(invGeot[0] + invGeot[1] * p.getX() + invGeot[2] * p.getY()));
     const int32_t row = static_cast<int32_t>(floor(invGeot[3] + invGeot[4] * p.getX() + invGeot[5] * p.getY()));
 
-    rastersList->clear();
+    rasterGroupList->clear();
 
     bool validPixel = (col >= 0) && (row >= 0) && (col < geoIndex.dset->GetRasterXSize()) && (row < geoIndex.dset->GetRasterYSize());
     if (!validPixel) return false;
@@ -229,13 +217,20 @@ bool VrtRaster::findRasters(OGRPoint& p)
                 char *fname = CPLUnescapeString(psNode->psChild->pszValue, NULL, CPLES_XML);
                 if (fname)
                 {
+                    rasters_group_t rgroup;
                     raster_info_t rinfo;
                     rinfo.fileName = fname;
-                    rinfo.auxFileName.clear();
+                    rinfo.tag = "dem";
 
                     /* Get the date this raster was created */
                     getRasterDate(rinfo);
-                    rastersList->add(rastersList->length(), rinfo);
+
+                    /* Create raster group with this raster file in it */
+                    rgroup.gmtDate = rinfo.gmtDate;
+                    rgroup.gpsTime = rinfo.gpsTime;
+                    rgroup.list.add(rgroup.list.length(), rinfo);
+                    rgroup.id = std::to_string(groupId++);
+                    rasterGroupList->add(rasterGroupList->length(), rgroup);
                     CPLFree(fname);
                     /*
                      * VRT file can have many rasters in it with the same point of interest.
@@ -254,7 +249,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
     }
     if (root) CPLDestroyXMLNode(root);
 
-    return (rastersList->length() > 0);
+    return (rasterGroupList->length() > 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -262,8 +257,9 @@ bool VrtRaster::findRasters(OGRPoint& p)
  *----------------------------------------------------------------------------*/
 bool VrtRaster::findCachedRasters(OGRPoint& p)
 {
-    bool foundRaster = false;
     Raster *raster = NULL;
+
+    rasterGroupList->clear();
 
     const char *key = rasterDict.first(&raster);
     while (key != NULL)
@@ -273,12 +269,25 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
         {
             raster->enabled = true;
             raster->point = p;
-            foundRaster = true;
+
+            /* Store cached raster info, fileName is enough */
+            rasters_group_t rgroup;
+            raster_info_t rinfo;
+
+            rinfo.fileName = raster->fileName;
+            rinfo.tag = "dem";
+            rinfo.gpsTime = raster->gpsTime;
+            rinfo.gmtDate = TimeLib::gps2gmttime(raster->gpsTime * 1000);
+            rgroup.list.add(rgroup.list.length(), rinfo);
+            rgroup.gpsTime = rinfo.gpsTime;
+            rgroup.gmtDate = rinfo.gmtDate;
+            rasterGroupList->add(rasterGroupList->length(), rgroup);
+
             break; /* Only one raster with this point in VRT */
         }
         key = rasterDict.next(&raster);
     }
-    return foundRaster;
+    return (rasterGroupList->length() > 0);
 }
 
 

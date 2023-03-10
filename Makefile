@@ -4,6 +4,7 @@ PGC_BUILD = $(ROOT)/build/pgc
 ATLAS_BUILD = $(ROOT)/build/atlas
 ICESAT2_BUILD = $(ROOT)/build/icesat2
 GEDI_BUILD = $(ROOT)/build/gedi
+LANDSAT_BUILD = $(ROOT)/build/landsat
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -18,7 +19,7 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 default-build: ## default build of sliderule
 	make -j4 -C $(BUILD)
 
-all: default-build atlas pgc gedi icesat2 ## build everything
+all: default-build atlas pgc gedi icesat2 landsat ## build everything
 
 config: config-release ## configure make for default build
 
@@ -47,12 +48,12 @@ config-development-debug: prep ## configure make for debug version of sliderule 
 config-development-cicd: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_APACHE_ARROW_10_COMPAT=ON $(ROOT)
 
-config-all: config-development config-atlas config-pgc config-gedi config-icesat2 ## configure everything
+config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat ## configure everything
 
 install: ## install sliderule to system
 	make -C $(BUILD) install
 
-install-all: install install-atlas install-pgc install-gedi install-icesat2 ## install everything
+install-all: install install-atlas install-pgc install-gedi install-icesat2 install-landsat ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(BUILD)/install_manifest.txt
@@ -97,10 +98,10 @@ config-pgc-debug: prep ## configure make for pgc plugin
 config-pgc: prep ## configure make for pgc plugin
 	cd $(PGC_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/pgc
 
-pgc: ## build icesat2 plugin
+pgc: ## build pgc plugin
 	make -j4 -C $(PGC_BUILD)
 
-install-pgc: ## install icesat2 plugin to system
+install-pgc: ## install pgc plugin to system
 	make -C $(PGC_BUILD) install
 
 uninstall-pgc: ## uninstall most recent install of icesat2 plugin from system
@@ -160,6 +161,25 @@ install-gedi: ## install gedi plugin to system
 uninstall-gedi: ## uninstall most recent install of gedi plugin from system
 	xargs rm < $(GEDI_BUILD)/install_manifest.txt
 
+##########################
+# Landsat Plugin Targets
+##########################
+
+config-landsat-debug: prep ## configure make for landsat plugin
+	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/landsat
+
+config-landsat: prep ## configure make for landsat plugin
+	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/landsat
+
+landsat: ## build icesat2 plugin
+	make -j4 -C $(LANDSAT_BUILD)
+
+install-landsat: ## install icesat2 plugin to system
+	make -C $(LANDSAT_BUILD) install
+
+uninstall-landsat: ## uninstall most recent install of icesat2 plugin from system
+	xargs rm < $(LANDSAT_BUILD)/install_manifest.txt
+
 ########################
 # Development Targets
 ########################
@@ -175,7 +195,7 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 ctags: config-pgc config-development ## generate ctags
 	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
 	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json > compile_commands.json
+	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json  $(LANDSAT_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
@@ -211,6 +231,7 @@ prep: ## create necessary build directories
 	mkdir -p $(ATLAS_BUILD)
 	mkdir -p $(ICESAT2_BUILD)
 	mkdir -p $(GEDI_BUILD)
+	mkdir -p $(LANDSAT_BUILD)
 
 clean: ## clean last build
 	- make -C $(BUILD) clean
@@ -218,6 +239,7 @@ clean: ## clean last build
 	- make -C $(ATLAS_BUILD) clean
 	- make -C $(ICESAT2_BUILD) clean
 	- make -C $(GEDI_BUILD) clean
+	- make -C $(LANDSAT_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
@@ -225,6 +247,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(ATLAS_BUILD)
 	- rm -Rf $(ICESAT2_BUILD)
 	- rm -Rf $(GEDI_BUILD)
+	- rm -Rf $(LANDSAT_BUILD)
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

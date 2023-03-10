@@ -114,6 +114,7 @@ bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, const char* t
                         rinfo.gmtDate.minute = minute;
                         rinfo.gmtDate.second = second;
                         rinfo.gmtDate.millisecond = 0;
+                        rinfo.gpsTime = TimeLib::gmt2gpstime(rinfo.gmtDate);
                         foundDate = true;
                     }
                     else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");

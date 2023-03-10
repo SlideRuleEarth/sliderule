@@ -45,6 +45,7 @@ local app_port                  = cfgtbl["app_port"] or 9081
 local probe_port                = cfgtbl["probe_port"] or 10081
 local authenticate_to_nsidc     = cfgtbl["authenticate_to_nsidc"] -- nil is false
 local authenticate_to_ornldaac  = cfgtbl["authenticate_to_ornldaac"] -- nil is false
+local authenticate_to_lpdaac    = cfgtbl["authenticate_to_lpdaac"] -- nil is false
 local register_as_service       = cfgtbl["register_as_service"] -- nil is false
 local asset_directory           = cfgtbl["asset_directory"] or __confdir.."/asset_directory.csv"
 local normal_mem_thresh         = cfgtbl["normal_mem_thresh"] or 1.0
@@ -88,6 +89,10 @@ end
 if authenticate_to_ornldaac then
     local script_parms = {earthdata="https://data.ornldaac.earthdata.nasa.gov/s3credentials", asset="ornl-s3"}
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("OrnldaacAuthScript")
+end
+if authenticate_to_lpdaac then
+    local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", asset="landsat-hls"}
+    local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 end
 
 -- Initialize Orchestrator --

@@ -65,10 +65,9 @@ void VctRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-VctRaster::VctRaster(lua_State *L, GeoParms* _parms, const int target_crs):
+VctRaster::VctRaster(lua_State *L, GeoParms* _parms):
     GeoRaster(L, _parms)
 {
-    targetCrs = target_crs;
     layer = NULL;
 }
 
@@ -87,28 +86,6 @@ void VctRaster::openGeoIndex(double lon, double lat)
 
     try
     {
-        /*
-         * Create CRS transform. One transform for all vector index files.
-         * When individual rasters are opened their CRS is validated against this transform.
-         * It is a critical error if they are different.
-         */
-        if (cord.transf == NULL )
-        {
-            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
-            CHECK_GDALERR(ogrerr);
-            ogrerr = cord.target.importFromEPSG(targetCrs);
-            CHECK_GDALERR(ogrerr);
-
-            /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-            cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-            cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-            /* Create coordinates transformation */
-            cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-            if (cord.transf == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinate transform");
-        }
-
         /* Cleanup previous */
         if (geoIndex.dset != NULL)
         {
@@ -125,17 +102,33 @@ void VctRaster::openGeoIndex(double lon, double lat)
         layer = geoIndex.dset->GetLayer(0);
         CHECKPTR(layer);
 
-        OGRSpatialReference* sref = layer->GetSpatialRef();
-        CHECKPTR(sref);
-        int epsg = sref->GetEPSGGeogCS();
-        if((epsg != DEFAULT_EPSG) && (epsg != 4979))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Vector index file has wrong CRS: %s", newVctFile.c_str());
-
         geoIndex.cols = geoIndex.dset->GetRasterXSize();
         geoIndex.rows = geoIndex.dset->GetRasterYSize();
 
         getIndexBbox(geoIndex.bbox, lon, lat);
         geoIndex.cellSize = 0;
+
+        /* Create coordinates transform for geoIndex */
+        if (geoIndex.cord.transf == NULL )
+        {
+            CoordTransform& cord = geoIndex.cord;
+            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
+            CHECK_GDALERR(ogrerr);
+            OGRSpatialReference* sref = layer->GetSpatialRef();
+            CHECKPTR(sref);
+            int epsg = sref->GetEPSGGeogCS();
+            ogrerr = cord.target.importFromEPSG(epsg);
+            CHECK_GDALERR(ogrerr);
+
+            /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+            cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+            /* Create coordinates transformation */
+            cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+            if (cord.transf == NULL)
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinate transform");
+        }
 
         /*
          * For vector files cellSize is unknown. Cannot validate radiusInPixels
@@ -148,22 +141,11 @@ void VctRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.dset)
         {
             geoIndex.clear();
-            /* Do NOT clearTransform() - it is created once for all scenes */
+            geoIndex.cord.clear();
             layer = NULL;
         }
         throw;
     }
-}
-
-
-/*----------------------------------------------------------------------------
- * transformCrs
- *----------------------------------------------------------------------------*/
-void VctRaster::transformCRS(OGRPoint &p)
-{
-    /* Do not convert to target CRS. Vector files are in geographic coordinates */
-    p.assignSpatialReference(&cord.source);
-    return;
 }
 
 

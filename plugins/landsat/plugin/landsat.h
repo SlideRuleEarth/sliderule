@@ -29,61 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __vrt_raster__
-#define __vrt_raster__
+#ifndef __landsat_plugin__
+#define __landsat_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
-#include "GeoParms.h"
+#include "LandsatHlsRaster.h"
 
 /******************************************************************************
- * VRT RASTER CLASS
+ * PROTOTYPES
  ******************************************************************************/
 
-class VrtRaster: public GeoRaster
-{
-    public:
+extern "C" {
+void initlandsat(void);
+void deinitlandsat(void);
+}
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+#endif  /* __landsat_plugin__ */
 
-        static void init    (void);
-        static void deinit  (void);
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                     VrtRaster          (lua_State* L, GeoParms* _parms, const char* vrt_file=NULL);
-        void         openGeoIndex       (double lon=0, double lat=0);
-        virtual void getIndexFile       (std::string& file, double lon=0, double lat=0);
-        virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
-        bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                         void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
-
-        bool         findRasters        (OGRPoint &p);
-        bool         findCachedRasters  (OGRPoint &p);
-        void         buildVRT           (std::string& vrt_file, List<std::string>& rlist);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-        std::string     vrtFile;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-        GDALRasterBand *band;
-        double          invGeot[6];
-        uint32_t        groupId;
-};
-
-#endif  /* __vrt_raster__ */

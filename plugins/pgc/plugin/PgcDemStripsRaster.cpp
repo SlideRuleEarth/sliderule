@@ -43,8 +43,8 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const int target_crs, const char* dem_name, const char* geo_suffix):
-    VctRaster(L, _parms, target_crs),
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix):
+    VctRaster(L, _parms),
     demName(dem_name)
 {
     path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
@@ -52,6 +52,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const int
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path supplied to geocells: %s", path2geocells.c_str());
     filePath = path2geocells.substr(0, pos);
+    groupId = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -98,7 +99,7 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * getRasterDate
+ * getIndexBbox
  *----------------------------------------------------------------------------*/
 void PgcDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
@@ -116,6 +117,28 @@ void PgcDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
+ * getFlags
+ *----------------------------------------------------------------------------*/
+uint32_t PgcDemStripsRaster::getFlags(const raster_info_t& rinfo)
+{
+    uint32_t flags = 0;
+
+    if(strcmp("flags", rinfo.tag.c_str()) == 0)
+    {
+        const char* key = rinfo.fileName.c_str();
+        Raster* raster  = NULL;
+
+        if(rasterDict.find(key, &raster))
+        {
+            /* Get flags */
+            assert(raster);
+            flags = raster->sample.value;
+        }
+    }
+    return flags;
+}
+
+/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::findRasters(OGRPoint& p)
@@ -127,15 +150,14 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
      * The date in the filename is the date of the earliest image of the stereo pair.
      * For intrack pairs (pairs collected intended for stereo) the two images are acquired within a few minutes of each other.
      * For cross-track images (opportunistic stereo pairs made from mono collects)
-     * the two images can be from up to 20 days apart.
+     * the two images can be from up to 30 days apart.
      *
      */
-    const char* demField         = "dem";
     const int DATES_CNT          = 2;
     const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
     try
     {
-        rastersList->clear();
+        rasterGroupList->clear();
 
         /* For now assume the first layer has the feature we need */
         layer->ResetReading();
@@ -146,8 +168,8 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
-            const char *fname = feature->GetFieldAsString(demField);
-            if (fname)
+            const char *fname = feature->GetFieldAsString("dem");
+            if(fname && strlen(fname) > 0)
             {
                 std::string fileName(fname);
                 std::size_t pos = fileName.find(demName);
@@ -156,9 +178,14 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
                 fileName = filePath + fileName.substr(pos);
 
+                rasters_group_t rgroup;
                 raster_info_t rinfo;
+                raster_info_t flagsRinfo;
+
                 rinfo.fileName = fileName;
+                rinfo.tag = "dem";
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
+                rinfo.gpsTime = 0;
 
                 const std::string endToken    = "_dem.tif";
                 const std::string newEndToken = "_bitmask.tif";
@@ -167,9 +194,10 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 {
                     fileName.replace(pos, endToken.length(), newEndToken.c_str());
                 } else fileName.clear();
-                rinfo.auxFileName = fileName;
 
-                double gpsTime = 0;
+                flagsRinfo.fileName = fileName;
+
+                double gps = 0;
                 for(int i=0; i<DATES_CNT; i++)
                 {
                     TimeLib::gmt_time_t gmtDate;
@@ -193,21 +221,33 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                         else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
                     }
                     // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
-                    gpsTime += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
+                    gps += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
                 }
-                rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gpsTime/DATES_CNT));
-                rastersList->add(rastersList->length(), rinfo);
+                gps = gps/DATES_CNT;
+                rgroup.gmtDate = rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
+                rgroup.gpsTime = rinfo.gpsTime = static_cast<int64_t>(gps);
+                rgroup.id = std::to_string(groupId++);
+                rgroup.list.add(rgroup.list.length(), rinfo);
+
+                if(flagsRinfo.fileName.length() > 0)
+                {
+                    flagsRinfo.tag = "flags";
+                    flagsRinfo.gmtDate = rinfo.gmtDate;
+                    flagsRinfo.gpsTime = rinfo.gpsTime;
+                    rgroup.list.add(rgroup.list.length(), flagsRinfo);
+                }
+                rasterGroupList->add(rasterGroupList->length(), rgroup);
             }
             OGRFeature::DestroyFeature(feature);
         }
-        mlog(DEBUG, "Found %ld rasters for (%.2lf, %.2lf)", rastersList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (rastersList->length() > 0);
+    return (rasterGroupList->length() > 0);
 }
 
 

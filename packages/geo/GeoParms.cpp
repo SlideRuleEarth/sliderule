@@ -47,7 +47,7 @@ const char* GeoParms::SELF                  = "samples";
 const char* GeoParms::SAMPLING_ALGO         = "algorithm";
 const char* GeoParms::SAMPLING_RADIUS       = "radius";
 const char* GeoParms::ZONAL_STATS           = "zonal_stats";
-const char* GeoParms::AUXILIARY_FILES       = "with_flags";
+const char* GeoParms::FLAGS_FILE            = "with_flags";
 const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
@@ -110,7 +110,7 @@ GeoParms::GeoParms (lua_State* L, int index):
     sampling_algo       (GRIORA_NearestNeighbour),
     sampling_radius     (0),
     zonal_stats         (false),
-    auxiliary_files     (false),
+    flags_file          (false),
     filter_time         (false),
     url_substring       (NULL),
     filter_closest_time (false),
@@ -150,10 +150,10 @@ GeoParms::GeoParms (lua_State* L, int index):
             if(field_provided) mlog(DEBUG, "Setting %s to %d", ZONAL_STATS, (int)zonal_stats);
             lua_pop(L, 1);
 
-            /* Auxiliary Files */
-            lua_getfield(L, index, AUXILIARY_FILES);
-            auxiliary_files = LuaObject::getLuaBoolean(L, -1, true, auxiliary_files, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", AUXILIARY_FILES, (int)auxiliary_files);
+            /* Flags File */
+            lua_getfield(L, index, FLAGS_FILE);
+            flags_file = LuaObject::getLuaBoolean(L, -1, true, flags_file, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", FLAGS_FILE, (int)flags_file);
             lua_pop(L, 1);
 
             /* Start Time */

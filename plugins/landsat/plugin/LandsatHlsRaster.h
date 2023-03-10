@@ -29,30 +29,50 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __vrt_raster__
-#define __vrt_raster__
+#ifndef __landsat_hls_raster__
+#define __landsat_hls_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
-#include "GeoParms.h"
+#include <string>
+#include "VctRaster.h"
 
 /******************************************************************************
- * VRT RASTER CLASS
+ * ARCTICDEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-class VrtRaster: public GeoRaster
+class LandsatHlsRaster: public VctRaster
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+        static const char* L8_bands[];     /* Landsat 8  */
+        static const char* S2_bands[];     /* Sentinel 2 */
+        static const char* ALGO_names[];   /* Algorithms names */
+        static const char* ALGO_bands[];   /* Algorithms bands */
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            LANDSAT8  = 0,
+            SENTINEL2 = 1,
+            ALGOBAND  = 2,
+            ALGONAME  = 3
+        } band_type_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init    (void);
-        static void deinit  (void);
+        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+                          { return new LandsatHlsRaster(L, _parms); }
+
 
     protected:
 
@@ -60,30 +80,36 @@ class VrtRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                     VrtRaster          (lua_State* L, GeoParms* _parms, const char* vrt_file=NULL);
-        void         openGeoIndex       (double lon=0, double lat=0);
-        virtual void getIndexFile       (std::string& file, double lon=0, double lat=0);
-        virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
-        bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                         void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
+                LandsatHlsRaster (lua_State* L, GeoParms* _parms);
 
-        bool         findRasters        (OGRPoint &p);
-        bool         findCachedRasters  (OGRPoint &p);
-        void         buildVRT           (std::string& vrt_file, List<std::string>& rlist);
+        void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
+        void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
+        bool    findRasters      (OGRPoint &p);
+        int     getSamples       (double lon, double lat, List<sample_t>& slist, void* param=NULL);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string     vrtFile;
 
     private:
+        bool validateBand   (band_type_t type, const char* bandName);
+
+        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
+        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
+        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
+        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        GDALRasterBand *band;
-        double          invGeot[6];
-        uint32_t        groupId;
+        std::string filePath;
+        std::string indexFile;
+
+        Dictionary<bool> bandsDict;
+
+        bool ndsi;
+        bool ndvi;
+        bool ndwi;
 };
 
-#endif  /* __vrt_raster__ */
+#endif  /* __landsat_hls_raster__ */

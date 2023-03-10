@@ -33,8 +33,13 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
 #include "core.h"
 #include "GeoRaster.h"
+
+#ifdef __aws__
+#include "aws.h"
+#endif
 
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
@@ -44,9 +49,12 @@
 #include <ogr_spatialref.h>
 #include <gdal_priv.h>
 #include <algorithm>
+#include <cstring>
+#include <tuple>
 
 #include "cpl_minixml.h"
 #include "cpl_string.h"
+#include "cpl_vsi.h"
 #include "gdal.h"
 #include "ogr_spatialref.h"
 
@@ -138,32 +146,60 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
     return status;
 }
 
+
+/*----------------------------------------------------------------------------
+ * getFlags
+ *----------------------------------------------------------------------------*/
+uint32_t GeoRaster::getFlags(const raster_info_t& rinfo)
+{
+    std::ignore = rinfo;
+    return 0;
+}
+
+
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param)
+int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
     slist.clear();
 
-    samplingMutex.lock(); /* Serialize sampling on the same object */
-
     try
     {
-        /* Get samples */
-        if (sample(lon, lat) > 0)
+        /* Get samples, if none found, return */
+        if(sample(lon, lat) == 0) return 0;
+
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            Raster *raster = NULL;
-            const char *key = rasterDict.first(&raster);
-            while (key != NULL)
+            const rasters_group_t& rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            Raster* rasterOfIntrest = NULL;
+
+            for(int j = 0; j < raster_iter.length; j++)
             {
-                assert(raster);
-                if (!raster->isAuxuliary && raster->enabled && raster->sampled)
+                const raster_info_t& rinfo = raster_iter[j].value;
+                const char* key            = rinfo.fileName.c_str();
+                Raster* raster             = NULL;
+
+                if(strcmp("dem", rinfo.tag.c_str()) == 0)
                 {
-                    slist.add(raster->sample);
+                    if(rasterDict.find(key, &raster))
+                    {
+                        assert(raster);
+                        if(raster->enabled && raster->sampled)
+                        {
+                            /* Update dictionary of used raster files */
+                            raster->sample.fileId = fileDictAdd(raster->fileName);
+                            raster->sample.flags  = 0;
+                            rasterOfIntrest       = raster;
+                        }
+                    }
                 }
-                key = rasterDict.next(&raster);
+                if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
             }
+            if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
         }
     }
     catch (const RunTimeException &e)
@@ -171,7 +207,6 @@ int GeoRaster::sample(double lon, double lat, List<sample_t>& slist, void* param
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
 
-    samplingMutex.unlock();
 
     return slist.length();
 }
@@ -214,53 +249,11 @@ GeoRaster::~GeoRaster(void)
         key = rasterDict.next(&raster);
     }
 
-    if (rastersList) delete rastersList;
+    if (rasterGroupList) delete rasterGroupList;
 
     /* Release GeoParms LuaObject */
     parms->releaseLuaObject();
 }
-
-/*----------------------------------------------------------------------------
- * sample
- *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat)
-{
-    invalidateCache();
-
-    /* Initial call, open raster index data set if not already opened */
-    if (geoIndex.dset == NULL)
-        openGeoIndex(lon, lat);
-
-    OGRPoint p(lon, lat);
-    transformCRS(p);
-
-    /* If point is not in current geoindex, find a new one */
-    if (!geoIndex.containsPoint(p))
-    {
-        openGeoIndex(lon, lat);
-
-        /* Check against newly opened geoindex */
-        if (!geoIndex.containsPoint(p))
-            return 0;
-    }
-
-    if (findCachedRasters(p))
-    {
-        /* Rasters alredy in cache have been previously filtered  */
-        sampleRasters();
-    }
-    else
-    {
-        if(findRasters(p) && filterRasters())
-        {
-            updateCache(p);
-            sampleRasters();
-        }
-    }
-
-    return getSampledRastersCount();
-}
-
 
 /*----------------------------------------------------------------------------
  * getUUID
@@ -286,10 +279,26 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     parms(_parms)
 {
     /* Initialize Class Data Members */
-    rastersList = new Ordering<raster_info_t>;
+    rasterGroupList = new Ordering<rasters_group_t>;
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
+
+    /* Establish Credentials */
+    #ifdef __aws__
+    if(_parms->asset)
+    {
+        const char* identity = _parms->asset->getName();
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        if(credentials.provided)
+        {
+            const char* path = _parms->asset->getPath();
+            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
+            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
+            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
+        }
+    }
+    #endif
 }
 
 
@@ -366,25 +375,36 @@ void GeoRaster::processRaster(Raster* raster)
             /* Get raster data type */
             raster->dataType = raster->band->GetRasterDataType();
 
-            /* Get raster spatial reference */
-            raster->sref = const_cast<OGRSpatialReference*>(raster->dset->GetSpatialRef());
-            CHECKPTR(raster->sref);
+            /* Create coordinates transform for raster */
+            if(raster->cord.transf == NULL)
+            {
+                CoordTransform& cord = raster->cord;
+                OGRErr ogrerr        = cord.source.importFromEPSG(DEFAULT_EPSG);
+                CHECK_GDALERR(ogrerr);
+
+                const char* projref = raster->dset->GetProjectionRef();
+                CHECKPTR(projref);
+                mlog(DEBUG, "%s", projref);
+                ogrerr = cord.target.importFromProj4(projref);
+                CHECK_GDALERR(ogrerr);
+
+                /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+                cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+                cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+                cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+                if(cord.transf == NULL)
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+            }
         }
 
-        /* Make sure point of interest and raster are in the same CRS */
+        /* If point has not been projected yet, do it now */
         OGRSpatialReference *psref = raster->point.getSpatialReference();
         CHECKPTR(psref);
-        if (!raster->sref->IsSame(psref))
+        if(!psref->IsProjected())
         {
-            if (cord.source.IsSame(psref) && !psref->IsProjected())
-            {
-                /* Transform point to raster's CRS */
-                double lon = raster->point.getX();
-                double lat = raster->point.getY();
-                if (raster->point.transform(cord.transf) != OGRERR_NONE)
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", lon, lat);
-            }
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "POI and raster CRS are not the same");
+            if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", raster->point.getX(), raster->point.getY());
         }
 
         /*
@@ -403,7 +423,6 @@ void GeoRaster::processRaster(Raster* raster)
 
         if (parms->zonal_stats)
             computeZonalStats(raster);
-
     }
     catch (const RunTimeException &e)
     {
@@ -445,10 +464,9 @@ void GeoRaster::sampleRasters(void)
     /* Did not signal any reader threads, don't wait */
     if (signaledReaders == 0) return;
 
-    /* Wait and update each raster when it is done */
+    /* Wait for readers to finish sampling */
     for (int j=0; j<signaledReaders; j++)
     {
-        /* Wait for reader to finish sampling */
         reader_t *reader = &rasterRreader[j];
         reader->sync->lock();
         {
@@ -456,18 +474,6 @@ void GeoRaster::sampleRasters(void)
                 reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
         }
         reader->sync->unlock();
-    }
-
-    /* Update dictionary of used raster files and auxualiary data */
-    key = rasterDict.first(&raster);
-    while (key != NULL)
-    {
-        if (!raster->isAuxuliary && raster->enabled && raster->sampled)
-        {
-            raster->sample.fileId = fileDictAdd(raster->fileName);
-            raster->sample.flags = raster->getPeerValue();
-        }
-        key = rasterDict.next(&raster);
     }
 }
 
@@ -492,24 +498,67 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
 }
 
 
+/*----------------------------------------------------------------------------
+ * sample
+ *----------------------------------------------------------------------------*/
+int GeoRaster::sample(double lon, double lat)
+{
+    invalidateCache();
+
+    /* Initial call, open raster index data set if not already opened */
+    if (geoIndex.dset == NULL)
+        openGeoIndex(lon, lat);
+
+    OGRPoint p(lon, lat);
+    transformCRS(p);
+
+    /* If point is not in current geoindex, find a new one */
+    if (!geoIndex.containsPoint(p))
+    {
+        openGeoIndex(lon, lat);
+
+        /* Check against newly opened geoindex */
+        if (!geoIndex.containsPoint(p))
+            return 0;
+    }
+
+    if (findCachedRasters(p))
+    {
+        /* Rasters alredy in cache have been previously filtered  */
+        sampleRasters();
+    }
+    else
+    {
+        if(findRasters(p) && filterRasters())
+        {
+            updateCache(p);
+            sampleRasters();
+        }
+    }
+
+    return getSampledRastersCount();
+}
+
+
+/*----------------------------------------------------------------------------
+ * fileDictAdd
+ *----------------------------------------------------------------------------*/
+uint64_t GeoRaster::fileDictAdd(const std::string& fileName)
+{
+    uint64_t id;
+
+    if(!fileDict.find(fileName.c_str(), &id))
+    {
+        id = (parms->key_space << 32) | fileDict.length();
+        fileDict.add(fileName.c_str(), id);
+    }
+
+    return id;
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * getPeerValue
- *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::Raster::getPeerValue(void)
-{
-    uint32_t peerValue = 0;
-
-    if (peerRaster && peerRaster->enabled && peerRaster->sampled)
-    {
-        peerValue = static_cast<uint32_t>(peerRaster->sample.value);
-    }
-
-    return peerValue;
-}
 
 /*----------------------------------------------------------------------------
  * readPixel
@@ -617,6 +666,19 @@ void GeoRaster::readPixel(Raster *raster)
     }
 }
 
+
+/*----------------------------------------------------------------------------
+ * transformCRS
+ *----------------------------------------------------------------------------*/
+void GeoRaster::transformCRS(OGRPoint &p)
+{
+    if (geoIndex.cord.transf && (p.transform(geoIndex.cord.transf) == OGRERR_NONE))
+    {
+        return;
+    }
+
+    throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
+}
 
 /*----------------------------------------------------------------------------
  * containsWindow
@@ -897,9 +959,8 @@ void GeoRaster::Raster::clear(bool close)
     if(close && dset) GDALClose((GDALDatasetH)dset);
     dset = NULL;
     band = NULL;
-    sref = NULL;
-    peerRaster = NULL;
-    isAuxuliary = false;
+    cord.clear();
+    groupId.clear();
     enabled = false;
     sampled = false;
     fileName.clear();
@@ -942,38 +1003,31 @@ void GeoRaster::invalidateCache(void)
  *----------------------------------------------------------------------------*/
 void GeoRaster::updateCache(OGRPoint& p)
 {
-    if (rastersList->length() == 0)
+    if (rasterGroupList->length() == 0)
         return;
 
     const char *key  = NULL;
     Raster *raster = NULL;
 
     /* Check new tif file list against rasters in dictionary */
-    Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-    for (int i = 0; i < raster_iter.length; i++)
+    Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+    for (int i = 0; i < group_iter.length; i++)
     {
-        const raster_info_t &rinfo   = raster_iter[i].value;
-        const char* rasterFile = rinfo.fileName.c_str();
-        const char* auxFile    = rinfo.auxFileName.c_str();;
+        const rasters_group_t& rgroup = group_iter[i].value;
+        const std::string& groupId = rgroup.id;
+        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
 
-        /* For now code supports only one auxiliary raster */
-        const char* keys[2] = {rasterFile, auxFile};
-        const int CNT = parms->auxiliary_files ? 2 : 1;
-
-        Raster* demRaster = NULL;
-        Raster* auxRaster = NULL;
-
-        for (int j = 0; j < CNT; j++)
+        for(int j = 0; j < raster_iter.length; j++)
         {
-            key = keys[j];
-            if(strlen(key) == 0) break;
+            const raster_info_t& rinfo = raster_iter[j].value;
+            key = rinfo.fileName.c_str();
 
-            if (rasterDict.find(key, &raster))
+            if(rasterDict.find(key, &raster))
             {
                 /* Update point to be sampled, mark raster enabled for next sampling */
                 assert(raster);
                 raster->enabled = true;
-                raster->point = p;
+                raster->point   = p;
             }
             else
             {
@@ -981,50 +1035,53 @@ void GeoRaster::updateCache(OGRPoint& p)
                 raster = new Raster;
                 assert(raster);
 
-                if(j == 0) {demRaster = raster; raster->isAuxuliary = false;}
-                if(j == 1) {auxRaster = raster; raster->isAuxuliary = true; }
-
-                raster->enabled = true;
-                raster->point = p;
+                raster->groupId      = groupId;
+                raster->enabled      = true;
+                raster->point        = p;
                 raster->sample.value = INVALID_SAMPLE_VALUE;
-                raster->fileName = key;
-                raster->gpsTime = static_cast<double>(TimeLib::gmt2gpstime(rinfo.gmtDate) / 1000);
+                raster->fileName     = key;
+                raster->gpsTime      = static_cast<double>(rinfo.gpsTime / 1000);
                 rasterDict.add(key, raster);
             }
-        }
-
-        /* Set up pointers between dem and auxiliary rasters */
-        if(demRaster && auxRaster)
-        {
-            demRaster->peerRaster = auxRaster;
-            auxRaster->peerRaster = demRaster;
         }
     }
 
     /* Maintain cache from getting too big */
     key = rasterDict.first(&raster);
-    while (key != NULL)
+    while(key != NULL)
     {
-        if (rasterDict.length() <= MAX_CACHED_RASTERS)
+        if(rasterDict.length() <= MAX_CACHED_RASTERS)
             break;
 
         assert(raster);
-        if (raster->enabled)
+#if 1
+        if(!raster->enabled)
         {
-            /* If raster has a peer, remove them both */
-            if(raster->peerRaster)
-            {
-                const char* peerKey = raster->peerRaster->fileName.c_str();
-                if (rasterDict.find(peerKey, &raster->peerRaster))
-                {
-                    rasterDict.remove(peerKey);
-                    delete raster->peerRaster;
-                }
-            }
-
             rasterDict.remove(key);
             delete raster;
         }
+#else
+        /* Remove all rasters from the same group */
+        /* TODO: for mosaics one group one raster - optimize it */
+        if(!raster->enabled)
+        {
+            std::string gropuId = raster->groupId;
+            rasterDict.remove(key);
+            delete raster;
+
+            key = rasterDict.next(&raster);
+            while(key != NULL)
+            {
+                assert(raster);
+                if(!raster->enabled && (raster->groupId == gropuId))
+                {
+                    rasterDict.remove(key);
+                    delete raster;
+                }
+                key = rasterDict.next(&raster);
+            }
+        }
+#endif
         key = rasterDict.next(&raster);
     }
 }
@@ -1034,67 +1091,75 @@ void GeoRaster::updateCache(OGRPoint& p)
  *----------------------------------------------------------------------------*/
 bool GeoRaster::filterRasters(void)
 {
-    /* Temporal and URL filters - remove unwanted rasters from the list */
+    /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
     {
-        Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-        for(int i = 0; i < raster_iter.length; i++)
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            const raster_info_t& rinfo = raster_iter[i].value;
-            bool removeRaster    = false;
+            const rasters_group_t& rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            bool removeGroup = false;
 
-            /* URL filter */
-            if(parms->url_substring)
+            for(int j = 0; j < raster_iter.length; j++)
             {
-                if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
-                    removeRaster = true;
+                const raster_info_t& rinfo = raster_iter[j].value;
+
+                /* URL filter */
+                if(parms->url_substring)
+                {
+                    if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
+                    {
+                        removeGroup = true;
+                        break;
+                    }
+                }
+
+                /* Temporal filter */
+                if(parms->filter_time)
+                {
+                    if(!TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
+                    {
+                        removeGroup = true;
+                        break;
+                    }
+                }
             }
 
-            /* Temporal filter */
-            if(!removeRaster && parms->filter_time)
-            {
-                if(!TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
-                    removeRaster = true;
-            }
-
-            if(removeRaster)
-            {
-                rastersList->remove(raster_iter[i].key);
-            }
+            if(removeGroup)
+                rasterGroupList->remove(group_iter[i].key);
         }
     }
 
-    /* Closest time filter */
+    /* Closest time filter - using raster group time, not individual reaster time */
     if(parms->filter_closest_time)
     {
         int64_t closestGps = TimeLib::gmt2gpstime(parms->closest_time);
         int64_t minDelta   = abs(std::numeric_limits<int64_t>::max() - closestGps);
-        unsigned long closest_key = INVALID_KEY;
 
-        Ordering<raster_info_t>::Iterator raster_iter(*rastersList);
-        for(int i = 0; i < raster_iter.length; i++)
+        /* Find raster group with the closesest time */
+        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gps   = TimeLib::gmt2gpstime(raster_iter[i].value.gmtDate);
+            int64_t gps   = group_iter[i].value.gpsTime;
             int64_t delta = abs(closestGps - gps);
 
             if(delta < minDelta)
-            {
-                /* Keep track of raster with closest time */
                 minDelta = delta;
-                closest_key  = raster_iter[i].key;
-            }
         }
 
-        if(closest_key != INVALID_KEY)
+        /* Remove all groups with greater delta */
+        for(int i = 0; i < group_iter.length; i++)
         {
-            /* Return list with only one (closest) raster */
-            raster_info_t ri = rastersList->get(closest_key);
-            rastersList->clear();
-            rastersList->add(0, ri);
+            int64_t gps   = group_iter[i].value.gpsTime;
+            int64_t delta = abs(closestGps - gps);
+
+            if(delta > minDelta)
+                rasterGroupList->remove(group_iter[i].key);
         }
     }
 
-    return (rastersList->length() > 0);
+    return (rasterGroupList->length() > 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -1107,11 +1172,11 @@ void GeoRaster::createThreads(void)
         return;
 
     uint32_t newThreadsCnt = threadsNeeded - readerCount;
-    // print2term("Creating %d new threads, readerCount: %d, neededThreads: %d\n", newThreadsCnt, readerCount, threadsNeeded);
+    mlog(DEBUG, "Creating %d new threads, readerCount: %d, neededThreads: %d\n", newThreadsCnt, readerCount, threadsNeeded);
 
     for (uint32_t i=0; i < newThreadsCnt; i++)
     {
-        if (readerCount < MAX_READER_THREADS)
+        if (readerCount <= MAX_READER_THREADS)
         {
             reader_t *reader = &rasterRreader[readerCount];
             reader->raster = NULL;
@@ -1124,7 +1189,7 @@ void GeoRaster::createThreads(void)
         else
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
-                                   "number of rasters to read: %d, is greater than max reading threads %d\n",
+                                   "Too many rasters to read: %d, max reading threads allowed: %d\n",
                                    rasterDict.length(), MAX_READER_THREADS);
         }
     }
@@ -1184,22 +1249,6 @@ int GeoRaster::getSampledRastersCount(void)
     return cnt;
 }
 
-
-/*----------------------------------------------------------------------------
- * fileDictAdd
- *----------------------------------------------------------------------------*/
-uint64_t GeoRaster::fileDictAdd(const std::string& fileName)
-{
-    uint64_t id;
-
-    if(!fileDict.find(fileName.c_str(), &id))
-    {
-        id = (parms->key_space << 32) | fileDict.length();
-        fileDict.add(fileName.c_str(), id);
-    }
-
-    return id;
-}
 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
@@ -1308,57 +1357,58 @@ int GeoRaster::luaSamples(lua_State *L)
         /* Get Self */
         lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
-        lua_obj->samplingMutex.lock(); /* Serialize sampling on the same object */
-
         /* Get Coordinates */
         double lon = getLuaFloat(L, 2);
         double lat = getLuaFloat(L, 3);
 
         /* Get samples */
-        int sampledRasters = lua_obj->sample(lon, lat);
-        if (sampledRasters > 0)
+        List<sample_t> slist;
+        if(lua_obj->getSamples(lon, lat, slist, NULL) > 0)
         {
-            Raster   *raster = NULL;
-            const char *key    = NULL;
-
             /* Create return table */
-            lua_createtable(L, sampledRasters, 0);
+            lua_createtable(L, slist.length(), 0);
 
-            /* Populate the return table */
-            int i = 0;
-            key = lua_obj->rasterDict.first(&raster);
-            while (key != NULL)
+            for(int i = 0; i < slist.length(); i++)
             {
-                assert(raster);
-                if (!raster->isAuxuliary && raster->enabled && raster->sampled)
+                const sample_t& sample = slist[i];
+                const char* fileName = "";
+
+                /* Find fileName from fileId */
+                Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
+                for(int j = 0; j < iterator.length; j++)
                 {
-                    lua_createtable(L, 0, 2);
-                    LuaEngine::setAttrStr(L, "file", raster->fileName.c_str());
-
-                    if (lua_obj->parms->zonal_stats) /* Include all zonal stats */
+                    if(iterator[j].value == sample.fileId)
                     {
-                        LuaEngine::setAttrNum(L, "mad",   raster->sample.stats.mad);
-                        LuaEngine::setAttrNum(L, "stdev", raster->sample.stats.stdev);
-                        LuaEngine::setAttrNum(L, "median",raster->sample.stats.median);
-                        LuaEngine::setAttrNum(L, "mean",  raster->sample.stats.mean);
-                        LuaEngine::setAttrNum(L, "max",   raster->sample.stats.max);
-                        LuaEngine::setAttrNum(L, "min",   raster->sample.stats.min);
-                        LuaEngine::setAttrNum(L, "count", raster->sample.stats.count);
+                        fileName = iterator[j].key;
+                        break;
                     }
-
-                    if (lua_obj->parms->auxiliary_files) /* Include auxuliary raster value (flags) */
-                    {
-                        LuaEngine::setAttrNum(L, "flags", raster->sample.flags);
-                    }
-
-                    LuaEngine::setAttrInt(L, "fileid",raster->sample.fileId);
-                    LuaEngine::setAttrNum(L, "time",  raster->sample.time);
-                    LuaEngine::setAttrNum(L, "value", raster->sample.value);
-                    lua_rawseti(L, -2, ++i);
                 }
-                key = lua_obj->rasterDict.next(&raster);
-            }
 
+                lua_createtable(L, 0, 2);
+                LuaEngine::setAttrStr(L, "file", fileName);
+
+
+                if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
+                {
+                    LuaEngine::setAttrNum(L, "mad", sample.stats.mad);
+                    LuaEngine::setAttrNum(L, "stdev", sample.stats.stdev);
+                    LuaEngine::setAttrNum(L, "median", sample.stats.median);
+                    LuaEngine::setAttrNum(L, "mean", sample.stats.mean);
+                    LuaEngine::setAttrNum(L, "max", sample.stats.max);
+                    LuaEngine::setAttrNum(L, "min", sample.stats.min);
+                    LuaEngine::setAttrNum(L, "count", sample.stats.count);
+                }
+
+                if(lua_obj->parms->flags_file) /* Include flags */
+                {
+                    LuaEngine::setAttrNum(L, "flags", sample.flags);
+                }
+
+                LuaEngine::setAttrInt(L, "fileid", sample.fileId);
+                LuaEngine::setAttrNum(L, "time", sample.time);
+                LuaEngine::setAttrNum(L, "value", sample.value);
+                lua_rawseti(L, -2, i+1);
+            }
             num_ret++;
             status = true;
         } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);
@@ -1367,8 +1417,6 @@ int GeoRaster::luaSamples(lua_State *L)
     {
         mlog(e.level(), "Failed to read samples: %s", e.what());
     }
-
-    if (lua_obj) lua_obj->samplingMutex.unlock();
 
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);

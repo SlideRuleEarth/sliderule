@@ -67,7 +67,7 @@ class GeoParms: public LuaObject
         static const char* SAMPLING_ALGO;
         static const char* SAMPLING_RADIUS;
         static const char* ZONAL_STATS;
-        static const char* AUXILIARY_FILES;
+        static const char* FLAGS_FILE;
         static const char* START_TIME;
         static const char* STOP_TIME;
         static const char* URL_SUBSTRING;
@@ -104,7 +104,7 @@ class GeoParms: public LuaObject
         GDALRIOResampleAlg  sampling_algo;
         int                 sampling_radius;
         bool                zonal_stats;
-        bool                auxiliary_files;
+        bool                flags_file;
         bool                filter_time;
         TimeLib::gmt_time_t start_time;
         TimeLib::gmt_time_t stop_time;

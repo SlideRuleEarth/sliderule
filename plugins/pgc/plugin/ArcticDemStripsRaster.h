@@ -50,8 +50,6 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int ARCTIC_DEM_EPSG = 3413;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -66,7 +64,7 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, ARCTIC_DEM_EPSG, "arcticdem", "/n") {}
+          PgcDemStripsRaster(L, _parms, "arcticdem", "/n") {}
 };
 
 #endif  /* __arcticdem_strips_raster__ */
