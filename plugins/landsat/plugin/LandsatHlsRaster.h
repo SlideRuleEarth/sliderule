@@ -36,6 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <string>
 #include "VctRaster.h"
 
 /******************************************************************************
@@ -49,8 +50,21 @@ class LandsatHlsRaster: public VctRaster
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const char* L8_tags[];   /* Landsat 8  */
-        static const char* S2_tags[];   /* Sentinel 2 */
+        static const char* L8_bands[];     /* Landsat 8  */
+        static const char* S2_bands[];     /* Sentinel 2 */
+        static const char* ALGO_names[];   /* Algorithms names */
+        static const char* ALGO_bands[];   /* Algorithms bands */
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            LANDSAT8  = 0,
+            SENTINEL2 = 1,
+            ALGOBAND  = 2,
+            ALGONAME  = 3
+        } band_type_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -78,6 +92,12 @@ class LandsatHlsRaster: public VctRaster
          *--------------------------------------------------------------------*/
 
     private:
+        bool validateBand   (band_type_t type, const char* bandName);
+
+        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
+        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
+        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
+        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data
@@ -85,9 +105,11 @@ class LandsatHlsRaster: public VctRaster
         std::string filePath;
         std::string indexFile;
 
-        bool calculateNDSI;
-        bool calculateNDVI;
-        bool calculateNDWI;
+        Dictionary<bool> bandsDict;
+
+        bool ndsi;
+        bool ndvi;
+        bool ndwi;
 };
 
 #endif  /* __landsat_hls_raster__ */

@@ -1014,6 +1014,7 @@ void GeoRaster::updateCache(OGRPoint& p)
     for (int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t& rgroup = group_iter[i].value;
+        const std::string& groupId = rgroup.id;
         Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
 
         for(int j = 0; j < raster_iter.length; j++)
@@ -1034,6 +1035,7 @@ void GeoRaster::updateCache(OGRPoint& p)
                 raster = new Raster;
                 assert(raster);
 
+                raster->groupId      = groupId;
                 raster->enabled      = true;
                 raster->point        = p;
                 raster->sample.value = INVALID_SAMPLE_VALUE;
@@ -1052,12 +1054,34 @@ void GeoRaster::updateCache(OGRPoint& p)
             break;
 
         assert(raster);
+#if 1
         if(!raster->enabled)
         {
-            /* TODO: remove all rasters from the same group */
             rasterDict.remove(key);
             delete raster;
         }
+#else
+        /* Remove all rasters from the same group */
+        /* TODO: for mosaics one group one raster - optimize it */
+        if(!raster->enabled)
+        {
+            std::string gropuId = raster->groupId;
+            rasterDict.remove(key);
+            delete raster;
+
+            key = rasterDict.next(&raster);
+            while(key != NULL)
+            {
+                assert(raster);
+                if(!raster->enabled && (raster->groupId == gropuId))
+                {
+                    rasterDict.remove(key);
+                    delete raster;
+                }
+                key = rasterDict.next(&raster);
+            }
+        }
+#endif
         key = rasterDict.next(&raster);
     }
 }
@@ -1384,8 +1408,6 @@ int GeoRaster::luaSamples(lua_State *L)
                 LuaEngine::setAttrNum(L, "time", sample.time);
                 LuaEngine::setAttrNum(L, "value", sample.value);
                 lua_rawseti(L, -2, i+1);
-
-                print2term("%8.3lf, %s\n", sample.value, fileName);
             }
             num_ret++;
             status = true;

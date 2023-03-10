@@ -14,6 +14,13 @@ local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3c
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 sys.wait(5)
 
+
+local td = runner.rootdir(arg[0])
+local geojsonfile = td.."/hls_trimmed.geojson"
+local f = io.open(geojsonfile, "r")
+local contents = f:read("*all")
+f:close()
+
 -- Unit Test --
 
 local  lon = -179.0
@@ -22,7 +29,7 @@ local  lat = 51.0
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test\n-------------------------------------------------"))
 
 local demType = "landsat-hls"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0 }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"B03", "NDVI"}, catalog = contents }))
 
 for i = 1, 1, 1 do
     local tbl, status = dem:sample(lon, lat)

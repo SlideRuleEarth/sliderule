@@ -28,10 +28,10 @@ for i = 1, 2 do
 
     local sampleCnt = 0
 
-    for i, v in ipairs(tbl) do
+    for j, v in ipairs(tbl) do
         local el = v["value"]
         local fname = v["file"]
-        print(string.format("(%02d) %8.2f %s", i, el, fname))
+        print(string.format("(%02d) %8.2f %s", j, el, fname))
         runner.check(el ~= -1000000)  --INVALID_SAMPLE_VALUE from VrtRaster.h
         runner.check(string.len(fname) > 0)
         sampleCnt = sampleCnt + 1

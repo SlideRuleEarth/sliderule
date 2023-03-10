@@ -49,18 +49,25 @@
  ******************************************************************************/
 
 /* Landsat 8 */
-const char* LandsatHlsRaster::L8_tags[] = {"B01", "B02", "B03", "B04", "B05",
+const char* LandsatHlsRaster::L8_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B09", "B10", "B11",
                                            "SAA", "SZA", "VAA", "VZA", "Fmask"};
-
 /* Sentinel 2 */
-const char* LandsatHlsRaster::S2_tags[] = {"B01", "B02", "B03", "B04", "B05",
+const char* LandsatHlsRaster::S2_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B08", "B09", "B10",
                                            "B11", "B12", "B8A", "SAA", "SZA",
                                            "VAA", "VZA", "Fmask"};
+/* Algorithm names (not real bands) */
+const char* LandsatHlsRaster::ALGO_names[] = {"NDSI", "NDVI", "NDWI"};
 
-#define L8_tagsCnt (sizeof (L8_tags) / sizeof (const char *))
-#define S2_tagsCnt (sizeof (S2_tags) / sizeof (const char *))
+/* Algorithm bands for L8 and S2 combined */
+const char* LandsatHlsRaster::ALGO_bands[] = {"B03", "B04", "B05", "B06", "B8A", "B11"};
+
+
+#define L8_bandCnt   (sizeof (L8_bands)   / sizeof (const char *))
+#define S2_bandCnt   (sizeof (S2_bands)   / sizeof (const char *))
+#define ALGO_nameCnt (sizeof (ALGO_names) / sizeof (const char *))
+#define ALGO_bandCnt (sizeof (ALGO_bands) / sizeof (const char *))
 
 
 /******************************************************************************
@@ -79,27 +86,53 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 {
     char uuid_str[UUID_STR_LEN];
 
-    calculateNDSI = calculateNDVI = calculateNDWI = false;
+    ndsi = ndvi = ndwi = false;
+
+    if(_parms->catalog == NULL)
+        throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
+
+    if(_parms->bands.length() == 0)
+        throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
 
     filePath.append(_parms->asset->getPath()).append("/");
     indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
 
     /* Create in memory index file (geojson) */
+    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
+    CHECKPTR(fp);
+    VSIFCloseL(fp);
 
-#warning !!! VERY DANGEROUS, strlen on unterminated geojson string will crash the app!!!
-    if(_parms->catalog)
-    {
-        int len      = strlen(_parms->catalog);
-        VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)len, FALSE);
-        CHECKPTR(fp);
-        VSIFCloseL(fp);
-    }
-
+    /* Create dictionary of bands and algo names to process */
+    bool returnBandSample;
     for(int i = 0; i < _parms->bands.length(); i++)
     {
-        if(strcasecmp(_parms->bands[i], "NDSI") == 0) calculateNDSI = true;
-        if(strcasecmp(_parms->bands[i], "NDVI") == 0) calculateNDVI = true;
-        if(strcasecmp(_parms->bands[i], "NDWI") == 0) calculateNDWI = true;
+        const char* name = _parms->bands[i];
+        if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
+        {
+            if(!bandsDict.find(name, &returnBandSample))
+            {
+                returnBandSample = true;
+                bandsDict.add(name, returnBandSample);
+            }
+
+            if(strcasecmp(_parms->bands[i], "NDSI") == 0) ndsi = true;
+            if(strcasecmp(_parms->bands[i], "NDVI") == 0) ndvi = true;
+            if(strcasecmp(_parms->bands[i], "NDWI") == 0) ndwi = true;
+        }
+    }
+
+    /* If user specified only algortithm(s) but no bands, add bands to dictionary of bands */
+    if(ndsi || ndvi || ndwi)
+    {
+        for (int i=0; i<ALGO_bandCnt; i++)
+        {
+            const char* band = ALGO_bands[i];
+            if(!bandsDict.find(band, &returnBandSample))
+            {
+                returnBandSample = false;
+                bandsDict.add(band, returnBandSample);
+            }
+        }
     }
 }
 
@@ -120,19 +153,13 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 {
-    /*
-     * Acording to:
-     * https://lpdaac.usgs.gov/data/get-started-data/collection-overview/missions/harmonized-landsat-sentinel-2-hls-overview/#hls-tiling-system
-     * each UTM zone has a vertical width of 6° of longitude and horizontal width of 8° of latitude.
-     */
+    OGREnvelope env;
+    OGRErr err = layer->GetExtent(&env);
 
-    lat = floor(lat);
-    lon = floor(lon);
-
-    bbox.lon_min = lon;
-    bbox.lat_min = lat;
-    bbox.lon_max = lon + 6.0;
-    bbox.lat_max = lat + 8.0;
+    bbox.lon_min = env.MinX;
+    bbox.lat_min = env.MinY;
+    bbox.lon_max = env.MaxX;
+    bbox.lat_max = env.MaxY;
 }
 
 
@@ -141,10 +168,6 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
-    /* L8 tags are a subset of S2 */
-    const char** tags = S2_tags;
-    const int tagsCnt = S2_tagsCnt;
-
     try
     {
         rasterGroupList->clear();
@@ -183,13 +206,19 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
             const std::string fileToken = "HLS";
 
-            //TODO: only tags/bands provided by params
-            //      if algos, automagicly look for nessary bands
-            //      validate bands received agains actuall allowed for L8 and S2
-            for(int i=0; i<tagsCnt; i++)
+            /* Find each requested band in the index file */
+            bool val;
+            const char* bandName = bandsDict.first(&val);
+            while(bandName != NULL)
             {
-                const char* tag = tags[i];
-                const char* fname = feature->GetFieldAsString(tag);
+                /* skip algo names (NDIS, etc) */
+                if(isValidAlgoName(bandName))
+                {
+                    bandName = bandsDict.next(&val);
+                    continue;
+                }
+
+                const char* fname = feature->GetFieldAsString(bandName);
                 if(fname && strlen(fname) > 0)
                 {
                     std::string fileName(fname);
@@ -201,19 +230,19 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
                     raster_info_t rinfo;
                     rinfo.fileName = fileName;
-                    rinfo.tag = tag;
+                    rinfo.tag = bandName;
                     rinfo.gpsTime = rgroup.gpsTime;
                     rinfo.gmtDate = rgroup.gmtDate;
 
                     rgroup.list.add(rgroup.list.length(), rinfo);
                 }
+                bandName = bandsDict.next(&val);
             }
-            print2term("Added group: %s with %ld rasters\n", rgroup.id.c_str(), rgroup.list.length());
+
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
             OGRFeature::DestroyFeature(feature);
             rasterGroupList->add(rasterGroupList->length(), rgroup);
         }
-        print2term("Found %ld raster groups for (%.2lf, %.2lf)\n", rasterGroupList->length(), p.getX(), p.getY());
         mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
     }
     catch (const RunTimeException &e)
@@ -280,8 +309,9 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
             if(!isL8 && !isS2)
                 throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
 
+            double invalid = -999999.0;
             double green, red, nir08, swir16;
-            green = red = nir08 = swir16 = 0;
+            green = red = nir08 = swir16 = invalid;
 
             /* Collect samples for all rasters */
             for(int j = 0; j < raster_iter.length; j++)
@@ -296,7 +326,15 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
                         /* Update dictionary of used raster files */
                         raster->sample.fileId = fileDictAdd(raster->fileName);
                         raster->sample.flags  = flags;
-                        slist.add(raster->sample);
+
+                        /* Is this band's sample to be returned to the user? */
+                        bool returnBandSample = false;
+                        const char* bandName  = rinfo.tag.c_str();
+                        if(bandsDict.find(bandName, &returnBandSample))
+                        {
+                            if(returnBandSample)
+                                slist.add(raster->sample);
+                        }
 
                         /* green and red bands are the same for L8 and S2 */
                         if(rinfo.tag == "B03") green = raster->sample.value;
@@ -319,29 +357,36 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
             sample_t sample;
             std::string groupName = rgroup.id + " {\"algo\": \"";
 
-            if(calculateNDSI)
+            /* Calculate algos - make sure that all the necessary bands were read */
+            if(ndsi)
             {
-                double ndsi = (green - swir16) / (green + swir16);
                 bzero(&sample, sizeof(sample));
-                sample.value  = ndsi;
+                if( (green != invalid) && (swir16 != invalid) )
+                    sample.value = (green - swir16) / (green + swir16);
+                else sample.value = invalid;
+
                 sample.fileId = fileDictAdd(groupName + "NDSI\"}");
                 slist.add(sample);
             }
 
-            if(calculateNDVI)
+            if(ndvi)
             {
-                double ndvi = (nir08 - red) / (nir08 + red);
                 bzero(&sample, sizeof(sample));
-                sample.value  = ndvi;
+                if( (red != invalid) && (nir08 != invalid) )
+                    sample.value = (nir08 - red) / (nir08 + red);
+                else sample.value = invalid;
+
                 sample.fileId = fileDictAdd(groupName + "NDVI\"}");
                 slist.add(sample);
             }
 
-            if(calculateNDWI)
+            if(ndwi)
             {
-                double ndwi = (nir08 - swir16) / (nir08 + swir16);
                 bzero(&sample, sizeof(sample));
-                sample.value  = ndwi;
+                if( (nir08 != invalid) && (swir16 != invalid) )
+                    sample.value = (nir08 - swir16) / (nir08 + swir16);
+                else sample.value = invalid;
+
                 sample.fileId = fileDictAdd(groupName + "NDWI\"}");
                 slist.add(sample);
             }
@@ -362,3 +407,41 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
+
+bool LandsatHlsRaster::validateBand(band_type_t type, const char* bandName)
+{
+    const char** tags;
+    int tagsCnt = 0;
+
+    if(bandName == NULL) return false;
+
+    if(type == SENTINEL2)
+    {
+        tags    = S2_bands;
+        tagsCnt = S2_bandCnt;
+    }
+    else if(type == LANDSAT8)
+    {
+        tags    = L8_bands;
+        tagsCnt = L8_bandCnt;
+    }
+    else if(type == ALGOBAND)
+    {
+        tags    = ALGO_bands;
+        tagsCnt = ALGO_bandCnt;
+    }
+    else if(type == ALGONAME)
+    {
+        tags    = ALGO_names;
+        tagsCnt = ALGO_nameCnt;
+    }
+
+    for(int i = 0; i < tagsCnt; i++)
+    {
+        const char* tag = tags[i];
+        if( strncasecmp(bandName, tag, strlen(tag)) == 0)
+            return true;
+    }
+
+    return false;
+}
