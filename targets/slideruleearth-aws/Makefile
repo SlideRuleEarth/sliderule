@@ -15,6 +15,7 @@ SLIDERULE_SOURCE_DIR = $(ROOT)
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 ICESAT2_BUILD_DIR = $(BUILD)/icesat2
 PGC_BUILD_DIR = $(BUILD)/pgc
+LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
 PYTHON_SOURCE_DIR = $(ROOT)/../sliderule-python
 SERVER_STAGE_DIR = $(STAGE)/sliderule
@@ -62,18 +63,21 @@ config-debug: prep ## configure the server for running locally with debug symbol
 	cd $(SLIDERULE_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
 	cd $(ICESAT2_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 
 config-release: prep ## configure server to run release version locally (useful for using valgrind)
 	cd $(SLIDERULE_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
 	cd $(ICESAT2_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 
 config-asan: prep ## configure server to run with address sanitizer locally
 	cd $(SLIDERULE_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
 	cd $(ICESAT2_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR); export CC=clang$(CLANG_VER); export CXX=clang++$(CLANG_VER); cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 
 sliderule: ## build the server using the local configuration
@@ -83,6 +87,8 @@ sliderule: ## build the server using the local configuration
 	make -C $(ICESAT2_BUILD_DIR) install
 	make -j4 -C $(PGC_BUILD_DIR)
 	make -C $(PGC_BUILD_DIR) install
+	make -j4 -C $(LANDSAT_BUILD_DIR)
+	make -C $(LANDSAT_BUILD_DIR) install
 	make -j4 -C $(GEDI_BUILD_DIR)
 	make -C $(GEDI_BUILD_DIR) install
 	cp docker/sliderule/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
@@ -110,7 +116,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	cp -R $(PYTHON_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)
+	cp -R $(SLIDERULE_SOURCE_DIR)/clients/python $(STATIC_WEB_STAGE_DIR)
 	-cp $(PYTHON_SOURCE_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_SOURCE_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
@@ -134,7 +140,7 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 demo-docker: # make the python client demo docker image; needs VERSION
 	-rm -Rf $(DEMO_STAGE_DIR)
 	mkdir -p $(DEMO_STAGE_DIR)
-	cp -R $(PYTHON_SOURCE_DIR) $(DEMO_STAGE_DIR)
+	cp -R $(SLIDERULE_SOURCE_DIR)/clients/python $(DEMO_STAGE_DIR)
 	cp docker/demo/* $(DEMO_STAGE_DIR)
 	chmod +x $(DEMO_STAGE_DIR)/docker-entrypoint.sh
 	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(REPO)/demo-client:latest .

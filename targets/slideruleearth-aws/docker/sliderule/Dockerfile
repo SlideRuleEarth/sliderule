@@ -105,6 +105,14 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release \
 RUN make -j8
 RUN make install
 
+# build and install landsat plugin into staging
+RUN mkdir -p /build/landsat
+WORKDIR /build/landsat
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+          /sliderule/plugins/landsat
+RUN make -j8
+RUN make install
+
 # build and install gedi plugin into staging
 RUN mkdir -p /build/gedi
 WORKDIR /build/gedi

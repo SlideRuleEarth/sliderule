@@ -4,9 +4,9 @@ MAINTAINER JP Swinski (jp.swinski@nasa.gov)
 # Environment
 ENV PYTHONPATH=/usr/local/lib
 
-# Install SlideRule client
-COPY sliderule-python /sliderule-python
-RUN cd /sliderule-python && conda env create -f environment.yml
+# Install SlideRule Python client
+COPY python /python
+RUN cd /python && conda env create -f environment.yml
 
 # Make RUN commands use the new environment:
 SHELL ["conda", "run", "-n", "sliderule", "/bin/bash", "-c"]

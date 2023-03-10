@@ -19,9 +19,9 @@ RUN pip3 install recommonmark
 RUN gem install webrick
 RUN gem install jekyll bundler
 
-# Install SlideRule Client
-COPY sliderule-python /sliderule-python
-RUN cd /sliderule-python && python3 setup.py install
+# Install SlideRule Python Client
+COPY python /python
+RUN cd /python && python3 setup.py install
 
 # Copy Over Jekyll Source
 COPY jekyll /jekyll
