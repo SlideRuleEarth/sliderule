@@ -83,8 +83,8 @@ sliderule: ## build the server using the local configuration
 	make -C $(PGC_BUILD_DIR) install
 	make -j4 -C $(GEDI_BUILD_DIR)
 	make -C $(GEDI_BUILD_DIR) install
-	cp $(ROOT)/docker/sliderule/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
-	cp $(ROOT)/docker/sliderule/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
+	cp docker/sliderule/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
+	cp docker/sliderule/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
 
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json
@@ -92,10 +92,20 @@ run: ## run the server locally
 selftest: ## run the self test on the server code
 	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
 
+static-website: ## make the website locally
+	cd jekyll; bundle install
+	cd docs/jekyll; bundle exec jekyll build
+	make -C rtd html
+	mkdir -p $(WEBSITE_STAGE_DIR)
+	cp -R jekyll/_site/* $(WEBSITE_STAGE_DIR)
+	cp -R rtd/build/html $(WEBSITE_STAGE_DIR)/rtd
+
+static-website-run-local: ## run the website locally
+	cd jekyll; bundle exec jekyll serve -d $(WEBSITE_STAGE_DIR) --skip-initial-build
+
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_SOURCE_DIR) && make distclean
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
 	cp -R $(PYTHON_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)
@@ -108,9 +118,6 @@ static-website-docker: ## make the static website docker image; needs VERSION
 
 static-website-run: ## run the static website docker locally; needs VERSION
 	docker run -it --rm --name=website -p 4000:4000 $(REPO)/static-website:$(VERSION)
-
-static-website-push:
-	docker push  $(REPO)/static-website:$(VERSION)
 
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
@@ -138,10 +145,6 @@ demo-docker: # make the python client demo docker image; needs VERSION
 demo-run: ## run the python client demo docker container locally; needs VERSION
 	docker run -it --rm --name=python-app -p 8866:8866 --entrypoint /usr/local/etc/docker-entrypoint.sh $(REPO)/demo-client:$(VERSION)
 
-demo-push:
-	docker push $(REPO)/demo-client:$(VERSION)
-	docker push $(REPO)/demo-nginx:$(VERSION)
-
 demo-deploy: ## deploy demo using terraform; needs VERSION, DOMAIN
 	cd terraform/demo && terraform init
 	cd terraform/demo && terraform workspace select $(DOMAIN)-demo || terraform workspace new $(DOMAIN)-demo
@@ -155,7 +158,14 @@ demo-destroy: ## destroy demo using terraform; needs DOMAIN
 sliderule-docker: ## build sliderule docker image; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
 	mkdir -p $(SERVER_STAGE_DIR)/etc
-	cp -R $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)
+	mkdir -p $(SERVER_STAGE_DIR)/sliderule/targets
+	cp -R $(SLIDERULE_SOURCE_DIR)/packages $(SERVER_STAGE_DIR)/sliderule
+	cp -R $(SLIDERULE_SOURCE_DIR)/platforms $(SERVER_STAGE_DIR)/sliderule
+	cp -R $(SLIDERULE_SOURCE_DIR)/plugins $(SERVER_STAGE_DIR)/sliderule
+	cp -R $(SLIDERULE_SOURCE_DIR)/scripts $(SERVER_STAGE_DIR)/sliderule
+	cp -R $(SLIDERULE_SOURCE_DIR)/targets/server-linux $(SERVER_STAGE_DIR)/sliderule/targets
+	cp $(SLIDERULE_SOURCE_DIR)/version.txt $(SERVER_STAGE_DIR)/sliderule
+	cp $(SLIDERULE_SOURCE_DIR)/CMakeLists.txt $(SERVER_STAGE_DIR)/sliderule
 	cp docker/sliderule/Dockerfile $(SERVER_STAGE_DIR)
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
 	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) -t $(REPO)/sliderule:latest .
@@ -246,6 +256,10 @@ cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
 	- rm -Rf $(STAGE)
+	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/jekyll/_site
+	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/jekyll/.jekyll-cache
+	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/rtd/build
+	- $(PYTHON_SOURCE_DIR)/clean.sh
 
 help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

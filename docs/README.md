@@ -99,9 +99,9 @@ The SlideRule **website** can be built and hosted locally for development purpos
 
 ### Build Instructions for local host
 
-To build, in the root of the repository:
+To build, in the slideruleearth-aws target directory:
 ```bash
-$ make
+$ make website
 ```
 
 To run locally (exposed as http://localhost:4000) in the root of the repository:
