@@ -104,6 +104,7 @@ class LandsatHlsRaster: public VctRaster
          *--------------------------------------------------------------------*/
         std::string filePath;
         std::string indexFile;
+        Mutex samplingMutex;
 
         Dictionary<bool> bandsDict;
 
