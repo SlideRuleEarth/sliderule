@@ -260,15 +260,22 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
-    slist.clear();
+    int samplesCnt = 0;
 
+    samplingMutex.lock();
     try
     {
         /* Get samples, if none found, return */
-        if(sample(lon, lat) == 0) return 0;
+        samplesCnt = sample(lon, lat);
+        if(samplesCnt == 0)
+        {
+            samplingMutex.unlock();
+            return samplesCnt;
+        }
+
+        slist.clear();
 
         Raster* raster = NULL;
-
         Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
         for(int i = 0; i < group_iter.length; i++)
         {
@@ -396,8 +403,9 @@ int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, 
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
+    samplingMutex.lock();
 
-    return slist.length();
+    return samplesCnt;
 }
 
 

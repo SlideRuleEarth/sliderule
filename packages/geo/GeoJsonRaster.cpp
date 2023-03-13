@@ -106,7 +106,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 
 
 /*----------------------------------------------------------------------------
- * contains
+ * includes
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat)
 {

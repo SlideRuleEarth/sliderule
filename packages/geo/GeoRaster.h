@@ -268,6 +268,7 @@ class GeoRaster: public LuaObject
         GeoIndex                    geoIndex;
         GeoParms*                   parms;
         Dictionary<Raster*>         rasterDict;
+        Mutex                       samplingMutex;
 
     private:
 
