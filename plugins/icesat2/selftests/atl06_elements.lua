@@ -5,7 +5,7 @@ json = require("json")
 
 -- Setup --
 
-local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
+local assets = asset.loaddir("../../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
 local asset_name = "nsidc-s3"
 local nsidc_s3 = core.getbyname(asset_name)
 
