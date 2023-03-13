@@ -7,7 +7,7 @@ json = require("json")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
-local assets = asset.loaddir() -- looks for asset_directory.csv in same directory this script is located in
+local assets = asset.loaddir("../../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
 
 -- Unit Test --
 
