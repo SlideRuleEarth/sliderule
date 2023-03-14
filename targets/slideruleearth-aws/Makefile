@@ -1,11 +1,15 @@
-# Note: In order to complete the release process, there are a couple of utilities that must be installed.
+# Note: In order to complete the release process, the following must be installed and configured in your environment:
 # 	* GitHub command line client (gh)
 # 		See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
-#		Then the user must authenticate to GitHub via `gh auth login`
+#		The user must authenticate to GitHub via `gh auth login`
 #	* AWS command line client (awscli)
 #		See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
-#		Then the user must have up-to-date aws credentials and also logged into the AWS Elastic Container Registry
+#		The user must have up-to-date aws credentials
+#   * Docker
+#		The user must be logged into the AWS Elastic Container Registry (ECR)
+#       The user must be logged into the GitHub Container Registry (GHCR)
 #	* Terraform & Packer
+#		The binaries are sufficient, but pay close attention to the local package versions
 
 ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
@@ -31,7 +35,8 @@ DEMO_NGINX_STAGE_DIR = $(STAGE)/nginx
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
 MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
-REPO ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
+ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
+GHCR := ghcr.io/icesat2-sliderule
 DOCKEROPTS ?=
 ARCH ?= arm
 DOMAIN ?= testsliderule.org
@@ -123,16 +128,16 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	-cp $(PYTHON_SOURCE_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
-	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(REPO)/static-website:latest .
-	docker tag $(REPO)/static-website:latest $(REPO)/static-website:$(VERSION)
+	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
+	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 
 static-website-run: ## run the static website docker locally; needs VERSION
-	docker run -it --rm --name=website -p 4000:4000 $(REPO)/static-website:$(VERSION)
+	docker run -it --rm --name=website -p 4000:4000 $(ECR)/static-website:$(VERSION)
 
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(REPO)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(ECR)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
@@ -145,20 +150,20 @@ demo-docker: # make the python client demo docker image; needs VERSION
 	cp -R $(SLIDERULE_SOURCE_DIR)/clients/python $(DEMO_STAGE_DIR)
 	cp docker/demo/* $(DEMO_STAGE_DIR)
 	chmod +x $(DEMO_STAGE_DIR)/docker-entrypoint.sh
-	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(REPO)/demo-client:latest .
-	docker tag $(REPO)/demo-client:latest $(REPO)/demo-client:$(VERSION)
+	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo-client:latest .
+	docker tag $(ECR)/demo-client:latest $(ECR)/demo-client:$(VERSION)
 	mkdir -p $(DEMO_NGINX_STAGE_DIR)
 	cp docker/demo-nginx/* $(DEMO_NGINX_STAGE_DIR)
-	cd $(DEMO_NGINX_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(REPO)/demo-nginx:latest .
-	docker tag $(REPO)/demo-nginx:latest $(REPO)/demo-nginx:$(VERSION)
+	cd $(DEMO_NGINX_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo-nginx:latest .
+	docker tag $(ECR)/demo-nginx:latest $(ECR)/demo-nginx:$(VERSION)
 
 demo-run: ## run the python client demo docker container locally; needs VERSION
-	docker run -it --rm --name=python-app -p 8866:8866 --entrypoint /usr/local/etc/docker-entrypoint.sh $(REPO)/demo-client:$(VERSION)
+	docker run -it --rm --name=python-app -p 8866:8866 --entrypoint /usr/local/etc/docker-entrypoint.sh $(ECR)/demo-client:$(VERSION)
 
 demo-deploy: ## deploy demo using terraform; needs VERSION, DOMAIN
 	cd terraform/demo && terraform init
 	cd terraform/demo && terraform workspace select $(DOMAIN)-demo || terraform workspace new $(DOMAIN)-demo
-	cd terraform/demo && terraform apply -var docker_image_url_demo-client=$(REPO)/demo-client:$(VERSION) -var docker_image_url_demo-nginx=$(REPO)/demo-nginx:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+	cd terraform/demo && terraform apply -var docker_image_url_demo-client=$(ECR)/demo-client:$(VERSION) -var docker_image_url_demo-nginx=$(ECR)/demo-nginx:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 demo-destroy: ## destroy demo using terraform; needs DOMAIN
 	cd terraform/demo && terraform init
@@ -169,7 +174,8 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(REPO)/sliderule-buildenv:latest .
+	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest .
+	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:latest
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
@@ -184,9 +190,9 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	cp $(SLIDERULE_SOURCE_DIR)/CMakeLists.txt $(SERVER_STAGE_DIR)/sliderule
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
-	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(REPO) -t $(REPO)/sliderule:latest .
-	docker tag $(REPO)/sliderule:latest $(REPO)/sliderule:$(VERSION)
-	docker tag $(REPO)/sliderule:latest $(REPO)/sliderule:$(MAJOR_VERSION)
+	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest .
+	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
+	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
 
 sliderule-full-docker: sliderule-buildenv-docker sliderule-docker ## build sliderule docker container from scratch; needs VERSION
 
@@ -196,9 +202,9 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cp docker/monitor/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(REPO)/monitor:latest .
-	docker tag $(REPO)/monitor:latest $(REPO)/monitor:$(VERSION)
-	docker tag $(REPO)/monitor:latest $(REPO)/monitor:$(MAJOR_VERSION)
+	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/monitor:latest .
+	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
+	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -207,12 +213,12 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(SLIDERULE_SOURCE_DIR)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(REPO)/ilb:latest .
-	docker tag $(REPO)/ilb:latest $(REPO)/ilb:$(VERSION)
-	docker tag $(REPO)/ilb:latest $(REPO)/ilb:$(MAJOR_VERSION)
+	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/ilb:latest .
+	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
+	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
 
 ilb-run: ## run intelligent load balancer docker container; needs VERSION
-	docker run -it --rm --name=ilb --net=host -v $(ROOT)/test/cluster:/haproxy -e CLUSTER=sliderule -e DOMAIN=localhost $(REPO)/ilb:$(VERSION)
+	docker run -it --rm --name=ilb --net=host -v $(ROOT)/test/cluster:/haproxy -e CLUSTER=sliderule -e DOMAIN=localhost $(ECR)/ilb:$(VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
@@ -239,15 +245,15 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	make DOCKEROPTS=--no-cache static-website-docker
 	make DOCKEROPTS=--no-cache demo-docker
 	# docker tags
-	docker push $(REPO)/sliderule:$(VERSION)
-	docker push $(REPO)/sliderule:$(MAJOR_VERSION)
-	docker push $(REPO)/monitor:$(VERSION)
-	docker push $(REPO)/monitor:$(MAJOR_VERSION)
-	docker push $(REPO)/ilb:$(VERSION)
-	docker push $(REPO)/ilb:$(MAJOR_VERSION)
-	docker push $(REPO)/static-website:$(VERSION)
-	docker push $(REPO)/demo-client:$(VERSION)
-	docker push $(REPO)/demo-nginx:$(VERSION)
+	docker push $(ECR)/sliderule:$(VERSION)
+	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
+	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/monitor:$(MAJOR_VERSION)
+	docker push $(ECR)/ilb:$(VERSION)
+	docker push $(ECR)/ilb:$(MAJOR_VERSION)
+	docker push $(ECR)/static-website:$(VERSION)
+	docker push $(ECR)/demo-client:$(VERSION)
+	docker push $(ECR)/demo-nginx:$(VERSION)
 	# deployment resources
 	make cluster-build-packer
 	make cluster-upload-terraform
@@ -256,21 +262,21 @@ cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
 	cd terraform/cluster && terraform apply \
 		-var cluster_name=sliderule \
 		-var ami_name=sliderule-$(MAJOR_VERSION) \
-		-var sliderule_image=$(REPO)/sliderule:$(MAJOR_VERSION) \
-		-var ilb_image=$(REPO)/ilb:$(MAJOR_VERSION) \
-		-var monitor_image=$(REPO)/monitor:$(MAJOR_VERSION) \
+		-var sliderule_image=$(ECR)/sliderule:$(MAJOR_VERSION) \
+		-var ilb_image=$(ECR)/ilb:$(MAJOR_VERSION) \
+		-var monitor_image=$(ECR)/monitor:$(MAJOR_VERSION) \
 		-var domain=$(DOMAIN)
 
 cluster-destroy: ## manually destroy a cluster
 	cd terraform/cluster && terraform destroy
 
 cluster-docker-clean: ## clean out old version of docker images; needs VERSION
-	- docker image rm $(REPO)/sliderule:$(VERSION)
-	- docker image rm $(REPO)/ilb:$(VERSION)
-	- docker image rm $(REPO)/monitor:$(VERSION)
-	- docker image rm $(REPO)/static-website:$(VERSION)
-	- docker image rm $(REPO)/demo-client:$(VERSION)
-	- docker image rm $(REPO)/demo-nginx:$(VERSION)
+	- docker image rm $(ECR)/sliderule:$(VERSION)
+	- docker image rm $(ECR)/ilb:$(VERSION)
+	- docker image rm $(ECR)/monitor:$(VERSION)
+	- docker image rm $(ECR)/static-website:$(VERSION)
+	- docker image rm $(ECR)/demo-client:$(VERSION)
+	- docker image rm $(ECR)/demo-nginx:$(VERSION)
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
