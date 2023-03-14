@@ -70,3 +70,6 @@ RUN cmake /gdal-3.6.2 -DCMAKE_BUILD_TYPE=Release
 RUN make -j8
 RUN make install
 RUN ldconfig
+
+# support interactive mode
+CMD ["/bin/bash"]

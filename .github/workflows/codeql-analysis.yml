@@ -46,7 +46,9 @@ jobs:
 
     # Build SlideRule
     - run: |
-       make config-development
+       mkdir -p build
+       cd build
+       cmake -D -DCMAKE_BUILD_TYPE=Release -DMAX_FREE_STACK_SIZE=1 -DUSE_ARROW_PACKAGE=ON -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_GEO_PACKAGE=ON ..
        make
        sudo make install
        make config-icesat2
@@ -55,4 +57,3 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
-
