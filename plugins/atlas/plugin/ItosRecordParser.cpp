@@ -973,7 +973,7 @@ Packet* ItosRecordParser::createPacket (Record* declaration, Packet* pkt, Record
             snprintf(syspkt_name, Record::MAX_TOKEN_SIZE, "%s.%s", (*system_declaration)->getName(), dotptr + 1);
 
             mlog(DEBUG, "SYSTEM INSTANTIATION of %s from %s", instantiated_rec->getName(), syspkt_name);
-            assert(instantiated_rec->isRedefinition() == true);
+            instantiated_rec->isRedefinition();
 
             /* Find Packet */
             Packet* orig_syspkt = findPacket(syspkt_name);

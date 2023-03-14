@@ -101,7 +101,7 @@ int LuaObject::luaGetByName(lua_State* L)
             /* Get Self */
             lua_obj = globalObjects.get(name);
 
-            /* Return  Lua Object */
+            /* Return Lua Object */
             associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
         }
         globalMut.unlock();
@@ -405,20 +405,22 @@ int LuaObject::luaName(lua_State* L)
         /* Add Name to Global Objects */
         globalMut.lock();
         {
-            /* Remove Previous Name (if it exists) */
-            if(lua_obj->ObjectName)
+            /* Check if Name Already Exists */
+            if(!lua_obj->ObjectName)
             {
-                globalObjects.remove(lua_obj->ObjectName);
-                delete [] lua_obj->ObjectName;
+                /* Register Name */
+                if(globalObjects.add(name, lua_obj))
+                {
+                    /* Associate Name */
+                    lua_obj->ObjectName = StringLib::duplicate(name);
+                    mlog(DEBUG, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
+                    status = true;
+                }
             }
-
-            /* Register Name */
-            if(globalObjects.add(name, lua_obj))
+            else
             {
-                /* Associate Name */
-                lua_obj->ObjectName = StringLib::duplicate(name);
-                mlog(DEBUG, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
-                status = true;
+                mlog(WARNING, "Name conflict on %s for type %s", lua_obj->getName(), lua_obj->getType());
+                status = true; // do not treat as error
             }
         }
         globalMut.unlock();
@@ -430,7 +432,6 @@ int LuaObject::luaName(lua_State* L)
         lua_pop(L, 1);
 
         /* Stack holds Self */
-
     }
     catch(const RunTimeException& e)
     {

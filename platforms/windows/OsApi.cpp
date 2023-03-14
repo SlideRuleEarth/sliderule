@@ -239,9 +239,9 @@ Sem::~Sem()
  *----------------------------------------------------------------------------*/
 void Sem::give(void)
 {
-    assert(ReleaseSemaphore(semId,      // handle to semaphore
-                            1,          // increase count by one
-                            NULL) != 0);// not interested in previous count
+    ReleaseSemaphore(semId,     // handle to semaphore
+                    1,          // increase count by one
+                    NULL);      // not interested in previous count
 }
 
 /*----------------------------------------------------------------------------
@@ -309,7 +309,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
  *----------------------------------------------------------------------------*/
 Timer::~Timer()
 {
-    assert(CloseHandle(timerId) != 0);
+    CloseHandle(timerId);
     alive = false;
     delete handlerPid;
 }
