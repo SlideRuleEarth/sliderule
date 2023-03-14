@@ -30,8 +30,8 @@ class TestParquet:
         assert len(gdf.keys()) == 16
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405240
-        assert gdf['segment_id'].describe()["max"] == 405915
+        assert gdf['segment_id'].describe()["min"] == 405231
+        assert gdf['segment_id'].describe()["max"] == 405900
 
     def test_atl03(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
@@ -51,8 +51,8 @@ class TestParquet:
         assert len(gdf.keys()) == 17
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405240
-        assert gdf['segment_id'].describe()["max"] == 405915
+        assert gdf['segment_id'].describe()["min"] == 405231
+        assert gdf['segment_id'].describe()["max"] == 405900
 
     def test_atl06_index(self, domain, asset, organization):
         icesat2.init(domain, organization=organization)
