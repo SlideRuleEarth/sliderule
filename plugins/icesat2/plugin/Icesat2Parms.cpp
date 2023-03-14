@@ -510,7 +510,7 @@ void Icesat2Parms::cleanup (void)
 void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of classifications or a single classification as a string */
     if(lua_istable(L, index))
@@ -616,7 +616,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
 void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of photon qualities or a single quality as a string */
     if(lua_istable(L, index))
@@ -722,7 +722,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
 void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of classifications or a single classification as a string */
     if(lua_istable(L, index))
@@ -822,7 +822,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
 void Icesat2Parms::get_lua_polygon (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of coordinates */
     if(lua_istable(L, index))
@@ -864,7 +864,7 @@ void Icesat2Parms::get_lua_polygon (lua_State* L, int index, bool* provided)
 void Icesat2Parms::get_lua_raster (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of coordinates */
     if(lua_istable(L, index))
@@ -872,7 +872,7 @@ void Icesat2Parms::get_lua_raster (lua_State* L, int index, bool* provided)
         try
         {
             raster = GeoJsonRaster::create(L, index);
-            *provided = true;
+            if(provided) *provided = true;
         }
         catch(const RunTimeException& e)
         {
@@ -889,12 +889,12 @@ void Icesat2Parms::get_lua_yapc (lua_State* L, int index, bool* provided)
     bool field_provided;
 
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of coordinates */
     if(lua_istable(L, index))
     {
-        *provided = true;
+        if(provided) *provided = true;
 
         lua_getfield(L, index, Icesat2Parms::YAPC_SCORE);
         yapc.score = (uint8_t)LuaObject::getLuaInteger(L, -1, true, yapc.score, &field_provided);
@@ -934,7 +934,7 @@ void Icesat2Parms::get_lua_yapc (lua_State* L, int index, bool* provided)
 void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t** string_list, bool* provided)
 {
     /* Reset provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of strings */
     if(lua_istable(L, index))
@@ -984,12 +984,12 @@ void Icesat2Parms::get_lua_phoreal (lua_State* L, int index, bool* provided)
     bool field_provided;
 
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of coordinates */
     if(lua_istable(L, index))
     {
-        *provided = true;
+        if(provided) *provided = true;
 
         /* Binsize */
         lua_getfield(L, index, Icesat2Parms::PHOREAL_BINSIZE);

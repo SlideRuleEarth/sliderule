@@ -316,7 +316,7 @@ GDALRIOResampleAlg GeoParms::str2algo (const char* str)
 void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     if(lua_istable(L, index))
     {
@@ -336,7 +336,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
     }
     else if(lua_isstring(L, index))
     {
-        *provided = true;
+        if(provided) *provided = true;
 
         /* Add band */
         const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
