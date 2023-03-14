@@ -43,8 +43,9 @@ jobs:
       - name: Install sliderule from current commit
         shell: bash -l {0}
         run: |
-          cd clients/python && python -m pip install .
-          cd clients/python && conda list
+          cd clients/python
+          python -m pip install .
+          conda list
 
       - name: Install netrc for authentication
         shell: bash -l {0}
@@ -55,4 +56,5 @@ jobs:
       - name: Run tests
         shell: bash -l {0}
         run: |
-          cd clients/python && python -m pytest --verbose
+          cd clients/python
+          python -m pytest --verbose
