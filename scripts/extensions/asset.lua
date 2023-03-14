@@ -111,28 +111,32 @@ local function loaddir(file)
         sys.log(core.DEBUG, string.format("Unable to load asset directory: %s", file))
     end
 
-    -- create asset for each entry in directory
-    for k,v in pairs(directory) do
-        assets[k] = core.asset(k, v["format"], v["path"], v["index"], v["region"], v["endpoint"]):name(k)
-    end
-
-    -- load index file for each asset in directory
+    -- find path prefix for potential index
     local offset = string.find(file, "/[^/]*$")
     local path_prefix = "./"
     if offset then -- pull out relative path of asset directory file
         path_prefix = file:sub(1, offset)
     end
+
+    -- create asset for each entry in directory
     for k,v in pairs(directory) do
-        sys.log(core.DEBUG, string.format("Building %s (%s) index at %s", k, v["format"], v["path"]))
-        if v["index"] then
-            if v["index"]:sub(1,1) == "/" then -- absolute path
-                _loadindex(assets[k], v["index"])
-            else -- relative path
-                _loadindex(assets[k], path_prefix..v["index"])
-            end
+
+        -- see if asset already exists
+        local asset = core.getbyname(k)
+
+        -- populate asset table
+        if  asset then
+            -- reference asset
+            assets[k] = asset
+        else
+            -- create asset
+            assets[k] = core.asset(k, v["format"], v["path"], v["index"], v["region"], v["endpoint"]):name(k)
+            -- load index file
+            _loadindex(assets[k], path_prefix..v["index"])
         end
     end
 
+    -- return dictionary of assets
     return assets
 end
 
