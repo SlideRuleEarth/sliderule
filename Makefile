@@ -36,7 +36,6 @@ DEVCFG += -DUSE_GEO_PACKAGE=ON
 DEVCFG += -DUSE_H5_PACKAGE=ON
 DEVCFG += -DUSE_LEGACY_PACKAGE=ON
 DEVCFG += -DUSE_NETSVC_PACKAGE=ON
-DEVCFG += -DUSE_PISTACHE_PACKAGE=ON
 DEVCFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 config-development: prep ## configure make for development version of sliderule binary
@@ -44,9 +43,6 @@ config-development: prep ## configure make for development version of sliderule 
 
 config-development-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
-
-config-development-cicd: prep ## configure make for debug version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_APACHE_ARROW_10_COMPAT=ON $(ROOT)
 
 config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat ## configure everything
 
