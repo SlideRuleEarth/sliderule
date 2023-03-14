@@ -12,6 +12,7 @@
 name: "CodeQL"
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
@@ -24,8 +25,9 @@ jobs:
 
   # Server Analysis
   analyze_server:
-    name: Analyze Server
+    name: Analyze SlideRule
     runs-on: ubuntu-latest
+    container: ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
 
     strategy:
       fail-fast: false
@@ -44,50 +46,13 @@ jobs:
 
     # Build SlideRule
     - run: |
-       sudo apt update
-       sudo apt install build-essential libreadline-dev liblua5.3-dev
-       sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
-       make config
+       make config-development
        make
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
-
-  # ICESat-2 Plugin Analysis
-  analyze_icesat2_plugin:
-    name: Analyze ICESat-2 Plugin
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'cpp' ]
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: ${{ matrix.language }}
-
-    - run: |
-       sudo apt update
-       sudo apt install build-essential libreadline-dev liblua5.3-dev
-       sudo apt install libcurl4-openssl-dev libssl-dev uuid-dev zlib1g-dev libgdal-dev
-       sudo mkdir -p /usr/local/include/sliderule
-       sudo find . -name "*.h" -exec cp {} /usr/local/include/sliderule/ \;
-       sudo cp platforms/linux/*.h /usr/local/include/sliderule/
-       sudo touch /usr/local/include/sliderule/platform.h
-       sudo chmod 777 /usr/local/include/sliderule/platform.h
-       sudo echo "#define LIBID \"codeql\"" >> /usr/local/include/sliderule/platform.h
-       sudo echo "#define CONFDIR \"/usr/local/etc/sliderule\"" >> /usr/local/include/sliderule/platform.h
-       sudo echo "#define __tracing__" >> /usr/local/include/sliderule/platform.h
-       sudo echo "#define __terminal__" >> /usr/local/include/sliderule/platform.h
+       sudo make install
        make config-icesat2
        make icesat2
+       sudo make install-icesat2
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
+
