@@ -155,10 +155,6 @@ def __todataframe(columns, time_key="time", lon_key="lon", lat_key="lat", **kwar
     # Generate Time Column
     columns['time'] = columns[time_key].astype('datetime64[ns]')
 
-    # Temporary code for backward compatibility
-    if 'delta_time' in columns:
-        del columns['delta_time']
-
     # Generate Geometry Column
     geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
     del columns[lon_key]
