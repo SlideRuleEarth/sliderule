@@ -46,14 +46,9 @@ jobs:
 
     # Build SlideRule
     - run: |
-       mkdir -p build
-       cd build
-       cmake -D -DCMAKE_BUILD_TYPE=Release -DMAX_FREE_STACK_SIZE=1 -DUSE_ARROW_PACKAGE=ON -DUSE_AWS_PACKAGE=ON -DUSE_H5_PACKAGE=ON -DUSE_GEO_PACKAGE=ON ..
+       cd targets/slideruleearth-aws
+       make config-release
        make
-       sudo make install
-       make config-icesat2
-       make icesat2
-       sudo make install-icesat2
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
