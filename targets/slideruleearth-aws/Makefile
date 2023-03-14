@@ -19,6 +19,7 @@ LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
 PYTHON_SOURCE_DIR = $(ROOT)/../sliderule-python
 SERVER_STAGE_DIR = $(STAGE)/sliderule
+BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
 TF_STAGE_DIR = $(STAGE)/tf
@@ -164,7 +165,13 @@ demo-destroy: ## destroy demo using terraform; needs DOMAIN
 	cd terraform/demo && terraform workspace select $(DOMAIN)-demo || terraform workspace new $(DOMAIN)-demo
 	cd terraform/demo && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-sliderule-docker: ## build sliderule docker image; needs VERSION
+sliderule-buildenv-docker: ## build sliderule build environment docker image
+	-rm -Rf $(BUILDENV_STAGE_DIR)
+	mkdir -p $(BUILDENV_STAGE_DIR)
+	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
+	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(REPO)/sliderule-buildenv:latest .
+
+sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
 	mkdir -p $(SERVER_STAGE_DIR)/etc
 	mkdir -p $(SERVER_STAGE_DIR)/sliderule/targets
@@ -175,11 +182,13 @@ sliderule-docker: ## build sliderule docker image; needs VERSION
 	cp -R $(SLIDERULE_SOURCE_DIR)/targets/server-linux $(SERVER_STAGE_DIR)/sliderule/targets
 	cp $(SLIDERULE_SOURCE_DIR)/version.txt $(SERVER_STAGE_DIR)/sliderule
 	cp $(SLIDERULE_SOURCE_DIR)/CMakeLists.txt $(SERVER_STAGE_DIR)/sliderule
-	cp docker/sliderule/Dockerfile $(SERVER_STAGE_DIR)
+	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
-	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) -t $(REPO)/sliderule:latest .
+	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(REPO) -t $(REPO)/sliderule:latest .
 	docker tag $(REPO)/sliderule:latest $(REPO)/sliderule:$(VERSION)
 	docker tag $(REPO)/sliderule:latest $(REPO)/sliderule:$(MAJOR_VERSION)
+
+sliderule-full-docker: sliderule-buildenv-docker sliderule-docker ## build sliderule docker container from scratch; needs VERSION
 
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
@@ -223,6 +232,7 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	cd $(SLIDERULE_SOURCE_DIR) && $(ROOT)/RELEASE.sh $(VERSION) && git push --tags && git push
 	cd $(SLIDERULE_SOURCE_DIR) && gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
 	# docker images
+	make DOCKEROPTS=--no-cache sliderule-buildenv-docker
 	make DOCKEROPTS=--no-cache sliderule-docker
 	make DOCKEROPTS=--no-cache monitor-docker
 	make DOCKEROPTS=--no-cache ilb-docker
