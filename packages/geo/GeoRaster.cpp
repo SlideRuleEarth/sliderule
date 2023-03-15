@@ -148,17 +148,36 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
 
 
 /*----------------------------------------------------------------------------
- * getFlags
+ * addSamples
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getFlags(const raster_info_t& rinfo)
+void GeoRaster::addSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
 {
-    std::ignore = rinfo;
-    return 0;
+    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+    for(int i = 0; i < raster_iter.length; i++)
+    {
+        const raster_info_t& rinfo = raster_iter[i].value;
+        if(strcmp("dem", rinfo.tag.c_str()) == 0)
+        {
+            Raster* raster  = NULL;
+            const char* key = rinfo.fileName.c_str();
+
+            if(rasterDict.find(key, &raster))
+            {
+                assert(raster);
+                if(raster->enabled && raster->sampled)
+                {
+                    /* Update dictionary of used raster files */
+                    raster->sample.fileId = fileDictAdd(raster->fileName);
+                    raster->sample.flags  = flags;
+                    slist.add(raster->sample);
+                }
+            }
+        }
+    }
 }
 
-
 /*----------------------------------------------------------------------------
- * sample
+ * getSamples
  *----------------------------------------------------------------------------*/
 int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
 {
@@ -182,32 +201,29 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t& rgroup = group_iter[i].value;
-            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-            Raster* rasterOfIntrest = NULL;
+            uint32_t flags = 0;
 
-            for(int j = 0; j < raster_iter.length; j++)
+            if(parms->flags_file)
             {
-                const raster_info_t& rinfo = raster_iter[j].value;
-                const char* key            = rinfo.fileName.c_str();
-                Raster* raster             = NULL;
-
-                if(strcmp("dem", rinfo.tag.c_str()) == 0)
+                /* Get flags value for this group of rasters */
+                Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+                for(int j = 0; j < raster_iter.length; j++)
                 {
-                    if(rasterDict.find(key, &raster))
+                    const raster_info_t& rinfo = raster_iter[j].value;
+                    if(strcmp("Fmask", rinfo.tag.c_str()) == 0)
                     {
-                        assert(raster);
-                        if(raster->enabled && raster->sampled)
+                        Raster* raster  = NULL;
+                        const char* key = rinfo.fileName.c_str();
+                        if(rasterDict.find(key, &raster))
                         {
-                            /* Update dictionary of used raster files */
-                            raster->sample.fileId = fileDictAdd(raster->fileName);
-                            raster->sample.flags  = 0;
-                            rasterOfIntrest       = raster;
+                            assert(raster);
+                            flags = raster->sample.value;
                         }
+                        break;
                     }
                 }
-                if(rasterOfIntrest) rasterOfIntrest->sample.flags = getFlags(rinfo);
             }
-            if(rasterOfIntrest) slist.add(rasterOfIntrest->sample);
+            addSamples(rgroup, slist, flags);
         }
     }
     catch (const RunTimeException &e)
@@ -845,7 +861,6 @@ void GeoRaster::computeZonalStats(Raster *raster)
 
         int _col = col - radiusInPixels;
         int _row = row - radiusInPixels;
-
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);

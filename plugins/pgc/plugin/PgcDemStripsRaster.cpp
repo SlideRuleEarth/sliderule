@@ -117,28 +117,6 @@ void PgcDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * getFlags
- *----------------------------------------------------------------------------*/
-uint32_t PgcDemStripsRaster::getFlags(const raster_info_t& rinfo)
-{
-    uint32_t flags = 0;
-
-    if(strcmp("flags", rinfo.tag.c_str()) == 0)
-    {
-        const char* key = rinfo.fileName.c_str();
-        Raster* raster  = NULL;
-
-        if(rasterDict.find(key, &raster))
-        {
-            /* Get flags */
-            assert(raster);
-            flags = raster->sample.value;
-        }
-    }
-    return flags;
-}
-
-/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::findRasters(OGRPoint& p)
@@ -231,7 +209,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
                 if(flagsRinfo.fileName.length() > 0)
                 {
-                    flagsRinfo.tag = "flags";
+                    flagsRinfo.tag = "Fmask";
                     flagsRinfo.gmtDate = rinfo.gmtDate;
                     flagsRinfo.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);

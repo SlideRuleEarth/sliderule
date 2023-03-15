@@ -223,7 +223,7 @@ class GeoRaster: public LuaObject
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_t create);
         virtual int      getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
-        virtual uint32_t getFlags        (const raster_info_t& rinfo);
+        virtual void     addSamples      (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
         inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
         const char*      getUUID         (char* uuid_str);
         virtual         ~GeoRaster       (void);

@@ -85,7 +85,7 @@ class LandsatHlsRaster: public VctRaster
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
         void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters      (OGRPoint &p);
-        int     getSamples       (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        void    addSamples       (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
 
         /*--------------------------------------------------------------------
          * Data
@@ -104,8 +104,6 @@ class LandsatHlsRaster: public VctRaster
          *--------------------------------------------------------------------*/
         std::string filePath;
         std::string indexFile;
-        Mutex samplingMutex;
-
         Dictionary<bool> bandsDict;
 
         bool ndsi;

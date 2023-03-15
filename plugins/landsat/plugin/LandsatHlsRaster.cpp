@@ -266,157 +266,107 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
 
 /*----------------------------------------------------------------------------
- * sample
+ * addSamples
  *----------------------------------------------------------------------------*/
-int LandsatHlsRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
+void LandsatHlsRaster::addSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
 {
-    std::ignore = param;
-    int samplesCnt = 0;
+    /* Which group is it? Landsat8 or Sentinel2 */
+    bool isL8 = false;
+    bool isS2 = false;
+    std::size_t pos;
 
-    samplingMutex.lock();
-    try
+    pos = rgroup.id.find("HLS.L30");
+    if(pos != std::string::npos) isL8 = true;
+
+    pos = rgroup.id.find("HLS.S30");
+    if(pos != std::string::npos) isS2 = true;
+
+    if(!isL8 && !isS2)
+        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
+
+    double invalid = -999999.0;
+    double green, red, nir08, swir16;
+    green = red = nir08 = swir16 = invalid;
+
+    /* Collect samples for all rasters */
+    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+    for(int j = 0; j < raster_iter.length; j++)
     {
-        /* Get samples, if none found, return */
-        samplesCnt = sample(lon, lat);
-        if(samplesCnt == 0)
+        const raster_info_t& rinfo = raster_iter[j].value;
+        const char* key            = rinfo.fileName.c_str();
+        Raster* raster             = NULL;
+        if(rasterDict.find(key, &raster))
         {
-            samplingMutex.unlock();
-            return samplesCnt;
-        }
-
-        slist.clear();
-
-        Raster* raster = NULL;
-        Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
-        for(int i = 0; i < group_iter.length; i++)
-        {
-            const rasters_group_t& rgroup = group_iter[i].value;
-            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-            uint32_t flags   = 0;
-
-            if(parms->flags_file)
+            assert(raster);
+            if(raster->enabled && raster->sampled)
             {
-                /* Get flags value for this group of rasters */
-                for(int j = 0; j < raster_iter.length; j++)
+                /* Update dictionary of used raster files */
+                raster->sample.fileId = fileDictAdd(raster->fileName);
+                raster->sample.flags  = flags;
+
+                /* Is this band's sample to be returned to the user? */
+                bool returnBandSample = false;
+                const char* bandName  = rinfo.tag.c_str();
+                if(bandsDict.find(bandName, &returnBandSample))
                 {
-                    const raster_info_t& rinfo = raster_iter[j].value;
-                    if(strcmp("Fmask", rinfo.tag.c_str()) == 0)
-                    {
-                        const char* key = rinfo.fileName.c_str();
-                        if(rasterDict.find(key, &raster))
-                        {
-                            assert(raster);
-                            flags = raster->sample.value;
-                        }
-                        break;
-                    }
+                    if(returnBandSample)
+                        slist.add(raster->sample);
                 }
-            }
 
-            /* Which group is it? Landsat8 or Sentinel2 */
-            bool isL8 = false;
-            bool isS2 = false;
-            std::size_t pos;
+                /* green and red bands are the same for L8 and S2 */
+                if(rinfo.tag == "B03") green = raster->sample.value;
+                if(rinfo.tag == "B04") red = raster->sample.value;
 
-            pos = rgroup.id.find("HLS.L30");
-            if(pos != std::string::npos) isL8 = true;
-
-            pos = rgroup.id.find("HLS.S30");
-            if(pos != std::string::npos) isS2 = true;
-
-            if(!isL8 && !isS2)
-                throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
-
-            double invalid = -999999.0;
-            double green, red, nir08, swir16;
-            green = red = nir08 = swir16 = invalid;
-
-            /* Collect samples for all rasters */
-            for(int j = 0; j < raster_iter.length; j++)
-            {
-                const raster_info_t& rinfo = raster_iter[j].value;
-                const char* key = rinfo.fileName.c_str();
-                if(rasterDict.find(key, &raster))
+                if(isL8)
                 {
-                    assert(raster);
-                    if(raster->enabled && raster->sampled)
-                    {
-                        /* Update dictionary of used raster files */
-                        raster->sample.fileId = fileDictAdd(raster->fileName);
-                        raster->sample.flags  = flags;
-
-                        /* Is this band's sample to be returned to the user? */
-                        bool returnBandSample = false;
-                        const char* bandName  = rinfo.tag.c_str();
-                        if(bandsDict.find(bandName, &returnBandSample))
-                        {
-                            if(returnBandSample)
-                                slist.add(raster->sample);
-                        }
-
-                        /* green and red bands are the same for L8 and S2 */
-                        if(rinfo.tag == "B03") green = raster->sample.value;
-                        if(rinfo.tag == "B04") red = raster->sample.value;
-
-                        if(isL8)
-                        {
-                            if(rinfo.tag == "B05") nir08  = raster->sample.value;
-                            if(rinfo.tag == "B06") swir16 = raster->sample.value;
-                        }
-                        else /* Must be Sentinel2 */
-                        {
-                            if(rinfo.tag == "B8A") nir08  = raster->sample.value;
-                            if(rinfo.tag == "B11") swir16 = raster->sample.value;
-                        }
-                    }
+                    if(rinfo.tag == "B05") nir08 = raster->sample.value;
+                    if(rinfo.tag == "B06") swir16 = raster->sample.value;
                 }
-            }
-
-            sample_t sample;
-            std::string groupName = rgroup.id + " {\"algo\": \"";
-
-            /* Calculate algos - make sure that all the necessary bands were read */
-            if(ndsi)
-            {
-                bzero(&sample, sizeof(sample));
-                if( (green != invalid) && (swir16 != invalid) )
-                    sample.value = (green - swir16) / (green + swir16);
-                else sample.value = invalid;
-
-                sample.fileId = fileDictAdd(groupName + "NDSI\"}");
-                slist.add(sample);
-            }
-
-            if(ndvi)
-            {
-                bzero(&sample, sizeof(sample));
-                if( (red != invalid) && (nir08 != invalid) )
-                    sample.value = (nir08 - red) / (nir08 + red);
-                else sample.value = invalid;
-
-                sample.fileId = fileDictAdd(groupName + "NDVI\"}");
-                slist.add(sample);
-            }
-
-            if(ndwi)
-            {
-                bzero(&sample, sizeof(sample));
-                if( (nir08 != invalid) && (swir16 != invalid) )
-                    sample.value = (nir08 - swir16) / (nir08 + swir16);
-                else sample.value = invalid;
-
-                sample.fileId = fileDictAdd(groupName + "NDWI\"}");
-                slist.add(sample);
+                else /* Must be Sentinel2 */
+                {
+                    if(rinfo.tag == "B8A") nir08 = raster->sample.value;
+                    if(rinfo.tag == "B11") swir16 = raster->sample.value;
+                }
             }
         }
     }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting samples: %s", e.what());
-    }
-    samplingMutex.lock();
 
-    return samplesCnt;
+    sample_t sample;
+    std::string groupName = rgroup.id + " {\"algo\": \"";
+
+    /* Calculate algos - make sure that all the necessary bands were read */
+    if(ndsi)
+    {
+        bzero(&sample, sizeof(sample));
+        if((green != invalid) && (swir16 != invalid))
+            sample.value = (green - swir16) / (green + swir16);
+        else sample.value = invalid;
+
+        sample.fileId = fileDictAdd(groupName + "NDSI\"}");
+        slist.add(sample);
+    }
+
+    if(ndvi)
+    {
+        bzero(&sample, sizeof(sample));
+        if((red != invalid) && (nir08 != invalid))
+            sample.value = (nir08 - red) / (nir08 + red);
+        else sample.value = invalid;
+
+        sample.fileId = fileDictAdd(groupName + "NDVI\"}");
+        slist.add(sample);
+    }
+
+    if(ndwi)
+    {
+        bzero(&sample, sizeof(sample));
+        if((nir08 != invalid) && (swir16 != invalid))
+            sample.value = (nir08 - swir16) / (nir08 + swir16);
+        else sample.value = invalid;
+
+        sample.fileId = fileDictAdd(groupName + "NDWI\"}");
+        slist.add(sample);
+    }
 }
 
 
