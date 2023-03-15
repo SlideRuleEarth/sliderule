@@ -54,7 +54,8 @@ local function srcscript (fullpath)
         return info.source
     else
         local src = info.source:match("^.+/(.+)$")
-        return src
+        local dir = info.source:match("(.*[/\\])") or "./"
+        return src, dir
     end
 end
 
