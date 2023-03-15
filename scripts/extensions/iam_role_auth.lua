@@ -38,6 +38,7 @@ if status then
 
                     -- wait until next fetch time
                     while sys.alive() and time.gps() < next_fetch_time do
+                        print("Waiting...")
                         sys.wait(5)
                     end
                 else
