@@ -8,7 +8,10 @@ local loglvl = global.eval(arg[1]) or core.INFO
 console.monitor:config(core.LOG, loglvl)
 sys.setlvl(core.LOG, loglvl)
 
--- Run Core Self Tests --
+local maxRuns = 1
+for runNum = 1, maxRuns do
+
+    -- Run Core Self Tests --
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")
@@ -80,6 +83,14 @@ if __landsat__ then
     local pgc_td = td .. "../../plugins/landsat/selftests/"
     runner.script(pgc_td .. "landsat_reader.lua")
 end
+
+
+if maxRuns > 1 then
+    print(string.format("\n--------------------------------\nTest Repeat Run: %d of %d finished\n--------------------------------", runNum, maxRuns))
+    sys.wait(3)
+end
+
+end  -- test repeat loop end
 
 -- Report Results --
 local errors = runner.report()

@@ -264,7 +264,6 @@ runner.check(b03 <= expected_max and b03 >= expected_min)
 
 
 
-
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 Zonal stats)\n-------------------------------------------------"))
 local samplingRadius = 120
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, zonal_stats=true, with_flags=true, bands = {"B03"}, catalog = contents }))
@@ -312,6 +311,27 @@ runner.check(b03 <= expected_max and b03 >= expected_min)
 
 
 
+print(string.format("\n-------------------------------------------------\nMany Rasters (189) Test\n-------------------------------------------------"))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0,
+                            bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
+                                     "B01", "B02", "B03", "B04", "B05", "B06",
+                                     "B07", "B08", "B09", "B10", "B11", "B12", "B8A", },
+                            catalog = contents }))
+sampleCnt = 0
+tbl, status = dem:sample(lon, lat)
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname
+    for j, v in ipairs(tbl) do
+        value = v["value"]
+        fname = v["file"]
+        sampleCnt = sampleCnt + 1
+        -- print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+    end
+end
+
+runner.check(sampleCnt == 189)
 
 -- Report Results --
 
