@@ -372,6 +372,19 @@ const char* LuaEngine::sanitize (const char* filename)
 }
 
 /*----------------------------------------------------------------------------
+ * luaAbortHook
+ *----------------------------------------------------------------------------*/
+void LuaEngine::abortHook (lua_State *L, lua_Debug *ar)
+{
+    (void)ar;
+    lua_pushstring(L, LUA_SELFKEY);
+    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
+    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
+    if(!li) luaL_error(L, "Unable to access Lua engine - aborting!\n");
+    if(!li->engineActive) luaL_error(L, "Lua engine no longer active - aborting!\n");
+}
+
+/*----------------------------------------------------------------------------
  * getEngineId
  *----------------------------------------------------------------------------*/
 uint64_t LuaEngine::getEngineId(void)

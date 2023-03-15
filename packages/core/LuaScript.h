@@ -84,7 +84,6 @@ class LuaScript: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static const char*  sanitize        (const char* filename);
         static int          luaActive       (lua_State* L);
         static int          luaResult       (lua_State* L);
 };

@@ -103,6 +103,7 @@ class LuaEngine
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);
         static void         showStack       (lua_State* l, const char* prefix=NULL);
         static const char*  sanitize        (const char* filename);
+        static void         abortHook       (lua_State* L, lua_Debug *ar);
 
         uint64_t            getEngineId     (void);
         bool                executeEngine   (int timeout_ms);

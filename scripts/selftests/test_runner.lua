@@ -1,9 +1,12 @@
 local runner = require("test_executive")
-local td = runner.rootdir(arg[0]) -- root directory
 local console = require("console")
+local global = require("global")
+local td = runner.rootdir(arg[0]) -- root directory
+local loglvl = global.eval(arg[1]) or core.INFO
 
 -- Initial Configuration --
-sys.setlvl(core.LOG, core.INFO)
+console.monitor:config(core.LOG, loglvl)
+sys.setlvl(core.LOG, loglvl)
 
 -- Run Core Self Tests --
 if __core__ then
@@ -23,6 +26,7 @@ end
 if __aws__ then
     runner.script(td .. "asset_index.lua")
     runner.script(td .. "credential_store.lua")
+    runner.script(td .. "asset_loaddir.lua")
 end
 
 -- Run H5 Self Tests --

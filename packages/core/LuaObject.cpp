@@ -90,13 +90,15 @@ int LuaObject::getLuaNumParms (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaObject::luaGetByName(lua_State* L)
 {
+    bool verbose = true;
     try
     {
         LuaObject* lua_obj = NULL;
         globalMut.lock();
         {
-            /* Get Name */
+            /* Get Parameters */
             const char* name = getLuaString(L, 1);
+            verbose = getLuaBoolean(L, 2, true, true);
 
             /* Get Self */
             lua_obj = globalObjects.get(name);
@@ -110,7 +112,7 @@ int LuaObject::luaGetByName(lua_State* L)
     catch(const RunTimeException& e)
     {
         globalMut.unlock();
-        mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
+        if(verbose) mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -351,9 +353,9 @@ int LuaObject::luaDelete (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                mlog(DEBUG, "Garbage collecting object %s/%s", lua_obj->getType(), lua_obj->getName());
-
                 int count = lua_obj->referenceCount--;
+                mlog(DEBUG, "Garbage collecting object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+
                 if(lua_obj->referenceCount == 0)
                 {
                     /* Delete Object */
@@ -362,7 +364,7 @@ int LuaObject::luaDelete (lua_State* L)
                 }
                 else
                 {
-                    mlog(DEBUG, "Delaying delete on referenced<%d> object %s/%s", count, lua_obj->getType(), lua_obj->getName());
+                    mlog(DEBUG, "Delaying delete on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
                 }
             }
             else
@@ -409,17 +411,22 @@ int LuaObject::luaName(lua_State* L)
             if(!lua_obj->ObjectName)
             {
                 /* Register Name */
-                if(globalObjects.add(name, lua_obj))
+                if(globalObjects.add(name, lua_obj, true))
                 {
                     /* Associate Name */
                     lua_obj->ObjectName = StringLib::duplicate(name);
                     mlog(DEBUG, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());
                     status = true;
                 }
+                else
+                {
+                    mlog(WARNING, "Name conflict on %s for type %s", lua_obj->getName(), lua_obj->getType());
+                    status = true; // do not treat as error
+                }
             }
             else
             {
-                mlog(WARNING, "Name conflict on %s for type %s", lua_obj->getName(), lua_obj->getType());
+                mlog(WARNING, "Object already named %s, cannot overwrite with name %s", lua_obj->getName(), name);
                 status = true; // do not treat as error
             }
         }

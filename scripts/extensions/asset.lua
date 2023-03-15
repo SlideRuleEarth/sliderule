@@ -40,8 +40,14 @@ end
 local function _loadindex(asset, file)
 
     -- check for no index
-    if file:match("[^/]*$") == "nil" then -- special value representing no index
+    local file_name = file:match("[^/]*$")
+    if file_name == "nil" then -- special value representing no index
         return false
+    else
+        local file_ext = file:match("[^.]*$")
+        if file_ext ~= "csv" and file_ext ~= "index" then -- index file must be csv or special type "index" to parse
+            return false
+        end
     end
 
     -- try to open index file
@@ -122,7 +128,7 @@ local function loaddir(file)
     for k,v in pairs(directory) do
 
         -- see if asset already exists
-        local asset = core.getbyname(k)
+        local asset = core.getbyname(k, false)
 
         -- populate asset table
         if  asset then
