@@ -121,7 +121,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
         }
     }
 
-    /* If user specified only algortithm(s) but no bands, add bands to dictionary of bands */
+    /* If user specified only algortithm(s), add needed bands to dictionary of bands */
     if(ndsi || ndvi || ndwi)
     {
         for (int i=0; i<ALGO_bandCnt; i++)
@@ -132,6 +132,17 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
                 returnBandSample = false;
                 bandsDict.add(band, returnBandSample);
             }
+        }
+    }
+
+    /* If user specified flags, add group Fmask to dictionary of bands */
+    if(_parms->flags_file)
+    {
+        const char* band = "Fmask";
+        if(!bandsDict.find(band, &returnBandSample))
+        {
+            returnBandSample = false;
+            bandsDict.add(band, returnBandSample);
         }
     }
 }

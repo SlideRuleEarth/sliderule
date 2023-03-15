@@ -8,16 +8,18 @@ json = require("json")
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
-print(string.format("BEFORE call to asset.loaddir()\n"))
 local assets = asset.loaddir("../../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
-print(string.format("AFTER  call to asset.loaddir()\n"))
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", asset="landsat-hls"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 sys.wait(5)
 
+local function script_path()
+    local str = debug.getinfo(2, "S").source:sub(2)
+    return str:match("(.*[/\\])") or "./"
+end
 
-local td = runner.rootdir(arg[0])
+local td = script_path()
 local geojsonfile = td.."hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
@@ -28,101 +30,254 @@ f:close()
 local  lon = -179.0
 local  lat = 51.0
 
-print(string.format("\n-------------------------------------------------\nLandsat Plugin test\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
 
 local demType = "landsat-hls"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
 
+
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
+local sampleCnt = 0
+local ndvi = 0
 local tbl, status = dem:sample(lon, lat)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local el, fname
+    local value, fname
     for j, v in ipairs(tbl) do
-        el = v["value"]
+        value = v["value"]
         fname = v["file"]
-        print(string.format("%15f, fname: %s", el, fname))
-    end
-    -- print(string.format("%15f, fname: %s", el, fname))
-end
 
-
-
---[[
-
-local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
-
-for i = 1, 2 do
-
-    local demType = demTypes[i];
-    local dem = geo.raster(demType, "NearestNeighbour", 0)
-
-    runner.check(dem ~= nil)
-
-    print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat)
-    runner.check(status == true)
-    runner.check(tbl ~= nil)
-
-    local sampleCnt = 0
-
-    for i, v in ipairs(tbl) do
-        local el = v["value"]
-        local fname = v["file"]
-        print(string.format("(%02d) %8.2f %s", i, el, fname))
-        runner.check(el ~= -1000000)  --INVALID_SAMPLE_VALUE from VrtRaster.h
-        runner.check(string.len(fname) > 0)
         sampleCnt = sampleCnt + 1
+        if sampleCnt == 1 then
+            ndvi = value
+        end
+        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+
+        -- only group names with algo string should be returned as a file name, example:
+        -- HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}
+        runner.check(string.find(fname, "{\"algo\": \"NDVI\"}"))
     end
-
-    if demType == "arcticdem-mosaic" then
-        runner.check(sampleCnt == 1)
-    else
-        runner.check(sampleCnt == 14)
-    end
-
-    print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
-    local rows, cols = dem:dim()
-    print(string.format("dimensions: rows: %d, cols: %d", rows, cols))
-    runner.check(rows ~= 0)
-    runner.check(cols ~= 0)
-
-    print(string.format("\n--------------------------------\nTest: %s bbox\n--------------------------------", demType))
-    local lon_min, lat_min, lon_max, lat_max = dem:bbox()
-    print(string.format("lon_min: %d, lat_min: %d, lon_max: %d, lan_max: %d", lon_min, lat_min, lon_max, lat_max))
-    runner.check(lon_min ~= 0)
-    runner.check(lat_min ~= 0)
-    runner.check(lon_max ~= 0)
-    runner.check(lon_max ~= 0)
-
-    print(string.format("\n--------------------------------\nTest: %s cellsize\n--------------------------------", demType))
-    local cellsize = dem:cell()
-    print(string.format("cellsize: %d", cellsize))
-
-    if demType == "arcticdem-mosaic" then
-        runner.check(cellsize == 2.0)
-    else
-        runner.check(cellsize == 0.0)
-    end
-
 end
 
-for i = 1, 2 do
+runner.check(sampleCnt == 9)
 
-    local demType = demTypes[i];
-    local samplingRadius = 30
-    local dem = geo.raster(demType, "NearestNeighbour", samplingRadius, true)
+local expected_value = -0.259439 -- first ndvi from the group of samples
+local expected_max = expected_value + 0.00001
+local expected_min = expected_value - 0.00001
 
-    runner.check(dem ~= nil)
+runner.check(ndvi <= expected_max and ndvi >= expected_min)
+dem = nil
 
-    print(string.format("\n--------------------------------\nTest: %s Zonal Stats\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat)
-    runner.check(status == true)
-    runner.check(tbl ~= nil)
 
-    local el, cnt, min, max, mean, median, stdev, mad
+print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI, NDSI, NDWI)\n-------------------------------------------------"))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+sampleCnt = 0
+local ndviCnt= 0
+local ndsiCnt= 0
+local ndwiCnt= 0
+tbl, status = dem:sample(lon, lat)
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname
     for j, v in ipairs(tbl) do
-        el = v["value"]
+        value = v["value"]
+        fname = v["file"]
+
+        sampleCnt = sampleCnt + 1
+
+        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+
+        if string.find(fname, "NDSI") then
+            ndsiCnt = ndsiCnt + 1
+            if sampleCnt == 1 then
+                local ndsi = value
+                expected_value = 0.06517 -- first ndwi from the group of samples
+                expected_max = expected_value + 0.00001
+                expected_min = expected_value - 0.00001
+                runner.check(ndsi <= expected_max and ndsi >= expected_min)
+            end
+        end
+
+        if string.find(fname, "NDWI") then
+            ndwiCnt = ndwiCnt + 1
+            if sampleCnt == 1 then
+                local ndwi = value
+                expected_value = -0.24315 -- first ndwi from the group of samples
+                expected_max = expected_value + 0.00001
+                expected_min = expected_value - 0.00001
+                runner.check(ndwi <= expected_max and ndwi >= expected_min)
+            end
+        end
+
+        if string.find(fname, "NDVI") then
+            ndviCnt = ndviCnt + 1
+            if sampleCnt == 1 then
+                local ndvi = value
+                expected_value = -0.25944 -- first ndvi from the group of samples
+                expected_max = expected_value + 0.00001
+                expected_min = expected_value - 0.00001
+                runner.check(ndvi <= expected_max and ndvi >= expected_min)
+            end
+        end
+    end
+end
+
+runner.check(sampleCnt == 27)
+runner.check(ndviCnt == 9)
+runner.check(ndsiCnt == 9)
+runner.check(ndwiCnt == 9)
+
+local url = "HLS.S30.T01UCS.2021001T22594"
+
+print(string.format("\n--------------------------------\nTest: %s URL/GROUP Filter: %s\n--------------------------------", demType, url))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, substr = url, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+sampleCnt = 0
+local invalidSamples = 0
+
+tbl, status = dem:sample(lon, lat)
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname
+    for j, v in ipairs(tbl) do
+        value = v["value"]
+        fname = v["file"]
+
+        sampleCnt = sampleCnt + 1
+        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+        if string.find(fname, url) == false then
+            invalidSamples = invalidSamples + 1
+        end
+
+    end
+end
+
+runner.check(sampleCnt == 3)
+runner.check(invalidSamples == 0)
+
+
+local tstr = "2021:2:4:23:3:0"
+local expectedGroup = "T01UCS.2021026T225819.v2.0"
+
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+sampleCnt = 0
+local value, fname
+for i, v in ipairs(tbl) do
+    fname = v["file"]
+    value = v["value"]
+    print(string.format("(%02d) value %10.3f, fname: %s", i, value, fname))
+    runner.check( string.find(fname, expectedGroup))
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 3)  -- 3 groups with closest time
+
+
+print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and qualit flags)\n-------------------------------------------------"))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"B03"}, catalog = contents }))
+local fmaskCnt  = 0
+local sampleCnt = 0
+local b03 = 0
+tbl, status = dem:sample(lon, lat)
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname, flags
+    for j, v in ipairs(tbl) do
+        value = v["value"]
+        fname = v["file"]
+        flags = v["flags"]
+
+        print(string.format("(%02d) value: %10.3f qmask: 0x%x, %s", j, value, flags, fname))
+
+        if string.find(fname, "B03.tif") then
+            sampleCnt = sampleCnt + 1
+            if sampleCnt == 1 then
+                b03 = value
+                runner.check(flags == 0xC2) -- first qualit mask
+            end
+        end
+
+        if string.find(fname, "Fmask.tif") then
+            fmaskCnt = fmaskCnt + 1
+        end
+
+        runner.check(flags ~= 0) -- all flags should be non zero
+    end
+end
+
+runner.check(sampleCnt == 9)
+runner.check(fmaskCnt  == 0)
+
+expected_value = 523.0 -- first b03 from the group of samples
+expected_max = expected_value + 0.00001
+expected_min = expected_value - 0.00001
+runner.check(b03 <= expected_max and b03 >= expected_min)
+
+
+print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and Fmask raster)\n-------------------------------------------------"))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"Fmask","B03"}, catalog = contents }))
+fmaskCnt  = 0
+sampleCnt = 0
+b03 = 0
+tbl, status = dem:sample(lon, lat)
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname, flags
+    for j, v in ipairs(tbl) do
+        value = v["value"]
+        fname = v["file"]
+        flags = v["flags"]
+
+        print(string.format("(%02d) value: %10.3f qmask: 0x%x, %s", j, value, flags, fname))
+
+        if string.find(fname, "B03.tif") then
+            sampleCnt = sampleCnt + 1
+            if sampleCnt == 1 then
+                b03 = value
+                runner.check(flags == 0xC2) -- first qualit mask
+            end
+        end
+
+        if string.find(fname, "Fmask.tif") then
+            fmaskCnt = fmaskCnt + 1
+        end
+
+        runner.check(flags ~= 0) -- all flags should be non zero
+    end
+end
+
+runner.check(sampleCnt == 9)
+runner.check(fmaskCnt  == 9)
+
+expected_value = 523.0 -- first b03 from the group of samples
+expected_max = expected_value + 0.00001
+expected_min = expected_value - 0.00001
+runner.check(b03 <= expected_max and b03 >= expected_min)
+
+
+
+
+print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 Zonal stats)\n-------------------------------------------------"))
+local samplingRadius = 120
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, zonal_stats=true, with_flags=true, bands = {"B03"}, catalog = contents }))
+sampleCnt = 0
+b03 = 0
+tbl, status = dem:sample(lon, lat)
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname, cnt, min, max, mean, median, stdev, mad, flags
+    for j, v in ipairs(tbl) do
+        value = v["value"]
+        fname = v["file"]
         cnt = v["count"]
         min = v["min"]
         max = v["max"]
@@ -130,18 +285,33 @@ for i = 1, 2 do
         median = v["median"]
         stdev = v["stdev"]
         mad = v["mad"]
+        flags = v["flags"]
 
         if el ~= -9999.0 then
-            print(string.format("(%02d) value: %6.2f   cnt: %03d   min: %6.2f   max: %6.2f   mean: %6.2f   median: %6.2f   stdev: %6.2f   mad: %6.2f", j, el, cnt, min, max, mean, median, stdev, mad))
-            runner.check(el ~= 0.0)
-            runner.check(min <= el)
-            runner.check(max >= el)
+            print(string.format("(%02d) value: %10.2f   cnt: %03d   qmask: 0x%x   min: %10.2f   max: %10.2f   mean: %10.2f   median: %10.2f   stdev: %10.2f   mad: %10.2f", j, value, cnt, flags, min, max, mean, median, stdev, mad))
+            runner.check(value ~= 0.0)
+            runner.check(min <= value)
+            runner.check(max >= value)
             runner.check(mean ~= 0.0)
             runner.check(stdev ~= 0.0)
         end
+
+        sampleCnt = sampleCnt + 1
+        if sampleCnt == 1 then
+            b03 = value
+        end
+
+        runner.check(string.find(fname, "B03.tif"))
     end
 end
---]]
+runner.check(sampleCnt == 9)
+expected_value = 523.0 -- first b03 from the group of samples
+expected_max = expected_value + 0.00001
+expected_min = expected_value - 0.00001
+runner.check(b03 <= expected_max and b03 >= expected_min)
+
+
+
 
 -- Report Results --
 

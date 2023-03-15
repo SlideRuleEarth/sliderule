@@ -75,13 +75,11 @@ if __pgc__ then
     runner.script(pgc_td .. "remadem_reader.lua")
 end
 
---[[
 -- Run Landsat Plugin Self Tests
 if __landsat__ then
     local pgc_td = td .. "../../plugins/landsat/selftests/"
     runner.script(pgc_td .. "landsat_reader.lua")
 end
---]]
 
 -- Report Results --
 local errors = runner.report()

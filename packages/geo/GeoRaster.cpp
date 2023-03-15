@@ -392,7 +392,7 @@ void GeoRaster::processRaster(Raster* raster)
 
                 const char* projref = raster->dset->GetProjectionRef();
                 CHECKPTR(projref);
-                mlog(DEBUG, "%s", projref);
+                // mlog(DEBUG, "%s", projref);
                 ogrerr = cord.target.importFromProj4(projref);
                 CHECK_GDALERR(ogrerr);
 
