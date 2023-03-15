@@ -26,7 +26,7 @@ config: config-release ## configure make for default build
 config-release: prep ## configure make for release version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
 
-config-debug: prep ## configure make for release version of sliderule binary
+config-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
 
 DEVCFG  = -DUSE_ARROW_PACKAGE=ON
@@ -44,7 +44,8 @@ config-development: prep ## configure make for development version of sliderule 
 config-development-debug: prep ## configure make for debug version of sliderule binary
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
-config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat ## configure everything
+config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat ctags ## configure everything
+config-all-debug: config-development-debug config-atlas-debug config-pgc-debug config-gedi-debug config-icesat2-debug config-landsat-debug ctags ## configure everything for debug
 
 install: ## install sliderule to system
 	make -C $(BUILD) install
@@ -108,7 +109,10 @@ uninstall-pgc: ## uninstall most recent install of icesat2 plugin from system
 ########################
 
 config-atlas: prep ## configure make for atlas plugin
-	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/atlas
+	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/atlas
+
+config-atlas-debug: prep ## configure make for atlas plugin
+	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/atlas
 
 atlas: ## build atlas plugin
 	make -j4 -C $(ATLAS_BUILD)
@@ -124,10 +128,10 @@ uninstall-atlas: ## uninstall most recent install of atlas plugin from system
 ########################
 
 config-icesat2: prep ## configure make for icesat2 plugin
-	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/icesat2
+	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/icesat2
 
 config-icesat2-debug: prep ## configure make for icesat2 plugin
-	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/icesat2
+	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/icesat2
 
 icesat2: ## build icesat2 plugin
 	make -j4 -C $(ICESAT2_BUILD)
@@ -143,10 +147,10 @@ uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from syste
 ########################
 
 config-gedi: prep ## configure make for gedi plugin
-	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)/plugins/gedi
+	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/gedi
 
 config-gedi-debug: prep ## configure make for gedi plugin
-	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)/plugins/gedi
+	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/gedi
 
 gedi: ## build gedi plugin
 	make -j4 -C $(GEDI_BUILD)
@@ -188,10 +192,10 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
 	cd $(BUILD); make
 
-ctags: config-pgc config-development ## generate ctags
+ctags: ## generate ctags
 	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
 	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json  $(LANDSAT_BUILD)/compile_commands.json > compile_commands.json
+	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
