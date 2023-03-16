@@ -244,7 +244,17 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
 
         /* Sample Raster */
         List<VrtRaster::sample_t> slist;
-        int num_samples = raster->getSamples(lon_val, lat_val, slist);
+        int num_samples = 0;
+        try
+        {
+            num_samples = raster->getSamples(lon_val, lat_val, slist);
+        }
+        catch(const RunTimeException& e)
+        {
+            LuaEndpoint::generateExceptionStatus(RTE_ERROR, e.level(), outQ, NULL,
+                                                "Exception caught when sampling %s at %.3lf,%.3lf: %s",
+                                                rasterKey, lon_val, lat_val, e.what());
+        }
 
         if(raster->hasZonalStats())
         {
