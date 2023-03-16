@@ -11,7 +11,7 @@ services:
       - /haproxy:/haproxy
       - /etc/ssl/private:/etc/ssl/private
     environment:
-      - CLUSTER=$CLUSTER
+      - IS_PUBLIC=$IS_PUBLIC
       - DOMAIN=$DOMAIN
       - OAUTH_HMAC_SECRET=$OAUTH_HMAC_SECRET
     healthcheck:

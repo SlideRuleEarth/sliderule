@@ -1,4 +1,4 @@
-name: Add issues to organization project
+name: Add Issue to Project
 
 on:
   issues:

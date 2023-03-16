@@ -3,9 +3,5 @@ channels:
   - conda-forge
 dependencies:
   - python=3.8
-  - geopandas-base
-  - gdal
   - pip
   - pytest
-  - requests
-  - setuptools_scm

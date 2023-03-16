@@ -86,3 +86,7 @@ variable "domain" {
   description = "root domain of site to use"
   default = "testsliderule.org"
 }
+variable "is_public" {
+  description = "(True/False): The cluster is public (Note: public clusters do NOT require authentication)"
+  default = "False"
+}

@@ -123,7 +123,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	cp -R $(SLIDERULE_SOURCE_DIR)/clients/python $(STATIC_WEB_STAGE_DIR)
+	rsync -a $(SLIDERULE_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
 	-cp $(PYTHON_SOURCE_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_SOURCE_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
@@ -254,6 +254,7 @@ cluster-release: ## release a version of the cluster; needs VERSION
 cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
 	cd terraform/cluster && terraform apply \
 		-var cluster_name=sliderule \
+		-var is_public=True \
 		-var ami_name=sliderule-$(MAJOR_VERSION) \
 		-var sliderule_image=$(ECR)/sliderule:$(MAJOR_VERSION) \
 		-var ilb_image=$(ECR)/ilb:$(MAJOR_VERSION) \

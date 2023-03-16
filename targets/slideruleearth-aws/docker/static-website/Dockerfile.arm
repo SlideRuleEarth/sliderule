@@ -34,8 +34,8 @@ RUN cd /jekyll && bundle exec jekyll build
 RUN chmod -R 744 /jekyll
 
 # Install SlideRule Python Client
-COPY python /python
-RUN cd /python && python3 setup.py install
+COPY sliderule /sliderule
+RUN cd /sliderule/clients/python && pip install .
 
 # Build RTD Website
 COPY rtd /rtd

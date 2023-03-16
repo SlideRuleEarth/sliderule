@@ -20,8 +20,8 @@ RUN gem install webrick
 RUN gem install jekyll bundler
 
 # Install SlideRule Python Client
-COPY python /python
-RUN cd /python && python3 setup.py install
+COPY sliderule /sliderule
+RUN cd /sliderule/clients/python && pip install .
 
 # Copy Over Jekyll Source
 COPY jekyll /jekyll
