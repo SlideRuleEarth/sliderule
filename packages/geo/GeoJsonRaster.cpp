@@ -111,7 +111,17 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 bool GeoJsonRaster::includes(double lon, double lat)
 {
     List<sample_t> slist;
-    int sampleCnt = getSamples(lon, lat, slist);
+    int sampleCnt = 0;
+
+    try
+    {
+        sampleCnt = getSamples(lon, lat, slist);
+    }
+    catch(const RunTimeException& e)
+    {
+        /* Not likely to happen, GeoJsonRaster class creates it's own raster in vsimemory */
+        mlog(e.level(), "%s", e.what());
+    }
 
     if( sampleCnt == 0 ) return false;
     if( sampleCnt > 1  ) mlog(ERROR, "Multiple samples returned for lon: %.2lf, lat: %.2lf, using first sample", lon, lat);

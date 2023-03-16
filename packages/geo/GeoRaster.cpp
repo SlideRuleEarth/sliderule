@@ -231,6 +231,8 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
+        samplingMutex.unlock();
+        throw;  // rethrow exception
     }
     samplingMutex.unlock();
 
