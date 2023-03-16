@@ -180,14 +180,7 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
 	mkdir -p $(SERVER_STAGE_DIR)/etc
-	mkdir -p $(SERVER_STAGE_DIR)/sliderule/targets
-	cp -R $(SLIDERULE_SOURCE_DIR)/packages $(SERVER_STAGE_DIR)/sliderule
-	cp -R $(SLIDERULE_SOURCE_DIR)/platforms $(SERVER_STAGE_DIR)/sliderule
-	cp -R $(SLIDERULE_SOURCE_DIR)/plugins $(SERVER_STAGE_DIR)/sliderule
-	cp -R $(SLIDERULE_SOURCE_DIR)/scripts $(SERVER_STAGE_DIR)/sliderule
-	cp -R $(SLIDERULE_SOURCE_DIR)/targets/server-linux $(SERVER_STAGE_DIR)/sliderule/targets
-	cp $(SLIDERULE_SOURCE_DIR)/version.txt $(SERVER_STAGE_DIR)/sliderule
-	cp $(SLIDERULE_SOURCE_DIR)/CMakeLists.txt $(SERVER_STAGE_DIR)/sliderule
+	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
 	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest .
