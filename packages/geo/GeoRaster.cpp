@@ -62,8 +62,10 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoRaster::OBJECT_TYPE = "GeoRaster";
-const char* GeoRaster::LuaMetaName = "GeoRaster";
+const char* GeoRaster::BITMASK_FILE = "Fmask";
+const char* GeoRaster::SAMPLES_FILE = "Dem";
+const char* GeoRaster::OBJECT_TYPE  = "GeoRaster";
+const char* GeoRaster::LuaMetaName  = "GeoRaster";
 const struct luaL_Reg GeoRaster::LuaMetaTable[] = {
     {"dim",         luaDimensions},
     {"bbox",        luaBoundingBox},
@@ -148,15 +150,15 @@ bool GeoRaster::registerRaster (const char* _name, factory_t create)
 
 
 /*----------------------------------------------------------------------------
- * addSamples
+ * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::addSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
 {
     Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
     for(int i = 0; i < raster_iter.length; i++)
     {
         const raster_info_t& rinfo = raster_iter[i].value;
-        if(strcmp("dem", rinfo.tag.c_str()) == 0)
+        if(strcmp(SAMPLES_FILE, rinfo.tag.c_str()) == 0)
         {
             Raster* raster  = NULL;
             const char* key = rinfo.fileName.c_str();
@@ -210,7 +212,7 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
                 for(int j = 0; j < raster_iter.length; j++)
                 {
                     const raster_info_t& rinfo = raster_iter[j].value;
-                    if(strcmp("Fmask", rinfo.tag.c_str()) == 0)
+                    if(strcmp(BITMASK_FILE, rinfo.tag.c_str()) == 0)
                     {
                         Raster* raster  = NULL;
                         const char* key = rinfo.fileName.c_str();
@@ -223,7 +225,7 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
                     }
                 }
             }
-            addSamples(rgroup, slist, flags);
+            getGroupSamples(rgroup, slist, flags);
         }
     }
     catch (const RunTimeException &e)
@@ -233,6 +235,42 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
     samplingMutex.unlock();
 
     return samplesCnt;
+}
+
+
+/*----------------------------------------------------------------------------
+ * getGmtDate
+ *----------------------------------------------------------------------------*/
+double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
+{
+    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
+
+    int i = feature->GetFieldIndex(field);
+    if(i == -1)
+    {
+        mlog(ERROR, "Time field: %s not found, unable to get GMT date", field);
+        return 0;
+    }
+
+    int year, month, day, hour, minute, second, timeZone;
+    year = month = day = hour = minute = second = timeZone = 0;
+    if(feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+    {
+        /* Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown */
+        if(timeZone == 100)
+        {
+            gmtDate.year        = year;
+            gmtDate.doy         = TimeLib::dayofyear(year, month, day);
+            gmtDate.hour        = hour;
+            gmtDate.minute      = minute;
+            gmtDate.second      = second;
+            gmtDate.millisecond = 0;
+        }
+        else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
+    }
+
+    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
+    return static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
 }
 
 

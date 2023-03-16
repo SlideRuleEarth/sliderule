@@ -51,12 +51,12 @@
 /* Landsat 8 */
 const char* LandsatHlsRaster::L8_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B09", "B10", "B11",
-                                           "SAA", "SZA", "VAA", "VZA", "Fmask"};
+                                           "SAA", "SZA", "VAA", "VZA", BITMASK_FILE};
 /* Sentinel 2 */
 const char* LandsatHlsRaster::S2_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B08", "B09", "B10",
                                            "B11", "B12", "B8A", "SAA", "SZA",
-                                           "VAA", "VZA", "Fmask"};
+                                           "VAA", "VZA", BITMASK_FILE};
 /* Algorithm names (not real bands) */
 const char* LandsatHlsRaster::ALGO_names[] = {"NDSI", "NDVI", "NDWI"};
 
@@ -138,7 +138,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     /* If user specified flags, add group Fmask to dictionary of bands */
     if(_parms->flags_file)
     {
-        const char* band = "Fmask";
+        const char* band = BITMASK_FILE;
         if(!bandsDict.find(band, &returnBandSample))
         {
             returnBandSample = false;
@@ -194,30 +194,11 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
             rasters_group_t rgroup;
             rgroup.id = feature->GetFieldAsString("id");
-
-            int year, month, day, hour, minute, second, timeZone;
-            int i = feature->GetFieldIndex("datetime");
-            if(feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
-            {
-                /*
-                 * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
-                 */
-                if(timeZone == 100)
-                {
-                    rgroup.gmtDate.year        = year;
-                    rgroup.gmtDate.doy         = TimeLib::dayofyear(year, month, day);
-                    rgroup.gmtDate.hour        = hour;
-                    rgroup.gmtDate.minute      = minute;
-                    rgroup.gmtDate.second      = second;
-                    rgroup.gmtDate.millisecond = 0;
-                    rgroup.gpsTime             = TimeLib::gmt2gpstime(rgroup.gmtDate);
-                }
-                else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
-            }
-
-            const std::string fileToken = "HLS";
+            double gps = getGmtDate(feature, "datetime", rgroup.gmtDate);
+            rgroup.gpsTime = gps;
 
             /* Find each requested band in the index file */
+            const std::string fileToken = "HLS";
             bool val;
             const char* bandName = bandsDict.first(&val);
             while(bandName != NULL)
@@ -266,9 +247,9 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
 
 /*----------------------------------------------------------------------------
- * addSamples
+ * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::addSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;

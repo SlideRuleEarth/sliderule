@@ -220,7 +220,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
                     rasters_group_t rgroup;
                     raster_info_t rinfo;
                     rinfo.fileName = fname;
-                    rinfo.tag = "dem";
+                    rinfo.tag = SAMPLES_FILE;
 
                     /* Get the date this raster was created */
                     getRasterDate(rinfo);
@@ -275,7 +275,7 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
             raster_info_t rinfo;
 
             rinfo.fileName = raster->fileName;
-            rinfo.tag = "dem";
+            rinfo.tag = SAMPLES_FILE;
             rinfo.gpsTime = raster->gpsTime;
             rinfo.gmtDate = TimeLib::gps2gmttime(raster->gpsTime * 1000);
             rgroup.list.add(rgroup.list.length(), rinfo);

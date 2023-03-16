@@ -131,7 +131,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
      * the two images can be from up to 30 days apart.
      *
      */
-    const int DATES_CNT          = 2;
+    const int DATES_CNT = 2;
     const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
     try
     {
@@ -146,7 +146,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
-            const char *fname = feature->GetFieldAsString("dem");
+            const char *fname = feature->GetFieldAsString(SAMPLES_FILE);
             if(fname && strlen(fname) > 0)
             {
                 std::string fileName(fname);
@@ -161,7 +161,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 raster_info_t flagsRinfo;
 
                 rinfo.fileName = fileName;
-                rinfo.tag = "dem";
+                rinfo.tag = SAMPLES_FILE;
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
                 rinfo.gpsTime = 0;
 
@@ -178,29 +178,10 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 double gps = 0;
                 for(int i=0; i<DATES_CNT; i++)
                 {
-                    TimeLib::gmt_time_t gmtDate;
-                    int year, month, day, hour, minute, second, timeZone;
-                    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
-                    year = month = day = hour = minute = second = timeZone = 0;
-
-                    int j = feature->GetFieldIndex(dates[i]);
-                    if(feature->GetFieldAsDateTime(j, &year, &month, &day, &hour, &minute, &second, &timeZone))
-                    {
-                        /* Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown */
-                        if(timeZone == 100)
-                        {
-                            gmtDate.year        = year;
-                            gmtDate.doy         = TimeLib::dayofyear(year, month, day);
-                            gmtDate.hour        = hour;
-                            gmtDate.minute      = minute;
-                            gmtDate.second      = second;
-                            gmtDate.millisecond = 0;
-                        }
-                        else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
-                    }
-                    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
-                    gps += static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
+                    TimeLib::gmt_time_t gmt;
+                    gps += getGmtDate(feature, dates[i], gmt);
                 }
+
                 gps = gps/DATES_CNT;
                 rgroup.gmtDate = rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup.gpsTime = rinfo.gpsTime = static_cast<int64_t>(gps);
@@ -209,7 +190,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
                 if(flagsRinfo.fileName.length() > 0)
                 {
-                    flagsRinfo.tag = "Fmask";
+                    flagsRinfo.tag = BITMASK_FILE;
                     flagsRinfo.gmtDate = rinfo.gmtDate;
                     flagsRinfo.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);

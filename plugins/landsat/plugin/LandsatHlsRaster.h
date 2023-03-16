@@ -85,7 +85,7 @@ class LandsatHlsRaster: public VctRaster
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
         void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
         bool    findRasters      (OGRPoint &p);
-        void    addSamples       (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
+        void    getGroupSamples  (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
 
         /*--------------------------------------------------------------------
          * Data
