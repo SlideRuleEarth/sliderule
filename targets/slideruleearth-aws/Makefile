@@ -220,8 +220,8 @@ cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VER
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
 	mkdir -p $(TF_STAGE_DIR)
-	cp terraform/*.* $(TF_STAGE_DIR)
-	cp terraform/.terraform.lock.hcl $(TF_STAGE_DIR)
+	cp terraform/cluster/*.* $(TF_STAGE_DIR)
+	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
 	echo "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
@@ -253,7 +253,7 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	make cluster-upload-terraform
 
 cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
-	cd terraform && terraform apply \
+	cd terraform/cluster && terraform apply \
 		-var cluster_name=sliderule \
 		-var is_public=True \
 		-var ami_name=sliderule-$(MAJOR_VERSION) \
@@ -263,7 +263,7 @@ cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
 		-var domain=$(DOMAIN)
 
 cluster-destroy: ## manually destroy a cluster
-	cd terraform && terraform destroy
+	cd terraform/cluster && terraform destroy
 
 cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/sliderule:$(VERSION)
