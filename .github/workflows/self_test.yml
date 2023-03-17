@@ -31,8 +31,8 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        apt update
-        apt install curl
+        apt-get update -y
+        apt-get install -y curl
 
     - name: Checkout sliderule repository
       uses: actions/checkout@v2
