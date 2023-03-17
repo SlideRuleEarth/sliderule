@@ -8,28 +8,31 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope='session')
 def domain(request):
-    domain_value = request.config.option.domain
-    if domain_value is None:
+    value = request.config.option.domain
+    if value is None:
         pytest.skip()
-    return domain_value
+    return value
 
 @pytest.fixture(scope='session')
 def asset(request):
-    asset_value = request.config.option.asset
-    if asset_value is None:
+    value = request.config.option.asset
+    if value is None:
         pytest.skip()
-    return asset_value
+    return value
 
 @pytest.fixture(scope='session')
 def organization(request):
-    organization_value = request.config.option.organization
-    if organization_value == "None":
-        organization_value = None
-    return organization_value
+    value = request.config.option.organization
+    if value == "None":
+        value = None
+    return value
 
 @pytest.fixture(scope='session')
 def desired_nodes(request):
-    desired_nodes_value = request.config.option.desired_nodes
-    if desired_nodes == "None":
-        desired_nodes = None
-    return desired_nodes
+    value = request.config.option.desired_nodes
+    if value is not None:
+        if value == "None":
+            value = None
+        else:
+            value = int(value)
+    return value

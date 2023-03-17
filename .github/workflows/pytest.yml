@@ -57,4 +57,4 @@ jobs:
         shell: bash -l {0}
         run: |
           cd clients/python
-          python -m pytest --verbose --organization developers
+          python -m pytest --verbose --organization developers --desired_nodes 2

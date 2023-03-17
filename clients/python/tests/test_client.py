@@ -13,7 +13,7 @@ class TestLocal:
         with pytest.raises(TypeError, match=('url')):
             sliderule.set_url()
 
-    def test_gps2utc(self, domain, organization, deisred_nodes):
+    def test_gps2utc(self, domain, organization, desired_nodes):
         sliderule.init(domain, organization=organization, desired_nodes=desired_nodes)
         utc = sliderule.gps2utc(1235331234000)
         assert utc == '2019-02-27T19:33:36Z'

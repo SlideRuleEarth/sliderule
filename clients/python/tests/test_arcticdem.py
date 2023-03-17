@@ -38,7 +38,7 @@ class TestMosaic:
         assert gdf['segment_id'].describe()["max"] == 405900
         assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < 0.0001
 
-    def test_zonal_stats(self, domain, asset, organization, desired_nodes:
+    def test_zonal_stats(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
