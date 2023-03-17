@@ -5,7 +5,7 @@ local td = sys.cwd() .. "/" .. runner.rootdir(arg[0])
 
 -- Setup --
 
-assets = asset.loaddir()
+assets = asset.loaddir("./asset_directory.csv")
 
 expected = {
     dataset1={format="file", url="/data/1"},

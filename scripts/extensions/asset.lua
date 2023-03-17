@@ -88,7 +88,7 @@ local function loaddir(file)
     local assets = {}
 
     -- find asset directory file
-    file = file or "./asset_directory.csv"
+    file = file or "asset_directory.csv"
     local _, count = string.gsub(file, "/", "/")
     if count > 0 then
         if file:find("/") ~= 1 then

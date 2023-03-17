@@ -10,3 +10,4 @@ set_target_properties (sliderule PROPERTIES CXX_STANDARD ${CXX_VERSION})
 target_link_libraries (sliderule PUBLIC slideruleLib)
 
 install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)
+install (FILES ${CMAKE_CURRENT_LIST_DIR}/asset_directory.csv DESTINATION ${CONFDIR})

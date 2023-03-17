@@ -8,7 +8,7 @@ json = require("json")
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
-local assets = asset.loaddir("../../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
+local assets = asset.loaddir()
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", asset="landsat-hls"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")

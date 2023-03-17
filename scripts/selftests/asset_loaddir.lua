@@ -9,7 +9,7 @@ asset = require("asset")
 
 -- Unit Test --
 
-local assets = asset.loaddir("../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
+local assets = asset.loaddir()
 
 local nsidc_s3 = core.getbyname("nsidc-s3")
 local not_there = core.getbyname("not_there")
@@ -20,7 +20,7 @@ runner.check(nsidc_s3)
 runner.check(not_there == nil)
 runner.check(arcticdem_mosaic)
 
-assets = asset.loaddir("../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
+local assets = asset.loaddir()
 
 nsidc_s3 = core.getbyname("nsidc-s3")
 not_there = core.getbyname("not_there")
@@ -31,7 +31,7 @@ runner.check(nsidc_s3)
 runner.check(not_there == nil)
 runner.check(arcticdem_mosaic)
 
-assets = asset.loaddir("../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
+local assets = asset.loaddir()
 
 nsidc_s3 = core.getbyname("nsidc-s3")
 not_there = core.getbyname("not_there")

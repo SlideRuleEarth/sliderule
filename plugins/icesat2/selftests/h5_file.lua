@@ -6,7 +6,7 @@ local pp = require("prettyprint")
 
 -- Setup --
 
-local assets = asset.loaddir("../../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
+local assets = asset.loaddir()
 local asset_name = "nsidc-s3"
 local atlas_asset = core.getbyname(asset_name)
 local resource = "ATL03_20181015231931_02650102_005_01.h5"

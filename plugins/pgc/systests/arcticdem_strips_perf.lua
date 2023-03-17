@@ -6,7 +6,7 @@ json = require("json")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
-local assets = asset.loaddir("../../../targets/slideruleearth-aws/docker/sliderule/asset_directory.csv")
+local assets = asset.loaddir()
 
 -- Setup --
 

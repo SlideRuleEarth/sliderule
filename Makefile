@@ -1,10 +1,12 @@
 ROOT = $(shell pwd)
-BUILD = $(ROOT)/build/sliderule
-PGC_BUILD = $(ROOT)/build/pgc
-ATLAS_BUILD = $(ROOT)/build/atlas
-ICESAT2_BUILD = $(ROOT)/build/icesat2
-GEDI_BUILD = $(ROOT)/build/gedi
-LANDSAT_BUILD = $(ROOT)/build/landsat
+BUILD ?= $(ROOT)/build
+STAGE ?= $(ROOT)/stage
+SLIDERULE_BUILD = $(BUILD)/sliderule
+PGC_BUILD = $(BUILD)/pgc
+ATLAS_BUILD = $(BUILD)/atlas
+ICESAT2_BUILD = $(BUILD)/icesat2
+GEDI_BUILD = $(BUILD)/gedi
+LANDSAT_BUILD = $(BUILD)/landsat
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -17,17 +19,17 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ########################
 
 default-build: ## default build of sliderule
-	make -j4 -C $(BUILD)
+	make -j4 -C $(SLIDERULE_BUILD)
 
 all: default-build atlas pgc gedi icesat2 landsat ## build everything
 
 config: config-release ## configure make for default build
 
 config-release: prep ## configure make for release version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
 
 config-debug: prep ## configure make for debug version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
 
 DEVCFG  = -DUSE_ARROW_PACKAGE=ON
 DEVCFG += -DUSE_AWS_PACKAGE=ON
@@ -39,21 +41,21 @@ DEVCFG += -DUSE_NETSVC_PACKAGE=ON
 DEVCFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 config-development: prep ## configure make for development version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
 
 config-development-debug: prep ## configure make for debug version of sliderule binary
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
 config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat ctags ## configure everything
 config-all-debug: config-development-debug config-atlas-debug config-pgc-debug config-gedi-debug config-icesat2-debug config-landsat-debug ctags ## configure everything for debug
 
 install: ## install sliderule to system
-	make -C $(BUILD) install
+	make -C $(SLIDERULE_BUILD) install
 
 install-all: install install-atlas install-pgc install-gedi install-icesat2 install-landsat ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
-	xargs rm < $(BUILD)/install_manifest.txt
+	xargs rm < $(SLIDERULE_BUILD)/install_manifest.txt
 
 ########################
 # Python Binding Targets
@@ -73,17 +75,17 @@ PYTHONCFG += -DICESAT2_PLUGIN_LIBPATH=/usr/local/etc/sliderule/icesat2.so
 PYTHONCFG += -DICESAT2_PLUGIN_INCPATH=/usr/local/include/sliderule/icesat2
 
 config-python: prep ## configure make for python bindings (using system environent)
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) $(ROOT)
 
 config-python-conda: prep ## configure make for python bindings (using conda environment)
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) $(ROOT)
 
 ########################
 # Shared Library Targets
 ########################
 
 config-library: prep ## configure make for shared library libsliderule.so
-	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
+	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
 
 #####################
 # PGC Plugin Targets
@@ -185,17 +187,17 @@ uninstall-landsat: ## uninstall most recent install of icesat2 plugin from syste
 ########################
 
 scan: prep ## perform static analysis
-	cd $(BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
-	cd $(BUILD); scan-build -o scan-results make
+	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
+	cd $(SLIDERULE_BUILD); scan-build -o scan-results make
 
 asan: prep ## build address sanitizer debug version of sliderule binary
-	cd $(BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
-	cd $(BUILD); make
+	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
+	cd $(SLIDERULE_BUILD); make
 
 ctags: ## generate ctags
 	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
 	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json > compile_commands.json
+	/usr/bin/jq -s 'add' $(SLIDERULE_BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
@@ -213,20 +215,20 @@ testheaptrack: ## analyze results of heap test
 	# heaptrack_gui heaptrack.sliderule.<pid>.gz
 
 testcov: ## analyze results of test coverage report
-	lcov -c --directory $(BUILD) --output-file $(BUILD)/coverage.info
-	genhtml $(BUILD)/coverage.info --output-directory $(BUILD)/coverage_html
-	# firefox $(BUILD)/coverage_html/index.html
+	lcov -c --directory $(SLIDERULE_BUILD) --output-file $(SLIDERULE_BUILD)/coverage.info
+	genhtml $(SLIDERULE_BUILD)/coverage.info --output-directory $(SLIDERULE_BUILD)/coverage_html
+	# firefox $(SLIDERULE_BUILD)/coverage_html/index.html
 
 testpy: ## run python binding test
-	cp scripts/systests/coro.py $(BUILD)
-	cd $(BUILD); /usr/bin/python3 coro.py
+	cp scripts/systests/coro.py $(SLIDERULE_BUILD)
+	cd $(SLIDERULE_BUILD); /usr/bin/python3 coro.py
 
 ########################
 # Global Targets
 ########################
 
 prep: ## create necessary build directories
-	mkdir -p $(BUILD)
+	mkdir -p $(SLIDERULE_BUILD)
 	mkdir -p $(PGC_BUILD)
 	mkdir -p $(ATLAS_BUILD)
 	mkdir -p $(ICESAT2_BUILD)
@@ -234,7 +236,7 @@ prep: ## create necessary build directories
 	mkdir -p $(LANDSAT_BUILD)
 
 clean: ## clean last build
-	- make -C $(BUILD) clean
+	- make -C $(SLIDERULE_BUILD) clean
 	- make -C $(PGC_BUILD) clean
 	- make -C $(ATLAS_BUILD) clean
 	- make -C $(ICESAT2_BUILD) clean
@@ -243,11 +245,11 @@ clean: ## clean last build
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
-	- rm -Rf $(PGC_BUILD)
-	- rm -Rf $(ATLAS_BUILD)
-	- rm -Rf $(ICESAT2_BUILD)
-	- rm -Rf $(GEDI_BUILD)
-	- rm -Rf $(LANDSAT_BUILD)
+	- rm -Rf $(STAGE)
+	- $(ROOT)/docs/clean.sh
+	- $(ROOT)/clients/python/clean.sh
+	- find -name ".cookies" -exec rm {} \;
+	- rm compile_commands.json
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

@@ -98,8 +98,6 @@ sliderule: ## build the server using the local configuration
 	make -C $(LANDSAT_BUILD_DIR) install
 	make -j4 -C $(GEDI_BUILD_DIR)
 	make -C $(GEDI_BUILD_DIR) install
-	cp docker/sliderule/asset_directory.csv $(SERVER_STAGE_DIR)/etc/sliderule
-	cp docker/sliderule/empty.index $(SERVER_STAGE_DIR)/etc/sliderule
 
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json
@@ -274,12 +272,7 @@ cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/demo-nginx:$(VERSION)
 
 distclean: ## fully remove all non-version controlled files and directories
-	- rm -Rf $(BUILD)
-	- rm -Rf $(STAGE)
-	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/jekyll/_site
-	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/jekyll/.jekyll-cache
-	- rm -Rf $(STATIC_WEB_SOURCE_DIR)/rtd/build
-	- $(ROOT)/clients/python/clean.sh
+	make -C $(SLIDERULE_SOURCE_DIR) distclean
 
 help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
