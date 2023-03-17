@@ -9,8 +9,8 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestHLS:
-    def test_samples(self, domain, organization):
-        sliderule.init(domain, organization=organization)
+    def test_samples(self, domain, organization, desired_nodes):
+        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes)
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"
         polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
@@ -22,8 +22,8 @@ class TestHLS:
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
         rsps = sliderule.source("samples", rqst)
 
-    def test_ndvi(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_ndvi(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         time_start = "2021-01-01T00:00:00Z"

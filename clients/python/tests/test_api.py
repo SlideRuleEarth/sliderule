@@ -9,8 +9,8 @@ sliderule.set_rqst_timeout((1, 60))
 
 @pytest.mark.network
 class TestApi:
-    def test_time(self, domain, organization):
-        icesat2.init(domain, organization=organization)
+    def test_time(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         rqst = {
             "time": "NOW",
             "input": "NOW",
@@ -28,8 +28,8 @@ class TestApi:
         again = d["time"]
         assert now == again
 
-    def test_geospatial1(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_geospatial1(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         test = {
             "asset": asset,
             "pole": "north",
@@ -73,8 +73,8 @@ class TestApi:
         assert d["lat"] == 40.0 and d["lon"] == 60.0
         assert d["x"] == 0.466307658155 and d["y"] == 0.80766855588292
 
-    def test_geospatial2(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_geospatial2(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         test = {
             "asset": asset,
             "pole": "north",
@@ -86,8 +86,8 @@ class TestApi:
         d = sliderule.source("geo", test)
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0
 
-    def test_geospatial3(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_geospatial3(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         test = {
             "asset": asset,
             "pole": "north",
@@ -99,8 +99,8 @@ class TestApi:
         d = sliderule.source("geo", test)
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0
 
-    def test_geospatial4(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_geospatial4(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         test = {
             "asset": asset,
             "pole": "north",
@@ -112,16 +112,16 @@ class TestApi:
         d = sliderule.source("geo", test)
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0
 
-    def test_definition(self, domain, organization):
-        icesat2.init(domain, organization=organization)
+    def test_definition(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         rqst = {
             "rectype": "atl06rec.elevation",
         }
         d = sliderule.source("definition", rqst)
         assert d["time"]["offset"] == 192
 
-    def test_version(self, domain, organization):
-        icesat2.init(domain, organization=organization)
+    def test_version(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         rsps = sliderule.source("version", {})
         assert 'server' in rsps
         assert 'version' in rsps['server']

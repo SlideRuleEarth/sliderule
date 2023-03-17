@@ -13,16 +13,17 @@ class TestLocal:
         with pytest.raises(TypeError, match=('url')):
             sliderule.set_url()
 
-    def test_gps2utc(self, domain, organization):
-        sliderule.init(domain, organization=organization)
+    def test_gps2utc(self, domain, organization, deisred_nodes):
+        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes)
         utc = sliderule.gps2utc(1235331234000)
         assert utc == '2019-02-27T19:33:36Z'
 
 @pytest.mark.network
 class TestRemote:
-    def test_check_version(self, domain, organization):
+    def test_check_version(self, domain, organization, desired_nodes):
         sliderule.set_url(domain)
         sliderule.authenticate(organization)
+        sliderule.scaleout(desired_nodes, 15)
         sliderule.check_version(plugins=['icesat2'])
 
     def test_init_badurl(self):

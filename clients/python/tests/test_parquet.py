@@ -12,8 +12,8 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestParquet:
-    def test_atl06(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl06(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
@@ -33,8 +33,8 @@ class TestParquet:
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405900
 
-    def test_atl03(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl03(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
@@ -54,8 +54,8 @@ class TestParquet:
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405900
 
-    def test_atl06_index(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl06_index(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -73,8 +73,8 @@ class TestParquet:
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.350047232')
         assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582526976')
 
-    def test_atl03_index(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl03_index(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {

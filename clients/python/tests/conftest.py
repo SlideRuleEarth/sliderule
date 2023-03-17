@@ -4,6 +4,7 @@ def pytest_addoption(parser):
     parser.addoption("--domain", action="store", default="slideruleearth.io")
     parser.addoption("--asset", action="store", default="nsidc-s3")
     parser.addoption("--organization", action="store", default="sliderule")
+    parser.addoption("--desired_nodes", action="store", default=None)
 
 @pytest.fixture(scope='session')
 def domain(request):
@@ -25,3 +26,10 @@ def organization(request):
     if organization_value == "None":
         organization_value = None
     return organization_value
+
+@pytest.fixture(scope='session')
+def desired_nodes(request):
+    desired_nodes_value = request.config.option.desired_nodes
+    if desired_nodes == "None":
+        desired_nodes = None
+    return desired_nodes

@@ -41,14 +41,14 @@ class TestRemote:
             icesat2.init('incorrect.org:8877')
             sliderule.source("version")
 
-    def test_get_version(self, domain, organization):
-        icesat2.init(domain, organization=organization)
+    def test_get_version(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         version = sliderule.get_version()
         assert isinstance(version, dict)
         assert {'icesat2', 'server', 'client'} <= version.keys()
 
-    def test_cmr(self, grandmesa, domain, organization):
-        icesat2.init(domain, organization=organization)
+    def test_cmr(self, grandmesa, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         granules = icesat2.cmr(polygon=grandmesa,
             time_start='2018-10-01',
             time_end='2018-12-01')

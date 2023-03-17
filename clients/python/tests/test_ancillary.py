@@ -12,8 +12,8 @@ TESTDIR = Path(__file__).parent
 @pytest.mark.network
 class TestRemote:
 
-    def test_geo(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_geo(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
@@ -24,8 +24,8 @@ class TestRemote:
         assert len(gdf["solar_elevation"]) == 1180
         assert gdf['solar_elevation'].describe()["min"] - 20.803468704223633 < 0.0000001
 
-    def test_ph(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_ph(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],

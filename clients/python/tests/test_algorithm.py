@@ -8,8 +8,8 @@ from sliderule import icesat2
 
 @pytest.mark.network
 class TestAlgorithm:
-    def test_atl06(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl06(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181019065445_03150111_004_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -22,8 +22,8 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622423
 
-    def test_atl06p(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl06p(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181019065445_03150111_004_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -36,8 +36,8 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622423
 
-    def test_atl03s(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl03s(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181019065445_03150111_004_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -60,8 +60,8 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
 
-    def test_atl03sp(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl03sp(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181019065445_03150111_004_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -84,8 +84,8 @@ class TestAlgorithm:
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
 
-    def test_atl08(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_atl08(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource = "ATL03_20181213075606_11560106_004_01.h5"
         track = 1
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
@@ -113,8 +113,8 @@ class TestAlgorithm:
         assert len(gdf[gdf["atl08_class"] == 3]) == 18958
         assert len(gdf[gdf["atl08_class"] == 4]) == 16050
 
-    def test_gs(self, domain, asset, organization):
-        icesat2.init(domain, organization=organization)
+    def test_gs(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
         resource_prefix = "20210114170723_03311012_004_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},
