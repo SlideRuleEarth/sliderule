@@ -29,6 +29,11 @@ jobs:
     container: ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
 
     steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install curl
+
     - name: Checkout sliderule repository
       uses: actions/checkout@v2
 
