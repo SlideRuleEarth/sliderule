@@ -1235,26 +1235,24 @@ void GeoRaster::createThreads(void)
         return;
 
     uint32_t newThreadsCnt = threadsNeeded - readerCount;
-    mlog(DEBUG, "Creating %d new threads, readerCount: %d, neededThreads: %d\n", newThreadsCnt, readerCount, threadsNeeded);
+    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAllowed: %d\n", newThreadsCnt, readerCount, threadsNeeded, MAX_READER_THREADS);
+
+    if(newThreadsCnt > MAX_READER_THREADS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Too many rasters to read: %d, max reading threads allowed: %d\n",
+                               newThreadsCnt, MAX_READER_THREADS);
+    }
 
     for (uint32_t i=0; i < newThreadsCnt; i++)
     {
-        if (readerCount <= MAX_READER_THREADS)
-        {
-            reader_t *reader = &rasterRreader[readerCount];
-            reader->raster = NULL;
-            reader->run = true;
-            reader->sync = new Cond(NUM_SYNC_SIGNALS);
-            reader->obj = this;
-            reader->thread = new Thread(readingThread, reader);
-            readerCount++;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR,
-                                   "Too many rasters to read: %d, max reading threads allowed: %d\n",
-                                   rasterDict.length(), MAX_READER_THREADS);
-        }
+        reader_t* reader = &rasterRreader[readerCount];
+        reader->raster   = NULL;
+        reader->run      = true;
+        reader->sync     = new Cond(NUM_SYNC_SIGNALS);
+        reader->obj      = this;
+        reader->thread   = new Thread(readingThread, reader);
+        readerCount++;
     }
     assert(readerCount == threadsNeeded);
 }
