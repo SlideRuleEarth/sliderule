@@ -7,7 +7,7 @@ A cloud-native framework for on-demand science data processing.
 
 This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website.
 
-If you are a science data user interested in using SlideRule to process Earth science data, you can get started right away by checking out the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) on https://slideruleearth.io.
+If you are a science data user interested in using SlideRule to process Earth science data, you can get started right away by checking out the [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) on our website, https://slideruleearth.io.
 
 
 ## I. Prerequisites
