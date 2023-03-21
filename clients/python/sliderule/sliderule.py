@@ -379,7 +379,7 @@ local_dns = {}
 socket_getaddrinfo = socket.getaddrinfo
 def __override_getaddrinfo(*args):
     if args[0] in local_dns:
-        logger.debug("getaddrinfo returned {} for {}".format(local_dns[args[0]], args[0]))
+        logger.critical("getaddrinfo returned {} for {}".format(local_dns[args[0]], args[0]))
         return socket_getaddrinfo(local_dns[args[0]], *args[1:])
     else:
         return socket_getaddrinfo(*args)

@@ -42,6 +42,7 @@ services:
       - ./:/haproxy
       - /etc/ssl/private:/etc/ssl/private
     environment:
+      - CLUSTER=localhost
       - IS_PUBLIC=True
     healthcheck:
       test: curl http://localhost:8050/discovery/health || exit 1

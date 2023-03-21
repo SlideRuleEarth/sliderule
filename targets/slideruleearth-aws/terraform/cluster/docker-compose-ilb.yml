@@ -12,6 +12,7 @@ services:
       - /etc/ssl/private:/etc/ssl/private
     environment:
       - IS_PUBLIC=$IS_PUBLIC
+      - CLUSTER=$CLUSTER
       - DOMAIN=$DOMAIN
       - OAUTH_HMAC_SECRET=$OAUTH_HMAC_SECRET
     healthcheck:
