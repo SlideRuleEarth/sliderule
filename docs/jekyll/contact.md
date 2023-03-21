@@ -15,9 +15,7 @@ Opening an issue is great for:
 * bugs in the code
 * feature requests
 
-For issues related to ***SlideRule's Python client*** or anything else related to the SlideRule user experience, please use this link to submit an issue: [sliderule-python issue](https://github.com/ICESat2-SlideRule/sliderule-python/issues).
-
-For issues related to ***SlideRule's server code*** (i.e you are a SlideRule back-end developer or contributor), please use this link to sumit an issue: [sliderule issue](https://github.com/ICESat2-SlideRule/sliderule/issues).
+Please use this link to sumit an issue: [sliderule issue](https://github.com/ICESat2-SlideRule/sliderule/issues).
 
 
 ## Method 2: Opening a Pull Request
@@ -28,9 +26,7 @@ Opening an pull request is great for:
 
 Before opening a pull request, please read our [Contributing](/rtd/user_guide/Contributing.html) guidelines.
 
-For pull requests related to ***SlideRule's Python client*** or anything else related to the SlideRule user experience, please use this link to submit a PR: [sliderule-python PR](https://github.com/ICESat2-SlideRule/sliderule-python/pulls).
-
-For pull requests related to ***SlideRule's server code*** (i.e you are a SlideRule back-end developer or contributor), please use this link to sumit a PR: [sliderule PR](https://github.com/ICESat2-SlideRule/sliderule/pulls).
+Please use this link to sumit a PR: [sliderule PR](https://github.com/ICESat2-SlideRule/sliderule/pulls).
 
 
 ## Method 3: Posting a Discussion Message
@@ -40,6 +36,4 @@ Posting a discussion message is great for:
 * questions you have on how things work
 * ideas you want to share and get people thinking about
 
-For posts related to ***SlideRule's Python client*** or anything else related to the SlideRule user experience, please use this link to start a discussion: [sliderule-python post](https://github.com/ICESat2-SlideRule/sliderule-python/discussions).
-
-For pull requests related to ***SlideRule's server code*** (i.e you are a SlideRule back-end developer or contributor), please use this link to start a discussion: [sliderule post](https://github.com/ICESat2-SlideRule/sliderule/discussions).
+Please use this link to start a discussion: [sliderule post](https://github.com/ICESat2-SlideRule/sliderule/discussions).

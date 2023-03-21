@@ -49,9 +49,14 @@ Repository Organization
 
 All of the software for SlideRule is open source under the BSD 3-clause license and developed in the open on GitHub. Users and future contributors are encouraged to browse the code, fork the repositories and submit pull requests, open issues, and post discussion topics.
 
-The SlideRule project consists of four distinct sets of code repositories.
-  * The `server <https://github.com/ICESat2-SlideRule/sliderule>`_ repository which includes a mission agnostic framework and mission specific plugins for processing science data.
-  * The `client <https://github.com/ICESat2-SlideRule/sliderule-python>`_ repositories which contain client language specific code (e.g. Python, R).
-  * The `documentation <https://github.com/ICESat2-SlideRule/sliderule-docs>`_ repository which contains the source for our static website and user documentation.
-  * The infrastructure repository which contains the scripts and definition files for deploying the SlideRule system. (Note, currently the infrastructure repository is private and is pending further review before being made public).
+The SlideRule project consists of one main repository with a few supporting repositories.
+  * The `sliderule <https://github.com/ICESat2-SlideRule/sliderule>`_ repository includes all source code for the deployment of sliderule
+    - `server <https://github.com/ICESat2-SlideRule/sliderule/tree/main/packages>`_: mission agnostic C++/Lua framework for processing science data
+    - `plugins <https://github.com/ICESat2-SlideRule/sliderule/tree/main/plugins>`_: mission specific plugins providing data subsetting and processing algorithms
+    - `python client <https://github.com/ICESat2-SlideRule/sliderule/tree/main/clients/python>`_: the Python client code that allows users to easily interact with SlideRule from the Python language
+    - `documentation <https://github.com/ICESat2-SlideRule/sliderule/tree/main/docs>`_: source for our static website and user documentation
+    - `infrastructure <https://github.com/ICESat2-SlideRule/sliderule/tree/main/targets/slideruleearth-aws>`_: infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud
+  * The `sliderule-python <https://github.com/ICESat2-SlideRule/sliderule-python>`_ repository includes example Jupyter notebooks for using SlideRule to perform common science data analysis workflows
+  * The `sliderule-ps-web <https://github.com/ICESat2-SlideRule/sliderule-ps-web>`_ repository containing the source code for the SlideRule Provisioning System website; written in Python/Django
+  * The `sliderule-ps-server <https://github.com/ICESat2-SlideRule/sliderule-ps-server>`_ repository containing the source code for the SlideRule Provisioning System backebnd server; written in Python
 
