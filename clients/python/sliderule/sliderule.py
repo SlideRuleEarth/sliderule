@@ -375,11 +375,39 @@ def __build_auth_header():
 # Overriding DNS
 ###############################################################################
 
+#
+# local_dns - global dictionary of DNS entries to override
+#
 local_dns = {}
+
+#
+# __initdns - resets the global dictionary
+#
+def __initdns():
+    local_dns.clear()
+
+#
+# __dnsoverridden - checks if url is already overridden
+#
+def __dnsoverridden(url):
+    name = url.lower()
+    return name in local_dns
+
+#
+# __jamdns - override the dns entry
+#
+def __jamdns(url, ipaddr):
+    name = url.lower()
+    local_dns[name] = ipaddr
+    logger.info("Overriding DNS for {} with {}".format(name, ipaddr))
+
+#
+# __override_getaddrinfo - replaces the socket library callback
+#
 socket_getaddrinfo = socket.getaddrinfo
 def __override_getaddrinfo(*args):
     if args[0] in local_dns:
-        logger.critical("getaddrinfo returned {} for {}".format(local_dns[args[0]], args[0]))
+        logger.info("getaddrinfo returned {} for {}".format(local_dns[args[0]], args[0]))
         return socket_getaddrinfo(local_dns[args[0]], *args[1:])
     else:
         return socket_getaddrinfo(*args)
@@ -542,7 +570,6 @@ def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organizatio
     set_verbose(verbose)
     set_url(url) # configure domain
     authenticate(organization) # configure credentials (if any) for organization
-    local_dns.clear() # clear cache of DNS lookups for clusters
     scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
     check_version(plugins=plugins) # verify compatibility between client and server versions
 
@@ -764,7 +791,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
-    global service_url, service_org, request_timeout, local_dns
+    global service_url, service_org, request_timeout
 
     # Update number of nodes
     if type(desired_nodes) == int:
@@ -808,12 +835,13 @@ def scaleout(desired_nodes, time_to_live):
         return # nothing needs to be done
     if desired_nodes < 0:
         raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
+    # Initialize DNS - clear cache of DNS lookups for clusters
+    __initdns()
     # Send Initial Request for Desired Cluster State
     update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
     start = time.time()
     available_nodes,_ = update_available_servers()
     scale_up_needed = False
-    dns_overridden = False
     # Wait for Cluster to Reach Desired State
     while available_nodes < desired_nodes:
         scale_up_needed = True
@@ -821,15 +849,13 @@ def scaleout(desired_nodes, time_to_live):
         time.sleep(10.0)
         available_nodes,_ = update_available_servers()
         # Override DNS if Cluster is Starting
-        if available_nodes == 0 and not dns_overridden:
+        url_to_override = service_org + "." + service_url
+        if available_nodes == 0 and not __dnsoverridden(url_to_override):
             headers = __build_auth_header()
             host = "https://ps." + service_url + "/api/org_ip_adr/" + service_org + "/"
             rsps = session.get(host, headers=headers, timeout=request_timeout).json()
             if rsps["status"] == "SUCCESS":
-                dns_overridden = True
-                url_to_override = service_org + "." + service_url
-                local_dns[url_to_override] = rsps["ip_address"]
-                logger.info("Overriding DNS for {} with {}".format(url_to_override, rsps["ip_address"]))
+                __jamdns(url_to_override, rsps["ip_address"])
         # Timeout Occurred
         if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
             logger.error("Maximum time allowed waiting for cluster has been exceeded")
