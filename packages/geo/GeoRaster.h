@@ -194,6 +194,7 @@ class GeoRaster: public LuaObject
             uint32_t        radiusInPixels;
 
             double          gpsTime;
+            double          useTime;
 
             /* Last sample information */
             OGRPoint        point;
@@ -314,6 +315,7 @@ class GeoRaster: public LuaObject
         void       readPixel               (Raster* raster);
         void       resamplePixel           (Raster* raster);
         void       computeZonalStats       (Raster* raster);
+        uint32_t   removeOldestRasterGroup (void);
 
 };
 

@@ -1015,6 +1015,53 @@ void GeoRaster::computeZonalStats(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
+ * removeOldestRasterGroup
+ *----------------------------------------------------------------------------*/
+uint32_t GeoRaster::removeOldestRasterGroup(void)
+{
+    Raster* raster = NULL;
+    Raster* oldestRaster = NULL;
+    double now = TimeLib::latchtime();
+    double max = std::numeric_limits<double>::min();
+    uint32_t removedRasters = 0;
+
+    /* Find oldest raster and it's groupId */
+    const char* key = rasterDict.first(&raster);
+    while(key != NULL)
+    {
+        assert(raster);
+        if(!raster->enabled)
+        {
+            double elapsedTime = now - raster->useTime;
+            if(elapsedTime > max)
+            {
+                max = elapsedTime;
+                oldestRaster = raster;
+            }
+        }
+        key = rasterDict.next(&raster);
+    }
+
+    if(oldestRaster == NULL) return 0;
+
+    std::string oldestId = oldestRaster->groupId;
+    key = rasterDict.first(&raster);
+    while(key != NULL)
+    {
+        assert(raster);
+        if(!raster->enabled && (raster->groupId == oldestId))
+        {
+            rasterDict.remove(key);
+            delete raster;
+            removedRasters++;
+        }
+        key = rasterDict.next(&raster);
+    }
+
+    return removedRasters;
+}
+
+/*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
 void GeoRaster::Raster::clear(bool close)
@@ -1037,6 +1084,7 @@ void GeoRaster::Raster::clear(bool close)
     yBlockSize = 0;
     radiusInPixels = 0;
     gpsTime = 0;
+    useTime = 0;
     point.empty();
     bzero(&sample, sizeof(sample_t));
 }
@@ -1087,10 +1135,12 @@ void GeoRaster::updateCache(OGRPoint& p)
 
             if(rasterDict.find(key, &raster))
             {
-                /* Update point to be sampled, mark raster enabled for next sampling */
+                /* Update existing raster, mark raster for next sampling */
                 assert(raster);
+                raster->groupId = groupId;
                 raster->enabled = true;
                 raster->point   = p;
+                raster->useTime = TimeLib::latchtime();
             }
             else
             {
@@ -1104,11 +1154,20 @@ void GeoRaster::updateCache(OGRPoint& p)
                 raster->sample.value = INVALID_SAMPLE_VALUE;
                 raster->fileName     = key;
                 raster->gpsTime      = static_cast<double>(rinfo.gpsTime / 1000);
+                raster->useTime      = TimeLib::latchtime();
                 rasterDict.add(key, raster);
             }
         }
     }
 
+#if 1
+    /* Maintain cache from getting too big */
+    while(rasterDict.length() > MAX_CACHED_RASTERS)
+    {
+        uint32_t removedRasters = removeOldestRasterGroup();
+        if(removedRasters == 0) break;
+    }
+#else
     /* Maintain cache from getting too big */
     key = rasterDict.first(&raster);
     while(key != NULL)
@@ -1117,36 +1176,14 @@ void GeoRaster::updateCache(OGRPoint& p)
             break;
 
         assert(raster);
-#if 1
         if(!raster->enabled)
         {
             rasterDict.remove(key);
             delete raster;
         }
-#else
-        /* Remove all rasters from the same group */
-        /* TODO: for mosaics one group one raster - optimize it */
-        if(!raster->enabled)
-        {
-            std::string gropuId = raster->groupId;
-            rasterDict.remove(key);
-            delete raster;
-
-            key = rasterDict.next(&raster);
-            while(key != NULL)
-            {
-                assert(raster);
-                if(!raster->enabled && (raster->groupId == gropuId))
-                {
-                    rasterDict.remove(key);
-                    delete raster;
-                }
-                key = rasterDict.next(&raster);
-            }
-        }
-#endif
         key = rasterDict.next(&raster);
     }
+#endif
 }
 
 /*----------------------------------------------------------------------------
