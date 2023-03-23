@@ -23,14 +23,6 @@ services:
       timeout: 10s
       retries: 1
       start_period: 30s
-  monitor:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest
-    network_mode: "host"
-    restart: unless-stopped
-    pull_policy: if_not_present
-    entrypoint: /usr/local/etc/docker-entrypoint.sh
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
   ilb:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ilb:latest
     network_mode: "host"
@@ -50,3 +42,20 @@ services:
       timeout: 10s
       retries: 1
       start_period: 30s
+  monitor:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+  proxy:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/proxy:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /etc/ssl/private:/etc/ssl/private

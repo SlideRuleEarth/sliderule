@@ -29,6 +29,7 @@ resource "aws_instance" "monitor" {
       crontab ./cronjob.txt
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
       export MONITOR_IMAGE=${var.monitor_image}
+      export PROXY_IMAGE=${var.proxy_image}
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-monitor.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF

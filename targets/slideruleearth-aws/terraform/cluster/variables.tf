@@ -82,6 +82,11 @@ variable "monitor_image" {
  type        = string
  default     = "742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest"
 }
+variable "proxy_image" {
+ description = "proxy docker version to use"
+ type        = string
+ default     = "742127912612.dkr.ecr.us-west-2.amazonaws.com/proxy:latest"
+}
 variable "domain" {
   description = "root domain of site to use"
   default = "testsliderule.org"

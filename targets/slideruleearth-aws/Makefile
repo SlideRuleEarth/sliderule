@@ -26,6 +26,7 @@ SERVER_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
+PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
@@ -113,7 +114,7 @@ static-website: ## make the website locally
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll/_site/* $(WEBSITE_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd/build/html $(WEBSITE_STAGE_DIR)/rtd
 
-static-website-run-local: ## run the website locally
+static-website-run: ## run the website locally
 	cd jekyll && bundle exec jekyll serve -d $(WEBSITE_STAGE_DIR) --skip-initial-build
 
 static-website-docker: ## make the static website docker image; needs VERSION
@@ -128,9 +129,6 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
-
-static-website-run: ## run the static website docker locally; needs VERSION
-	docker run -it --rm --name=website -p 4000:4000 $(ECR)/static-website:$(VERSION)
 
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
@@ -198,6 +196,13 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
 
+proxy-docker: # make the reverse proxy docker image; needs VERSION
+	-rm -Rf $(PROXY_STAGE_DIR)
+	mkdir -p $(PROXY_STAGE_DIR)
+	cp docker/proxy/* $(PROXY_STAGE_DIR)
+	cd $(PROXY_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/proxy:latest .
+	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
+
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
@@ -208,9 +213,6 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/ilb:latest .
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
-
-ilb-run: ## run intelligent load balancer docker container; needs VERSION
-	docker run -it --rm --name=ilb --net=host -v $(ROOT)/test/cluster:/haproxy -e CLUSTER=sliderule -e DOMAIN=localhost $(ECR)/ilb:$(VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
