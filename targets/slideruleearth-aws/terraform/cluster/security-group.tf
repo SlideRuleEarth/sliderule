@@ -15,11 +15,11 @@ resource "aws_security_group" "monitor-sg" {
     protocol    = "tcp"
   }
 
-  # HAProxy - Grafana - TCP
+  # HAProxy - NGINX (proxy) - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]
-    from_port   = 3000
-    to_port     = 3000
+    from_port   = 8080
+    to_port     = 8080
     protocol    = "tcp"
   }
 
