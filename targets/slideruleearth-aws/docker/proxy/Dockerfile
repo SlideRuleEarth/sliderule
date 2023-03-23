@@ -45,7 +45,6 @@ RUN luarocks install lua-resty-openidc
 # configure nginx
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d
-COPY auth.lua /etc/nginx/conf.d
 EXPOSE 8888
 
 # entrypoint for debug
