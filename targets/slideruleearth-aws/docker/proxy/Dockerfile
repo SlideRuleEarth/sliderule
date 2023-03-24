@@ -1,13 +1,6 @@
 FROM openresty/openresty:buster
 
 # install build dependencies
-#RUN apt-get update && \
-#  DEBIAN_FRONTEND=noninteractive \
-#  apt-get install -y --no-install-recommends \
-#  openresty-opm \
-#  && rm -rf /var/lib/apt/lists/*
-
-# install build dependencies
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
@@ -43,9 +36,8 @@ RUN luarocks install lua-resty-jwt
 RUN luarocks install lua-resty-openidc
 
 # configure nginx
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d
-EXPOSE 8888
+COPY nginx.conf /etc/nginx/conf.d/nginx.conf.template
 
-# entrypoint for debug
+# entrypoint
+COPY docker-entrypoint.sh /usr/local/etc/
 #ENTRYPOINT ["/bin/bash"]
