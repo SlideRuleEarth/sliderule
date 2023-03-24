@@ -36,7 +36,9 @@ RUN luarocks install lua-resty-jwt
 RUN luarocks install lua-resty-openidc
 
 # configure nginx
-COPY nginx.conf /etc/nginx/conf.d/nginx.conf.template
+COPY auth.conf /usr/local/openresty/nginx/conf/auth.conf.template
+COPY nginx.conf /etc/nginx/conf.d/nginx.conf
+RUN rm /etc/nginx/conf.d/default.conf
 
 # entrypoint
 COPY docker-entrypoint.sh /usr/local/etc/
