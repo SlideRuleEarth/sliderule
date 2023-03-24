@@ -18,6 +18,10 @@ services:
     entrypoint: /usr/local/etc/docker-entrypoint.sh
     volumes:
       - /etc/ssl/private:/etc/ssl/private
+    environment:
+      - CLIENT_ID=$CLIENT_ID
+      - CLIENT_SECRET=$CLIENT_SECRET
+      - DOMAIN=$DOMAIN
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true

@@ -39,8 +39,9 @@ resource "aws_instance" "monitor" {
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
       export CLIENT_ID='${local.provsys_openidc.client_id}'
       export CLIENT_SECRET='${local.provsys_openidc.client_secret}'
-      export MONITOR_IMAGE=${var.monitor_image}
-      export PROXY_IMAGE=${var.proxy_image}
+      export DOMAIN=${var.domain}
+      export MONITOR_IMAGE=${var.container_repo}/monitor:${var.cluster_version}
+      export PROXY_IMAGE=${var.container_repo}/proxy:${var.cluster_version}
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-monitor.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF

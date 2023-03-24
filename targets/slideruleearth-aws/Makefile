@@ -234,6 +234,7 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	# docker images
 	make DOCKEROPTS=--no-cache sliderule-buildenv-docker
 	make DOCKEROPTS=--no-cache sliderule-docker
+	make DOCKEROPTS=--no-cache proxy-docker
 	make DOCKEROPTS=--no-cache monitor-docker
 	make DOCKEROPTS=--no-cache ilb-docker
 	make DOCKEROPTS=--no-cache static-website-docker
@@ -241,6 +242,8 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	# docker tags
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
+	docker push $(ECR)/proxy:$(VERSION)
+	docker push $(ECR)/proxy:$(MAJOR_VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
 	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
@@ -255,11 +258,8 @@ cluster-release: ## release a version of the cluster; needs VERSION
 cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
 	cd terraform/cluster && terraform apply \
 		-var cluster_name=sliderule \
+		-var cluster_version=$(MAJOR_VERSION)
 		-var is_public=True \
-		-var ami_name=sliderule-$(MAJOR_VERSION) \
-		-var sliderule_image=$(ECR)/sliderule:$(MAJOR_VERSION) \
-		-var ilb_image=$(ECR)/ilb:$(MAJOR_VERSION) \
-		-var monitor_image=$(ECR)/monitor:$(MAJOR_VERSION) \
 		-var domain=$(DOMAIN)
 
 cluster-destroy: ## manually destroy a cluster
@@ -268,6 +268,7 @@ cluster-destroy: ## manually destroy a cluster
 cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
+	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker image rm $(ECR)/demo-client:$(VERSION)
