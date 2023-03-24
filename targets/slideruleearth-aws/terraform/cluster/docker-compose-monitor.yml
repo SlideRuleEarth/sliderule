@@ -15,6 +15,7 @@ services:
     pull_policy: if_not_present
     stdin_open: true # docker run -i
     tty: true # docker run -t
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
     volumes:
       - /etc/ssl/private:/etc/ssl/private
   autoheal:
