@@ -64,3 +64,4 @@ services:
       - CLIENT_ID=$CLIENT_ID
       - CLIENT_SECRET=$CLIENT_SECRET
       - DOMAIN=$DOMAIN
+      - REDIRECT_URI_SCHEME=http
