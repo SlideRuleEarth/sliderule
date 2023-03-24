@@ -1160,31 +1160,14 @@ void GeoRaster::updateCache(OGRPoint& p)
         }
     }
 
-#if 1
     /* Maintain cache from getting too big */
     while(rasterDict.length() > MAX_CACHED_RASTERS)
     {
         uint32_t removedRasters = removeOldestRasterGroup();
         if(removedRasters == 0) break;
     }
-#else
-    /* Maintain cache from getting too big */
-    key = rasterDict.first(&raster);
-    while(key != NULL)
-    {
-        if(rasterDict.length() <= MAX_CACHED_RASTERS)
-            break;
-
-        assert(raster);
-        if(!raster->enabled)
-        {
-            rasterDict.remove(key);
-            delete raster;
-        }
-        key = rasterDict.next(&raster);
-    }
-#endif
 }
+
 
 /*----------------------------------------------------------------------------
  * filterRasters
