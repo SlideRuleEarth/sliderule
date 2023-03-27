@@ -202,6 +202,7 @@ proxy-docker: # make the reverse proxy docker image; needs VERSION
 	cp docker/proxy/* $(PROXY_STAGE_DIR)
 	cd $(PROXY_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/proxy:latest .
 	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
+	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(MAJOR_VERSION)
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
