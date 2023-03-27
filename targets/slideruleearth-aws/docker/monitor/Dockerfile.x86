@@ -43,6 +43,7 @@ COPY datasources.yaml /grafana/conf/provisioning/datasources/default.yaml
 COPY dashboards.yaml /grafana/conf/provisioning/dashboards/default.yaml
 COPY dashboard-*.json /var/lib/grafana/dashboards/
 RUN grafana-cli --homepath "/grafana" --config "/grafana/conf/grafana.ini" admin data-migration encrypt-datasource-passwords
+COPY dashboard-sliderule-node-sys-metrics.json /grafana/public/dashboards/home.json
 
 # Copy Over Entry Point Script
 COPY docker-entrypoint.sh /usr/local/etc/

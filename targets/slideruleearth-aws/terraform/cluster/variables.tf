@@ -43,50 +43,39 @@ variable "publicCIDRblock" {
 # Deployment Variables
 #----------------------------------------------------------------
 variable "cluster_name" {
- description = "the name tag for the EC2 instance"
+ description = "organization name for the cluster of sliderule nodes"
  type        = string
  default     = "sliderule"
 }
-variable "ami_name" {
-  description = "name of ami to use for cluster base image"
-  type        = string
-  default     = "sliderule-latest"
+variable "cluster_version" {
+ description = "version of docker containers to use for sliderule cluster"
+ type        = string
+ default     = "latest"
 }
 variable "node_asg_desired_capacity" {
-  description = "number of nodes in node autoscaling group"
+  description = "number of nodes in node sliderule cluster"
   type        = number
   default     = 2
 }
 variable "node_asg_min_capacity" {
-  description = "minimum number of nodes in node autoscaling group"
+  description = "minimum number of nodes in node sliderule cluster"
   type        = number
   default     = 0
 }
 variable "node_asg_max_capacity" {
-  description = "maxmum number of nodes in node autoscaling group"
+  description = "maxmum number of nodes in node sliderule cluster"
   type        = number
   default     = 7
 }
-variable "sliderule_image" {
- description = "sliderule docker version to use"
- type        = string
- default     = "742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule:latest"
-}
-variable "ilb_image" {
- description = "intelligent load balancer docker version to use"
- type        = string
- default     = "742127912612.dkr.ecr.us-west-2.amazonaws.com/ilb:latest"
-}
-variable "monitor_image" {
- description = "monitor docker version to use"
- type        = string
- default     = "742127912612.dkr.ecr.us-west-2.amazonaws.com/monitor:latest"
-}
 variable "domain" {
-  description = "root domain of site to use"
+  description = "root domain of sliderule cluster"
   default = "testsliderule.org"
 }
 variable "is_public" {
   description = "(True/False): The cluster is public (Note: public clusters do NOT require authentication)"
   default = "False"
+}
+variable "container_repo" {
+  description = "container registry holding sliderule container images"
+  default = "742127912612.dkr.ecr.us-west-2.amazonaws.com"
 }

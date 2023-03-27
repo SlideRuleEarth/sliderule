@@ -1,5 +1,5 @@
 locals {
-  ami_major_version = split(".","${var.ami_name}")[0]
+  ami_major_version = "sliderule-${var.cluster_version}"
 }
 
 data "aws_ami" "sliderule_cluster_ami" {

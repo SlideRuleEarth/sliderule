@@ -36,7 +36,7 @@ resource "aws_instance" "ilb" {
       export IS_PUBLIC=${var.is_public}
       export CLUSTER=${var.cluster_name}
       export DOMAIN=${var.domain}
-      export ILB_IMAGE=${var.ilb_image}
+      export ILB_IMAGE=${var.container_repo}/ilb:${var.cluster_version}
       mkdir -p /etc/ssl/private
       aws s3 cp s3://sliderule/config/slideruleearth.io.pem /etc/ssl/private/slideruleearth.io.pem
       aws s3 cp s3://sliderule/config/testsliderule.org.pem /etc/ssl/private/testsliderule.org.pem

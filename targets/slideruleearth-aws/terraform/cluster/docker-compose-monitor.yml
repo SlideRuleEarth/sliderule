@@ -8,6 +8,21 @@ services:
     entrypoint: /usr/local/etc/docker-entrypoint.sh
     stdin_open: true # docker run -i
     tty: true # docker run -t
+  proxy:
+    image: ${PROXY_IMAGE}
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    volumes:
+      - /etc/ssl/private:/etc/ssl/private
+    environment:
+      - CLIENT_ID=$CLIENT_ID
+      - CLIENT_SECRET=$CLIENT_SECRET
+      - DOMAIN=$DOMAIN
+      - REDIRECT_URI_SCHEME=https
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true
