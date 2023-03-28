@@ -1,15 +1,30 @@
-# Note: In order to complete the release process, the following must be installed and configured in your environment:
-# 	* GitHub command line client (gh)
-# 		See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
-#		The user must authenticate to GitHub via `gh auth login`
-#	* AWS command line client (awscli)
-#		See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
-#		The user must have up-to-date aws credentials
-#   * Docker
-#		The user must be logged into the AWS Elastic Container Registry (ECR)
-#       The user must be logged into the GitHub Container Registry (GHCR)
-#	* Terraform & Packer
-#		The binaries are sufficient, but pay close attention to the local package versions
+# Notes:
+#
+# (1) In order to complete the release process, the following must be installed and configured in your environment:
+#     * GitHub command line client (gh)
+#           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
+#           The user must authenticate to GitHub via `gh auth login`
+#     * AWS command line client (awscli)
+#           See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
+#           The user must have up-to-date aws credentials
+#     * Docker
+#           The user must be logged into the AWS Elastic Container Registry (ECR)
+#           The user must be logged into the GitHub Container Registry (GHCR)
+#     * Terraform & Packer
+#           The binaries are sufficient, but pay close attention to the local package versions
+#
+# (2) To release a version of SlideRule:
+#     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
+#        $ aws --profile={profile} sts get-session-token --serial-number arn:aws:iam::742127912612:mfa/{username} --token-code={code}
+#     2. Login to AWS Elastic Container Registry
+#        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+#     3. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
+#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
+#     4. Login to GitHub
+#        $ gh auth login
+#     5. Execute the makefile target to release the code; X.Y.Z is the version
+#        $ make cluster-release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#
 
 ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
@@ -48,7 +63,6 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/l
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
 TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
-
 SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
 SLIDERULECFG += -DUSE_ARROW_PACKAGE=ON
 SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
@@ -171,8 +185,9 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest .
-	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:latest
+	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(GHCR)/sliderule-buildenv:latest .
+	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
+	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
@@ -180,7 +195,7 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
-	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest .
+	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(GHCR) -t $(ECR)/sliderule:latest .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
 
@@ -216,15 +231,17 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
 
 cluster-docker: ## build all cluster docker images
-	make DOCKEROPTS=--no-cache sliderule-buildenv-docker
-	make DOCKEROPTS=--no-cache sliderule-docker
-	make DOCKEROPTS=--no-cache proxy-docker
-	make DOCKEROPTS=--no-cache monitor-docker
-	make DOCKEROPTS=--no-cache ilb-docker
-	make DOCKEROPTS=--no-cache static-website-docker
-	make DOCKEROPTS=--no-cache demo-docker
+	make sliderule-buildenv-docker
+	make sliderule-docker
+	make proxy-docker
+	make monitor-docker
+	make ilb-docker
+	make static-website-docker
+	make demo-docker
 
-cluster-docker-push: ## push all cluster images to docker container registry
+cluster-docker-push: ## push all cluster images to docker container registries
+	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
+	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
@@ -249,10 +266,16 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
 
+cluster-tag: ## create version tag in this repository and release it on GitHub
+	echo $(VERSION) > $(ROOT)/version.txt
+	git add $(ROOT)/version.txt
+	git commit -m "Version $(VERSION)"
+	git tag -a $(VERSION) -m "version $(VERSION)"
+	git push --tags && git push
+	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
+
 cluster-release: ## release a version of the cluster; needs VERSION
-	gh auth login
-	cd $(SLIDERULE_SOURCE_DIR) && $(ROOT)/RELEASE.sh $(VERSION) && git push --tags && git push
-	cd $(SLIDERULE_SOURCE_DIR) && gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
+	make cluster-tag
 	make cluster-docker
 	make cluster-docker-push
 	make cluster-build-packer
@@ -260,7 +283,7 @@ cluster-release: ## release a version of the cluster; needs VERSION
 
 cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
 	cd terraform/cluster && terraform apply \
-		-var cluster_name=sliderule \
+		-var cluster_name=local \
 		-var cluster_version=$(MAJOR_VERSION)
 		-var is_public=True \
 		-var domain=$(DOMAIN)
