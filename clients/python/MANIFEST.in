@@ -6,4 +6,3 @@ exclude *.yml
 include README.md
 include LICENSE
 include requirements.txt
-include version.txt

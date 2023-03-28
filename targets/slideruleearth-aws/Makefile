@@ -215,6 +215,28 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
 
+cluster-docker: ## build all cluster docker images
+	make DOCKEROPTS=--no-cache sliderule-buildenv-docker
+	make DOCKEROPTS=--no-cache sliderule-docker
+	make DOCKEROPTS=--no-cache proxy-docker
+	make DOCKEROPTS=--no-cache monitor-docker
+	make DOCKEROPTS=--no-cache ilb-docker
+	make DOCKEROPTS=--no-cache static-website-docker
+	make DOCKEROPTS=--no-cache demo-docker
+
+cluster-docker-push: ## push all cluster images to docker container registry
+	docker push $(ECR)/sliderule:$(VERSION)
+	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
+	docker push $(ECR)/proxy:$(VERSION)
+	docker push $(ECR)/proxy:$(MAJOR_VERSION)
+	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/monitor:$(MAJOR_VERSION)
+	docker push $(ECR)/ilb:$(VERSION)
+	docker push $(ECR)/ilb:$(MAJOR_VERSION)
+	docker push $(ECR)/static-website:$(VERSION)
+	docker push $(ECR)/demo-client:$(VERSION)
+	docker push $(ECR)/demo-nginx:$(VERSION)
+
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
 
@@ -228,31 +250,11 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
 
 cluster-release: ## release a version of the cluster; needs VERSION
-	# release repositories
 	gh auth login
 	cd $(SLIDERULE_SOURCE_DIR) && $(ROOT)/RELEASE.sh $(VERSION) && git push --tags && git push
 	cd $(SLIDERULE_SOURCE_DIR) && gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
-	# docker images
-	make DOCKEROPTS=--no-cache sliderule-buildenv-docker
-	make DOCKEROPTS=--no-cache sliderule-docker
-	make DOCKEROPTS=--no-cache proxy-docker
-	make DOCKEROPTS=--no-cache monitor-docker
-	make DOCKEROPTS=--no-cache ilb-docker
-	make DOCKEROPTS=--no-cache static-website-docker
-	make DOCKEROPTS=--no-cache demo-docker
-	# docker tags
-	docker push $(ECR)/sliderule:$(VERSION)
-	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
-	docker push $(ECR)/proxy:$(VERSION)
-	docker push $(ECR)/proxy:$(MAJOR_VERSION)
-	docker push $(ECR)/monitor:$(VERSION)
-	docker push $(ECR)/monitor:$(MAJOR_VERSION)
-	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/ilb:$(MAJOR_VERSION)
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/demo-client:$(VERSION)
-	docker push $(ECR)/demo-nginx:$(VERSION)
-	# deployment resources
+	make cluster-docker
+	make cluster-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
 

@@ -1,4 +1,5 @@
 import os
+import subprocess
 from setuptools import setup, find_packages
 
 # get long_description from README.md
@@ -10,10 +11,10 @@ with open('requirements.txt') as fh:
     install_requires = fh.read().splitlines()
 
 # get version
-with open('../../version.txt') as fh:
-    version = fh.read().strip()
-    if version[0] == 'v':
-        version = version[1:]
+capture = subprocess.run(["git", "describe"], capture_output=True, text=True)
+version = capture.stdout.strip()
+if version[0] == 'v':
+    version = version[1:]
 
 # list of all utility scripts to be included with package
 scripts=[os.path.join('utils',f) for f in os.listdir('utils') if f.endswith('.py')]
