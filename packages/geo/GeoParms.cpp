@@ -105,7 +105,7 @@ int GeoParms::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoParms::GeoParms (lua_State* L, int index):
+GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     LuaObject           (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     sampling_algo       (GRIORA_NearestNeighbour),
     sampling_radius     (0),
@@ -235,9 +235,13 @@ GeoParms::GeoParms (lua_State* L, int index):
 
             /* Asset */
             lua_getfield(L, index, ASSET);
-            asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1));
-            asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
-            mlog(DEBUG, "Setting %s to %s", asset ? ASSET : "name", asset_name);
+            asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
+            if(asset_name)
+            {
+                asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+                if(!asset && asset_required) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset_name);
+                mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+            }
             lua_pop(L, 1);
 
             /* Key Space */

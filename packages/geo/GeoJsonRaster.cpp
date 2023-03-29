@@ -96,7 +96,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 
     /* Get Geo Parameters */
     lua_getfield(L, index, GeoParms::SELF);
-    GeoParms* _parms = new GeoParms(L, lua_gettop(L));
+    GeoParms* _parms = new GeoParms(L, lua_gettop(L), true);
     LuaObject::referenceLuaObject(_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
     lua_pop(L, 1);
 
