@@ -93,13 +93,13 @@ void initpgc(void)
     ArcticDemMosaicRaster::init();
     ArcticDemStripsRaster::init();
     RemaDemMosaicRaster::init();
-    // RemaDemStripsRaster::init();
+    RemaDemStripsRaster::init();
 
     /* Register Rasters */
     GeoRaster::registerRaster(LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
     GeoRaster::registerRaster(LUA_ARCTIC_DEM_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
     GeoRaster::registerRaster(LUA_REMA_DEM_MOSAIC_RASTER_NAME, RemaDemMosaicRaster::create);
-    // GeoRaster::registerRaster(LUA_REMA_DEM_STRIPS_RASTER_NAME, RemaDemStripsRaster::create);
+    GeoRaster::registerRaster(LUA_REMA_DEM_STRIPS_RASTER_NAME, RemaDemStripsRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_PGC_LIBNAME, pgc_open);
@@ -117,6 +117,6 @@ void deinitpgc (void)
     ArcticDemMosaicRaster::deinit();
     ArcticDemStripsRaster::deinit();
     RemaDemMosaicRaster::deinit();
-    // RemaDemStripsRaster::deinit();
+    RemaDemStripsRaster::deinit();
 }
 }

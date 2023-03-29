@@ -67,7 +67,8 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
      *
      * https://www.pgc.umn.edu/guides/stereo-derived-elevation-models/pgcs-dem-products-arcticdem-rema-and-earthdem/#section-9
      *
-     * NOTE: valid latitude strings are 'n59' and up. Nothing below 59. 'n' is always followed by two digits.
+     * NOTE: valid latitude strings for Arctic DEMs are 'n59' and up. Nothing below 59. 'n' is always followed by two digits.
+     *       valid latitude strings for REMA are 's54' and down. Nothing above 54. 's' is always followed by two digits.
      *       valid longitude strings are 'e/w' followed by zero padded 3 digits.
      *       example:  lat 61, lon -120.3  ->  n61w121
      *                 lat 61, lon  -50.8  ->  n61w051
@@ -83,7 +84,7 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
     char latBuf[32];
 
     sprintf(lonBuf, "%03d", abs(_lon));
-    sprintf(latBuf, "%02d", _lat);
+    sprintf(latBuf, "%02d", abs(_lat));
 
     std::string lonStr(lonBuf);
     std::string latStr(latBuf);

@@ -15,7 +15,7 @@ local lon = -80.0   -- DO NOT CHANGE lon and lat, later tests are hardcoded to t
 local lat = -80.0
 
 local demTypes = {"rema-mosaic", "rema-strips"}
-local demTypeCnt = 1
+local demTypeCnt = 2
 
 for i = 1, demTypeCnt do
 
@@ -41,7 +41,7 @@ for i = 1, demTypeCnt do
     if demType == "rema-mosaic" then
         runner.check(sampleCnt == 1)
     else
-        runner.check(sampleCnt == 14)
+        runner.check(sampleCnt == 10)
     end
 
     print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
@@ -111,241 +111,9 @@ for i = 1, demTypeCnt do
     if demType == "rema-mosaic" then
         runner.check(sampleCnt == 1)
     else
-        runner.check(sampleCnt == 14)
+        runner.check(sampleCnt == 10)
     end
 end
-
---[[
-
-
-local samplingRadius = 20
-local demType = demTypes[2];
-local url = "SETSM_s2s041_WV01_20181210_102001007A560E00_10200100802C2300"
-
-print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
-local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true, with_flags=true, substr = url}))
-runner.check(dem ~= nil)
-local tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-local sampleCnt = 0
-
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local cnt = v["count"]
-    print(string.format("(%02d) value: %6.8f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
-    runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
-    runner.check(string.len(fname) > 0)
-    sampleCnt = sampleCnt + 1
-
-    --Only one strip should be sampled with the url filter
-    runner.check(flags == 4)    -- Qualit mask for this strip/sample, 4 means cloud
-    runner.check(cnt == 317)    -- Valid samples used in calculating zonal stats
-    runner.check(el > 452.4843 and el < 452.4850 )  -- Valid samples used in calculating zonal stats
-end
-
-runner.check(sampleCnt == 1)  -- Only one sample/strip returned
-
-
-
-
-samplingRadius = 20
-demType = demTypes[2];
-local t0str = "2014:2:25:23:00:00"
-local t1str = "2016:6:2:24:00:00"
-
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, t1=%s\n--------------------------------", demType, t0str, t1str))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, t1=t1str}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
-    runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
-    runner.check(string.len(fname) > 0)
-    sampleCnt = sampleCnt + 1
-
-    if i == 1 then
-        runner.check(flags == 4) -- Qualit mask for this strip/sample, 4 means cloud
-        runner.check(cnt == 317) -- Valid samples used in calculating zonal stats
-        runner.check(el > 773.03 and el < 773.04) -- Valid samples used in calculating zonal stats
-    else
-        runner.check(flags == 0) -- Qualit mask for this strip/sample, 4 means cloud
-        runner.check(cnt == 317) -- Valid samples used in calculating zonal stats
-        runner.check(el > 80.2264 and el < 80.2266) -- Valid samples used in calculating zonal stats
-    end
-end
-runner.check(sampleCnt == 2)
-
-
-t0str = "2021:2:3:1:0:0"
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s\n--------------------------------", demType, t0str))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str }))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
-    runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
-    runner.check(string.len(fname) > 0)
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 4)
-
-
-t1str = "2021:2:3:1:0:0"
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t1=%s\n--------------------------------", demType, t1str))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t1=t1str}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
-    runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
-    runner.check(string.len(fname) > 0)
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 10)
-
-local tstr = "2021:2:4:23:3:0"
-local expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
-
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
-    runner.check( expectedFile == fname )
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 1)
-
-
-tstr = "2016:6:0:0:0:0"
-expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV02_20160602_1030010057849C00_103001005607CA00_2m_lsf_seg1_dem.tif"
-
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
-    runner.check( expectedFile == fname )
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 1)
-
-
-tstr  = "2016:6:0:0:0:0"
-t0str = "2021:2:3:1:0:0"
-expectedFile = "pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV03_20210204_10400100656B9F00_1040010065903500_2m_lsf_seg1_dem.tif"
-print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, closest_time=%s\n--------------------------------", demType, t0str, tstr))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, closest_time=tstr}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
-    runner.check( expectedFile == fname )
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 1)
-
-
-print(string.format("\n--------------------------------\nTest: %s fileId\n--------------------------------", demType))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, with_flags = true}))
-runner.check(dem ~= nil)
-
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local time = v["time"]
-    local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
-    runner.check(fileid == sampleCnt)  -- getting back 14 unique strips, each with fileid 0 to 13
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 14)
-print("\n");
-
-tbl, status = dem:sample(lon+1.0, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local time = v["time"]
-    local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
-    runner.check(fileid == sampleCnt+14)  -- getting back 7 different strips, not previusly found, fileid 14 to 20
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 7)
-print("\n");
-
-tbl, status = dem:sample(lon, lat)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-sampleCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    local flags = v["flags"]
-    local time = v["time"]
-    local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
-    runner.check(fileid == sampleCnt)  -- getting back the same 14 raster (from first sample call) fileid 0 to 13
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 14)
-
---]]
 
 
 demType = demTypes[1];
@@ -367,13 +135,12 @@ runner.check(sampleCnt == 1)
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
 -- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m/2m_dem_tiles.vrt -80 -80
 
-local expected_mosaic_value = 328.015625 -- read using gdallocationinfo
-local expected_max = expected_mosaic_value + 0.000000001
-local expected_min = expected_mosaic_value - 0.000000001
+local expected_val = 328.015625 -- read using gdallocationinfo
+local expected_max = expected_val + 0.000000001
+local expected_min = expected_val - 0.000000001
 
 runner.check(el <= expected_max and el >= expected_min)
 
---[[
 
 demType = demTypes[2];
 print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
@@ -388,19 +155,17 @@ for i, v in ipairs(tbl) do
     print(string.format("(%02d)  value: %6.2f   %s", i, el, fname))
     sampleCnt = sampleCnt + 1
 end
-runner.check(sampleCnt == 14)
+runner.check(sampleCnt == 10)
 
 -- Compare sample value received from sample call to value read with GDAL command line utility.
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
--- gdallocationinfo  -wgs84 /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20200222_1020010099A56800_1020010095159800_2m_lsf_seg1_dem.tif -178.0 51.7
+-- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m/s80w080/SETSM_s2s041_WV03_20201105_1040010062706C00_104001006337FF00_2m_lsf_seg1_dem.tif -80 -80
 
-expected_mosaic_value = 632.90625 -- read using gdallocationinfo
-expected_max = expected_mosaic_value + 0.000000001
-expected_min = expected_mosaic_value - 0.000000001
+expected_val =  333.6171875 -- read using gdallocationinfo
+expected_max = expected_val + 0.000000001
+expected_min = expected_val - 0.000000001
 
 runner.check(el <= expected_max and el >= expected_min)
-
---]]
 
 -- Report Results --
 
