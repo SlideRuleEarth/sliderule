@@ -179,10 +179,7 @@ Once the shared object is built, the build system must copy the shared object in
 
 ## VI. Delivering the Code
 
-Run [RELEASE.sh](RELEASE.sh) to tag the repository and create a tarball that can be distributed: `./RELEASE.sh vX.Y.Z`
-
-The three number version identifier X.Y.Z has the following convention: Incrementing X indicates an interface change and does not guarantee the preservation of backward compatibility.  Incrementing Y indicates additional or modified functionality that maintains compile-time compatibility but may change a run-time behavior.  Incrementing Z indicates a bug fix or code cleanup and maintains both compile-time and run-time compatibility.
-
+The three number version identifier X.Y.Z has the following convention: Incrementing X indicates an interface change and does not guarantee the preservation of backward compatibility.  Incrementing Y indicates additional or modified functionality that maintains backward compatibility.  Incrementing Z indicates a bug fix or code cleanup that does not change the interface or intended behavior of the code.
 
 
 ## VII. Licensing
@@ -200,8 +197,7 @@ corresponding source files.
 
 The following third-party libraries can be linked to by SlideRule:
 * __Lua__: https://www.lua.org/ (MIT license)
-* __AWS SDK for C++__: https://aws.amazon.com/sdk-for-cpp/ (Apache 2.0 license)
-* __HDF5 Library__: https://www.hdfgroup.org (BSD-style license)
-* __HDF5 REST VOL Plugin__: https://www.hdfgroup.org (BSD-style license)
+* __GDAL__: https://gdal.org/ (MIT license)
+* __Arrow__: https://arrow.apache.org/ (Apache 2.0 license)
 * __RapidJSON__: https://github.com/Tencent/rapidjson (MIT license)
-* __curl__: https://curl.se/docs/copyright.html (open source license - see website for license information)
+* __curl__: https://curl.se/docs/copyright.html (MIT license derivative - see website for license information)
