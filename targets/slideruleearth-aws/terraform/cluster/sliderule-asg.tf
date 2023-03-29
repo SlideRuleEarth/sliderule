@@ -1,5 +1,5 @@
-resource "aws_autoscaling_group" "node-cluster" {
-  launch_configuration  = aws_launch_configuration.node-instance.id
+resource "aws_autoscaling_group" "sliderule-cluster" {
+  launch_configuration  = aws_launch_configuration.sliderule-instance.id
   desired_capacity      = var.node_asg_desired_capacity
   min_size              = var.node_asg_min_capacity
   max_size              = var.node_asg_max_capacity
@@ -12,12 +12,12 @@ resource "aws_autoscaling_group" "node-cluster" {
   }
 }
 
-resource "aws_launch_configuration" "node-instance" {
+resource "aws_launch_configuration" "sliderule-instance" {
   image_id                    = data.aws_ami.sliderule_cluster_ami.id
   instance_type               = "r6g.xlarge"
   key_name                    = var.key_pair_name
   associate_public_ip_address = true
-  security_groups             = [aws_security_group.node-sg.id]
+  security_groups             = [aws_security_group.sliderule-sg.id]
   iam_instance_profile        = aws_iam_instance_profile.s3-role.name
   user_data = <<-EOF
       #!/bin/bash
@@ -27,7 +27,7 @@ resource "aws_launch_configuration" "node-instance" {
       export CLUSTER=${var.cluster_name}
       export SLIDERULE_IMAGE=${var.container_repo}/sliderule:${var.cluster_version}
       export PROVISIONING_SYSTEM="https://ps.${var.domain}"
-      aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-node.yml ./docker-compose.yml
+      aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-sliderule.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
   EOF
 }

@@ -23,6 +23,13 @@ services:
       - CLIENT_SECRET=$CLIENT_SECRET
       - DOMAIN=$DOMAIN
       - REDIRECT_URI_SCHEME=https
+  website:
+    image: ${STATIC_WEBSITE_IMAGE}
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true
