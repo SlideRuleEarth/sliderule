@@ -76,7 +76,7 @@ def h5 (dataset, resource, asset, datatype=sliderule.datatypes["DYNAMIC"], col=0
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
@@ -119,7 +119,7 @@ def h5p (datasets, resource, asset):
     parallel on the server side, but also shares a file context between the reads so that portions of the file that
     need to be read multiple times do not result in multiple requests to S3.
 
-    For a full discussion of the data type conversion options, see `h5 </rtd/api_reference/icesat2.html#h5>`_.
+    For a full discussion of the data type conversion options, see `h5 </web/rtd/api_reference/icesat2.html#h5>`_.
 
     Parameters
     ----------
@@ -128,7 +128,7 @@ def h5p (datasets, resource, asset):
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------

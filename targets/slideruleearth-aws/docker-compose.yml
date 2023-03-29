@@ -1,6 +1,6 @@
 version: "3.9"
 services:
-  node:
+  sliderule:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule:latest
     network_mode: "host"
     restart: unless-stopped
@@ -65,3 +65,10 @@ services:
       - CLIENT_SECRET=$CLIENT_SECRET
       - DOMAIN=$DOMAIN
       - REDIRECT_URI_SCHEME=http
+  website:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/static-website:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    stdin_open: true # docker run -i
+    tty: true # docker run -t

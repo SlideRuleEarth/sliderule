@@ -152,7 +152,7 @@ All times sent as request parameters are in GMT time.  All times returned in res
 * ``"t0"``: start time for filtering source datasets (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
 * ``"t1"``: stop time for filtering source datasets (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
 
-The SlideRule Python client provides helper functions to perform the conversion.  See `gps2utc </rtd/api_reference/sliderule.html#gps2utc>`_.
+The SlideRule Python client provides helper functions to perform the conversion.  See `gps2utc </web/rtd/api_reference/sliderule.html#gps2utc>`_.
 
 For APIs that return GeoDataFrames, the **"time"** column values are represented as a ``datatime`` with microsecond precision.
 
@@ -561,7 +561,7 @@ h5
 
     Reads a dataset from an HDF5 file and return the values of the dataset in a list.
 
-    See `icesat2.h5 </rtd/api_reference/icesat2.html#h5>`_ function for a convient method for accessing HDF5 datasets.
+    See `icesat2.h5 </web/rtd/api_reference/icesat2.html#h5>`_ function for a convient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
 
@@ -645,7 +645,7 @@ h5p
 
     Reads a list of datasets from an HDF5 file and returns the values of the datasets in a dictionary of lists.
 
-    See `icesat2.h5p </rtd/api_reference/icesat2.html#h5p>`_ function for a convient method for accessing HDF5 datasets.
+    See `icesat2.h5p </web/rtd/api_reference/icesat2.html#h5p>`_ function for a convient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
 

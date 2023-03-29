@@ -246,8 +246,8 @@ clean: ## clean last build
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
 	- rm -Rf $(STAGE)
-	- $(ROOT)/docs/clean.sh
-	- $(ROOT)/clients/python/clean.sh
+	- cd $(ROOT)/docs && ./clean.sh
+	- cd $(ROOT)/clients/python && ./clean.sh
 	- find -name ".cookies" -exec rm {} \;
 	- rm compile_commands.json
 

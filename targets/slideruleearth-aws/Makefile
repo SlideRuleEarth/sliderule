@@ -36,7 +36,8 @@ ICESAT2_BUILD_DIR = $(BUILD)/icesat2
 PGC_BUILD_DIR = $(BUILD)/pgc
 LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
-PYTHON_SOURCE_DIR = $(ROOT)/../sliderule-python
+PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
+PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 SERVER_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
@@ -120,45 +121,24 @@ run: ## run the server locally
 selftest: ## run the self test on the server code
 	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
 
-static-website: ## make the website locally
-	cd $(STATIC_WEB_SOURCE_DIR)/jekyll && bundle install
-	cd $(STATIC_WEB_SOURCE_DIR)/jekyll && bundle exec jekyll build
-	make -C $(STATIC_WEB_SOURCE_DIR)/rtd html
-	mkdir -p $(WEBSITE_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll/_site/* $(WEBSITE_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd/build/html $(WEBSITE_STAGE_DIR)/rtd
-
-static-website-run: ## run the website locally
-	cd jekyll && bundle exec jekyll serve -d $(WEBSITE_STAGE_DIR) --skip-initial-build
-
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
-	-cp $(PYTHON_SOURCE_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp $(PYTHON_SOURCE_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 
-static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(ECR)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
 demo-docker: # make the python client demo docker image; needs VERSION
 	-rm -Rf $(DEMO_STAGE_DIR)
 	mkdir -p $(DEMO_STAGE_DIR)
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(DEMO_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp -R $(PYTHON_SOURCE_DIR) $(DEMO_STAGE_DIR)/sliderule-python
+	cp -R $(PYTHON_EXAMPLES_DIR) $(DEMO_STAGE_DIR)/sliderule-python
 	cp docker/demo/* $(DEMO_STAGE_DIR)
 	chmod +x $(DEMO_STAGE_DIR)/docker-entrypoint.sh
 	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo-client:latest .
@@ -170,16 +150,6 @@ demo-docker: # make the python client demo docker image; needs VERSION
 
 demo-run: ## run the python client demo docker container locally; needs VERSION
 	docker run -it --rm --name=python-app -p 8866:8866 --entrypoint /usr/local/etc/docker-entrypoint.sh $(ECR)/demo-client:$(VERSION)
-
-demo-deploy: ## deploy demo using terraform; needs VERSION, DOMAIN
-	cd terraform/demo && terraform init
-	cd terraform/demo && terraform workspace select $(DOMAIN)-demo || terraform workspace new $(DOMAIN)-demo
-	cd terraform/demo && terraform apply -var docker_image_url_demo-client=$(ECR)/demo-client:$(VERSION) -var docker_image_url_demo-nginx=$(ECR)/demo-nginx:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-demo-destroy: ## destroy demo using terraform; needs DOMAIN
-	cd terraform/demo && terraform init
-	cd terraform/demo && terraform workspace select $(DOMAIN)-demo || terraform workspace new $(DOMAIN)-demo
-	cd terraform/demo && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -268,7 +238,8 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 
 cluster-tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
-	git add $(ROOT)/version.txt
+	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push

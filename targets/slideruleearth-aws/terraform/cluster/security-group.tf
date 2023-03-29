@@ -74,16 +74,16 @@ resource "aws_security_group" "ilb-sg" {
   }
 }
 
-# Security Group for Nodes
-resource "aws_security_group" "node-sg" {
+# Security Group for SlideRule
+resource "aws_security_group" "sliderule-sg" {
   vpc_id       = aws_vpc.sliderule-vpc.id
-  name         = "${var.cluster_name}-node-sg"
-  description  = "Node Security Group"
+  name         = "${var.cluster_name}-sliderule-sg"
+  description  = "SlideRule Security Group"
   tags = {
-    Name = "${var.cluster_name}-node-sg"
+    Name = "${var.cluster_name}-sliderule-sg"
   }
 
-  # SlideRule Node (from ILB) - TCP
+  # SlideRule (from ILB) - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]
     from_port   = 9081
@@ -91,7 +91,7 @@ resource "aws_security_group" "node-sg" {
     protocol    = "tcp"
   }
 
-  # SlideRule Node (from Prometheus) - TCP
+  # SlideRule (from Prometheus) - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]
     from_port   = 10081

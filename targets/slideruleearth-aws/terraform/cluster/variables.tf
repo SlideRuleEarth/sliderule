@@ -43,7 +43,7 @@ variable "publicCIDRblock" {
 # Deployment Variables
 #----------------------------------------------------------------
 variable "cluster_name" {
- description = "organization name for the cluster of sliderule nodes"
+ description = "organization name for the sliderule cluster"
  type        = string
  default     = "sliderule"
 }
@@ -53,17 +53,17 @@ variable "cluster_version" {
  default     = "latest"
 }
 variable "node_asg_desired_capacity" {
-  description = "number of nodes in node sliderule cluster"
+  description = "number of nodes in sliderule cluster"
   type        = number
   default     = 2
 }
 variable "node_asg_min_capacity" {
-  description = "minimum number of nodes in node sliderule cluster"
+  description = "minimum number of nodes in sliderule cluster"
   type        = number
   default     = 0
 }
 variable "node_asg_max_capacity" {
-  description = "maxmum number of nodes in node sliderule cluster"
+  description = "maxmum number of nodes in sliderule cluster"
   type        = number
   default     = 7
 }

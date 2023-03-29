@@ -382,7 +382,7 @@ def __query_resources(parm, version, **kwargs):
 def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
     '''
     Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
-    This function is a wrapper for the `sliderule.init(...) function </rtds/api_reference/sliderule.html#init>`_.
+    This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
 
     Parameters
     ----------
@@ -407,16 +407,16 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtds/user_guide/ICESat-2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtds/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
     asset:      str
-                data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
     GeoDataFrame
-        geolocated elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
+        geolocated elevations (see `Elevations </web/rtd/user_guide/ICESat-2.html#elevations>`_)
     '''
     return atl06p(parm, asset=asset, resources=[resource])
 
@@ -439,9 +439,9 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to use for processing
         callbacks:      dictionary
@@ -454,7 +454,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Returns
     -------
     GeoDataFrame
-        geolocated elevations (see `Elevations </rtd/user_guide/ICESat-2.html#elevations>`_)
+        geolocated elevations (see `Elevations </web/rtd/user_guide/ICESat-2.html#elevations>`_)
 
     Examples
     --------
@@ -519,16 +519,16 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
         parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
+                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         resource:   str
                     ATL03 HDF5 filename
         asset:      str
-                    data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
     GeoDataFrame
-        ATL03 extents (see `Photon Segments </rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
+        ATL03 extents (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
     '''
     return atl03sp(parm, asset=asset, resources=[resource])
 
@@ -550,9 +550,9 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to return
         callbacks:      dictionary
@@ -565,7 +565,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
     Returns
     -------
     GeoDataFrame
-        ATL03 segments (see `Photon Segments </rtd/user_guide/ICESat-2.html#photon-segments>`_)
+        ATL03 segments (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#photon-segments>`_)
     '''
     try:
         tstart = time.perf_counter()
@@ -727,11 +727,11 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtds/user_guide/ICESat-2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtds/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
     asset:      str
-                data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -759,9 +759,9 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </rtd/user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         asset:          str
-                        data source asset (see `Assets </rtd/user_guide/ICESat-2.html#assets>`_)
+                        data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
         version:        str
                         the version of the ATL03 data to use for processing
         callbacks:      dictionary

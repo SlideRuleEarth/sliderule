@@ -42,6 +42,7 @@ resource "aws_instance" "monitor" {
       export DOMAIN=${var.domain}
       export MONITOR_IMAGE=${var.container_repo}/monitor:${var.cluster_version}
       export PROXY_IMAGE=${var.container_repo}/proxy:${var.cluster_version}
+      export STATIC_WEBSITE_IMAGE=${var.container_repo}/static-website:${var.cluster_version}
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-monitor.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF
