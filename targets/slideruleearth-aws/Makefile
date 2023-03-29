@@ -36,7 +36,8 @@ ICESAT2_BUILD_DIR = $(BUILD)/icesat2
 PGC_BUILD_DIR = $(BUILD)/pgc
 LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
-PYTHON_SOURCE_DIR = $(ROOT)/../sliderule-python
+PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
+PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 SERVER_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
@@ -126,8 +127,8 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
-	-cp $(PYTHON_SOURCE_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp $(PYTHON_SOURCE_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
@@ -137,7 +138,7 @@ demo-docker: # make the python client demo docker image; needs VERSION
 	-rm -Rf $(DEMO_STAGE_DIR)
 	mkdir -p $(DEMO_STAGE_DIR)
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(DEMO_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp -R $(PYTHON_SOURCE_DIR) $(DEMO_STAGE_DIR)/sliderule-python
+	cp -R $(PYTHON_EXAMPLES_DIR) $(DEMO_STAGE_DIR)/sliderule-python
 	cp docker/demo/* $(DEMO_STAGE_DIR)
 	chmod +x $(DEMO_STAGE_DIR)/docker-entrypoint.sh
 	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo-client:latest .
@@ -237,7 +238,8 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 
 cluster-tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
-	git add $(ROOT)/version.txt
+	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
