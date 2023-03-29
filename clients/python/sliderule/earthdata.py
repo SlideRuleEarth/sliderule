@@ -459,7 +459,7 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
         version:            str
                             dataset version string, leave as None to get latest support version
         polygon:            list
-                            either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+                            either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
         time_start:         str
                             starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         time_end:           str
@@ -514,7 +514,7 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
         collections:    list
                         list of dataset collections as specified by CMR, leave as None to use defaults
         polygon:        list
-                        either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
+                        either a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_), or a list of such lists when the region includes more than one polygon
         time_start:     str
                         starting time for query in format ``<year>-<month>-<day>T<hour>:<minute>:<second>Z``
         time_end:       str

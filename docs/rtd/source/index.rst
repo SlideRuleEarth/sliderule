@@ -59,7 +59,7 @@ Where To Begin
 Contacting Us
 -------------
 
-SlideRule is openly developed on GitHub at https://github.com/ICESat2-SlideRule.  We welcome all feedback and contributions!  For more details on the different ways to reach out to us, see our `Contact Us </contact>`_ page.
+SlideRule is openly developed on GitHub at https://github.com/ICESat2-SlideRule.  We welcome all feedback and contributions!  For more details on the different ways to reach out to us, see our `Contact Us </web/contact/>`_ page.
 
 
 Project Information

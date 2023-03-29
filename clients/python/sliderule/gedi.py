@@ -220,7 +220,7 @@ def __query_resources(parm, dataset, **kwargs):
 def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
     '''
     Initializes the Python client for use with SlideRule and should be called before other GEDI API calls.
-    This function is a wrapper for the `sliderule.init(...) function </rtds/api_reference/sliderule.html#init>`_.
+    This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
 
     Parameters
     ----------
