@@ -16,7 +16,7 @@ Run the `./clean.sh` script in the base directory of the ___sliderule-python___ 
 
 ### 2. Build Binary Distribution
 
-Run `python setup.py bdist` in the base directory of the ___sliderule-python___ repository.  This will use the `version.txt` file to grab the version of the package it builds.
+Run `python setup.py bdist` in the base directory of the ___sliderule-python___ repository.  This uses `git describe` to grab the version of the package it builds.
 
 ### 3. Upload to PyPI
 

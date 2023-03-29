@@ -12,7 +12,9 @@ with open('requirements.txt') as fh:
 
 # get version
 capture = subprocess.run(["git", "describe"], capture_output=True, text=True)
-version = capture.stdout.strip()
+version_str = capture.stdout.strip()
+version_info = version_str.split("-")
+version = version_info[0]
 if version[0] == 'v':
     version = version[1:]
 
