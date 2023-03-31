@@ -2090,12 +2090,12 @@ class leaflet:
     def default_atl03_fields():
         """List of ATL03 tooltip fields
         """
-        return ['atl03_cnf', 'atl08_class', 'cycle', 'delta_time', 'height',
+        return ['atl03_cnf', 'atl08_class', 'cycle', 'height',
             'pair', 'rgt', 'segment_id', 'track', 'yapc_score']
 
     @staticmethod
     def default_atl06_fields():
         """List of ATL06-SR tooltip fields
         """
-        return ['cycle', 'delta_time', 'dh_fit_dx', 'gt', 'h_mean',
+        return ['cycle', 'dh_fit_dx', 'gt', 'h_mean',
             'h_sigma', 'rgt', 'rms_misfit', 'w_surface_window_final']
