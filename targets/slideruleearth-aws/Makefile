@@ -209,8 +209,8 @@ cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VER
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
 	mkdir -p $(TF_STAGE_DIR)
-	cp terraform/cluster/*.* $(TF_STAGE_DIR)
-	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
+	cp terraform/*.* $(TF_STAGE_DIR)
+	cp terraform/.terraform.lock.hcl $(TF_STAGE_DIR)
 	echo "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
