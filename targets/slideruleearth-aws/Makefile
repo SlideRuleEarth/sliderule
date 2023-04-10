@@ -46,7 +46,6 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
-DEMO_STAGE_DIR = $(STAGE)/demo
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -133,16 +132,6 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 
-demo-docker: # make the python client demo docker image; needs VERSION
-	-rm -Rf $(DEMO_STAGE_DIR)
-	mkdir -p $(DEMO_STAGE_DIR)
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(DEMO_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp docker/demo/* $(DEMO_STAGE_DIR)
-	chmod +x $(DEMO_STAGE_DIR)/docker-entrypoint.sh
-	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo:latest .
-	docker tag $(ECR)/demo:latest $(ECR)/demo-client:$(VERSION)
-	docker tag $(ECR)/demo:latest $(ECR)/demo-client:$(MAJOR_VERSION)
-
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
@@ -199,7 +188,6 @@ cluster-docker: ## build all cluster docker images
 	make monitor-docker
 	make ilb-docker
 	make static-website-docker
-	make demo-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
@@ -214,8 +202,6 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/ilb:$(MAJOR_VERSION)
 	docker push $(ECR)/static-website:$(VERSION)
 	docker push $(ECR)/static-website:$(MAJOR_VERSION)
-	docker push $(ECR)/demo:$(VERSION)
-	docker push $(ECR)/demo:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
@@ -251,7 +237,6 @@ cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
-	- docker image rm $(ECR)/demo:$(VERSION)
 
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean
