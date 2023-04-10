@@ -47,7 +47,6 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 DEMO_STAGE_DIR = $(STAGE)/demo
-DEMO_NGINX_STAGE_DIR = $(STAGE)/nginx
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -138,18 +137,11 @@ demo-docker: # make the python client demo docker image; needs VERSION
 	-rm -Rf $(DEMO_STAGE_DIR)
 	mkdir -p $(DEMO_STAGE_DIR)
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(DEMO_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp -R $(PYTHON_EXAMPLES_DIR) $(DEMO_STAGE_DIR)/sliderule-python
 	cp docker/demo/* $(DEMO_STAGE_DIR)
 	chmod +x $(DEMO_STAGE_DIR)/docker-entrypoint.sh
-	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo-client:latest .
-	docker tag $(ECR)/demo-client:latest $(ECR)/demo-client:$(VERSION)
-	mkdir -p $(DEMO_NGINX_STAGE_DIR)
-	cp docker/demo-nginx/* $(DEMO_NGINX_STAGE_DIR)
-	cd $(DEMO_NGINX_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo-nginx:latest .
-	docker tag $(ECR)/demo-nginx:latest $(ECR)/demo-nginx:$(VERSION)
-
-demo-run: ## run the python client demo docker container locally; needs VERSION
-	docker run -it --rm --name=python-app -p 8866:8866 --entrypoint /usr/local/etc/docker-entrypoint.sh $(ECR)/demo-client:$(VERSION)
+	cd $(DEMO_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/demo:latest .
+	docker tag $(ECR)/demo:latest $(ECR)/demo-client:$(VERSION)
+	docker tag $(ECR)/demo:latest $(ECR)/demo-client:$(MAJOR_VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -221,8 +213,9 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/ilb:$(MAJOR_VERSION)
 	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/demo-client:$(VERSION)
-	docker push $(ECR)/demo-nginx:$(VERSION)
+	docker push $(ECR)/static-website:$(MAJOR_VERSION)
+	docker push $(ECR)/demo:$(VERSION)
+	docker push $(ECR)/demo:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
@@ -252,24 +245,13 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	make cluster-build-packer
 	make cluster-upload-terraform
 
-cluster-deploy: ## manually deploy a cluster; needs VERSION, DOMAIN
-	cd terraform/cluster && terraform apply \
-		-var cluster_name=local \
-		-var cluster_version=$(MAJOR_VERSION)
-		-var is_public=True \
-		-var domain=$(DOMAIN)
-
-cluster-destroy: ## manually destroy a cluster
-	cd terraform/cluster && terraform destroy
-
 cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
-	- docker image rm $(ECR)/demo-client:$(VERSION)
-	- docker image rm $(ECR)/demo-nginx:$(VERSION)
+	- docker image rm $(ECR)/demo:$(VERSION)
 
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean

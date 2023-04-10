@@ -72,3 +72,16 @@ services:
     pull_policy: if_not_present
     stdin_open: true # docker run -i
     tty: true # docker run -t
+  demo:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/demo:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /usr/local/etc/docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
