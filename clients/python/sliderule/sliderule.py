@@ -389,26 +389,34 @@ def __initdns():
 #
 # __dnsoverridden - checks if url is already overridden
 #
-def __dnsoverridden(url):
-    name = url.lower()
-    return name in local_dns
+def __dnsoverridden():
+    global service_org, service_url
+    url = service_org + "." + service_url
+    return url.lower() in local_dns
 
 #
 # __jamdns - override the dns entry
 #
-def __jamdns(url, ipaddr):
-    name = url.lower()
-    local_dns[name] = ipaddr
-    logger.info("Overriding DNS for {} with {}".format(name, ipaddr))
+def __jamdns():
+    global service_url, service_org, request_timeout
+    url = service_org + "." + service_url
+    headers = __build_auth_header()
+    host = "https://ps." + service_url + "/api/org_ip_adr/" + service_org + "/"
+    rsps = session.get(host, headers=headers, timeout=request_timeout).json()
+    if rsps["status"] == "SUCCESS":
+        ipaddr = rsps["ip_address"]
+        local_dns[url.lower()] = ipaddr
+        logger.info("Overriding DNS for {} with {}".format(url, ipaddr))
 
 #
 # __override_getaddrinfo - replaces the socket library callback
 #
 socket_getaddrinfo = socket.getaddrinfo
 def __override_getaddrinfo(*args):
-    if args[0] in local_dns:
-        logger.info("getaddrinfo returned {} for {}".format(local_dns[args[0]], args[0]))
-        return socket_getaddrinfo(local_dns[args[0]], *args[1:])
+    url = args[0].lower()
+    if url in local_dns:
+        logger.info("getaddrinfo returned {} for {}".format(local_dns[url], url))
+        return socket_getaddrinfo(local_dns[url], *args[1:])
     else:
         return socket_getaddrinfo(*args)
 socket.getaddrinfo = __override_getaddrinfo
@@ -541,7 +549,7 @@ def getvalues(data, dtype, size):
 #
 #  Initialize
 #
-def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organization=service_org, desired_nodes=None, time_to_live=60, plugins=[]):
+def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organization=service_org, desired_nodes=None, time_to_live=60, bypass_dns=False, plugins=[]):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -556,6 +564,12 @@ def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organizatio
                         minimum severity of log message to output
         organization:   str
                         SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
+        desired_nodes:  int
+                        requested number of processing nodes in the cluster
+        time_to_live:   int
+                        minimum number of minutes the desired number of nodes should be present in the cluster
+        bypass_dns:     bool
+                        if true then the ip address for the cluster is retrieved from the provisioning system and used directly
         plugins:        list
                         names of the plugins that need to be available on the server
 
@@ -570,7 +584,7 @@ def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organizatio
     set_verbose(verbose)
     set_url(url) # configure domain
     authenticate(organization) # configure credentials (if any) for organization
-    scaleout(desired_nodes, time_to_live) # set cluster to desired number of nodes (if permitted based on credentials)
+    scaleout(desired_nodes, time_to_live, bypass_dns) # set cluster to desired number of nodes (if permitted based on credentials)
     check_version(plugins=plugins) # verify compatibility between client and server versions
 
 #
@@ -815,7 +829,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
 #
 # scaleout
 #
-def scaleout(desired_nodes, time_to_live):
+def scaleout(desired_nodes, time_to_live, bypass_dns):
     '''
     Scale the cluster and wait for cluster to reach desired state
 
@@ -825,6 +839,8 @@ def scaleout(desired_nodes, time_to_live):
                         the desired number of nodes in the cluster
         time_to_live:   int
                         number of minutes for the desired nodes to run
+        bypass_dns:     bool
+                        the cluster ip address is retrieved from the provisioning system and used directly
 
     Examples
     --------
@@ -835,8 +851,10 @@ def scaleout(desired_nodes, time_to_live):
         return # nothing needs to be done
     if desired_nodes < 0:
         raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
-    # Initialize DNS - clear cache of DNS lookups for clusters
-    __initdns()
+    # Initialize DNS
+    __initdns() # clear cache of DNS lookups for clusters
+    if bypass_dns:
+        __jamdns() # use ip address for cluster
     # Send Initial Request for Desired Cluster State
     update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
     start = time.time()
@@ -849,13 +867,8 @@ def scaleout(desired_nodes, time_to_live):
         time.sleep(10.0)
         available_nodes,_ = update_available_servers()
         # Override DNS if Cluster is Starting
-        url_to_override = service_org + "." + service_url
-        if available_nodes == 0 and not __dnsoverridden(url_to_override):
-            headers = __build_auth_header()
-            host = "https://ps." + service_url + "/api/org_ip_adr/" + service_org + "/"
-            rsps = session.get(host, headers=headers, timeout=request_timeout).json()
-            if rsps["status"] == "SUCCESS":
-                __jamdns(url_to_override, rsps["ip_address"])
+        if available_nodes == 0 and not __dnsoverridden():
+            __jamdns()
         # Timeout Occurred
         if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
             logger.error("Maximum time allowed waiting for cluster has been exceeded")

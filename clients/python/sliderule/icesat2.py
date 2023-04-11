@@ -379,7 +379,7 @@ def __query_resources(parm, version, **kwargs):
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60):
+def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60, bypass_dns=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
@@ -394,7 +394,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
         >>> from sliderule import icesat2
         >>> icesat2.init()
     '''
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, plugins=['icesat2'])
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['icesat2'])
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
 
 #

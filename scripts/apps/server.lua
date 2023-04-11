@@ -95,12 +95,6 @@ if authenticate_to_lpdaac then
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 end
 
--- Initialize Orchestrator --
-netsvc.orchurl(orchestrator_url)
-if register_as_service then
-    local service_script = core.script("service_registry", "http://"..sys.ipv4()..":"..tostring(app_port)):name("ServiceScript")
-end
-
 --------------------------------------------------
 -- Application Server
 --------------------------------------------------
@@ -138,3 +132,13 @@ local probe_endpoint = core.endpoint(1.0, 1.0, core.DEBUG):name("ProbeEndpoint")
 -- Run Probe HTTP Server --
 local probe_server = core.httpd(probe_port):name("ProbeServer")
 probe_server:attach(probe_endpoint, "/probe")
+
+--------------------------------------------------
+-- Register Service
+--------------------------------------------------
+
+-- Initialize Orchestrator --
+netsvc.orchurl(orchestrator_url)
+if register_as_service then
+    local service_script = core.script("service_registry", "http://"..sys.ipv4()..":"..tostring(app_port)):name("ServiceScript")
+end
