@@ -23,7 +23,7 @@ class TestRemote:
     def test_check_version(self, domain, organization, desired_nodes):
         sliderule.set_url(domain)
         sliderule.authenticate(organization)
-        sliderule.scaleout(desired_nodes, 15)
+        sliderule.scaleout(desired_nodes, 15, False)
         sliderule.check_version(plugins=['icesat2'])
 
     def test_init_badurl(self):

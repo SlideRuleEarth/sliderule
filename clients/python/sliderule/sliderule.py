@@ -845,7 +845,7 @@ def scaleout(desired_nodes, time_to_live, bypass_dns):
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.scaleout(4, 300)
+        >>> sliderule.scaleout(4, 300, False)
     '''
     if desired_nodes is None:
         return # nothing needs to be done
