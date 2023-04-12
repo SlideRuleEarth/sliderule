@@ -1,13 +1,3 @@
-data "aws_secretsmanager_secret_version" "openidc" {
-  secret_id = "prod/openidc/secrets"
-}
-
-locals {
-  provsys_openidc = jsondecode(
-    data.aws_secretsmanager_secret_version.openidc.secret_string
-  )
-}
-
 resource "aws_instance" "monitor" {
     ami                         = data.aws_ami.sliderule_cluster_ami.id
     availability_zone           = var.availability_zone
@@ -37,8 +27,8 @@ resource "aws_instance" "monitor" {
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-cronjob.txt ./cronjob.txt
       crontab ./cronjob.txt
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-      export CLIENT_ID='${local.provsys_openidc.client_id}'
-      export CLIENT_SECRET='${local.provsys_openidc.client_secret}'
+      export CLIENT_ID='${local.secrets.client_id}'
+      export CLIENT_SECRET='${local.secrets.client_secret}'
       export DOMAIN=${var.domain}
       export MONITOR_IMAGE=${var.container_repo}/monitor:${var.cluster_version}
       export PROXY_IMAGE=${var.container_repo}/proxy:${var.cluster_version}

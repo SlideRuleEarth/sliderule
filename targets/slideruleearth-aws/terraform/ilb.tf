@@ -1,13 +1,3 @@
-data "aws_secretsmanager_secret_version" "creds" {
-  secret_id = "prod/provsys/secrets"
-}
-
-locals {
-  provsys_creds = jsondecode(
-    data.aws_secretsmanager_secret_version.creds.secret_string
-  )
-}
-
 resource "aws_instance" "ilb" {
     ami                         = data.aws_ami.sliderule_cluster_ami.id
     availability_zone           = var.availability_zone
@@ -32,7 +22,7 @@ resource "aws_instance" "ilb" {
     user_data = <<-EOF
       #!/bin/bash
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-      export OAUTH_HMAC_SECRET='${local.provsys_creds.jwt_secret_key}'
+      export OAUTH_HMAC_SECRET='${local.secrets.jwt_secret_key}'
       export IS_PUBLIC=${var.is_public}
       export CLUSTER=${var.cluster_name}
       export DOMAIN=${var.domain}
