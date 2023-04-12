@@ -215,10 +215,10 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                 # Parse Ancillary Data
                 data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
                 # Add Left Pair Track Entry
-                field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x2,
+                field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']) | numpy.uint64(0x2),
                 field_dictionary[field_name][field_name] += data[LEFT_PAIR],
                 # Add Right Pair Track Entry
-                field_dictionary[field_name]['extent_id'] += rsp['extent_id'] | 0x3,
+                field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']) | numpy.uint64(0x3),
                 field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
@@ -237,7 +237,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                     for field in field_names:
                         field_dictionary[field_set][field_set + "." + field] = []
                 # Populate dictionary for field set
-                field_dictionary[field_set]['extent_id'] += rsp['index'],
+                field_dictionary[field_set]['extent_id'] += numpy.uint64(rsp['index']),
                 for field in field_names:
                     if as_numpy_array:
                         data = []
@@ -257,6 +257,8 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                 for field in field_names:
                     if type(rsp[field]) == tuple:
                         field_dictionary[field_set][field] += numpy.array(rsp[field]),
+                    elif field == 'extent_id':
+                        field_dictionary[field_set][field] += numpy.uint64(rsp[field]),
                     else:
                         field_dictionary[field_set][field] += rsp[field],
             elif 'fileidrec' == rsp['__rectype']:
@@ -290,7 +292,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     tstart_merge = time.perf_counter()
     for field_set in field_dictionary:
         df = geopandas.pd.DataFrame(field_dictionary[field_set])
-        gdf = geopandas.pd.merge(gdf, df, on='extent_id', how='left').set_axis(gdf.index)
+        gdf = geopandas.pd.merge(gdf, df, how='left', on='extent_id').set_axis(gdf.index)
     profiles["merge"] = time.perf_counter() - tstart_merge
 
     # Delete Extent ID Column

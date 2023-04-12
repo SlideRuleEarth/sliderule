@@ -9,7 +9,7 @@ ATL06_FILE1 = "ATL06_20181019065445_03150111_004_01.h5"
 @pytest.mark.network
 class TestApi:
     def test_happy_case(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         datasets = [
             {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
             {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},
@@ -29,19 +29,19 @@ class TestApi:
                 assert round(rsps[dataset][index]) == round(expected[dataset][index])
 
     def test_invalid_file(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         datasets = [ {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5} ]
         rsps = icesat2.h5p(datasets, "invalid_file.h5", asset)
         assert len(rsps) == 0
 
     def test_invalid_asset(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         datasets = [ {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5} ]
         rsps = icesat2.h5p(datasets, ATL06_FILE1, "invalid-asset")
         assert len(rsps) == 0
 
     def test_invalid_dataset(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         datasets = [ {"dataset": "/gt3r/invalid", "numrows": 5} ]
         rsps = icesat2.h5p(datasets, ATL06_FILE1, asset)
         assert len(rsps) == 0

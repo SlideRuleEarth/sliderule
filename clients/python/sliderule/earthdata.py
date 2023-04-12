@@ -165,9 +165,7 @@ def __cmr_granule_metadata(search_results):
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
         gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=sliderule.EPSG_MERCATOR)
         # append to combined GeoDataFrame and catch warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            granule_metadata = granule_metadata.append(gdf)
+        granule_metadata = granule_metadata.append(gdf)
     # return granule metadata
     # - time start and time end
     # - time granule was updated
@@ -224,11 +222,9 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
         if kwargs['return_metadata']:
             metadata_results = __cmr_granule_metadata(search_page)
         else:
-            metadata_results = [None for _ in url_scroll_results]
-        # append granule metadata and catch warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            metadata = metadata.append(metadata_results)
+            metadata_results = geopandas.pd.DataFrame([None for _ in url_scroll_results])
+        # append granule metadata
+        metadata = metadata.append(metadata_results)
 
     return (urls,metadata)
 

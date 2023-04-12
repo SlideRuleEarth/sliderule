@@ -10,7 +10,7 @@ sliderule.set_rqst_timeout((1, 60))
 @pytest.mark.network
 class TestApi:
     def test_time(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         rqst = {
             "time": "NOW",
             "input": "NOW",
@@ -29,7 +29,7 @@ class TestApi:
         assert now == again
 
     def test_geospatial1(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
             "asset": asset,
             "pole": "north",
@@ -74,7 +74,7 @@ class TestApi:
         assert d["x"] == 0.466307658155 and d["y"] == 0.80766855588292
 
     def test_geospatial2(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
             "asset": asset,
             "pole": "north",
@@ -87,7 +87,7 @@ class TestApi:
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0
 
     def test_geospatial3(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
             "asset": asset,
             "pole": "north",
@@ -100,7 +100,7 @@ class TestApi:
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0
 
     def test_geospatial4(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
             "asset": asset,
             "pole": "north",
@@ -113,7 +113,7 @@ class TestApi:
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0
 
     def test_definition(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         rqst = {
             "rectype": "atl06rec.elevation",
         }
@@ -121,7 +121,7 @@ class TestApi:
         assert d["time"]["offset"] == 192
 
     def test_version(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         rsps = sliderule.source("version", {})
         assert 'server' in rsps
         assert 'version' in rsps['server']

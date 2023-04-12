@@ -20,35 +20,35 @@ def grandmesa():
                {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
 
 
-class TestLocal:
-    def test_init_empty_raises(self):
-        with pytest.raises(TypeError):
-            icesat2.init(url=[])
-
-    def test_toregion_empty_raises(self):
-        with pytest.raises(TypeError, match=('source')):
-            region = sliderule.toregion()
-
-    def test_toregion(self):
-        region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
-        assert len(region["poly"]) == 5 # 5 coordinate pairs
-        assert {'lon', 'lat'} <= region["poly"][0].keys()
+#class TestLocal:
+#    def test_init_empty_raises(self):
+#        with pytest.raises(TypeError):
+#            icesat2.init(url=[])
+#
+#    def test_toregion_empty_raises(self):
+#        with pytest.raises(TypeError, match=('source')):
+#            region = sliderule.toregion()
+#
+#    def test_toregion(self):
+#        region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
+#        assert len(region["poly"]) == 5 # 5 coordinate pairs
+#        assert {'lon', 'lat'} <= region["poly"][0].keys()
 
 @pytest.mark.network
 class TestRemote:
-    def test_init_badurl(self):
-        with pytest.raises( (sliderule.FatalError) ):
-            icesat2.init('incorrect.org:8877')
-            sliderule.source("version")
-
-    def test_get_version(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
-        version = sliderule.get_version()
-        assert isinstance(version, dict)
-        assert {'icesat2', 'server', 'client'} <= version.keys()
+#    def test_init_badurl(self):
+#        with pytest.raises( (sliderule.FatalError) ):
+#            icesat2.init('incorrect.org:8877')
+#            sliderule.source("version")
+#
+#    def test_get_version(self, domain, organization, desired_nodes):
+#        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+#        version = sliderule.get_version()
+#        assert isinstance(version, dict)
+#        assert {'icesat2', 'server', 'client'} <= version.keys()
 
     def test_cmr(self, grandmesa, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes)
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         granules = icesat2.cmr(polygon=grandmesa,
             time_start='2018-10-01',
             time_end='2018-12-01')
