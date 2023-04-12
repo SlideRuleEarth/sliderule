@@ -131,6 +131,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
+	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
