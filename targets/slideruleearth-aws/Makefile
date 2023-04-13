@@ -140,6 +140,10 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 
+sliderule-buildenv-docker-push: ## push sliderule build environment docker image (must be x86 arch)
+	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
+	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
+
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
 	mkdir -p $(SERVER_STAGE_DIR)/etc
@@ -190,8 +194,6 @@ cluster-docker: ## build all cluster docker images
 	make static-website-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
-	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
