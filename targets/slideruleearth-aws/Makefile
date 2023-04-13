@@ -233,11 +233,13 @@ cluster-release: ## release a version of the cluster; needs VERSION
 	make cluster-upload-terraform
 
 cluster-docker-clean: ## clean out old version of docker images; needs VERSION
+	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
+	- docker system prune -f
 
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean
