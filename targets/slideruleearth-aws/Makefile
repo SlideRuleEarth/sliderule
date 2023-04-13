@@ -56,7 +56,6 @@ DOCKEROPTS ?=
 ARCH ?= arm
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
-DOMAIN_NAME = $(subst .,-,$(DOMAIN))
 CLANG_VER = "-12"
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
@@ -210,8 +209,8 @@ cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VER
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
 	mkdir -p $(TF_STAGE_DIR)
-	cp terraform/*.* $(TF_STAGE_DIR)
-	cp terraform/.terraform.lock.hcl $(TF_STAGE_DIR)
+	cp terraform/cluster/*.* $(TF_STAGE_DIR)
+	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
 	echo "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
@@ -240,6 +239,16 @@ cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
+
+static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(REPO)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean
