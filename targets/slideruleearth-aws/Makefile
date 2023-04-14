@@ -128,9 +128,21 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
+	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
+	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
+
+static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(ECR)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -241,16 +253,6 @@ cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
-
-static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(REPO)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean

@@ -28,7 +28,7 @@ variable "vpc_cidr" {
 
 variable "container_port" {
   description = "Port exposed by the docker image to redirect traffic to"
-  default     = 4000
+  default     = 8040
 }
 
 variable "task_count" {
@@ -40,7 +40,7 @@ variable "task_count" {
 # static-website load balancer
 variable "static_web_health_check_path" {
   description = "Health check path for the default target group"
-  default     = "/"
+  default     = "/status"
 }
 
 # ecs

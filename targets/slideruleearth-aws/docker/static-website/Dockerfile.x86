@@ -9,6 +9,7 @@ RUN apt-get update && \
   python3 \
   python3-pip \
   git \
+  nginx \
   && rm -rf /var/lib/apt/lists/*
 
 # Install RTD Dependencies
@@ -20,7 +21,7 @@ RUN gem install webrick
 RUN gem install jekyll bundler
 
 # Install SlideRule Python Client
-COPY sliderule /sliderule
+COPY sliderule/clients/python /sliderule/clients/python
 RUN cd /sliderule/clients/python && pip install .
 
 # Copy Over Jekyll Source
@@ -47,5 +48,11 @@ RUN mkdir -p /srv/jekyll/_site \
  && cp -R /jekyll/_site/* /srv/jekyll/_site \
  && cp -R /rtd/build/html /srv/jekyll/_site/rtd
 
-WORKDIR /jekyll
-ENTRYPOINT bundle exec jekyll serve -d /srv/jekyll/_site --host=0.0.0.0 --skip-initial-build
+# Setup NGINX
+COPY nginx.conf /etc/nginx/sites-available/
+RUN ln -s /etc/nginx/sites-available/nginx.conf /etc/nginx/sites-enabled/nginx.conf \
+  && rm /etc/nginx/sites-enabled/default
+
+# Entrypoint
+COPY docker-entrypoint.sh /usr/local/etc/
+ENTRYPOINT /usr/local/etc/docker-entrypoint.sh
