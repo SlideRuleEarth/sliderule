@@ -225,7 +225,7 @@ class GeoRaster: public LuaObject
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_t create);
-        virtual void     getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        void             getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         virtual void     getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
         double           getGmtDate      (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
@@ -246,7 +246,7 @@ class GeoRaster: public LuaObject
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
-        virtual void    sampleRasters         (void);
+        void            sampleRasters         (void);
         void            processRaster         (Raster* raster);
         void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
