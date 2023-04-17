@@ -1444,7 +1444,8 @@ int GeoRaster::luaSamples(lua_State *L)
 
         /* Get samples */
         List<sample_t> slist;
-        if(lua_obj->getSamples(lon, lat, slist, NULL) > 0)
+        lua_obj->getSamples(lon, lat, slist, NULL);
+        if(slist.length() > 0)
         {
             /* Create return table */
             lua_createtable(L, slist.length(), 0);
