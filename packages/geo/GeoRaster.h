@@ -225,7 +225,7 @@ class GeoRaster: public LuaObject
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_t create);
-        virtual int      getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        virtual void     getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
         virtual void     getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
         double           getGmtDate      (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
