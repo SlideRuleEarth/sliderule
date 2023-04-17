@@ -247,7 +247,8 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         int num_samples = 0;
         try
         {
-            num_samples = raster->getSamples(lon_val, lat_val, slist);
+            raster->getSamples(lon_val, lat_val, slist);
+            num_samples = slist.length();
         }
         catch(const RunTimeException& e)
         {
@@ -255,11 +256,6 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
                                                 "Exception caught when sampling %s at %.3lf,%.3lf: %s",
                                                 rasterKey, lon_val, lat_val, e.what());
         }
-
-        /*
-         * Patch - num samples is twice length of returned list; resetting back to length of list
-         */
-        num_samples = slist.length();
 
         if(raster->hasZonalStats())
         {

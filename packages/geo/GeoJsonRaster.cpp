@@ -115,7 +115,8 @@ bool GeoJsonRaster::includes(double lon, double lat)
 
     try
     {
-        sampleCnt = getSamples(lon, lat, slist);
+        getSamples(lon, lat, slist);
+        sampleCnt = slist.length();
     }
     catch(const RunTimeException& e)
     {
