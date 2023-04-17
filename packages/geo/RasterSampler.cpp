@@ -256,6 +256,11 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
                                                 rasterKey, lon_val, lat_val, e.what());
         }
 
+        /*
+         * Patch - num samples is twice length of returned list; resetting back to length of list
+         */
+        num_samples = slist.length();
+
         if(raster->hasZonalStats())
         {
             /* Create and Post Sample Record */
