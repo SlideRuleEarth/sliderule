@@ -181,23 +181,21 @@ void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& 
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
-    int samplesCnt = 0;
 
     samplingMutex.lock();
     try
     {
+        slist.clear();
+
         /* Get samples, if none found, return */
-        samplesCnt = sample(lon, lat);
-        if(samplesCnt == 0)
+        if(sample(lon, lat) == 0)
         {
             samplingMutex.unlock();
-            return samplesCnt;
+            return;
         }
-
-        slist.clear();
 
         Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
         for(int i = 0; i < group_iter.length; i++)
@@ -235,8 +233,6 @@ int GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* p
         throw;  // rethrow exception
     }
     samplingMutex.unlock();
-
-    return samplesCnt;
 }
 
 
