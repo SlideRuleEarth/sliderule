@@ -687,6 +687,8 @@ bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start
 
 /*----------------------------------------------------------------------------
  * getleapsecs
+ *  sysnow - microseconds
+ *  start_secs - starting epoch
  *----------------------------------------------------------------------------*/
 int TimeLib::getleapsecs(int64_t sysnow, int64_t start_secs)
 {

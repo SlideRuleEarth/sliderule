@@ -88,7 +88,7 @@ class Gedi04aReader: public LuaObject
         /* Footprint Record */
         typedef struct {
             uint64_t        shot_number;
-            double          time_ns;
+            uint64_t        time_ns;
             double          latitude;
             double          longitude;
             double          agbd;
