@@ -93,7 +93,7 @@ The asset name tells SlideRule where to get the data, and what format the data s
 .. csv-table::
     :header: asset,          format,     path,          index,      region,     endpoint
 
-    nsidc-s3,           cumulus,    nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    icesat2,           cumulus,    nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     atlas-s3,           s3,         sliderule/data/ATLAS,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     atlas-local,        file,       /data/ATLAS,                                                        nil,                local,      local
     ornl-s3,            s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
@@ -614,7 +614,7 @@ h5
 
         >>> import sliderule
         >>> sliderule.set_url("slideruleearth.io")
-        >>> asset = "nsidc-s3"
+        >>> asset = "icesat2"
         >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
         >>> dataset = "/gt1r/geolocation/segment_ph_cnt"
         >>> rqst = {
@@ -671,7 +671,7 @@ h5p
 
         >>> import sliderule
         >>> sliderule.set_url("slideruleearth.io")
-        >>> asset = "nsidc-s3"
+        >>> asset = "icesat2"
         >>> resource = "ATL03_20181019065445_03150111_003_01.h5"
         >>> dataset = "/gt1r/geolocation/segment_ph_cnt"
         >>> datasets = [ {"dataset": dataset, "col": 0, "startrow": 0, "numrows": 5} ]

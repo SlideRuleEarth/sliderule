@@ -23,4 +23,4 @@ params={'srt': 1,
   {'lat': -76.5, 'lon': 67.7},
   {'lat': -64.5, 'lon': 67.7}]}
 
-gdf = icesat2.atl03sp(params, asset="nsidc-s3", resources=['ATL03_20190502021224_05160312_005_01.h5'], callbacks = {"atl03rec": atl03rec_cb})
+gdf = icesat2.atl03sp(params, asset="icesat2", resources=['ATL03_20190502021224_05160312_005_01.h5'], callbacks = {"atl03rec": atl03rec_cb})

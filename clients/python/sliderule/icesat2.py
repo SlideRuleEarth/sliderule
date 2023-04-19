@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 profiles = {}
 
 # default asset
-DEFAULT_ASSET="nsidc-s3"
+DEFAULT_ASSET="icesat2"
 
 # default standard data product version
 DEFAULT_ICESAT2_SDP_VERSION='005'

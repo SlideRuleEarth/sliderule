@@ -39,7 +39,7 @@ parms = {
 }
 
 # make request
-rsps = icesat2.atl06p(parms, "nsidc-s3")
+rsps = icesat2.atl06p(parms, "icesat2")
 print(f"{rsps}")
 ```
 

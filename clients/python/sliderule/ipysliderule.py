@@ -81,8 +81,8 @@ class widgets:
 
         # dropdown menu for setting asset
         self.asset = ipywidgets.Dropdown(
-            options=['atlas-local', 'atlas-s3', 'nsidc-s3'],
-            value='nsidc-s3',
+            options=['atlas-local', 'atlas-s3', 'icesat2'],
+            value='icesat2',
             description='Asset:',
             description_tooltip="Asset: Location for SlideRule to get the data",
             disabled=False,

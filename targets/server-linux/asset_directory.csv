@@ -1,5 +1,5 @@
 asset,              identity,       driver,     path,                                                               index,              region,     endpoint
-icesat2,            nsidc-cloud,    s3,         nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+icesat2,            nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 gedil4a,            ornl-cloud,     s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 landsat-hls,        lpdaac-cloud,   nil,        /vsis3/lp-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 arcticdem-mosaic,   nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m,                 2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
@@ -10,3 +10,4 @@ atlas-local,        local,          file,       /data/ATLAS,                    
 gedi-local,         local,          file,       /data/GEDI,                                                         nil,                local,      local
 atlas-s3,           iam-role,       s3,         sliderule/data/ATLAS,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 gedi-s3,            iam-role,       s3,         sliderule/data/GEDI,                                                nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+nsidc-s3,           nsidc-cloud,    s3,         nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com

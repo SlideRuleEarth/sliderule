@@ -11,10 +11,10 @@ asset = require("asset")
 
 local assets = asset.loaddir()
 
-local nsidc_s3 = core.getbyname("nsidc-s3")
+local nsidc_s3 = core.getbyname("icesat2")
 local not_there = core.getbyname("not_there")
 local arcticdem_mosaic = core.getbyname("arcticdem-mosaic")
-nsidc_s3 = core.getbyname("nsidc-s3")
+nsidc_s3 = core.getbyname("icesat2")
 
 runner.check(nsidc_s3)
 runner.check(not_there == nil)
@@ -22,10 +22,10 @@ runner.check(arcticdem_mosaic)
 
 local assets = asset.loaddir()
 
-nsidc_s3 = core.getbyname("nsidc-s3")
+nsidc_s3 = core.getbyname("icesat2")
 not_there = core.getbyname("not_there")
 arcticdem_mosaic = core.getbyname("arcticdem-mosaic")
-nsidc_s3 = core.getbyname("nsidc-s3")
+nsidc_s3 = core.getbyname("icesat2")
 
 runner.check(nsidc_s3)
 runner.check(not_there == nil)
@@ -33,10 +33,10 @@ runner.check(arcticdem_mosaic)
 
 local assets = asset.loaddir()
 
-nsidc_s3 = core.getbyname("nsidc-s3")
+nsidc_s3 = core.getbyname("icesat2")
 not_there = core.getbyname("not_there")
 arcticdem_mosaic = core.getbyname("arcticdem-mosaic")
-nsidc_s3 = core.getbyname("nsidc-s3")
+nsidc_s3 = core.getbyname("icesat2")
 
 runner.check(nsidc_s3)
 runner.check(not_there == nil)

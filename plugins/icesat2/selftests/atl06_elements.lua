@@ -6,7 +6,7 @@ json = require("json")
 -- Setup --
 
 local assets = asset.loaddir()
-local asset_name = "nsidc-s3"
+local asset_name = "icesat2"
 local nsidc_s3 = core.getbyname(asset_name)
 
 local creds = aws.csget(asset_name)
