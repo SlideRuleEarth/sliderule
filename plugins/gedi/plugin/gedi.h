@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "GediParms.h"
+#include "Gedi01bReader.h"
 #include "Gedi02aReader.h"
 #include "Gedi04aReader.h"
 

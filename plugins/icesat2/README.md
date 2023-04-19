@@ -3,7 +3,7 @@
 
 This SlideRule plugin includes algorithms for processing ICESat-2 data products.
 
-If you are a science user interested in processing ICESat-2 data with SlideRule, please see the [sliderule-python client](https://github.com/ICESat2-SlideRule/sliderule-python).
+If you are a science user interested in processing ICESat-2 data with SlideRule, please see the [sliderule-python examples](https://github.com/ICESat2-SlideRule/sliderule-python) or our [documentation](https://slideruleearth.io) for help getting started.
 
 ## I. Prerequisites
 

@@ -2,7 +2,7 @@
 
 This SlideRule plugin includes modules for subsetting and sampling the GEDI data products.
 
-If you are a science user interested in processing GEDI data with SlideRule, please see the [sliderule-python client](https://github.com/ICESat2-SlideRule/sliderule-python).
+If you are a science user interested in processing GEDI data with SlideRule, please see the [sliderule-python examples](https://github.com/ICESat2-SlideRule/sliderule-python) or our [documentation](https://slideruleearth.io) for help getting started.
 
 ## I. Prerequisites
 
@@ -22,9 +22,13 @@ $ make install
 ## III. What Is Provided
 
 The plugin supplies the following endpoints:
+* [gedi01b](endpoints/gedi01b.lua): subset GEDI L1B waveforms
+* [gedi02a](endpoints/gedi02a.lua): subset GEDI L2A footprints
 * [gedi04a](endpoints/gedi04a.lua): subset GEDI L4A footprints
 
 This plugin supplies the following record types:
+* `gedil1brec`: a waveform of GEDI data
+* `gedil2arec`: a footprint of GEDI data
 * `gedil4arec`: a footprint of GEDI data
 
 ## IV. Licensing
