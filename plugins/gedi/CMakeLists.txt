@@ -55,6 +55,7 @@ endif()
 target_sources(gedi
     PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/plugin/gedi.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi02aReader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.cpp
 )
@@ -71,6 +72,8 @@ target_include_directories (gedi
 # Script Installation #
 install (
     FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi02a.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi02ap.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04a.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/gedi04ap.lua
     DESTINATION
@@ -83,6 +86,7 @@ install (TARGETS gedi LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/gedi.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi02aReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.h
     DESTINATION

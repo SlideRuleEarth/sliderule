@@ -55,27 +55,27 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Gedi04aReader::fpRecType = "gedi04arec.footprint";
-const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
-    {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),     1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::TIME8,    offsetof(footprint_t, time_ns),         1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(footprint_t, latitude),        1,  NULL, NATIVE_FLAGS},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(footprint_t, longitude),       1,  NULL, NATIVE_FLAGS},
-    {"agbd",            RecordObject::DOUBLE,   offsetof(footprint_t, agbd),            1,  NULL, NATIVE_FLAGS},
-    {"elevation",       RecordObject::DOUBLE,   offsetof(footprint_t, elevation),       1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::DOUBLE,   offsetof(footprint_t, solar_elevation), 1,  NULL, NATIVE_FLAGS},
-    {"beam",            RecordObject::UINT8,    offsetof(footprint_t, beam),            1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),           1,  NULL, NATIVE_FLAGS}
+const char* Gedi02aReader::fpRecType = "gedi02arec.footprint";
+const RecordObject::fieldDef_t Gedi02aReader::fpRecDef[] = {
+    {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),             1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(footprint_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(footprint_t, latitude),                1,  NULL, NATIVE_FLAGS},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(footprint_t, longitude),               1,  NULL, NATIVE_FLAGS},
+    {"elevation_lm",    RecordObject::DOUBLE,   offsetof(footprint_t, elevation_lowestmode),    1,  NULL, NATIVE_FLAGS},
+    {"elevation_hr",    RecordObject::DOUBLE,   offsetof(footprint_t, elevation_highestreturn), 1,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::DOUBLE,   offsetof(footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
+    {"beam",            RecordObject::UINT8,    offsetof(footprint_t, beam),                    1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),                   1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Gedi04aReader::batchRecType = "gedi04arec";
-const RecordObject::fieldDef_t Gedi04aReader::batchRecDef[] = {
-    {"footprint",       RecordObject::USER,     offsetof(gedil4a_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
+const char* Gedi02aReader::batchRecType = "gedi02arec";
+const RecordObject::fieldDef_t Gedi02aReader::batchRecDef[] = {
+    {"footprint",       RecordObject::USER,     offsetof(gedi02a_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
 };
 
-const char* Gedi04aReader::OBJECT_TYPE = "Gedi04aReader";
-const char* Gedi04aReader::LuaMetaName = "Gedi04aReader";
-const struct luaL_Reg Gedi04aReader::LuaMetaTable[] = {
+const char* Gedi02aReader::OBJECT_TYPE = "Gedi02aReader";
+const char* Gedi02aReader::LuaMetaName = "Gedi02aReader";
+const struct luaL_Reg Gedi02aReader::LuaMetaTable[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -87,7 +87,7 @@ const struct luaL_Reg Gedi04aReader::LuaMetaTable[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
-int Gedi04aReader::luaCreate (lua_State* L)
+int Gedi02aReader::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
     GediParms* parms = NULL;
@@ -102,13 +102,13 @@ int Gedi04aReader::luaCreate (lua_State* L)
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Gedi04aReader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Gedi02aReader(L, asset, resource, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
         if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating Gedi04aReader: %s", e.what());
+        mlog(e.level(), "Error creating Gedi02aReader: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -116,19 +116,19 @@ int Gedi04aReader::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Gedi04aReader::init (void)
+void Gedi02aReader::init (void)
 {
     RECDEF(fpRecType,       fpRecDef,       sizeof(footprint_t),                NULL);
-    RECDEF(batchRecType,    batchRecDef,    offsetof(gedil4a_t, footprint[1]),  NULL);
+    RECDEF(batchRecType,    batchRecDef,    offsetof(gedi02a_t, footprint[1]),  NULL);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Gedi04aReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator):
+Gedi02aReader::Gedi02aReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000),
-    batchRecord(batchRecType, sizeof(gedil4a_t))
+    batchRecord(batchRecType, sizeof(gedi02a_t))
 {
     assert(_asset);
     assert(_resource);
@@ -153,7 +153,7 @@ Gedi04aReader::Gedi04aReader (lua_State* L, Asset* _asset, const char* _resource
 
     /* Initialize Batch Record Processing */
     batchIndex = 0;
-    batchData = (gedil4a_t*)batchRecord.getRecordData();
+    batchData = (gedi02a_t*)batchRecord.getRecordData();
 
     /* Initialize Readers */
     active = true;
@@ -213,7 +213,7 @@ Gedi04aReader::Gedi04aReader (lua_State* L, Asset* _asset, const char* _resource
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::~Gedi04aReader (void)
+Gedi02aReader::~Gedi02aReader (void)
 {
     active = false;
 
@@ -234,7 +234,7 @@ Gedi04aReader::~Gedi04aReader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Region::Region (info_t* info):
+Gedi02aReader::Region::Region (info_t* info):
     lat_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lat_lowestmode", GediParms::beam2group(info->beam)).str(), &info->reader->context),
     lon_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lon_lowestmode", GediParms::beam2group(info->beam)).str(), &info->reader->context),
     inclusion_mask  (NULL),
@@ -277,7 +277,7 @@ Gedi04aReader::Region::Region (info_t* info):
 /*----------------------------------------------------------------------------
  * Region::Destructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Region::~Region (void)
+Gedi02aReader::Region::~Region (void)
 {
     cleanup();
 }
@@ -285,7 +285,7 @@ Gedi04aReader::Region::~Region (void)
 /*----------------------------------------------------------------------------
  * Region::cleanup
  *----------------------------------------------------------------------------*/
-void Gedi04aReader::Region::cleanup (void)
+void Gedi02aReader::Region::cleanup (void)
 {
     if(inclusion_mask) delete [] inclusion_mask;
 }
@@ -293,7 +293,7 @@ void Gedi04aReader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Gedi04aReader::Region::polyregion (info_t* info)
+void Gedi02aReader::Region::polyregion (info_t* info)
 {
     int points_in_polygon = info->reader->parms->polygon.length();
 
@@ -359,7 +359,7 @@ void Gedi04aReader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Gedi04aReader::Region::rasterregion (info_t* info)
+void Gedi02aReader::Region::rasterregion (info_t* info)
 {
     /* Allocate Inclusion Mask */
     if(lat_lowestmode.size <= 0) return;
@@ -406,43 +406,41 @@ void Gedi04aReader::Region::rasterregion (info_t* info)
 }
 
 /*----------------------------------------------------------------------------
- * Gedi04a::Constructor
+ * Gedi02a::Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Gedi04a::Gedi04a (info_t* info, Region& region):
+Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
     shot_number     (info->reader->asset, info->reader->resource, SafeString("%s/shot_number",      GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     delta_time      (info->reader->asset, info->reader->resource, SafeString("%s/delta_time",       GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    agbd            (info->reader->asset, info->reader->resource, SafeString("%s/agbd",             GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     elev_lowestmode (info->reader->asset, info->reader->resource, SafeString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_highestreturn (info->reader->asset, info->reader->resource, SafeString("%s/elev_highestreturn",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/degrade_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    l2_quality_flag (info->reader->asset, info->reader->resource, SafeString("%s/l2_quality_flag",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    l4_quality_flag (info->reader->asset, info->reader->resource, SafeString("%s/l4_quality_flag",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    quality_flag    (info->reader->asset, info->reader->resource, SafeString("%s/quality_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     surface_flag    (info->reader->asset, info->reader->resource, SafeString("%s/surface_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
 {
 
     /* Join Hardcoded Reads */
     shot_number.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
-    agbd.join(info->reader->read_timeout_ms, true);
     elev_lowestmode.join(info->reader->read_timeout_ms, true);
+    elev_highestreturn.join(info->reader->read_timeout_ms, true);
     solar_elevation.join(info->reader->read_timeout_ms, true);
     degrade_flag.join(info->reader->read_timeout_ms, true);
-    l2_quality_flag.join(info->reader->read_timeout_ms, true);
-    l4_quality_flag.join(info->reader->read_timeout_ms, true);
+    quality_flag.join(info->reader->read_timeout_ms, true);
     surface_flag.join(info->reader->read_timeout_ms, true);
 }
 
 /*----------------------------------------------------------------------------
- * Gedi04a::Destructor
+ * Gedi02a::Destructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Gedi04a::~Gedi04a (void)
+Gedi02aReader::Gedi02a::~Gedi02a (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * postRecordBatch
  *----------------------------------------------------------------------------*/
-void Gedi04aReader::postRecordBatch (stats_t* local_stats)
+void Gedi02aReader::postRecordBatch (stats_t* local_stats)
 {
     uint8_t* rec_buf = NULL;
     int size = batchIndex * sizeof(footprint_t);
@@ -463,16 +461,16 @@ void Gedi04aReader::postRecordBatch (stats_t* local_stats)
 /*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
-void* Gedi04aReader::subsettingThread (void* parm)
+void* Gedi02aReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    Gedi04aReader* reader = info->reader;
+    Gedi02aReader* reader = info->reader;
     GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
+    uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi02a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -481,7 +479,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         Region region(info);
 
         /* Read GEDI Datasets */
-        Gedi04a gedi04a(info, region);
+        Gedi02a Gedi02a(info, region);
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;
@@ -492,7 +490,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             /* Check Degrade Filter */
             if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)
             {
-                if(gedi04a.degrade_flag[footprint] != parms->degrade_filter)
+                if(Gedi02a.degrade_flag[footprint] != parms->degrade_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -502,17 +500,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             /* Check L2 Quality Filter */
             if(parms->l2_quality_filter != GediParms::L2QLTY_UNFILTERED)
             {
-                if(gedi04a.l2_quality_flag[footprint] != parms->l2_quality_filter)
-                {
-                    local_stats.footprints_filtered++;
-                    continue;
-                }
-            }
-
-            /* Check L4 Quality Filter */
-            if(parms->l4_quality_filter != GediParms::L4QLTY_UNFILTERED)
-            {
-                if(gedi04a.l4_quality_flag[footprint] != parms->l4_quality_filter)
+                if(Gedi02a.quality_flag[footprint] != parms->l2_quality_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -522,7 +510,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             /* Check Surface Filter */
             if(parms->surface_filter != GediParms::SURFACE_UNFILTERED)
             {
-                if(gedi04a.surface_flag[footprint] != parms->surface_filter)
+                if(Gedi02a.surface_flag[footprint] != parms->surface_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -541,20 +529,19 @@ void* Gedi04aReader::subsettingThread (void* parm)
             reader->threadMut.lock();
             {
                 /* Populate Entry in Batch Structure */
-                footprint_t* fp     = &reader->batchData->footprint[reader->batchIndex];
-                fp->shot_number     = gedi04a.shot_number[footprint];
-                fp->time_ns         = parms->deltatime2timestamp(gedi04a.delta_time[footprint]);
-                fp->latitude        = region.lat_lowestmode[footprint];
-                fp->longitude       = region.lon_lowestmode[footprint];
-                fp->agbd            = gedi04a.agbd[footprint];
-                fp->elevation       = gedi04a.elev_lowestmode[footprint];
-                fp->solar_elevation = gedi04a.solar_elevation[footprint];
-                fp->beam            = info->beam;
-                fp->flags           = 0;
-                if(gedi04a.degrade_flag[footprint])     fp->flags |= GediParms::DEGRADE_FLAG_MASK;
-                if(gedi04a.l2_quality_flag[footprint])  fp->flags |= GediParms::L2_QUALITY_FLAG_MASK;
-                if(gedi04a.l4_quality_flag[footprint])  fp->flags |= GediParms::L4_QUALITY_FLAG_MASK;
-                if(gedi04a.surface_flag[footprint])     fp->flags |= GediParms::SURFACE_FLAG_MASK;
+                footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
+                fp->shot_number             = Gedi02a.shot_number[footprint];
+                fp->time_ns                 = parms->deltatime2timestamp(Gedi02a.delta_time[footprint]);
+                fp->latitude                = region.lat_lowestmode[footprint];
+                fp->longitude               = region.lon_lowestmode[footprint];
+                fp->elevation_lowestmode    = Gedi02a.elev_lowestmode[footprint];
+                fp->elevation_highestreturn = Gedi02a.elev_highestreturn[footprint];
+                fp->solar_elevation         = Gedi02a.solar_elevation[footprint];
+                fp->beam                    = info->beam;
+                fp->flags                   = 0;
+                if(Gedi02a.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
+                if(Gedi02a.quality_flag[footprint]) fp->flags |= GediParms::L2_QUALITY_FLAG_MASK;
+                if(Gedi02a.surface_flag[footprint]) fp->flags |= GediParms::SURFACE_FLAG_MASK;
 
                 /* Send Record */
                 reader->batchIndex++;
@@ -618,16 +605,16 @@ void* Gedi04aReader::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/
-int Gedi04aReader::luaStats (lua_State* L)
+int Gedi02aReader::luaStats (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Gedi04aReader* lua_obj = NULL;
+    Gedi02aReader* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = (Gedi04aReader*)getLuaSelf(L, 1);
+        lua_obj = (Gedi02aReader*)getLuaSelf(L, 1);
     }
     catch(const RunTimeException& e)
     {

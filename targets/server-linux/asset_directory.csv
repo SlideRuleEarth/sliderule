@@ -8,3 +8,5 @@ arcticdem-mosaic,   nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/
 arcticdem-strips,   nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 rema-mosaic,        nil,        /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m,                      2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
 rema-strips,        nil,        /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m,                     nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+gedi-s3,            s3,         sliderule/data/GEDI,                                                nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+gedi-local,         file,       /data/GEDI,                                                         nil,                local,      local

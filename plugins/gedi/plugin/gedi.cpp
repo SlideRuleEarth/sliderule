@@ -68,6 +68,7 @@ int gedi_open (lua_State *L)
 {
     static const struct luaL_Reg gedi_functions[] = {
         {"parms",               GediParms::luaCreate},
+        {"gedi02a",             Gedi02aReader::luaCreate},
         {"gedi04a",             Gedi04aReader::luaCreate},
         {"version",             gedi_version},
         {NULL,                  NULL}
@@ -94,6 +95,7 @@ extern "C" {
 void initgedi (void)
 {
     /* Initialize Modules */
+    Gedi02aReader::init();
     Gedi04aReader::init();
 
     /* Extend Lua */

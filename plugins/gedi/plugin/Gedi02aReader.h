@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedi04a_reader__
-#define __gedi04a_reader__
+#ifndef __gedi02a_reader__
+#define __gedi02a_reader__
 
 /******************************************************************************
  * INCLUDES
@@ -49,10 +49,10 @@
 #include "GediParms.h"
 
 /******************************************************************************
- * GEDI04A READER
+ * GEDI02A READER
  ******************************************************************************/
 
-class Gedi04aReader: public LuaObject
+class Gedi02aReader: public LuaObject
 {
     public:
 
@@ -83,8 +83,8 @@ class Gedi04aReader: public LuaObject
             int64_t         time_ns;
             double          latitude;
             double          longitude;
-            double          agbd;
-            double          elevation;
+            double          elevation_lowestmode;
+            double          elevation_highestreturn;
             double          solar_elevation;
             uint8_t         beam;
             uint8_t         flags;
@@ -93,7 +93,7 @@ class Gedi04aReader: public LuaObject
         /* Batch Record */
         typedef struct {
             footprint_t     footprint[BATCH_SIZE];
-        } gedil4a_t;
+        } gedi02a_t;
 
         /* Statistics */
         typedef struct {
@@ -118,7 +118,7 @@ class Gedi04aReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            Gedi04aReader*  reader;
+            Gedi02aReader*  reader;
             int             beam;
         } info_t;
 
@@ -144,22 +144,21 @@ class Gedi04aReader: public LuaObject
                 long                num_footprints;
         };
 
-        /* Gedi04a Data Subclass */
-        class Gedi04a
+        /* Gedi02a Data Subclass */
+        class Gedi02a
         {
             public:
 
-                Gedi04a             (info_t* info, Region& region);
-                ~Gedi04a            (void);
+                Gedi02a             (info_t* info, Region& region);
+                ~Gedi02a            (void);
 
                 H5Array<uint64_t>   shot_number;
                 H5Array<double>     delta_time;
-                H5Array<float>      agbd;
                 H5Array<float>      elev_lowestmode;
+                H5Array<float>      elev_highestreturn;
                 H5Array<float>      solar_elevation;
                 H5Array<uint8_t>    degrade_flag;
-                H5Array<uint8_t>    l2_quality_flag;
-                H5Array<uint8_t>    l4_quality_flag;
+                H5Array<uint8_t>    quality_flag;
                 H5Array<uint8_t>    surface_flag;
         };
 
@@ -182,17 +181,17 @@ class Gedi04aReader: public LuaObject
         H5Coro::context_t   context;
         RecordObject        batchRecord;
         int                 batchIndex;
-        gedil4a_t*          batchData;
+        gedi02a_t*          batchData;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Gedi04aReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator=true);
-                            ~Gedi04aReader          (void);
+                            Gedi02aReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator=true);
+                            ~Gedi02aReader          (void);
         void                postRecordBatch         (stats_t* local_stats);
         static void*        subsettingThread        (void* parm);
         static int          luaStats                (lua_State* L);
 };
 
-#endif  /* __gedi04a_reader__ */
+#endif  /* __gedi02a_reader__ */

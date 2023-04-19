@@ -1,7 +1,7 @@
 --
--- ENDPOINT:    /source/gedi04ap
+-- ENDPOINT:    /source/gedi02ap
 --
--- PURPOSE:     fan out gedi04a requests to multiple back-end servers and collect responses
+-- PURPOSE:     fan out gedi02a requests to multiple back-end servers and collect responses
 --
 -- INPUT:       rqst
 --              {
@@ -42,12 +42,12 @@ if parms[arrow.PARMS] then
     if output_parms:isparquet() then
         rsps_from_nodes = rspq .. "-parquet"
         terminate_proxy_stream = true
-        parquet_builder = arrow.parquet(output_parms, rspq, rsps_from_nodes, "gedi04a", "gedi04a.footprint", rqstid, "longitude", "latitude")
+        parquet_builder = arrow.parquet(output_parms, rspq, rsps_from_nodes, "gedi02a", "gedi02a.footprint", rqstid, "longitude", "latitude")
     end
 end
 
 -- Proxy Request --
-local proxy = netsvc.proxy("gedi04a", resources, json.encode(parms), node_timeout, rsps_from_nodes, terminate_proxy_stream)
+local proxy = netsvc.proxy("gedi02a", resources, json.encode(parms), node_timeout, rsps_from_nodes, terminate_proxy_stream)
 
 -- Wait Until Proxy Completes --
 while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do

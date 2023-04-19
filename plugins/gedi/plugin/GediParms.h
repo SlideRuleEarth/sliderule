@@ -89,12 +89,20 @@ class GediParms: public LuaObject
             L4QLTY_SET = 1
         } l4_quality_t;
 
-        /* SURFACE Flag */
+        /* Surface Flag */
         typedef enum {
             SURFACE_UNFILTERED = -1,
             SURFACE_UNSET = 0,
             SURFACE_SET = 1
         } surface_t;
+
+        /* Flags */
+        typedef enum {
+            DEGRADE_FLAG_MASK    = 0x01,
+            L2_QUALITY_FLAG_MASK = 0x02,
+            L4_QUALITY_FLAG_MASK = 0x04,
+            SURFACE_FLAG_MASK    = 0x80
+        } flags_t;
 
         /*--------------------------------------------------------------------
          * Constants

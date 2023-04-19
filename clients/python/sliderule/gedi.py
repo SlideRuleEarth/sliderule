@@ -28,7 +28,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
-import datetime
 import logging
 import numpy
 import geopandas
@@ -45,8 +44,10 @@ logger = logging.getLogger(__name__)
 # profiling times for each major function
 profiles = {}
 
-# default asset
-DEFAULT_ASSET="ornl-s3"
+# default assets
+DEFAULT_L1_ASSET="gedi-s3"
+DEFAULT_L2_ASSET="gedi-s3"
+DEFAULT_L4_ASSET="ornl-s3"
 
 # default GEDI standard data product version
 DEFAULT_GEDI_SDP_VERSION = '2'
@@ -209,7 +210,39 @@ def __query_resources(parm, dataset, **kwargs):
     else:
         return resources
 
+#
+#  Perform Processing Request
+#
+def __processing_request(parm, asset, callbacks, resources, keep_id, dataset, api, rec, profile):
+    try:
+        tstart = time.perf_counter()
 
+        # Get List of Resources from CMR (if not supplied)
+        if resources == None:
+            resources = __query_resources(parm, dataset)
+
+        # Build GEDI Request
+        parm["asset"] = asset
+        rqst = {
+            "resources": resources,
+            "parms": parm
+        }
+
+        # Make API Processing Request
+        rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
+
+        # Flatten Responses
+        gdf = __flattenbatches(rsps, rec, 'footprint', parm, keep_id)
+
+        # Return Response
+        profiles[profile] = time.perf_counter() - tstart
+        return gdf
+
+    # Handle Runtime Errors
+    except RuntimeError as e:
+        logger.critical(e)
+        return sliderule.emptyframe()
+    
 ###############################################################################
 # APIs
 ###############################################################################
@@ -238,9 +271,9 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
 #
 #  GEDI L4A
 #
-def gedi04a (parm, resource, asset=DEFAULT_ASSET):
+def gedi04a (parm, resource, asset=DEFAULT_L4_ASSET):
     '''
-    Performs GEDI L4A subsetting returns gridded elevations
+    Performs GEDI L4A subsetting of elevation footprints
 
     Parameters
     ----------
@@ -259,11 +292,11 @@ def gedi04a (parm, resource, asset=DEFAULT_ASSET):
     return gedi04ap(parm, asset=asset, resources=[resource])
 
 #
-#  Parallel ATL06
+#  Parallel GEDI04A
 #
-def gedi04ap(parm, asset=DEFAULT_ASSET, callbacks={}, resources=None, keep_id=False):
+def gedi04ap(parm, asset=DEFAULT_L4_ASSET, callbacks={}, resources=None, keep_id=False):
     '''
-    Performs subsetting in parallel on GEDI data and returns gridded footprints.  This function expects that the **parm** argument
+    Performs subsetting in parallel on GEDI data and returns elevation footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
     then any polygon or resource filtering options supplied in **parm** are ignored.
 
@@ -283,7 +316,7 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, callbacks={}, resources=None, keep_id=Fa
     Returns
     -------
     GeoDataFrame
-        gridded footprints
+        geolocated footprints
 
     Examples
     --------
@@ -299,31 +332,70 @@ def gedi04ap(parm, asset=DEFAULT_ASSET, callbacks={}, resources=None, keep_id=Fa
         >>> asset = "ornldaac-s3"
         >>> rsps = gedi.gedi04ap(parms, asset=asset, resources=resources)
     '''
-    try:
-        tstart = time.perf_counter()
+    return __processing_request(parm, asset, callbacks, resources, keep_id, 'GEDI_L4A_AGB_Density_V2_1_2056', 'gedi04ap', 'gedi04arec', gedi04ap.__name__)
 
-        # Get List of Resources from CMR (if not supplied)
-        if resources == None:
-            resources = __query_resources(parm, 'GEDI_L4A_AGB_Density_V2_1_2056')
+#
+#  GEDI L2A
+#
+def gedi02a (parm, resource, asset=DEFAULT_L2_ASSET):
+    '''
+    Performs GEDI L2A subsetting of elevation footprints
 
-        # Build ATL06 Request
-        parm["asset"] = asset
-        rqst = {
-            "resources": resources,
-            "parms": parm
-        }
+    Parameters
+    ----------
+    parms:      dict
+                parameters used to configure subsetting process
+    resource:   str
+                GEDI HDF5 filename
+    asset:      str
+                data source asset
 
-        # Make API Processing Request
-        rsps = sliderule.source("gedi04ap", rqst, stream=True, callbacks=callbacks)
+    Returns
+    -------
+    GeoDataFrame
+        gridded footrpints
+    '''
+    return gedi04ap(parm, asset=asset, resources=[resource])
 
-        # Flatten Responses
-        gdf = __flattenbatches(rsps, 'gedi04arec', 'footprint', parm, keep_id)
+#
+#  Parallel GEDI02A
+#
+def gedi02ap(parm, asset=DEFAULT_L2_ASSET, callbacks={}, resources=None, keep_id=False):
+    '''
+    Performs subsetting in parallel on GEDI data and returns geolocated footprints.  This function expects that the **parm** argument
+    includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
+    then any polygon or resource filtering options supplied in **parm** are ignored.
 
-        # Return Response
-        profiles[gedi04ap.__name__] = time.perf_counter() - tstart
-        return gdf
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure subsetting process
+        asset:          str
+                        data source asset
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["GEDI04_A_2019229131935_O03846_02_T03642_02_002_02_V002.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
 
-    # Handle Runtime Errors
-    except RuntimeError as e:
-        logger.critical(e)
-        return sliderule.emptyframe()
+    Returns
+    -------
+    GeoDataFrame
+        geolocated footprints
+
+    Examples
+    --------
+        >>> from sliderule import gedi
+        >>> gedi.init()
+        >>> region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},
+        ...            {"lon":-105.30742121965137, "lat": 39.81983728534918},
+        ...            {"lon":-105.30742121965137, "lat": 40.164048017973755},
+        ...            {"lon":-105.82971551223244, "lat": 40.164048017973755},
+        ...            {"lon":-105.82971551223244, "lat": 39.81983728534918} ]
+        >>> parms = { "poly": region }
+        >>> resources = ["GEDI02_A_2019229131935_O03846_02_T03642_02_002_02_V002.h5"]
+        >>> asset = "gedi-local"
+        >>> rsps = gedi.gedi02ap(parms, asset=asset, resources=resources)
+    '''
+    return __processing_request(parm, asset, callbacks, resources, keep_id, 'GEDI02_A', 'gedi02ap', 'gedi02arec', gedi02ap.__name__)
