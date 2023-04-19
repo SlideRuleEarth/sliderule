@@ -35,9 +35,10 @@ if __name__ == '__main__':
     logger = srpybin.logger(srpybin.INFO)
 
     # parameters
-    asset = "ornldaac"
+    asset = "gedil4a"
+    identity = "ornldaac"
+    driver = "s3"
     resource = "GEDI04_A_2019229131935_O03846_02_T03642_02_002_02_V002.h5"
-    format = "s3"
     path = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data"
     region = "us-west-2"
     endpoint = "https://s3.us-west-2.amazonaws.com"
@@ -50,8 +51,8 @@ if __name__ == '__main__':
 
     # credentials
     print("fetching credentials...")
-    s3credentials = get_s3credentials(asset)
-    srcredentials = srpybin.credentials(asset)
+    s3credentials = get_s3credentials("ornldaac")
+    srcredentials = srpybin.credentials(identity)
     srcredentials.provide({"accessKeyId":       s3credentials['accessKeyId'],
                           "secretAccessKey":    s3credentials['secretAccessKey'],
                           "sessionToken":       s3credentials['sessionToken'],
@@ -59,7 +60,7 @@ if __name__ == '__main__':
 
     # perform read
     print("performing dataset read...")
-    h5file = srpybin.h5coro(asset, resource, format, path, region, endpoint)
+    h5file = srpybin.h5coro(asset, resource, identity, driver, path, region, endpoint)
     data = h5file.readp(datasets)
 
     # plot

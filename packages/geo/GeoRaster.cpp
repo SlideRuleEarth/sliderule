@@ -348,7 +348,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     #ifdef __aws__
     if(_parms->asset)
     {
-        const char* identity = _parms->asset->getName();
+        const char* identity = _parms->asset->getIdentity();
         CredentialStore::Credential credentials = CredentialStore::get(identity);
         if(credentials.provided)
         {

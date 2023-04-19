@@ -378,7 +378,7 @@ int GeoParms::luaAssetRegion (lua_State* L)
     try
     {
         GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
-        if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getName());
+        if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getRegion());
         else lua_pushnil(L);
         return 1;
     }

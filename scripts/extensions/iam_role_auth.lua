@@ -6,7 +6,7 @@ local json = require("json")
 local parm = json.decode(arg[1] or "{}")
 
 local aws_meta_url = "http://169.254.169.254/latest/meta-data/iam/security-credentials"
-local asset = parm["asset"] or "iam-role"
+local identity = parm["identity"] or "iam-role"
 
 -- get current EC2 role
 local role, status = netsvc.get(aws_meta_url)
@@ -28,7 +28,7 @@ if status then
                 sys.log(core.INFO, string.format("New IAM role %s credentials fetched, expiration: %s", role, credential.Expiration))
 
                 -- store credentials for use by server
-                rc = aws.csput(asset, credential)
+                rc = aws.csput(identity, credential)
 
                 if rc then
                     -- calculate next fetch time

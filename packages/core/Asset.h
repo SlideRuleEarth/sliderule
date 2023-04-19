@@ -90,15 +90,15 @@ class Asset: public LuaObject
             Dictionary<double>  attributes{ASSET_STARTING_ATTRIBUTES_PER_RESOURCE};
         } resource_t;
 
-        typedef IODriver* (*new_driver_t) (const Asset* _asset, const char* resource);
+        typedef IODriver* (*io_driver_t) (const Asset* _asset, const char* resource);
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int      luaCreate       (lua_State* L);
-        static Asset*   pythonCreate    (const char* name, const char* format, const char* path, const char* index, const char* region, const char* endpoint);
-        static bool     registerDriver  (const char* _format, new_driver_t driver);
+        static Asset*   pythonCreate    (const char* name, const char* identity, const char* driver, const char* path, const char* index, const char* region, const char* endpoint);
+        static bool     registerDriver  (const char* _format, io_driver_t driver);
 
         IODriver*       createDriver    (const char* resource) const;
 
@@ -109,7 +109,8 @@ class Asset: public LuaObject
 
         int             size            (void) const;
         const char*     getName         (void) const;
-        const char*     getFormat       (void) const;
+        const char*     getIdentity     (void) const;
+        const char*     getDriver       (void) const;
         const char*     getPath         (void) const;
         const char*     getIndex        (void) const;
         const char*     getRegion       (void) const;
@@ -130,7 +131,8 @@ class Asset: public LuaObject
 
         typedef struct {
             const char*                 name;
-            const char*                 format;
+            const char*                 identity;
+            const char*                 driver;
             const char*                 path;
             const char*                 index;
             const char*                 region;
@@ -141,11 +143,11 @@ class Asset: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static Mutex                    driverMut;
-        static Dictionary<new_driver_t> drivers;
+        static Mutex                    ioDriverMut;
+        static Dictionary<io_driver_t>  ioDrivers;
 
         attributes_t                    attributes;
-        new_driver_t                    driver;
+        io_driver_t                     io_driver;
 
         List<resource_t,ASSET_STARTING_RESOURCES_PER_INDEX> resources;
 
@@ -153,7 +155,7 @@ class Asset: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Asset       (lua_State* L, attributes_t _attributes, new_driver_t _driver);
+                        Asset       (lua_State* L, attributes_t _attributes, io_driver_t _io_driver);
 
         static int      luaInfo     (lua_State* L);
         static int      luaLoad     (lua_State* L);

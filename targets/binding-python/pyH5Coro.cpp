@@ -61,11 +61,11 @@ Mutex pyH5Coro::pyMut;
 /*--------------------------------------------------------------------
  * Constructor
  *--------------------------------------------------------------------*/
-pyH5Coro::pyH5Coro (const std::string &_asset, const std::string &_resource, const std::string &format, const std::string &path, const std::string &region, const std::string &endpoint):
+pyH5Coro::pyH5Coro (const std::string &_asset, const std::string &_resource, const std::string &identity, const std::string &driver, const std::string &path, const std::string &region, const std::string &endpoint):
     resource(_resource)
 {
-    asset = Asset::pythonCreate(_asset.c_str(), format.c_str(), path.c_str(), NULL, region.c_str(), endpoint.c_str());
-    if(asset == NULL) throw std::invalid_argument("failed to create asset, likely missing driver for provided format");
+    asset = Asset::pythonCreate(_asset.c_str(), identity.c_str(), driver.c_str(), path.c_str(), NULL, region.c_str(), endpoint.c_str());
+    if(asset == NULL) throw std::invalid_argument("failed to create asset, likely missing driver");
 }
 
 /*--------------------------------------------------------------------

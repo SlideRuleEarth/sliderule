@@ -206,7 +206,7 @@ void* Atl03Indexer::indexerThread (void* parm)
 
     /* Build Prefix */
     char prefix[MAX_STR_SIZE];
-    StringLib::format(prefix, MAX_STR_SIZE, "%s://%s/", indexer->asset->getFormat(), indexer->asset->getPath());
+    StringLib::format(prefix, MAX_STR_SIZE, "%s://%s/", indexer->asset->getDriver(), indexer->asset->getPath());
 
     /* Initialize Context */
     H5Coro::context_t* context = NULL;

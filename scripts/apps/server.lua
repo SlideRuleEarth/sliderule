@@ -84,14 +84,15 @@ local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
 
 -- Run Earth Data Authentication Scripts --
 if authenticate_to_nsidc then
+    local script_parms = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"}
     local earthdata_auth_script = core.script("earth_data_auth"):name("NsidcAuthScript")
 end
 if authenticate_to_ornldaac then
-    local script_parms = {earthdata="https://data.ornldaac.earthdata.nasa.gov/s3credentials", asset="ornl-s3"}
+    local script_parms = {earthdata="https://data.ornldaac.earthdata.nasa.gov/s3credentials", identity="ornl-cloud"}
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("OrnldaacAuthScript")
 end
 if authenticate_to_lpdaac then
-    local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", asset="landsat-hls"}
+    local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 end
 

@@ -53,8 +53,8 @@ const struct luaL_Reg Asset::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-Mutex Asset::driverMut;
-Dictionary<Asset::new_driver_t> Asset::drivers;
+Mutex Asset::ioDriverMut;
+Dictionary<Asset::io_driver_t> Asset::ioDrivers;
 
 /******************************************************************************
  * VOID IO DRIVER CLASS
@@ -102,7 +102,7 @@ Asset::IODriver::~IODriver (void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <format>, <path>, <index>)
+ * luaCreate - create(<name>, <driver>, <path>, <index>)
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {
@@ -112,29 +112,30 @@ int Asset::luaCreate (lua_State* L)
 
         /* Get Parameters */
         _attributes.name       = getLuaString(L, 1);
-        _attributes.format     = getLuaString(L, 2);
-        _attributes.path       = getLuaString(L, 3);
-        _attributes.index      = getLuaString(L, 4, true, NULL);
-        _attributes.region     = getLuaString(L, 5, true, NULL);
-        _attributes.endpoint   = getLuaString(L, 6, true, NULL);
+        _attributes.identity   = getLuaString(L, 2);
+        _attributes.driver     = getLuaString(L, 3);
+        _attributes.path       = getLuaString(L, 4);
+        _attributes.index      = getLuaString(L, 5, true, NULL);
+        _attributes.region     = getLuaString(L, 6, true, NULL);
+        _attributes.endpoint   = getLuaString(L, 7, true, NULL);
 
         /* Get IO Driver */
-        new_driver_t _driver = NULL;
-        driverMut.lock();
+        io_driver_t _io_driver = NULL;
+        ioDriverMut.lock();
         {
-            drivers.find(_attributes.format, &_driver);
+            ioDrivers.find(_attributes.driver, &_io_driver);
         }
-        driverMut.unlock();
+        ioDriverMut.unlock();
 
         /* Check Driver */
-        if(_driver == NULL)
+        if(_io_driver == NULL)
         {
-            mlog(CRITICAL, "Failed to find I/O driver for %s, using default driver", _attributes.format);
-            _driver = Asset::IODriver::create; // set it to the default
+            mlog(CRITICAL, "Failed to find I/O driver for %s, using default driver", _attributes.driver);
+            _io_driver = Asset::IODriver::create; // set it to the default
         }
 
         /* Return Asset Object */
-        return createLuaObject(L, new Asset(L, _attributes, _driver));
+        return createLuaObject(L, new Asset(L, _attributes, _io_driver));
     }
     catch(const RunTimeException& e)
     {
@@ -146,43 +147,44 @@ int Asset::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * pythonCreate
  *----------------------------------------------------------------------------*/
-Asset* Asset::pythonCreate (const char* name, const char* format, const char* path, const char* index, const char* region, const char* endpoint)
+Asset* Asset::pythonCreate (const char* name, const char* identity, const char* driver, const char* path, const char* index, const char* region, const char* endpoint)
 {
     attributes_t _attributes;
 
     /* Get Parameters */
     _attributes.name       = name;
-    _attributes.format     = format;
+    _attributes.identity   = identity;
+    _attributes.driver     = driver;
     _attributes.path       = path;
     _attributes.index      = index;
     _attributes.region     = region;
     _attributes.endpoint   = endpoint;
 
     /* Get IO Driver */
-    new_driver_t _driver = NULL;
-    driverMut.lock();
+    io_driver_t _io_driver = NULL;
+    ioDriverMut.lock();
     {
-        drivers.find(_attributes.format, &_driver);
+        ioDrivers.find(_attributes.driver, &_io_driver);
     }
-    driverMut.unlock();
+    ioDriverMut.unlock();
 
     /* Return Asset Object */
-    if(_driver == NULL) return NULL;
-    else                return new Asset(NULL, _attributes, _driver);
+    if(_io_driver == NULL)  return NULL;
+    else                    return new Asset(NULL, _attributes, _io_driver);
 }
 
 /*----------------------------------------------------------------------------
  * registerDriver
  *----------------------------------------------------------------------------*/
-bool Asset::registerDriver (const char* _format, new_driver_t driver)
+bool Asset::registerDriver (const char* _format, io_driver_t driver)
 {
     bool status;
 
-    driverMut.lock();
+    ioDriverMut.lock();
     {
-        status = drivers.add(_format, driver);
+        status = ioDrivers.add(_format, driver);
     }
-    driverMut.unlock();
+    ioDriverMut.unlock();
 
     return status;
 }
@@ -192,8 +194,8 @@ bool Asset::registerDriver (const char* _format, new_driver_t driver)
  *----------------------------------------------------------------------------*/
 Asset::IODriver* Asset::createDriver (const char* resource) const
 {
-    if(driver)  return driver(this, resource);
-    else        return NULL;
+    if(io_driver)   return io_driver(this, resource);
+    else            return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -202,7 +204,8 @@ Asset::IODriver* Asset::createDriver (const char* resource) const
 Asset::~Asset (void)
 {
     if(attributes.name)     delete [] attributes.name;
-    if(attributes.format)   delete [] attributes.format;
+    if(attributes.identity) delete [] attributes.identity;
+    if(attributes.driver)   delete [] attributes.driver;
     if(attributes.path)     delete [] attributes.path;
     if(attributes.index)    delete [] attributes.index;
     if(attributes.region)   delete [] attributes.region;
@@ -242,11 +245,19 @@ const char* Asset::getName (void) const
 }
 
 /*----------------------------------------------------------------------------
- * getFormat
+ * getIdentity
  *----------------------------------------------------------------------------*/
-const char* Asset::getFormat (void) const
+const char* Asset::getIdentity (void) const
 {
-    return attributes.format;
+    return attributes.identity;
+}
+
+/*----------------------------------------------------------------------------
+ * getDriver
+ *----------------------------------------------------------------------------*/
+const char* Asset::getDriver (void) const
+{
+    return attributes.driver;
 }
 
 /*----------------------------------------------------------------------------
@@ -284,20 +295,21 @@ const char* Asset::getEndpoint (void) const
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Asset::Asset (lua_State* L, attributes_t _attributes, new_driver_t _driver):
+Asset::Asset (lua_State* L, attributes_t _attributes, io_driver_t _io_driver):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     attributes.name     = StringLib::duplicate(_attributes.name);
-    attributes.format   = StringLib::duplicate(_attributes.format);
+    attributes.identity = StringLib::duplicate(_attributes.identity);
+    attributes.driver   = StringLib::duplicate(_attributes.driver);
     attributes.path     = StringLib::duplicate(_attributes.path);
     attributes.index    = StringLib::duplicate(_attributes.index);
     attributes.region   = StringLib::duplicate(_attributes.region);
     attributes.endpoint = StringLib::duplicate(_attributes.endpoint);
-    driver              = _driver;
+    io_driver           = _io_driver;
 }
 
 /*----------------------------------------------------------------------------
- * luaInfo - :info() --> name, format, path, index, region, endpoint, status
+ * luaInfo - :info() --> name, identity, driver, path, index, region, endpoint, status
  *----------------------------------------------------------------------------*/
 int Asset::luaInfo (lua_State* L)
 {
@@ -311,7 +323,8 @@ int Asset::luaInfo (lua_State* L)
 
         /* Push Info */
         attr->name      ? (void)lua_pushlstring(L, attr->name,      StringLib::size(attr->name))        : lua_pushnil(L);
-        attr->format    ? (void)lua_pushlstring(L, attr->format,    StringLib::size(attr->format))      : lua_pushnil(L);
+        attr->identity  ? (void)lua_pushlstring(L, attr->identity,  StringLib::size(attr->identity))    : lua_pushnil(L);
+        attr->driver    ? (void)lua_pushlstring(L, attr->driver,    StringLib::size(attr->driver))      : lua_pushnil(L);
         attr->path      ? (void)lua_pushlstring(L, attr->path,      StringLib::size(attr->path))        : lua_pushnil(L);
         attr->index     ? (void)lua_pushlstring(L, attr->index,     StringLib::size(attr->index))       : lua_pushnil(L);
         attr->region    ? (void)lua_pushlstring(L, attr->region,    StringLib::size(attr->region))      : lua_pushnil(L);

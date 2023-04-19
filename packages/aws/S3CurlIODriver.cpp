@@ -991,7 +991,7 @@ S3CurlIODriver::S3CurlIODriver (const Asset* _asset):
     ioKey = NULL;
 
     /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getName());
+    latestCredentials = CredentialStore::get(asset->getIdentity());
 }
 
 /*----------------------------------------------------------------------------
@@ -1018,7 +1018,7 @@ S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
     ioKey++;
 
     /* Get Latest Credentials */
-    latestCredentials = CredentialStore::get(asset->getName());
+    latestCredentials = CredentialStore::get(asset->getIdentity());
 }
 
 /*----------------------------------------------------------------------------
