@@ -45,9 +45,9 @@ logger = logging.getLogger(__name__)
 profiles = {}
 
 # default assets
-DEFAULT_L1_ASSET="gedi-s3"
-DEFAULT_L2_ASSET="gedi-s3"
-DEFAULT_L4_ASSET="ornl-s3"
+DEFAULT_L1B_ASSET="gedil1b"
+DEFAULT_L2A_ASSET="gedil2a"
+DEFAULT_L4A_ASSET="gedil4a"
 
 # default GEDI standard data product version
 DEFAULT_GEDI_SDP_VERSION = '2'
@@ -242,7 +242,7 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, dataset, ap
     except RuntimeError as e:
         logger.critical(e)
         return sliderule.emptyframe()
-    
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -271,7 +271,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
 #
 #  GEDI L4A
 #
-def gedi04a (parm, resource, asset=DEFAULT_L4_ASSET):
+def gedi04a (parm, resource, asset=DEFAULT_L4A_ASSET):
     '''
     Performs GEDI L4A subsetting of elevation footprints
 
@@ -294,7 +294,7 @@ def gedi04a (parm, resource, asset=DEFAULT_L4_ASSET):
 #
 #  Parallel GEDI04A
 #
-def gedi04ap(parm, asset=DEFAULT_L4_ASSET, callbacks={}, resources=None, keep_id=False):
+def gedi04ap(parm, asset=DEFAULT_L4A_ASSET, callbacks={}, resources=None, keep_id=False):
     '''
     Performs subsetting in parallel on GEDI data and returns elevation footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -337,7 +337,7 @@ def gedi04ap(parm, asset=DEFAULT_L4_ASSET, callbacks={}, resources=None, keep_id
 #
 #  GEDI L2A
 #
-def gedi02a (parm, resource, asset=DEFAULT_L2_ASSET):
+def gedi02a (parm, resource, asset=DEFAULT_L2A_ASSET):
     '''
     Performs GEDI L2A subsetting of elevation footprints
 
@@ -360,7 +360,7 @@ def gedi02a (parm, resource, asset=DEFAULT_L2_ASSET):
 #
 #  Parallel GEDI02A
 #
-def gedi02ap(parm, asset=DEFAULT_L2_ASSET, callbacks={}, resources=None, keep_id=False):
+def gedi02ap(parm, asset=DEFAULT_L2A_ASSET, callbacks={}, resources=None, keep_id=False):
     '''
     Performs subsetting in parallel on GEDI data and returns geolocated footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
