@@ -355,7 +355,7 @@ def gedi02a (parm, resource, asset=DEFAULT_L2A_ASSET):
     GeoDataFrame
         gridded footrpints
     '''
-    return gedi04ap(parm, asset=asset, resources=[resource])
+    return gedi02ap(parm, asset=asset, resources=[resource])
 
 #
 #  Parallel GEDI02A
@@ -399,3 +399,69 @@ def gedi02ap(parm, asset=DEFAULT_L2A_ASSET, callbacks={}, resources=None, keep_i
         >>> rsps = gedi.gedi02ap(parms, asset=asset, resources=resources)
     '''
     return __processing_request(parm, asset, callbacks, resources, keep_id, 'GEDI02_A', 'gedi02ap', 'gedi02arec', gedi02ap.__name__)
+
+#
+#  GEDI L1B
+#
+def gedi01b (parm, resource, asset=DEFAULT_L1B_ASSET):
+    '''
+    Performs GEDI L1B subsetting of elevation waveforms
+
+    Parameters
+    ----------
+    parms:      dict
+                parameters used to configure subsetting process
+    resource:   str
+                GEDI HDF5 filename
+    asset:      str
+                data source asset
+
+    Returns
+    -------
+    GeoDataFrame
+        gridded footrpints
+    '''
+    return gedi01bp(parm, asset=asset, resources=[resource])
+
+#
+#  Parallel GEDI01B
+#
+def gedi01bp(parm, asset=DEFAULT_L1B_ASSET, callbacks={}, resources=None, keep_id=False):
+    '''
+    Performs subsetting in parallel on GEDI data and returns geolocated footprints.  This function expects that the **parm** argument
+    includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
+    then any polygon or resource filtering options supplied in **parm** are ignored.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure subsetting process
+        asset:          str
+                        data source asset
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["GEDI04_A_2019229131935_O03846_02_T03642_02_002_02_V002.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
+
+    Returns
+    -------
+    GeoDataFrame
+        geolocated footprints
+
+    Examples
+    --------
+        >>> from sliderule import gedi
+        >>> gedi.init()
+        >>> region = [ {"lon":-105.82971551223244, "lat": 39.81983728534918},
+        ...            {"lon":-105.30742121965137, "lat": 39.81983728534918},
+        ...            {"lon":-105.30742121965137, "lat": 40.164048017973755},
+        ...            {"lon":-105.82971551223244, "lat": 40.164048017973755},
+        ...            {"lon":-105.82971551223244, "lat": 39.81983728534918} ]
+        >>> parms = { "poly": region }
+        >>> resources = ["GEDI01_B_2019229131935_O03846_02_T03642_02_002_02_V002.h5"]
+        >>> asset = "gedi-local"
+        >>> rsps = gedi.gedi01bp(parms, asset=asset, resources=resources)
+    '''
+    return __processing_request(parm, asset, callbacks, resources, keep_id, 'GEDI01_B', 'gedi01bp', 'gedi01brec', gedi01bp.__name__)

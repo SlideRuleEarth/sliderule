@@ -73,6 +73,9 @@ class Gedi01bReader: public LuaObject
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
+        static const int MAX_TX_SAMPLES = 128;
+        static const int MAX_RX_SAMPLES = 2048;
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -83,11 +86,15 @@ class Gedi01bReader: public LuaObject
             int64_t         time_ns;
             double          latitude;
             double          longitude;
-            double          elevation_lowestmode;
-            double          elevation_highestreturn;
+            double          elevation_start;
+            double          elevation_stop;
             double          solar_elevation;
             uint8_t         beam;
             uint8_t         flags;
+            uint16_t        tx_size;
+            uint16_t        rx_size;
+            float           tx_waveform[MAX_TX_SAMPLES];
+            float           rx_waveform[MAX_RX_SAMPLES];
         } footprint_t;
 
         /* Batch Record */
@@ -134,8 +141,8 @@ class Gedi01bReader: public LuaObject
                 void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
-                H5Array<double>     lat_lowestmode;
-                H5Array<double>     lon_lowestmode;
+                H5Array<double>     lat_bin0;
+                H5Array<double>     lon_bin0;
 
                 bool*               inclusion_mask;
                 bool*               inclusion_ptr;
@@ -154,12 +161,14 @@ class Gedi01bReader: public LuaObject
 
                 H5Array<uint64_t>   shot_number;
                 H5Array<double>     delta_time;
-                H5Array<float>      elev_lowestmode;
-                H5Array<float>      elev_highestreturn;
+                H5Array<double>     elev_bin0;
+                H5Array<double>     elev_lastbin;
                 H5Array<float>      solar_elevation;
                 H5Array<uint8_t>    degrade_flag;
-                H5Array<uint8_t>    quality_flag;
-                H5Array<uint8_t>    surface_flag;
+                H5Array<uint16_t>   tx_sample_count;
+                H5Array<uint64_t>   tx_start_index;
+                H5Array<uint16_t>   rx_sample_count;
+                H5Array<uint64_t>   rx_start_index;
         };
 
         /*--------------------------------------------------------------------

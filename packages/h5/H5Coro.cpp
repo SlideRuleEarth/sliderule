@@ -1623,13 +1623,6 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         uint64_t obj_hdr_addr = readField(metaData.offsetsize, &pos);
         uint32_t cache_type = (uint32_t)readField(4, &pos);
         pos += 20; // reserved + scratch pad
-        if(errorChecking)
-        {
-            if(cache_type == 2)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "symbolic links are unsupported");
-            }
-        }
 
         /* Read Link Name */
         uint64_t link_name_addr = heap_data_addr + link_name_offset;
@@ -1662,6 +1655,10 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
+                if(cache_type == 2)
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "symbolic links are unsupported (%s)", link_name);
+                }
                 highestDataLevel = dlvl + 1;
                 readObjHdr(obj_hdr_addr, highestDataLevel);
                 break; // dataset found

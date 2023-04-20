@@ -57,15 +57,19 @@
 
 const char* Gedi01bReader::fpRecType = "gedi01brec.footprint";
 const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
-    {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),             1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::TIME8,    offsetof(footprint_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(footprint_t, latitude),                1,  NULL, NATIVE_FLAGS},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(footprint_t, longitude),               1,  NULL, NATIVE_FLAGS},
-    {"elevation_lm",    RecordObject::DOUBLE,   offsetof(footprint_t, elevation_lowestmode),    1,  NULL, NATIVE_FLAGS},
-    {"elevation_hr",    RecordObject::DOUBLE,   offsetof(footprint_t, elevation_highestreturn), 1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::DOUBLE,   offsetof(footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
-    {"beam",            RecordObject::UINT8,    offsetof(footprint_t, beam),                    1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),                   1,  NULL, NATIVE_FLAGS}
+    {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),         1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(footprint_t, time_ns),             1,  NULL, NATIVE_FLAGS},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(footprint_t, latitude),            1,  NULL, NATIVE_FLAGS},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(footprint_t, longitude),           1,  NULL, NATIVE_FLAGS},
+    {"elevation_start", RecordObject::DOUBLE,   offsetof(footprint_t, elevation_start),     1,  NULL, NATIVE_FLAGS},
+    {"elevation_stop",  RecordObject::DOUBLE,   offsetof(footprint_t, elevation_stop),      1,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::DOUBLE,   offsetof(footprint_t, solar_elevation),     1,  NULL, NATIVE_FLAGS},
+    {"beam",            RecordObject::UINT8,    offsetof(footprint_t, beam),                1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),               1,  NULL, NATIVE_FLAGS},
+    {"tx_size",         RecordObject::UINT16,   offsetof(footprint_t, tx_size),             1,  NULL, NATIVE_FLAGS},
+    {"rx_size",         RecordObject::UINT16,   offsetof(footprint_t, rx_size),             1,  NULL, NATIVE_FLAGS},
+    {"tx_waveform",     RecordObject::FLOAT,    offsetof(footprint_t, tx_waveform),         MAX_TX_SAMPLES,  NULL, NATIVE_FLAGS},
+    {"rx_waveform",     RecordObject::FLOAT,    offsetof(footprint_t, rx_waveform),         MAX_RX_SAMPLES,  NULL, NATIVE_FLAGS}
 };
 
 const char* Gedi01bReader::batchRecType = "gedi01brec";
@@ -235,14 +239,14 @@ Gedi01bReader::~Gedi01bReader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bReader::Region::Region (info_t* info):
-    lat_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lat_lowestmode", GediParms::beam2group(info->beam)).str(), &info->reader->context),
-    lon_lowestmode  (info->reader->asset, info->reader->resource, SafeString("%s/lon_lowestmode", GediParms::beam2group(info->beam)).str(), &info->reader->context),
+    lat_bin0        (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/latitude_bin0", GediParms::beam2group(info->beam)).str(), &info->reader->context),
+    lon_bin0        (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/longitude_bin0", GediParms::beam2group(info->beam)).str(), &info->reader->context),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
     /* Join Reads */
-    lat_lowestmode.join(info->reader->read_timeout_ms, true);
-    lon_lowestmode.join(info->reader->read_timeout_ms, true);
+    lat_bin0.join(info->reader->read_timeout_ms, true);
+    lon_bin0.join(info->reader->read_timeout_ms, true);
 
     /* Initialize Region */
     first_footprint = 0;
@@ -259,7 +263,7 @@ Gedi01bReader::Region::Region (info_t* info):
     }
     else
     {
-        num_footprints = MIN(lat_lowestmode.size, lon_lowestmode.size);
+        num_footprints = MIN(lat_bin0.size, lon_bin0.size);
     }
 
     /* Check If Anything to Process */
@@ -270,8 +274,8 @@ Gedi01bReader::Region::Region (info_t* info):
     }
 
     /* Trim Geospatial Datasets Read from HDF5 File */
-    lat_lowestmode.trim(first_footprint);
-    lon_lowestmode.trim(first_footprint);
+    lat_bin0.trim(first_footprint);
+    lon_bin0.trim(first_footprint);
 }
 
 /*----------------------------------------------------------------------------
@@ -299,8 +303,8 @@ void Gedi01bReader::Region::polyregion (info_t* info)
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(lat_lowestmode[0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(lat_lowestmode[0] < -70.0) projection = MathLib::SOUTH_POLAR;
+    if(lat_bin0[0] > 70.0) projection = MathLib::NORTH_POLAR;
+    else if(lat_bin0[0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
     List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
@@ -314,12 +318,12 @@ void Gedi01bReader::Region::polyregion (info_t* info)
     bool first_footprint_found = false;
     bool last_footprint_found = false;
     int footprint = 0;
-    while(footprint < lat_lowestmode.size)
+    while(footprint < lat_bin0.size)
     {
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        MathLib::coord_t footprint_coord = {lon_lowestmode[footprint], lat_lowestmode[footprint]};
+        MathLib::coord_t footprint_coord = {lon_bin0[footprint], lat_bin0[footprint]};
         MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, projection);
 
         /* Test Inclusion */
@@ -362,18 +366,18 @@ void Gedi01bReader::Region::polyregion (info_t* info)
 void Gedi01bReader::Region::rasterregion (info_t* info)
 {
     /* Allocate Inclusion Mask */
-    if(lat_lowestmode.size <= 0) return;
-    inclusion_mask = new bool [lat_lowestmode.size];
+    if(lat_bin0.size <= 0) return;
+    inclusion_mask = new bool [lat_bin0.size];
     inclusion_ptr = inclusion_mask;
 
     /* Loop Throuh Segments */
     bool first_footprint_found = false;
     long last_footprint = 0;
     int footprint = 0;
-    while(footprint < lat_lowestmode.size)
+    while(footprint < lat_bin0.size)
     {
         /* Check Inclusion */
-        bool inclusion = info->reader->parms->raster->includes(lon_lowestmode[footprint], lat_lowestmode[footprint]);
+        bool inclusion = info->reader->parms->raster->includes(lon_bin0[footprint], lat_bin0[footprint]);
         inclusion_mask[footprint] = inclusion;
 
         /* If Coordinate Is In Raster */
@@ -409,25 +413,28 @@ void Gedi01bReader::Region::rasterregion (info_t* info)
  * Gedi01b::Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bReader::Gedi01b::Gedi01b (info_t* info, Region& region):
-    shot_number     (info->reader->asset, info->reader->resource, SafeString("%s/shot_number",      GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->asset, info->reader->resource, SafeString("%s/delta_time",       GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_lowestmode (info->reader->asset, info->reader->resource, SafeString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_highestreturn (info->reader->asset, info->reader->resource, SafeString("%s/elev_highestreturn",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/degrade_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    quality_flag    (info->reader->asset, info->reader->resource, SafeString("%s/quality_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    surface_flag    (info->reader->asset, info->reader->resource, SafeString("%s/surface_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->asset, info->reader->resource, SafeString("%s/shot_number",                  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/delta_time",       GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_bin0       (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/elevation_bin0",   GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_lastbin    (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/elevation_lastbin",GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/degrade",          GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    tx_sample_count (info->reader->asset, info->reader->resource, SafeString("%s/tx_sample_count",              GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    tx_start_index  (info->reader->asset, info->reader->resource, SafeString("%s/tx_sample_start_index",        GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    rx_sample_count (info->reader->asset, info->reader->resource, SafeString("%s/rx_sample_count",              GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    rx_start_index  (info->reader->asset, info->reader->resource, SafeString("%s/rx_sample_start_index",        GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
 {
-
     /* Join Hardcoded Reads */
     shot_number.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
-    elev_lowestmode.join(info->reader->read_timeout_ms, true);
-    elev_highestreturn.join(info->reader->read_timeout_ms, true);
+    elev_bin0.join(info->reader->read_timeout_ms, true);
+    elev_lastbin.join(info->reader->read_timeout_ms, true);
     solar_elevation.join(info->reader->read_timeout_ms, true);
     degrade_flag.join(info->reader->read_timeout_ms, true);
-    quality_flag.join(info->reader->read_timeout_ms, true);
-    surface_flag.join(info->reader->read_timeout_ms, true);
+    tx_sample_count.join(info->reader->read_timeout_ms, true);
+    tx_start_index.join(info->reader->read_timeout_ms, true);
+    rx_sample_count.join(info->reader->read_timeout_ms, true);
+    rx_start_index.join(info->reader->read_timeout_ms, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -479,7 +486,17 @@ void* Gedi01bReader::subsettingThread (void* parm)
         Region region(info);
 
         /* Read GEDI Datasets */
-        Gedi01b Gedi01b(info, region);
+        Gedi01b gedi01b(info, region);
+
+        /* Read Waveforms */
+        long tx0 = gedi01b.tx_start_index[0] - 1;
+        long txN = gedi01b.tx_start_index[region.num_footprints - 1] - 1 + gedi01b.tx_sample_count[region.num_footprints - 1] - tx0;
+        long rx0 = gedi01b.rx_start_index[0] - 1;
+        long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
+        H5Array<float> txwaveform(info->reader->asset, info->reader->resource, SafeString("%s/txwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, tx0, txN);
+        H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, SafeString("%s/rxwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, rx0, txN);
+        txwaveform.join(info->reader->read_timeout_ms, true);
+        rxwaveform.join(info->reader->read_timeout_ms, true);
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;
@@ -490,27 +507,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
             /* Check Degrade Filter */
             if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)
             {
-                if(Gedi01b.degrade_flag[footprint] != parms->degrade_filter)
-                {
-                    local_stats.footprints_filtered++;
-                    continue;
-                }
-            }
-
-            /* Check L2 Quality Filter */
-            if(parms->l2_quality_filter != GediParms::L2QLTY_UNFILTERED)
-            {
-                if(Gedi01b.quality_flag[footprint] != parms->l2_quality_filter)
-                {
-                    local_stats.footprints_filtered++;
-                    continue;
-                }
-            }
-
-            /* Check Surface Filter */
-            if(parms->surface_filter != GediParms::SURFACE_UNFILTERED)
-            {
-                if(Gedi01b.surface_flag[footprint] != parms->surface_filter)
+                if(gedi01b.degrade_flag[footprint] != parms->degrade_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -530,18 +527,36 @@ void* Gedi01bReader::subsettingThread (void* parm)
             {
                 /* Populate Entry in Batch Structure */
                 footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
-                fp->shot_number             = Gedi01b.shot_number[footprint];
-                fp->time_ns                 = parms->deltatime2timestamp(Gedi01b.delta_time[footprint]);
-                fp->latitude                = region.lat_lowestmode[footprint];
-                fp->longitude               = region.lon_lowestmode[footprint];
-                fp->elevation_lowestmode    = Gedi01b.elev_lowestmode[footprint];
-                fp->elevation_highestreturn = Gedi01b.elev_highestreturn[footprint];
-                fp->solar_elevation         = Gedi01b.solar_elevation[footprint];
+                fp->shot_number             = gedi01b.shot_number[footprint];
+                fp->time_ns                 = parms->deltatime2timestamp(gedi01b.delta_time[footprint]);
+                fp->latitude                = region.lat_bin0[footprint];
+                fp->longitude               = region.lon_bin0[footprint];
+                fp->elevation_start         = gedi01b.elev_bin0[footprint];
+                fp->elevation_stop          = gedi01b.elev_lastbin[footprint];
+                fp->solar_elevation         = gedi01b.solar_elevation[footprint];
                 fp->beam                    = info->beam;
                 fp->flags                   = 0;
-                if(Gedi01b.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
-                if(Gedi01b.quality_flag[footprint]) fp->flags |= GediParms::L2_QUALITY_FLAG_MASK;
-                if(Gedi01b.surface_flag[footprint]) fp->flags |= GediParms::SURFACE_FLAG_MASK;
+                fp->tx_size                 = gedi01b.tx_sample_count[footprint];
+                fp->rx_size                 = gedi01b.rx_sample_count[footprint];;
+
+                /* Set Flags */
+                if(gedi01b.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
+
+                /* Populate Tx Waveform */
+                long tx_start_index = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];
+                long tx_end_index = tx_start_index + MIN(fp->tx_size, MAX_TX_SAMPLES);
+                for(long i = tx_start_index, j = 0; i < tx_end_index; i++, j++)
+                {
+                    fp->tx_waveform[j] = txwaveform[i];
+                }
+
+                /* Populate Rx Waveform */
+                long rx_start_index = gedi01b.rx_start_index[footprint] - gedi01b.rx_start_index[0];
+                long rx_end_index = rx_start_index + MIN(fp->rx_size, MAX_RX_SAMPLES);
+                for(long i = rx_start_index, j = 0; i < rx_end_index; i++, j++)
+                {
+                    fp->rx_waveform[j] = rxwaveform[i];
+                }
 
                 /* Send Record */
                 reader->batchIndex++;
