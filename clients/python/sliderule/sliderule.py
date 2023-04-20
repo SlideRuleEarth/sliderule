@@ -809,15 +809,27 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
 
     # Update number of nodes
     if type(desired_nodes) == int:
-        headers = __build_auth_header()
-        if type(time_to_live) == int:
-            host = "https://ps." + service_url + "/api/desired_org_num_nodes_ttl/" + service_org + "/" + str(desired_nodes) + "/" + str(time_to_live) + "/"
-            rsps = session.post(host, headers=headers, timeout=request_timeout)
-        else:
-            host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(desired_nodes) + "/"
-            rsps = session.put(host, headers=headers, timeout=request_timeout)
-        rsps.raise_for_status()
-
+        rsps_body = {}
+        try:
+            headers = __build_auth_header()
+            # Get boundaries of cluster and calculate nodes to request
+            host = "https://ps." + service_url + "/api/org_num_nodes/" + service_org + "/"
+            rsps = session.get(host, headers=headers, timeout=request_timeout)
+            rsps.raise_for_status()
+            rsps_body = rsps.json()
+            requested_nodes = max(min(desired_nodes, rsps_body["max_nodes"]), rsps_body["min_nodes"])
+            # Request number of nodes in cluster
+            if type(time_to_live) == int:
+                host = "https://ps." + service_url + "/api/desired_org_num_nodes_ttl/" + service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
+                rsps = session.post(host, headers=headers, timeout=request_timeout)
+            else:
+                host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(requested_nodes) + "/"
+                rsps = session.put(host, headers=headers, timeout=request_timeout)
+            rsps_body = rsps.json()
+            rsps.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.info('{}'.format(e))
+            logger.error('Provisioning system responded with error => {}'.format(rsps_body["error_msg"]))
     # Get number of nodes currently registered
     try:
         rsps = source("status", parm={"service":"sliderule"}, path="/discovery", silence=True)
