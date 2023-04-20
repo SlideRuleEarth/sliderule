@@ -82,6 +82,8 @@ class FootprintReader: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
+        /* Subsetting Function */
+        typedef void* (*subset_func_t) (void* parm);
 
         /* Batch Record */
         typedef struct {
@@ -97,19 +99,7 @@ class FootprintReader: public LuaObject
             uint32_t        footprints_retried;
         } stats_t;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
+        /* Thread Information */
         typedef struct {
             FootprintReader*    reader;
             int                 beam;
@@ -166,10 +156,9 @@ class FootprintReader: public LuaObject
 
                             FootprintReader         (lua_State* L, Asset* _asset, const char* _resource,
                                                      const char* outq_name, GediParms* _parms, bool _send_terminator,
-                                                     const char* batch_rec_type, const char* lat_name, const char* lon_name);
+                                                     const char* batch_rec_type, const char* lat_name, const char* lon_name,
+                                                     subset_func_t subsetter);
                             ~FootprintReader        (void);
-        static void*        subsettingThread        (void* parm);
-        virtual void*       subsetFootprints        (void* parm) = 0;
         void                postRecordBatch         (stats_t* local_stats);
         static int          luaStats                (lua_State* L);
 };
@@ -200,10 +189,11 @@ const struct luaL_Reg FootprintReader<footprint_t>::LuaMetaTable[] = {
 template <class footprint_t>
 FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, const char* _resource,
                                                 const char* outq_name, GediParms* _parms, bool _send_terminator,
-                                                const char* batch_rec_type, const char* lat_name, const char* lon_name ):
+                                                const char* batch_rec_type, const char* lat_name, const char* lon_name,
+                                                subset_func_t subsetter ):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000),
-    batchRecord(batch_rec_type, sizeof(footprint_t))
+    batchRecord(batch_rec_type, sizeof(batch_t))
 {
     assert(_asset);
     assert(_resource);
@@ -230,14 +220,14 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
 
     /* Initialize Batch Record Processing */
     batchIndex = 0;
-    batchData = (footprint_t*)batchRecord.getRecordData();
+    batchData = (batch_t*)batchRecord.getRecordData();
 
     /* Initialize Readers */
     active = true;
     numComplete = 0;
     memset(readerPid, 0, sizeof(readerPid));
 
-    /* PRocess Resource */
+    /* Process Resource */
     try
     {
         /* Read Beam Data */
@@ -249,7 +239,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
                 info_t* info = new info_t;
                 info->reader = this;
                 info->beam = GediParms::BEAM_NUMBER[b];
-                readerPid[b] = new Thread(subsettingThread, info);
+                readerPid[b] = new Thread(subsetter, info);
             }
         }
         else if(parms->beam == GediParms::BEAM0000 ||
@@ -265,7 +255,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
             info_t* info = new info_t;
             info->reader = this;
             info->beam = parms->beam;
-            subsettingThread(info);
+            subsetter(info);
         }
         else
         {
@@ -489,15 +479,6 @@ void FootprintReader<footprint_t>::Region::rasterregion (info_t* info)
         /* Trim Inclusion Mask */
         inclusion_ptr = &inclusion_mask[first_footprint];
     }
-}
-
-/*----------------------------------------------------------------------------
- * subsettingThread
- *----------------------------------------------------------------------------*/
-template <class footprint_t>
-void* FootprintReader<footprint_t>::subsettingThread (void* parm)
-{
-    return subsetFootprints(parm);
 }
 
 /*----------------------------------------------------------------------------

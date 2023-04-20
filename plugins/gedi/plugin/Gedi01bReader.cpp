@@ -42,50 +42,33 @@
 #include "gedi.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_STAT_FOOTPRINTS_READ        "read"
-#define LUA_STAT_FOOTPRINTS_FILTERED    "filtered"
-#define LUA_STAT_FOOTPRINTS_SENT        "sent"
-#define LUA_STAT_FOOTPRINTS_DROPPED     "dropped"
-#define LUA_STAT_FOOTPRINTS_RETRIED     "retried"
-
-/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
 const char* Gedi01bReader::fpRecType = "gedi01brec.footprint";
 const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
-    {"shot_number",     RecordObject::UINT64,   offsetof(footprint_t, shot_number),         1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::TIME8,    offsetof(footprint_t, time_ns),             1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(footprint_t, latitude),            1,  NULL, NATIVE_FLAGS},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(footprint_t, longitude),           1,  NULL, NATIVE_FLAGS},
-    {"elevation_start", RecordObject::DOUBLE,   offsetof(footprint_t, elevation_start),     1,  NULL, NATIVE_FLAGS},
-    {"elevation_stop",  RecordObject::DOUBLE,   offsetof(footprint_t, elevation_stop),      1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::DOUBLE,   offsetof(footprint_t, solar_elevation),     1,  NULL, NATIVE_FLAGS},
-    {"beam",            RecordObject::UINT8,    offsetof(footprint_t, beam),                1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(footprint_t, flags),               1,  NULL, NATIVE_FLAGS},
-    {"tx_size",         RecordObject::UINT16,   offsetof(footprint_t, tx_size),             1,  NULL, NATIVE_FLAGS},
-    {"rx_size",         RecordObject::UINT16,   offsetof(footprint_t, rx_size),             1,  NULL, NATIVE_FLAGS},
-    {"tx_waveform",     RecordObject::FLOAT,    offsetof(footprint_t, tx_waveform),         MAX_TX_SAMPLES,  NULL, NATIVE_FLAGS},
-    {"rx_waveform",     RecordObject::FLOAT,    offsetof(footprint_t, rx_waveform),         MAX_RX_SAMPLES,  NULL, NATIVE_FLAGS}
+    {"shot_number",     RecordObject::UINT64,   offsetof(g01b_footprint_t, shot_number),        1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(g01b_footprint_t, time_ns),            1,  NULL, NATIVE_FLAGS},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(g01b_footprint_t, latitude),           1,  NULL, NATIVE_FLAGS},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(g01b_footprint_t, longitude),          1,  NULL, NATIVE_FLAGS},
+    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS},
+    {"elevation_stop",  RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_stop),     1,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS},
+    {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT8,    offsetof(g01b_footprint_t, flags),              1,  NULL, NATIVE_FLAGS},
+    {"tx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, tx_size),            1,  NULL, NATIVE_FLAGS},
+    {"rx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, rx_size),            1,  NULL, NATIVE_FLAGS},
+    {"tx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, tx_waveform),        G01B_MAX_TX_SAMPLES,  NULL, NATIVE_FLAGS},
+    {"rx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, rx_waveform),        G01B_MAX_RX_SAMPLES,  NULL, NATIVE_FLAGS}
 };
 
 const char* Gedi01bReader::batchRecType = "gedi01brec";
 const RecordObject::fieldDef_t Gedi01bReader::batchRecDef[] = {
-    {"footprint",       RecordObject::USER,     offsetof(gedi01b_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
-};
-
-const char* Gedi01bReader::OBJECT_TYPE = "Gedi01bReader";
-const char* Gedi01bReader::LuaMetaName = "Gedi01bReader";
-const struct luaL_Reg Gedi01bReader::LuaMetaTable[] = {
-    {"stats",       luaStats},
-    {NULL,          NULL}
+    {"footprint",       RecordObject::USER,     offsetof(batch_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
 };
 
 /******************************************************************************
- * GEDIT L1B READER CLASS
+ * GEDI L1B READER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -122,96 +105,19 @@ int Gedi01bReader::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Gedi01bReader::init (void)
 {
-    RECDEF(fpRecType,       fpRecDef,       sizeof(footprint_t),                NULL);
-    RECDEF(batchRecType,    batchRecDef,    offsetof(gedi01b_t, footprint[1]),  NULL);
+    RECDEF(fpRecType,       fpRecDef,       sizeof(g01b_footprint_t),           NULL);
+    RECDEF(batchRecType,    batchRecDef,    offsetof(batch_t, footprint[1]),    NULL);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bReader::Gedi01bReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    read_timeout_ms(_parms->read_timeout * 1000),
-    batchRecord(batchRecType, sizeof(gedi01b_t))
+    FootprintReader<g01b_footprint_t>(L, _asset, _resource,
+                                      outq_name, _parms, _send_terminator,
+                                      batchRecType, "geolocation/latitude_bin0", "geolocation/longitude_bin0",
+                                      Gedi01bReader::subsettingThread)
 {
-    assert(_asset);
-    assert(_resource);
-    assert(outq_name);
-    assert(_parms);
-
-    /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
-    parms = _parms;
-
-    /* Create Publisher */
-    outQ = new Publisher(outq_name);
-    sendTerminator = _send_terminator;
-
-    /* Clear Statistics */
-    stats.footprints_read       = 0;
-    stats.footprints_filtered   = 0;
-    stats.footprints_sent       = 0;
-    stats.footprints_dropped    = 0;
-    stats.footprints_retried    = 0;
-
-    /* Initialize Batch Record Processing */
-    batchIndex = 0;
-    batchData = (gedi01b_t*)batchRecord.getRecordData();
-
-    /* Initialize Readers */
-    active = true;
-    numComplete = 0;
-    memset(readerPid, 0, sizeof(readerPid));
-
-    /* PRocess Resource */
-    try
-    {
-        /* Read Beam Data */
-        if(parms->beam == GediParms::ALL_BEAMS)
-        {
-            threadCount = GediParms::NUM_BEAMS;
-            for(int b = 0; b < GediParms::NUM_BEAMS; b++)
-            {
-                info_t* info = new info_t;
-                info->reader = this;
-                info->beam = GediParms::BEAM_NUMBER[b];
-                readerPid[b] = new Thread(subsettingThread, info);
-            }
-        }
-        else if(parms->beam == GediParms::BEAM0000 ||
-                parms->beam == GediParms::BEAM0001 ||
-                parms->beam == GediParms::BEAM0010 ||
-                parms->beam == GediParms::BEAM0011 ||
-                parms->beam == GediParms::BEAM0101 ||
-                parms->beam == GediParms::BEAM0110 ||
-                parms->beam == GediParms::BEAM1000 ||
-                parms->beam == GediParms::BEAM1011)
-        {
-            threadCount = 1;
-            info_t* info = new info_t;
-            info->reader = this;
-            info->beam = parms->beam;
-            subsettingThread(info);
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid beam specified <%d>, must be 0, 1, 2, 3, 5, 6, 8, 11, or -1 for all", parms->beam);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        /* Log Error */
-        mlog(e.level(), "Failed to process resource %s: %s", resource, e.what());
-
-        /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) LuaEndpoint::generateExceptionStatus(RTE_TIMEOUT, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
-        else LuaEndpoint::generateExceptionStatus(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
-
-        /* Indicate End of Data */
-        if(sendTerminator) outQ->postCopy("", 0);
-        signalComplete();
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -219,194 +125,6 @@ Gedi01bReader::Gedi01bReader (lua_State* L, Asset* _asset, const char* _resource
  *----------------------------------------------------------------------------*/
 Gedi01bReader::~Gedi01bReader (void)
 {
-    active = false;
-
-    for(int b = 0; b < GediParms::NUM_BEAMS; b++)
-    {
-        if(readerPid[b]) delete readerPid[b];
-    }
-
-    delete outQ;
-
-    parms->releaseLuaObject();
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * Region::Constructor
- *----------------------------------------------------------------------------*/
-Gedi01bReader::Region::Region (info_t* info):
-    lat_bin0        (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/latitude_bin0", GediParms::beam2group(info->beam)).str(), &info->reader->context),
-    lon_bin0        (info->reader->asset, info->reader->resource, SafeString("%s/geolocation/longitude_bin0", GediParms::beam2group(info->beam)).str(), &info->reader->context),
-    inclusion_mask  (NULL),
-    inclusion_ptr   (NULL)
-{
-    /* Join Reads */
-    lat_bin0.join(info->reader->read_timeout_ms, true);
-    lon_bin0.join(info->reader->read_timeout_ms, true);
-
-    /* Initialize Region */
-    first_footprint = 0;
-    num_footprints = H5Coro::ALL_ROWS;
-
-    /* Determine Spatial Extent */
-    if(info->reader->parms->raster != NULL)
-    {
-        rasterregion(info);
-    }
-    else if(info->reader->parms->polygon.length() > 0)
-    {
-        polyregion(info);
-    }
-    else
-    {
-        num_footprints = MIN(lat_bin0.size, lon_bin0.size);
-    }
-
-    /* Check If Anything to Process */
-    if(num_footprints <= 0)
-    {
-        cleanup();
-        throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
-    }
-
-    /* Trim Geospatial Datasets Read from HDF5 File */
-    lat_bin0.trim(first_footprint);
-    lon_bin0.trim(first_footprint);
-}
-
-/*----------------------------------------------------------------------------
- * Region::Destructor
- *----------------------------------------------------------------------------*/
-Gedi01bReader::Region::~Region (void)
-{
-    cleanup();
-}
-
-/*----------------------------------------------------------------------------
- * Region::cleanup
- *----------------------------------------------------------------------------*/
-void Gedi01bReader::Region::cleanup (void)
-{
-    if(inclusion_mask) delete [] inclusion_mask;
-}
-
-/*----------------------------------------------------------------------------
- * Region::polyregion
- *----------------------------------------------------------------------------*/
-void Gedi01bReader::Region::polyregion (info_t* info)
-{
-    int points_in_polygon = info->reader->parms->polygon.length();
-
-    /* Determine Best Projection To Use */
-    MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(lat_bin0[0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(lat_bin0[0] < -70.0) projection = MathLib::SOUTH_POLAR;
-
-    /* Project Polygon */
-    List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
-    MathLib::point_t* projected_poly = new MathLib::point_t [points_in_polygon];
-    for(int i = 0; i < points_in_polygon; i++)
-    {
-        projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
-    }
-
-    /* Find First and Last Footprints in Polygon */
-    bool first_footprint_found = false;
-    bool last_footprint_found = false;
-    int footprint = 0;
-    while(footprint < lat_bin0.size)
-    {
-        bool inclusion = false;
-
-        /* Project Segment Coordinate */
-        MathLib::coord_t footprint_coord = {lon_bin0[footprint], lat_bin0[footprint]};
-        MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, projection);
-
-        /* Test Inclusion */
-        if(MathLib::inpoly(projected_poly, points_in_polygon, footprint_point))
-        {
-            inclusion = true;
-        }
-
-        /* Find First Footprint */
-        if(!first_footprint_found && inclusion)
-        {
-            /* Set First Segment */
-            first_footprint_found = true;
-            first_footprint = footprint;
-        }
-        else if(first_footprint_found && !last_footprint_found && !inclusion)
-        {
-            /* Set Last Segment */
-            last_footprint_found = true;
-            break; // full extent found!
-        }
-
-        /* Bump Footprint */
-        footprint++;
-    }
-
-    /* Set Number of Segments */
-    if(first_footprint_found)
-    {
-        num_footprints = footprint - first_footprint;
-    }
-
-    /* Delete Projected Polygon */
-    delete [] projected_poly;
-}
-
-/*----------------------------------------------------------------------------
- * Region::rasterregion
- *----------------------------------------------------------------------------*/
-void Gedi01bReader::Region::rasterregion (info_t* info)
-{
-    /* Allocate Inclusion Mask */
-    if(lat_bin0.size <= 0) return;
-    inclusion_mask = new bool [lat_bin0.size];
-    inclusion_ptr = inclusion_mask;
-
-    /* Loop Throuh Segments */
-    bool first_footprint_found = false;
-    long last_footprint = 0;
-    int footprint = 0;
-    while(footprint < lat_bin0.size)
-    {
-        /* Check Inclusion */
-        bool inclusion = info->reader->parms->raster->includes(lon_bin0[footprint], lat_bin0[footprint]);
-        inclusion_mask[footprint] = inclusion;
-
-        /* If Coordinate Is In Raster */
-        if(inclusion)
-        {
-            if(!first_footprint_found)
-            {
-                first_footprint_found = true;
-                first_footprint = footprint;
-                last_footprint = footprint;
-            }
-            else
-            {
-                last_footprint = footprint;
-            }
-        }
-
-        /* Bump Footprint */
-        footprint++;
-    }
-
-    /* Set Number of Footprints */
-    if(first_footprint_found)
-    {
-        num_footprints = last_footprint - first_footprint + 1;
-
-        /* Trim Inclusion Mask */
-        inclusion_ptr = &inclusion_mask[first_footprint];
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -445,34 +163,13 @@ Gedi01bReader::Gedi01b::~Gedi01b (void)
 }
 
 /*----------------------------------------------------------------------------
- * postRecordBatch
- *----------------------------------------------------------------------------*/
-void Gedi01bReader::postRecordBatch (stats_t* local_stats)
-{
-    uint8_t* rec_buf = NULL;
-    int size = batchIndex * sizeof(footprint_t);
-    int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
-    int post_status = MsgQ::STATE_TIMEOUT;
-    while( active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
-    if(post_status > 0)
-    {
-        local_stats->footprints_sent += batchIndex;
-    }
-    else
-    {
-        mlog(ERROR, "Failed to post %s to stream %s: %d", batchRecord.getRecordType(), outQ->getName(), post_status);
-        local_stats->footprints_dropped += batchIndex;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * subsettingThread
+ * subsetFootprints
  *----------------------------------------------------------------------------*/
 void* Gedi01bReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    Gedi01bReader* reader = info->reader;
+    Gedi01bReader* reader = (Gedi01bReader*)info->reader;
     GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
@@ -526,11 +223,11 @@ void* Gedi01bReader::subsettingThread (void* parm)
             reader->threadMut.lock();
             {
                 /* Populate Entry in Batch Structure */
-                footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
+                g01b_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number             = gedi01b.shot_number[footprint];
                 fp->time_ns                 = parms->deltatime2timestamp(gedi01b.delta_time[footprint]);
-                fp->latitude                = region.lat_bin0[footprint];
-                fp->longitude               = region.lon_bin0[footprint];
+                fp->latitude                = region.lat[footprint];
+                fp->longitude               = region.lon[footprint];
                 fp->elevation_start         = gedi01b.elev_bin0[footprint];
                 fp->elevation_stop          = gedi01b.elev_lastbin[footprint];
                 fp->solar_elevation         = gedi01b.solar_elevation[footprint];
@@ -544,7 +241,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
 
                 /* Populate Tx Waveform */
                 long tx_start_index = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];
-                long tx_end_index = tx_start_index + MIN(fp->tx_size, MAX_TX_SAMPLES);
+                long tx_end_index = tx_start_index + MIN(fp->tx_size, G01B_MAX_TX_SAMPLES);
                 for(long i = tx_start_index, j = 0; i < tx_end_index; i++, j++)
                 {
                     fp->tx_waveform[j] = txwaveform[i];
@@ -552,7 +249,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
 
                 /* Populate Rx Waveform */
                 long rx_start_index = gedi01b.rx_start_index[footprint] - gedi01b.rx_start_index[0];
-                long rx_end_index = rx_start_index + MIN(fp->rx_size, MAX_RX_SAMPLES);
+                long rx_end_index = rx_start_index + MIN(fp->rx_size, G01B_MAX_RX_SAMPLES);
                 for(long i = rx_start_index, j = 0; i < rx_end_index; i++, j++)
                 {
                     fp->rx_waveform[j] = rxwaveform[i];
@@ -615,52 +312,4 @@ void* Gedi01bReader::subsettingThread (void* parm)
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
- *----------------------------------------------------------------------------*/
-int Gedi01bReader::luaStats (lua_State* L)
-{
-    bool status = false;
-    int num_obj_to_return = 1;
-    Gedi01bReader* lua_obj = NULL;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = (Gedi01bReader*)getLuaSelf(L, 1);
-    }
-    catch(const RunTimeException& e)
-    {
-        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
-    }
-
-    try
-    {
-        /* Get Clear Parameter */
-        bool with_clear = getLuaBoolean(L, 2, true, false);
-
-        /* Create Statistics Table */
-        lua_newtable(L);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_READ,            lua_obj->stats.footprints_read);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_FILTERED,     lua_obj->stats.footprints_filtered);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_SENT,         lua_obj->stats.footprints_sent);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_DROPPED,      lua_obj->stats.footprints_dropped);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_RETRIED,      lua_obj->stats.footprints_retried);
-
-        /* Clear if Requested */
-        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
-
-        /* Set Success */
-        status = true;
-        num_obj_to_return = 2;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error returning stats %s: %s", lua_obj->getName(), e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_obj_to_return);
 }

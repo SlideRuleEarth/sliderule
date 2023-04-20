@@ -89,6 +89,7 @@ install (TARGETS gedi LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/gedi.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/FootprintReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi01bReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi02aReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.h
