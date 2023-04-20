@@ -36,6 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "FootprintReader.h"
 #include "GediParms.h"
 #include "Gedi01bReader.h"
 #include "Gedi02aReader.h"

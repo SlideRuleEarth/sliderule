@@ -74,7 +74,7 @@ const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
 
 const char* Gedi01bReader::batchRecType = "gedi01brec";
 const RecordObject::fieldDef_t Gedi01bReader::batchRecDef[] = {
-    {"footprint",       RecordObject::USER,     offsetof(gedi02a_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
+    {"footprint",       RecordObject::USER,     offsetof(gedi01b_t, footprint),         0,  fpRecType, NATIVE_FLAGS}
 };
 
 const char* Gedi01bReader::OBJECT_TYPE = "Gedi01bReader";
@@ -85,7 +85,7 @@ const struct luaL_Reg Gedi01bReader::LuaMetaTable[] = {
 };
 
 /******************************************************************************
- * GEDIT L4A READER CLASS
+ * GEDIT L1B READER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ int Gedi01bReader::luaCreate (lua_State* L)
 void Gedi01bReader::init (void)
 {
     RECDEF(fpRecType,       fpRecDef,       sizeof(footprint_t),                NULL);
-    RECDEF(batchRecType,    batchRecDef,    offsetof(gedi02a_t, footprint[1]),  NULL);
+    RECDEF(batchRecType,    batchRecDef,    offsetof(gedi01b_t, footprint[1]),  NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -132,7 +132,7 @@ void Gedi01bReader::init (void)
 Gedi01bReader::Gedi01bReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000),
-    batchRecord(batchRecType, sizeof(gedi02a_t))
+    batchRecord(batchRecType, sizeof(gedi01b_t))
 {
     assert(_asset);
     assert(_resource);
@@ -157,7 +157,7 @@ Gedi01bReader::Gedi01bReader (lua_State* L, Asset* _asset, const char* _resource
 
     /* Initialize Batch Record Processing */
     batchIndex = 0;
-    batchData = (gedi02a_t*)batchRecord.getRecordData();
+    batchData = (gedi01b_t*)batchRecord.getRecordData();
 
     /* Initialize Readers */
     active = true;

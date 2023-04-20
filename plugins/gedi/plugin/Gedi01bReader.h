@@ -100,7 +100,7 @@ class Gedi01bReader: public LuaObject
         /* Batch Record */
         typedef struct {
             footprint_t     footprint[BATCH_SIZE];
-        } gedi02a_t;
+        } gedi01b_t;
 
         /* Statistics */
         typedef struct {
@@ -190,7 +190,7 @@ class Gedi01bReader: public LuaObject
         H5Coro::context_t   context;
         RecordObject        batchRecord;
         int                 batchIndex;
-        gedi02a_t*          batchData;
+        gedi01b_t*          batchData;
 
         /*--------------------------------------------------------------------
          * Methods
