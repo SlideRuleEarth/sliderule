@@ -1,6 +1,7 @@
 asset,                      identity,       driver,     path,                                                                   index,              region,     endpoint
 icesat2,                    nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 gedil4a,                    ornl-cloud,     s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,        nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+gedil4b,                    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass/data,         GEDI04_B_MW019MW138_02_002_05_R01000M_V2.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
 gedil3-elevation,           ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif,    us-west-2, https://s3.us-west-2.amazonaws.com
 gedil3-canopy,              ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_rh100_mean_2019108_2022019_002_03.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
 gedil3-elevation-stddev,    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif,  us-west-2, https://s3.us-west-2.amazonaws.com

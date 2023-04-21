@@ -59,6 +59,7 @@ target_sources(gedi
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi02aReader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi03Raster.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04bRaster.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.cpp
 )
 
@@ -95,6 +96,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi02aReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi03Raster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04bRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.h
     DESTINATION
         ${INSTALLDIR}/include/sliderule/gedi

@@ -29,29 +29,52 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gediplugin__
-#define __gediplugin__
+#ifndef __gedi04b_raster__
+#define __gedi04b_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "FootprintReader.h"
-#include "GediParms.h"
-#include "Gedi01bReader.h"
-#include "Gedi02aReader.h"
-#include "Gedi03Raster.h"
-#include "Gedi04aReader.h"
-#include "Gedi04bRaster.h"
+#include "VrtRaster.h"
+#include "GeoParms.h"
+#include <uuid/uuid.h>
 
 /******************************************************************************
- * PROTOTYPES
+ * GEDI 04B RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initgedi (void);
-}
+class Gedi04bRaster: public VrtRaster
+{
+    public:
 
-#endif  /* __gediplugin__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void         init            (void);
+        static GeoRaster*   create          (lua_State* L, GeoParms* _parms);
+        virtual             ~Gedi04bRaster  (void);
+
+    protected:
 
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                Gedi04bRaster   (lua_State *L, GeoParms* _parms);
+        bool    getRasterDate   (raster_info_t& rinfo);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        TimeLib::gmt_time_t gmtDate;
+        int64_t gpsTime;
+        char uuid_str[UUID_STR_LEN]; // temporary buffer
+};
+
+#endif  /* __gedi04b_raster__ */
