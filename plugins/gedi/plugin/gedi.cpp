@@ -40,7 +40,12 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_GEDI_LIBNAME    "gedi"
+#define LUA_GEDI_LIBNAME                            "gedi"
+#define LUA_GEDI_L03_ELEVATION_RASTER_NAME          "gedil3-elevation"
+#define LUA_GEDI_L03_CANOPY_RASTER_NAME             "gedil3-canopy"
+#define LUA_GEDI_L03_ELEVATION_STDDEV_RASTER_NAME   "gedil3-elevation-stddev"
+#define LUA_GEDI_L03_CANOPY_STDDEV_RASTER_NAME      "gedil3-canopy-stddev"
+#define LUA_GEDI_L03_COUNTS_RASTER_NAME             "gedil3-counts"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -98,7 +103,15 @@ void initgedi (void)
     /* Initialize Modules */
     Gedi01bReader::init();
     Gedi02aReader::init();
+    Gedi03Raster::init();
     Gedi04aReader::init();
+
+    /* Register Rasters */
+    GeoRaster::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        Gedi03Raster::create);
+    GeoRaster::registerRaster(LUA_GEDI_L03_CANOPY_RASTER_NAME,           Gedi03Raster::create);
+    GeoRaster::registerRaster(LUA_GEDI_L03_ELEVATION_STDDEV_RASTER_NAME, Gedi03Raster::create);
+    GeoRaster::registerRaster(LUA_GEDI_L03_CANOPY_STDDEV_RASTER_NAME,    Gedi03Raster::create);
+    GeoRaster::registerRaster(LUA_GEDI_L03_COUNTS_RASTER_NAME,           Gedi03Raster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open);

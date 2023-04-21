@@ -375,7 +375,7 @@ static CURL* initializeWriteRequest (SafeString& url, headers_t headers, write_c
  ******************************************************************************/
 
 const char* S3CurlIODriver::DEFAULT_REGION = "us-west-2";
-const char* S3CurlIODriver::DEFAULT_ASSET_NAME = "iam-role";
+const char* S3CurlIODriver::DEFAULT_IDENTITY = "iam-role";
 const char* S3CurlIODriver::FORMAT = "s3";
 
 /******************************************************************************
@@ -818,10 +818,10 @@ int S3CurlIODriver::luaGet(lua_State* L)
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
         const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+        const char* identity    = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
@@ -863,11 +863,11 @@ int S3CurlIODriver::luaDownload(lua_State* L)
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
         const char* region      = LuaObject::getLuaString(L, 3, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+        const char* identity    = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_IDENTITY);
         const char* filename    = LuaObject::getLuaString(L, 5, true, key);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         int64_t rsps_size = get(filename, bucket, key, region, &credentials);
@@ -902,14 +902,14 @@ int S3CurlIODriver::luaRead(lua_State* L)
         long size               = LuaObject::getLuaInteger(L, 3);
         long pos                = LuaObject::getLuaInteger(L, 4);
         const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+        const char* identity    = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Check Parameters */
         if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid size: %ld", size);
         else if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         uint8_t* rsps_data = new uint8_t [size];
@@ -952,10 +952,10 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         const char* key         = LuaObject::getLuaString(L, 2);
         const char* filename    = LuaObject::getLuaString(L, 3);
         const char* region      = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_REGION);
-        const char* asset_name  = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_ASSET_NAME);
+        const char* identity    = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(asset_name);
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         int64_t upload_size = put(filename, bucket, key, region, &credentials);

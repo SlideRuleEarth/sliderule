@@ -329,9 +329,3 @@ void VrtRaster::buildVRT(std::string& vrt_file, List<std::string>& rlist)
     GDALClose(vrtDset);
     mlog(DEBUG, "Created %s", vrt_file.c_str());
 }
-
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
-

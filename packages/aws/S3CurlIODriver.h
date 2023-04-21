@@ -61,7 +61,7 @@ class S3CurlIODriver: public Asset::IODriver
         static const long SSL_VERIFYPEER = 0;
         static const long SSL_VERIFYHOST = 0;
         static const char* DEFAULT_REGION;
-        static const char* DEFAULT_ASSET_NAME;
+        static const char* DEFAULT_IDENTITY;
         static const char* FORMAT;
 
         /*--------------------------------------------------------------------
