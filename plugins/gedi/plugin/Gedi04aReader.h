@@ -49,10 +49,26 @@
 #include "GediParms.h"
 
 /******************************************************************************
+ * GEDI04A FOOTPRINT
+ ******************************************************************************/
+
+typedef struct {
+    uint64_t        shot_number;
+    int64_t         time_ns;
+    double          latitude;
+    double          longitude;
+    double          agbd;
+    double          elevation;
+    double          solar_elevation;
+    uint8_t         beam;
+    uint8_t         flags;
+} g04a_footprint_t;
+
+/******************************************************************************
  * GEDI04A READER
  ******************************************************************************/
 
-class Gedi04aReader: public LuaObject
+class Gedi04aReader: public FootprintReader<g04a_footprint_t>
 {
     public:
 
@@ -60,49 +76,11 @@ class Gedi04aReader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int BATCH_SIZE = 256;
-
         static const char* fpRecType;
         static const RecordObject::fieldDef_t fpRecDef[];
 
         static const char* batchRecType;
         static const RecordObject::fieldDef_t batchRecDef[];
-
-        static const char* OBJECT_TYPE;
-
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        /* Footprint Record */
-        typedef struct {
-            uint64_t        shot_number;
-            int64_t         time_ns;
-            double          latitude;
-            double          longitude;
-            double          agbd;
-            double          elevation;
-            double          solar_elevation;
-            uint8_t         beam;
-            uint8_t         flags;
-        } footprint_t;
-
-        /* Batch Record */
-        typedef struct {
-            footprint_t     footprint[BATCH_SIZE];
-        } gedil4a_t;
-
-        /* Statistics */
-        typedef struct {
-            uint32_t        footprints_read;
-            uint32_t        footprints_filtered;
-            uint32_t        footprints_sent;
-            uint32_t        footprints_dropped;
-            uint32_t        footprints_retried;
-        } stats_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -116,33 +94,6 @@ class Gedi04aReader: public LuaObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        typedef struct {
-            Gedi04aReader*  reader;
-            int             beam;
-        } info_t;
-
-        /* Region Subclass */
-        class Region
-        {
-            public:
-
-                Region              (info_t* info);
-                ~Region             (void);
-
-                void cleanup        (void);
-                void polyregion     (info_t* info);
-                void rasterregion   (info_t* info);
-
-                H5Array<double>     lat_lowestmode;
-                H5Array<double>     lon_lowestmode;
-
-                bool*               inclusion_mask;
-                bool*               inclusion_ptr;
-
-                long                first_footprint;
-                long                num_footprints;
-        };
 
         /* Gedi04a Data Subclass */
         class Gedi04a
@@ -164,35 +115,12 @@ class Gedi04aReader: public LuaObject
         };
 
         /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        bool                active;
-        Thread*             readerPid[GediParms::NUM_BEAMS];
-        Mutex               threadMut;
-        int                 threadCount;
-        int                 numComplete;
-        Asset*              asset;
-        const char*         resource;
-        bool                sendTerminator;
-        const int           read_timeout_ms;
-        Publisher*          outQ;
-        GediParms*          parms;
-        stats_t             stats;
-        H5Coro::context_t   context;
-        RecordObject        batchRecord;
-        int                 batchIndex;
-        gedil4a_t*          batchData;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                             Gedi04aReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator=true);
                             ~Gedi04aReader          (void);
-        void                postRecordBatch         (stats_t* local_stats);
         static void*        subsettingThread        (void* parm);
-        static int          luaStats                (lua_State* L);
 };
 
 #endif  /* __gedi04a_reader__ */
