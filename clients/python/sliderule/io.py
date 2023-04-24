@@ -269,6 +269,56 @@ def attributes_encoder(attr):
     else:
         return attr
 
+# conversion factors between time units and seconds
+_to_sec = {'microseconds': 1e-6, 'microsecond': 1e-6,
+           'microsec': 1e-6, 'microsecs': 1e-6,
+           'milliseconds': 1e-3, 'millisecond': 1e-3,
+           'millisec': 1e-3, 'millisecs': 1e-3,
+           'msec': 1e-3, 'msecs': 1e-3, 'ms': 1e-3,
+           'seconds': 1.0, 'second': 1.0, 'sec': 1.0,
+           'secs': 1.0, 's': 1.0,
+           'minutes': 60.0, 'minute': 60.0,
+           'min': 60.0, 'mins': 60.0,
+           'hours': 3600.0, 'hour': 3600.0,
+           'hr': 3600.0, 'hrs': 3600.0, 'h': 3600.0,
+           'day': 86400.0, 'days': 86400.0, 'd': 86400.0}
+
+# PURPOSE: split a date string into units and epoch
+def split_date_string(date_string: str):
+    """
+    split a date string into units and epoch
+
+    Parameters
+    ----------
+    date_string: str
+        time-units since yyyy-mm-dd hh:mm:ss
+    """
+    try:
+        units,_,epoch = date_string.split(None, 2)
+    except ValueError:
+        raise ValueError(f'Invalid format: {date_string}')
+    else:
+        return (units.lower(), epoch)
+
+# PURPOSE: convert a numpy datetime array to delta times from the UNIX epoch
+def convert_datetime(date, epoch='2018-01-01T00:00:00'):
+    """
+    Convert a numpy datetime array to seconds since ``epoch``
+
+    Parameters
+    ----------
+    date: obj
+        numpy datetime array
+    epoch: str, default '2018-01-01T00:00:00'
+        epoch for output delta_time
+
+    Returns
+    -------
+    delta_time: float
+        seconds since epoch
+    """
+    return (date - np.datetime64(epoch)) / np.timedelta64(1, 's')
+
 # calculate centroid of polygon
 def centroid(x,y):
     npts = len(x)
@@ -396,6 +446,7 @@ def to_nc(gdf, filename, **kwargs):
     kwargs.setdefault('crs','EPSG:4326')
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
+    kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
     # get output attributes
     attributes = get_attributes()
     # open netCDF3 file object (64-bit offset format)
@@ -410,8 +461,17 @@ def to_nc(gdf, filename, **kwargs):
     # get geodataframe coordinate system
     if gdf.crs:
         kwargs['crs'] = gdf.crs
-    # create dimensions
-    fileID.createDimension('delta_time', len(df['delta_time']))
+    # create output delta time dimension and variable
+    fileID.createDimension('delta_time', len(df.index))
+    nc = fileID.createVariable('delta_time', 'f8', ('delta_time',))
+    units, epoch = split_date_string(kwargs['units'])
+    delta_time = convert_datetime(df.index, epoch)/_to_sec[units]
+    nc[:] = delta_time.copy()
+    # set attributes for delta time
+    attributes['delta_time']['units'] = kwargs['units']
+    attributes['delta_time']['long_name'] = "Elapsed GPS time"
+    for att_key,att_val in attributes['delta_time'].items():
+        setattr(nc, att_key, att_val)
     # for each variable in the dataframe
     for key,val in df.items():
         if np.issubdtype(val, np.unsignedinteger):
@@ -518,8 +578,8 @@ def from_nc(filename, **kwargs):
     while True:
         # attempt to get x and y coordinates for query polygon
         try:
-            x = json.loads(getattr(fileID, 'poly{0:d}_x'.format(i)))
-            y = json.loads(getattr(fileID, 'poly{0:d}_y'.format(i)))
+            x = json.loads(getattr(fileID, f'poly{i:d}_x'))
+            y = json.loads(getattr(fileID, f'poly{i:d}_y'))
         except:
             break
         else:
@@ -527,19 +587,21 @@ def from_nc(filename, **kwargs):
             regions.append(to_region(x, y))
             # add to polygon counter
             i += 1
-    # Closing the netCDF file
-    fileID.close()
-    warnings.filterwarnings("default")
     # Generate Time Column
-    delta_time = (nc['delta_time']*1e9).astype('timedelta64[ns]')
-    atlas_sdp_epoch = np.datetime64(datetime.datetime(2018, 1, 1))
-    nc['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
+    units, epoch = split_date_string(fileID.variables['delta_time'].units.decode('utf-8'))
+    delta_time = (1e9*_to_sec[units]*nc['delta_time']).astype('timedelta64[ns]')
+    nc['time'] = geopandas.pd.to_datetime(np.datetime64(epoch) + delta_time)
+    # remove delta time from dictionary
+    del nc['delta_time']
     # generate geometry column
     lon_key,lat_key = (kwargs['lon_key'],kwargs['lat_key'])
     geometry = geopandas.points_from_xy(nc[lon_key],nc[lat_key])
     # remove coordinates from dictionary
     del nc[lon_key]
     del nc[lat_key]
+    # Closing the netCDF file
+    fileID.close()
+    warnings.filterwarnings("default")
     # create Pandas DataFrame object
     df = geopandas.pd.DataFrame(nc)
     # build GeoDataFrame
@@ -573,6 +635,7 @@ def to_hdf(gdf, filename, **kwargs):
     kwargs.setdefault('crs','EPSG:4326')
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
+    kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
     # get output attributes
     attributes = get_attributes()
     # convert geodataframe to pandas dataframe
@@ -644,8 +707,8 @@ def write_pytables(df, filename, attributes, **kwargs):
         lon, lat = from_region(poly)
         lon = attributes_encoder(lon)
         lat = attributes_encoder(lat)
-        setattr(fileID.root._v_attrs, 'poly{0:d}_x'.format(i), json.dumps(lon))
-        setattr(fileID.root._v_attrs, 'poly{0:d}_y'.format(i), json.dumps(lat))
+        setattr(fileID.root._v_attrs, f'poly{i:d}_x', json.dumps(lon))
+        setattr(fileID.root._v_attrs, f'poly{i:d}_y', json.dumps(lat))
     # Output HDF5 structure information
     logging.info(filename)
     logging.info(fileID.get_storer('sliderule_segments').non_index_axes[0][1])
@@ -658,22 +721,24 @@ def write_h5py(df, filename, attributes, **kwargs):
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
     kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
     # open HDF5 file object
     fileID = h5py.File(filename, mode='w')
     # create HDF5 records
     h5 = {}
-    # create dataset for variable
+    # create output delta time variable
     key = 'delta_time'
-    h5[key] = fileID.create_dataset(key, df[key].shape, data=df[key],
-        dtype=df[key].dtype, compression='gzip')
-    # set attributes for variable
+    units, epoch = split_date_string(kwargs['units'])
+    delta_time = convert_datetime(df.index, epoch)/_to_sec[units]
+    h5[key] = fileID.create_dataset(key, delta_time.shape, data=delta_time,
+        dtype=delta_time.dtype, compression='gzip')
+    # set attributes for delta time
+    attributes['delta_time']['units'] = kwargs['units']
+    attributes['delta_time']['long_name'] = "Elapsed GPS time"
     for att_key,att_val in attributes[key].items():
         h5[key].attrs[att_key] = att_val
     # for each variable in the dataframe
     for key,val in df.items():
-        # skip delta time variable
-        if (key == 'delta_time'):
-            continue
         # create dataset for variable
         h5[key] = fileID.create_dataset(key, val.shape, data=val,
             dtype=val.dtype, compression='gzip')
@@ -723,8 +788,8 @@ def write_h5py(df, filename, attributes, **kwargs):
         lon, lat = from_region(poly)
         lon = attributes_encoder(lon)
         lat = attributes_encoder(lat)
-        fileID.attrs['poly{0:d}_x'.format(i)] = json.dumps(lon)
-        fileID.attrs['poly{0:d}_y'.format(i)] = json.dumps(lat)
+        fileID.attrs[f'poly{i:d}_x'] = json.dumps(lon)
+        fileID.attrs[f'poly{i:d}_y'] = json.dumps(lat)
     # Output HDF5 structure information
     logging.info(filename)
     logging.info(list(fileID.keys()))
@@ -785,8 +850,8 @@ def read_pytables(filename, **kwargs):
     while True:
         # attempt to get x and y coordinates for query polygon
         try:
-            x = json.loads(getattr(fileID.root._v_attrs,'poly{0:d}_x'.format(i)))
-            y = json.loads(getattr(fileID.root._v_attrs,'poly{0:d}_y'.format(i)))
+            x = json.loads(getattr(fileID.root._v_attrs,f'poly{i:d}_x'))
+            y = json.loads(getattr(fileID.root._v_attrs,f'poly{i:d}_y'))
         except:
             break
         else:
@@ -855,8 +920,8 @@ def read_h5py(filename, **kwargs):
     while True:
         # attempt to get x and y coordinates for query polygon
         try:
-            x = json.loads(fileID.attrs['poly{0:d}_x'.format(i)])
-            y = json.loads(fileID.attrs['poly{0:d}_y'.format(i)])
+            x = json.loads(fileID.attrs[f'poly{i:d}_x'])
+            y = json.loads(fileID.attrs[f'poly{i:d}_y'])
         except:
             break
         else:
@@ -864,18 +929,20 @@ def read_h5py(filename, **kwargs):
             regions.append(to_region(x,y))
             # add to polygon counter
             i += 1
-    # Closing the HDF5 file
-    fileID.close()
     # Generate Time Column
-    delta_time = (h5['delta_time']*1e9).astype('timedelta64[ns]')
-    atlas_sdp_epoch = np.datetime64(datetime.datetime(2018, 1, 1))
-    h5['time'] = geopandas.pd.to_datetime(atlas_sdp_epoch + delta_time)
+    units, epoch = split_date_string(fileID['delta_time'].attrs['units'])
+    delta_time = (1e9*_to_sec[units]*h5['delta_time']).astype('timedelta64[ns]')
+    h5['time'] = geopandas.pd.to_datetime(np.datetime64(epoch) + delta_time)
+    # remove delta time from dictionary
+    del h5['delta_time']
     # generate geometry column
     lon_key,lat_key = (kwargs['lon_key'],kwargs['lat_key'])
     geometry = geopandas.points_from_xy(h5[lon_key],h5[lat_key])
     # remove coordinates from dictionary
     del h5[lon_key]
     del h5[lat_key]
+    # Closing the HDF5 file
+    fileID.close()
     # create Pandas DataFrame object
     df = geopandas.pd.DataFrame(h5)
     # build GeoDataFrame
