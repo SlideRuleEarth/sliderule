@@ -102,7 +102,7 @@ Asset::IODriver::~IODriver (void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<name>, <driver>, <path>, <index>)
+ * luaCreate - create(<name>, <identity>, <driver>, <path>, [<index>], [<region>], [<endpoint>])
  *----------------------------------------------------------------------------*/
 int Asset::luaCreate (lua_State* L)
 {

@@ -6,7 +6,7 @@ local pp = require("prettyprint")
 -- Setup --
 
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
-local test_bucket = "icesat2-sliderule"
+local test_bucket = "sliderule"
 local test_path = "data/test"
 local test_file = "t8.shakespeare.txt"
 local status = false

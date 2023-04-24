@@ -9,13 +9,14 @@ json = require("json")
 local assets = asset.loaddir()
 local asset_name = "icesat2"
 local nsidc_s3 = core.getbyname(asset_name)
+local name, identity, driver = nsidc_s3:info()
 
-local creds = aws.csget(asset_name)
+local creds = aws.csget(identity)
 if not creds then
     local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
     local response, _ = netsvc.get(earthdata_url)
     local _, credential = pcall(json.decode, response)
-    aws.csput(asset_name, credential)
+    aws.csput(identity, credential)
 end
 
 -- Unit Test --
@@ -26,7 +27,7 @@ local filelist = { "ATL03_20181019065445_03150111_005_01.h5",
                    "ATL03_20200304065203_10470605_005_01.h5" }
 
 -- get index filename
-local name, format, path, index_filename, region, endpoint, status = nsidc_s3:info()
+local name, identity, driver, path, index_filename, region, endpoint, status = nsidc_s3:info()
 runner.check(status)
 
 -- setup index file writer
