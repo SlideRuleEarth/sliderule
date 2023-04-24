@@ -18,6 +18,8 @@ Additional files are necessary to run some of the notebooks locally.  They are:
  * :download:`grandmesa.geojson <../assets/grandmesa.geojson>`
  * :download:`dicksonfjord.geojson <../assets/dicksonfjord.geojson>`
 
+For more Jupyter Notebook examples, checkout out our `sliderule-python repository <https://github.com/ICESat2-SlideRule/sliderule-python>`_.
+
 
 Example Notebooks
 #################
