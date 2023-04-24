@@ -1,4 +1,4 @@
-asset,      format,     path,       index,          region,     endpoint
-dataset1,   file,       /data/1,    dataset1.index, local,      local
-dataset2,   file,       /data/2,    dataset2.index, local,      local
-dataset3,   s3,         /data/3,    dataset3.index, local,      local
+asset,      identity,   driver,     path,       index,          region,     endpoint
+dataset1,   nil,        file,       /data/1,    dataset1.index, local,      local
+dataset2,   nil,        file,       /data/2,    dataset2.index, local,      local
+dataset3,   nil,        s3,         /data/3,    dataset3.index, local,      local

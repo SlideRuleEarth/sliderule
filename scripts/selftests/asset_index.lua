@@ -8,9 +8,9 @@ local td = sys.cwd() .. "/" .. runner.rootdir(arg[0])
 assets = asset.loaddir("./asset_directory.csv")
 
 expected = {
-    dataset1={format="file", url="/data/1"},
-    dataset2={format="file", url="/data/2"},
-    dataset3={format="s3",   url="/data/3"}
+    dataset1={driver="file", url="/data/1"},
+    dataset2={driver="file", url="/data/2"},
+    dataset3={driver="s3",   url="/data/3"}
 }
 
 local function check_query(act, exp)
@@ -29,17 +29,17 @@ end
 
 print('\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do
-    name, format, url, index_filename, region, endpoint, status = v:info()
-    runner.compare(format, expected[name]["format"])
+    name, identity, driver, url, index_filename, region, endpoint, status = v:info()
+    runner.compare(driver, expected[name]["driver"])
     runner.compare(url, expected[name]["url"])
     runner.check(status)
 end
 
 print('\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
 local a2 = core.getbyname("dataset1")
-name, format, url, index_filename, region, endpoint, status = a2:info()
+name, identity, driver, url, index_filename, region, endpoint, status = a2:info()
 runner.compare(name, "dataset1")
-runner.compare(format, expected["dataset1"]["format"])
+runner.compare(driver, expected["dataset1"]["driver"])
 runner.compare(url, expected["dataset1"]["url"])
 
 print('\n------------------\nTest03: Display Time Tree for Dataset1\n------------------\n')
@@ -62,9 +62,9 @@ check_query(r5, e5)
 
 print('\n------------------\nTest06: Query Overlapping Dataset\n------------------\n')
 local a6 = core.getbyname("dataset2")
-name, format, url, index_filename, region, endpoint, status = a6:info()
+name, identity, driver, url, index_filename, region, endpoint, status = a6:info()
 runner.compare(name, "dataset2")
-runner.compare(format, expected["dataset2"]["format"])
+runner.compare(driver, expected["dataset2"]["driver"])
 runner.compare(url, expected["dataset2"]["url"])
 local i6 = core.intervalindex(a6, "t0", "t1"):name("overlappingindex"):display()
 local r6 = i6:query({t0=6.0, t1=10.0})

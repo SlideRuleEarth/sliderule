@@ -339,7 +339,7 @@ int Asset::luaInfo (lua_State* L)
     }
 
     /* Return Status */
-    return returnLuaStatus(L, status, 7);
+    return returnLuaStatus(L, status, 8);
 }
 
 /*----------------------------------------------------------------------------
