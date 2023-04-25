@@ -33,6 +33,9 @@ Example Notebooks
 - Single Track Demo (`html </web/rtd/_static/html/single_track_demo.html>`_ | `nbviewer <https://nbviewer.org/github/ICESat2-SlideRule/sliderule-python/blob/main/examples/single_track_demo.ipynb>`_ | :download:`download <../assets/single_track_demo.ipynb>`)
     Demonstrates how to request custom ATL06 elevations from SlideRule for a single ICESat-2 granule and then use SlideRule APIs to read and compare the results to the ATL06 standard data product.
 
+- PhoREAL Example (`html </web/rtd/_static/html/phoreal.html>`_ | `nbviewer <https://nbviewer.org/github/ICESat2-SlideRule/sliderule-python/blob/main/examples/phoreal.ipynb>`_ | :download:`download <../assets/phoreal.ipynb>`)
+    Demonstrate use of the PhoREAL algorithm running inside SlideRule.  Vegetation metrics are calculated over the Grand Mesa region and then later combined with calculated elevations.
+
 - ArcticDEM Mosaic Example (`html </web/rtd/_static/html/arcticdem_mosaic.html>`_ | `nbviewer <https://nbviewer.org/github/ICESat2-SlideRule/sliderule-python/blob/main/examples/arcticdem_mosaic.ipynb>`_ | :download:`download <../assets/arcticdem_mosaic.ipynb>`)
     Demonstrates how to sample the ArcticDEM Mosaic raster at generated ATL06-SR points and return all of the data as a unified GeoDataFrame.
 
