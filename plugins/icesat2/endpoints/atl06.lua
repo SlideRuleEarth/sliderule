@@ -43,30 +43,23 @@ if not asset then
     do return end
 end
 
--- Create Record Queue --
-local recq = resource .. "." .. rspq
-
--- ATL06 Dispatcher --
-local atl06_disp = core.dispatcher(recq)
-
 -- Request Parameters */
 local rqst_parms = icesat2.parms(parms)
 
--- Exception Forwarding --
-local except_pub = core.publish(rspq)
-atl06_disp:attach(except_pub, "exceptrec") -- exception records
-atl06_disp:attach(except_pub, "extrec") -- ancillary records
+-- Create ATL03 Record Queue --
+local atl03q = resource .. "." .. rspq
 
--- ATL06 Dispatch Algorithm --
-local atl06_algo = icesat2.atl06(rspq, rqst_parms)
-atl06_disp:attach(atl06_algo, "atl03rec")
+-- Initialize ATL06 Record Queue --
+local atl06q = rspq
 
 -- Raster Sampler --
 local sampler_disp = nil
 if parms[geo.PARMS] then
+    atl06q = "atl06." .. resource .. "." .. rspq
+    rsps_bridge = core.bridge(atl06q, rspq)
     local atl06_rec_type = parms["compact"] and "atl06rec-compact" or "atl06rec"
     local elevation_rec_type = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation"
-    sampler_disp = core.dispatcher(rspq, 1) -- 1 thread required because GeoRaster is not thread safe
+    sampler_disp = core.dispatcher(atl06q, 1) -- 1 thread required because GeoRaster is not thread safe
     for key,settings in pairs(parms[geo.PARMS]) do
         local robj = geo.raster(geo.parms(settings):keyspace(shard))
         if robj then
@@ -83,6 +76,18 @@ if parms[geo.PARMS] then
     sampler_disp:run()
 end
 
+-- ATL06 Dispatcher --
+local atl06_disp = core.dispatcher(atl03q)
+
+-- Exception and Ancillary Record Forwarding --
+local except_pub = core.publish(rspq)
+atl06_disp:attach(except_pub, "exceptrec") -- exception records
+atl06_disp:attach(except_pub, "extrec") -- ancillary records
+
+-- ATL06 Dispatch Algorithm --
+local atl06_algo = icesat2.atl06(atl06q, rqst_parms)
+atl06_disp:attach(atl06_algo, "atl03rec")
+
 -- Run ATL06 Dispatcher --
 atl06_disp:run()
 
@@ -90,7 +95,7 @@ atl06_disp:run()
 userlog:sendlog(core.INFO, string.format("request <%s> atl06 processing initiated on %s ...", rspq, resource))
 
 -- ATL03 Reader --
-local atl03_reader = icesat2.atl03(asset, resource, recq, rqst_parms, true)
+local atl03_reader = icesat2.atl03(asset, resource, atl03q, rqst_parms, true)
 
 -- Wait Until Reader Completion --
 while (userlog:numsubs() > 0) and not atl03_reader:waiton(interval * 1000) do

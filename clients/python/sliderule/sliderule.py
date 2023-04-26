@@ -578,7 +578,7 @@ def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organizatio
         >>> import sliderule
         >>> sliderule.init()
     '''
-    if verbose:
+    if verbose and loglevel == logging.CRITICAL:
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel)
     set_verbose(verbose)
