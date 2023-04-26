@@ -75,7 +75,7 @@ local function initialize(resource, parms, algo, args)
     userlog:sendlog(core.INFO, string.format("request <%s> processing initialized on %s ...", rspq, resource))
 
     -- Return Needed Objects to Continue Processing Request --
-    return {asset=asset, algo_disp=algo_disp, sample_disp=sampler_disp, userlog=userlog}
+    return {asset=asset, algo_disp=algo_disp, sampler_disp=sampler_disp, userlog=userlog}
 end
 
 --
