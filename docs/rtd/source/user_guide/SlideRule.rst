@@ -91,15 +91,26 @@ A source dataset is called an **asset** and is specified by its name as a string
 The asset name tells SlideRule where to get the data, and what format the data should be in. The following assets are supported by the current deployment of SlideRule:
 
 .. csv-table::
-    :header: asset,          format,     path,          index,      region,     endpoint
-
-    icesat2,           cumulus,    nsidc-cumulus-prod-protected,                                       nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    atlas-s3,           s3,         sliderule/data/ATLAS,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    atlas-local,        file,       /data/ATLAS,                                                        nil,                local,      local
-    ornl-s3,            s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    arcticdem-mosaic,   nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m,                 2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
-    arcticdem-strips,   nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    rema-mosaic,        nil,        /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m,                      2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
+    :header: asset,             identity,       driver,     path,                                                                   index,              region,     endpoint
+    icesat2,                    nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    gedil4a,                    ornl-cloud,     s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,        nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    gedil4b,                    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass/data,         GEDI04_B_MW019MW138_02_002_05_R01000M_V2.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
+    gedil3-elevation,           ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif,    us-west-2, https://s3.us-west-2.amazonaws.com
+    gedil3-canopy,              ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_rh100_mean_2019108_2022019_002_03.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
+    gedil3-elevation-stddev,    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif,  us-west-2, https://s3.us-west-2.amazonaws.com
+    gedil3-canopy-stddev,       ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_rh100_stddev_2019108_2022019_002_03.tif,            us-west-2, https://s3.us-west-2.amazonaws.com
+    gedil3-counts,              ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_counts_2019108_2022019_002_03.tif,                  us-west-2, https://s3.us-west-2.amazonaws.com
+    gedil2a,                    iam-role,       s3,         sliderule/data/GEDI,                                                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    gedil1b,                    iam-role,       s3,         sliderule/data/GEDI,                                                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    landsat-hls,                lpdaac-cloud,   nil,        /vsis3/lp-prod-protected,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    arcticdem-mosaic,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m,                     2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
+    arcticdem-strips,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    rema-mosaic,                nil,            nil,        /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m,                          2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
+    rema-strips,                nil,            nil,        /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m,                         nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    atlas-local,                local,          file,       /data/ATLAS,                                                            nil,                local,      local
+    gedi-local,                 local,          file,       /data/GEDI,                                                             nil,                local,      local
+    atlas-s3,                   iam-role,       s3,         sliderule/data/ATLAS,                                                   nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    nsidc-s3,                   nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 
 5. Parameters
 #############
