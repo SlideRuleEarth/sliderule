@@ -29,7 +29,7 @@ local resource = rqst["resource"]
 local parms = rqst["parms"]
 local atl03_asset = parms["asset"] or rqst["atl03-asset"] or "icesat2"
 parms["asset"] = atl03_asset -- backward compatibility layer
-local timeout = parms["node-timeout"] or parms["timeout"] or icesat2.NODE_TIMEOUT
+local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 local shard = rqst["shard"] or 0 -- key space
 
 -- Initialize Timeouts --
