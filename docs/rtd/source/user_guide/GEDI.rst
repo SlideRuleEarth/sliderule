@@ -9,7 +9,7 @@ GEDI Plugin Module
 The GEDI API currently provides subsetting and raster sampling capabilities to SlideRule for the L1B, L2A, L3, L4A, and L4B datasets.
 * The ``L1B`` dataset can be subsetted with waveforms returned for each footprint inside a user-supplied area of interest
 * The ``L2A`` dataset can be subsetted with elevations returned for each footprint inside a user-supplied area of interest
-* The ``L3 ``dataset can be sampled at specific coordinates and associated with any other SlideRule generated data product that is geolocated
+* The ``L3`` dataset can be sampled at specific coordinates and associated with any other SlideRule generated data product that is geolocated
 * The ``L4A`` dataset can be subsetted with elevation and above-ground vegetation density returned for each footprint inside a user-supplied area of interest
 * The ``L4B`` dataset can be sampled at specific coordinates and associated with any other SlideRule generated data product that is geolocated
 
@@ -100,6 +100,7 @@ The footprint data is stored along-track inside the GEDI granules. The data is r
 --------------------------
 
 The following raster datasets are available to sample:
+
 * ``"gedil3-elevation"``: GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif
 * ``"gedil3-canopy"``: GEDI03_rh100_mean_2019108_2022019_002_03.tif
 * ``"gedil3-elevation-stddev"``: GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif
@@ -132,6 +133,7 @@ The footprint data is stored along-track inside the GEDI granules. The data is r
 --------------------------
 
 The following raster datasets are available to sample:
+
 * ``"gedil4b"``: GEDI04_B_MW019MW138_02_002_05_R01000M_V2.tif
 
 For example, if you wanted to sample the GEDI L4B biodensity raster and calculate zonal statistics for every ICESat-2 PhoREAL data point, then you could add the following entry to your parameters for your PhoREAL request:

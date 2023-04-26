@@ -2,7 +2,7 @@
 gedi
 =======
 
-The GEDI Python API ``gedi.py`` is used to access the services provided by the **gedu** plugin for SlideRule. From Python, the module can be imported via:
+The GEDI Python API ``gedi.py`` is used to access the services provided by the **gedi** plugin for SlideRule. From Python, the module can be imported via:
 
 .. code-block:: python
 
