@@ -1129,28 +1129,25 @@ void GeoRaster::updateCache(OGRPoint& p)
             const raster_info_t& rinfo = raster_iter[j].value;
             key = rinfo.fileName.c_str();
 
-            if(rasterDict.find(key, &raster))
+            bool inCache = rasterDict.find(key, &raster);
+            if(!inCache)
             {
-                /* Update existing raster, mark raster for next sampling */
-                assert(raster);
-                raster->groupId = groupId;
-                raster->enabled = true;
-                raster->point   = p;
-                raster->useTime = TimeLib::latchtime();
-            }
-            else
-            {
-                /* Create new raster and add to dictionary */
+                /* Create new raster */
                 raster = new Raster;
                 assert(raster);
+                raster->fileName = key;
+                raster->gpsTime  = static_cast<double>(rinfo.gpsTime / 1000);
+            }
 
-                raster->groupId      = groupId;
-                raster->enabled      = true;
-                raster->point        = p;
-                raster->sample.value = INVALID_SAMPLE_VALUE;
-                raster->fileName     = key;
-                raster->gpsTime      = static_cast<double>(rinfo.gpsTime / 1000);
-                raster->useTime      = TimeLib::latchtime();
+            raster->groupId      = groupId;
+            raster->enabled      = true;
+            raster->point        = p;
+            raster->sample.value = INVALID_SAMPLE_VALUE;
+            raster->useTime      = TimeLib::latchtime();
+
+            if(!inCache)
+            {
+                /* Add new raster to dictionary */
                 rasterDict.add(key, raster);
             }
         }
