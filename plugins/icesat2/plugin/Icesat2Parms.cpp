@@ -53,13 +53,9 @@ const char* Icesat2Parms::YAPC_WIN_X                   = "win_x";
 const char* Icesat2Parms::YAPC_VERSION                 = "version";
 const char* Icesat2Parms::ATL08_CLASS                  = "atl08_class";
 const char* Icesat2Parms::QUALITY                      = "quality_ph";
-const char* Icesat2Parms::POLYGON                      = "poly";
-const char* Icesat2Parms::RASTER                       = "raster";
 const char* Icesat2Parms::TRACK                        = "track";
 const char* Icesat2Parms::STAGES                       = "stages";
 const char* Icesat2Parms::COMPACT                      = "compact";
-const char* Icesat2Parms::LATITUDE                     = "lat";
-const char* Icesat2Parms::LONGITUDE                    = "lon";
 const char* Icesat2Parms::ALONG_TRACK_SPREAD           = "ats";
 const char* Icesat2Parms::MIN_PHOTON_COUNT             = "cnt";
 const char* Icesat2Parms::EXTENT_LENGTH                = "len";
@@ -71,22 +67,12 @@ const char* Icesat2Parms::PASS_INVALID                 = "pass_invalid";
 const char* Icesat2Parms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* Icesat2Parms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* Icesat2Parms::ATL03_PH_FIELDS              = "atl03_ph_fields";
-const char* Icesat2Parms::RQST_TIMEOUT                 = "rqst-timeout";
-const char* Icesat2Parms::NODE_TIMEOUT                 = "node-timeout";
-const char* Icesat2Parms::READ_TIMEOUT                 = "read-timeout";
-const char* Icesat2Parms::GLOBAL_TIMEOUT               = "timeout";
 const char* Icesat2Parms::PHOREAL                      = "phoreal";
 const char* Icesat2Parms::PHOREAL_BINSIZE              = "binsize";
 const char* Icesat2Parms::PHOREAL_GEOLOC               = "geoloc";
 const char* Icesat2Parms::PHOREAL_USE_ABS_H            = "use_abs_h";
 const char* Icesat2Parms::PHOREAL_WAVEFORM             = "send_waveform";
 const char* Icesat2Parms::PHOREAL_ABOVE                = "above_classifier";
-
-const char* Icesat2Parms::OBJECT_TYPE = "Icesat2Parms";
-const char* Icesat2Parms::LuaMetaName = "Icesat2Parms";
-const struct luaL_Reg Icesat2Parms::LuaMetaTable[] = {
-    {NULL,          NULL}
-};
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -272,7 +258,7 @@ int64_t Icesat2Parms::deltatime2timestamp (double delta_time)
  * Constructor
  *----------------------------------------------------------------------------*/
 Icesat2Parms::Icesat2Parms(lua_State* L, int index):
-    LuaObject                   (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    NetsvcParms                 (L, index),
     surface_type                (SRT_LAND_ICE),
     pass_invalid                (false),
     dist_in_seg                 (false),
@@ -287,7 +273,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
                                   .min_knn    = 5,
                                   .win_h      = 6.0,
                                   .win_x      = 15.0 },
-    raster                      (NULL),
     track                       (ALL_TRACKS),
     max_iterations              (5),
     minimum_photon_count        (10),
@@ -298,9 +283,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     extent_step                 (20.0),
     atl03_geo_fields            (NULL),
     atl03_ph_fields             (NULL),
-    rqst_timeout                (DEFAULT_RQST_TIMEOUT),
-    node_timeout                (DEFAULT_NODE_TIMEOUT),
-    read_timeout                (DEFAULT_READ_TIMEOUT),
     phoreal                     { .binsize          = 1.0,
                                   .geoloc           = PHOREAL_MEDIAN,
                                   .use_abs_h        = false,
@@ -349,18 +331,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         lua_getfield(L, index, Icesat2Parms::ATL08_CLASS);
         get_lua_atl08_class(L, -1, &provided);
         if(provided) stages[STAGE_ATL08] = true;
-        lua_pop(L, 1);
-
-        /* Polygon */
-        lua_getfield(L, index, Icesat2Parms::POLYGON);
-        get_lua_polygon(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d points", Icesat2Parms::POLYGON, (int)polygon.length());
-        lua_pop(L, 1);
-
-        /* Raster */
-        lua_getfield(L, index, Icesat2Parms::RASTER);
-        get_lua_raster(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s file for use", Icesat2Parms::RASTER);
         lua_pop(L, 1);
 
         /* Track */
@@ -429,38 +399,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
         lua_pop(L, 1);
 
-        /* Global Timeout */
-        lua_getfield(L, index, Icesat2Parms::GLOBAL_TIMEOUT);
-        int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
-        if(provided)
-        {
-            rqst_timeout = global_timeout;
-            node_timeout = global_timeout;
-            read_timeout = global_timeout;
-            mlog(DEBUG, "Setting %s to %d", Icesat2Parms::RQST_TIMEOUT, global_timeout);
-            mlog(DEBUG, "Setting %s to %d", Icesat2Parms::NODE_TIMEOUT, global_timeout);
-            mlog(DEBUG, "Setting %s to %d", Icesat2Parms::READ_TIMEOUT, global_timeout);
-        }
-        lua_pop(L, 1);
-
-        /* Request Timeout */
-        lua_getfield(L, index, Icesat2Parms::RQST_TIMEOUT);
-        rqst_timeout = LuaObject::getLuaInteger(L, -1, true, rqst_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::RQST_TIMEOUT, rqst_timeout);
-        lua_pop(L, 1);
-
-        /* Node Timeout */
-        lua_getfield(L, index, Icesat2Parms::NODE_TIMEOUT);
-        node_timeout = LuaObject::getLuaInteger(L, -1, true, node_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::NODE_TIMEOUT, node_timeout);
-        lua_pop(L, 1);
-
-        /* Read Timeout */
-        lua_getfield(L, index, Icesat2Parms::READ_TIMEOUT);
-        read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::READ_TIMEOUT, read_timeout);
-        lua_pop(L, 1);
-
         /* PhoREAL */
         lua_getfield(L, index, Icesat2Parms::PHOREAL);
         get_lua_phoreal(L, -1, &provided);
@@ -499,7 +437,6 @@ Icesat2Parms::~Icesat2Parms (void)
  *----------------------------------------------------------------------------*/
 void Icesat2Parms::cleanup (void)
 {
-    if(raster) delete raster;
     if(atl03_geo_fields) delete atl03_geo_fields;
     if(atl03_ph_fields) delete atl03_ph_fields;
 }
@@ -813,71 +750,6 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "ATL08 classification must be provided as a table or string");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * get_lua_polygon
- *----------------------------------------------------------------------------*/
-void Icesat2Parms::get_lua_polygon (lua_State* L, int index, bool* provided)
-{
-    /* Reset Provided */
-    if(provided) *provided = false;
-
-    /* Must be table of coordinates */
-    if(lua_istable(L, index))
-    {
-        /* Get Number of Points in Polygon */
-        int num_points = lua_rawlen(L, index);
-
-        /* Iterate through each coordinate */
-        for(int i = 0; i < num_points; i++)
-        {
-            /* Get coordinate table */
-            lua_rawgeti(L, index, i+1);
-            if(lua_istable(L, index))
-            {
-                MathLib::coord_t coord;
-
-                /* Get longitude entry */
-                lua_getfield(L, index, Icesat2Parms::LONGITUDE);
-                coord.lon = LuaObject::getLuaFloat(L, -1);
-                lua_pop(L, 1);
-
-                /* Get latitude entry */
-                lua_getfield(L, index, Icesat2Parms::LATITUDE);
-                coord.lat = LuaObject::getLuaFloat(L, -1);
-                lua_pop(L, 1);
-
-                /* Add Coordinate */
-                polygon.add(coord);
-                if(provided) *provided = true;
-            }
-            lua_pop(L, 1);
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * get_lua_raster
- *----------------------------------------------------------------------------*/
-void Icesat2Parms::get_lua_raster (lua_State* L, int index, bool* provided)
-{
-    /* Reset Provided */
-    if(provided) *provided = false;
-
-    /* Must be table of coordinates */
-    if(lua_istable(L, index))
-    {
-        try
-        {
-            raster = GeoJsonRaster::create(L, index);
-            if(provided) *provided = true;
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Error creating GeoJsonRaster file: %s", e.what());
-        }
     }
 }
 

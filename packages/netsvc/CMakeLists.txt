@@ -22,6 +22,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.cpp
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/NetsvcParms.cpp
     )
 
     target_include_directories (slideruleLib
@@ -37,6 +38,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.h
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h
             ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/NetsvcParms.h
         DESTINATION
             ${INCDIR}
     )

@@ -42,12 +42,13 @@
 #include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
+#include "NetsvcParms.h"
 
 /******************************************************************************
  * REQUEST PARAMETERS
  ******************************************************************************/
 
-class Icesat2Parms: public LuaObject
+class Icesat2Parms: public NetsvcParms
 {
     public:
 
@@ -66,13 +67,9 @@ class Icesat2Parms: public LuaObject
         static const char* YAPC_VERSION;
         static const char* ATL08_CLASS;
         static const char* QUALITY;
-        static const char* POLYGON;
-        static const char* RASTER;
         static const char* TRACK;
         static const char* STAGES;
         static const char* COMPACT;
-        static const char* LATITUDE;
-        static const char* LONGITUDE;
         static const char* ALONG_TRACK_SPREAD;
         static const char* MIN_PHOTON_COUNT;
         static const char* EXTENT_LENGTH;
@@ -84,10 +81,6 @@ class Icesat2Parms: public LuaObject
         static const char* DISTANCE_IN_SEGMENTS;
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
-        static const char* RQST_TIMEOUT;
-        static const char* NODE_TIMEOUT;
-        static const char* READ_TIMEOUT;
-        static const char* GLOBAL_TIMEOUT; // sets all timeouts at once
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
         static const char* PHOREAL_GEOLOC;
@@ -104,17 +97,9 @@ class Icesat2Parms: public LuaObject
 
         static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
 
-        static const int DEFAULT_RQST_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
-        static const int DEFAULT_NODE_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
-        static const int DEFAULT_READ_TIMEOUT       = EndpointProxy::DEFAULT_TIMEOUT; // seconds
-
         static const uint8_t INVALID_FLAG           = 0xFF;
 
         static const int64_t ATLAS_SDP_EPOCH_GPS    = 1198800018; // seconds to add to ATLAS delta times to get GPS times
-
-        static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -266,8 +251,6 @@ class Icesat2Parms: public LuaObject
         bool                    atl08_class[NUM_ATL08_CLASSES]; // list of surface classifications to use (leave empty to skip)
         bool                    stages[NUM_STAGES];             // algorithm iterations
         yapc_t                  yapc;                           // settings used in YAPC algorithm
-        List<MathLib::coord_t>  polygon;                        // polygon of region of interest
-        GeoJsonRaster*          raster;                         // raster of region of interest, created from geojson file
         int                     track;                          // reference pair track number (1, 2, 3, or 0 for all tracks)
         int                     max_iterations;                 // least squares fit iterations
         int                     minimum_photon_count;           // PE
@@ -278,9 +261,6 @@ class Icesat2Parms: public LuaObject
         double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
         string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
-        int                     rqst_timeout;                   // total time in seconds for request to be processed
-        int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
-        int                     read_timeout;                   // time in seconds for a single read of an asset to take
         phoreal_t               phoreal;                        // phoreal algorithm settings
 
     private:
@@ -296,8 +276,6 @@ class Icesat2Parms: public LuaObject
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
-        void                    get_lua_polygon         (lua_State* L, int index, bool* provided);
-        void                    get_lua_raster          (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
         void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);

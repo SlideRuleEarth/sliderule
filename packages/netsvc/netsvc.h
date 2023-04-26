@@ -40,6 +40,7 @@
 #include "EndpointProxy.h"
 #include "OrchestratorLib.h"
 #include "ProvisioningSystemLib.h"
+#include "NetsvcParms.h"
 
 /******************************************************************************
  * PROTOTYPES
