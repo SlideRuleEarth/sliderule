@@ -87,5 +87,3 @@ set_max_resources
 cmr
 ---
 .. autofunction:: sliderule.icesat2.cmr
-
-""""""""""""""""

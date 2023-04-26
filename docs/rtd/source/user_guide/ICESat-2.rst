@@ -128,11 +128,8 @@ For example:
         "atl03_ph_fields":      ["pce_mframe_cnt"]
     }
 
-2.6 PhoREAL parameters (feature preview)
-----------------------------------------
-
-.. warning::
-    The PhoREAL capabilities in SlideRule are still in development and are subject to change with each release until it is officially supported.
+2.6 PhoREAL parameters
+-----------------------
 
 The PhoREAL vegetation algorithm, developed at the University of Texas at Austin, provides vegatation statistics over custom-length ATL03 photon segments.  A subset of these algorithms have been integrated into SlideRule are accessed via the _atl08_ and _atl08p_ APIs using the ``"phoreal"`` parameter set.
 
