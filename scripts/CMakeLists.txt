@@ -28,6 +28,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/base64.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/georesource.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/iam_role_auth.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/earth_data_auth.lua
