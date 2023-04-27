@@ -87,6 +87,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    user_guide/Background.rst
    user_guide/SlideRule.rst
    user_guide/ICESat-2.rst
+   user_guide/GEDI.rst
    user_guide/prov-sys.rst
    user_guide/H5Coro.md
    user_guide/GeoParquet.md
@@ -103,6 +104,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
 
    api_reference/sliderule.rst
    api_reference/icesat2.rst
+   api_reference/gedi.rst
    api_reference/earthdata.rst
    api_reference/h5.rst
    api_reference/ipxapi.rst

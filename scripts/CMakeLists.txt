@@ -28,12 +28,14 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/base64.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/georesource.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/iam_role_auth.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/earth_data_auth.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/json.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/packet.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/prettyprint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/proxy.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/service_registry.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/test_executive.lua
     DESTINATION

@@ -634,10 +634,10 @@ int Atl06Dispatch::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, "h5atl03",         lua_obj->stats.h5atl03_rec_cnt);
-        LuaEngine::setAttrInt(L, "filtered",        lua_obj->stats.filtered_cnt);
-        LuaEngine::setAttrInt(L, "posted",          lua_obj->stats.post_success_cnt);
-        LuaEngine::setAttrInt(L, "dropped",         lua_obj->stats.post_dropped_cnt);
+        LuaEngine::setAttrInt(L, "read",        lua_obj->stats.h5atl03_rec_cnt);
+        LuaEngine::setAttrInt(L, "filtered",    lua_obj->stats.filtered_cnt);
+        LuaEngine::setAttrInt(L, "posted",      lua_obj->stats.post_success_cnt);
+        LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.post_dropped_cnt);
 
         /* Optionally Clear */
         if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));

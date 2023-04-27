@@ -65,11 +65,17 @@ int netsvc_open (lua_State* L)
         {"pslogin",     ProvisioningSystemLib::luaLogin},
         {"psvalidate",  ProvisioningSystemLib::luaValidate},
         {"psauth",      ProvisioningSystemLib::Authenticator::luaCreate},
+        {"parms",       NetsvcParms::luaCreate},
         {NULL,          NULL}
     };
 
     /* Set Library */
     luaL_newlib(L, netsvc_functions);
+
+    /* Set Globals */
+    LuaEngine::setAttrInt(L, "RQST_TIMEOUT",  NetsvcParms::DEFAULT_RQST_TIMEOUT);
+    LuaEngine::setAttrInt(L, "NODE_TIMEOUT",  NetsvcParms::DEFAULT_NODE_TIMEOUT);
+    LuaEngine::setAttrInt(L, "READ_TIMEOUT",  NetsvcParms::DEFAULT_READ_TIMEOUT);
 
     return 1;
 }

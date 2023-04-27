@@ -28,7 +28,7 @@ local rqst = json.decode(arg[1])
 local resource = rqst["resource"]
 local parms = rqst["parms"]
 local gedi_asset = parms["asset"]
-local timeout = parms["node-timeout"] or parms["timeout"] or gedi.NODE_TIMEOUT
+local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 
 -- Initialize Timeouts --
 local duration = 0
