@@ -806,6 +806,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
     global service_url, service_org, request_timeout
+    requested_nodes = 0
 
     # Update number of nodes
     if type(desired_nodes) == int:
@@ -820,6 +821,8 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
             rsps_body = rsps.json()
             rsps.raise_for_status()
             requested_nodes = max(min(desired_nodes, rsps_body["max_nodes"]), rsps_body["min_nodes"])
+            if requested_nodes != desired_nodes:
+                logger.info("Provisioning system desired nodes truncated to {}".format(requested_nodes))
         except requests.exceptions.HTTPError as e:
             logger.info('{}'.format(e))
             logger.info('Provisioning system status request returned error => {}'.format(rsps_body["error_msg"]))
@@ -844,7 +847,8 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         available_servers = rsps["nodes"]
     except FatalError:
         available_servers = 0
-    return available_servers, available_servers
+    
+    return available_servers, requested_nodes
 
 #
 # scaleout
@@ -876,12 +880,11 @@ def scaleout(desired_nodes, time_to_live, bypass_dns):
     if bypass_dns:
         __jamdns() # use ip address for cluster
     # Send Initial Request for Desired Cluster State
-    update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
     start = time.time()
-    available_nodes,_ = update_available_servers()
+    available_nodes,requested_nodes = update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
     scale_up_needed = False
     # Wait for Cluster to Reach Desired State
-    while available_nodes < desired_nodes:
+    while available_nodes < requested_nodes:
         scale_up_needed = True
         logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
         time.sleep(10.0)

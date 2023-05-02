@@ -318,11 +318,6 @@ def __query_resources(parm, version, **kwargs):
     # Submission Arguments for CMR
     kwargs.setdefault('return_metadata', False)
 
-    # Check Parameters are Valid
-    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
-        return []
-
     # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
         kwargs['polygon'] = parm["clusters"]
@@ -338,19 +333,24 @@ def __query_resources(parm, version, **kwargs):
     # Build Filters
     name_filter_enabled = False
     rgt_filter = '????'
-    if "rgt" in parm:
+    if "rgt" in parm and parm["rgt"] != None:
         rgt_filter = f'{parm["rgt"]}'.zfill(4)
         name_filter_enabled = True
     cycle_filter = '??'
-    if "cycle" in parm:
+    if "cycle" in parm and parm["cycle"] != None:
         cycle_filter = f'{parm["cycle"]}'.zfill(2)
         name_filter_enabled = True
     region_filter = '??'
-    if "region" in parm:
+    if "region" in parm and parm["region"] != None:
         region_filter = f'{parm["region"]}'.zfill(2)
         name_filter_enabled = True
     if name_filter_enabled:
         kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
+
+    # Check Parameters are Valid
+    if (not name_filter_enabled) and ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
+        return []
 
     # Make CMR Request
     if kwargs['return_metadata']:
