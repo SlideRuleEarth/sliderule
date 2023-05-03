@@ -57,9 +57,10 @@ typedef struct {
     int64_t         time_ns;
     double          latitude;
     double          longitude;
-    double          elevation_lowestmode;
-    double          elevation_highestreturn;
-    double          solar_elevation;
+    float           elevation_lowestmode;
+    float           elevation_highestreturn;
+    float           solar_elevation;
+    float           sensitivity;
     uint8_t         beam;
     uint8_t         flags;
 } g02a_footprint_t;
@@ -108,6 +109,7 @@ class Gedi02aReader: public FootprintReader<g02a_footprint_t>
                 H5Array<float>      elev_lowestmode;
                 H5Array<float>      elev_highestreturn;
                 H5Array<float>      solar_elevation;
+                H5Array<float>      sensitivity;
                 H5Array<uint8_t>    degrade_flag;
                 H5Array<uint8_t>    quality_flag;
                 H5Array<uint8_t>    surface_flag;

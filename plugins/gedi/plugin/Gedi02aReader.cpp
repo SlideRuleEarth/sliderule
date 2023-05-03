@@ -51,9 +51,10 @@ const RecordObject::fieldDef_t Gedi02aReader::fpRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(g02a_footprint_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(g02a_footprint_t, latitude),                1,  NULL, NATIVE_FLAGS},
     {"longitude",       RecordObject::DOUBLE,   offsetof(g02a_footprint_t, longitude),               1,  NULL, NATIVE_FLAGS},
-    {"elevation_lm",    RecordObject::DOUBLE,   offsetof(g02a_footprint_t, elevation_lowestmode),    1,  NULL, NATIVE_FLAGS},
-    {"elevation_hr",    RecordObject::DOUBLE,   offsetof(g02a_footprint_t, elevation_highestreturn), 1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::DOUBLE,   offsetof(g02a_footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
+    {"elevation_lm",    RecordObject::FLOAT,    offsetof(g02a_footprint_t, elevation_lowestmode),    1,  NULL, NATIVE_FLAGS},
+    {"elevation_hr",    RecordObject::FLOAT,    offsetof(g02a_footprint_t, elevation_highestreturn), 1,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::FLOAT,    offsetof(g02a_footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
+    {"sensitivity",     RecordObject::FLOAT,    offsetof(g02a_footprint_t, sensitivity),             1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g02a_footprint_t, beam),                    1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT8,    offsetof(g02a_footprint_t, flags),                   1,  NULL, NATIVE_FLAGS}
 };
@@ -132,6 +133,7 @@ Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
     elev_lowestmode (info->reader->asset, info->reader->resource, SafeString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     elev_highestreturn (info->reader->asset, info->reader->resource, SafeString("%s/elev_highestreturn",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    sensitivity     (info->reader->asset, info->reader->resource, SafeString("%s/sensitivity",      GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/degrade_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     quality_flag    (info->reader->asset, info->reader->resource, SafeString("%s/quality_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     surface_flag    (info->reader->asset, info->reader->resource, SafeString("%s/surface_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
@@ -143,6 +145,7 @@ Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
     elev_lowestmode.join(info->reader->read_timeout_ms, true);
     elev_highestreturn.join(info->reader->read_timeout_ms, true);
     solar_elevation.join(info->reader->read_timeout_ms, true);
+    sensitivity.join(info->reader->read_timeout_ms, true);
     degrade_flag.join(info->reader->read_timeout_ms, true);
     quality_flag.join(info->reader->read_timeout_ms, true);
     surface_flag.join(info->reader->read_timeout_ms, true);
@@ -234,6 +237,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 fp->elevation_lowestmode    = Gedi02a.elev_lowestmode[footprint];
                 fp->elevation_highestreturn = Gedi02a.elev_highestreturn[footprint];
                 fp->solar_elevation         = Gedi02a.solar_elevation[footprint];
+                fp->sensitivity             = Gedi02a.sensitivity[footprint];
                 fp->beam                    = info->beam;
                 fp->flags                   = 0;
                 if(Gedi02a.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;

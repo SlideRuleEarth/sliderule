@@ -96,6 +96,60 @@ const char* GediParms::beam2group (int beam)
 }
 
 /*----------------------------------------------------------------------------
+ * group2beam
+ *----------------------------------------------------------------------------*/
+int GediParms::group2beam (const char* group)
+{
+    if      (StringLib::match(group, "BEAM0000"))   return BEAM0000;
+    else if (StringLib::match(group, "BEAM0001"))   return BEAM0001;
+    else if (StringLib::match(group, "BEAM0010"))   return BEAM0010;
+    else if (StringLib::match(group, "BEAM0011"))   return BEAM0011;
+    else if (StringLib::match(group, "BEAM0101"))   return BEAM0101;
+    else if (StringLib::match(group, "BEAM0110"))   return BEAM0110;
+    else if (StringLib::match(group, "BEAM1000"))   return BEAM1000;
+    else if (StringLib::match(group, "BEAM1011"))   return BEAM1011;
+    else                                            return UNKNOWN_BEAM;
+}
+
+/*----------------------------------------------------------------------------
+ * beam2index
+ *----------------------------------------------------------------------------*/
+int GediParms::beam2index (int beam)
+{
+    switch((beam_t)beam)
+    {
+        case BEAM0000:  return 0;
+        case BEAM0001:  return 1;
+        case BEAM0010:  return 2;
+        case BEAM0011:  return 3;
+        case BEAM0101:  return 4;
+        case BEAM0110:  return 5;
+        case BEAM1000:  return 6;
+        case BEAM1011:  return 7;
+        default:        return -1;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * index2group
+ *----------------------------------------------------------------------------*/
+const char* GediParms::index2group (int index)
+{
+    switch(index)
+    {
+        case 0:     return "BEAM0000";
+        case 1:     return "BEAM0001";
+        case 2:     return "BEAM0010";
+        case 3:     return "BEAM0011";
+        case 4:     return "BEAM0101";
+        case 5:     return "BEAM0110";
+        case 6:     return "BEAM1000";
+        case 7:     return "BEAM1011";
+        default:    return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
  * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
  *----------------------------------------------------------------------------*/
 int64_t GediParms::deltatime2timestamp (double delta_time)
@@ -112,7 +166,7 @@ int64_t GediParms::deltatime2timestamp (double delta_time)
  *----------------------------------------------------------------------------*/
 GediParms::GediParms(lua_State* L, int index):
     NetsvcParms                 (L, index),
-    beam                        (ALL_BEAMS),
+    beams                       {true, true, true, true, true, true, true, true},
     degrade_filter              (DEGRADE_UNFILTERED),
     l2_quality_filter           (L2QLTY_UNFILTERED),
     l4_quality_filter           (L4QLTY_UNFILTERED),
@@ -122,10 +176,9 @@ GediParms::GediParms(lua_State* L, int index):
 
     try
     {
-        /* Beam */
+        /* Beams */
         lua_getfield(L, index, GediParms::BEAM);
-        beam = LuaObject::getLuaInteger(L, -1, true, beam, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", GediParms::BEAM, beam);
+        get_lua_beams(L, -1, &provided);
         lua_pop(L, 1);
 
         /* Degrade Flag */
@@ -172,4 +225,100 @@ GediParms::~GediParms (void)
  *----------------------------------------------------------------------------*/
 void GediParms::cleanup (void)
 {
+}
+
+/*----------------------------------------------------------------------------
+ * set_beam
+ *----------------------------------------------------------------------------*/
+bool GediParms::set_beam(int beam)
+{
+    int index = beam2index(beam);
+    if(index >= 0)
+    {
+        beams[index] = true;
+        mlog(DEBUG, "Selecting beam %d", beam);
+        return true;
+    }
+    else
+    {
+        mlog(ERROR, "Invalid beam: %d", beam);
+        return false;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_lua_beams
+ *----------------------------------------------------------------------------*/
+void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    if(provided) *provided = false;
+
+    /* Must be table of beams or a single beam */
+    if(lua_istable(L, index))
+    {
+        /* Clear beam table (sets all to false) */
+        memset(beams, 0, sizeof(beams));
+
+        /* Get number of entries in table */
+        int num_entries = lua_rawlen(L, index);
+        if(num_entries > 0 && provided) *provided = true;
+
+        /* Iterate through each entry in table */
+        for(int i = 0; i < num_entries; i++)
+        {
+            /* Get entry */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set beam */
+            if(lua_isinteger(L, -1))
+            {
+                int beam = LuaObject::getLuaInteger(L, -1);
+                set_beam(beam);
+            }
+            else if(lua_isstring(L, -1))
+            {
+                const char* group = LuaObject::getLuaString(L, -1);
+                int beam = group2beam(group);
+                set_beam(beam);
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(lua_isinteger(L, index))
+    {
+        /* Clear beam table (sets all to false) */
+        memset(beams, 0, sizeof(beams));
+
+        /* Set Beam */
+        int beam = LuaObject::getLuaInteger(L, -1);
+        if(beam == ALL_BEAMS) // special case
+        {
+            for(int i = 0; i < NUM_BEAMS; i++)
+            {
+                beams[i] = true;
+            }
+            mlog(DEBUG, "Selecting all beams");
+        }
+        else
+        {
+            set_beam(beam);
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        /* Clear beam table (sets all to false) */
+        memset(beams, 0, sizeof(beams));
+
+        /* Set Beam */
+        const char* group = LuaObject::getLuaString(L, -1);
+        int beam = group2beam(group);
+        set_beam(beam);
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "Beams must be provided as a table or single integer or string");
+    }
 }
