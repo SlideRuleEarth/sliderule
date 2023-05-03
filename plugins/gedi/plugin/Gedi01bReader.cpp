@@ -174,7 +174,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi02a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
+    uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi01b_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -191,7 +191,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
         long rx0 = gedi01b.rx_start_index[0] - 1;
         long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
         H5Array<float> txwaveform(info->reader->asset, info->reader->resource, SafeString("%s/txwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, tx0, txN);
-        H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, SafeString("%s/rxwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, rx0, txN);
+        H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, SafeString("%s/rxwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, rx0, rxN);
         txwaveform.join(info->reader->read_timeout_ms, true);
         rxwaveform.join(info->reader->read_timeout_ms, true);
 
