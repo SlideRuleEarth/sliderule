@@ -227,39 +227,47 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
     numComplete = 0;
     memset(readerPid, 0, sizeof(readerPid));
 
+    /* Count Number of Beams to Process */
+    int beam_count = 0;
+    int last_beam_index = -1;
+    for(int i = 0; i < GediParms::NUM_BEAMS; i++)
+    {
+        if(parms->beams[i])
+        {
+            beam_count++;
+            last_beam_index = i;
+        }
+    }
+
     /* Process Resource */
     try
     {
         /* Read Beam Data */
-        if(parms->beam == GediParms::ALL_BEAMS)
-        {
-            threadCount = GediParms::NUM_BEAMS;
-            for(int b = 0; b < GediParms::NUM_BEAMS; b++)
-            {
-                info_t* info = new info_t;
-                info->reader = this;
-                info->beam = GediParms::BEAM_NUMBER[b];
-                readerPid[b] = new Thread(subsetter, info);
-            }
-        }
-        else if(parms->beam == GediParms::BEAM0000 ||
-                parms->beam == GediParms::BEAM0001 ||
-                parms->beam == GediParms::BEAM0010 ||
-                parms->beam == GediParms::BEAM0011 ||
-                parms->beam == GediParms::BEAM0101 ||
-                parms->beam == GediParms::BEAM0110 ||
-                parms->beam == GediParms::BEAM1000 ||
-                parms->beam == GediParms::BEAM1011)
+        if(beam_count == 1)
         {
             threadCount = 1;
             info_t* info = new info_t;
             info->reader = this;
-            info->beam = parms->beam;
+            info->beam = GediParms::BEAM_NUMBER[last_beam_index];
             subsetter(info);
+        }
+        else if(beam_count > 0)
+        {
+            threadCount = beam_count;
+            for(int i = 0; i < GediParms::NUM_BEAMS; i++)
+            {
+                if(parms->beams[i])
+                {
+                    info_t* info = new info_t;
+                    info->reader = this;
+                    info->beam = GediParms::BEAM_NUMBER[i];
+                    readerPid[i] = new Thread(subsetter, info);
+                }
+            }
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid beam specified <%d>, must be 0, 1, 2, 3, 5, 6, 8, 11, or -1 for all", parms->beam);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No valid beams specified, must be 0, 1, 2, 3, 5, 6, 8, 11, or -1 for all");
         }
     }
     catch(const RunTimeException& e)
@@ -285,9 +293,9 @@ FootprintReader<footprint_t>::~FootprintReader (void)
 {
     active = false;
 
-    for(int b = 0; b < GediParms::NUM_BEAMS; b++)
+    for(int i = 0; i < GediParms::NUM_BEAMS; i++)
     {
-        if(readerPid[b]) delete readerPid[b];
+        if(readerPid[i]) delete readerPid[i];
     }
 
     delete [] latName;

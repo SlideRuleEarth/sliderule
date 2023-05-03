@@ -56,6 +56,7 @@ class GediParms: public NetsvcParms
 
         /* Beams */
         typedef enum {
+            UNKNOWN_BEAM = -2,
             ALL_BEAMS = -1,
             BEAM0000 = 0,
             BEAM0001 = 1,
@@ -124,13 +125,16 @@ class GediParms: public NetsvcParms
 
         static int          luaCreate           (lua_State* L);
         static const char*  beam2group          (int beam);
+        static int          group2beam          (const char* group);
+        static int          beam2index          (int beam);
+        static const char*  index2group         (int index);
         static int64_t      deltatime2timestamp (double delta_time);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        int                     beam;                           // beam number or -1 for all
+        bool                    beams[NUM_BEAMS];
         degrade_t               degrade_filter;
         l2_quality_t            l2_quality_filter;
         l4_quality_t            l4_quality_filter;
@@ -145,6 +149,8 @@ class GediParms: public NetsvcParms
                                 GediParms               (lua_State* L, int index);
                                 ~GediParms              (void);
         void                    cleanup                 (void);
+        bool                    set_beam                (int beam);
+        void                    get_lua_beams           (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __gedi_parms__ */
