@@ -65,7 +65,7 @@ local errorChecking = true
 local starttime = time.latch();
 
 for i=1,#arr do
--- for i=1, 10 do
+-- for i=1, 14 do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  tbl, status = dem:sample(lon, lat)

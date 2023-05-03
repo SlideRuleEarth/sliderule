@@ -81,6 +81,7 @@ class LandsatHlsRaster: public VctRaster
          *--------------------------------------------------------------------*/
 
                 LandsatHlsRaster (lua_State* L, GeoParms* _parms);
+       virtual ~LandsatHlsRaster (void);
 
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
         void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
@@ -109,6 +110,8 @@ class LandsatHlsRaster: public VctRaster
         bool ndsi;
         bool ndvi;
         bool ndwi;
+
+        List<OGRFeature*> featuresList;
 };
 
 #endif  /* __landsat_hls_raster__ */

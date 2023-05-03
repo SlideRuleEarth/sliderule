@@ -147,6 +147,17 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     }
 }
 
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+LandsatHlsRaster::~LandsatHlsRaster(void)
+{
+    for(int i = 0; i < featuresList.length(); i++)
+    {
+        OGRFeature* feature = featuresList[i];
+        OGRFeature::DestroyFeature(feature);
+    }
+}
 
 /*----------------------------------------------------------------------------
  * getIndexFile
@@ -184,10 +195,24 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
     {
         rasterGroupList->clear();
 
-        /* For now assume the first layer has the feature we need */
-        layer->ResetReading();
-        while (OGRFeature* feature = layer->GetNextFeature())
+        if(featuresList.length() == 0)
         {
+            /* For now assume the first layer has the feature we need */
+            layer->ResetReading();
+            while(OGRFeature* feature = layer->GetNextFeature())
+            {
+                OGRFeature* newFeature = feature->Clone();
+                featuresList.add(newFeature);
+                OGRFeature::DestroyFeature(feature);
+            }
+        }
+
+        /* For now assume the first layer has the feature we need */
+        // layer->ResetReading();
+        // while (OGRFeature* feature = layer->GetNextFeature())
+        for(int i = 0; i < featuresList.length(); i++)
+        {
+            OGRFeature* feature = featuresList[i];
             OGRGeometry *geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
@@ -233,7 +258,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
             }
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
-            OGRFeature::DestroyFeature(feature);
+            // OGRFeature::DestroyFeature(feature);
             rasterGroupList->add(rasterGroupList->length(), rgroup);
         }
         mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
