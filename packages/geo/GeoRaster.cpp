@@ -563,6 +563,7 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
  *----------------------------------------------------------------------------*/
 int GeoRaster::sample(double lon, double lat)
 {
+    double t1 = TimeLib::latchtime();
     invalidateCache();
 
     /* Initial call, open raster index data set if not already opened */
@@ -595,6 +596,8 @@ int GeoRaster::sample(double lon, double lat)
             sampleRasters();
         }
     }
+    double t2 = TimeLib::latchtime();
+    print2term("%-20s %.10lf  cacheCnt: %d\n\n", __FUNCTION__, t2 - t1, rasterDict.length() );
 
     return getSampledRastersCount();
 }

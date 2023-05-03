@@ -179,6 +179,7 @@ void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)
 {
+    double t1 = TimeLib::latchtime();
     try
     {
         rasterGroupList->clear();
@@ -241,6 +242,8 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
+    double t2 = TimeLib::latchtime();
+    print2term("%-20s %.10lf\n", __FUNCTION__, t2 - t1 );
 
     return (rasterGroupList->length() > 0);
 }
