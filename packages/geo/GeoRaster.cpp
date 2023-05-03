@@ -597,7 +597,7 @@ int GeoRaster::sample(double lon, double lat)
         }
     }
     double t2 = TimeLib::latchtime();
-    print2term("%-20s %.10lf  cacheCnt: %d\n\n", __FUNCTION__, t2 - t1, rasterDict.length() );
+    // print2term("%-20s %.10lf  cacheCnt: %d\n\n", __FUNCTION__, t2 - t1, rasterDict.length() );
 
     return getSampledRastersCount();
 }

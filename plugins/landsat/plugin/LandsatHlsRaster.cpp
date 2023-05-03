@@ -268,7 +268,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
     double t2 = TimeLib::latchtime();
-    print2term("%-20s %.10lf\n", __FUNCTION__, t2 - t1 );
+    // print2term("%-20s %.10lf\n", __FUNCTION__, t2 - t1 );
 
     return (rasterGroupList->length() > 0);
 }
