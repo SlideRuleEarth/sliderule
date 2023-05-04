@@ -3,6 +3,7 @@ console = require("console")
 asset = require("asset")
 csv = require("csv")
 json = require("json")
+local td = runner.rootdir(arg[0])
 
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
@@ -14,13 +15,7 @@ local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3c
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 sys.wait(5)
 
-local function script_path()
-    local str = debug.getinfo(2, "S").source:sub(2)
-    return str:match("(.*[/\\])") or "./"
-end
-
-local td = script_path()
-local geojsonfile = td.."hls_trimmed.geojson"
+local geojsonfile = td.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
@@ -335,12 +330,12 @@ runner.check(sampleCnt == 189)
 
 
 
-local geojsonfile = td.."/grand_mesa.geojson"
+local geojsonfile = td.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
-local poifile = td.."/grand_mesa_poi.txt"
+local poifile = td.."../data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")
 -- read in array of POI from file
 local arr = {}
@@ -353,7 +348,7 @@ for l in f:lines() do
 end
 f:close()
 
-local ndvifile = td.."/grand_mesa_ndvi.txt"
+local ndvifile = td.."../data/grand_mesa_ndvi.txt"
 local f = io.open(ndvifile, "r")
 -- read in array of NDVI values
 local ndvi_results = {}

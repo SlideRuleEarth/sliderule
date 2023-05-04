@@ -16,12 +16,12 @@ sys.wait(5)
 
 
 local td = runner.rootdir(arg[0])
-local geojsonfile = td.."/grand_mesa.geojson"
+local geojsonfile = td.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
-local poifile = td.."/grand_mesa_poi.txt"
+local poifile = td.."../data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")
 -- read in array of POI from file
 local arr = {}
@@ -41,7 +41,7 @@ for i=1, 10 do
 end
 ]]
 
-local ndvifile = td.."/grand_mesa_ndvi.txt"
+local ndvifile = td.."../data/grand_mesa_ndvi.txt"
 local f = io.open(ndvifile, "r")
 -- read in array of NDVI values
 local ndvi_results = {}

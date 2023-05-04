@@ -1,1 +1,0 @@
-../selftests/grand_mesa_poi.txt

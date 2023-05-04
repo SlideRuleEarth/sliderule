@@ -16,7 +16,7 @@ sys.wait(5)
 
 
 local td = runner.rootdir(arg[0])
-local geojsonfile = td.."/hls_trimmed.geojson"
+local geojsonfile = td.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
