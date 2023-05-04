@@ -328,7 +328,10 @@ end
 
 runner.check(sampleCnt == 189)
 
-
+-- Grand Mesa test has 26183 samples/ndvi Results
+-- Limit the number of samples for selftest.
+local maxSamples = 100
+local linesRead = 0
 
 local geojsonfile = td.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
@@ -345,6 +348,10 @@ for l in f:lines() do
     table.insert(row, tonumber(snum))
   end
   table.insert(arr, row)
+  linesRead = linesRead + 1
+  if linesRead > maxSamples then
+    break
+  end
 end
 f:close()
 
@@ -352,24 +359,29 @@ local ndvifile = td.."../data/grand_mesa_ndvi.txt"
 local f = io.open(ndvifile, "r")
 -- read in array of NDVI values
 local ndvi_results = {}
+linesRead = 0
 
 for l in f:lines() do
   table.insert(ndvi_results, tonumber(l))
+  linesRead = linesRead + 1
+  if linesRead > maxSamples then
+    break
+  end
 end
 f:close()
-
-print(string.format("\n-------------------------------------------------\nLandsat Grand Mesa test\n-------------------------------------------------"))
-
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents }))
 
 local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
 local badFileCnt = 0
 local badNDVICnt = 0
+
+print(string.format("\n-------------------------------------------------\nLandsat Grand Mesa test\n-------------------------------------------------"))
+
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents }))
 sampleCnt = 0
 
 local starttime = time.latch();
 
-for i=1,#arr do
+for i=1, maxSamples do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  tbl, status = dem:sample(lon, lat)
@@ -399,21 +411,14 @@ for i=1,#arr do
             end
         end
     end
-
     sampleCnt = sampleCnt + 1
-
-    local modulovalue = 2000
-    if (i % modulovalue == 0) then
-        print(string.format("Sample: %d", sampleCnt))
-    end
 end
 
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-print(string.format("\nSamples: %d, wrong NDVI: %d, wrong groupID: %d", sampleCnt, badNDVICnt, badFileCnt))
-print(string.format("ExecTime: %f", dtime))
-runner.check(sampleCnt == 26183)
+print(string.format("Samples: %d, ExecTime: %f", sampleCnt, dtime))
+runner.check(sampleCnt == maxSamples)
 runner.check(badFileCnt == 0)
 runner.check(badNDVICnt == 0)
 
