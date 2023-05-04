@@ -91,6 +91,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    user_guide/prov-sys.rst
    user_guide/H5Coro.md
    user_guide/GeoParquet.md
+   user_guide/GeoRaster.md
    user_guide/Private-Clusters.md
    user_guide/Under-the-Hood.rst
    user_guide/NASA-Earthdata.rst
