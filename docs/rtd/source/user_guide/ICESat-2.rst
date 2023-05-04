@@ -263,8 +263,8 @@ Each extent is uniquely identified by an extent ID. The extent ID is analogous t
 NOTE - while all data returned from SlideRule for ATL03/06/08 endpoints include the extent ID (as ``"extent_id"``), by default the Python client strips it out when it creates the final GeoDataFrame. There is an option to keep the extend ID by setting the "keep_id" argument in the atl03/06/08 group of Python functions to True.  This is useful when performing merges on GeoDataFrames from multiple APIs (for example, you can combine results from atl06 and atl08 endpoints and created a single GeoDataFrame with both elevation and vegatation data in it).
 
 
-3.1 Segmented Photon Data
---------------------------
+3.1 Segmented Photon Data (ATL03)
+---------------------------------
 
 The photon data is stored as along-track segments inside the ATL03 granules, which is then broken apart by SlideRule and re-segmented according to processing
 parameters supplied at the time of the request. The new segments are called **extents**.  When the length of an extent is 40 meters, and the step size is 20 meters, the extent matches the ATL06 segments.
@@ -284,7 +284,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"segment_id"``: segment ID of first ATL03 segment in result
 - ``"segment_dist"``: along track distance from the equator to the center of the extent (in meters)
 - ``"count"``: the number of photons in the segment
-- ``"delta_time"``: seconds from ATLAS Standard Data Product (SDP) epoch (Jan 1, 2018)
+- ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
 - ``"latitude"``: latitude (-90.0 to 90.0)
 - ``"longitude"``: longitude (-180.0 to 180.0)
 - ``"distance"``: along track distance of the photon in meters (with respect to the center of the segment)
@@ -297,15 +297,16 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"yapc_score"``: the photon's YAPC classification (0 - 255, the larger the number the higher the confidence in surface reflection)
 
 
-3.2 Elevations
---------------
+3.2 Elevations (ATL06)
+----------------------
 
-The primary result returned by SlideRule for ICESat-2 processing requests is a set of geolocated elevations corresponding to a geolocated ATL03 along-track segment. The elevations are contained in a GEoDataFrame where each row represents a calculated elevation.
+The primary result returned by SlideRule for ICESat-2 ATL06 processing requests is a set of geolocated elevations corresponding to a geolocated ATL03 along-track segment. The elevations are contained in a GeoDataFrame where each row represents a calculated elevation.
 
 Elements that are present in the **compact** version of the results are noted below.
 
 The elevation GeoDataFrame has the following columns:
 
+- ``"extent_id"``: unique ID associated with custom ATL03 segment (removed from final GeoDataFrame by default)
 - ``"segment_id"``: segment ID of first ATL03 segment in result
 - ``"n_fit_photons"``: number of photons used in final calculation
 - ``"pflags"``: processing flags (0x1 - spread too short; 0x2 - too few photons; 0x4 - max iterations reached)
@@ -314,7 +315,7 @@ The elevation GeoDataFrame has the following columns:
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
 - ``"distance"``: along track distance from the equator in meters
-- ``"delta_time"``: seconds from ATLAS Standard Product epoch (Jan 1, 2018) [*in compact*]
+- ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
 - ``"lat"``: latitude (-90.0 to 90.0) [*in compact*]
 - ``"lon"``: longitude (-180.0 to 180.0) [*in compact*]
 - ``"h_mean"``: elevation in meters from ellipsoid [*in compact*]
@@ -323,6 +324,37 @@ The elevation GeoDataFrame has the following columns:
 - ``"w_surface_window_final"``: width of the window used to select the final set of photons used in the calculation
 - ``"rms_misfit"``: measured error in the linear fit of the surface
 - ``"h_sigma"``: error estimate for the least squares fit model
+
+3.3 Vegetation Metrics (ATL08)
+------------------------------
+
+The primary result returned by SlideRule for ICESat-2 ATL08 processing requests is a set of geolocated vegetation metrics corresponding to a geolocated ATL03 along-track segment. The metrics are contained in a GeoDataFrame where each row represents a segment.
+
+The vegetation GeoDataFrame has the following columns:
+
+- ``"extent_id"``: unique ID associated with custom ATL03 segment (removed from final GeoDataFrame by default)
+- ``"segment_id"``: segment ID of first ATL03 segment in result
+- ``"rgt"``: reference ground track
+- ``"cycle"``: cycle
+- ``"spot"``: laser spot 1 to 6
+- ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
+- ``"ph_count"``: total number of photons used by PhoREAL algorithm for this extent
+- ``"gnd_count"``: number of ground photons used by PhoREAL algorithm for this extent
+- ``"veg_count"``: number of vegetation (canopy and top of canopy) photons used by PhoREAL algorithm for this extent
+- ``"landcover"``: flag indicating if segment includes land surfaces
+- ``"snowcover"``: flag indicating if snow is present in the segment
+- ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
+- ``"lat"``: latitude (-90.0 to 90.0) [*in compact*]
+- ``"lon"``: longitude (-180.0 to 180.0) [*in compact*]
+- ``"distance"``: along track distance from the equator in meters
+- ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
+- ``"h_te_median"``: median terrain elevation in meters (absolute heights)
+- ``"h_max_canopy"``: maximum relief height for canopy photons
+- ``"h_min_canopy"``: minimum relief height for canopy photons
+- ``"h_mean_canopy"``: average relief height for canopy photons
+- ``"h_canopy"``: 98th percentile relief height for canopy photons
+- ``"canopy_openness"``: standard deviation of relief height for canopy photons
+- ``"canopy_h_metrics"``: relief height at given percentile for canopy photons
 
 
 4. Callbacks
