@@ -10,7 +10,7 @@ GeoParquet is a meta data and file organization covention overlayed on top of th
 
 ## Overview
 
-SlideRule currently supports returning results back to data users as GeoParquet files.  These files are built on the server and either streamed back directly to the user, or uploaded to a user-specified S3 bucket for later access. To specify the GeoParquet option, the request must include the `output` parameter with the `output.format` field set to **"parquet"**. See the section on `output parameters <./SlideRule.html#2-6-output-parameters>`_ for more details.
+SlideRule currently supports returning results back to data users as GeoParquet files.  These files are built on the server and either streamed back directly to the user, or uploaded to a user-specified S3 bucket for later access. To specify the GeoParquet option, the request must include the `output` parameter with the `output.format` field set to **"parquet"**. See the section on [output parameters](./SlideRule.html#output-parameters) for more details.
 
 
 ### S3 as a destination

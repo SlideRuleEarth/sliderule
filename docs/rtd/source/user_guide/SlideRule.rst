@@ -91,7 +91,8 @@ A source dataset is called an **asset** and is specified by its name as a string
 The asset name tells SlideRule where to get the data, and what format the data should be in. The following assets are supported by the current deployment of SlideRule:
 
 .. csv-table::
-    :header: asset,             identity,       driver,     path,                                                                   index,              region,     endpoint
+    :header: asset, identity, driver, path, index, region, endpoint
+    
     icesat2,                    nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     gedil4a,                    ornl-cloud,     s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,        nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     gedil4b,                    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass/data,         GEDI04_B_MW019MW138_02_002_05_R01000M_V2.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
@@ -196,6 +197,8 @@ To request raster sampling, the ``"samples"`` parameter must be populated as a d
         - ``"t1"``: stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
         - ``"substr"``: substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)
         - ``"closest_time"``: time used to filter rasters to be sampled; only the raster that is closest in time to the provided time will be sampled - can be multiple rasters if they all share the same time (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
+        - ``"catalog"``: geojson formatted stac query response (obtained through the `sliderule.earthdata.stac` Python API)
+        - ``"bands"``: list of bands to read out of the raster, or a predefined algorithm that combines bands for a given dataset
         - ``"key_space"``: 64-bit integer defining the upper 32-bits of the ``file_id``; this in general should never be set as the server will typically do the right thing assigning a key space;   but for users that are parallelizing requests on the client-side, this parameter can be usedful when constructing the resulting file dictionaries that come back with the raster samples
 
 .. code-block:: python
