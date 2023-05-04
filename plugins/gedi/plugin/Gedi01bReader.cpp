@@ -294,6 +294,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
         reader->stats.footprints_sent += local_stats.footprints_sent;
         reader->stats.footprints_dropped += local_stats.footprints_dropped;
         reader->stats.footprints_retried += local_stats.footprints_retried;
+printf("NUM RECORDS SENT: %u\n", reader->stats.footprints_sent);
 
         /* Indicate End of Data */
         if(reader->numComplete == reader->threadCount)

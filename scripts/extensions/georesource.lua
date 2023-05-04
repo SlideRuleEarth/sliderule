@@ -29,7 +29,7 @@ local function initialize(resource, parms, algo, args)
     local userlog = msg.publish(rspq)
 
     -- Get Asset --
-    local asset_name = parms["asset"] or default_asset
+    local asset_name = parms["asset"] or args.default_asset
     local asset = core.getbyname(asset_name)
     if not asset then
         userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", asset_name))
@@ -58,24 +58,29 @@ local function initialize(resource, parms, algo, args)
     end
 
     -- Dispatcher --
-    local algo_disp = core.dispatcher(args.source_q)
+    local source_q = nil
+    local algo_disp = nil
+    if algo then
+        source_q = resource .. "." .. rspq
+        algo_disp = core.dispatcher(source_q)
 
-    -- Attach Exception and Ancillary Record Forwarding --
-    local except_pub = core.publish(rspq)
-    algo_disp:attach(except_pub, "exceptrec") -- exception records
-    algo_disp:attach(except_pub, "extrec") -- ancillary records
+        -- Attach Exception and Ancillary Record Forwarding --
+        local except_pub = core.publish(rspq)
+        algo_disp:attach(except_pub, "exceptrec") -- exception records
+        algo_disp:attach(except_pub, "extrec") -- ancillary records
 
-    -- Attach Algorithm --
-    algo_disp:attach(algo, args.source_rec)
+        -- Attach Algorithm --
+        algo_disp:attach(algo, args.source_rec)
 
-    -- Run Dispatcher --
-    algo_disp:run()
+        -- Run Dispatcher --
+        algo_disp:run()
+    end
 
     -- Post Initial Status Progress --
     userlog:sendlog(core.INFO, string.format("request <%s> processing initialized on %s ...", rspq, resource))
 
     -- Return Needed Objects to Continue Processing Request --
-    return {asset=asset, algo_disp=algo_disp, sampler_disp=sampler_disp, userlog=userlog}
+    return {asset=asset, source_q=source_q, algo_disp=algo_disp, sampler_disp=sampler_disp, userlog=userlog}
 end
 
 --
@@ -100,20 +105,22 @@ local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, us
     end
 
     -- Resource Processing Complete --
-    if with_stats then
+    if with_stats and reader then
         local reader_stats = reader:stats(false)
         userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, reader_stats.read, reader_stats.filtered, reader_stats.dropped))
     end
 
-    -- Wait Until ATL06 Dispatch Completion --
-    while (userlog:numsubs() > 0) and not algo_disp:waiton(interval * 1000) do
-        duration = duration + interval
-        -- Check for Timeout --
-        if timeout >= 0 and duration >= timeout then
-            userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
-            do return false end
+    -- Wait Until Algorithm Dispatch Completion --
+    if algo_disp then
+        while (userlog:numsubs() > 0) and not algo_disp:waiton(interval * 1000) do
+            duration = duration + interval
+            -- Check for Timeout --
+            if timeout >= 0 and duration >= timeout then
+                userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
+                do return false end
+            end
+            userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to process source records (after %d seconds)", rspq, duration))
         end
-        userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to process source records (after %d seconds)", rspq, duration))
     end
 
     -- Wait Until Sampler Dispatch Completion --
@@ -131,9 +138,9 @@ local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, us
     end
 
     -- Request Processing Complete --
-    if with_stats then
+    if with_stats and algo then
         local algo_stats = algo:stats(false)
-        userlog:sendlog(core.INFO, string.format("request <%s> processing complete (%d/%d/%d/%d)", rspq, algo_stats.read, algo_stats.filtered, algo_stats.posted, algo_stats.dropped))
+        userlog:sendlog(core.INFO, string.format("request <%s> processing complete (%d/%d/%d/%d)", rspq, algo_stats.read, algo_stats.filtered, algo_stats.sent, algo_stats.dropped))
     end
 
     -- Return Success --

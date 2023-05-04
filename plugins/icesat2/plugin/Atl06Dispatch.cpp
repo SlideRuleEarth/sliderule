@@ -636,7 +636,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
         lua_newtable(L);
         LuaEngine::setAttrInt(L, "read",        lua_obj->stats.h5atl03_rec_cnt);
         LuaEngine::setAttrInt(L, "filtered",    lua_obj->stats.filtered_cnt);
-        LuaEngine::setAttrInt(L, "posted",      lua_obj->stats.post_success_cnt);
+        LuaEngine::setAttrInt(L, "sent",        lua_obj->stats.post_success_cnt);
         LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.post_dropped_cnt);
 
         /* Optionally Clear */

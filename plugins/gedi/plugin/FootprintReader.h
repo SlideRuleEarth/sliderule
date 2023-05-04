@@ -49,16 +49,6 @@
 #include "GediParms.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_STAT_FOOTPRINTS_READ        "read"
-#define LUA_STAT_FOOTPRINTS_FILTERED    "filtered"
-#define LUA_STAT_FOOTPRINTS_SENT        "sent"
-#define LUA_STAT_FOOTPRINTS_DROPPED     "dropped"
-#define LUA_STAT_FOOTPRINTS_RETRIED     "retried"
-
-/******************************************************************************
  * FOOTPRINT READER
  ******************************************************************************/
 
@@ -539,11 +529,11 @@ int FootprintReader<footprint_t>::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_READ,         lua_obj->stats.footprints_read);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_FILTERED,     lua_obj->stats.footprints_filtered);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_SENT,         lua_obj->stats.footprints_sent);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_DROPPED,      lua_obj->stats.footprints_dropped);
-        LuaEngine::setAttrInt(L, LUA_STAT_FOOTPRINTS_RETRIED,      lua_obj->stats.footprints_retried);
+        LuaEngine::setAttrInt(L, "read",        lua_obj->stats.footprints_read);
+        LuaEngine::setAttrInt(L, "filtered",    lua_obj->stats.footprints_filtered);
+        LuaEngine::setAttrInt(L, "sent",        lua_obj->stats.footprints_sent);
+        LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.footprints_dropped);
+        LuaEngine::setAttrInt(L, "retried",     lua_obj->stats.footprints_retried);
 
         /* Clear if Requested */
         if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));

@@ -12,7 +12,6 @@ local parms         = rqst["parms"]
 local args = {
     shard           = rqst["shard"] or 0, -- key space
     default_asset   = "icesat2",
-    source_q        = resource .. "." .. rspq,
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     source_rec      = "atl03rec",
     result_rec      = parms["compact"] and "atl06rec-compact" or "atl06rec",
@@ -27,6 +26,6 @@ local algo          = icesat2.atl06(args.result_q, rqst_parms)
 local proc          = georesource.initialize(resource, parms, algo, args)
 
 if proc then
-    local reader    = icesat2.atl03(proc.asset, resource, args.source_q, rqst_parms, true)
+    local reader    = icesat2.atl03(proc.asset, resource, proc.source_q, rqst_parms, true)
     local status    = georesource.waiton(resource, parms, algo, reader, proc.algo_disp, proc.sampler_disp, proc.userlog, true)
 end

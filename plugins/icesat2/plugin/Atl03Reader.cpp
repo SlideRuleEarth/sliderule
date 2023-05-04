@@ -42,16 +42,6 @@
 #include "icesat2.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_STAT_SEGMENTS_READ          "read"
-#define LUA_STAT_EXTENTS_FILTERED       "filtered"
-#define LUA_STAT_EXTENTS_SENT           "sent"
-#define LUA_STAT_EXTENTS_DROPPED        "dropped"
-#define LUA_STAT_EXTENTS_RETRIED        "retried"
-
-/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -2017,11 +2007,11 @@ int Atl03Reader::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
-        LuaEngine::setAttrInt(L, LUA_STAT_SEGMENTS_READ,        lua_obj->stats.segments_read);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_FILTERED,     lua_obj->stats.extents_filtered);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_SENT,         lua_obj->stats.extents_sent);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_DROPPED,      lua_obj->stats.extents_dropped);
-        LuaEngine::setAttrInt(L, LUA_STAT_EXTENTS_RETRIED,      lua_obj->stats.extents_retried);
+        LuaEngine::setAttrInt(L, "read",        lua_obj->stats.segments_read);
+        LuaEngine::setAttrInt(L, "filtered",    lua_obj->stats.extents_filtered);
+        LuaEngine::setAttrInt(L, "sent",        lua_obj->stats.extents_sent);
+        LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.extents_dropped);
+        LuaEngine::setAttrInt(L, "retried",     lua_obj->stats.extents_retried);
 
         /* Clear if Requested */
         if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
