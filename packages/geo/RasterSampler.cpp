@@ -110,9 +110,10 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* index_key   = getLuaString(L, 5);
         const char* lon_key     = getLuaString(L, 6);
         const char* lat_key     = getLuaString(L, 7);
+        const char* time_key    = getLuaString(L, 8, true, NULL);
 
         /* Create Dispatch */
-        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, index_key, lon_key, lat_key));
+        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, index_key, lon_key, lat_key, time_key));
     }
     catch(const RunTimeException& e)
     {
@@ -150,7 +151,8 @@ void RasterSampler::deinit (void)
  *----------------------------------------------------------------------------*/
 RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* raster_key,
                               const char* outq_name, const char* rec_type,
-                              const char* index_key, const char* lon_key, const char* lat_key):
+                              const char* index_key, const char* lon_key, const char* lat_key,
+                              const char* time_key):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(_raster);
@@ -185,6 +187,16 @@ RasterSampler::RasterSampler (lua_State* L, VrtRaster* _raster, const char* rast
     if(latField.type == RecordObject::INVALID_FIELD)
     {
         mlog(CRITICAL, "Failed to get field %s from record type: %s", lat_key, rec_type);
+    }
+
+    timeField.type = RecordObject::INVALID_FIELD;
+    if(time_key)
+    {
+        timeField = RecordObject::getDefinedField(rec_type, time_key);
+        if(timeField.type == RecordObject::INVALID_FIELD)
+        {
+            mlog(CRITICAL, "Failed to get field %s from record type: %s", time_key, rec_type);
+        }
     }
 }
 
@@ -226,6 +238,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
     RecordObject::field_t index_field = indexField;
     RecordObject::field_t lon_field = lonField;
     RecordObject::field_t lat_field = latField;
+    RecordObject::field_t time_field = timeField;
 
     /* Loop Through Each Record in Batch */
     for(int extent = 0; extent < num_extents; extent++)
@@ -242,13 +255,21 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         double lat_val = record->getValueReal(lat_field);
         lat_field.offset += (recordSizeBytes * 8);
 
+        /* Get Time */
+        long gps = 0;
+        if(time_field.type != RecordObject::INVALID_FIELD)
+        {
+            long time_val = record->getValueInteger(time_field);
+            time_field.offset += (recordSizeBytes * 8);
+            gps = TimeLib::sysex2gpstime(time_val);
+        }
+
         /* Sample Raster */
         List<VrtRaster::sample_t> slist;
         int num_samples = 0;
         try
         {
-            int64_t gps_closest_time = 0;
-            raster->getSamples(lon_val, lat_val, gps_closest_time, slist);
+            raster->getSamples(lon_val, lat_val, gps, slist);
             num_samples = slist.length();
         }
         catch(const RunTimeException& e)

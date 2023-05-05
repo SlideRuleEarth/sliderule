@@ -121,6 +121,7 @@ class TimeLib
         static int64_t      sys2gpstime     (int64_t sysnow); // takes system time (microseconds), returns milliseconds from gps epoch
         static int64_t      gps2systime     (int64_t gpsnow); // takes gps time (milliseconds), return system time (microseconds)
         static int64_t      gps2systimeex   (double gps_secs); // takes gps time (seconds), return extended precision system time (nanoseconds)
+        static int64_t      sysex2gpstime   (int64_t sysex); // takes extended precision system time (nanoseconds), return gps time (milliseconds)
         static gmt_time_t   sys2gmttime     (int64_t sysnow); // takes system time (microseconds), returns GMT time (includes leap seconds)
         static gmt_time_t   gps2gmttime     (int64_t ms); // returns GMT time (includes leap seconds), takes gps time as milliseconds since gps epoch
         static gmt_time_t   cds2gmttime     (int days, int msecs); // returns GMT time (includes leap seconds)

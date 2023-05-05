@@ -52,6 +52,7 @@ const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
+const char* GeoParms::USE_POI_TIME          = "use_poi_time";
 const char* GeoParms::CATALOG               = "catalog";
 const char* GeoParms::BANDS                 = "bands";
 const char* GeoParms::ASSET                 = "asset";
@@ -114,6 +115,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     filter_time         (false),
     url_substring       (NULL),
     filter_closest_time (false),
+    use_poi_time        (false),
     catalog             (NULL),
     asset_name          (NULL),
     asset               (NULL),
@@ -218,6 +220,12 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
                 TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", CLOSEST_TIME, closest_date.year, closest_date.month, closest_date.day, closest_time.hour, closest_time.minute, closest_time.second);
             }
+            lua_pop(L, 1);
+
+            /* Use Point of Interest Time */
+            lua_getfield(L, index, USE_POI_TIME);
+            use_poi_time = LuaObject::getLuaBoolean(L, -1, true, use_poi_time, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", USE_POI_TIME, (int)use_poi_time);
             lua_pop(L, 1);
 
             /* Catalog */

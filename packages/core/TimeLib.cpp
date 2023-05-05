@@ -196,6 +196,17 @@ int64_t TimeLib::gps2systimeex (double gps_secs)
 }
 
 /*----------------------------------------------------------------------------
+ * gps2systimeex
+ *
+ *  converts extended precision system time (nanoseconds) to gps time (milliseconds)
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::sysex2gpstime (int64_t sysex)
+{
+    int64_t sysnow = sysex / 1000;
+    return(sys2gpstime(sysnow));
+}
+
+/*----------------------------------------------------------------------------
  * sys2gmttime
  *
  *  converts system time (microseconds) to milliseconds since gps epoch
