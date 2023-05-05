@@ -247,7 +247,8 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         int num_samples = 0;
         try
         {
-            raster->getSamples(lon_val, lat_val, slist);
+            int64_t gps_closest_time = 0;
+            raster->getSamples(lon_val, lat_val, gps_closest_time, slist);
             num_samples = slist.length();
         }
         catch(const RunTimeException& e)

@@ -174,6 +174,29 @@ end
 runner.check(sampleCnt == 3)  -- 3 groups with closest time
 
 
+local tstr          = "2021:2:4:23:3:0"
+local tstrOverride  = "2000:2:4:23:3:0"
+local expectedGroup = "T01UCS.2021001T225941.v2.0"
+
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override:  closest_time=%s\n--------------------------------", demType, tstrOverride, tstr))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat, tstrOverride)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+sampleCnt = 0
+local value, fname
+for i, v in ipairs(tbl) do
+    fname = v["file"]
+    value = v["value"]
+    print(string.format("(%02d) value %10.3f, fname: %s", i, value, fname))
+    runner.check( string.find(fname, expectedGroup))
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 3)  -- 3 groups with closest time
+
+
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and qualit flags)\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"B03"}, catalog = contents }))
 local fmaskCnt  = 0

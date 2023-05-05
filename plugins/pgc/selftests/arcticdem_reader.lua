@@ -248,6 +248,27 @@ end
 runner.check(sampleCnt == 1)
 
 
+local tstr         = "2021:2:4:23:3:0"
+local tstrOverride = "2016:6:0:0:0:0"
+local expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV02_20160602_1030010057849C00_103001005607CA00_2m_lsf_seg1_dem.tif"
+
+print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override closest_time: %s with %s\n--------------------------------", demType, tstr, tstrOverride))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
+runner.check(dem ~= nil)
+tbl, status = dem:sample(lon, lat, tstrOverride)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+sampleCnt = 0
+for i, v in ipairs(tbl) do
+    local fname = v["file"]
+    print(string.format("(%02d) fname: %s", i, fname))
+    runner.check( expectedFile == fname )
+    sampleCnt = sampleCnt + 1
+end
+runner.check(sampleCnt == 1)
+
+
 tstr = "2016:6:0:0:0:0"
 expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV02_20160602_1030010057849C00_103001005607CA00_2m_lsf_seg1_dem.tif"
 

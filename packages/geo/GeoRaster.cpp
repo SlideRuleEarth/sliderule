@@ -181,7 +181,7 @@ void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& 
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, int64_t gps, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
 
@@ -191,7 +191,7 @@ void GeoRaster::getSamples(double lon, double lat, List<sample_t>& slist, void* 
         slist.clear();
 
         /* Get samples, if none found, return */
-        if(sample(lon, lat) == 0)
+        if(sample(lon, lat, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -561,7 +561,7 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat)
+int GeoRaster::sample(double lon, double lat, int64_t gps)
 {
     invalidateCache();
 
@@ -589,7 +589,7 @@ int GeoRaster::sample(double lon, double lat)
     }
     else
     {
-        if(findRasters(p) && filterRasters())
+        if(findRasters(p) && filterRasters(gps))
         {
             updateCache(p);
             sampleRasters();
@@ -1165,7 +1165,7 @@ void GeoRaster::updateCache(OGRPoint& p)
 /*----------------------------------------------------------------------------
  * filterRasters
  *----------------------------------------------------------------------------*/
-bool GeoRaster::filterRasters(void)
+bool GeoRaster::filterRasters(int64_t gps)
 {
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
@@ -1208,17 +1208,22 @@ bool GeoRaster::filterRasters(void)
     }
 
     /* Closest time filter - using raster group time, not individual reaster time */
-    if(parms->filter_closest_time)
+    int64_t closestGps = 0;
+    if(gps > 0)
+        closestGps = gps;
+    else if (parms->filter_closest_time)
+        closestGps = TimeLib::gmt2gpstime(parms->closest_time);
+
+    if(closestGps > 0)
     {
-        int64_t closestGps = TimeLib::gmt2gpstime(parms->closest_time);
-        int64_t minDelta   = abs(std::numeric_limits<int64_t>::max() - closestGps);
+        int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
         /* Find raster group with the closesest time */
         Ordering<rasters_group_t>::Iterator group_iter(*rasterGroupList);
         for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gps   = group_iter[i].value.gpsTime;
-            int64_t delta = abs(closestGps - gps);
+            int64_t gpsTime = group_iter[i].value.gpsTime;
+            int64_t delta   = abs(closestGps - gpsTime);
 
             if(delta < minDelta)
                 minDelta = delta;
@@ -1227,8 +1232,8 @@ bool GeoRaster::filterRasters(void)
         /* Remove all groups with greater delta */
         for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gps   = group_iter[i].value.gpsTime;
-            int64_t delta = abs(closestGps - gps);
+            int64_t gpsTime = group_iter[i].value.gpsTime;
+            int64_t delta   = abs(closestGps - gpsTime);
 
             if(delta > minDelta)
                 rasterGroupList->remove(group_iter[i].key);
@@ -1417,7 +1422,7 @@ int GeoRaster::luaCellSize(lua_State *L)
 
 
 /*----------------------------------------------------------------------------
- * luaSamples - :sample(lon, lat) --> in|out
+ * luaSamples - :sample(lon, lat, gps) --> in|out
  *----------------------------------------------------------------------------*/
 int GeoRaster::luaSamples(lua_State *L)
 {
@@ -1435,9 +1440,17 @@ int GeoRaster::luaSamples(lua_State *L)
         double lon = getLuaFloat(L, 2);
         double lat = getLuaFloat(L, 3);
 
+        /* Get gps closest time (overrides params provided closest time)*/
+        int64_t gps = 0;
+        if(lua_gettop(L) > 3)
+        {
+            const char* closest_time_str = getLuaString(L, 4);
+            gps = TimeLib::str2gpstime(closest_time_str);
+        }
+
         /* Get samples */
         List<sample_t> slist;
-        lua_obj->getSamples(lon, lat, slist, NULL);
+        lua_obj->getSamples(lon, lat, gps, slist, NULL);
         if(slist.length() > 0)
         {
             /* Create return table */

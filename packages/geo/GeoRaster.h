@@ -225,7 +225,7 @@ class GeoRaster: public LuaObject
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_t create);
-        void             getSamples      (double lon, double lat, List<sample_t>& slist, void* param=NULL);
+        void             getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL);
         virtual void     getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
         double           getGmtDate      (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
@@ -251,7 +251,7 @@ class GeoRaster: public LuaObject
         void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
-        int             sample                (double lon, double lat);
+        int             sample                (double lon, double lat, int64_t gps);
         uint64_t        fileDictAdd           (const std::string& fileName);
 
         virtual bool    readGeoIndexData      (OGRPoint* point, int srcWindowSize, int srcOffset,
@@ -307,7 +307,7 @@ class GeoRaster: public LuaObject
 
         static void* readingThread (void *param);
 
-        bool       filterRasters           (void);
+        bool       filterRasters           (int64_t gps);
         void       createThreads           (void);
         void       updateCache             (OGRPoint& p);
         void       invalidateCache         (void);
