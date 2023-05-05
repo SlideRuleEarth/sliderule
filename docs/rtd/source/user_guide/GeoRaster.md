@@ -52,11 +52,32 @@ Sampling rasters is controlled by the `samples` field of a request's parameter d
 ```
 The `mosaic` and `strips` dictionary keys are provided by the user to identify the data returned back to the user in the GeoDataFrame - they can be anything the user wants as long as it unique.  The `asset` dictionary keys are used to identify which asset in SlideRule's asset directory is to be sampled.  The dictionary keys that follow all control how the raster is to be sampled.
 
-SlideRule supports various algorithms for sampling rasters: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, and Gauss.  These are the algorithms supplied by GDAL and exposed to users through the SlideRule APIs.  In addition to these algorithms, SlideRule also provides the ability to calculate zonal statistics for a given geolocation: count (number of pixels), minimum, maximum, mean, median, standard devation, and median absolute deviation. Lastly, depending on the dataset, SlideRule provides custom bands that can be derived using other bands in the raster file.  For example, the HLS dataset (`landsat-hls`) provides the following three custom bands: "NDSI", "NDVI", "NDWI". 
-  
+SlideRule supports various algorithms for sampling rasters: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, and Gauss.  These are the algorithms supplied by GDAL and exposed to users through the SlideRule APIs.  In addition to these algorithms, SlideRule also provides the ability to calculate zonal statistics for a given geolocation: count (number of pixels), minimum, maximum, mean, median, standard devation, and median absolute deviation. Lastly, depending on the dataset, SlideRule provides custom bands that can be derived using other bands in the raster file.  For example, the HLS dataset (`landsat-hls`) provides the following three custom bands: "NDSI", "NDVI", "NDWI".
+
 Prior to sampling a raster, SlideRule provides ways to select and filter which rasters are sampled in a dataset.  These include filtering based on time, and file name pattern matching.
 
 For a full list of parameters available to users when sampling rasters, please see the [sampling parameters](./SlideRule.html#raster-sampling).
+
+## Sample Results
+
+The results returned by SlideRule for sampled raster datasets are sent as ancillary datasets which are then merged by the client software into the primary GeoDataFrame. The column name for each of the values below are prepended with the `key` supplied by the user in the processing request.  For example, if the user supplied `"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}` in the processing request, then each column associated with the results of sampling the `arcticdem-mosaic` asset would have `mosiac.` prepended to it.
+
+The standard columns added to a GeoDataFrame for each sampled raster dataset are:
+
+- __"value"__: the sampled value from the raster at the point of interest
+- __"time"__: the best time provided by the raster dataset for when the sampled value was measured
+- __"file_id"__: a number used to identify the name of the file the sample value came from; this is used in conjunction with the `file_directory` provided in the metadata of a GeoDataFrame
+- __"flags"__: any flags (if requested) that acompany the sampled data in the raster it was read from
+
+The zonal statistic columns added to a GeoDataFrame for each sampled raster dataset are:
+
+- __"count"__: number of pixels read to calculate sample value
+- __"min"__: minimum pixel value of pixels that constributed to sample value
+- __"max"__: maximum pixel value of pixels that constributed to sample value
+- __"mean"__: average/mean pixel value of pixels that constributed to sample value
+- __"median"__: average/median pixel value of pixels that constributed to sample value
+- __"stdev"__: standard deviation of pixel values of pixels that constributed to sample value
+- __"mad"__: median absolute deviation of pixel values of pixels that constributed to sample value
 
 ## Special Case - HLS
 
@@ -70,7 +91,7 @@ polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
             {"lon": -177.0000000001, "lat": 49.0000000001},
             {"lon": -177.0000000001, "lat": 51.0000000001} ]
 ```
-collected in the month of January in year 2021, 
+collected in the month of January in year 2021,
 ```python
 time_start = "2021-01-01T00:00:00Z"
 time_end = "2021-02-01T23:59:59Z"
