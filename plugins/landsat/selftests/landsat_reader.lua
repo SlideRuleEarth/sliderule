@@ -33,24 +33,28 @@ local demType = "landsat-hls"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
 local sampleCnt = 0
 local ndvi = 0
+local gpsTime = 0
 local tbl, status = dem:sample(lon, lat)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname
+    local value, fname, time
     for j, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
+        time  = v["time"]
 
         sampleCnt = sampleCnt + 1
         if sampleCnt == 1 then
             ndvi = value
+            gpsTime = time
         end
-        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+        print(string.format("(%02d) value %10.3f, time %.2f, fname: %s", j, value, time, fname))
 
         -- only group names with algo string should be returned as a file name, example:
         -- HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}
         runner.check(string.find(fname, "{\"algo\": \"NDVI\"}"))
+        runner.check(time ~= 0.0)
     end
 end
 
@@ -61,6 +65,7 @@ local expected_max = expected_value + 0.00001
 local expected_min = expected_value - 0.00001
 
 runner.check(ndvi <= expected_max and ndvi >= expected_min)
+runner.check(gpsTime == 1293577339.0)
 dem = nil
 
 
@@ -74,14 +79,15 @@ tbl, status = dem:sample(lon, lat)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname
+    local value, fname, time
     for j, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
+        time  = v["time"]
 
         sampleCnt = sampleCnt + 1
 
-        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+        print(string.format("(%02d) value %10.3f, time %.2f, fname: %s", j, value, time, fname))
 
         if string.find(fname, "NDSI") then
             ndsiCnt = ndsiCnt + 1
@@ -115,6 +121,7 @@ else
                 runner.check(ndvi <= expected_max and ndvi >= expected_min)
             end
         end
+        runner.check(time ~= 0.0)
     end
 end
 
@@ -134,17 +141,18 @@ tbl, status = dem:sample(lon, lat)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname
+    local value, fname, time
     for j, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
+        time  = v["time"]
 
         sampleCnt = sampleCnt + 1
-        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+        print(string.format("(%02d) value %10.3f, time %.2f, fname: %s", j, value, time, fname))
         if string.find(fname, url) == false then
             invalidSamples = invalidSamples + 1
         end
-
+        runner.check(time ~= 0.0)
     end
 end
 
@@ -206,13 +214,14 @@ tbl, status = dem:sample(lon, lat)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname, flags
+    local value, fname, time, flags
     for j, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
+        time  = v["time"]
         flags = v["flags"]
 
-        print(string.format("(%02d) value: %10.3f qmask: 0x%x, %s", j, value, flags, fname))
+        print(string.format("(%02d) value %10.3f, time %10.3f, qmask 0x%x, %s", j, value, time, flags, fname))
 
         if string.find(fname, "B03.tif") then
             sampleCnt = sampleCnt + 1
@@ -285,15 +294,17 @@ runner.check(b03 <= expected_max and b03 >= expected_min)
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 Zonal stats)\n-------------------------------------------------"))
 local samplingRadius = 120
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, zonal_stats=true, with_flags=true, bands = {"B03"}, catalog = contents }))
+gpsTime = 0
 sampleCnt = 0
 b03 = 0
 tbl, status = dem:sample(lon, lat)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname, cnt, min, max, mean, median, stdev, mad, flags
+    local value, time, fname, cnt, min, max, mean, median, stdev, mad, flags
     for j, v in ipairs(tbl) do
         value = v["value"]
+        time = v["time"]
         fname = v["file"]
         cnt = v["count"]
         min = v["min"]
@@ -305,8 +316,9 @@ else
         flags = v["flags"]
 
         if el ~= -9999.0 then
-            print(string.format("(%02d) value: %10.2f   cnt: %03d   qmask: 0x%x   min: %10.2f   max: %10.2f   mean: %10.2f   median: %10.2f   stdev: %10.2f   mad: %10.2f", j, value, cnt, flags, min, max, mean, median, stdev, mad))
+            print(string.format("(%02d) value: %10.2f, time: %.2f,  cnt: %03d   qmask: 0x%x   min: %10.2f   max: %10.2f   mean: %10.2f   median: %10.2f   stdev: %10.2f   mad: %10.2f", j, value, time, cnt, flags, min, max, mean, median, stdev, mad))
             runner.check(value ~= 0.0)
+            runner.check(time ~= 0.0)
             runner.check(min <= value)
             runner.check(max >= value)
             runner.check(mean ~= 0.0)
@@ -316,6 +328,7 @@ else
         sampleCnt = sampleCnt + 1
         if sampleCnt == 1 then
             b03 = value
+            gpsTime = time
         end
 
         runner.check(string.find(fname, "B03.tif"))
@@ -326,6 +339,7 @@ expected_value = 523.0 -- first b03 from the group of samples
 expected_max = expected_value + 0.00001
 expected_min = expected_value - 0.00001
 runner.check(b03 <= expected_max and b03 >= expected_min)
+runner.check(gpsTime == 1293577339.0)
 
 
 
