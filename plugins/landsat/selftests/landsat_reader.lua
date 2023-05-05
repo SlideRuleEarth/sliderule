@@ -3,7 +3,7 @@ console = require("console")
 asset = require("asset")
 csv = require("csv")
 json = require("json")
-local td = runner.rootdir(arg[0])
+local _,td = runner.srcscript()
 
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)

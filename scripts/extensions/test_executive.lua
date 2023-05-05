@@ -49,12 +49,12 @@ Function:   scriptsrc
    Notes:   none
 ]]
 local function srcscript (fullpath)
-    local info = debug.getinfo(2,'S');
+    local info = debug.getinfo(2,'S')
     if fullpath then
         return info.source
     else
-        local src = info.source:match("^.+/(.+)$")
-        local dir = info.source:match("(.*[/\\])") or "./"
+        local src = info.source:sub(2):match("^.+/(.+)$")
+        local dir = info.source:sub(2):match("(.*[/\\])") or "./"
         return src, dir
     end
 end

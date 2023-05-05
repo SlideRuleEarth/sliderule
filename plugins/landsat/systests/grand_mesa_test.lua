@@ -15,7 +15,7 @@ local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_
 sys.wait(5)
 
 
-local td = runner.rootdir(arg[0])
+local _,td = runner.srcscript()
 local geojsonfile = td.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
