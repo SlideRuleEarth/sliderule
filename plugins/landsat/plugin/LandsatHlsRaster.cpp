@@ -310,6 +310,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
     }
 
     sample_t sample;
+    double groupTime = rgroup.gpsTime / 1000;
     std::string groupName = rgroup.id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
@@ -320,6 +321,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
             sample.value = (green - swir16) / (green + swir16);
         else sample.value = invalid;
 
+        sample.time   = groupTime;
         sample.fileId = fileDictAdd(groupName + "NDSI\"}");
         slist.add(sample);
     }
@@ -331,6 +333,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
             sample.value = (nir08 - red) / (nir08 + red);
         else sample.value = invalid;
 
+        sample.time   = groupTime;
         sample.fileId = fileDictAdd(groupName + "NDVI\"}");
         slist.add(sample);
     }
@@ -342,6 +345,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
             sample.value = (nir08 - swir16) / (nir08 + swir16);
         else sample.value = invalid;
 
+        sample.time   = groupTime;
         sample.fileId = fileDictAdd(groupName + "NDWI\"}");
         slist.add(sample);
     }
