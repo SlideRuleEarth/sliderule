@@ -71,6 +71,20 @@ VctRaster::VctRaster(lua_State *L, GeoParms* _parms):
     layer = NULL;
 }
 
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+VctRaster::~VctRaster(void)
+{
+    for(int i = 0; i < featuresList.length(); i++)
+    {
+        OGRFeature* feature = featuresList[i];
+        OGRFeature::DestroyFeature(feature);
+    }
+}
+
+
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
@@ -89,6 +103,14 @@ void VctRaster::openGeoIndex(double lon, double lat)
         /* Cleanup previous */
         if (geoIndex.dset != NULL)
         {
+            /* Free cached features for this vector index file */
+            for(int i = 0; i < featuresList.length(); i++)
+            {
+                OGRFeature* feature = featuresList[i];
+                OGRFeature::DestroyFeature(feature);
+            }
+            featuresList.clear();
+
             GDALClose((GDALDatasetH)geoIndex.dset);
             geoIndex.dset = NULL;
         }
@@ -101,6 +123,17 @@ void VctRaster::openGeoIndex(double lon, double lat)
         geoIndex.fileName = newVctFile;
         layer = geoIndex.dset->GetLayer(0);
         CHECKPTR(layer);
+
+        /* For now assume the first layer has the features we need
+         * Clone all features and store them for performance/speed of feature lookup
+         */
+        layer->ResetReading();
+        while(OGRFeature* feature = layer->GetNextFeature())
+        {
+            OGRFeature* newFeature = feature->Clone();
+            featuresList.add(newFeature);
+            OGRFeature::DestroyFeature(feature);
+        }
 
         geoIndex.cols = geoIndex.dset->GetRasterXSize();
         geoIndex.rows = geoIndex.dset->GetRasterYSize();

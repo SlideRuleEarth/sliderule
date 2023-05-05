@@ -148,18 +148,6 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-LandsatHlsRaster::~LandsatHlsRaster(void)
-{
-    for(int i = 0; i < featuresList.length(); i++)
-    {
-        OGRFeature* feature = featuresList[i];
-        OGRFeature::DestroyFeature(feature);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
@@ -193,18 +181,6 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
     try
     {
         rasterGroupList->clear();
-
-        if(featuresList.length() == 0)
-        {
-            /* For now assume the first layer has the feature we need */
-            layer->ResetReading();
-            while(OGRFeature* feature = layer->GetNextFeature())
-            {
-                OGRFeature* newFeature = feature->Clone();
-                featuresList.add(newFeature);
-                OGRFeature::DestroyFeature(feature);
-            }
-        }
 
         for(int i = 0; i < featuresList.length(); i++)
         {

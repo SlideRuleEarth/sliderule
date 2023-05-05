@@ -138,10 +138,9 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
     {
         rasterGroupList->clear();
 
-        /* For now assume the first layer has the feature we need */
-        layer->ResetReading();
-        while (OGRFeature* feature = layer->GetNextFeature())
+        for(int i = 0; i < featuresList.length(); i++)
         {
+            OGRFeature* feature = featuresList[i];
             OGRGeometry *geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
@@ -198,7 +197,6 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 }
                 rasterGroupList->add(rasterGroupList->length(), rgroup);
             }
-            OGRFeature::DestroyFeature(feature);
         }
         mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
     }
