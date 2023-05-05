@@ -123,12 +123,43 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     columns = {}
     records = []
     num_records = 0
+    field_dictionary = {} # [<field_name>] = {"shot_number": [], <field_name>: []}
+    file_dictionary = {} # [id] = "filename"
     if len(rsps) > 0:
         # Sort Records
         for rsp in rsps:
             if rectype in rsp['__rectype']:
                 records += rsp,
                 num_records += len(rsp[batch_column])
+            elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
+                if rsp["num_samples"] <= 0:
+                    continue
+                # Get field names and set
+                sample = rsp["samples"][0]
+                field_names = list(sample.keys())
+                field_names.remove("__rectype")
+                field_set = rsp['key']
+                as_numpy_array = False
+                if rsp["num_samples"] > 1:
+                    as_numpy_array = True
+                # On first time, build empty dictionary for field set associated with raster
+                if field_set not in field_dictionary:
+                    field_dictionary[field_set] = {'shot_number': []}
+                    for field in field_names:
+                        field_dictionary[field_set][field_set + "." + field] = []
+                # Populate dictionary for field set
+                field_dictionary[field_set]['shot_number'] += numpy.uint64(rsp['index']),
+                for field in field_names:
+                    if as_numpy_array:
+                        data = []
+                        for s in rsp["samples"]:
+                            data += s[field],
+                        field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
+                    else:
+                        field_dictionary[field_set][field_set + "." + field] += sample[field],
+            elif 'fileidrec' == rsp['__rectype']:
+                file_dictionary[rsp["file_id"]] = rsp["file_name"]
+
         # Build Columns
         if num_records > 0:
             # Initialize Columns
@@ -153,9 +184,20 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
     # Build Initial GeoDataFrame
     gdf = __todataframe(columns)
 
-    # Delete Extent ID Column
+    # Merge Ancillary Fields
+    tstart_merge = time.perf_counter()
+    for field_set in field_dictionary:
+        df = geopandas.pd.DataFrame(field_dictionary[field_set])
+        gdf = geopandas.pd.merge(gdf, df, how='left', on='shot_number').set_axis(gdf.index)
+    profiles["merge"] = time.perf_counter() - tstart_merge
+
+    # Delete Shot Number Column
     if len(gdf) > 0 and not keep_id:
         del gdf["shot_number"]
+
+    # Attach Metadata
+    if len(file_dictionary) > 0:
+        gdf.attrs['file_directory'] = file_dictionary
 
     # Return GeoDataFrame
     profiles["flatten"] = time.perf_counter() - tstart_flatten
