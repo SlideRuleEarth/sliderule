@@ -43,8 +43,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoJsonRaster::LuaMetaName = "GeoJsonRaster";
-
 const char* GeoJsonRaster::FILEDATA_KEY   = "data";
 const char* GeoJsonRaster::FILELENGTH_KEY = "length";
 const char* GeoJsonRaster::CELLSIZE_KEY   = "cellsize";
@@ -68,7 +66,7 @@ int GeoJsonRaster::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }

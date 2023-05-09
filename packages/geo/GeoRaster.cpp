@@ -64,119 +64,10 @@
 
 const char* GeoRaster::BITMASK_FILE = "Fmask";
 const char* GeoRaster::SAMPLES_FILE = "Dem";
-const char* GeoRaster::OBJECT_TYPE  = "GeoRaster";
-const char* GeoRaster::LuaMetaName  = "GeoRaster";
-const struct luaL_Reg GeoRaster::LuaMetaTable[] = {
-    {"dim",         luaDimensions},
-    {"bbox",        luaBoundingBox},
-    {"cell",        luaCellSize},
-    {"sample",      luaSamples},
-    {NULL,          NULL}
-};
-
-Mutex GeoRaster::factoryMut;
-Dictionary<GeoRaster::factory_t> GeoRaster::factories;
 
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void GeoRaster::init( void )
-{
-}
-
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void GeoRaster::deinit( void )
-{
-}
-
-/*----------------------------------------------------------------------------
- * luaCreate
- *----------------------------------------------------------------------------*/
-int GeoRaster::luaCreate( lua_State* L )
-{
-    GeoParms* _parms = NULL;
-    try
-    {
-        /* Get Parameters */
-        _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
-
-        /* Get Factory */
-        factory_t _create = NULL;
-        factoryMut.lock();
-        {
-            factories.find(_parms->asset_name, &_create);
-        }
-        factoryMut.unlock();
-
-        /* Check Factory */
-        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
-
-        /* Create Raster */
-        GeoRaster* _raster = _create(L, _parms);
-        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", _parms->asset_name);
-
-        /* Return Object */
-        return createLuaObject(L, _raster);
-    }
-    catch(const RunTimeException& e)
-    {
-        if(_parms) _parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * registerDriver
- *----------------------------------------------------------------------------*/
-bool GeoRaster::registerRaster (const char* _name, factory_t create)
-{
-    bool status;
-
-    factoryMut.lock();
-    {
-        status = factories.add(_name, create);
-    }
-    factoryMut.unlock();
-
-    return status;
-}
-
-
-/*----------------------------------------------------------------------------
- * getGroupSamples
- *----------------------------------------------------------------------------*/
-void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
-{
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-    for(int i = 0; i < raster_iter.length; i++)
-    {
-        const raster_info_t& rinfo = raster_iter[i].value;
-        if(strcmp(SAMPLES_FILE, rinfo.tag.c_str()) == 0)
-        {
-            Raster* raster  = NULL;
-            const char* key = rinfo.fileName.c_str();
-
-            if(rasterDict.find(key, &raster))
-            {
-                assert(raster);
-                if(raster->enabled && raster->sampled)
-                {
-                    /* Update dictionary of used raster files */
-                    raster->sample.fileId = fileDictAdd(raster->fileName);
-                    raster->sample.flags  = flags;
-                    slist.add(raster->sample);
-                }
-            }
-        }
-    }
-}
 
 /*----------------------------------------------------------------------------
  * getSamples
@@ -235,43 +126,6 @@ void GeoRaster::getSamples(double lon, double lat, int64_t gps, List<sample_t>& 
     samplingMutex.unlock();
 }
 
-
-/*----------------------------------------------------------------------------
- * getGmtDate
- *----------------------------------------------------------------------------*/
-double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
-{
-    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
-
-    int i = feature->GetFieldIndex(field);
-    if(i == -1)
-    {
-        mlog(ERROR, "Time field: %s not found, unable to get GMT date", field);
-        return 0;
-    }
-
-    int year, month, day, hour, minute, second, timeZone;
-    year = month = day = hour = minute = second = timeZone = 0;
-    if(feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
-    {
-        /* Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown */
-        if(timeZone == 100)
-        {
-            gmtDate.year        = year;
-            gmtDate.doy         = TimeLib::dayofyear(year, month, day);
-            gmtDate.hour        = hour;
-            gmtDate.minute      = minute;
-            gmtDate.second      = second;
-            gmtDate.millisecond = 0;
-        }
-        else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
-    }
-
-    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
-    return static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
-}
-
-
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
@@ -310,9 +164,94 @@ GeoRaster::~GeoRaster(void)
     }
 
     if (rasterGroupList) delete rasterGroupList;
+}
 
-    /* Release GeoParms LuaObject */
-    parms->releaseLuaObject();
+
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
+    RasterObject(L, _parms)
+{
+    /* Initialize Class Data Members */
+    rasterGroupList = new Ordering<rasters_group_t>;
+    rasterRreader = new reader_t[MAX_READER_THREADS];
+    bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
+    readerCount = 0;
+
+    /* Add Lua Functions */
+    LuaEngine::setAttrFunc(L, "dim", luaDimensions);
+    LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
+    LuaEngine::setAttrFunc(L, "cell", luaCellSize);
+    LuaEngine::setAttrFunc(L, "sample", luaSamples);
+}
+
+/*----------------------------------------------------------------------------
+ * getGroupSamples
+ *----------------------------------------------------------------------------*/
+void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+{
+    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+    for(int i = 0; i < raster_iter.length; i++)
+    {
+        const raster_info_t& rinfo = raster_iter[i].value;
+        if(strcmp(SAMPLES_FILE, rinfo.tag.c_str()) == 0)
+        {
+            Raster* raster  = NULL;
+            const char* key = rinfo.fileName.c_str();
+
+            if(rasterDict.find(key, &raster))
+            {
+                assert(raster);
+                if(raster->enabled && raster->sampled)
+                {
+                    /* Update dictionary of used raster files */
+                    raster->sample.fileId = fileDictAdd(raster->fileName);
+                    raster->sample.flags  = flags;
+                    slist.add(raster->sample);
+                }
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getGmtDate
+ *----------------------------------------------------------------------------*/
+double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
+{
+    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
+
+    int i = feature->GetFieldIndex(field);
+    if(i == -1)
+    {
+        mlog(ERROR, "Time field: %s not found, unable to get GMT date", field);
+        return 0;
+    }
+
+    int year, month, day, hour, minute, second, timeZone;
+    year = month = day = hour = minute = second = timeZone = 0;
+    if(feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
+    {
+        /* Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown */
+        if(timeZone == 100)
+        {
+            gmtDate.year        = year;
+            gmtDate.doy         = TimeLib::dayofyear(year, month, day);
+            gmtDate.hour        = hour;
+            gmtDate.minute      = minute;
+            gmtDate.second      = second;
+            gmtDate.millisecond = 0;
+        }
+        else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
+    }
+
+    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
+    return static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
 }
 
 /*----------------------------------------------------------------------------
@@ -325,42 +264,6 @@ const char* GeoRaster::getUUID(char *uuid_str)
     uuid_unparse_lower(uuid, uuid_str);
     return uuid_str;
 }
-
-
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    parms(_parms)
-{
-    /* Initialize Class Data Members */
-    rasterGroupList = new Ordering<rasters_group_t>;
-    rasterRreader = new reader_t[MAX_READER_THREADS];
-    bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
-    readerCount = 0;
-
-    /* Establish Credentials */
-    #ifdef __aws__
-    if(_parms->asset)
-    {
-        const char* identity = _parms->asset->getIdentity();
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
-        if(credentials.provided)
-        {
-            const char* path = _parms->asset->getPath();
-            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
-            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
-            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
-        }
-    }
-    #endif
-}
-
 
 /*----------------------------------------------------------------------------
  * radius2pixels
@@ -600,21 +503,6 @@ int GeoRaster::sample(double lon, double lat, int64_t gps)
 }
 
 
-/*----------------------------------------------------------------------------
- * fileDictAdd
- *----------------------------------------------------------------------------*/
-uint64_t GeoRaster::fileDictAdd(const std::string& fileName)
-{
-    uint64_t id;
-
-    if(!fileDict.find(fileName.c_str(), &id))
-    {
-        id = (parms->key_space << 32) | fileDict.length();
-        fileDict.add(fileName.c_str(), id);
-    }
-
-    return id;
-}
 
 /******************************************************************************
  * PRIVATE METHODS

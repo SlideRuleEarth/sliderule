@@ -52,9 +52,9 @@ class Gedi04bRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init            (void);
-        static GeoRaster*   create          (lua_State* L, GeoParms* _parms);
-        virtual             ~Gedi04bRaster  (void);
+        static void             init            (void);
+        static RasterObject*    create          (lua_State* L, GeoParms* _parms);
+        virtual                 ~Gedi04bRaster  (void);
 
     protected:
 

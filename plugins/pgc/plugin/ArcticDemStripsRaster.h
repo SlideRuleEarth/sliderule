@@ -50,7 +50,7 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+        static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new ArcticDemStripsRaster(L, _parms); }
 
     protected:

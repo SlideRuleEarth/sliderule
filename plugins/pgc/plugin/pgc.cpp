@@ -96,10 +96,10 @@ void initpgc(void)
     RemaDemStripsRaster::init();
 
     /* Register Rasters */
-    GeoRaster::registerRaster(LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
-    GeoRaster::registerRaster(LUA_ARCTIC_DEM_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
-    GeoRaster::registerRaster(LUA_REMA_DEM_MOSAIC_RASTER_NAME, RemaDemMosaicRaster::create);
-    GeoRaster::registerRaster(LUA_REMA_DEM_STRIPS_RASTER_NAME, RemaDemStripsRaster::create);
+    RasterObject::registerRaster(LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);
+    RasterObject::registerRaster(LUA_ARCTIC_DEM_STRIPS_RASTER_NAME, ArcticDemStripsRaster::create);
+    RasterObject::registerRaster(LUA_REMA_DEM_MOSAIC_RASTER_NAME, RemaDemMosaicRaster::create);
+    RasterObject::registerRaster(LUA_REMA_DEM_STRIPS_RASTER_NAME, RemaDemStripsRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_PGC_LIBNAME, pgc_open);
