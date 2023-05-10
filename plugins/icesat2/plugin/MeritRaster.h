@@ -29,25 +29,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __raster_object__
-#define __raster_object__
+#ifndef __merit_raster_
+#define __merit_raster_
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
-#include "OsApi.h"
-#include "TimeLib.h"
+#include "RasterObject.h"
 #include "GeoParms.h"
-#include "Ordering.h"
-#include "List.h"
 
 /******************************************************************************
- * RASTER OBJECT CLASS
+ * MERIT RASTER CLASS
  ******************************************************************************/
 
-class RasterObject: public LuaObject
+class MeritRaster: public RasterObject
 {
     public:
 
@@ -55,53 +51,22 @@ class RasterObject: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* ASSET_NAME;
+        static const char* RESOURCE_NAME;
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
+        static const double X_SCALE;
+        static const double Y_SCALE;
 
-        typedef struct {
-            double    value;
-            double    time; // gps seconds
-            uint64_t  fileId;
-            uint32_t  flags;
-
-            struct {
-                uint32_t count;
-                double   min;
-                double   max;
-                double   mean;
-                double   median;
-                double   stdev;
-                double   mad;
-            } stats;
-        } sample_t;
-
-        typedef RasterObject* (*factory_t) (lua_State* L, GeoParms* _parms);
+        static const int X_MAX = 6000;
+        static const int Y_MAX = 6000;        
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init            (void);
-        static void     deinit          (void);
-        static int      luaCreate       (lua_State* L);
-        static bool     registerRaster  (const char* _name, factory_t create);
-        virtual void    getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) = 0;
-        virtual         ~RasterObject   (void);
-
-        inline bool hasZonalStats (void) 
-        { 
-            return parms->zonal_stats; 
-        }
-        
-        inline const Dictionary<uint64_t>& fileDictGet(void)
-        {
-            return fileDict;
-        }
+        static void             init            (void);
+        static RasterObject*    create          (lua_State* L, GeoParms* _parms);
+        virtual                 ~MeritRaster    (void);
 
     protected:
 
@@ -109,15 +74,8 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    RasterObject    (lua_State* L, GeoParms* _parms);
-        uint64_t    fileDictAdd     (const std::string& fileName);
-        static int  luaSamples      (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        GeoParms* parms;
+                MeritRaster     (lua_State *L, GeoParms* _parms);
+        void    getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
 
     private:
 
@@ -125,9 +83,14 @@ class RasterObject: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static Mutex                    factoryMut;
-        static Dictionary<factory_t>    factories;
-        Dictionary<uint64_t>            fileDict;
+        Mutex       cacheMut;
+        int         cacheLat;
+        int         cacheLon;
+        long        cacheSize;
+        uint8_t*    cache;
+
+        Asset*      asset;
+        int64_t     gpsTime;
 };
 
-#endif  /* __raster_object__ */
+#endif  /* __merit_raster_ */

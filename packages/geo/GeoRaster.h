@@ -267,7 +267,6 @@ class GeoRaster: public RasterObject
         static int luaDimensions(lua_State* L);
         static int luaBoundingBox(lua_State* L);
         static int luaCellSize(lua_State* L);
-        static int luaSamples(lua_State* L);
 
         static void* readingThread (void *param);
 

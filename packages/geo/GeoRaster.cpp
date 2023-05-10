@@ -187,7 +187,23 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
     LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
-    LuaEngine::setAttrFunc(L, "sample", luaSamples);
+    LuaEngine::setAttrFunc(L, "sample", RasterObject::luaSamples);
+
+    /* Establish Credentials */
+    #ifdef __aws__
+    if(_parms->asset)
+    {
+        const char* identity = _parms->asset->getIdentity();
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        if(credentials.provided)
+        {
+            const char* path = _parms->asset->getPath();
+            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
+            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
+            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
+        }
+    }
+    #endif
 }
 
 /*----------------------------------------------------------------------------
@@ -1302,96 +1318,6 @@ int GeoRaster::luaCellSize(lua_State *L)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting cell size: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
-}
-
-
-/*----------------------------------------------------------------------------
- * luaSamples - :sample(lon, lat, gps) --> in|out
- *----------------------------------------------------------------------------*/
-int GeoRaster::luaSamples(lua_State *L)
-{
-    bool status = false;
-    int num_ret = 1;
-
-    GeoRaster *lua_obj = NULL;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = (GeoRaster *)getLuaSelf(L, 1);
-
-        /* Get Coordinates */
-        double lon = getLuaFloat(L, 2);
-        double lat = getLuaFloat(L, 3);
-
-        /* Get gps closest time (overrides params provided closest time)*/
-        int64_t gps = 0;
-        if(lua_gettop(L) > 3)
-        {
-            const char* closest_time_str = getLuaString(L, 4);
-            gps = TimeLib::str2gpstime(closest_time_str);
-        }
-
-        /* Get samples */
-        List<sample_t> slist;
-        lua_obj->getSamples(lon, lat, gps, slist, NULL);
-        if(slist.length() > 0)
-        {
-            /* Create return table */
-            lua_createtable(L, slist.length(), 0);
-
-            for(int i = 0; i < slist.length(); i++)
-            {
-                const sample_t& sample = slist[i];
-                const char* fileName = "";
-
-                /* Find fileName from fileId */
-                Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
-                for(int j = 0; j < iterator.length; j++)
-                {
-                    if(iterator[j].value == sample.fileId)
-                    {
-                        fileName = iterator[j].key;
-                        break;
-                    }
-                }
-
-                lua_createtable(L, 0, 2);
-                LuaEngine::setAttrStr(L, "file", fileName);
-
-
-                if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
-                {
-                    LuaEngine::setAttrNum(L, "mad", sample.stats.mad);
-                    LuaEngine::setAttrNum(L, "stdev", sample.stats.stdev);
-                    LuaEngine::setAttrNum(L, "median", sample.stats.median);
-                    LuaEngine::setAttrNum(L, "mean", sample.stats.mean);
-                    LuaEngine::setAttrNum(L, "max", sample.stats.max);
-                    LuaEngine::setAttrNum(L, "min", sample.stats.min);
-                    LuaEngine::setAttrNum(L, "count", sample.stats.count);
-                }
-
-                if(lua_obj->parms->flags_file) /* Include flags */
-                {
-                    LuaEngine::setAttrNum(L, "flags", sample.flags);
-                }
-
-                LuaEngine::setAttrInt(L, "fileid", sample.fileId);
-                LuaEngine::setAttrNum(L, "time", sample.time);
-                LuaEngine::setAttrNum(L, "value", sample.value);
-                lua_rawseti(L, -2, i+1);
-            }
-            num_ret++;
-            status = true;
-        } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Failed to read samples: %s", e.what());
     }
 
     /* Return Status */
