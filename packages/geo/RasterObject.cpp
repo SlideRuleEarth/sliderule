@@ -145,6 +145,8 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     parms(_parms)
 {
+    /* Add Lua Functions */
+    LuaEngine::setAttrFunc(L, "sample", luaSamples);
 }
 
 /*----------------------------------------------------------------------------

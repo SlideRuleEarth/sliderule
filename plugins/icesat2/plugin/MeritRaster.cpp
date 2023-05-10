@@ -44,7 +44,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* MeritRaster::ASSET_NAME = "merit";
+const char* MeritRaster::ASSET_NAME = "merit-dem";
 const char* MeritRaster::RESOURCE_NAME = "merit_3as_20200617_001_01.h5";
 
 const double MeritRaster::X_SCALE = (1.0 / 1200.0);
@@ -157,10 +157,10 @@ void MeritRaster::getSamples (double lon, double lat, int64_t gps, List<sample_t
 
     /* Build Sample */
     sample_t sample = {
+        .value = tile[(y_offset *  X_MAX) + x_offset],
+        .time = (double)gpsTime,
         .fileId = 0,
-        .flags = 0,
-        .time = gpsTime,
-        .value = tile[(y_offset *  X_MAX) + x_offset]
+        .flags = 0
     };
     memset(&sample.stats, 0, sizeof(sample.stats));
 

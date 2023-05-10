@@ -187,7 +187,6 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
     LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
-    LuaEngine::setAttrFunc(L, "sample", RasterObject::luaSamples);
 
     /* Establish Credentials */
     #ifdef __aws__
