@@ -58,7 +58,9 @@ class MeritRaster: public RasterObject
         static const double Y_SCALE;
 
         static const int X_MAX = 6000;
-        static const int Y_MAX = 6000;        
+        static const int Y_MAX = 6000;
+
+        static const int TIMEOUT_MS = 600000;
 
         /*--------------------------------------------------------------------
          * Methods

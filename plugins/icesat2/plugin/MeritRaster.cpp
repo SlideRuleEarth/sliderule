@@ -65,8 +65,8 @@ void MeritRaster::init(void)
  * create
  *----------------------------------------------------------------------------*/
 RasterObject* MeritRaster::create(lua_State* L, GeoParms* _parms)
-{ 
-    return new MeritRaster(L, _parms); 
+{
+    return new MeritRaster(L, _parms);
 }
 
 /*----------------------------------------------------------------------------
@@ -119,7 +119,7 @@ void MeritRaster::getSamples (double lon, double lat, int64_t gps, List<sample_t
     /* Determine Upper Left Coordinates */
     int left_lon = ((int)floor(lon / 5.0)) * 5;
     int upper_lat = ((int)ceil(lat / 5.0)) * 5;
-    
+
     /* Calculate Pixel Location */
     int x_offset = (int)(((double)lon - left_lon) / X_SCALE);
     int y_offset = (int)(((double)lat - upper_lat) / Y_SCALE);
@@ -153,17 +153,24 @@ void MeritRaster::getSamples (double lon, double lat, int64_t gps, List<sample_t
 
     /* Read Dataset */
     H5Coro::context_t context;
-    H5Array<float> tile(asset, RESOURCE_NAME, dataset.str(), &context);
+    H5Array<int32_t> tile(asset, RESOURCE_NAME, dataset.str(), &context, H5Coro::ALL_COLS);
+    bool status = tile.join(TIMEOUT_MS, false);
+    if(status)
+    {
+        /* Build Sample */
+        sample_t sample = {
+            .value = (double)tile[(y_offset *  X_MAX) + x_offset],
+            .time = ((double)gpsTime / (double)1000.0),
+            .fileId = 0,
+            .flags = 0
+        };
+        memset(&sample.stats, 0, sizeof(sample.stats));
 
-    /* Build Sample */
-    sample_t sample = {
-        .value = tile[(y_offset *  X_MAX) + x_offset],
-        .time = (double)gpsTime,
-        .fileId = 0,
-        .flags = 0
-    };
-    memset(&sample.stats, 0, sizeof(sample.stats));
-
-    /* Return Sample */
-    slist.add(sample);
+        /* Return Sample */
+        slist.add(sample);
+    }
+    else
+    {
+        mlog(ERROR, "Failed to sample dataset: %s", dataset.str());
+    }
 }

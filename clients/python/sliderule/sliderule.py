@@ -67,7 +67,7 @@ MAX_PS_CLUSTER_WAIT_SECS = 600
 
 verbose = False
 
-request_timeout = (10, 60) # (connection, read) in seconds
+request_timeout = (10, 120) # (connection, read) in seconds
 
 logger = logging.getLogger(__name__)
 
