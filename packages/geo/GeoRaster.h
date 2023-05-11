@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
+#include "RasterObject.h"
 #include "OsApi.h"
 #include "TimeLib.h"
 #include "GeoParms.h"
@@ -77,7 +77,7 @@ do                                                                            \
  * GEO RASTER CLASS
  ******************************************************************************/
 
-class GeoRaster: public LuaObject
+class GeoRaster: public RasterObject
 {
     public:
 
@@ -93,9 +93,6 @@ class GeoRaster: public LuaObject
 
         static const char* BITMASK_FILE;
         static const char* SAMPLES_FILE;
-        static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -107,24 +104,6 @@ class GeoRaster: public LuaObject
             double lon_max;
             double lat_max;
         } bbox_t;
-
-
-        typedef struct {
-            double    value;
-            double    time;
-            uint64_t  fileId;
-            uint32_t  flags;
-
-            struct {
-                uint32_t count;
-                double   min;
-                double   max;
-                double   mean;
-                double   median;
-                double   stdev;
-                double   mad;
-            } stats;
-        } sample_t;
 
 
         class CoordTransform
@@ -215,23 +194,12 @@ class GeoRaster: public LuaObject
         } reader_t;
 
 
-        typedef GeoRaster* (*factory_t) (lua_State* L, GeoParms* _parms);
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void      init            (void);
-        static void      deinit          (void);
-        static int       luaCreate       (lua_State* L);
-        static bool      registerRaster  (const char* _name, factory_t create);
-        void             getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL);
-        virtual void     getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
-        double           getGmtDate      (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        inline bool      hasZonalStats   (void) { return parms->zonal_stats; }
-        const char*      getUUID         (char* uuid_str);
-        virtual         ~GeoRaster       (void);
-        inline const Dictionary<uint64_t>& fileDictGet(void) {return fileDict;}
+        virtual         ~GeoRaster  (void);
+        void            getSamples  (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
 
     protected:
 
@@ -240,6 +208,9 @@ class GeoRaster: public LuaObject
          *--------------------------------------------------------------------*/
 
                         GeoRaster             (lua_State* L, GeoParms* _parms);
+        virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
+        double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
+        const char*     getUUID               (char* uuid_str);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
         virtual void    transformCRS          (OGRPoint& p);
@@ -252,7 +223,6 @@ class GeoRaster: public LuaObject
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
         int             sample                (double lon, double lat, int64_t gps);
-        uint64_t        fileDictAdd           (const std::string& fileName);
 
         virtual bool    readGeoIndexData      (OGRPoint* point, int srcWindowSize, int srcOffset,
                                                void* data, int dstWindowSize, GDALRasterIOExtraArg* args);
@@ -270,7 +240,6 @@ class GeoRaster: public LuaObject
 
         Ordering<rasters_group_t>*  rasterGroupList;
         GeoIndex                    geoIndex;
-        GeoParms*                   parms;
         Dictionary<Raster*>         rasterDict;
         Mutex                       samplingMutex;
 
@@ -288,13 +257,8 @@ class GeoRaster: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static Mutex factoryMut;
-        static Dictionary<factory_t> factories;
-
         reader_t*    rasterRreader;
         uint32_t     readerCount;
-
-        Dictionary<uint64_t> fileDict;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -303,7 +267,6 @@ class GeoRaster: public LuaObject
         static int luaDimensions(lua_State* L);
         static int luaBoundingBox(lua_State* L);
         static int luaCellSize(lua_State* L);
-        static int luaSamples(lua_State* L);
 
         static void* readingThread (void *param);
 

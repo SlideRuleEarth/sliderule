@@ -42,7 +42,7 @@
 #include "DispatchObject.h"
 #include "OsApi.h"
 #include "MsgQ.h"
-#include "VrtRaster.h"
+#include "RasterObject.h"
 
 /******************************************************************************
  * RASTER SAMPLER DISPATCH CLASS
@@ -101,7 +101,7 @@ class RasterSampler: public DispatchObject
             uint64_t            index;
             char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
-            VrtRaster::sample_t samples[];
+            RasterObject::sample_t samples[];
         } zs_geo_t;
 
         /* File Directory Entry Record */
@@ -124,7 +124,7 @@ class RasterSampler: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        VrtRaster*              raster;
+        RasterObject*           raster;
         const char*             rasterKey;
         Publisher*              outQ;
         int                     recordSizeBytes;
@@ -137,7 +137,7 @@ class RasterSampler: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        RasterSampler           (lua_State* L, VrtRaster* _raster, const char* raster_key,
+                        RasterSampler           (lua_State* L, RasterObject* _raster, const char* raster_key,
                                                  const char* outq_name, const char* rec_type,
                                                  const char* index_key, const char* lon_key, const char* lat_key,
                                                  const char* time_key);

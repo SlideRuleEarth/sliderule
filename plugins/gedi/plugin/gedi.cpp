@@ -106,12 +106,12 @@ void initgedi (void)
     Gedi04bRaster::init();
 
     /* Register Rasters */
-    GeoRaster::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        Gedi03Raster::create);
-    GeoRaster::registerRaster(LUA_GEDI_L03_CANOPY_RASTER_NAME,           Gedi03Raster::create);
-    GeoRaster::registerRaster(LUA_GEDI_L03_ELEVATION_STDDEV_RASTER_NAME, Gedi03Raster::create);
-    GeoRaster::registerRaster(LUA_GEDI_L03_CANOPY_STDDEV_RASTER_NAME,    Gedi03Raster::create);
-    GeoRaster::registerRaster(LUA_GEDI_L03_COUNTS_RASTER_NAME,           Gedi03Raster::create);
-    GeoRaster::registerRaster(LUA_GEDI_L04B_RASTER_NAME,                 Gedi04bRaster::create);
+    RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        Gedi03Raster::create);
+    RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_RASTER_NAME,           Gedi03Raster::create);
+    RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_STDDEV_RASTER_NAME, Gedi03Raster::create);
+    RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_STDDEV_RASTER_NAME,    Gedi03Raster::create);
+    RasterObject::registerRaster(LUA_GEDI_L03_COUNTS_RASTER_NAME,           Gedi03Raster::create);
+    RasterObject::registerRaster(LUA_GEDI_L04B_RASTER_NAME,                 Gedi04bRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open);

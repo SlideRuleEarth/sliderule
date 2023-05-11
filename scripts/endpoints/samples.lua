@@ -26,12 +26,14 @@ local dem = geo.raster(geo.parms(rqst[geo.PARMS]))
 
 -- Build Table --
 local samples = {}
-for _, position in ipairs(coord) do
-    local lon = position[1]
-    local lat = position[2]
-    local sample, status = dem:sample(lon, lat)
-    if status then
-        table.insert(samples, sample)
+if dem then
+    for _, position in ipairs(coord) do
+        local lon = position[1]
+        local lat = position[2]
+        local sample, status = dem:sample(lon, lat)
+        if status then
+            table.insert(samples, sample)
+        end
     end
 end
 

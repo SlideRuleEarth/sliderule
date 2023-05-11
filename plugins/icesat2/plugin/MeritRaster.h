@@ -29,50 +29,46 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __landsat_hls_raster__
-#define __landsat_hls_raster__
+#ifndef __merit_raster_
+#define __merit_raster_
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string>
-#include "VctRaster.h"
+#include "RasterObject.h"
+#include "GeoParms.h"
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * MERIT RASTER CLASS
  ******************************************************************************/
 
-class LandsatHlsRaster: public VctRaster
+class MeritRaster: public RasterObject
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const char* L8_bands[];     /* Landsat 8  */
-        static const char* S2_bands[];     /* Sentinel 2 */
-        static const char* ALGO_names[];   /* Algorithms names */
-        static const char* ALGO_bands[];   /* Algorithms bands */
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
+        static const char* ASSET_NAME;
+        static const char* RESOURCE_NAME;
 
-        typedef enum {
-            LANDSAT8  = 0,
-            SENTINEL2 = 1,
-            ALGOBAND  = 2,
-            ALGONAME  = 3
-        } band_type_t;
+        static const double X_SCALE;
+        static const double Y_SCALE;
+
+        static const int X_MAX = 6000;
+        static const int Y_MAX = 6000;
+
+        static const int TIMEOUT_MS = 600000;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-                          { return new LandsatHlsRaster(L, _parms); }
-
+        static void             init            (void);
+        static RasterObject*    create          (lua_State* L, GeoParms* _parms);
+        virtual                 ~MeritRaster    (void);
 
     protected:
 
@@ -80,35 +76,22 @@ class LandsatHlsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                LandsatHlsRaster (lua_State* L, GeoParms* _parms);
-
-        void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
-        void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
-        bool    findRasters      (OGRPoint &p);
-        void    getGroupSamples  (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
+                MeritRaster     (lua_State *L, GeoParms* _parms);
+        void    getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
 
     private:
-        bool validateBand   (band_type_t type, const char* bandName);
-
-        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
-        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
-        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
-        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string filePath;
-        std::string indexFile;
-        Dictionary<bool> bandsDict;
 
-        bool ndsi;
-        bool ndvi;
-        bool ndwi;
+        Mutex       cacheMut;
+        int         cacheLat;
+        int         cacheLon;
+        int32_t*    cache;
+
+        Asset*      asset;
+        int64_t     gpsTime;
 };
 
-#endif  /* __landsat_hls_raster__ */
+#endif  /* __merit_raster_ */

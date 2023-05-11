@@ -89,7 +89,7 @@ void initlandsat(void)
     LandsatHlsRaster::init();
 
     /* Register Rasters */
-    GeoRaster::registerRaster(LUA_LANDSAT_HLS_RASTER_NAME, LandsatHlsRaster::create);
+    RasterObject::registerRaster(LUA_LANDSAT_HLS_RASTER_NAME, LandsatHlsRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_LANDSAT_LIBNAME, landsat_open);

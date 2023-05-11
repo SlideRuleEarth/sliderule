@@ -51,7 +51,7 @@ void Gedi03Raster::init(void)
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-GeoRaster* Gedi03Raster::create(lua_State* L, GeoParms* _parms)
+RasterObject* Gedi03Raster::create(lua_State* L, GeoParms* _parms)
 { 
     return new Gedi03Raster(L, _parms); 
 }

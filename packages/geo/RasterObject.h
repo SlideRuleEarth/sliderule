@@ -29,50 +29,79 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __landsat_hls_raster__
-#define __landsat_hls_raster__
+#ifndef __raster_object__
+#define __raster_object__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string>
-#include "VctRaster.h"
+#include "LuaObject.h"
+#include "OsApi.h"
+#include "TimeLib.h"
+#include "GeoParms.h"
+#include "Ordering.h"
+#include "List.h"
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * RASTER OBJECT CLASS
  ******************************************************************************/
 
-class LandsatHlsRaster: public VctRaster
+class RasterObject: public LuaObject
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const char* L8_bands[];     /* Landsat 8  */
-        static const char* S2_bands[];     /* Sentinel 2 */
-        static const char* ALGO_names[];   /* Algorithms names */
-        static const char* ALGO_bands[];   /* Algorithms bands */
+
+        static const char* OBJECT_TYPE;
+        static const char* LuaMetaName;
+        static const struct luaL_Reg LuaMetaTable[];
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef enum {
-            LANDSAT8  = 0,
-            SENTINEL2 = 1,
-            ALGOBAND  = 2,
-            ALGONAME  = 3
-        } band_type_t;
+        typedef struct {
+            double    value;
+            double    time; // gps seconds
+            uint64_t  fileId;
+            uint32_t  flags;
+
+            struct {
+                uint32_t count;
+                double   min;
+                double   max;
+                double   mean;
+                double   median;
+                double   stdev;
+                double   mad;
+            } stats;
+        } sample_t;
+
+        typedef RasterObject* (*factory_t) (lua_State* L, GeoParms* _parms);
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-                          { return new LandsatHlsRaster(L, _parms); }
+        static void     init            (void);
+        static void     deinit          (void);
+        static int      luaCreate       (lua_State* L);
+        static bool     registerRaster  (const char* _name, factory_t create);
+        virtual void    getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) = 0;
+        virtual         ~RasterObject   (void);
 
+        inline bool hasZonalStats (void) 
+        { 
+            return parms->zonal_stats; 
+        }
+        
+        inline const Dictionary<uint64_t>& fileDictGet(void)
+        {
+            return fileDict;
+        }
 
     protected:
 
@@ -80,35 +109,25 @@ class LandsatHlsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                LandsatHlsRaster (lua_State* L, GeoParms* _parms);
-
-        void    getIndexFile     (std::string& file, double lon=0, double lat=0 );
-        void    getIndexBbox     (bbox_t& bbox, double lon=0, double lat=0);
-        bool    findRasters      (OGRPoint &p);
-        void    getGroupSamples  (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
+                    RasterObject    (lua_State* L, GeoParms* _parms);
+        uint64_t    fileDictAdd     (const std::string& fileName);
+        static int  luaSamples      (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+        GeoParms* parms;
 
     private:
-        bool validateBand   (band_type_t type, const char* bandName);
-
-        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
-        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
-        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
-        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-        std::string filePath;
-        std::string indexFile;
-        Dictionary<bool> bandsDict;
 
-        bool ndsi;
-        bool ndvi;
-        bool ndwi;
+        static Mutex                    factoryMut;
+        static Dictionary<factory_t>    factories;
+        Dictionary<uint64_t>            fileDict;
 };
 
-#endif  /* __landsat_hls_raster__ */
+#endif  /* __raster_object__ */

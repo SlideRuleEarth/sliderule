@@ -54,7 +54,7 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static GeoRaster* create(lua_State* L, GeoParms* _parms)
+        static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new RemaDemStripsRaster(L, _parms); }
 
     protected:

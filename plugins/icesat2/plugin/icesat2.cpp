@@ -129,6 +129,9 @@ void initicesat2 (void)
     /* Register Cumulus IO Driver */
     Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);
 
+    /* Register Rasters */
+    RasterObject::registerRaster(MeritRaster::ASSET_NAME, MeritRaster::create);
+
     /* Extend Lua */
     LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open);
 

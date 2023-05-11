@@ -137,52 +137,6 @@ def __calcspot(sc_orient, track, pair):
     return 0
 
 #
-#  Dictionary to GeoDataFrame
-#
-def __todataframe(columns, time_key="time", lon_key="lon", lat_key="lat", **kwargs):
-
-    # Latch Start Time
-    tstart = time.perf_counter()
-
-    # Set Default Keyword Arguments
-    kwargs['index_key'] = "time"
-    kwargs['crs'] = sliderule.EPSG_MERCATOR
-
-    # Check Empty Columns
-    if len(columns) <= 0:
-        return sliderule.emptyframe(**kwargs)
-
-    # Generate Time Column
-    columns['time'] = columns[time_key].astype('datetime64[ns]')
-
-    # Generate Geometry Column
-    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
-    del columns[lon_key]
-    del columns[lat_key]
-
-    # Create Pandas DataFrame object
-    if type(columns) == dict:
-        df = geopandas.pd.DataFrame(columns)
-    else:
-        df = columns
-
-    # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
-    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
-
-    # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
-    # Can do this during DataFrame creation, but this allows input argument for desired column
-    gdf.set_index(kwargs['index_key'], inplace=True)
-
-    # Sort values for reproducible output despite async processing
-    gdf.sort_index(inplace=True)
-
-    # Update Profile
-    profiles[__todataframe.__name__] = time.perf_counter() - tstart
-
-    # Return GeoDataFrame
-    return gdf
-
-#
 # Flatten Batches
 #
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
@@ -286,7 +240,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = __todataframe(columns)
+    gdf = sliderule.todataframe(columns, lon_key='lon', lat_key='lat')
 
     # Merge Ancillary Fields
     tstart_merge = time.perf_counter()
@@ -699,7 +653,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     profiles["flatten"] = time.perf_counter() - tstart_flatten
 
                     # Create DataFrame
-                    gdf = __todataframe(columns, lat_key="latitude", lon_key="longitude")
+                    gdf = sliderule.todataframe(columns, lat_key="latitude", lon_key="longitude")
 
                     # Calculate Spot Column
                     gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)

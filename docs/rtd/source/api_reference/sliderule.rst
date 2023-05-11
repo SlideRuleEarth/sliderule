@@ -85,4 +85,4 @@ check_version
 
 toregion
 --------
-.. autofunction:: sliderule.icesat2.toregion
+.. autofunction:: sliderule.toregion
