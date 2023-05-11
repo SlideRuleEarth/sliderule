@@ -314,7 +314,7 @@ def __query_resources(parm, version, **kwargs):
 
     # Check Resources are Under Limit
     if(len(resources) > earthdata.max_requested_resources):
-        raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using cmr.set_max_resources to set a higher limit.'.format(len(resources), max_requested_resources))
+        raise sliderule.FatalError('Exceeded maximum requested granules: {} (current max is {})\nConsider using cmr.set_max_resources to set a higher limit.'.format(len(resources), earthdata.max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(resources))
 
