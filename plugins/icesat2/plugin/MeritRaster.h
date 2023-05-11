@@ -88,8 +88,7 @@ class MeritRaster: public RasterObject
         Mutex       cacheMut;
         int         cacheLat;
         int         cacheLon;
-        long        cacheSize;
-        uint8_t*    cache;
+        int32_t*    cache;
 
         Asset*      asset;
         int64_t     gpsTime;

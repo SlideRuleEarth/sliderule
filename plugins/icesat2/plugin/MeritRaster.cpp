@@ -74,6 +74,7 @@ RasterObject* MeritRaster::create(lua_State* L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 MeritRaster::~MeritRaster(void)
 {
+    if(cache) delete [] cache;
     if(asset) asset->releaseLuaObject();
 }
 
@@ -89,7 +90,6 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
     asset(NULL),
     cacheLat(0),
     cacheLon(0),
-    cacheSize(0),
     cache(NULL)
 {
     /* Initialize Time */
@@ -151,15 +151,47 @@ void MeritRaster::getSamples (double lon, double lat, int64_t gps, List<sample_t
     /* Build Dataset Name */
     SafeString dataset("%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
 
-    /* Read Dataset */
-    H5Coro::context_t context;
-    H5Array<int32_t> tile(asset, RESOURCE_NAME, dataset.str(), &context, H5Coro::ALL_COLS);
-    bool status = tile.join(TIMEOUT_MS, false);
-    if(status)
+    try
     {
+        double value = 0.0;
+        bool value_cached = false;
+
+        /* Check Cache */
+        cacheMut.lock();
+        {
+            if(cache && (left_lon == cacheLon) && (upper_lat == cacheLat))
+            {
+                value = (double)cache[(y_offset *  X_MAX) + x_offset];
+                value_cached = true;
+            }
+        }
+        cacheMut.unlock();
+
+        /* Read Dataset */
+        if(!value_cached)
+        {
+            H5Coro::context_t context;
+            H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context);
+            assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
+            int32_t* tile = (int32_t*)info.data;
+
+            /* Update Cache */
+            cacheMut.lock();
+            {
+                if(cache) delete [] cache;
+                cache = tile;
+                cacheLon = left_lon;
+                cacheLat = upper_lat;
+            }
+            cacheMut.unlock();
+
+            /* Read Value */
+            value = (double)tile[(y_offset *  X_MAX) + x_offset];
+        }
+
         /* Build Sample */
         sample_t sample = {
-            .value = (double)tile[(y_offset *  X_MAX) + x_offset],
+            .value = value,
             .time = ((double)gpsTime / (double)1000.0),
             .fileId = 0,
             .flags = 0
@@ -169,7 +201,7 @@ void MeritRaster::getSamples (double lon, double lat, int64_t gps, List<sample_t
         /* Return Sample */
         slist.add(sample);
     }
-    else
+    catch(const RunTimeException& e)
     {
         mlog(ERROR, "Failed to sample dataset: %s", dataset.str());
     }
