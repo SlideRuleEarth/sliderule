@@ -16,7 +16,7 @@ In order to sample a raster dataset, SlideRule must first ascertain which indivi
 
 SlideRule's asset directory is a list of datasets that SlideRule has access to.  Each entry in the asset directory describes a dataset and provides the necessary information to find, authenticate, and read that dataset.
 
-The following raster datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on); the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
+The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on); the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
 
 |asset|raster|description|
 |:---:|:---:|:---:|
@@ -29,6 +29,7 @@ The following raster datasets are currently provided in SlideRule's Asset Direct
 |gedil3-counts| *| GEDI L3 gridded counts of valid laser footprints|
 |gedil2a| | GEDI L2A Elevation and Height Metrics Data Global Footprint|
 |gedil1b| | GEDI L1B Geolocated Waveforms|
+|merit-dem| *| MERIT Digital Elevation Model|
 |landsat-hls| *| Harminized LandSat Sentinal-2|
 |arcticdem-mosaic| *| PGC Arctic Digital Elevation Model Mosaic|
 |arcticdem-strips| *| PGC Arctic Digital Elevation Model Strips|
