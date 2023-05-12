@@ -20,7 +20,7 @@ Version description of the v3.1.0 release of ICESat-2 SlideRule.
 
 ## Development Updates
 
-- Now using OpenID Connect protocol to authenticate users trying to access cluster instances of grafana and static website.  
+- Now using OpenID Connect protocol to authenticate users trying to access cluster instances of grafana and static website.
 
 - Direct support/option in provisioning system for deploying public clusters
 
