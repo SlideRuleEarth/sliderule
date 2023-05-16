@@ -1,0 +1,995 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": "60c9886cd34e86b9389f3ef4",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.87929730499997,
+                        38.72331737500008
+                    ],
+                    [
+                        -107.87929730499997,
+                        38.81610137300004
+                    ],
+                    [
+                        -107.76077840799996,
+                        38.81610137300004
+                    ],
+                    [
+                        -107.76077840799996,
+                        38.72331737500008
+                    ],
+                    [
+                        -107.87929730499997,
+                        38.72331737500008
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2021-06-16T19:24:19.670-06:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_WestCentral_2019_A19/TIFF/USGS_1M_13_x25y430_CO_WestCentral_2019_A19.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a0582cefae35a21ee8c",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.117274181,
+                        38.9003581843
+                    ],
+                    [
+                        -108.117274181,
+                        38.987435717
+                    ],
+                    [
+                        -107.998021739,
+                        38.987435717
+                    ],
+                    [
+                        -107.998021739,
+                        38.9003581843
+                    ],
+                    [
+                        -108.117274181,
+                        38.9003581843
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:08:25.219-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x23y432_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a0582cefae35a21ee8e",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.121233424,
+                        38.9903575086
+                    ],
+                    [
+                        -108.121233424,
+                        39.0774149519
+                    ],
+                    [
+                        -108.001829768,
+                        39.0774149519
+                    ],
+                    [
+                        -108.001829768,
+                        38.9903575086
+                    ],
+                    [
+                        -108.121233424,
+                        38.9903575086
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:08:25.977-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x23y433_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a0582cefae35a21ee90",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.121233424,
+                        38.9903575086
+                    ],
+                    [
+                        -108.121233424,
+                        39.0774149519
+                    ],
+                    [
+                        -108.001829768,
+                        39.0774149519
+                    ],
+                    [
+                        -108.001829768,
+                        38.9903575086
+                    ],
+                    [
+                        -108.121233424,
+                        38.9903575086
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:21.241-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x23y433_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a0582cefae35a21ee92",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.125210421,
+                        39.0803464254
+                    ],
+                    [
+                        -108.125210421,
+                        39.1673924555
+                    ],
+                    [
+                        -108.005642919,
+                        39.1673924555
+                    ],
+                    [
+                        -108.005642919,
+                        39.0803464254
+                    ],
+                    [
+                        -108.125210421,
+                        39.0803464254
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:08:27.002-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x23y434_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a0682cefae35a21ee94",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.125210421,
+                        39.0803464254
+                    ],
+                    [
+                        -108.125210421,
+                        39.1673924555
+                    ],
+                    [
+                        -108.005642919,
+                        39.1673924555
+                    ],
+                    [
+                        -108.005642919,
+                        39.0803464254
+                    ],
+                    [
+                        -108.125210421,
+                        39.0803464254
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:22.090-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x23y434_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a1782cefae35a21eefc",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.005786052,
+                        38.9932698128
+                    ],
+                    [
+                        -108.005786052,
+                        39.0804508366
+                    ],
+                    [
+                        -107.886511428,
+                        39.0804508366
+                    ],
+                    [
+                        -107.886511428,
+                        38.9932698128
+                    ],
+                    [
+                        -108.005786052,
+                        38.9932698128
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:08:31.179-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x24y433_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a1882cefae35a21eefe",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.005786052,
+                        38.9932698128
+                    ],
+                    [
+                        -108.005786052,
+                        39.0804508366
+                    ],
+                    [
+                        -107.886511428,
+                        39.0804508366
+                    ],
+                    [
+                        -107.886511428,
+                        38.9932698128
+                    ],
+                    [
+                        -108.005786052,
+                        38.9932698128
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:25.110-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x24y433_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a1882cefae35a21ef00",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.0096165,
+                        39.0832590351
+                    ],
+                    [
+                        -108.0096165,
+                        39.1704380327
+                    ],
+                    [
+                        -107.890178233,
+                        39.1704380327
+                    ],
+                    [
+                        -107.890178233,
+                        39.0832590351
+                    ],
+                    [
+                        -108.0096165,
+                        39.0832590351
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:08:32.035-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x24y434_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a1882cefae35a21ef02",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.0096165,
+                        39.0832590351
+                    ],
+                    [
+                        -108.0096165,
+                        39.1704380327
+                    ],
+                    [
+                        -107.890178233,
+                        39.1704380327
+                    ],
+                    [
+                        -107.890178233,
+                        39.0832590351
+                    ],
+                    [
+                        -108.0096165,
+                        39.0832590351
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:25.940-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x24y434_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a2982cefae35a21ef62",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.890333125,
+                        38.9960685777
+                    ],
+                    [
+                        -107.890333125,
+                        39.0833723076
+                    ],
+                    [
+                        -107.771165187,
+                        39.0833723076
+                    ],
+                    [
+                        -107.771165187,
+                        38.9960685777
+                    ],
+                    [
+                        -107.890333125,
+                        38.9960685777
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:30.029-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x25y433_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a2982cefae35a21ef64",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.894005394,
+                        39.0860667422
+                    ],
+                    [
+                        -107.894005394,
+                        39.1733691193
+                    ],
+                    [
+                        -107.774685932,
+                        39.1733691193
+                    ],
+                    [
+                        -107.774685932,
+                        39.0860667422
+                    ],
+                    [
+                        -107.894005394,
+                        39.0860667422
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:08:20.526-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL1_2016/TIFF/USGS_one_meter_x25y434_CO_MesaCo_QL1_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa4a2982cefae35a21ef66",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.894005394,
+                        39.0860667422
+                    ],
+                    [
+                        -107.894005394,
+                        39.1733691193
+                    ],
+                    [
+                        -107.774685932,
+                        39.1733691193
+                    ],
+                    [
+                        -107.774685932,
+                        39.0860667422
+                    ],
+                    [
+                        -107.894005394,
+                        39.0860667422
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:31.077-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x25y434_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa520782cefae35a222091",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.34752959,
+                        38.8160457315
+                    ],
+                    [
+                        -108.34752959,
+                        38.908843574
+                    ],
+                    [
+                        -108.235680365,
+                        38.908843574
+                    ],
+                    [
+                        -108.235680365,
+                        38.8160457315
+                    ],
+                    [
+                        -108.34752959,
+                        38.8160457315
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:09:55.531-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x73y431_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa520782cefae35a222093",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.344169662,
+                        38.9060469265
+                    ],
+                    [
+                        -108.344169662,
+                        38.998860953
+                    ],
+                    [
+                        -108.232179267,
+                        38.998860953
+                    ],
+                    [
+                        -108.232179267,
+                        38.9060469265
+                    ],
+                    [
+                        -108.344169662,
+                        38.9060469265
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:09:56.479-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x73y432_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa520782cefae35a222095",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.340806218,
+                        38.9960647394
+                    ],
+                    [
+                        -108.340806218,
+                        39.088876958
+                    ],
+                    [
+                        -108.228673333,
+                        39.088876958
+                    ],
+                    [
+                        -108.228673333,
+                        38.9960647394
+                    ],
+                    [
+                        -108.340806218,
+                        38.9960647394
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:09:57.282-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x73y433_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa520882cefae35a222097",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.337404533,
+                        39.0860721673
+                    ],
+                    [
+                        -108.337404533,
+                        39.1788907959
+                    ],
+                    [
+                        -108.22516358,
+                        39.1788907959
+                    ],
+                    [
+                        -108.22516358,
+                        39.0860721673
+                    ],
+                    [
+                        -108.337404533,
+                        39.0860721673
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:09:58.216-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x73y434_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa521882cefae35a222117",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.232324477,
+                        38.8132649229
+                    ],
+                    [
+                        -108.232324477,
+                        38.9061674919
+                    ],
+                    [
+                        -108.120635849,
+                        38.9061674919
+                    ],
+                    [
+                        -108.120635849,
+                        38.8132649229
+                    ],
+                    [
+                        -108.232324477,
+                        38.8132649229
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:01.640-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x74y431_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa521882cefae35a222119",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.228819063,
+                        38.9032662093
+                    ],
+                    [
+                        -108.228819063,
+                        38.9961763131
+                    ],
+                    [
+                        -108.11698964,
+                        38.9961763131
+                    ],
+                    [
+                        -108.11698964,
+                        38.9032662093
+                    ],
+                    [
+                        -108.228819063,
+                        38.9032662093
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:02.789-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x74y432_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa521882cefae35a22211b",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.225297931,
+                        38.9932663862
+                    ],
+                    [
+                        -108.225297931,
+                        39.0861834754
+                    ],
+                    [
+                        -108.11335018,
+                        39.0861834754
+                    ],
+                    [
+                        -108.11335018,
+                        38.9932663862
+                    ],
+                    [
+                        -108.225297931,
+                        38.9932663862
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:03.966-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x74y433_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa521882cefae35a22211d",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.221772569,
+                        39.0832555975
+                    ],
+                    [
+                        -108.221772569,
+                        39.1761892522
+                    ],
+                    [
+                        -108.1096832,
+                        39.1761892522
+                    ],
+                    [
+                        -108.1096832,
+                        39.0832555975
+                    ],
+                    [
+                        -108.221772569,
+                        39.0832555975
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:04.908-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x74y434_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523082cefae35a22219f",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.113495714,
+                        38.9003543365
+                    ],
+                    [
+                        -108.113495714,
+                        38.9933780972
+                    ],
+                    [
+                        -108.001828547,
+                        38.9933780972
+                    ],
+                    [
+                        -108.001828547,
+                        38.9003543365
+                    ],
+                    [
+                        -108.113495714,
+                        38.9003543365
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:09.113-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x75y432_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523082cefae35a2221a1",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.109828537,
+                        38.9903539455
+                    ],
+                    [
+                        -108.109828537,
+                        39.0833763181
+                    ],
+                    [
+                        -107.998031861,
+                        39.0833763181
+                    ],
+                    [
+                        -107.998031861,
+                        38.9903539455
+                    ],
+                    [
+                        -108.109828537,
+                        38.9903539455
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:10.789-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x75y433_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523082cefae35a2221a3",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.109828537,
+                        38.9903539455
+                    ],
+                    [
+                        -108.109828537,
+                        39.0833763181
+                    ],
+                    [
+                        -107.998031861,
+                        39.0833763181
+                    ],
+                    [
+                        -107.998031861,
+                        38.9903539455
+                    ],
+                    [
+                        -108.109828537,
+                        38.9903539455
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:53.546-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x75y433_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523082cefae35a2221a5",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.10613335,
+                        39.0803338521
+                    ],
+                    [
+                        -108.10613335,
+                        39.1733725678
+                    ],
+                    [
+                        -107.994218917,
+                        39.1733725678
+                    ],
+                    [
+                        -107.994218917,
+                        39.0803338521
+                    ],
+                    [
+                        -108.10613335,
+                        39.0803338521
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:12.112-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x75y434_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523082cefae35a2221a7",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -108.10613335,
+                        39.0803338521
+                    ],
+                    [
+                        -108.10613335,
+                        39.1733725678
+                    ],
+                    [
+                        -107.994218917,
+                        39.1733725678
+                    ],
+                    [
+                        -107.994218917,
+                        39.0803338521
+                    ],
+                    [
+                        -108.10613335,
+                        39.0803338521
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:54.548-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x75y434_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523f82cefae35a22221f",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.994364041,
+                        38.9873277409
+                    ],
+                    [
+                        -107.994364041,
+                        39.0804547089
+                    ],
+                    [
+                        -107.882730559,
+                        39.0804547089
+                    ],
+                    [
+                        -107.882730559,
+                        38.9873277409
+                    ],
+                    [
+                        -107.994364041,
+                        38.9873277409
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:18.520-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x76y433_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523f82cefae35a222221",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.994364041,
+                        38.9873277409
+                    ],
+                    [
+                        -107.994364041,
+                        39.0804547089
+                    ],
+                    [
+                        -107.882730559,
+                        39.0804547089
+                    ],
+                    [
+                        -107.882730559,
+                        38.9873277409
+                    ],
+                    [
+                        -107.994364041,
+                        38.9873277409
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:57.809-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x76y433_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523f82cefae35a222223",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.990522223,
+                        39.0773069779
+                    ],
+                    [
+                        -107.990522223,
+                        39.1704416187
+                    ],
+                    [
+                        -107.878771337,
+                        39.1704416187
+                    ],
+                    [
+                        -107.878771337,
+                        39.0773069779
+                    ],
+                    [
+                        -107.990522223,
+                        39.0773069779
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:10:19.416-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x76y434_CO_MesaCo_QL2_UTM12_2016.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "5eaa523f82cefae35a222225",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        -107.990522223,
+                        39.0773069779
+                    ],
+                    [
+                        -107.990522223,
+                        39.1704416187
+                    ],
+                    [
+                        -107.878771337,
+                        39.1704416187
+                    ],
+                    [
+                        -107.878771337,
+                        39.0773069779
+                    ],
+                    [
+                        -107.990522223,
+                        39.0773069779
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-11-17T11:11:01.808-07:00",
+                "url": "/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x76y434_CO_MesaCo_QL2_UTM13_2015.tif"
+            }
+        }
+    ]
+}
