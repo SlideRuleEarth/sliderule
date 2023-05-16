@@ -12,8 +12,7 @@ sys.setlvl(core.LOG, core.DEBUG)
 local assets = asset.loaddir()
 
 local _,td = runner.srcscript()
--- local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
-local geojsonfile = td.."../data/3dep.geojson"
+local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
@@ -53,8 +52,8 @@ local errorChecking = true
 
 local starttime = time.latch();
 
-for i=1,#arr do
--- for i=1000, 1002 do
+-- for i=1,#arr do
+for i=1, 5 do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  tbl, status = dem:sample(lon, lat)

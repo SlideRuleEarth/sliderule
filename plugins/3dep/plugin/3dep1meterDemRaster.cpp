@@ -37,6 +37,7 @@
 #include "TimeLib.h"
 
 #include <uuid/uuid.h>
+#include <limits>
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -68,6 +69,10 @@ threeDep1meterDemRaster::threeDep1meterDemRaster(lua_State *L, GeoParms* _parms)
     filePath.append(_parms->asset->getPath()).append("/");
     indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
 
+    // print2term("%s\n", _parms->catalog);
+    // mlog(DEBUG, "%s", _parms->catalog);
+
+
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
@@ -96,8 +101,9 @@ void threeDep1meterDemRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
     bbox.lat_min = env.MinY;
     bbox.lon_max = env.MaxX;
     bbox.lat_max = env.MaxY;
-}
 
+    mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+}
 
 /*----------------------------------------------------------------------------
  * findRasters

@@ -15,7 +15,6 @@ import json
 #----------------------------------------------------------------------
 minlon =  -108.30871582031250
 maxlon =  -107.87406921386717
-
 minlat =    38.81670618152057
 maxlat =    39.12260286627899
 
@@ -23,10 +22,9 @@ maxlat =    39.12260286627899
 dataset = 'Digital Elevation Model (DEM) 1 meter'
 
 
-#put bounding box into string format
-bbox = (minlon,minlat,maxlon,maxlat)
-bbox = str(bbox)
-bbox = bbox.strip('()')
+#the API doc states that the list should be  [x,y x,y x,y x,y x,y]  Polygon, longitude/latitude values expressed in decimal degrees in a space-delimited list.
+#the doc is WRONG, the list must be          [x y, x y, x y, x y, x y]
+grandMesaPoly = '-108.311682565537666 39.137576462129438,  -108.341156683252237 39.037589876133246, -108.287868638779599 38.89051431295789, -108.207729687800509 38.823205529198098, -108.074601643110313 38.847513782586297, -107.985605104949812 38.943991201101703, -107.728398587557521 39.015109302306328, -107.787241424909936 39.195630349659986, -108.049394800987542 39.139504663354245, -108.172870009708575 39.159200663961158, -108.311682565537666 39.137576462129438'
 
 #Build call to USGS REST API
 url='https://tnmaccess.nationalmap.gov/api/v1/products'
@@ -37,7 +35,7 @@ allItems = []
 
 #Execute REST API calls to collect all 3DEP 1 meter DEM rasters for AOI.
 while requestCnt >= 0:
-    params = dict(datasets=dataset, bbox=bbox, prodFormats='GeoTIFF',outputFormat='JSON', max=100, offset=rxItemsCnt)
+    params = dict(datasets=dataset, polygon=grandMesaPoly, prodFormats='GeoTIFF',outputFormat='JSON', max=100, offset=rxItemsCnt)
 
     try:
         r = requests.get(url,params=params)
@@ -50,10 +48,12 @@ while requestCnt >= 0:
     except:
         print('Error loading JSON output')
 
+    # print(r.content)
+
     #for debugging, write json server response to file
-    #jsonFile = 'dem' + str(requestCnt) + '.json'
-    #with open(jsonFile, 'w') as outfile:
-    #    json.dump(data, outfile)
+    jsonFile = 'dem' + str(requestCnt) + '.json'
+    with open(jsonFile, 'w') as outfile:
+        json.dump(data, outfile)
 
     #extract just the records from the JSON
     items = data['items']
@@ -87,8 +87,9 @@ for i in range(len(allItems)):
     minY = allItems[i]['boundingBox']['minY']
     maxY = allItems[i]['boundingBox']['maxY']
 
-    #clockwise for interior of bounding box
-    coordList = [[minX, minY], [minX, maxY], [maxX, maxY], [maxX, minY], [minX, minY]]
+    #counter-clockwise for interior of bounding box
+    coordList = [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]]
+
     geometryDic = {"type": "Polygon", "coordinates": coordList}
     geojsonDict['features'][i].update({"geometry": geometryDic})
 
