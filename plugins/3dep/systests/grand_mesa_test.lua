@@ -12,7 +12,8 @@ sys.setlvl(core.LOG, core.DEBUG)
 local assets = asset.loaddir()
 
 local _,td = runner.srcscript()
-local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
+-- local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
+local geojsonfile = td.."../data/3dep.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()

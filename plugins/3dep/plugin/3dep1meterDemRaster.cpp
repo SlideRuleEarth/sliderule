@@ -79,8 +79,7 @@ threeDep1meterDemRaster::threeDep1meterDemRaster(lua_State *L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 void threeDep1meterDemRaster::getIndexFile(std::string& file, double lon, double lat)
 {
-    file = "/data/3dep/grand_mesa_1m_dem.geojson";
-    // file = indexFile;
+    file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
 

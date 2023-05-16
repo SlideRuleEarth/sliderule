@@ -40,8 +40,8 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_3DEP_LIBNAME                "three_dep"
-#define LUA_3DEP_1METER_DEM_RASTER_NAME "three_dep-1meter-dem"
+#define LUA_3DEP_LIBNAME                "3dep"
+#define LUA_3DEP_1METER_DEM_RASTER_NAME "3dep-1meter-dem"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
