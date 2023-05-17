@@ -1,6 +1,6 @@
 import requests
 import json
-
+from datetime import datetime, timezone
 
 """
    chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://apps.nationalmap.gov/help/documents/TNMAccessAPIDocumentation/TNMAccessAPIDocumentation.pdf
@@ -13,12 +13,6 @@ import json
 
 #INPUTS
 #----------------------------------------------------------------------
-minlon =  -108.30871582031250
-maxlon =  -107.87406921386717
-minlat =    38.81670618152057
-maxlat =    39.12260286627899
-
-
 dataset = 'Digital Elevation Model (DEM) 1 meter'
 
 
@@ -94,6 +88,8 @@ for i in range(len(allItems)):
     geojsonDict['features'][i].update({"geometry": geometryDic})
 
     date = allItems[i]['lastUpdated']
+    pydate = datetime.fromisoformat(date)
+    date = pydate.astimezone(None).isoformat()
     url  = allItems[i]['urls']['TIFF'].replace('https://prd-tnm.s3.amazonaws.com','/vsis3/prd-tnm')
     propertiesDict = {"datetime": date, "url": url }
     geojsonDict['features'][i].update({"properties": propertiesDict})

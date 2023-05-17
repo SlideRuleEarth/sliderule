@@ -90,22 +90,6 @@ void threeDep1meterDemRaster::getIndexFile(std::string& file, double lon, double
 
 
 /*----------------------------------------------------------------------------
- * getIndexBbox
- *----------------------------------------------------------------------------*/
-void threeDep1meterDemRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
-{
-    OGREnvelope env;
-    OGRErr err = layer->GetExtent(&env);
-
-    bbox.lon_min = env.MinX;
-    bbox.lat_min = env.MinY;
-    bbox.lon_max = env.MaxX;
-    bbox.lat_max = env.MaxY;
-
-    mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
-}
-
-/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool threeDep1meterDemRaster::findRasters(OGRPoint& p)
@@ -132,7 +116,7 @@ bool threeDep1meterDemRaster::findRasters(OGRPoint& p)
             {
                 raster_info_t rinfo;
                 rinfo.fileName = fname;
-                rinfo.tag      = "url";
+                rinfo.tag      = SAMPLES_FILE;
                 rinfo.gpsTime  = rgroup.gpsTime;
                 rinfo.gmtDate  = rgroup.gmtDate;
 
@@ -151,36 +135,6 @@ bool threeDep1meterDemRaster::findRasters(OGRPoint& p)
 
     return (rasterGroupList->length() > 0);
 }
-
-
-/*----------------------------------------------------------------------------
- * getGroupSamples
- *----------------------------------------------------------------------------*/
-void threeDep1meterDemRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
-{
-    /* Collect samples for all rasters */
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-    for(int j = 0; j < raster_iter.length; j++)
-    {
-        const raster_info_t& rinfo = raster_iter[j].value;
-        const char* key            = rinfo.fileName.c_str();
-        Raster* raster             = NULL;
-        if(rasterDict.find(key, &raster))
-        {
-            assert(raster);
-            if(raster->enabled && raster->sampled)
-            {
-                /* Update dictionary of used raster files */
-                raster->sample.fileId = fileDictAdd(raster->fileName);
-                raster->sample.flags  = flags;
-                slist.add(raster->sample);
-            }
-        }
-    }
-}
-
-
-
 
 
 /******************************************************************************

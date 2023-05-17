@@ -61,14 +61,14 @@ class VrtRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
                      VrtRaster          (lua_State* L, GeoParms* _parms, const char* vrt_file=NULL);
-        void         openGeoIndex       (double lon=0, double lat=0);
+        void         openGeoIndex       (double lon=0, double lat=0) override;
         virtual void getIndexFile       (std::string& file, double lon=0, double lat=0);
         virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
         bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                         void *data, int dstWindowSize, GDALRasterIOExtraArg *args);
+                                         void *data, int dstWindowSize, GDALRasterIOExtraArg *args) override;
 
-        bool         findRasters        (OGRPoint &p);
-        bool         findCachedRasters  (OGRPoint &p);
+        bool         findRasters        (OGRPoint &p) override;
+        bool         findCachedRasters  (OGRPoint &p) override;
         void         buildVRT           (std::string& vrt_file, List<std::string>& rlist);
 
         /*--------------------------------------------------------------------

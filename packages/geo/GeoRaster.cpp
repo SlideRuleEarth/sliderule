@@ -265,7 +265,7 @@ double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  Time
         else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
     }
 
-    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
+    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, second);
     return static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
 }
 

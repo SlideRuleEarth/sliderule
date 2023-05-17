@@ -159,21 +159,6 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * getIndexBbox
- *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
-{
-    OGREnvelope env;
-    OGRErr err = layer->GetExtent(&env);
-
-    bbox.lon_min = env.MinX;
-    bbox.lat_min = env.MinY;
-    bbox.lon_max = env.MaxX;
-    bbox.lat_max = env.MaxY;
-}
-
-
-/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(OGRPoint& p)

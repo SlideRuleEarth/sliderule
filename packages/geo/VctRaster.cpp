@@ -183,6 +183,27 @@ void VctRaster::openGeoIndex(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
+ * getIndexBbox
+ *----------------------------------------------------------------------------*/
+void VctRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
+{
+    std::ignore = lon = lat;
+
+    OGREnvelope env;
+    OGRErr err = layer->GetExtent(&env);
+    if(err == OGRERR_NONE )
+    {
+        bbox.lon_min = env.MinX;
+        bbox.lat_min = env.MinY;
+        bbox.lon_max = env.MaxX;
+        bbox.lat_max = env.MaxY;
+        mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+    }
+    else mlog(ERROR, "Failed to get layer extent/bbox");
+}
+
+
+/*----------------------------------------------------------------------------
  * findCachedRaster
  *----------------------------------------------------------------------------*/
 bool VctRaster::findCachedRasters(OGRPoint& p)

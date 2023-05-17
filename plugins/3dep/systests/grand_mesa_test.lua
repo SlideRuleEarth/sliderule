@@ -4,8 +4,8 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
 
@@ -45,8 +45,7 @@ local demType = "3dep-1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 
 local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
-local badFileCnt = 0
-local badNDVICnt = 0
+local failedRead = 0
 local samplesCnt = 0
 local errorChecking = true
 
@@ -58,7 +57,17 @@ for i=1, 5 do
     local  lat = arr[i][2]
     local  tbl, status = dem:sample(lon, lat)
     if status ~= true then
+        failedRead = failedRead + 1
         print(string.format("======> FAILED to read", lon, lat))
+    else
+        local value, fname, time
+        for j, v in ipairs(tbl) do
+            value = v["value"]
+            fname = v["file"]
+            time  = v["time"]
+            print(string.format("(%02d) value %12.3f, time %.2f, fname: %s", j, value, time, fname))
+        end
+            print("\n")
     end
 
     samplesCnt = samplesCnt + 1
@@ -73,7 +82,7 @@ end
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-print(string.format("\nSamples: %d, wrong NDVI: %d, wrong groupID: %d", samplesCnt, badNDVICnt, badFileCnt))
+print(string.format("\nSamples: %d, failedRead: %d", samplesCnt, failedRead))
 print(string.format("ExecTime: %f", dtime))
 
 os.exit()
