@@ -1,6 +1,6 @@
 # usgs3dep SlideRule Plugin top-level CMake build script
 
-project (3DEP LANGUAGES CXX)
+project (USGS3DEP LANGUAGES CXX)
 
 #################
 # CMake Options #
