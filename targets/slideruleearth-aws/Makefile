@@ -36,6 +36,7 @@ ICESAT2_BUILD_DIR = $(BUILD)/icesat2
 PGC_BUILD_DIR = $(BUILD)/pgc
 LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
+3DEP_BUILD_DIR = $(BUILD)/3dep
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 SERVER_STAGE_DIR = $(STAGE)/sliderule
@@ -78,6 +79,7 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(PGC_BUILD_DIR)
 	mkdir -p $(LANDSAT_BUILD_DIR)
 	mkdir -p $(GEDI_BUILD_DIR)
+	mkdir -p $(3DEP_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols
 	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
@@ -85,6 +87,7 @@ config-debug: prep ## configure the server for running locally with debug symbol
 	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/3dep
 
 config-release: prep ## configure server to run release version locally (useful for using valgrind)
 	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
@@ -92,6 +95,7 @@ config-release: prep ## configure server to run release version locally (useful 
 	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/3dep
 
 config-asan: prep ## configure server to run with address sanitizer locally
 	cd $(SLIDERULE_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
@@ -99,6 +103,7 @@ config-asan: prep ## configure server to run with address sanitizer locally
 	cd $(PGC_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(3dep_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/3dep
 
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
@@ -111,6 +116,8 @@ sliderule: ## build the server using the local configuration
 	make -C $(LANDSAT_BUILD_DIR) install
 	make -j4 -C $(GEDI_BUILD_DIR)
 	make -C $(GEDI_BUILD_DIR) install
+	make -j4 -C $(3DEP_BUILD_DIR)
+	make -C $(3DEP_BUILD_DIR) install
 
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json

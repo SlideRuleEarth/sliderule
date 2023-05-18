@@ -363,8 +363,13 @@ void GeoRaster::processRaster(Raster* raster)
                 const char* projref = raster->dset->GetProjectionRef();
                 CHECKPTR(projref);
                 // mlog(DEBUG, "%s", projref);
+
                 ogrerr = cord.target.importFromProj4(projref);
                 CHECK_GDALERR(ogrerr);
+
+                int northFlag=0;
+                int utm = cord.target.GetUTMZone(&northFlag);
+                mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
 
                 /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
                 cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
