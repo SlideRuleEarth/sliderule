@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __3dep_1meter_dem_raster__
-#define __3dep_1meter_dem_raster__
+#ifndef __usgs3dep_1meter_dem_raster__
+#define __usgs3dep_1meter_dem_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,10 @@
 #include "VctRaster.h"
 
 /******************************************************************************
- * 3DEP 1METER DEM RASTER CLASS
+ * USGS3DEP 1METER DEM RASTER CLASS
  ******************************************************************************/
 
-class threeDep1meterDemRaster: public VctRaster
+class Usgs3dep1meterDemRaster: public VctRaster
 {
     public:
 
@@ -55,7 +55,7 @@ class threeDep1meterDemRaster: public VctRaster
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, GeoParms* _parms)
-                          { return new threeDep1meterDemRaster(L, _parms); }
+                          { return new Usgs3dep1meterDemRaster(L, _parms); }
 
 
     protected:
@@ -64,7 +64,7 @@ class threeDep1meterDemRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                threeDep1meterDemRaster (lua_State* L, GeoParms* _parms);
+                Usgs3dep1meterDemRaster (lua_State* L, GeoParms* _parms);
 
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) override;
         bool    findRasters      (OGRPoint &p) override;
@@ -82,4 +82,4 @@ class threeDep1meterDemRaster: public VctRaster
         std::string indexFile;
 };
 
-#endif  /* __3dep_1meter_dem_raster__ */
+#endif  /* __usgs3dep_1meter_dem_raster__ */

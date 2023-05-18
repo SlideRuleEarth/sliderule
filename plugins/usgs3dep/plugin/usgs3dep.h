@@ -29,24 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __3dep_plugin__
-#define __3dep_plugin__
+#ifndef __usgs3dep_plugin__
+#define __usgs3dep_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "3dep1meterDemRaster.h"
+#include "usgs3dep1meterDemRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void init3dep(void);
-void deinit3dep(void);
+void initusgs3dep(void);
+void deinitusgs3dep(void);
 }
 
-#endif  /* __3dep_plugin__ */
+#endif  /* __usgs3dep_plugin__ */
 
 

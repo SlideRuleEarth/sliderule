@@ -39,9 +39,9 @@ for i=1, 10 do
 end
 ]]
 
-print(string.format("\n-------------------------------------------------\n3dep 1meter DEM Grand Mesa test\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM Grand Mesa test\n-------------------------------------------------"))
 
-local demType = "3dep-1meter-dem"
+local demType = "usgs3dep-1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 
 local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"

@@ -34,26 +34,26 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "3dep.h"
+#include "usgs3dep.h"
 
 /******************************************************************************
  * DEFINES
  ******************************************************************************/
 
-#define LUA_3DEP_LIBNAME                "3dep"
-#define LUA_3DEP_1METER_DEM_RASTER_NAME "3dep-1meter-dem"
+#define LUA_USGS3DEP_LIBNAME                "usgs3dep"
+#define LUA_USGS3DEP_1METER_DEM_RASTER_NAME "usgs3dep-1meter-dem"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * three_dep_version
+ * usgs3dep_version
  *----------------------------------------------------------------------------*/
-int three_dep_version (lua_State* L)
+int usgs3dep_version (lua_State* L)
 {
     /* Display Version Information on Terminal */
-    print2term("3dep Plugin Version: %s\n", BINID);
+    print2term("usgs3dep Plugin Version: %s\n", BINID);
     print2term("Build Information: %s\n", BUILDINFO);
 
     /* Return Version Information to Lua */
@@ -63,17 +63,17 @@ int three_dep_version (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * three_dep_open
+ * usgs3dep_open
  *----------------------------------------------------------------------------*/
-int three_dep_open (lua_State *L)
+int usgs3dep_open (lua_State *L)
 {
-    static const struct luaL_Reg three_dep_functions[] = {
-        {"version",         three_dep_version},
+    static const struct luaL_Reg usgs3dep_functions[] = {
+        {"version",         usgs3dep_version},
         {NULL,              NULL}
     };
 
     /* Set Library */
-    luaL_newlib(L, three_dep_functions);
+    luaL_newlib(L, usgs3dep_functions);
 
     return 1;
 }
@@ -83,27 +83,27 @@ int three_dep_open (lua_State *L)
  ******************************************************************************/
 
 extern "C" {
-void init3dep(void)
+void initusgs3dep(void)
 {
     /* Initialize Modules */
-    threeDep1meterDemRaster::init();
+    Usgs3dep1meterDemRaster::init();
 
     /* Register Rasters */
-    RasterObject::registerRaster(LUA_3DEP_1METER_DEM_RASTER_NAME, threeDep1meterDemRaster::create);
+    RasterObject::registerRaster(LUA_USGS3DEP_1METER_DEM_RASTER_NAME, Usgs3dep1meterDemRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_3DEP_LIBNAME, three_dep_open);
+    LuaEngine::extend(LUA_USGS3DEP_LIBNAME, usgs3dep_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_3DEP_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_USGS3DEP_LIBNAME, BINID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_3DEP_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_USGS3DEP_LIBNAME, BINID);
 }
 
-void deinit3dep (void)
+void deinitusgs3dep (void)
 {
     /* Uninitialize Modules */
-    threeDep1meterDemRaster::deinit();
+    Usgs3dep1meterDemRaster::deinit();
 }
 }

@@ -1,4 +1,4 @@
-# SlideRule 3dep Plugin
+# SlideRule usgs3dep Plugin
 
 
 ## I. Prerequisites

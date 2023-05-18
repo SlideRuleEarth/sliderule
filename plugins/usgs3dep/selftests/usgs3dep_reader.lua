@@ -22,9 +22,9 @@ f:close()
 local  lon = -108.1
 local  lat = 39.1
 
-print(string.format("\n-------------------------------------------------\n3dep 1meter DEM test\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM test\n-------------------------------------------------"))
 
-local demType = "3dep-1meter-dem"
+local demType = "usgs3dep-1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 
 

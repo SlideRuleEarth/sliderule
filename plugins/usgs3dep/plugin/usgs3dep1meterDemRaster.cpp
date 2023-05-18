@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "3dep1meterDemRaster.h"
+#include "usgs3dep1meterDemRaster.h"
 #include "TimeLib.h"
 
 #include <uuid/uuid.h>
@@ -58,7 +58,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-threeDep1meterDemRaster::threeDep1meterDemRaster(lua_State *L, GeoParms* _parms):
+Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms):
     VctRaster(L, _parms)
 {
     char uuid_str[UUID_STR_LEN];
@@ -82,7 +82,7 @@ threeDep1meterDemRaster::threeDep1meterDemRaster(lua_State *L, GeoParms* _parms)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void threeDep1meterDemRaster::getIndexFile(std::string& file, double lon, double lat)
+void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double lat)
 {
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
@@ -92,7 +92,7 @@ void threeDep1meterDemRaster::getIndexFile(std::string& file, double lon, double
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool threeDep1meterDemRaster::findRasters(OGRPoint& p)
+bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
 {
     try
     {

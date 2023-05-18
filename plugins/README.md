@@ -7,3 +7,4 @@
 | pgc       | PGC DEMs sampling support            |
 | landsat   | Landsat sampling support             |
 | gedi      | gedi sampling support                |
+| usgs3dep  | usgs 3dep sampling support           |
