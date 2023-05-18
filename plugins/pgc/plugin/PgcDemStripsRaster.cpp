@@ -146,7 +146,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
-            const char *fname = feature->GetFieldAsString(SAMPLES_FILE);
+            const char *fname = feature->GetFieldAsString(SAMPLES_RASTER_TAG);
             if(fname && strlen(fname) > 0)
             {
                 std::string fileName(fname);
@@ -161,7 +161,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 raster_info_t flagsRinfo;
 
                 rinfo.fileName = fileName;
-                rinfo.tag = SAMPLES_FILE;
+                rinfo.tag = SAMPLES_RASTER_TAG;
                 bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
                 rinfo.gpsTime = 0;
 
@@ -190,7 +190,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
 
                 if(flagsRinfo.fileName.length() > 0)
                 {
-                    flagsRinfo.tag = BITMASK_FILE;
+                    flagsRinfo.tag = FLAGS_RASTER_TAG;
                     flagsRinfo.gmtDate = rinfo.gmtDate;
                     flagsRinfo.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);

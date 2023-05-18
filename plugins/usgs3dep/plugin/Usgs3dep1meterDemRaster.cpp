@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "usgs3dep1meterDemRaster.h"
+#include "Usgs3dep1meterDemRaster.h"
 #include "TimeLib.h"
 
 #include <uuid/uuid.h>
@@ -116,7 +116,7 @@ bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
             {
                 raster_info_t rinfo;
                 rinfo.fileName = fname;
-                rinfo.tag      = SAMPLES_FILE;
+                rinfo.tag      = SAMPLES_RASTER_TAG;
                 rinfo.gpsTime  = rgroup.gpsTime;
                 rinfo.gmtDate  = rgroup.gmtDate;
 

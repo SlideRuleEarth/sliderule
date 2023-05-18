@@ -55,7 +55,7 @@ endif()
 target_sources(usgs3dep
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/usgs3dep.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/usgs3dep1meterDemRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Usgs3dep1meterDemRaster.cpp
 )
 
 # Include Directories #
@@ -73,7 +73,7 @@ install (TARGETS usgs3dep LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/usgs3dep.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/usgs3dep1meterDemRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Usgs3dep1meterDemRaster.h
     DESTINATION
         ${INSTALLDIR}/include/sliderule/usgs3dep
 )

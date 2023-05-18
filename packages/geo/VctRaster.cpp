@@ -145,7 +145,7 @@ void VctRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.cord.transf == NULL )
         {
             CoordTransform& cord = geoIndex.cord;
-            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
+            OGRErr ogrerr = cord.source.importFromEPSG(SLIDERULE_EPSG);
             CHECK_GDALERR(ogrerr);
             OGRSpatialReference* sref = layer->GetSpatialRef();
             CHECKPTR(sref);

@@ -62,8 +62,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoRaster::BITMASK_FILE = "Fmask";
-const char* GeoRaster::SAMPLES_FILE = "Dem";
+const char* GeoRaster::FLAGS_RASTER_TAG   = "Fmask";
+const char* GeoRaster::SAMPLES_RASTER_TAG = "Dem";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -101,7 +101,7 @@ void GeoRaster::getSamples(double lon, double lat, int64_t gps, List<sample_t>& 
                 for(int j = 0; j < raster_iter.length; j++)
                 {
                     const raster_info_t& rinfo = raster_iter[j].value;
-                    if(strcmp(BITMASK_FILE, rinfo.tag.c_str()) == 0)
+                    if(strcmp(FLAGS_RASTER_TAG, rinfo.tag.c_str()) == 0)
                     {
                         Raster* raster  = NULL;
                         const char* key = rinfo.fileName.c_str();
@@ -214,7 +214,7 @@ void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& 
     for(int i = 0; i < raster_iter.length; i++)
     {
         const raster_info_t& rinfo = raster_iter[i].value;
-        if(strcmp(SAMPLES_FILE, rinfo.tag.c_str()) == 0)
+        if(strcmp(SAMPLES_RASTER_TAG, rinfo.tag.c_str()) == 0)
         {
             Raster* raster  = NULL;
             const char* key = rinfo.fileName.c_str();
@@ -357,7 +357,7 @@ void GeoRaster::processRaster(Raster* raster)
             if(raster->cord.transf == NULL)
             {
                 CoordTransform& cord = raster->cord;
-                OGRErr ogrerr        = cord.source.importFromEPSG(DEFAULT_EPSG);
+                OGRErr ogrerr        = cord.source.importFromEPSG(SLIDERULE_EPSG);
                 CHECK_GDALERR(ogrerr);
 
                 const char* projref = raster->dset->GetProjectionRef();
