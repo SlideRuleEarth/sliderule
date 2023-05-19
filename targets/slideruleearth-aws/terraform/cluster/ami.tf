@@ -1,5 +1,5 @@
 locals {
-  ami_major_version = "sliderule-${var.cluster_version}"
+  ami_name = format("sliderule-%s", split(".","${var.cluster_version}")[0])
 }
 
 data "aws_ami" "sliderule_cluster_ami" {
@@ -7,7 +7,7 @@ data "aws_ami" "sliderule_cluster_ami" {
 
   filter {
     name   = "name"
-    values = [local.ami_major_version]
+    values = [local.ami_name]
   }
 
   filter {
