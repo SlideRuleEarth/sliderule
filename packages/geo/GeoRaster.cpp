@@ -317,7 +317,7 @@ void GeoRaster::processRaster(Raster* raster)
         {
             raster->dset = (GDALDataset *)GDALOpenEx(raster->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
             if (raster->dset == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened index raster: %s:", raster->fileName.c_str());
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", raster->fileName.c_str());
 
             mlog(DEBUG, "Opened %s", raster->fileName.c_str());
 
@@ -354,37 +354,12 @@ void GeoRaster::processRaster(Raster* raster)
             raster->dataType = raster->band->GetRasterDataType();
 
             /* Create coordinates transform for raster */
-            if(raster->cord.transf == NULL)
-            {
-                CoordTransform& cord = raster->cord;
-                OGRErr ogrerr        = cord.source.importFromEPSG(SLIDERULE_EPSG);
-                CHECK_GDALERR(ogrerr);
-
-                const char* projref = raster->dset->GetProjectionRef();
-                CHECKPTR(projref);
-                // mlog(DEBUG, "%s", projref);
-
-                ogrerr = cord.target.importFromProj4(projref);
-                CHECK_GDALERR(ogrerr);
-
-                int northFlag=0;
-                int utm = cord.target.GetUTMZone(&northFlag);
-                mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
-
-                /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-                cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-                cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-                cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-                if(cord.transf == NULL)
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
-            }
+            createTransform(raster->cord, raster->dset);
         }
 
         /* If point has not been projected yet, do it now */
         OGRSpatialReference *psref = raster->point.getSpatialReference();
-        CHECKPTR(psref);
-        if(!psref->IsProjected())
+        if((psref == NULL) || !psref->IsProjected())
         {
             if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", raster->point.getX(), raster->point.getY());
@@ -493,7 +468,7 @@ int GeoRaster::sample(double lon, double lat, int64_t gps)
         openGeoIndex(lon, lat);
 
     OGRPoint p(lon, lat);
-    transformCRS(p);
+    transformToIndexCRS(p);
 
     /* If point is not in current geoindex, find a new one */
     if (!geoIndex.containsPoint(p))
@@ -636,14 +611,46 @@ void GeoRaster::readPixel(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
- * transformCRS
+ * createTransform
  *----------------------------------------------------------------------------*/
-void GeoRaster::transformCRS(OGRPoint &p)
+void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
 {
-    if (geoIndex.cord.transf && (p.transform(geoIndex.cord.transf) == OGRERR_NONE))
-    {
-        return;
-    }
+    CHECKPTR(dset);
+    cord.clear(true);
+
+    OGRErr ogrerr = cord.source.importFromEPSG(SLIDERULE_EPSG);
+    CHECK_GDALERR(ogrerr);
+
+    const char* projref = dset->GetProjectionRef();
+    CHECKPTR(projref);
+    // mlog(DEBUG, "%s", projref);
+
+    ogrerr = cord.target.importFromProj4(projref);
+    CHECK_GDALERR(ogrerr);
+
+    int northFlag = 0;
+    int utm       = cord.target.GetUTMZone(&northFlag);
+    int epsg      = cord.target.GetEPSGGeogCS();
+    mlog(DEBUG, "Target EPSG: %d, UTM: %d%s", epsg, utm, northFlag ? "N" : "S");
+
+    /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+    cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+    cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+    if(cord.transf == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+}
+
+/*----------------------------------------------------------------------------
+ * transformToIndexCRS
+ *----------------------------------------------------------------------------*/
+void GeoRaster::transformToIndexCRS(OGRPoint &p)
+{
+    /* Vector index files do not have transforms */
+    if (geoIndex.cord.transf == NULL) return;
+
+    if (p.transform(geoIndex.cord.transf) == OGRERR_NONE) return;
 
     throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
 }
