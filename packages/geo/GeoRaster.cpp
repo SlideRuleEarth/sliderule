@@ -625,7 +625,7 @@ void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
     CHECKPTR(projref);
     // mlog(DEBUG, "%s", projref);
 
-    ogrerr = cord.target.importFromProj4(projref);
+    ogrerr = cord.target.importFromWkt(projref);
     CHECK_GDALERR(ogrerr);
 
     int northFlag = 0;
