@@ -628,10 +628,7 @@ void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
     ogrerr = cord.target.importFromWkt(projref);
     CHECK_GDALERR(ogrerr);
 
-    int northFlag = 0;
-    int utm       = cord.target.GetUTMZone(&northFlag);
-    int epsg      = cord.target.GetEPSGGeogCS();
-    mlog(DEBUG, "Target EPSG: %d, UTM: %d%s", epsg, utm, northFlag ? "N" : "S");
+    overrideTargetCRS(cord.target);
 
     /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
     cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
@@ -641,6 +638,16 @@ void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
     if(cord.transf == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
 }
+
+
+/*----------------------------------------------------------------------------
+ * overridetTargetCRS
+ *----------------------------------------------------------------------------*/
+void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
+{
+    std::ignore = target;
+}
+
 
 /*----------------------------------------------------------------------------
  * transformToIndexCRS

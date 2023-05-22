@@ -68,6 +68,7 @@ class Usgs3dep1meterDemRaster: public VctRaster
 
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) override;
         bool    findRasters      (OGRPoint &p) override;
+        void    overrideTargetCRS(OGRSpatialReference& target) override;
 
         /*--------------------------------------------------------------------
          * Data

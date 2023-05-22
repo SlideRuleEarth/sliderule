@@ -137,6 +137,47 @@ bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
 }
 
 
+/*----------------------------------------------------------------------------
+ * overrideTargetCRS
+ *----------------------------------------------------------------------------*/
+void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
+{
+    int northFlag   = 0;
+    int utm         = target.GetUTMZone(&northFlag);
+
+    // target.dumpReadable();
+    mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
+
+    /* Must be north */
+    if(northFlag==0)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected for continental USA", utm, northFlag?"N":"S");
+
+    /*
+     * Continental USA UTM zones are 10N to 19N
+     * https://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system#/media/File:Utm-zones-USA.svg
+     */
+    const int minUTM = 10;
+    const int maxUTM = 19;
+
+    if(utm < minUTM || utm > maxUTM)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected for continental USA", utm, northFlag?"N":"S");
+
+    int epsg = 6339 + utm - minUTM;
+    mlog(DEBUG, "New EPSG: %d", epsg);
+
+    OGRSpatialReference horizontal;
+    OGRSpatialReference vertical;
+
+    OGRErr ogrerr = horizontal.importFromEPSG(epsg);
+    CHECK_GDALERR(ogrerr);
+    ogrerr = vertical.importFromEPSG(5703);     /* NAVD88 height, https://epsg.io/5703 */
+    CHECK_GDALERR(ogrerr);
+
+    ogrerr = target.SetCompoundCS("sliderule", &horizontal, &vertical);
+    CHECK_GDALERR(ogrerr);
+    // target.dumpReadable();
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/

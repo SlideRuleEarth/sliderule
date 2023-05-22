@@ -213,7 +213,8 @@ class GeoRaster: public RasterObject
         const char*     getUUID               (char* uuid_str);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
-        virtual void    createTransform       (CoordTransform& cord, GDALDataset* dset);
+        void            createTransform       (CoordTransform& cord, GDALDataset* dset);
+        virtual void    overrideTargetCRS     (OGRSpatialReference& target);
         void            transformToIndexCRS   (OGRPoint& p);
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
