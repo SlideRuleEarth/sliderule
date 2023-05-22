@@ -1,4 +1,4 @@
-const sliderule = require('../sliderule.js');
+const sliderule = require('sliderule');
 
 function checkVersion (result) {
     expect(result.server.duration).toBeGreaterThan(0);
@@ -9,14 +9,14 @@ function checkVersion (result) {
 }
 
 test('node version api', () => {
-    return sliderule.get_version().then(
+    return sliderule.core.get_version().then(
         result => checkVersion(result),
         error => {throw new Error(error);}
     );
 });
 
 test('source version api', () => {
-    return sliderule.source('version').then(
+    return sliderule.core.source('version').then(
         result => checkVersion(result),
         error => {throw new Error(error);}
     );

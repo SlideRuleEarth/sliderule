@@ -2,6 +2,9 @@
   "name": "sliderule",
   "description": "client for the SlideRule on-demand science data processing service",
   "version": "3.3.0",
+  "keywords": [
+    "sliderule"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ICESat2-SlideRule/sliderule.git"
@@ -20,6 +23,6 @@
     "url": "https://github.com/ICESat2-SlideRule/sliderule/issues"
   },
   "homepage": "https://github.com/ICESat2-SlideRule/sliderule#readme",
-  "main": "main.js",
+  "main": "index.js",
   "author": ""
 }

@@ -1,5 +1,4 @@
-# sliderule-javascript
-
+# SlideRule Node.js Client
 
 ### Install Node.js
 
@@ -32,7 +31,7 @@ sudo apt install nginx
 
 Configure NGINX
 ```bash
-sudo cp nginx.config /etc/nginx/sites-available/sliderule
+sudo cp utils/nginx.config /etc/nginx/sites-available/sliderule
 sudo ln -s /etc/nginx/sites-available/sliderule /etc/nginx/sites-enabled/sliderule
 sudo rm /etc/nginx/sites-enabled/default # if present
 ```
