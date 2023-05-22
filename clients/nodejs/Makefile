@@ -1,14 +1,14 @@
-ROOT = $(shell pwd)/../..
-TEST ?=
+ROOT = $(shell pwd)
+TEST ?= tests
 
 test: ## run unit tests against public cluster
 	jest $(TEST)
 
 test-local: ## run unit tests against local running sliderule server
-	jest $(TEST) --setupFiles $(ROOT)/local-config.json
+	jest $(TEST) --setupFiles $(ROOT)/tests/local.config.js
 
 test-developer: ## run unit tests against developers cluster
-	jest $(TEST) --setupFiles $(ROOT)/developer-config.json
+	jest $(TEST) --setupFiles $(ROOT)/tests/developer.config.js
 
 install: ## install project (installs dependencies in package.json file)
 	npm install

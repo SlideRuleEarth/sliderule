@@ -87,7 +87,9 @@ function httpRequest(options, body, onClose) {
       reject(new Error(err.message));
     });
 
-    if (body != null) {
+    if (typeof body == 'string') {
+      request.write(body);
+    } else if (body != null) {
       request.write(JSON.stringify(body));
     }
 
