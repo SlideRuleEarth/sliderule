@@ -1,0 +1,25 @@
+{
+  "name": "sliderule",
+  "description": "client for the SlideRule on-demand science data processing service",
+  "version": "3.3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ICESat2-SlideRule/sliderule.git"
+  },
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "jest": "^29.5.0"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "netrc": "^0.1.4"
+  },
+  "bugs": {
+    "url": "https://github.com/ICESat2-SlideRule/sliderule/issues"
+  },
+  "homepage": "https://github.com/ICESat2-SlideRule/sliderule#readme",
+  "main": "main.js",
+  "author": ""
+}
