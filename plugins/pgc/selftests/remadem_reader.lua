@@ -133,7 +133,7 @@ runner.check(sampleCnt == 1)
 
 -- Compare sample value received from sample call to value read with GDAL command line utility.
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
--- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m/2m_dem_tiles.vrt -80 -80
+-- gdallocationinfo -l_srs EPSG:7912 /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m/2m_dem_tiles.vrt -80 -80
 
 local expected_val = 328.015625 -- read using gdallocationinfo
 local expected_max = expected_val + 0.000000001
@@ -159,7 +159,7 @@ runner.check(sampleCnt == 10)
 
 -- Compare sample value received from sample call to value read with GDAL command line utility.
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
--- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m/s80w080/SETSM_s2s041_WV03_20201105_1040010062706C00_104001006337FF00_2m_lsf_seg1_dem.tif -80 -80
+-- gdallocationinfo -l_srs EPSG:7912 /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m/s80w080/SETSM_s2s041_WV03_20201105_1040010062706C00_104001006337FF00_2m_lsf_seg1_dem.tif -80 -80
 
 expected_val =  333.6171875 -- read using gdallocationinfo
 expected_max = expected_val + 0.000000001

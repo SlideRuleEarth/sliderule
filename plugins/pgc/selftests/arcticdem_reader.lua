@@ -387,12 +387,10 @@ runner.check(sampleCnt == 1)
 
 -- Compare sample value received from sample call to value read with GDAL command line utility.
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
--- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.7
-
--- local expected_mosaic_value = 80.7135009765625 -- read using gdallocationinfo, worked with SLIDERULE EPSG:7665 but not with 7912
-local expected_mosaic_value = 80.706345
-local expected_max = expected_mosaic_value + 0.000001
-local expected_min = expected_mosaic_value - 0.000001
+--  gdallocationinfo -l_srs EPSG:7912  /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.
+local expected_mosaic_value = 80.706344604492
+local expected_max = expected_mosaic_value + 0.0000000001
+local expected_min = expected_mosaic_value - 0.0000000001
 
 runner.check(el <= expected_max and el >= expected_min)
 
@@ -418,12 +416,11 @@ runner.check(sampleCnt == 14)
 
 -- Compare sample value received from sample call to value read with GDAL command line utility.
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
--- gdallocationinfo  -wgs84 /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20200222_1020010099A56800_1020010095159800_2m_lsf_seg1_dem.tif -178.0 51.7
+-- gdallocationinfo -l_srs EPSG:7912 /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20200222_1020010099A56800_1020010095159800_2m_lsf_seg1_dem.tif -178.0 51.7
 
--- expected_mosaic_value = 632.90625 -- read using gdallocationinfo, worked with SLIDERULE EPSG:7665 but not with 7912
-expected_mosaic_value = 633.7422 --
-expected_max = expected_mosaic_value + 0.0001
-expected_min = expected_mosaic_value - 0.0001
+expected_mosaic_value = 633.742187
+expected_max = expected_mosaic_value + 0.000001
+expected_min = expected_mosaic_value - 0.000001
 
 runner.check(testElevation <= expected_max and testElevation >= expected_min)
 

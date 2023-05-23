@@ -77,8 +77,6 @@ runner.check(gpsTime == 1289671725.0)
 
 dem = nil
 
---[[
-
 print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM test NO filter\n-------------------------------------------------"))
 sampleCnt = 0
 sampledFile = ""
@@ -114,8 +112,6 @@ runner.check(sampledValue <= expected_max and sampledValue >= expected_min)
 runner.check(gpsTime == 1289671725.0)
 
 runner.check(sampledFile == expectedFile)
-
---]]
 
 
 -- Report Results --
