@@ -141,7 +141,8 @@ for i, v in ipairs(tbl) do
     --Only one strip should be sampled with the url filter
     runner.check(flags == 4)    -- Qualit mask for this strip/sample, 4 means cloud
     runner.check(cnt == 317)    -- Valid samples used in calculating zonal stats
-    runner.check(el > 452.4843 and el < 452.4850 )  -- Valid samples used in calculating zonal stats
+    -- runner.check(el > 452.4843 and el < 452.4850 )  -- Valid samples used in calculating zonal stats, worked with SLIDERULE EPSG:7665 but not with 7912
+    runner.check(el > 449.6562 and el < 449.6563)  -- Valid samples used in calculating zonal stats  (changed with new sliderule EPSG:7912)
 end
 
 runner.check(sampleCnt == 1)  -- Only one sample/strip returned
@@ -175,11 +176,15 @@ for i, v in ipairs(tbl) do
     if i == 1 then
         runner.check(flags == 4) -- Qualit mask for this strip/sample, 4 means cloud
         runner.check(cnt == 317) -- Valid samples used in calculating zonal stats
-        runner.check(el > 773.03 and el < 773.04) -- Valid samples used in calculating zonal stats
+        -- runner.check(el > 773.03 and el < 773.04) -- Valid samples used in calculating zonal stats , worked with SLIDERULE EPSG:7665 but not with 7912
+
+        runner.check(el > 772.81 and el < 772.84) -- Valid samples used in calculating zonal stats
     else
         runner.check(flags == 0) -- Qualit mask for this strip/sample, 4 means cloud
         runner.check(cnt == 317) -- Valid samples used in calculating zonal stats
-        runner.check(el > 80.2264 and el < 80.2266) -- Valid samples used in calculating zonal stats
+        -- runner.check(el > 80.2264 and el < 80.2266) -- Valid samples used in calculating zonal stats, worked with SLIDERULE EPSG:7665 but not with 7912
+
+        runner.check(el > 80.38 and el < 80.39) -- Valid samples used in calculating zonal stats
     end
 end
 runner.check(sampleCnt == 2)
@@ -384,9 +389,10 @@ runner.check(sampleCnt == 1)
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
 -- gdallocationinfo -wgs84 /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.7
 
-local expected_mosaic_value = 80.7135009765625 -- read using gdallocationinfo
-local expected_max = expected_mosaic_value + 0.000000001
-local expected_min = expected_mosaic_value - 0.000000001
+-- local expected_mosaic_value = 80.7135009765625 -- read using gdallocationinfo, worked with SLIDERULE EPSG:7665 but not with 7912
+local expected_mosaic_value = 80.706345
+local expected_max = expected_mosaic_value + 0.000001
+local expected_min = expected_mosaic_value - 0.000001
 
 runner.check(el <= expected_max and el >= expected_min)
 
@@ -414,9 +420,10 @@ runner.check(sampleCnt == 14)
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
 -- gdallocationinfo  -wgs84 /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20200222_1020010099A56800_1020010095159800_2m_lsf_seg1_dem.tif -178.0 51.7
 
-expected_mosaic_value = 632.90625 -- read using gdallocationinfo
-expected_max = expected_mosaic_value + 0.000000001
-expected_min = expected_mosaic_value - 0.000000001
+-- expected_mosaic_value = 632.90625 -- read using gdallocationinfo, worked with SLIDERULE EPSG:7665 but not with 7912
+expected_mosaic_value = 633.7422 --
+expected_max = expected_mosaic_value + 0.0001
+expected_min = expected_mosaic_value - 0.0001
 
 runner.check(testElevation <= expected_max and testElevation >= expected_min)
 

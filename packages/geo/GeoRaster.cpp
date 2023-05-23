@@ -361,8 +361,12 @@ void GeoRaster::processRaster(Raster* raster)
         OGRSpatialReference *psref = raster->point.getSpatialReference();
         if((psref == NULL) || !psref->IsProjected())
         {
+            mlog(DEBUG, "Before transform: (%lf, %lf)", raster->point.getX(), raster->point.getY());
+
             if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", raster->point.getX(), raster->point.getY());
+
+            mlog(DEBUG, "After  transform: (%lf, %lf)", raster->point.getX(), raster->point.getY());
         }
 
         /*

@@ -89,7 +89,7 @@ class GeoRaster: public RasterObject
         static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 50;
-        static const int   SLIDERULE_EPSG = 7665;
+        static const int   SLIDERULE_EPSG = 7912;
 
         static const char* FLAGS_RASTER_TAG;
         static const char* SAMPLES_RASTER_TAG;

@@ -69,10 +69,6 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
     filePath.append(_parms->asset->getPath()).append("/");
     indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
 
-    // print2term("%s\n", _parms->catalog);
-    // mlog(DEBUG, "%s", _parms->catalog);
-
-
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
