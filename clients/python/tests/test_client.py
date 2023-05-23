@@ -1,4 +1,4 @@
-"""Tests for sliderule-python."""
+"""Tests for sliderule."""
 
 import pytest
 from requests.exceptions import ConnectTimeout, ConnectionError

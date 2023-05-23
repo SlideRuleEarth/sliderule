@@ -1,4 +1,4 @@
-"""Tests for sliderule-python landsat raster support."""
+"""Tests for sliderule landsat raster support."""
 
 import pytest
 from pathlib import Path

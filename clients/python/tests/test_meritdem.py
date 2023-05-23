@@ -1,4 +1,4 @@
-"""Tests for sliderule-python merit-dem raster support."""
+"""Tests for sliderule merit-dem raster support."""
 
 import pytest
 from pathlib import Path

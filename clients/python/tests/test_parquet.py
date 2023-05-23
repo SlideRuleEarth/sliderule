@@ -1,4 +1,4 @@
-"""Tests for sliderule-python parquet support."""
+"""Tests for sliderule parquet support."""
 
 import pytest
 from pathlib import Path

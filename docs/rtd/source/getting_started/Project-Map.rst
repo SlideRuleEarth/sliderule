@@ -19,7 +19,7 @@ Component Organization
 
     Example Jupyter Notebooks: `sliderule-python/examples <https://github.com/ICESat2-SlideRule/sliderule-python/tree/main/examples>`_
 
-    Juypter Notebook Widgets: `sliderule-python/sliderule/ipysliderule.py <https://github.com/ICESat2-SlideRule/sliderule-python/blob/main/sliderule/ipysliderule.py>`_
+    Juypter Notebook Widgets: `ipysliderule.py <https://github.com/ICESat2-SlideRule/sliderule/blob/main/sliderule/clients/python/sliderule/ipysliderule.py>`_
 
 
 :SlideRule Python Client: The SlideRule Python client is a set Python modules that provide functions for making processing requests to SlideRule web services.  In a Jupter environment, all interactions with SlideRule occur through the Python client.  For researchers that want to use SlideRule, the Python client is likely the only part of the SlideRule system they need to know.
