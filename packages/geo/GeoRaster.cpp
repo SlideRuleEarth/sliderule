@@ -578,6 +578,20 @@ void GeoRaster::readPixel(Raster *raster)
             }
             break;
 
+            case GDT_Int64:
+            {
+                int64_t *p = (int64_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_UInt64:
+            {
+                uint64_t *p = (uint64_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
             case GDT_Float32:
             {
                 float *p = (float *)data;
@@ -594,7 +608,6 @@ void GeoRaster::readPixel(Raster *raster)
 
             default:
                 /*
-                 * This version of GDAL does not support 64bit integers
                  * Complex numbers are supported but not needed at this point.
                  */
                 block->DropLock();
@@ -645,7 +658,7 @@ void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
 
 
 /*----------------------------------------------------------------------------
- * overridetTargetCRS
+ * overrideTargetCRS
  *----------------------------------------------------------------------------*/
 void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
 {
