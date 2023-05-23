@@ -1,4 +1,4 @@
-const sliderule = require('sliderule');
+const sliderule = require('../../sliderule');
 
 test('authenticate to provisioning system', () => {
     return sliderule.core.authenticate().then(

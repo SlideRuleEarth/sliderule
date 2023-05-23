@@ -5,16 +5,22 @@ test: ## run unit tests against public cluster
 	cd sliderule; jest $(TEST)
 
 test-local: ## run unit tests against local running sliderule server
-	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/tests/local.config.js
+	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/local.config.js
 
 test-developer: ## run unit tests against developers cluster
-	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/tests/developer.config.js
+	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/developer.config.js
+
+publish: ## publish package to npm registry
+	cd sliderule; npm publish --access public
+
+login: ## login to npm registry
+	npm login --scope sliderule --auth-type legacy
 
 install: ## install project (installs dependencies in package.json file)
 	cd sliderule; npm install
 
 init: ## initialize project
-	cd sliderule; npm init
+	cd sliderule; npm init --scope sliderule
 
 distclean: ## fully remove all non-version controlled files and directories
 	-rm -Rf sliderule/node_modules/

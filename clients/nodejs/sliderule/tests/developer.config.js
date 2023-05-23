@@ -1,2 +1,2 @@
-const sliderule = require('sliderule.js');
-sliderule.init({organization: "developers"});
+const sliderule = require('../../sliderule');
+sliderule.core.init({organization: "developers"});

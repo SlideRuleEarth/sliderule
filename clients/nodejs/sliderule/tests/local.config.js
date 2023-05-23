@@ -1,3 +1,3 @@
-const sliderule = require('sliderule.js');
+const sliderule = require('../../sliderule');
 const http = require('http')
-sliderule.init({domain:"localhost", organization: null, protocol: http});
+sliderule.core.init({domain:"localhost", organization: null, protocol: http});

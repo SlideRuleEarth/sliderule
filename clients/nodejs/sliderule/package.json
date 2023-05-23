@@ -1,5 +1,5 @@
 {
-  "name": "sliderule",
+  "name": "@sliderule/sliderule",
   "description": "client for the SlideRule on-demand science data processing service",
   "version": "3.3.0",
   "keywords": [
@@ -16,6 +16,17 @@
   "scripts": {
     "test": "jest"
   },
+  "roots": [
+    "<rootDir>"
+  ],
+  "modulePaths": [
+    "<rootDir>",
+    "./"
+  ],
+  "moduleDirectories": [
+    "node_modules",
+    "./"
+  ],
   "dependencies": {
     "netrc": "^0.1.4"
   },
@@ -24,5 +35,8 @@
   },
   "homepage": "https://github.com/ICESat2-SlideRule/sliderule#readme",
   "main": "index.js",
-  "author": ""
+  "author": "",
+  "directories": {
+    "test": "tests"
+  }
 }
