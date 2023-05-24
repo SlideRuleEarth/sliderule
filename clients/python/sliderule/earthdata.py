@@ -502,7 +502,7 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
 #
 #  SpatioTemporal Asset Catalog
 #
-def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), as_str=False):
+def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), as_str=True):
     '''
     Perform a STAC query of the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov>`_ catalog for a list of data within temporal and spatial parameters
 
@@ -585,7 +585,7 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
 #
 #  The National Map
 #
-def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d")):
+def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d"), as_str=True):
     '''
     Query `USGS National Map API <https://tnmaccess.nationalmap.gov/api/v1/products>`_ for a list of data within temporal and spatial parameters.  See https://apps.nationalmap.gov/help/documents/TNMAccessAPIDocumentation/TNMAccessAPIDocumentation.pdf for more details on the API.
 
@@ -685,4 +685,8 @@ def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftim
         geojson['features'][i].update({"properties": propertiesDict})
 
     # Return GeoJSON
-    return geojson
+    if as_str:
+        return json.dumps(geojson)
+    else:
+        return geojson
+
