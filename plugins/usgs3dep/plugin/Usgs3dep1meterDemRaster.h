@@ -29,49 +29,33 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __landsat_hls_raster__
-#define __landsat_hls_raster__
+#ifndef __usgs3dep_1meter_dem_raster__
+#define __usgs3dep_1meter_dem_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <string>
 #include "VctRaster.h"
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * USGS3DEP 1METER DEM RASTER CLASS
  ******************************************************************************/
 
-class LandsatHlsRaster: public VctRaster
+class Usgs3dep1meterDemRaster: public VctRaster
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-        static const char* L8_bands[];     /* Landsat 8  */
-        static const char* S2_bands[];     /* Sentinel 2 */
-        static const char* ALGO_names[];   /* Algorithms names */
-        static const char* ALGO_bands[];   /* Algorithms bands */
-
-        /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
-        typedef enum {
-            LANDSAT8  = 0,
-            SENTINEL2 = 1,
-            ALGOBAND  = 2,
-            ALGONAME  = 3
-        } band_type_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, GeoParms* _parms)
-                          { return new LandsatHlsRaster(L, _parms); }
+                          { return new Usgs3dep1meterDemRaster(L, _parms); }
 
 
     protected:
@@ -80,34 +64,23 @@ class LandsatHlsRaster: public VctRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                LandsatHlsRaster (lua_State* L, GeoParms* _parms);
+                Usgs3dep1meterDemRaster (lua_State* L, GeoParms* _parms);
 
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) override;
         bool    findRasters      (OGRPoint &p) override;
-        void    getGroupSamples  (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags) override;
+        void    overrideTargetCRS(OGRSpatialReference& target) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
     private:
-        bool validateBand   (band_type_t type, const char* bandName);
-
-        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
-        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
-        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
-        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
         std::string filePath;
         std::string indexFile;
-        Dictionary<bool> bandsDict;
-
-        bool ndsi;
-        bool ndvi;
-        bool ndwi;
 };
 
-#endif  /* __landsat_hls_raster__ */
+#endif  /* __usgs3dep_1meter_dem_raster__ */

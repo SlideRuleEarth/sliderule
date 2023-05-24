@@ -51,12 +51,12 @@
 /* Landsat 8 */
 const char* LandsatHlsRaster::L8_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B09", "B10", "B11",
-                                           "SAA", "SZA", "VAA", "VZA", BITMASK_FILE};
+                                           "SAA", "SZA", "VAA", "VZA", FLAGS_RASTER_TAG};
 /* Sentinel 2 */
 const char* LandsatHlsRaster::S2_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B08", "B09", "B10",
                                            "B11", "B12", "B8A", "SAA", "SZA",
-                                           "VAA", "VZA", BITMASK_FILE};
+                                           "VAA", "VZA", FLAGS_RASTER_TAG};
 /* Algorithm names (not real bands) */
 const char* LandsatHlsRaster::ALGO_names[] = {"NDSI", "NDVI", "NDWI"};
 
@@ -138,7 +138,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     /* If user specified flags, add group Fmask to dictionary of bands */
     if(_parms->flags_file)
     {
-        const char* band = BITMASK_FILE;
+        const char* band = FLAGS_RASTER_TAG;
         if(!bandsDict.find(band, &returnBandSample))
         {
             returnBandSample = false;
@@ -155,21 +155,6 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
     // file = "/data/hls/hls_trimmed.geojson";
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
-}
-
-
-/*----------------------------------------------------------------------------
- * getIndexBbox
- *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
-{
-    OGREnvelope env;
-    OGRErr err = layer->GetExtent(&env);
-
-    bbox.lon_min = env.MinX;
-    bbox.lat_min = env.MinY;
-    bbox.lon_max = env.MaxX;
-    bbox.lat_max = env.MaxY;
 }
 
 

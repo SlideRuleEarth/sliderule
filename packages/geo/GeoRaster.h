@@ -89,10 +89,10 @@ class GeoRaster: public RasterObject
         static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 50;
-        static const int   DEFAULT_EPSG = 4326;
+        static const int   SLIDERULE_EPSG = 7912;
 
-        static const char* BITMASK_FILE;
-        static const char* SAMPLES_FILE;
+        static const char* FLAGS_RASTER_TAG;
+        static const char* SAMPLES_RASTER_TAG;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -213,7 +213,9 @@ class GeoRaster: public RasterObject
         const char*     getUUID               (char* uuid_str);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
         virtual bool    findRasters           (OGRPoint& p) = 0;
-        virtual void    transformCRS          (OGRPoint& p);
+        void            createTransform       (CoordTransform& cord, GDALDataset* dset);
+        virtual void    overrideTargetCRS     (OGRSpatialReference& target);
+        void            transformToIndexCRS   (OGRPoint& p);
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);

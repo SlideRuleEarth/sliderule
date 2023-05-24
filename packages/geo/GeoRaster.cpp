@@ -62,8 +62,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoRaster::BITMASK_FILE = "Fmask";
-const char* GeoRaster::SAMPLES_FILE = "Dem";
+const char* GeoRaster::FLAGS_RASTER_TAG   = "Fmask";
+const char* GeoRaster::SAMPLES_RASTER_TAG = "Dem";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -101,7 +101,7 @@ void GeoRaster::getSamples(double lon, double lat, int64_t gps, List<sample_t>& 
                 for(int j = 0; j < raster_iter.length; j++)
                 {
                     const raster_info_t& rinfo = raster_iter[j].value;
-                    if(strcmp(BITMASK_FILE, rinfo.tag.c_str()) == 0)
+                    if(strcmp(FLAGS_RASTER_TAG, rinfo.tag.c_str()) == 0)
                     {
                         Raster* raster  = NULL;
                         const char* key = rinfo.fileName.c_str();
@@ -214,7 +214,7 @@ void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& 
     for(int i = 0; i < raster_iter.length; i++)
     {
         const raster_info_t& rinfo = raster_iter[i].value;
-        if(strcmp(SAMPLES_FILE, rinfo.tag.c_str()) == 0)
+        if(strcmp(SAMPLES_RASTER_TAG, rinfo.tag.c_str()) == 0)
         {
             Raster* raster  = NULL;
             const char* key = rinfo.fileName.c_str();
@@ -265,7 +265,7 @@ double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  Time
         else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
     }
 
-    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d  %s", year, month, day, hour, minute, second, rinfo.fileName.c_str());
+    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, second);
     return static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
 }
 
@@ -317,7 +317,7 @@ void GeoRaster::processRaster(Raster* raster)
         {
             raster->dset = (GDALDataset *)GDALOpenEx(raster->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
             if (raster->dset == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened index raster: %s:", raster->fileName.c_str());
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", raster->fileName.c_str());
 
             mlog(DEBUG, "Opened %s", raster->fileName.c_str());
 
@@ -354,35 +354,19 @@ void GeoRaster::processRaster(Raster* raster)
             raster->dataType = raster->band->GetRasterDataType();
 
             /* Create coordinates transform for raster */
-            if(raster->cord.transf == NULL)
-            {
-                CoordTransform& cord = raster->cord;
-                OGRErr ogrerr        = cord.source.importFromEPSG(DEFAULT_EPSG);
-                CHECK_GDALERR(ogrerr);
-
-                const char* projref = raster->dset->GetProjectionRef();
-                CHECKPTR(projref);
-                // mlog(DEBUG, "%s", projref);
-                ogrerr = cord.target.importFromProj4(projref);
-                CHECK_GDALERR(ogrerr);
-
-                /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-                cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-                cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-                cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-                if(cord.transf == NULL)
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
-            }
+            createTransform(raster->cord, raster->dset);
         }
 
         /* If point has not been projected yet, do it now */
         OGRSpatialReference *psref = raster->point.getSpatialReference();
-        CHECKPTR(psref);
-        if(!psref->IsProjected())
+        if((psref == NULL) || !psref->IsProjected())
         {
+            mlog(DEBUG, "Before transform: (%lf, %lf)", raster->point.getX(), raster->point.getY());
+
             if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", raster->point.getX(), raster->point.getY());
+
+            mlog(DEBUG, "After  transform: (%lf, %lf)", raster->point.getX(), raster->point.getY());
         }
 
         /*
@@ -488,7 +472,7 @@ int GeoRaster::sample(double lon, double lat, int64_t gps)
         openGeoIndex(lon, lat);
 
     OGRPoint p(lon, lat);
-    transformCRS(p);
+    transformToIndexCRS(p);
 
     /* If point is not in current geoindex, find a new one */
     if (!geoIndex.containsPoint(p))
@@ -594,6 +578,20 @@ void GeoRaster::readPixel(Raster *raster)
             }
             break;
 
+            case GDT_Int64:
+            {
+                int64_t *p = (int64_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
+            case GDT_UInt64:
+            {
+                uint64_t *p = (uint64_t *)data;
+                raster->sample.value = (double)p[offset];
+            }
+            break;
+
             case GDT_Float32:
             {
                 float *p = (float *)data;
@@ -610,7 +608,6 @@ void GeoRaster::readPixel(Raster *raster)
 
             default:
                 /*
-                 * This version of GDAL does not support 64bit integers
                  * Complex numbers are supported but not needed at this point.
                  */
                 block->DropLock();
@@ -631,14 +628,53 @@ void GeoRaster::readPixel(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
- * transformCRS
+ * createTransform
  *----------------------------------------------------------------------------*/
-void GeoRaster::transformCRS(OGRPoint &p)
+void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
 {
-    if (geoIndex.cord.transf && (p.transform(geoIndex.cord.transf) == OGRERR_NONE))
-    {
-        return;
-    }
+    CHECKPTR(dset);
+    cord.clear(true);
+
+    OGRErr ogrerr = cord.source.importFromEPSG(SLIDERULE_EPSG);
+    CHECK_GDALERR(ogrerr);
+
+    const char* projref = dset->GetProjectionRef();
+    CHECKPTR(projref);
+    // mlog(DEBUG, "%s", projref);
+
+    ogrerr = cord.target.importFromWkt(projref);
+    CHECK_GDALERR(ogrerr);
+
+    overrideTargetCRS(cord.target);
+
+    /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+    cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+    cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+    if(cord.transf == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+}
+
+
+/*----------------------------------------------------------------------------
+ * overrideTargetCRS
+ *----------------------------------------------------------------------------*/
+void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
+{
+    std::ignore = target;
+}
+
+
+/*----------------------------------------------------------------------------
+ * transformToIndexCRS
+ *----------------------------------------------------------------------------*/
+void GeoRaster::transformToIndexCRS(OGRPoint &p)
+{
+    /* Vector index files do not have transforms */
+    if (geoIndex.cord.transf == NULL) return;
+
+    if (p.transform(geoIndex.cord.transf) == OGRERR_NONE) return;
 
     throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
 }

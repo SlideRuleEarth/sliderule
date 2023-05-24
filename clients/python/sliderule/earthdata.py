@@ -33,11 +33,10 @@ import json
 import ssl
 import urllib.request
 import requests
-import datetime
 import logging
-import warnings
 import numpy
 import geopandas
+from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 import sliderule
@@ -56,23 +55,27 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                {"provider": "NSIDC_ECS",   "version": "005",   "stac": False,  "collections": [] },
-    "ATL06":                                {"provider": "NSIDC_ECS",   "version": "005",   "stac": False,  "collections": []},
-    "ATL08":                                {"provider": "NSIDC_ECS",   "version": "005",   "stac": False,  "collections": []},
-    "GEDI01_B":                             {"provider": "LPDAAC_ECS",  "version": "002",   "stac": False,  "collections": []},
-    "GEDI02_A":                             {"provider": "LPDAAC_ECS",  "version": "002",   "stac": False,  "collections": []},
-    "GEDI02_B":                             {"provider": "LPDAAC_ECS",  "version": "002",   "stac": False,  "collections": []},
-    "GEDI_L3_LandSurface_Metrics_V2_1952":  {"provider": "ORNL_CLOUD",  "version": None,    "stac": False,  "collections": []},
-    "GEDI_L4A_AGB_Density_V2_1_2056":       {"provider": "ORNL_CLOUD",  "version": None,    "stac": False,  "collections": []},
-    "GEDI_L4B_Gridded_Biomass_2017":        {"provider": "ORNL_CLOUD",  "version": None,    "stac": False,  "collections": []},
-    "HLS":                                  {"provider": "LPCLOUD",     "version": None,    "stac": True,   "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]}
+    "ATL03":                                    {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "collections": [] },
+    "ATL06":                                    {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "collections": []},
+    "ATL08":                                    {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "collections": []},
+    "GEDI01_B":                                 {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "collections": []},
+    "GEDI02_A":                                 {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "collections": []},
+    "GEDI02_B":                                 {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "collections": []},
+    "GEDI_L3_LandSurface_Metrics_V2_1952":      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "collections": []},
+    "GEDI_L4A_AGB_Density_V2_1_2056":           {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "collections": []},
+    "GEDI_L4B_Gridded_Biomass_2017":            {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "collections": []},
+    "HLS":                                      {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]},
+    "Digital Elevation Model (DEM) 1 meter":    {"provider": "USGS",        "version": None,   "api": "tnm",   "collections": []}
 }
 
-# page size for requests
+# upper limit on resources returned from CMR query per request
 CMR_PAGE_SIZE = 2000
 
-# upper limit on stac resources returned from stac query per request
-MAX_STAC_RESOURCES_PER_PAGE = 100
+# upper limit on resources returned from STAC query per request
+STAC_PAGE_SIZE = 100
+
+# upper limit on resources returned from TNM query per request
+TNM_PAGE_SIZE = 100
 
 ###############################################################################
 # NSIDC UTILITIES
@@ -345,7 +348,7 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
     url = 'https://cmr.earthdata.nasa.gov/stac/{}/search'.format(provider)
     headers = {'Content-Type': 'application/json'}
     rqst = {
-        "limit": MAX_STAC_RESOURCES_PER_PAGE,
+        "limit": STAC_PAGE_SIZE,
         "datetime": '{}/{}'.format(time_start, time_end),
         "collections": collections,
     }
@@ -444,7 +447,7 @@ def set_max_resources (max_resources):
 #
 #  Common Metadata Repository
 #
-def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):
+def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), return_metadata=False, name_filter=None):
     '''
     Query the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov>`_ for a list of data within temporal and spatial parameters
 
@@ -499,7 +502,7 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
 #
 #  SpatioTemporal Asset Catalog
 #
-def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), as_str=False):
+def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01T00:00:00Z', time_end=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), as_str=True):
     '''
     Perform a STAC query of the `NASA Common Metadata Repository (CMR) <https://cmr.earthdata.nasa.gov>`_ catalog for a list of data within temporal and spatial parameters
 
@@ -578,3 +581,112 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
         return json.dumps(geojson)
     else:
         return geojson
+
+#
+#  The National Map
+#
+def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d"), as_str=True):
+    '''
+    Query `USGS National Map API <https://tnmaccess.nationalmap.gov/api/v1/products>`_ for a list of data within temporal and spatial parameters.  See https://apps.nationalmap.gov/help/documents/TNMAccessAPIDocumentation/TNMAccessAPIDocumentation.pdf for more details on the API.
+
+    Parameters
+    ----------
+        short_name:         str
+                            dataset name
+        polygon:            list
+                            a single list of longitude,latitude in counter-clockwise order with first and last point matching, defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_)
+        time_start:         str
+                            starting time for query in format ``<year>-<month>-<day>``
+        time_end:           str
+                            ending time for query in format ``<year>-<month>-<day>``
+
+    Returns
+    -------
+    dict
+        geojson of resources intersecting area of interest
+
+    Examples
+    --------
+        >>> from sliderule import earthdata
+        >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+        ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
+        ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
+        ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
+        ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        >>> geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region)
+        >>> geojson
+        {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'id': '5eaa4a0582cefae35a21ee8c', 'geometry': {'type': 'Polygon'...
+    '''
+    # Flatten polygon (the list must be formated as 'x y, x y, x y, x y, x y', the documentation is incorrect)
+    coord_list = []
+    for coord in polygon:
+        coord_list.append('{} {}'.format(coord["lon"], coord["lat"]))
+    poly_str = ', '.join(coord_list)
+
+    # Create requests context
+    context = requests.Session()
+    context.trust_env = False # prevent requests from attaching credentials from environment
+
+    # Make paged requests to collect all resources that intersect area of interest
+    items = []
+    while True:
+
+        # Build request
+        url='https://tnmaccess.nationalmap.gov/api/v1/products'
+        rqst = {
+            "datasets":     short_name,
+            "polygon":      poly_str,
+            "prodFormats":  'GeoTIFF',
+            "outputFormat": 'JSON',
+            "max":          TNM_PAGE_SIZE,
+            "offset":       len(items)
+        }
+
+        # Optional request parameters
+        if time_start != None:
+            rqst["start"] = time_start
+            rqst["stop"] = time_end
+
+        # Make request
+        rsps = context.get(url, params=rqst)
+        rsps.raise_for_status()
+        data = json.loads(rsps.content)
+        items += data['items']
+        if len(items) == data['total']:
+            break
+
+    # Create GeoJSON
+    geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for i in range(len(items)):
+        geojson['features'].append({"type": "Feature"})
+        id = items[i]['sourceId']
+        geojson['features'][i].update({"id": id})
+
+        # Create polygon from bounding box
+        minX = items[i]['boundingBox']['minX']
+        maxX = items[i]['boundingBox']['maxX']
+        minY = items[i]['boundingBox']['minY']
+        maxY = items[i]['boundingBox']['maxY']
+
+        # Counter-clockwise for interior of bounding box
+        coordList = [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]]
+
+        geometryDic = {"type": "Polygon", "coordinates": coordList}
+        geojson['features'][i].update({"geometry": geometryDic})
+
+        date = items[i]['lastUpdated']
+        pydate = datetime.fromisoformat(date)
+        date = pydate.astimezone(None).isoformat()
+        url  = items[i]['urls']['TIFF'].replace('https://prd-tnm.s3.amazonaws.com','/vsis3/prd-tnm')
+        propertiesDict = {"datetime": date, "url": url }
+        geojson['features'][i].update({"properties": propertiesDict})
+
+    # Return GeoJSON
+    if as_str:
+        return json.dumps(geojson)
+    else:
+        return geojson
+
