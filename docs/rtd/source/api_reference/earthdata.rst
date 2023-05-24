@@ -2,7 +2,7 @@
 earthdata
 =========
 
-The SlideRule Python API ``earthdata.py`` is used to access the services provided by NASA's EarthData Common Metadata Repository. From Python, the module can be imported via:
+The SlideRule Python API ``earthdata.py`` is used to access the indexing services provided institutions that maintain Earth science datasets (for example, NASA's EarthData Common Metadata Repository, and USGS's The National Map). From Python, the module can be imported via:
 
 .. code-block:: python
 
@@ -27,3 +27,8 @@ stac
 ----
 .. autofunction:: sliderule.earthdata.stac
 
+""""""""""""""""
+
+tnm
+---
+.. autofunction:: sliderule.earthdata.tnm
