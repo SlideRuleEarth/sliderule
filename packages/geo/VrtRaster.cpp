@@ -84,7 +84,7 @@ void VrtRaster::openGeoIndex(double lon, double lat)
 
     getIndexFile(newVrtFile, lon, lat);
 
-    /* Is it already with the same file? */
+    /* Is geoindex already opened with the same file? */
     if (geoIndex.dset != NULL && geoIndex.fileName == newVrtFile)
         return;
 
@@ -101,29 +101,20 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.dset == NULL)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open VRT index file: %s", newVrtFile.c_str());
 
+        mlog(DEBUG, "Opened: %s", newVrtFile.c_str());
 
         geoIndex.fileName = newVrtFile;
         band = geoIndex.dset->GetRasterBand(1);
         CHECKPTR(band);
 
-        /* Get inverted geo transform for vrt */
-        double geot[6] = {0};
-        CPLErr err = GDALGetGeoTransform(geoIndex.dset, geot);
-        CHECK_GDALERR(err);
-        if (!GDALInvGeoTransform(geot, invGeot))
-        {
-            CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
-            CHECK_GDALERR(CE_Failure);
-        }
-
-        /* Store information about vrt raster */
         geoIndex.cols = geoIndex.dset->GetRasterXSize();
         geoIndex.rows = geoIndex.dset->GetRasterYSize();
 
-        /* Get raster boundry box */
-        bzero(geot, sizeof(geot));
-        err = geoIndex.dset->GetGeoTransform(geot);
+        double geot[6] = {0};
+        CPLErr err = geoIndex.dset->GetGeoTransform(geot);
         CHECK_GDALERR(err);
+
+        /* Get raster boundry box */
         geoIndex.bbox.lon_min = geot[0];
         geoIndex.bbox.lon_max = geot[0] + geoIndex.cols * geot[1];
         geoIndex.bbox.lat_max = geot[3];
@@ -140,28 +131,19 @@ void VrtRaster::openGeoIndex(double lon, double lat)
                                    parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(geoIndex.cellSize));
         }
 
-        /* Create coordinates transform for geoIndex */
-        if (geoIndex.cord.transf == NULL )
+        /*
+         * Get inverted transform for VRT
+         * geot - holds 3x2 coefficients.
+         * Inverting switches between geo to pixel <==> pixel to geo
+         */
+        if (!GDALInvGeoTransform(geot, invGeot))
         {
-            CoordTransform& cord = geoIndex.cord;
-            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
-            CHECK_GDALERR(ogrerr);
-            const char *projref = geoIndex.dset->GetProjectionRef();
-            CHECKPTR(projref);
-            mlog(DEBUG, "%s", projref);
-            ogrerr = cord.target.importFromProj4(projref);
-            CHECK_GDALERR(ogrerr);
-
-            /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-            cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-            cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-            cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-            if (cord.transf == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+            CPLError(CE_Failure, CPLE_AppDefined, "Cannot invert geotransform");
+            CHECK_GDALERR(CE_Failure);
         }
 
-        mlog(DEBUG, "Opened: %s", newVrtFile.c_str());
+        /* Create coordinates transform for VRT geoIndex */
+        createTransform(geoIndex.cord, geoIndex.dset);
     }
     catch (const RunTimeException &e)
     {
@@ -220,7 +202,7 @@ bool VrtRaster::findRasters(OGRPoint& p)
                     rasters_group_t rgroup;
                     raster_info_t rinfo;
                     rinfo.fileName = fname;
-                    rinfo.tag = SAMPLES_FILE;
+                    rinfo.tag = SAMPLES_RASTER_TAG;
 
                     /* Get the date this raster was created */
                     getRasterDate(rinfo);
@@ -275,7 +257,7 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
             raster_info_t rinfo;
 
             rinfo.fileName = raster->fileName;
-            rinfo.tag = SAMPLES_FILE;
+            rinfo.tag = SAMPLES_RASTER_TAG;
             rinfo.gpsTime = raster->gpsTime;
             rinfo.gmtDate = TimeLib::gps2gmttime(raster->gpsTime * 1000);
             rgroup.list.add(rgroup.list.length(), rinfo);

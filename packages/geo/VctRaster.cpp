@@ -141,27 +141,8 @@ void VctRaster::openGeoIndex(double lon, double lat)
         getIndexBbox(geoIndex.bbox, lon, lat);
         geoIndex.cellSize = 0;
 
-        /* Create coordinates transform for geoIndex */
-        if (geoIndex.cord.transf == NULL )
-        {
-            CoordTransform& cord = geoIndex.cord;
-            OGRErr ogrerr = cord.source.importFromEPSG(DEFAULT_EPSG);
-            CHECK_GDALERR(ogrerr);
-            OGRSpatialReference* sref = layer->GetSpatialRef();
-            CHECKPTR(sref);
-            int epsg = sref->GetEPSGGeogCS();
-            ogrerr = cord.target.importFromEPSG(epsg);
-            CHECK_GDALERR(ogrerr);
-
-            /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-            cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-            cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-            /* Create coordinates transformation */
-            cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-            if (cord.transf == NULL)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinate transform");
-        }
+        /* Vector index files should be in geographic CRS, no need to create transform */
+        geoIndex.cord.clear(true);
 
         /*
          * For vector files cellSize is unknown. Cannot validate radiusInPixels
@@ -179,6 +160,27 @@ void VctRaster::openGeoIndex(double lon, double lat)
         }
         throw;
     }
+}
+
+
+/*----------------------------------------------------------------------------
+ * getIndexBbox
+ *----------------------------------------------------------------------------*/
+void VctRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
+{
+    std::ignore = lon = lat;
+
+    OGREnvelope env;
+    OGRErr err = layer->GetExtent(&env);
+    if(err == OGRERR_NONE )
+    {
+        bbox.lon_min = env.MinX;
+        bbox.lat_min = env.MinY;
+        bbox.lon_max = env.MaxX;
+        bbox.lat_max = env.MaxY;
+        mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+    }
+    else mlog(ERROR, "Failed to get layer extent/bbox");
 }
 
 

@@ -85,6 +85,13 @@ if __landsat__ then
 end
 
 
+-- Run usgs3dep Plugin Self Tests
+if __landsat__ then
+    local pgc_td = td .. "../../plugins/usgs3dep/selftests/"
+    runner.script(pgc_td .. "usgs3dep_reader.lua")
+end
+
+
 if maxRuns > 1 then
     print(string.format("\n--------------------------------\nTest Repeat Run: %d of %d finished\n--------------------------------", runNum, maxRuns))
     sys.wait(3)
