@@ -5,8 +5,8 @@ csv = require("csv")
 json = require("json")
 local _,td = runner.srcscript()
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
 local assets = asset.loaddir()
