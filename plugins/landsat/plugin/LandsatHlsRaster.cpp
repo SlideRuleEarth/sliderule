@@ -69,6 +69,8 @@ const char* LandsatHlsRaster::ALGO_bands[] = {"B03", "B04", "B05", "B06", "B8A",
 #define ALGO_nameCnt (sizeof (ALGO_names) / sizeof (const char *))
 #define ALGO_bandCnt (sizeof (ALGO_bands) / sizeof (const char *))
 
+const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected";
+
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -94,7 +96,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     if(_parms->bands.length() == 0)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
 
-    filePath.append(_parms->asset->getPath()).append("/");
+    filePath.append(_parms->asset->getPath());
     indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
 
     /* Create in memory index file (geojson) */
@@ -181,7 +183,6 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
             rgroup.gpsTime = gps;
 
             /* Find each requested band in the index file */
-            const std::string fileToken = "HLS";
             bool val;
             const char* bandName = bandsDict.first(&val);
             while(bandName != NULL)
@@ -197,14 +198,10 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                 if(fname && strlen(fname) > 0)
                 {
                     std::string fileName(fname);
-                    std::size_t pos = fileName.find(fileToken);
-                    if(pos == std::string::npos)
-                        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", fileToken.c_str());
-
-                    fileName = filePath + fileName.substr(pos);
+                    const size_t pos = strlen(URL_str);
 
                     raster_info_t rinfo;
-                    rinfo.fileName = fileName;
+                    rinfo.fileName = filePath + fileName.substr(pos);
                     rinfo.tag = bandName;
                     rinfo.gpsTime = rgroup.gpsTime;
                     rinfo.gmtDate = rgroup.gmtDate;

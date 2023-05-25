@@ -47,6 +47,8 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com";
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -66,7 +68,7 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
-    filePath.append(_parms->asset->getPath()).append("/");
+    filePath.append(_parms->asset->getPath());
     indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
 
     /* Create in memory index file (geojson) */
@@ -110,8 +112,11 @@ bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
             {
+                std::string fileName(fname);
+                const size_t pos = strlen(URL_str);
+
                 raster_info_t rinfo;
-                rinfo.fileName = fname;
+                rinfo.fileName = filePath + fileName.substr(pos);
                 rinfo.tag      = SAMPLES_RASTER_TAG;
                 rinfo.gpsTime  = rgroup.gpsTime;
                 rinfo.gmtDate  = rgroup.gmtDate;

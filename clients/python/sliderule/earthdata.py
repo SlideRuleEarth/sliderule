@@ -680,7 +680,7 @@ def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftim
         date = items[i]['lastUpdated']
         pydate = datetime.fromisoformat(date)
         date = pydate.astimezone(None).isoformat()
-        url  = items[i]['urls']['TIFF'].replace('https://prd-tnm.s3.amazonaws.com','/vsis3/prd-tnm')
+        url  = items[i]['urls']['TIFF']
         propertiesDict = {"datetime": date, "url": url }
         geojson['features'][i].update({"properties": propertiesDict})
 

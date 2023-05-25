@@ -54,6 +54,7 @@ class LandsatHlsRaster: public VctRaster
         static const char* S2_bands[];     /* Sentinel 2 */
         static const char* ALGO_names[];   /* Algorithms names */
         static const char* ALGO_bands[];   /* Algorithms bands */
+        static const char* URL_str;
 
         /*--------------------------------------------------------------------
          * Typedefs

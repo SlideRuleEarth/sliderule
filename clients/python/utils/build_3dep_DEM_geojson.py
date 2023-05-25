@@ -90,7 +90,7 @@ for i in range(len(allItems)):
     date = allItems[i]['lastUpdated']
     pydate = datetime.fromisoformat(date)
     date = pydate.astimezone(None).isoformat()
-    url  = allItems[i]['urls']['TIFF'].replace('https://prd-tnm.s3.amazonaws.com','/vsis3/prd-tnm')
+    url  = allItems[i]['urls']['TIFF']
     propertiesDict = {"datetime": date, "url": url }
     geojsonDict['features'][i].update({"properties": propertiesDict})
 
