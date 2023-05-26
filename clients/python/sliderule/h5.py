@@ -93,10 +93,10 @@ def h5 (dataset, resource, asset, datatype=sliderule.datatypes["DYNAMIC"], col=0
 
     Examples
     --------
-        >>> segments    = icesat2.h5("/gt1r/land_ice_segments/segment_id",  resource, asset)
-        >>> heights     = icesat2.h5("/gt1r/land_ice_segments/h_li",        resource, asset)
-        >>> latitudes   = icesat2.h5("/gt1r/land_ice_segments/latitude",    resource, asset)
-        >>> longitudes  = icesat2.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
+        >>> segments    = h5.h5("/gt1r/land_ice_segments/segment_id",  resource, asset)
+        >>> heights     = h5.h5("/gt1r/land_ice_segments/h_li",        resource, asset)
+        >>> latitudes   = h5.h5("/gt1r/land_ice_segments/latitude",    resource, asset)
+        >>> longitudes  = h5.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
         >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
     '''
     tstart = time.perf_counter()
@@ -154,7 +154,7 @@ def h5p (datasets, resource, asset):
         ...         {"dataset": "/gt3l/land_ice_segments/h_li", "numrows": 5},
         ...         {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5}
         ...     ]
-        >>> rsps = icesat2.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", "atlas-local")
+        >>> rsps = h5.h5p(datasets, "ATL06_20181019065445_03150111_003_01.h5", "atlas-local")
         >>> print(rsps)
         {'/gt2r/land_ice_segments/h_li': array([45.3146427 , 45.27640582, 45.23608027, 45.21131015, 45.15692304]),
          '/gt2l/land_ice_segments/h_li': array([45.35118977, 45.33535027, 45.27195617, 45.21816889, 45.18534204]),

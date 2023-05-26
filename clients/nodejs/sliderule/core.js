@@ -57,46 +57,299 @@ let sysConfig = {
   timeout: 120000, // milliseconds
 };
 
+//
+// Record Definitions
+//
+let recordDefinitions = {}
+
+//
+// SlideRule Data Types
+//
+const datatypes = {
+  TEXT:     0,
+  REAL:     1,
+  INTEGER:  2,
+  DYNAMIC:  3
+};
+
+
+//
+// SlideRule Constants
+//
+const H5CORO_ALL_ROWS = -1;
+const INT8            = 0;
+const INT16           = 1;
+const INT32           = 2;
+const INT64           = 3;
+const UINT8           = 4;
+const UINT16          = 5;
+const UINT32          = 6;
+const UINT64          = 7;
+const BITFIELD        = 8;
+const FLOAT           = 9;
+const DOUBLE          = 10;
+const TIME8           = 11;
+const STRING          = 12;
+const USER            = 13;
+
+//
+// SlideRule Field Types
+//
+const fieldtypes = {
+  INT8:     {code: INT8,      size: 1},
+  INT16:    {code: INT16,     size: 2},
+  INT32:    {code: INT32,     size: 4},
+  INT64:    {code: INT64,     size: 8},
+  UINT8:    {code: UINT8,     size: 1},
+  UINT16:   {code: UINT16,    size: 2},
+  UINT32:   {code: UINT32,    size: 4},
+  UINT64:   {code: UINT64,    size: 8},
+  BITFIELD: {code: BITFIELD,  size: 1},
+  FLOAT:    {code: FLOAT,     size: 4},
+  DOUBLE:   {code: DOUBLE,    size: 8},
+  TIME8:    {code: TIME8,     size: 8},
+  STRING:   {code: STRING,    size: 1},
+  USER:     {code: USER,      size: 0},
+};
+
 //------------------------------------
 // Local Functions
 //------------------------------------
 
 //
+// populateDefinition
+//
+async function populateDefinition(rec_type) {
+  let promise = new Promise((resolve, reject) => {
+    if (rec_type in recordDefinitions) {
+      resolve(recordDefinitions[rec_type]);
+    }
+    else {
+      exports.source("definition", {"rectype" : rec_type}).then(
+        result => {
+          recordDefinitions[rec_type] = result;
+          resolve(recordDefinitions[rec_type]);
+        },
+        error => {
+          reject(new Error(`failed to retrieve definition for ${rec_type}: ${error}`));
+        }
+      );
+    }
+  });
+  return promise;
+}
+
+//
+// decodeElement
+//
+function decodeElement(type_code, big_endian, byte_offset, buffer) {
+  if (big_endian) {
+    switch (type_code) {
+      case INT8:      return buffer.readInt8(byte_offset);
+      case INT16:     return buffer.readInt16BE(byte_offset);
+      case INT32:     return buffer.readInt32BE(byte_offset);
+      case INT64:     return buffer.readInt64BE(byte_offset);
+      case UINT8:     return buffer.readUInt8(byte_offset);
+      case UINT16:    return buffer.readUInt16BE(byte_offset);
+      case UINT32:    return buffer.readUInt32BE(byte_offset);
+      case UINT64:    return buffer.readUInt64BE(byte_offset);
+      case BITFIELD:  throw new Error(`Bit fields are unsupported`);
+      case FLOAT:     return buffer.readFloatBE(byte_offset);
+      case DOUBLE:    return buffer.readDoubleBE(byte_offset);
+      case TIME8:     return new Date(buffer.readInt64BE(byte_offset) / 1000000);
+      case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
+      case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
+      default:        throw new Error(`Invalid field type ${type_code}`);
+    }
+  }
+  else {
+    switch (type_code) {
+      case INT8:      return buffer.readInt8(byte_offset);
+      case INT16:     return buffer.readInt16LE(byte_offset);
+      case INT32:     return buffer.readInt32LE(byte_offset);
+      case INT64:     return buffer.readInt64LE(byte_offset);
+      case UINT8:     return buffer.readUInt8(byte_offset);
+      case UINT16:    return buffer.readUInt16LE(byte_offset);
+      case UINT32:    return buffer.readUInt32LE(byte_offset);
+      case UINT64:    return buffer.readUInt64LE(byte_offset);
+      case BITFIELD:  throw new Error(`Bit fields are unsupported`);
+      case FLOAT:     return buffer.readFloatLE(byte_offset);
+      case DOUBLE:    return buffer.readDoubleLE(byte_offset);
+      case TIME8:     return new Date(buffer.readInt64LE(byte_offset) / 1000000);
+      case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
+      case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
+      default:        throw new Error(`Invalid field type ${type_code}`);
+    };
+  }
+}
+
+//
+// decodeField
+//
+async function decodeField(field_def, buffer, offset) {
+
+  let value = []; // ultimately returned
+
+  // Pull out definition
+  let type_code = fieldtypes[field_def.type].code;
+  let big_endian = (field_def.flags.match('BE') != null);
+  let byte_offset = offset + (field_def.offset / 8);
+  let num_elements = field_def.elements;
+
+  // Calculate size of field
+  let field_size = fieldtypes[field_def.type].size;
+  let rec_def = null;
+  if (field_def.type_code == USER) {
+    rec_def = await populateDefinition(field_def.type);
+    field_size = rec_def.__datasize;
+  }
+
+  // For variable length fields, calculate number of elements using size of record
+  if (num_elements == 0) {
+    num_elements = (buffer.length - byte_offset) / field_size;
+  }
+
+  // Decode elements
+  for (let i = 0; i < num_elements; i++) {
+    if (field_def.type_code == USER) {
+      value.push(decodeField(rec_def, buffer, byte_offset)); // TODO: the offsets and byte offsets are probably not correct for arrays and structs/user fields
+    }
+    else {
+      value.push(decodeElement(type_code, big_endian, byte_offset, buffer));
+    }
+    byte_offset += field_size;
+  }
+
+  // Create final value
+  if (type_code == STRING) {
+    value = value.join('');
+  }
+  else if (num_elements == 1) {
+    value = value[0];
+  }
+
+  // Return value
+  return value;
+}
+
+//
+// decodeRecord
+//
+async function decodeRecord(rec_type, buffer, offset) {
+  let rec_obj = {}
+  let rec_def = await populateDefinition(rec_type);
+  // For each field defined in record
+  for (let field in rec_def) {
+    // Check if not property
+    if (field.match(/^__/) != null) {
+      rec_obj[field] = decodeField(rec_def[field], buffer, offset);
+    }
+  }
+  // Return decoded record
+  return rec_obj;
+}
+//
+// parseResponse
+//
+function parseResponse (response, resolve, reject) {
+  // Check Response Code
+  if (response.statusCode !== 200) {
+    response.resume();
+    reject(new Error(`server returned ${response.statusCode}`));
+  }
+  // Handle Normal Response
+  else if (response.headers['content-type'] == 'application/json' ||
+            response.headers['content-type'] == 'text/plain') {
+    let chunks = [];
+    response.on('data', (chunk) => {
+      chunks.push(chunk);
+    }).on('close', () => {
+      let buffer = Buffer.concat(chunks);
+      let rsps = JSON.parse(buffer);
+      resolve(rsps);
+    });
+  }
+  // Handle Streaming Response
+  else if (response.headers['content-type'] == 'application/octet-stream') {
+    const REC_HDR_SIZE = 8;
+    const REC_VERSION = 2;
+    let recs = [];
+    let chunks = [];
+    let bytes_read = 0;
+    let got_header = false;
+    let rec_size = 0;
+    response.on('data', (chunk) => {
+      chunks.push(chunk);
+      bytes_read += chunk.length;
+      if (!got_header && bytes_read > REC_HDR_SIZE) {
+        got_header = true;
+        let buffer = Buffer.concat(chunks);
+        chunks = [];
+        // Get header info
+        let rec_version = buffer.readUInt16BE(0);
+        let rec_type_size = buffer.readUInt16BE(2);
+        let rec_data_size = buffer.readUInt32BE(4);
+        if (rec_version != REC_VERSION) {
+          reject(new Error(`invalid record format: ${rec_verison}`))
+        }
+        rec_size = rec_type_size + rec_data_size;
+        // Optimized Processing of Small Responses
+        if (bytes_read >= (REC_HDR_SIZE + rec_size)) {
+          let rec_type = buffer.toString('utf8', REC_HDR_SIZE, REC_HDR_SIZE + rec_type_size);
+          decodeRecord(rec_type, buffer, REC_HDR_SIZE + rec_type_size).then(
+            result => recs.push(result)
+          );
+          // Restore unused bytes that have been read
+          if(bytes_read > (REC_HDR_SIZE + rec_size)) {
+            chunks = [buffer.subarray(REC_HDR_SIZE + rec_size)];
+          }
+        }
+        else {
+          chunks = [buffer.subarray(REC_HDR_SIZE)];
+        }
+      }
+      else if (bytes_read >= rec_size) {
+        got_header = false;
+        let buffer = Buffer.concat(chunks);
+        chunks = [];
+        decodeRecord(rec_type, buffer, 0).then(
+          result => recs.push(result)
+        );
+        // Restore unused bytes that have been read
+        if(bytes_read > rec_size) {
+          chunks = [buffer.subarray(rec_size)];
+        }
+      }
+    }).on('close', () => {
+      resolve(recs);
+    });
+  }
+}
+
+//
 // httpRequest
 //
-function httpRequest(options, body, onClose) {
-  let promise = new Promise((resolve, reject) => {
-    let request = sysConfig.protocol.request(options, (res) => {
-      if (res.statusCode !== 200) {
-        res.resume();
-        reject(new Error(`server returned ${res.statusCode}`));
-      }
+function httpRequest(options, body) {
+  return new Promise((resolve, reject) => {
 
-      let data = '';
+    // On Response
+    let request = sysConfig.protocol.request(options, (res) =>
+      parseResponse(res, resolve, reject)
+    );
 
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('close', () => {
-        resolve(onClose(data));
-      });
-    });
-
+    // On Errors
     request.on('error', (err) => {
       reject(new Error(err.message));
     });
 
-    if (typeof body == 'string') {
+    // Populate Body of Request (if provided)
+    if (typeof body != null) {
       request.write(body);
-    } else if (body != null) {
-      request.write(JSON.stringify(body));
     }
 
+    // Terminate Request
     request.end();
   });
-
-  return promise;
 };
 
 //------------------------------------
@@ -115,15 +368,22 @@ exports.init = (config) => {
 //
 exports.source = (api, parm=null, stream=false) => {
 
+  // Build Body
+  let body = null
+  if (parm != null) {
+    body = JSON.stringify(parm);
+  }
+
   // Setup Request Options
   const options = {
     host: sysConfig.organization && (sysConfig.organization + '.' + sysConfig.domain) || sysConfig.domain,
     path: '/source/' + api,
     method: stream && 'POST' || 'GET',
+    headers: {'Content-Type': 'application/json', 'Content-Length': body.length},
   };
 
   // Make API Request
-  return httpRequest(options, parm, (data) => JSON.parse(data));
+  return httpRequest(options, body);
 }
 
 //
@@ -163,20 +423,21 @@ exports.authenticate = (ps_username=null, ps_password=null) => {
     };
 
     // Make Authentication Request
-    return httpRequest(options, body, (data) => {
-      let expiration = 0;
-      try {
-        rsps = JSON.parse(data);
-        sysCredentials.access = rsps.access;
-        sysCredentials.refresh = rsps.refresh;
-        sysCredentials.expiration =  (Date.now() / 1000) + (rsps.access_lifetime / 2);
-        expiration = sysCredentials.expiration;
+    return httpRequest(options, body).then(
+      result => {
+        let expiration = 0;
+        try {
+          sysCredentials.access = result.access;
+          sysCredentials.refresh = result.refresh;
+          sysCredentials.expiration =  (Date.now() / 1000) + (result.access_lifetime / 2);
+          expiration = sysCredentials.expiration;
+        }
+        catch (e) {
+          console.error("Error processing authentication response\n", result);
+        }
+        return expiration;
       }
-      catch (e) {
-        console.error("Error processing authentication response\n", data);
-      }
-      return expiration;
-    });
+    );
 }
 
 //
@@ -187,6 +448,22 @@ exports.get_version = () => {
     result => {
       result['client'] = {version: pkg['version']};
       result['organization'] = sysConfig.organization;
+      return result;
+    }
+  );
+}
+
+//
+// H5
+//
+exports.h5 = (dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, startrow=0, numrows=H5CORO_ALL_ROWS) => {
+  let parm = {
+    asset: asset,
+    resource: resource,
+    datasets: [ { dataset: dataset, datatype: datatype, col: col, startrow: startrow, numrows: numrows } ]
+  };
+  return exports.source('h5p', parm, true).then(
+    result => {
       return result;
     }
   );
