@@ -140,6 +140,19 @@ async function populateDefinition(rec_type) {
 }
 
 //
+// getFieldSize
+//
+async function getFieldSize(type) {
+  if (type_code == USER) {
+    let rec_def = await populateDefinition(field_def.type);
+    return rec_def.__datasize;
+  }
+  else {
+    return fieldtypes[field_def.type].size;
+  }
+}
+
+//
 // decodeElement
 //
 function decodeElement(type_code, big_endian, byte_offset, buffer) {
@@ -190,29 +203,22 @@ async function decodeField(field_def, buffer, offset) {
 
   let value = []; // ultimately returned
 
-  // Pull out definition
+  // Pull out field attributes
   let type_code = fieldtypes[field_def.type].code;
   let big_endian = (field_def.flags.match('BE') != null);
   let byte_offset = offset + (field_def.offset / 8);
   let num_elements = field_def.elements;
+  let field_size = getFieldSize(field_def.type);
 
-  // Calculate size of field
-  let field_size = fieldtypes[field_def.type].size;
-  let rec_def = null;
-  if (field_def.type_code == USER) {
-    rec_def = await populateDefinition(field_def.type);
-    field_size = rec_def.__datasize;
-  }
-
-  // For variable length fields, calculate number of elements using size of record
+  // For variable length fields, recalculate number of elements using size of record
   if (num_elements == 0) {
     num_elements = (buffer.length - byte_offset) / field_size;
   }
 
   // Decode elements
   for (let i = 0; i < num_elements; i++) {
-    if (field_def.type_code == USER) {
-      value.push(decodeField(rec_def, buffer, byte_offset)); // TODO: the offsets and byte offsets are probably not correct for arrays and structs/user fields
+    if (type_code == USER) {
+      value.push(decodeRecord(field_def.type, buffer, byte_offset));
     }
     else {
       value.push(decodeElement(type_code, big_endian, byte_offset, buffer));
@@ -248,6 +254,7 @@ async function decodeRecord(rec_type, buffer, offset) {
   // Return decoded record
   return rec_obj;
 }
+
 //
 // parseResponse
 //
