@@ -143,19 +143,20 @@ async function populateDefinition(rec_type) {
 // getFieldSize
 //
 async function getFieldSize(type) {
+  let type_code = fieldtypes[type].code;
   if (type_code == USER) {
-    let rec_def = await populateDefinition(field_def.type);
+    let rec_def = await populateDefinition(type);
     return rec_def.__datasize;
   }
   else {
-    return fieldtypes[field_def.type].size;
+    return fieldtypes[type].size;
   }
 }
 
 //
 // decodeElement
 //
-function decodeElement(type_code, big_endian, byte_offset, buffer) {
+function decodeElement(type_code, big_endian, buffer, byte_offset) {
   if (big_endian) {
     switch (type_code) {
       case INT8:      return buffer.readInt8(byte_offset);
@@ -208,7 +209,7 @@ async function decodeField(field_def, buffer, offset) {
   let big_endian = (field_def.flags.match('BE') != null);
   let byte_offset = offset + (field_def.offset / 8);
   let num_elements = field_def.elements;
-  let field_size = getFieldSize(field_def.type);
+  let field_size = await getFieldSize(field_def.type);
 
   // For variable length fields, recalculate number of elements using size of record
   if (num_elements == 0) {
@@ -221,7 +222,7 @@ async function decodeField(field_def, buffer, offset) {
       value.push(decodeRecord(field_def.type, buffer, byte_offset));
     }
     else {
-      value.push(decodeElement(type_code, big_endian, byte_offset, buffer));
+      value.push(decodeElement(type_code, big_endian, buffer, byte_offset));
     }
     byte_offset += field_size;
   }
@@ -229,6 +230,10 @@ async function decodeField(field_def, buffer, offset) {
   // Create final value
   if (type_code == STRING) {
     value = value.join('');
+    let null_index = value.indexOf('\0');
+    if (null_index > -1) {
+      value = value.substr(0, null_index);
+    }
   }
   else if (num_elements == 1) {
     value = value[0];
@@ -247,10 +252,11 @@ async function decodeRecord(rec_type, buffer, offset) {
   // For each field defined in record
   for (let field in rec_def) {
     // Check if not property
-    if (field.match(/^__/) != null) {
-      rec_obj[field] = decodeField(rec_def[field], buffer, offset);
+    if (field.match(/^__/) == null) {
+      rec_obj[field] = await decodeField(rec_def[field], buffer, offset);
     }
   }
+  console.log("REC_OBJ", rec_obj);
   // Return decoded record
   return rec_obj;
 }
