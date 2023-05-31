@@ -487,6 +487,30 @@ exports.get_version = () => {
 }
 
 //
+// Get Values
+//
+exports.get_values = (bytearray, fieldtype) => {
+  let values = [];
+  let buffer = Buffer.from(bytearray);
+  switch (fieldtype) {
+    case INT8:    for (let i = 0; i < buffer.length; i += 1) values.push(buffer.readInt8LE(i));   break;
+    case INT16:   for (let i = 0; i < buffer.length; i += 2) values.push(buffer.readInt16LE(i));  break;
+    case INT32:   for (let i = 0; i < buffer.length; i += 4) values.push(buffer.readInt32LE(i));  break;
+    case INT64:   for (let i = 0; i < buffer.length; i += 8) values.push(buffer.readInt64LE(i));  break;
+    case UINT8:   for (let i = 0; i < buffer.length; i += 1) values.push(buffer.readUInt8LE(i));  break;
+    case UINT16:  for (let i = 0; i < buffer.length; i += 2) values.push(buffer.readUInt16LE(i)); break;
+    case UINT32:  for (let i = 0; i < buffer.length; i += 4) values.push(buffer.readUInt32LE(i)); break;
+    case UINT64:  for (let i = 0; i < buffer.length; i += 8) values.push(buffer.readUInt64LE(i)); break;
+    case FLOAT:   for (let i = 0; i < buffer.length; i += 4) values.push(buffer.readFloatLE(i));  break;
+    case DOUBLE:  for (let i = 0; i < buffer.length; i += 8) values.push(buffer.readDoubleLE(i)); break;
+    case TIME8:   for (let i = 0; i < buffer.length; i += 8) values.push(buffer.readInt64LE(i));  break;
+    case STRING:  values = String.fromCharCode.apply(null, bytearray); break;
+    default: break;
+  }
+  return values;
+}
+
+//
 // H5
 //
 exports.h5 = (dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, startrow=0, numrows=H5CORO_ALL_ROWS) => {
@@ -496,8 +520,6 @@ exports.h5 = (dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, start
     datasets: [ { dataset: dataset, datatype: datatype, col: col, startrow: startrow, numrows: numrows } ]
   };
   return exports.source('h5p', parm, true).then(
-    result => {
-      return result;
-    }
+    result => exports.get_values(result[0].data, result[0].datatype)
   );
 }
