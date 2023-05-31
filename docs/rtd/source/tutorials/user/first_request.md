@@ -10,15 +10,15 @@ This tutorial walks you through the steps necessary to make your first request t
 
 ## Background
 
-While it is possible to directly access all of ICESat-2 SlideRule's services using any client that communicates over HTTP, it is more practical to use the supplied [Python client](https://github.com/ICESat2-SlideRule/sliderule-python), which hides much of the complexity of interacting with each of the services and provides a high-level Python interface for most use-cases.
+While it is possible to directly access all of ICESat-2 SlideRule's services using any client that communicates over HTTP, it is more practical to use the supplied [Python client](https://github.com/ICESat2-SlideRule/sliderule), which hides much of the complexity of interacting with each of the services and provides a high-level Python interface for most use-cases.
 
-For this reason, _"using"_ SlideRule is, in practice, the same as writing a Python script that uses the SlideRule-Python client package.  The Python client is used to issue science processing requests to `slideruleearth.io` and then analyze the responses that come back.
+For this reason, _"using"_ SlideRule is, in practice, the same as writing a Python script that uses the SlideRule Python client package.  The Python client is used to issue science processing requests to `slideruleearth.io` and then analyze the responses that come back.
 
 These processing requests will typically specify a geospatial region of interest (e.g. defined by a GeoJSON file) and instruct the SlideRule system what algorithms it wants to have run on the ICESat-2 data collected within that region.  When SlideRule receives the request, it reads the appropriate source datasets, executes the requested algorithms on that data, and returns the results back to the requesting application.
 
 ## Setting Up Your System
 
-__Step 1__: Clone the Python client repository
+__Step 1__: Clone the SlideRule Python examples repository
 ```bash
 $ git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
 ```
@@ -31,7 +31,7 @@ $ conda env create -f environment.yml
 
 __Step 3__: Activate the sliderule conda environment
 ```bash
-$ conda activate sliderule
+$ conda activate sliderule_env
 ```
 
 ## Your First Processing Request

@@ -1,4 +1,4 @@
-"""Tests for sliderule-python icesat2 api."""
+"""Tests for sliderule icesat2 api."""
 
 import pytest
 import sliderule

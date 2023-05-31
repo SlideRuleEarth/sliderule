@@ -18,7 +18,7 @@ import datetime
 
 # -- Project information -----------------------------------------------------
 
-project = 'sliderule-python'
+project = 'sliderule'
 year = datetime.date.today().year
 copyright = f"2020\u2013{year}, University of Washington"
 author = 'The SlideRule Developers'
@@ -63,7 +63,7 @@ autosummary_generate = True
 
 # -- Options for HTML output -------------------------------------------------
 
-# html_title = "SlideRule-python"
+# html_title = "SlideRule"
 html_short_title = "SlideRule"
 html_show_sourcelink = False
 html_show_sphinx = True
@@ -83,7 +83,7 @@ html_theme_options = {
 html_logo = "../../jekyll/assets/images/SlideRule-blueBG.png"
 html_favicon = "../../jekyll/favicon.ico"
 html_static_path = ['_static']
-repository_url = f"https://github.com/ICESat2-SlideRule/sliderule-python"
+repository_url = f"https://github.com/ICESat2-SlideRule/sliderule"
 html_context = {
     "menu_links": [
         (

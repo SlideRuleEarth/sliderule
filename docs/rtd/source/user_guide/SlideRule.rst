@@ -577,7 +577,7 @@ h5
 
     Reads a dataset from an HDF5 file and return the values of the dataset in a list.
 
-    See `icesat2.h5 </web/rtd/api_reference/icesat2.html#h5>`_ function for a convient method for accessing HDF5 datasets.
+    See `h5.h5 </web/rtd/api_reference/h5.html#h5>`_ function for a convient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
 

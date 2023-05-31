@@ -20,7 +20,7 @@ Every deployment of SlideRule consists of three major sets of components which a
 Web Services
 ------------
 
-Web services provided by SlideRule can be accessed by any http client (e.g. curl); but a Python client (https://github.com/ICESat2-SlideRule/sliderule-python) is provided by the project to make it easier to interact with SlideRule. The Python client provides functional interfaces for processing science data: processing parameters are passed to the client’s API, all the necessary requests to the SlideRule servers are performed inside the client and the responses handled, and then the results are collected into a GeoDataFrame and returned back to the calling code.  Future releases of SlideRule will include clients for other popular programming languages like Julia and R.
+Web services provided by SlideRule can be accessed by any http client (e.g. curl); but a Python client (https://github.com/ICESat2-SlideRule/sliderule) is provided by the project to make it easier to interact with SlideRule. The Python client provides functional interfaces for processing science data: processing parameters are passed to the client’s API, all the necessary requests to the SlideRule servers are performed inside the client and the responses handled, and then the results are collected into a GeoDataFrame and returned back to the calling code.  Future releases of SlideRule will include clients for other popular programming languages like Julia and R.
 
 Data Access
 -----------

@@ -1,4 +1,4 @@
-"""Tests for sliderule-python connection errors when requests get sent back to back."""
+"""Tests for sliderule connection errors when requests get sent back to back."""
 
 import pytest
 import sliderule
