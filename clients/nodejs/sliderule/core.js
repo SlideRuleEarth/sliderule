@@ -256,7 +256,6 @@ async function decodeRecord(rec_type, buffer, offset) {
       rec_obj[field] = await decodeField(rec_def[field], buffer, offset);
     }
   }
-  console.log("REC_OBJ", rec_obj);
   // Return decoded record
   return rec_obj;
 }
@@ -272,7 +271,7 @@ function parseResponse (response, resolve, reject) {
   }
   // Handle Normal Response
   else if (response.headers['content-type'] == 'application/json' ||
-            response.headers['content-type'] == 'text/plain') {
+           response.headers['content-type'] == 'text/plain') {
     let chunks = [];
     response.on('data', (chunk) => {
       chunks.push(chunk);
@@ -289,52 +288,87 @@ function parseResponse (response, resolve, reject) {
     let recs = [];
     let chunks = [];
     let bytes_read = 0;
+    let bytes_processed = 0;
+    let bytes_to_process = 0;
+    let total_bytes = null;
     let got_header = false;
     let rec_size = 0;
+    let rec_type = null;
     response.on('data', (chunk) => {
       chunks.push(chunk);
       bytes_read += chunk.length;
-      if (!got_header && bytes_read > REC_HDR_SIZE) {
-        got_header = true;
-        let buffer = Buffer.concat(chunks);
-        chunks = [];
-        // Get header info
-        let rec_version = buffer.readUInt16BE(0);
-        let rec_type_size = buffer.readUInt16BE(2);
-        let rec_data_size = buffer.readUInt32BE(4);
-        if (rec_version != REC_VERSION) {
-          reject(new Error(`invalid record format: ${rec_verison}`))
-        }
-        rec_size = rec_type_size + rec_data_size;
-        // Optimized Processing of Small Responses
-        if (bytes_read >= (REC_HDR_SIZE + rec_size)) {
-          let rec_type = buffer.toString('utf8', REC_HDR_SIZE, REC_HDR_SIZE + rec_type_size);
-          decodeRecord(rec_type, buffer, REC_HDR_SIZE + rec_type_size).then(
-            result => recs.push(result)
-          );
-          // Restore unused bytes that have been read
-          if(bytes_read > (REC_HDR_SIZE + rec_size)) {
-            chunks = [buffer.subarray(REC_HDR_SIZE + rec_size)];
+      bytes_to_process += chunk.length;
+      while (bytes_to_process > 0) {
+        // State: Accumulating Header
+        if (!got_header && bytes_read > REC_HDR_SIZE) {
+          // Process header
+          got_header = true;
+          bytes_processed += REC_HDR_SIZE;
+          bytes_to_process -= REC_HDR_SIZE;
+          let buffer = Buffer.concat(chunks);
+          chunks = [];
+          // Get header info
+          let rec_version = buffer.readUInt16BE(0);
+          let rec_type_size = buffer.readUInt16BE(2);
+          let rec_data_size = buffer.readUInt32BE(4);
+          if (rec_version != REC_VERSION) {
+            reject(new Error(`invalid record format: ${rec_verison}`))
+          }
+          rec_size = rec_type_size + rec_data_size;
+          rec_type = buffer.toString('utf8', REC_HDR_SIZE, REC_HDR_SIZE + rec_type_size);
+          // Process record (optimized processing of small pesponses)
+          if (bytes_read >= (REC_HDR_SIZE + rec_size)) {
+            got_header = false;
+            decodeRecord(rec_type, buffer, REC_HDR_SIZE + rec_type_size).then(
+              result => {
+                recs.push(result);
+                bytes_processed += rec_size;
+                bytes_to_process -= rec_size;
+              }
+            );
+            // Restore unused bytes that have been read
+            if(bytes_read > (REC_HDR_SIZE + rec_size)) {
+              chunks = [buffer.subarray(REC_HDR_SIZE + rec_size)];
+            }
+          }
+          else {
+            chunks = [buffer.subarray(REC_HDR_SIZE)];
           }
         }
+        // State: Accumulating Record
+        else if (got_header && bytes_read >= rec_size) {
+          // Process record
+          got_header = false;
+          let buffer = Buffer.concat(chunks);
+          chunks = [];
+          decodeRecord(rec_type, buffer, 0).then(
+            result => {
+              bytes_processed += rec_size;
+              bytes_to_process -= rec_size;
+              recs.push(result);
+            }
+          );
+          // Restore unused bytes that have been read
+          if(bytes_read > rec_size) {
+            chunks = [buffer.subarray(rec_size)];
+          }
+        }
+        // State: Need More Data
         else {
-          chunks = [buffer.subarray(REC_HDR_SIZE)];
+          break;
         }
       }
-      else if (bytes_read >= rec_size) {
-        got_header = false;
-        let buffer = Buffer.concat(chunks);
-        chunks = [];
-        decodeRecord(rec_type, buffer, 0).then(
-          result => recs.push(result)
-        );
-        // Restore unused bytes that have been read
-        if(bytes_read > rec_size) {
-          chunks = [buffer.subarray(rec_size)];
-        }
+      // Check complete
+      if (total_bytes != null && bytes_processed == total_bytes) {
+        resolve(recs);
       }
     }).on('close', () => {
-      resolve(recs);
+      if (bytes_processed == bytes_read) {
+        resolve(recs);
+      }
+      else {
+        total_bytes = bytes_read;
+      }
     });
   }
 }
