@@ -306,7 +306,6 @@ function parseResponse (response, resolve, reject) {
           bytes_processed += REC_HDR_SIZE;
           bytes_to_process -= REC_HDR_SIZE;
           let buffer = Buffer.concat(chunks);
-          chunks = [];
           // Get header info
           let rec_version = buffer.readUInt16BE(0);
           let rec_type_size = buffer.readUInt16BE(2);
@@ -314,43 +313,33 @@ function parseResponse (response, resolve, reject) {
           if (rec_version != REC_VERSION) {
             reject(new Error(`invalid record format: ${rec_verison}`))
           }
+          // Set record attributes
           rec_size = rec_type_size + rec_data_size;
           rec_type = buffer.toString('utf8', REC_HDR_SIZE, REC_HDR_SIZE + rec_type_size);
-          // Process record (optimized processing of small pesponses)
-          if (bytes_read >= (REC_HDR_SIZE + rec_size)) {
-            got_header = false;
-            decodeRecord(rec_type, buffer, REC_HDR_SIZE + rec_type_size).then(
-              result => {
-                recs.push(result);
-                bytes_processed += rec_size;
-                bytes_to_process -= rec_size;
-              }
-            );
-            // Restore unused bytes that have been read
-            if(bytes_read > (REC_HDR_SIZE + rec_size)) {
-              chunks = [buffer.subarray(REC_HDR_SIZE + rec_size)];
-            }
-          }
-          else {
-            chunks = [buffer.subarray(REC_HDR_SIZE)];
-          }
+          chunks = [buffer.subarray(REC_HDR_SIZE)];
         }
         // State: Accumulating Record
         else if (got_header && bytes_read >= rec_size) {
           // Process record
           got_header = false;
           let buffer = Buffer.concat(chunks);
-          chunks = [];
+          bytes_to_process -= rec_size;
           decodeRecord(rec_type, buffer, 0).then(
             result => {
               bytes_processed += rec_size;
-              bytes_to_process -= rec_size;
               recs.push(result);
+              // Check complete
+              if (total_bytes != null && bytes_processed == total_bytes) {
+                resolve(recs);
+              }
             }
           );
           // Restore unused bytes that have been read
           if(bytes_read > rec_size) {
             chunks = [buffer.subarray(rec_size)];
+          }
+          else {
+            chunks = [];
           }
         }
         // State: Need More Data
@@ -358,11 +347,8 @@ function parseResponse (response, resolve, reject) {
           break;
         }
       }
-      // Check complete
-      if (total_bytes != null && bytes_processed == total_bytes) {
-        resolve(recs);
-      }
     }).on('close', () => {
+      // Check complete
       if (bytes_processed == bytes_read) {
         resolve(recs);
       }
