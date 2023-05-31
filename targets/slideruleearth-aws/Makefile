@@ -12,6 +12,8 @@
 #           The user must be logged into the GitHub Container Registry (GHCR)
 #     * Terraform & Packer
 #           The binaries are sufficient, but pay close attention to the local package versions
+#     * Node.js
+#			The javascript npm package for SlideRule is updated via a node.js script on release
 #
 # (2) To release a version of SlideRule:
 #     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
@@ -39,6 +41,7 @@ GEDI_BUILD_DIR = $(BUILD)/gedi
 USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
+NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 SERVER_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
@@ -238,6 +241,8 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 
 cluster-tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
+	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
+	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git commit -m "Version $(VERSION)"
