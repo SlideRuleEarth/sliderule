@@ -52,6 +52,14 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release \
 RUN make -j8
 RUN make install
 
+# build and install usgs3dep plugin into staging
+RUN mkdir -p /build/usgs3dep
+WORKDIR /build/usgs3dep
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+          /sliderule/plugins/usgs3dep
+RUN make -j8
+RUN make install
+
 # install project specific files
 COPY etc/* /usr/local/etc/sliderule/
 
