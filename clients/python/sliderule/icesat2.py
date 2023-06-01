@@ -139,7 +139,7 @@ def __calcspot(sc_orient, track, pair):
 #
 # Flatten Batches
 #
-def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
+def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array):
 
     # Latch Start Time
     tstart_flatten = time.perf_counter()
@@ -182,7 +182,6 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id):
                 field_names = list(sample.keys())
                 field_names.remove("__rectype")
                 field_set = rsp['key']
-                as_numpy_array = False
                 if rsp["num_samples"] > 1:
                     as_numpy_array = True
                 # On first time, build empty dictionary for field set associated with raster
@@ -379,7 +378,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -406,6 +405,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
+        as_numpy_array: bool
+                        whether to provide all sampled values as numpy arrays even if there is only a single value
 
     Returns
     -------
@@ -454,7 +455,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id)
+        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id, as_numpy_array)
 
         # Return Response
         profiles[atl06p.__name__] = time.perf_counter() - tstart
@@ -699,7 +700,7 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL08
 #
-def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
+def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False):
     '''
     Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns geolocated vegatation statistics.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -726,6 +727,8 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
+        as_numpy_array: bool
+                        whether to provide all sampled values as numpy arrays even if there is only a single value
 
     Returns
     -------
@@ -750,7 +753,7 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id)
+        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id, as_numpy_array)
 
         # Return Response
         profiles[atl08p.__name__] = time.perf_counter() - tstart

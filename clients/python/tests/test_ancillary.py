@@ -10,8 +10,7 @@ import os.path
 TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
-class TestRemote:
-
+class TestAncillary:
     def test_geo(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))

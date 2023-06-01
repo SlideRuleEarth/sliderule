@@ -1,4 +1,4 @@
-"""Tests for sliderule icesat2 api."""
+"""Tests for sliderule geo api."""
 
 import pytest
 import sliderule
@@ -8,26 +8,7 @@ from sliderule import icesat2
 sliderule.set_rqst_timeout((1, 60))
 
 @pytest.mark.network
-class TestApi:
-    def test_time(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        rqst = {
-            "time": "NOW",
-            "input": "NOW",
-            "output": "GPS" }
-        d = sliderule.source("time", rqst)
-        now = d["time"] - (d["time"] % 1000) # gmt is in resolution of seconds, not milliseconds
-        rqst["time"] = d["time"]
-        rqst["input"] = "GPS"
-        rqst["output"] = "GMT"
-        d = sliderule.source("time", rqst)
-        rqst["time"] = d["time"]
-        rqst["input"] = "GMT"
-        rqst["output"] = "GPS"
-        d = sliderule.source("time", rqst)
-        again = d["time"]
-        assert now == again
-
+class TestGeo:
     def test_geospatial1(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
@@ -111,30 +92,3 @@ class TestApi:
         }
         d = sliderule.source("geo", test)
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0
-
-    def test_definition(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        rqst = {
-            "rectype": "atl06rec.elevation",
-        }
-        d = sliderule.source("definition", rqst)
-        assert d["time"]["offset"] == 192
-
-    def test_version(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        rsps = sliderule.source("version", {})
-        assert 'server' in rsps
-        assert 'version' in rsps['server']
-        assert 'commit' in rsps['server']
-        assert 'launch' in rsps['server']
-        assert 'duration' in rsps['server']
-        assert 'packages' in rsps['server']
-        assert '.' in rsps['server']['version']
-        assert '-g' in rsps['server']['commit']
-        assert ':' in rsps['server']['launch']
-        assert rsps['server']['duration'] > 0
-        assert 'icesat2' in rsps['server']['packages']
-        assert 'version' in rsps['icesat2']
-        assert 'commit' in rsps['icesat2']
-        assert '.' in rsps['icesat2']['version']
-        assert '-g' in rsps['icesat2']['commit']
