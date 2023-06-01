@@ -376,7 +376,7 @@ function httpRequest(options, body) {
     });
 
     // Populate Body of Request (if provided)
-    if (typeof body != null) {
+    if (body != null) {
       request.write(body);
     }
 
@@ -401,19 +401,19 @@ exports.init = (config) => {
 //
 exports.source = (api, parm=null, stream=false) => {
 
-  // Build Body
-  let body = null
-  if (parm != null) {
-    body = JSON.stringify(parm);
-  }
-
   // Setup Request Options
   const options = {
     host: sysConfig.organization && (sysConfig.organization + '.' + sysConfig.domain) || sysConfig.domain,
     path: '/source/' + api,
     method: stream && 'POST' || 'GET',
-    headers: {'Content-Type': 'application/json', 'Content-Length': body.length},
   };
+
+  // Build Body
+  let body = null
+  if (parm != null) {
+    body = JSON.stringify(parm);
+    options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
+  }
 
   // Make API Request
   return httpRequest(options, body);
