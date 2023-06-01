@@ -53,4 +53,29 @@ class TestSTAC:
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         with pytest.raises(sliderule.FatalError):
-            response = earthdata.stac(short_name="DOES_NOT_EXIST", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z")
+            earthdata.stac(short_name="DOES_NOT_EXIST", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z")
+
+
+#
+# TNM
+#
+@pytest.mark.network
+class TestTNM:
+    def test_asdict(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
+        geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region["poly"], as_str=False)
+        assert 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m' in geojson["features"][0]['properties']['url']
+
+    def test_asstr(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
+        response = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region["poly"], as_str=True)
+        geojson = json.loads(response)
+        assert 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m' in geojson["features"][0]['properties']['url']
+
+    def test_bad_short_name(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
+        geojson = earthdata.tnm(short_name='DOES_NOT_EXIST', polygon=region["poly"], as_str=False)
+        assert len(geojson['features']) == 0
