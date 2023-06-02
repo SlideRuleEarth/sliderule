@@ -129,6 +129,7 @@ class GeoRaster: public RasterObject
             double          cellSize;
             bbox_t          bbox;
             CoordTransform  cord;
+            double          geoidShift;
 
             void clear(bool close = true);
             inline bool containsPoint(OGRPoint& p);
@@ -177,6 +178,7 @@ class GeoRaster: public RasterObject
 
             /* Last sample information */
             OGRPoint        point;
+            double          geoidShift;
             sample_t        sample;
 
             void clear(bool close = true);
@@ -199,7 +201,7 @@ class GeoRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         virtual         ~GeoRaster  (void);
-        void            getSamples  (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
+        void            getSamples  (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
 
     protected:
 
@@ -224,7 +226,7 @@ class GeoRaster: public RasterObject
         void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
-        int             sample                (double lon, double lat, int64_t gps);
+        int             sample                (double lon, double lat, double height, int64_t gps);
 
         virtual bool    readGeoIndexData      (OGRPoint* point, int srcWindowSize, int srcOffset,
                                                void* data, int dstWindowSize, GDALRasterIOExtraArg* args);
@@ -244,6 +246,7 @@ class GeoRaster: public RasterObject
         GeoIndex                    geoIndex;
         Dictionary<Raster*>         rasterDict;
         Mutex                       samplingMutex;
+        bool                        correctElevation;
 
     private:
 

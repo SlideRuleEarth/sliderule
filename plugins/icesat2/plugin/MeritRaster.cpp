@@ -111,10 +111,13 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSamples (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param)
+void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param)
 {
     (void)param;
     (void)gps;
+    (void)height;
+
+#warning FIX ME - what about height!!!
 
     /* Determine Upper Left Coordinates */
     int left_lon = ((int)floor(lon / 5.0)) * 5;

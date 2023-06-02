@@ -16,13 +16,14 @@ local verbose = false
 
 local  lon = -180.00
 local  lat = 66.34  -- Arctic Circle lat
+local  height = 0
 local _lon = lon
 local _lat = lat
 
 print('\n------------------\nTest: AWS mosaic\n------------')
 local dem = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat)
+local tbl, status = dem:sample(lon, lat, height)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
@@ -53,7 +54,7 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    tbl, status = dem:sample(lon, lat)
+    tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
@@ -80,7 +81,7 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    tbl, status = dem:sample(lon, lat)
+    tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
@@ -119,7 +120,7 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    tbl, status = dem:sample(lon, lat)
+    tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))

@@ -90,14 +90,14 @@ class RasterObject: public LuaObject
         static void     deinit          (void);
         static int      luaCreate       (lua_State* L);
         static bool     registerRaster  (const char* _name, factory_t create);
-        virtual void    getSamples      (double lon, double lat, int64_t gps, List<sample_t>& slist, void* param=NULL) = 0;
+        virtual void    getSamples      (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param=NULL) = 0;
         virtual         ~RasterObject   (void);
 
-        inline bool hasZonalStats (void) 
-        { 
-            return parms->zonal_stats; 
+        inline bool hasZonalStats (void)
+        {
+            return parms->zonal_stats;
         }
-        
+
         inline const Dictionary<uint64_t>& fileDictGet(void)
         {
             return fileDict;

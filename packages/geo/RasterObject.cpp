@@ -181,20 +181,22 @@ int RasterObject::luaSamples(lua_State *L)
         lua_obj = (RasterObject*)getLuaSelf(L, 1);
 
         /* Get Coordinates */
-        double lon = getLuaFloat(L, 2);
-        double lat = getLuaFloat(L, 3);
+        double lon    = getLuaFloat(L, 2);
+        double lat    = getLuaFloat(L, 3);
+        double height = getLuaFloat(L, 4);
 
         /* Get gps closest time (overrides params provided closest time)*/
         int64_t gps = 0;
-        if(lua_gettop(L) > 3)
+        if(lua_gettop(L) > 4)
         {
-            const char* closest_time_str = getLuaString(L, 4);
+            const char* closest_time_str = getLuaString(L, 5);
             gps = TimeLib::str2gpstime(closest_time_str);
         }
 
         /* Get samples */
         List<sample_t> slist;
-        lua_obj->getSamples(lon, lat, gps, slist, NULL);
+        lua_obj->getSamples(lon, lat, height, gps, slist, NULL);
+
         if(slist.length() > 0)
         {
             /* Create return table */

@@ -28,6 +28,7 @@ for d = 1, 2 do
     local  failedSamples = 0
     local  lon = -100.50
     local  lat = 76.34
+    local  height = 0
     -- local  lon = -65.50
     -- local  lat = 83.29
     local  demType = demTypes[d];
@@ -37,7 +38,7 @@ for d = 1, 2 do
 
     for i = 1, maxPoints
     do
-        local tbl, status = dem:sample(lon, lat)
+        local tbl, status = dem:sample(lon, lat, height)
         if status ~= true then
             failedSamples = failedSamples + 1
             if verboseErrors then

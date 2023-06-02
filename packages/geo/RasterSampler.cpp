@@ -256,6 +256,15 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         double lat_val = record->getValueReal(lat_field);
         lat_field.offset += (recordSizeBytes * 8);
 
+        /* Get Height */
+#if 1
+#warning FIX ME!!!
+        double height_val = 0;
+#else
+        double height_val = record->getValueReal(height_field);
+        height_field.offset += (recordSizeBytes * 8);
+#endif
+
         /* Get Time */
         long gps = 0;
         if(time_field.type != RecordObject::INVALID_FIELD)
@@ -270,14 +279,14 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         int num_samples = 0;
         try
         {
-            raster->getSamples(lon_val, lat_val, gps, slist);
+            raster->getSamples(lon_val, lat_val, height_val, gps, slist);
             num_samples = slist.length();
         }
         catch(const RunTimeException& e)
         {
             LuaEndpoint::generateExceptionStatus(RTE_ERROR, e.level(), outQ, NULL,
-                                                "Exception caught when sampling %s at %.3lf,%.3lf: %s",
-                                                rasterKey, lon_val, lat_val, e.what());
+                                                "Exception caught when sampling %s at %.3lf,%.3lf,%3lf: %s",
+                                                rasterKey, lon_val, lat_val, height_val, e.what());
         }
 
         if(raster->hasZonalStats())

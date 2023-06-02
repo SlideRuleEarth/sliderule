@@ -118,6 +118,17 @@ static void configGDAL(void)
      * Be careful : on Linux systems, the number of file handles that can be opened by a process is generally limited to 1024.
     */
     CPLSetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "300");
+
+
+    /*
+     * Enable PROJ library network capabilities for accessing GeoTIFF grids
+     * https://proj.org/en/9.2/usage/network.html
+     */
+    OSRSetPROJEnableNetwork(1);
+    if(!OSRGetPROJEnableNetwork())
+    {
+        mlog(CRITICAL, "PROJ library network capabilities are DISABLED");
+    }
 }
 
 /*----------------------------------------------------------------------------

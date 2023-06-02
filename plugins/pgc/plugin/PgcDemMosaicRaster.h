@@ -36,11 +36,10 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <string_view>
 #include "VrtRaster.h"
 
 /******************************************************************************
- *PGC DEM MOSAIC RASTER CLASS
+ * PGC DEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
 class PgcDemMosaicRaster: public VrtRaster

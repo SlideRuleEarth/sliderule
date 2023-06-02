@@ -1,7 +1,10 @@
 local runner = require("test_executive")
+console = require("console")
 local td = runner.rootdir(arg[0])
 
 -- Setup --
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 local geojsonfile = td.."/grandmesa.geojson"
 
@@ -49,7 +52,8 @@ runner.check(_cellsize == cellsize)
 print('\n------------------\nTest05: sample\n------------------')
 local lon = -108
 local lat =   39
-local tbl, status = robj:sample(lon, lat)
+local height = 0
+local tbl, status = robj:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -64,7 +68,7 @@ runner.check(s == 1)
 -- Edge of bbox
 lon = -108.34
 lat =   38.90
-tbl, status = robj:sample(lon, lat)
+tbl, status = robj:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 for j, v in ipairs(tbl) do
@@ -78,7 +82,7 @@ runner.check(s == 200)
 -- Outside of bbox
 lon = -100
 lat =   40
-tbl, status = robj:sample(lon, lat)
+tbl, status = robj:sample(lon, lat, height)
 runner.check(status == nil)
 runner.check(tbl == nil)
 

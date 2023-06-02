@@ -12,12 +12,13 @@ json = require("json")
 
 local lon = -178.0
 local lat =   51.7
+local height = 0
 
 
 print('Memory test')
 
 local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
-local tbl, status = dem:sample(lon, lat)
+local tbl, status = dem:sample(lon, lat, height)
 
 if status ~= true then
     failedSamples = failedSamples + 1
@@ -31,7 +32,7 @@ else
 end
 
 local dem = geo.raster("arcticdem-strips", "NearestNeighbour", 0)
-local tbl, status = dem:sample(lon, lat)
+local tbl, status = dem:sample(lon, lat, height)
 
 if status ~= true then
     failedSamples = failedSamples + 1
