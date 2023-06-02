@@ -34,3 +34,22 @@ class Test3DEP:
             if '3dep' in key:
                 for entry in gdf[key]:
                     assert (type(entry) == numpy.ndarray) or math.isnan(entry)
+
+    def test_as_variable(self, domain, organization, desired_nodes):
+        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region)
+        parms = {
+            "poly": region,
+            "degrade_flag": 0,
+            "l2_quality_flag": 1,
+            "beam": 0,
+            "samples": {"3dep": {"asset": "usgs3dep-1meter-dem", "catalog": geojson}}
+        }
+        gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'], as_numpy_array=False)
+        non_array_count = 0
+        for key in gdf.keys():
+            if '3dep' in key:
+                for entry in gdf[key]:
+                    if (type(entry) != numpy.ndarray) and (not math.isnan(entry)):
+                        non_array_count += 1
+        assert non_array_count > 0
