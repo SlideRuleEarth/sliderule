@@ -283,6 +283,7 @@ class GeoRaster: public RasterObject
         void       readPixel               (Raster* raster);
         void       resamplePixel           (Raster* raster);
         void       computeZonalStats       (Raster* raster);
+        bool       nodataCheck             (Raster* raster);
         uint32_t   removeOldestRasterGroup (void);
 
 };

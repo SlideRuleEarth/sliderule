@@ -626,8 +626,10 @@ void GeoRaster::readPixel(Raster *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
-        if(correctElevation)
+        if(nodataCheck(raster) && correctElevation)
+        {
             raster->sample.value += raster->geoidShift;
+        }
 
         // mlog(DEBUG, "Value: %.2lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
         //      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
@@ -826,8 +828,10 @@ void GeoRaster::resamplePixel(Raster *raster)
         if(validWindow)
         {
             raster->sample.value = rbuf[0];
-            if(correctElevation)
+            if(nodataCheck(raster) && correctElevation)
+            {
                 raster->sample.value += geoidShift;
+            }
         }
         else
         {
@@ -977,6 +981,27 @@ void GeoRaster::computeZonalStats(Raster *raster)
     if (samplesArray) delete[] samplesArray;
 }
 
+
+/*----------------------------------------------------------------------------
+ * nodataCheck
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::nodataCheck(Raster* raster)
+{
+    /*
+     * Replace nodata with NAN
+     */
+    const double a = raster->band->GetNoDataValue();
+    const double b = raster->sample.value;
+    const double epsilon = 0.000001;
+
+    if(std::fabs(a-b) < epsilon)
+    {
+        raster->sample.value = std::nanf("");
+        return false;
+    }
+
+    return true;
+}
 
 /*----------------------------------------------------------------------------
  * removeOldestRasterGroup

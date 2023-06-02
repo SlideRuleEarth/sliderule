@@ -50,7 +50,7 @@ else
             gpsTime = time
         end
 
-        print(string.format("(%02d) value %10.6f, time %.2f, fname: %s", j, value, time, fname))
+        print(string.format("(%02d) value %10.5f, time %.2f, fname: %s", j, value, time, fname))
         runner.check(time ~= 0.0)
     end
 end
@@ -104,7 +104,7 @@ else
             gpsTime = time
         end
 
-        print(string.format("(%02d) value %10.6f, time %.2f, fname: %s", j, value, time, fname))
+        print(string.format("(%02d) value %10.5f, time %.2f, fname: %s", j, value, time, fname))
         runner.check(time ~= 0.0)
     end
 end
