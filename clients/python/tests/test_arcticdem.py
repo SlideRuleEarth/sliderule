@@ -61,3 +61,30 @@ class TestMosaic:
         assert gdf["mosaic.count"].describe()["max"] == 81
         assert gdf["mosaic.stdev"].describe()["count"] == 954
         assert gdf["mosaic.time"][0] == 1176076818.0
+
+@pytest.mark.network
+class TestStrips:
+    def test_vct(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
+                                {'lon': -46.34013213284274, 'lat': 65.49860245693627},
+                                {'lon': -46.35015561146599, 'lat': 65.67523503534576},
+                                {'lon': -46.77853429879463, 'lat': 65.67041017142712},
+                                {'lon': -46.76533411521963, 'lat': 65.4938164756588}  ]
+        parms = { "poly": region_of_interest,
+                "cnf": "atl03_high",
+                "ats": 10.0,
+                "cnt": 5,
+                "len": 40.0,
+                "res": 120.0,
+                "maxi": 5,
+                "rgt": 658,
+                "time_start":'2020-01-01',
+                "time_end":'2021-01-01',
+                "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
+        gdf = icesat2.atl06p(parms, asset="icesat2", resources=['ATL03_20191108234307_06580503_005_01.h5'])
+        assert len(gdf.attrs['file_directory']) == 16
+        for file_id in range(16):
+            assert file_id in gdf.attrs['file_directory'].keys()
+            assert '/pgc-opendata-dems/arcticdem/strips/' in gdf.attrs['file_directory'][file_id]
+

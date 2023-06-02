@@ -55,7 +55,6 @@ class TestSTAC:
         with pytest.raises(sliderule.FatalError):
             earthdata.stac(short_name="DOES_NOT_EXIST", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z")
 
-
 #
 # TNM
 #
