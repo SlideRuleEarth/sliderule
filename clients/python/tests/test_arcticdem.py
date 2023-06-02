@@ -72,16 +72,16 @@ class TestStrips:
                                 {'lon': -46.77853429879463, 'lat': 65.67041017142712},
                                 {'lon': -46.76533411521963, 'lat': 65.4938164756588}  ]
         parms = { "poly": region_of_interest,
-                "cnf": "atl03_high",
-                "ats": 10.0,
-                "cnt": 5,
-                "len": 40.0,
-                "res": 120.0,
-                "maxi": 5,
-                "rgt": 658,
-                "time_start":'2020-01-01',
-                "time_end":'2021-01-01',
-                "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
+                  "cnf": "atl03_high",
+                  "ats": 10.0,
+                  "cnt": 5,
+                  "len": 40.0,
+                  "res": 120.0,
+                  "maxi": 5,
+                  "rgt": 658,
+                  "time_start":'2020-01-01',
+                  "time_end":'2021-01-01',
+                  "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
         gdf = icesat2.atl06p(parms, asset="icesat2", resources=['ATL03_20191108234307_06580503_005_01.h5'])
         assert len(gdf.attrs['file_directory']) == 16
         for file_id in range(16):
