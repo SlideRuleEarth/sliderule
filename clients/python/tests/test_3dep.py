@@ -17,7 +17,7 @@ class Test3DEP:
         sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region)
         gdf = raster.sample("usgs3dep-1meter-dem", [[-108.0,39.0]], {"catalog": geojson})
-        assert(len(gdf) >= 4)
+        assert len(gdf) >= 4
 
     def test_as_numpy_array(self, domain, organization, desired_nodes):
         sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -30,6 +30,7 @@ class Test3DEP:
             "samples": {"3dep": {"asset": "usgs3dep-1meter-dem", "catalog": geojson}}
         }
         gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'], as_numpy_array=True)
+        assert len(gdf) > 0
         for key in gdf.keys():
             if '3dep' in key:
                 for entry in gdf[key]:

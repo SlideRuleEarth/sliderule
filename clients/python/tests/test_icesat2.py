@@ -5,6 +5,7 @@ from pyproj import Transformer
 from shapely.geometry import Polygon, Point
 import pandas as pd
 from sliderule import icesat2
+import time
 
 @pytest.mark.network
 class TestAlgorithm:
@@ -17,7 +18,9 @@ class TestAlgorithm:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1 }
+        perf_start = time.perf_counter()
         gdf = icesat2.atl06(parms, resource, asset)
+        assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622423
@@ -31,7 +34,9 @@ class TestAlgorithm:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1 }
+        perf_start = time.perf_counter()
         gdf = icesat2.atl06p(parms, asset, resources=[resource])
+        assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622423
@@ -55,7 +60,9 @@ class TestAlgorithm:
                   "len": 20.0,
                   "res": 20.0,
                   "maxi": 1 }
+        perf_start = time.perf_counter()
         gdf = icesat2.atl03s(parms, resource, asset)
+        assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
@@ -79,7 +86,9 @@ class TestAlgorithm:
                   "len": 20.0,
                   "res": 20.0,
                   "maxi": 1 }
+        perf_start = time.perf_counter()
         gdf = icesat2.atl03sp(parms, asset, resources=[resource])
+        assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488673
@@ -103,7 +112,9 @@ class TestAlgorithm:
                   "len": 20.0,
                   "res": 20.0,
                   "maxi": 1 }
+        perf_start = time.perf_counter()
         gdf = icesat2.atl03s(parms, resource, asset)
+        assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 243237
