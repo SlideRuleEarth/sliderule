@@ -153,19 +153,16 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 
     /* Must be north */
     if(northFlag==0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected for continental USA", utm, northFlag?"N":"S");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected", utm, northFlag?"N":"S");
 
-    /*
-     * Continental USA UTM zones are 10N to 19N
-     * https://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system#/media/File:Utm-zones-USA.svg
-     */
-    const int minUTM = 10;
-    const int maxUTM = 19;
+    const int minUTM = 1;
+    const int maxUTM = 60;
 
     if(utm < minUTM || utm > maxUTM)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected for continental USA", utm, northFlag?"N":"S");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
 
-    int epsg = 6339 + utm - minUTM;
+    const int nad83_2011_utm_zone1_epsg = 6330;
+    int epsg  = nad83_2011_utm_zone1_epsg + utm - 1;
     mlog(DEBUG, "New EPSG: %d", epsg);
 
     OGRSpatialReference horizontal;
