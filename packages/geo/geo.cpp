@@ -37,6 +37,7 @@
 #include "geo.h"
 #include <gdal.h>
 #include <cpl_conv.h>
+#include <proj.h>
 
 /******************************************************************************
  * DEFINES
@@ -47,6 +48,68 @@
 /******************************************************************************
  * GEO FUNCTIONS
  ******************************************************************************/
+
+void test_projlib(void)
+{
+    /*
+     * Taken from https://github.com/OSGeo/PROJ/blob/master/examples/crs_to_geodetic.c
+     * Demonstrate that PROJ APIs can be called directly without OGR or GDAL.
+     */
+
+    /* Create the context. */
+    /* You may set C=PJ_DEFAULT_CTX if you are sure you will     */
+    /* use PJ objects from only one thread                       */
+    PJ_CONTEXT *C = proj_context_create();
+
+    /* Create a projection. */
+    PJ *P = proj_create(C, "+proj=utm +zone=32 +datum=WGS84 +type=crs");
+
+    if (0 == P)
+    {
+        print2term("Failed to create transformation object.\n");
+    }
+
+    /* Get the geodetic CRS for that projection. */
+    PJ *G = proj_crs_get_geodetic_crs(C, P);
+
+    /* Create the transform from geodetic to projected coordinates.*/
+    PJ_AREA *A = NULL;
+    const char *const *options = NULL;
+    PJ *G2P = proj_create_crs_to_crs_from_pj(C, G, P, A, options);
+
+    /* Longitude and latitude of Copenhagen, in degrees. */
+    double lon = 12.0, lat = 55.0;
+
+    /* Prepare the input */
+    PJ_COORD c_in;
+    c_in.lpzt.z = 0.0;
+    c_in.lpzt.t = HUGE_VAL; // important only for time-dependent projections
+    c_in.lp.lam = lon;
+    c_in.lp.phi = lat;
+    // print2term("Input longitude: %g, latitude: %g (degrees)\n", c_in.lp.lam, c_in.lp.phi);
+
+    /* Compute easting and northing */
+    PJ_COORD c_out = proj_trans(G2P, PJ_FWD, c_in);
+    // print2term("Output easting: %g, northing: %g (meters)\n", c_out.enu.e, c_out.enu.n);
+
+    /* Apply the inverse transform */
+    PJ_COORD c_inv = proj_trans(G2P, PJ_INV, c_out);
+    // print2term("Inverse applied. Longitude: %g, latitude: %g (degrees)\n", c_inv.lp.lam, c_inv.lp.phi);
+
+    if(c_in.lpzt.z != c_inv.lpzt.z &&
+       c_in.lpzt.t != c_inv.lpzt.t &&
+       c_in.lp.lam != c_inv.lp.lam &&
+       c_in.lp.phi != c_inv.lp.phi)
+       {
+           print2term("PROJ lib failed\n");
+       }
+
+    /* Clean up */
+    proj_destroy(P);
+    proj_destroy(G);
+    proj_destroy(G2P);
+    proj_context_destroy(C); /* may be omitted in the single threaded case */
+}
 
 /*----------------------------------------------------------------------------
  * Optimal configuration for cloud based COGs based on:
@@ -182,6 +245,8 @@ void initgeo (void)
 
     /* Custom GDAL configuration for cloud based COGs */
     configGDAL();
+
+    test_projlib();
 
     /* Initialize Modules */
     GeoRaster::init();
