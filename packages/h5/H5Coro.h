@@ -158,7 +158,7 @@ class H5FileBuffer
         * Methods
         *--------------------------------------------------------------------*/
 
-                            H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking=false, bool _verbose=false, bool _meta_only=false);
+                            H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only=false);
         virtual             ~H5FileBuffer       (void);
 
     protected:

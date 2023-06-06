@@ -3,7 +3,7 @@
 #
 
 import sys
-from sliderule import icesat2
+from sliderule import h5
 from utils import parse_command_line, initialize_client
 
 ###############################################################################
@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # Read Dataset #
     datasets = [ {"dataset": local["dataset"], "col": local["col"], "startrow": local["startrow"], "numrows": local["numrows"]} ]
-    rawdata = icesat2.h5p(datasets, cfg["resource"], cfg["asset"])
+    rawdata = h5.h5p(datasets, cfg["resource"], cfg["asset"])
     print(rawdata)
 
     # Write Dataset to File #

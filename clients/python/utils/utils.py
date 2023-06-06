@@ -59,7 +59,7 @@ def initialize_client(args):
         "domain":                   'localhost',
         "organization":             None,
         "asset":                    'atlas-local',
-        "region":                   'examples/grandmesa.geojson',
+        "region":                   None,
         "resource":                 'ATL03_20181017222812_02950102_005_01.h5',
         "raster":                   True,
         "atl08_class":              [],

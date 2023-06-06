@@ -233,7 +233,7 @@ The following portions of the HDF5 format specification are either currently imp
 | Format Element | Supported | Contains | Missing |
 |:--------------:|:---------:|:--------:|:-------:|
 | ___Field Sizes___ | <span style="color:green">Yes</span> | 1, 2, 4, 8, bytes | |
-| ___Superblock___   | <span style="color:blue">Partial</span> | Version 0 | Version 1, 2, 3 |
+| ___Superblock___   | <span style="color:blue">Partial</span> | Version 0, 2 | Version 1, 3 |
 | ___B-Tree___  | <span style="color:blue">Partial</span> | Version 1 | Version 2 |
 | ___Group Symbol Table___  | <span style="color:green">Yes</span> | Version 1 | |
 | ___Local Heap___  | <span style="color:green">Yes</span> | Version 0 |
@@ -247,13 +247,13 @@ The following portions of the HDF5 format specification are either currently imp
 | ___Link Info Message___  | <span style="color:green">Yes</span> | Version 0 | |
 | ___Datatype Message___  | <span style="color:blue">Partial</span> | Version 1 | Version 0, 2, 3 |
 | ___Fill Value (Old) Message___  | <span style="color:red">No</span> | | Unversioned |
-| ___Fill Value Message___  | <span style="color:blue">Partial</span> | Version 2 | Version 1, 3 |
+| ___Fill Value Message___  | <span style="color:blue">Partial</span> | Version 2, 3 | Version 1 |
 | ___Link Message___  | <span style="color:green">Yes</span> | Version 1 |
 | ___External Data Files Message___  | <span style="color:red">No</span> | | Version 1 |
 | ___Data Layout Message___  | <span style="color:blue">Partial</span> | Version 3 | Version 1, 2 |
 | ___Bogus Message___  | <span style="color:red">No</span> | | Unversioned |
 | ___Group Info Message___  | <span style="color:red">No</span> | | Version 0 |
-| ___Filter Pipeline Message___  | <span style="color:green">Yes</span> | Version 1 | |
+| ___Filter Pipeline Message___  | <span style="color:green">Yes</span> | Version 1, 2 | |
 | ___Attribute Message___  | <span style="color:blue">Partial</span> | Version 1 | Version 2, 3 |
 | ___Object Comment Message___  | <span style="color:red">No</span> | | Unversioned |
 | ___Object Modification Time (Old) Message___  | <span style="color:red">No</span> | | Unversioned |

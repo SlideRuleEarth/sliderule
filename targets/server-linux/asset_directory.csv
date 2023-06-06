@@ -20,3 +20,4 @@ atlas-local,                local,          file,       /data/ATLAS,            
 gedi-local,                 local,          file,       /data/GEDI,                                                             nil,                local,      local
 atlas-s3,                   iam-role,       s3,         sliderule/data/ATLAS,                                                   nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
 nsidc-s3,                   nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+swot-local,                 nil,            file,       /data/SWOT,                                                             nil,                local,      local

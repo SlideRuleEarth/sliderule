@@ -50,6 +50,10 @@
 #define H5_EXTRA_DEBUG false
 #endif
 
+#ifndef H5_ERROR_CHECKING
+#define H5_ERROR_CHECKING true
+#endif
+
 /******************************************************************************
  * MACROS
  ******************************************************************************/
@@ -181,7 +185,7 @@ H5FileBuffer::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _error_checking, bool _verbose, bool _meta_only)
+H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only)
 {
     assert(asset);
     assert(resource);
@@ -199,8 +203,6 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     datasetPrint            = StringLib::duplicate(dataset);
     datasetStartRow         = startrow;
     datasetNumRows          = numrows;
-    errorChecking           = _error_checking;
-    verbose                 = _verbose;
     metaOnly                = _meta_only;
     ioKey                   = NULL;
     dataChunkBufferSize     = 0;
@@ -705,7 +707,7 @@ void H5FileBuffer::readDataset (info_t* info)
     uint64_t buffer_offset = row_size * datasetStartRow;
 
     /* Check if Data Address and Data Size is Valid */
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(H5_INVALID(metaData.address))
         {
@@ -737,7 +739,7 @@ void H5FileBuffer::readDataset (info_t* info)
             case CHUNKED_LAYOUT:
             {
                 /* Chunk Layout Specific Error Checks */
-                if(errorChecking)
+                if(H5_ERROR_CHECKING)
                 {
                     if(metaData.elementsize != metaData.typesize)
                     {
@@ -867,7 +869,7 @@ void H5FileBuffer::readDataset (info_t* info)
 
             default:
             {
-                if(errorChecking)
+                if(H5_ERROR_CHECKING)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout: %d", (int)metaData.layout);
                 }
@@ -882,62 +884,102 @@ void H5FileBuffer::readDataset (info_t* info)
 uint64_t H5FileBuffer::readSuperblock (void)
 {
     uint64_t pos = 0;
+    uint64_t root_group_offset = 0;
 
-    /* Read and Verify Superblock Info */
-    if(errorChecking)
+    /* Signature and Version */
+    uint64_t signature = readField(8, &pos);
+    if(signature != H5_SIGNATURE_LE)
     {
-        uint64_t signature = readField(8, &pos);
-        if(signature != H5_SIGNATURE_LE)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file signature: 0x%llX", (unsigned long long)signature);
-        }
-
-        uint64_t superblock_version = readField(1, &pos);
-        if(superblock_version != 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file superblock version: %d", (int)superblock_version);
-        }
-
-        uint64_t freespace_version = readField(1, &pos);
-        if(freespace_version != 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file free space version: %d", (int)freespace_version);
-        }
-
-        uint64_t roottable_version = readField(1, &pos);
-        if(roottable_version != 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file root table version: %d", (int)roottable_version);
-        }
-
-        uint64_t headermsg_version = readField(1, &pos);
-        if(headermsg_version != 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file header message version: %d", (int)headermsg_version);
-        }
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file signature: 0x%llX", (unsigned long long)signature);
     }
 
-    /* Read Sizes */
-    pos = 13;
-    metaData.offsetsize = readField(1, &pos);
-    metaData.lengthsize = readField(1, &pos);
-    uint16_t leaf_k     = (uint16_t)readField(2, &pos);
-    uint16_t internal_k = (uint16_t)readField(2, &pos);
-
-    /* Read Group Offset */
-    pos = 64;
-    uint64_t root_group_offset = readField(metaData.offsetsize, &pos);
-
-    if(verbose)
+    uint64_t superblock_version = readField(1, &pos);
+    if((superblock_version != 0) && (superblock_version != 2))
     {
-        print2term("\n----------------\n");
-        print2term("File Information\n");
-        print2term("----------------\n");
-        print2term("Size of Offsets:                                                 %lu\n",     (unsigned long)metaData.offsetsize);
-        print2term("Size of Lengths:                                                 %lu\n",     (unsigned long)metaData.lengthsize);
-        print2term("Group Leaf Node K:                                               %lu\n",     (unsigned long)leaf_k);
-        print2term("Group Internal Node K:                                           %lu\n",     (unsigned long)internal_k);
-        print2term("Root Object Header Address:                                      0x%lX\n",   (long unsigned)root_group_offset);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file superblock version: %d", (int)superblock_version);
+    }
+
+    /* Super Block Version 0 */
+    if(superblock_version == 0) 
+    {
+        /* Read and Verify Superblock Info */
+        if(H5_ERROR_CHECKING)
+        {
+            uint64_t freespace_version = readField(1, &pos);
+            if(freespace_version != 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file free space version: %d", (int)freespace_version);
+            }
+
+            uint64_t roottable_version = readField(1, &pos);
+            if(roottable_version != 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file root table version: %d", (int)roottable_version);
+            }
+        }
+
+        /* Read Sizes */
+        pos = 13;
+        metaData.offsetsize = readField(1, &pos);
+        metaData.lengthsize = readField(1, &pos);
+
+        /* Read Base Address */
+        if(H5_ERROR_CHECKING)
+        {
+            pos = 24;
+            uint64_t base_address = readField(8, &pos);
+            if(base_address != 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
+            }
+        }
+
+        /* Read Group Offset */
+        pos = 24 + (5 * metaData.offsetsize);
+        root_group_offset = readField(metaData.offsetsize, &pos);
+
+        if(H5_VERBOSE)
+        {
+            print2term("\n----------------\n");
+            print2term("File Information\n");
+            print2term("----------------\n");
+            print2term("Size of Offsets:                                                 %lu\n",     (unsigned long)metaData.offsetsize);
+            print2term("Size of Lengths:                                                 %lu\n",     (unsigned long)metaData.lengthsize);
+            print2term("Root Object Header Address:                                      0x%lX\n",   (long unsigned)root_group_offset);
+        }
+    }
+    /* Super Block Version 2 */
+    else // if(superblock_version == 2) 
+    {
+        /* Read Sizes */
+        pos = 9;
+        metaData.offsetsize = readField(1, &pos);
+        metaData.lengthsize = readField(1, &pos);
+
+        /* Read Base Address */
+        if(H5_ERROR_CHECKING)
+        {
+            pos = 12;
+            uint64_t base_address = readField(8, &pos);
+            if(base_address != 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
+            }
+        }
+
+        /* Read Group Offset */
+        pos = 12 + (3 * metaData.offsetsize);
+        root_group_offset = readField(metaData.offsetsize, &pos);
+
+        if(H5_VERBOSE)
+        {
+            print2term("\n----------------\n");
+            print2term("File Information\n");
+            print2term("----------------\n");
+            print2term("Size of Offsets:                                                 %lu\n",     (unsigned long)metaData.offsetsize);
+            print2term("Size of Lengths:                                                 %lu\n",     (unsigned long)metaData.lengthsize);
+            print2term("Root Object Header Address:                                      0x%lX\n",   (long unsigned)root_group_offset);
+        }
     }
 
     /* Return Root Group Offset */
@@ -953,7 +995,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
 
     uint64_t starting_position = pos;
 
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -972,7 +1014,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)msg_type, starting_position);
@@ -1003,7 +1045,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint16_t    start_num_rows      = (uint16_t)readField(2, &pos); // Starting # of Rows in Root Indirect Block
     uint64_t    root_blk_addr       = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Root Block
     uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
         print2term("I/O Filters' Encoded Length:                                     %lu\n", (unsigned long)io_filter_len);
@@ -1044,10 +1086,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
 
     /* Check Checksum */
     uint64_t check_sum = readField(4, &pos);
-    if(errorChecking)
-    {
-        (void)check_sum;
-    }
+    (void)check_sum; // unused
 
     /* Build Heap Info Structure */
     heap_info_t heap_info = {
@@ -1067,7 +1106,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     {
         /* Direct Blocks */
         int bytes_read = readDirectBlock(&heap_info, heap_info.starting_blk_size, root_blk_addr, hdr_flags, dlvl);
-        if(errorChecking && (bytes_read > heap_info.starting_blk_size))
+        if(H5_ERROR_CHECKING && (bytes_read > heap_info.starting_blk_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
         }
@@ -1077,7 +1116,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     {
         /* Indirect Blocks */
         int bytes_read = readIndirectBlock(&heap_info, 0, root_blk_addr, hdr_flags, dlvl);
-        if(errorChecking && (bytes_read > heap_info.starting_blk_size))
+        if(H5_ERROR_CHECKING && (bytes_read > heap_info.starting_blk_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
         }
@@ -1096,7 +1135,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
 {
     uint64_t starting_position = pos;
 
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -1115,7 +1154,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Direct Block [%d,%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, block_size, (unsigned long)starting_position);
@@ -1123,7 +1162,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     }
 
     /* Read Block Header */
-    if(!verbose)
+    if(!H5_VERBOSE)
     {
         pos += metaData.offsetsize + heap_info->blk_offset_size;
     }
@@ -1138,10 +1177,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     if(heap_info->dblk_checksum)
     {
         uint64_t check_sum = readField(4, &pos);
-        if(errorChecking)
-        {
-            (void)check_sum;
-        }
+        (void)check_sum; // unused
     }
 
     /* Read Block Data */
@@ -1153,7 +1189,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         int peak_size = MIN((1 << highestBit(data_left)), 8);
         if(readField(peak_size, &peak_addr) == 0)
         {
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 print2term("\nExiting direct block 0x%lx early at 0x%lx\n", starting_position, pos);
             }
@@ -1173,7 +1209,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         heap_info->cur_objects++;
 
         /* Check Reading Past Block */
-        if(errorChecking)
+        if(H5_ERROR_CHECKING)
         {
             if(data_left < 0)
             {
@@ -1203,7 +1239,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
 {
     uint64_t starting_position = pos;
 
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -1222,7 +1258,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Indirect Block [%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, (unsigned long)starting_position);
@@ -1230,7 +1266,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     }
 
     /* Read Block Header */
-    if(!verbose)
+    if(!H5_VERBOSE)
     {
         pos += metaData.offsetsize + heap_info->blk_offset_size;
     }
@@ -1249,7 +1285,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
     int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
     int N = K - (max_dblock_rows * heap_info->table_width);
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Number of Rows:                                                  %d\n", nrows);
         print2term("Maximum Direct Block Rows:                                       %d\n", max_dblock_rows);
@@ -1272,7 +1308,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
             /* Direct Block Entry */
             if(row_block_size <= heap_info->max_dblk_size)
             {
-                if(errorChecking)
+                if(H5_ERROR_CHECKING)
                 {
                     if(row >= K)
                     {
@@ -1287,7 +1323,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 {
                     /* Read Direct Block */
                     int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
-                    if(errorChecking && (bytes_read > row_block_size))
+                    if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
@@ -1295,7 +1331,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
             }
             else /* Indirect Block Entry */
             {
-                if(errorChecking)
+                if(H5_ERROR_CHECKING)
                 {
                     if(row < K || row >= N)
                     {
@@ -1309,7 +1345,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 {
                     /* Read Direct Block */
                     int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
-                    if(errorChecking && (bytes_read > row_block_size))
+                    if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
@@ -1320,10 +1356,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
 
     /* Read Checksum */
     uint64_t check_sum = readField(4, &pos);
-    if(errorChecking)
-    {
-        (void)check_sum;
-    }
+    (void)check_sum; // unused
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
@@ -1340,7 +1373,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
 
     /* Check Signature and Node Type */
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -1363,7 +1396,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     uint8_t node_level = (uint8_t)readField(1, &pos);
     uint16_t entries_used = (uint16_t)readField(2, &pos);
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("B-Tree Node: 0x%lx\n", (unsigned long)starting_position);
@@ -1396,7 +1429,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
         }
 
         /* Display */
-        if(verbose && H5_EXTRA_DEBUG)
+        if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
             print2term("\nEntry:                                                           %d[%d]\n", (int)node_level, e);
             print2term("Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
@@ -1472,7 +1505,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 }
 
                 /* Display Info */
-                if(verbose && H5_EXTRA_DEBUG)
+                if(H5_VERBOSE && H5_EXTRA_DEBUG)
                 {
                     print2term("Chunk Offset:                                                    %ld (%ld)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
                     print2term("Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
@@ -1517,7 +1550,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 }
                 else /* no supported filters */
                 {
-                    if(errorChecking)
+                    if(H5_ERROR_CHECKING)
                     {
                         if(metaData.filter[SHUFFLE_FILTER])
                         {
@@ -1561,13 +1594,13 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
 
     /* Read Trailing Zero */
     uint64_t trailing_zero = readField(8, pos);
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(trailing_zero % metaData.typesize != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "key did not include a trailing zero: %lu", trailing_zero);
         }
-        else if(verbose && H5_EXTRA_DEBUG)
+        else if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
             print2term("Trailing Zero:                                                   %d\n", (int)trailing_zero);
         }
@@ -1589,7 +1622,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
     uint64_t starting_position = pos;
 
     /* Check Signature and Version */
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 6;
     }
@@ -1644,7 +1677,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
             }
         }
         link_name[i] = '\0';
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Link Name:                                                       %s\n", link_name);
             print2term("Object Header Address:                                           0x%lx\n", obj_hdr_addr);
@@ -1684,7 +1717,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     if(peek == 1) return readObjHdrV1(starting_position, dlvl);
 
     /* Read Object Header */
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 5; // move past signature and version
     }
@@ -1707,7 +1740,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     uint8_t obj_hdr_flags = (uint8_t)readField(1, &pos);
     if(obj_hdr_flags & FILE_STATS_BIT)
     {
-        if(!verbose)
+        if(!H5_VERBOSE)
         {
             pos += 16; // move past time fields
         }
@@ -1739,7 +1772,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     /* Optional Phase Attributes */
     if(obj_hdr_flags & STORE_CHANGE_PHASE_BIT)
     {
-        if(!verbose)
+        if(!H5_VERBOSE)
         {
             pos += 4; // move past phase attributes
         }
@@ -1757,10 +1790,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 
     /* Verify Checksum */
     uint64_t check_sum = readField(4, &pos);
-    if(errorChecking)
-    {
-        (void)check_sum;
-    }
+    (void)check_sum; // unused
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
@@ -1788,7 +1818,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
 
         /* Read Each Message */
         int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
-        if(errorChecking && (bytes_read != msg_size))
+        if(H5_ERROR_CHECKING && (bytes_read != msg_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "header message different size than specified: %d != %d", bytes_read, msg_size);
         }
@@ -1805,7 +1835,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
     }
 
     /* Check Size */
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(pos != end)
         {
@@ -1826,7 +1856,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     uint64_t starting_position = pos;
 
     /* Read Version */
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 2;
     }
@@ -1846,7 +1876,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Number of Header Messages */
-    if(!verbose)
+    if(!H5_VERBOSE)
     {
         pos += 2;
     }
@@ -1861,7 +1891,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Object Reference Count */
-    if(!verbose)
+    if(!H5_VERBOSE)
     {
         pos += 4;
     }
@@ -1874,7 +1904,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     /* Read Object Header Size */
     uint64_t obj_hdr_size = readField(metaData.lengthsize, &pos);
     uint64_t end_of_hdr = pos + obj_hdr_size;
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Object Header Size:                                              %d\n", (int)obj_hdr_size);
         print2term("End of Header:                                                   0x%lx\n", (unsigned long)end_of_hdr);
@@ -1904,7 +1934,7 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
         uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
 
         /* Reserved Bytes */
-        if(!errorChecking)
+        if(!H5_ERROR_CHECKING)
         {
             pos += 3;
         }
@@ -1923,7 +1953,7 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
 
         /* Handle 8-byte Alignment of Messages */
         if((bytes_read % 8) > 0) bytes_read += 8 - (bytes_read % 8);
-        if(errorChecking && (bytes_read != msg_size))
+        if(H5_ERROR_CHECKING && (bytes_read != msg_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);
         }
@@ -1943,7 +1973,7 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
     if(pos < end) pos = end;
 
     /* Check Size */
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(pos != end)
         {
@@ -1979,7 +2009,7 @@ int H5FileBuffer::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos,
 
         default:
         {
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 print2term("Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)msg_type, (int)size, (unsigned long)pos);
             }
@@ -2006,7 +2036,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t flags           = (uint8_t)readField(1, &pos);
     pos += version == 1 ? 5 : 1; // go past reserved bytes
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(version != 1 && version != 2)
         {
@@ -2024,7 +2054,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Dataspace Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2044,7 +2074,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             metaData.dimensions[d] = readField(metaData.lengthsize, &pos);
             num_elements *= metaData.dimensions[d];
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 print2term("Dimension %d:                                                     %lu\n", (int)metaData.ndims, (unsigned long)metaData.dimensions[d]);
             }
@@ -2058,7 +2088,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Number of Elements:                                              %lu\n", (unsigned long)num_elements);
     }
@@ -2081,7 +2111,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = readField(1, &pos);
     uint64_t flags = readField(1, &pos);
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(version != 0)
         {
@@ -2089,7 +2119,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Link Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2100,7 +2130,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
         uint64_t max_create_index = readField(8, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
         }
@@ -2109,7 +2139,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Heap and Name Offsets */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
     uint64_t name_index = readField(metaData.offsetsize, &pos);
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
@@ -2118,7 +2148,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
         uint64_t create_order_index = readField(8, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
         }
@@ -2150,7 +2180,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(version != 1)
         {
@@ -2160,7 +2190,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Set Data Type */
     metaData.type = (data_type_t)(version_class & 0x0F);
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2177,7 +2207,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             metaData.signedval = ((databits & 0x08) >> 3) == 1;
 
-            if(!verbose)
+            if(!H5_VERBOSE)
             {
                 pos += 4;
             }
@@ -2200,7 +2230,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case FLOATING_POINT_TYPE:
         {
-            if(!verbose)
+            if(!H5_VERBOSE)
             {
                 pos += 12;
             }
@@ -2238,7 +2268,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "variable length data types require reading a global heap, which is not yet supported");
 #if 0
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 unsigned int vt_type = databits & 0xF; // variable length type
                 unsigned int padding = (databits & 0xF0) >> 4;
@@ -2268,7 +2298,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case STRING_TYPE:
         {
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 unsigned int padding = databits & 0x0F;
                 unsigned int charset = (databits & 0xF0) >> 4;
@@ -2290,7 +2320,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         default:
         {
-            if(errorChecking)
+            if(H5_ERROR_CHECKING)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported datatype: %d", (int)metaData.type);
             }
@@ -2314,44 +2344,76 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     uint64_t version = readField(1, &pos);
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
-        if(version != 2)
+        if((version != 2) && (version != 3))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid fill value version: %d", (int)version);
         }
     }
 
-    if(!verbose)
+    if(H5_VERBOSE)
     {
-        pos += 2;
-    }
-    else
-    {
-        uint8_t space_allocation_time = (uint8_t)readField(1, &pos);
-        uint8_t fill_value_write_time = (uint8_t)readField(1, &pos);
-
         print2term("\n----------------\n");
         print2term("Fill Value Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
-        print2term("Space Allocation Time:                                           %d\n", (int)space_allocation_time);
-        print2term("Fill Value Write Time:                                           %d\n", (int)fill_value_write_time);
     }
 
-    uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
-    if(fill_value_defined)
+    if(version == 2)
     {
-        metaData.fillsize = (int)readField(4, &pos);
-        if(verbose)
+        if(!H5_VERBOSE)
         {
-            print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
+            pos += 2;
+        }
+        else
+        {
+            uint8_t space_allocation_time = (uint8_t)readField(1, &pos);
+            uint8_t fill_value_write_time = (uint8_t)readField(1, &pos);
+
+            print2term("Space Allocation Time:                                           %d\n", (int)space_allocation_time);
+            print2term("Fill Value Write Time:                                           %d\n", (int)fill_value_write_time);
         }
 
-        if(metaData.fillsize > 0)
+        uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
+        if(fill_value_defined)
         {
+            metaData.fillsize = (int)readField(4, &pos);
+            if(H5_VERBOSE)
+            {
+                print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
+            }
+
+            if(metaData.fillsize > 0)
+            {
+                uint64_t fill_value = readField(metaData.fillsize, &pos);
+                metaData.fill.fill_ll = fill_value;
+                if(H5_VERBOSE)
+                {
+                    print2term("Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
+                }
+            }
+        }
+    }
+    else // if(version == 3)
+    {
+        uint8_t flags = (uint8_t)readField(1, &pos);
+        if(H5_VERBOSE)
+        {
+            print2term("Fill Flags:                                                      %02X\n", flags);
+        }
+
+        uint8_t fill_value_defined = flags & 0x20;
+        if(fill_value_defined)
+        {
+            metaData.fillsize = (int)readField(4, &pos);
+            if(H5_VERBOSE)
+            {
+                print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
+            }
+
             uint64_t fill_value = readField(metaData.fillsize, &pos);
             metaData.fill.fill_ll = fill_value;
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 print2term("Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
             }
@@ -2380,7 +2442,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = readField(1, &pos);
     uint64_t flags = readField(1, &pos);
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(version != 1)
         {
@@ -2388,7 +2450,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Link Message [%d]: 0x%x, 0x%lx\n", dlvl, (unsigned)flags, (unsigned long)starting_position);
@@ -2400,7 +2462,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(flags & LINK_TYPE_PRESENT_BIT)
     {
         link_type = readField(1, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Link Type:                                                       %lu\n", (unsigned long)link_type);
         }
@@ -2410,7 +2472,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
         uint64_t create_order = readField(8, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Creation Order:                                                  %lX\n", (unsigned long)create_order);
         }
@@ -2420,7 +2482,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(flags & CHAR_SET_PRESENT_BIT)
     {
         uint8_t char_set = readField(1, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
         }
@@ -2428,13 +2490,13 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Link Name */
     int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
-    if(errorChecking && (link_name_len_of_len > 8))
+    if(H5_ERROR_CHECKING && (link_name_len_of_len > 8))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", (int)link_name_len_of_len);
     }
 
     uint64_t link_name_len = readField(link_name_len_of_len, &pos);
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
     }
@@ -2442,7 +2504,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t link_name[STR_BUFF_SIZE];
     readByteArray(link_name, link_name_len, &pos);
     link_name[link_name_len] = '\0';
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Link Name:                                                       %s\n", link_name);
     }
@@ -2451,7 +2513,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(link_type == 0) // hard link
     {
         uint64_t object_header_addr = readField(metaData.offsetsize, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
         }
@@ -2471,7 +2533,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint8_t soft_link[STR_BUFF_SIZE];
         readByteArray(soft_link, soft_link_len, &pos);
         soft_link[soft_link_len] = '\0';
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Soft Link:                                                       %s\n", soft_link);
         }
@@ -2482,12 +2544,12 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint8_t ext_link[STR_BUFF_SIZE];
         readByteArray(ext_link, ext_link_len, &pos);
         ext_link[ext_link_len] = '\0';
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("External Link:                                                   %s\n", ext_link);
         }
     }
-    else if(errorChecking)
+    else if(H5_ERROR_CHECKING)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link type: %d", link_type);
     }
@@ -2510,7 +2572,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = readField(1, &pos);
     metaData.layout = (layout_t)readField(1, &pos);
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(version != 3)
         {
@@ -2518,7 +2580,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Data Layout Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2550,7 +2612,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             /* Read Number of Dimensions */
             int chunk_num_dim = (int)readField(1, &pos) - 1; // dimensionality is plus one over actual number of dimensions
             chunk_num_dim = MIN(chunk_num_dim, MAX_NDIMS);
-            if(errorChecking)
+            if(H5_ERROR_CHECKING)
             {
                 if((metaData.ndims != UNKNOWN_VALUE) && (chunk_num_dim != metaData.ndims))
                 {
@@ -2576,7 +2638,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             metaData.elementsize = (int)readField(4, &pos);
 
             /* Display Data Attributes */
-            if(verbose)
+            if(H5_VERBOSE)
             {
                 print2term("Chunk Element Size:                                              %d\n", (int)metaData.elementsize);
                 print2term("Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
@@ -2591,7 +2653,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         default:
         {
-            if(errorChecking)
+            if(H5_ERROR_CHECKING)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout: %d", (int)metaData.layout);
             }
@@ -2615,17 +2677,16 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Message Info */
     uint64_t version = readField(1, &pos);
     uint32_t num_filters = (uint32_t)readField(1, &pos);
-    pos += 6; // move past reserved bytes
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
-        if(version != 1)
+        if((version != 1) && (version != 2))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter version: %d", (int)version);
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Filter Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2634,22 +2695,50 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         print2term("Number of Filters:                                               %d\n", (int)num_filters);
     }
 
+    /* Move past reserved bytes in version 1 */
+    if(version == 1)
+    {
+        pos += 6;
+    }
+
     /* Read Filters */
     for(int f = 0; f < (int)num_filters; f++)
     {
-        /* Read Filter Description */
+        /* Read Filter ID */
         filter_t filter             = (filter_t)readField(2, &pos);
-        uint16_t name_len           = (uint16_t)readField(2, &pos);
+
+        /* Read Filter Name Length */
+        uint16_t name_len = 0;
+        if(version == 1 || filter >= 256)
+        {
+            name_len = (uint16_t)readField(2, &pos);
+        }
+
+        /* Read Filter Parameters */
         uint16_t flags              = (uint16_t)readField(2, &pos);
         uint16_t num_parms          = (uint16_t)readField(2, &pos);
 
+        /* Consistency Check Flags */
+        if(H5_ERROR_CHECKING)
+        {
+            if((flags != 0) && (flags != 1))
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid flags in filter message: %02X", (int)flags);
+            }
+        }
+
         /* Read Name */
         uint8_t filter_name[STR_BUFF_SIZE];
-        readByteArray(filter_name, name_len, &pos);
+        if(name_len > 0)
+        {
+            readByteArray(filter_name, name_len, &pos);
+            int name_padding = (8 - (name_len % 8)) % 8;
+            pos += name_padding;
+        }
         filter_name[name_len] = '\0';
 
         /* Display */
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Filter Identification Value:                                     %d\n", (int)filter);
             print2term("Flags:                                                           0x%x\n", (int)flags);
@@ -2667,13 +2756,16 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter specified: %d", (int)filter);
         }
 
-        /* Client Data */
+        /* Client Data (unused) */
         pos += num_parms * 4;
 
-        /* Handle Padding */
-        if(num_parms % 2 == 1)
+        /* Handle Padding (version 1 only) */
+        if(version == 1)
         {
-            pos += 4;
+            if(num_parms % 2 == 1)
+            {
+                pos += 4;
+            }
         }
     }
 
@@ -2695,7 +2787,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     uint64_t version = readField(1, &pos);
 
     /* Error Check Info */
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         uint64_t reserved0 = readField(1, &pos);
 
@@ -2727,7 +2819,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     readByteArray(attr_name, name_size, &pos);
     pos += (8 - (name_size % 8)) % 8; // align to next 8-byte boundary
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(attr_name[name_size - 1] != '\0')
         {
@@ -2741,7 +2833,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Display Attribute Message Information */
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Attribute Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2766,7 +2858,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Read Datatype Message */
     int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
-    if(errorChecking && datatype_bytes_read > (int)datatype_size)
+    if(H5_ERROR_CHECKING && datatype_bytes_read > (int)datatype_size)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
@@ -2778,7 +2870,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
-    if(errorChecking && dataspace_bytes_read > (int)dataspace_size)
+    if(H5_ERROR_CHECKING && dataspace_bytes_read > (int)dataspace_size)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
@@ -2815,7 +2907,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     uint64_t version = readField(1, &pos);
     uint64_t flags = readField(1, &pos);
 
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(version != 0)
         {
@@ -2823,7 +2915,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         }
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2834,7 +2926,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
         uint16_t max_create_index = readField(2, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Maximum Creation Index:                                          %u\n", (unsigned short)max_create_index);
         }
@@ -2843,7 +2935,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Read Heap and Name Offsets */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
     uint64_t name_index = readField(metaData.offsetsize, &pos);
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
@@ -2852,7 +2944,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
         uint64_t create_order_index = readField(metaData.offsetsize, &pos);
-        if(verbose)
+        if(H5_VERBOSE)
         {
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
         }
@@ -2880,7 +2972,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t hc_offset = readField(metaData.offsetsize, &pos);
     uint64_t hc_length = readField(metaData.lengthsize, &pos);
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2899,7 +2991,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     else
     {
         /* Read Continuation Header */
-        if(errorChecking)
+        if(H5_ERROR_CHECKING)
         {
             uint64_t signature = readField(4, &pos);
             if(signature != H5_OCHK_SIGNATURE_LE)
@@ -2918,7 +3010,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         /* Verify Checksum */
         uint64_t check_sum = readField(4, &pos);
-        if(errorChecking)
+        if(H5_ERROR_CHECKING)
         {
             (void)check_sum;
         }
@@ -2941,7 +3033,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t btree_addr = readField(metaData.offsetsize, &pos);
     uint64_t heap_addr = readField(metaData.offsetsize, &pos);
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2952,7 +3044,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Heap Info */
     pos = heap_addr;
-    if(!errorChecking)
+    if(!H5_ERROR_CHECKING)
     {
         pos += 24;
     }
@@ -2979,7 +3071,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     while(true)
     {
         /* Read Header Info */
-        if(!errorChecking)
+        if(!H5_ERROR_CHECKING)
         {
             pos += 5;
         }
@@ -3018,7 +3110,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t left_sibling = readField(metaData.offsetsize, &pos); (void)left_sibling;
         uint64_t right_sibling = readField(metaData.offsetsize, &pos);
         uint64_t key0 = readField(metaData.lengthsize, &pos); (void)key0;
-        if(verbose && H5_EXTRA_DEBUG)
+        if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
             print2term("Entries Used:                                                    %d\n", (int)entries_used);
             print2term("Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
@@ -3046,7 +3138,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
 
         /* Read Header Info */
-        if(!errorChecking)
+        if(!H5_ERROR_CHECKING)
         {
             pos += 6;
         }
@@ -3098,7 +3190,7 @@ void H5FileBuffer::parseDataset (void)
         gptr = nptr + 1;                            // go to start of next group
     }
 
-    if(verbose)
+    if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Dataset: ");
@@ -3208,7 +3300,7 @@ int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
 {
-    if(errorChecking)
+    if(H5_ERROR_CHECKING)
     {
         if(type_size < 0 || type_size > 8)
         {
@@ -3348,7 +3440,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, true, H5_VERBOSE, _meta_only);
+    H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
     if(info.data)
     {
         bool data_valid = true;
@@ -3556,7 +3648,7 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
     {
         /* Open File */
         info_t data_info;
-        H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0, true, true);
+        H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0);
 
         /* Free Data */
         if(data_info.data) delete [] data_info.data;
