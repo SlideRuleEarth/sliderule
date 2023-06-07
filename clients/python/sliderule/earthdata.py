@@ -55,17 +55,19 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                    {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "collections": [] },
-    "ATL06":                                    {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "collections": []},
-    "ATL08":                                    {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "collections": []},
-    "GEDI01_B":                                 {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "collections": []},
-    "GEDI02_A":                                 {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "collections": []},
-    "GEDI02_B":                                 {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "collections": []},
-    "GEDI_L3_LandSurface_Metrics_V2_1952":      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "collections": []},
-    "GEDI_L4A_AGB_Density_V2_1_2056":           {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "collections": []},
-    "GEDI_L4B_Gridded_Biomass_2017":            {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "collections": []},
-    "HLS":                                      {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]},
-    "Digital Elevation Model (DEM) 1 meter":    {"provider": "USGS",        "version": None,   "api": "tnm",   "collections": []}
+    "ATL03":                                               {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "formats": [".h5"],    "collections": [] },
+    "ATL06":                                               {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "ATL08":                                               {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "GEDI01_B":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "GEDI02_A":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "GEDI02_B":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".tiff"],  "collections": []},
+    "GEDI_L3_LandSurface_Metrics_V2_1952":                 {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "GEDI_L4A_AGB_Density_V2_1_2056":                      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "GEDI_L4B_Gridded_Biomass_2017":                       {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".tiff"],  "collections": []},
+    "HLS":                                                 {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]},
+    "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": []},
+    "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"]},
+    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"]}
 }
 
 # upper limit on resources returned from CMR query per request
@@ -93,7 +95,7 @@ TNM_PAGE_SIZE = 100
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 
-def __cmr_filter_urls(search_results):
+def __cmr_filter_urls(search_results, data_formats):
     """Select only the desired data files from CMR response."""
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
         return []
@@ -125,7 +127,7 @@ def __cmr_filter_urls(search_results):
             # Exclude links with duplicate filenames (they would overwrite)
             continue
         unique_filenames.add(filename)
-        if ".h5" in link['href'][-3:]:
+        if any([extension in link['href'] for extension in data_formats]):
             resource = link['href'].split("/")[-1]
             urls.append(resource)
     # return filtered urls
@@ -185,7 +187,8 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     params = '&short_name={0}'.format(short_name)
     if version != None:
         params += '&version={0}'.format(version)
-    params += '&temporal[]={0},{1}'.format(time_start, time_end)
+    if time_start != None and time_end != None:
+        params += '&temporal[]={0},{1}'.format(time_start, time_end)
     if kwargs['polygon']:
         params += '&polygon={0}'.format(kwargs['polygon'])
     if kwargs['name_filter']:
@@ -217,7 +220,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
             cmr_scroll_id = headers['cmr-scroll-id']
         search_page = response.read()
         search_page = json.loads(search_page.decode('utf-8'))
-        url_scroll_results = __cmr_filter_urls(search_page)
+        url_scroll_results = __cmr_filter_urls(search_page, DATASETS[short_name]["formats"])
         if not url_scroll_results:
             break
         urls += url_scroll_results
@@ -571,7 +574,9 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
         collections = DATASETS[short_name]["collections"]
 
     # create list of polygons
-    polygons = __format_polygons(polygon)
+    polygons = None
+    if polygon:
+        polygons = __format_polygons(polygon)
 
     # perform query
     geojson = __stac_search(provider, short_name, collections, polygons, time_start, time_end)

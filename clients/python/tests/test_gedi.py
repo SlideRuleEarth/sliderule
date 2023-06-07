@@ -1,4 +1,4 @@
-"""Tests for sliderule icesat2 atl06-sr algorithm."""
+"""Tests for sliderule gedi plugin."""
 
 import pytest
 from sliderule import sliderule, gedi, earthdata, icesat2
