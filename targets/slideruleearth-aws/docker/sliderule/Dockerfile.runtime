@@ -60,6 +60,14 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release \
 RUN make -j8
 RUN make install
 
+# build and install swot plugin into staging
+RUN mkdir -p /build/swot
+WORKDIR /build/swot
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+          /sliderule/plugins/swot
+RUN make -j8
+RUN make install
+
 # install project specific files
 COPY etc/* /usr/local/etc/sliderule/
 
