@@ -42,6 +42,12 @@
 #include "swot.h"
 
 /******************************************************************************
+ * MACROS
+ ******************************************************************************/
+
+#define CONVERT_COORD(c) (((double)(c)) / 1000000.0)
+
+/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -122,7 +128,7 @@ void SwotL2Reader::init (void)
  *----------------------------------------------------------------------------*/
 SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    context {},
+    context{},
     region(_asset, _resource, _parms, &context),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -270,14 +276,15 @@ void SwotL2Reader::Region::polyregion (SwotParms* parms)
     int line = 0;
     while(line < lat.size)
     {
+print2term("LINE: %d, %ld\n", line, lat.size);
         bool inclusion = false;
 
         /* Project Line Coordinate */
-        MathLib::coord_t footprint_coord = {lon[line], lat[line]};
-        MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, projection);
+        MathLib::coord_t line_coord = {CONVERT_COORD(lon[line]), CONVERT_COORD(lat[line])};
+        MathLib::point_t line_point = MathLib::coord2point(line_coord, projection);
 
         /* Test Inclusion */
-        if(MathLib::inpoly(projected_poly, points_in_polygon, footprint_point))
+        if(MathLib::inpoly(projected_poly, points_in_polygon, line_point))
         {
             inclusion = true;
         }
@@ -327,7 +334,7 @@ void SwotL2Reader::Region::rasterregion (SwotParms* parms)
     while(line < lat.size)
     {
         /* Check Inclusion */
-        bool inclusion = parms->raster->includes(lon[line], lat[line]);
+        bool inclusion = parms->raster->includes(CONVERT_COORD(lon[line]), CONVERT_COORD(lat[line]));
         inclusion_mask[line] = inclusion;
 
         /* If Coordinate Is In Raster */
@@ -378,8 +385,8 @@ void* SwotL2Reader::geoThread (void* parm)
     /* Populate Record Object */
     for(int i = 0; i < reader->region.num_lines; i++)
     {
-        rec_data->scan[i].latitude = reader->region.lat[i];
-        rec_data->scan[i].longitude = reader->region.lon[i];
+        rec_data->scan[i].latitude = CONVERT_COORD(reader->region.lat[i]);
+        rec_data->scan[i].longitude = CONVERT_COORD(reader->region.lon[i]);
     }
 
     /* Post Record */

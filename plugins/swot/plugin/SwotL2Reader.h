@@ -137,8 +137,8 @@ class SwotL2Reader: public LuaObject
 
             const int           read_timeout_ms;
 
-            H5Array<double>     lat;
-            H5Array<double>     lon;
+            H5Array<int32_t>    lat;
+            H5Array<int32_t>    lon;
 
             bool*               inclusion_mask;
             bool*               inclusion_ptr;
