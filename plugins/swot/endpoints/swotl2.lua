@@ -12,12 +12,12 @@ local parms         = rqst["parms"]
 local args = {
     shard           = rqst["shard"] or 0, -- key space
     default_asset   = "swot-sim-ecco-llc4320",
-    result_q        = rspq,
-    result_rec      = "swotl2rec",
-    result_batch    = nil,
-    index_field     = nil,
-    lon_field       = nil,
-    lat_field       = nil
+    result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
+    result_rec      = "swotl2geo",
+    result_batch    = "swotl2geo.scan",
+    index_field     = "scan_id",
+    lon_field       = "longitude",
+    lat_field       = "latitude"
 }
 
 local rqst_parms    = swot.parms(parms)

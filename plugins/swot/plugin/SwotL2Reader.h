@@ -101,12 +101,14 @@ class SwotL2Reader: public LuaObject
 
         /* Scan Record */
         typedef struct {
+            uint64_t            scan_id;
             double              latitude;
             double              longitude;
         } scan_rec_t;
 
         /* Geo Record */
         typedef struct {
+            char                granule[MAX_GRANULE_NAME_STR];
             scan_rec_t          scan[1];
         } geo_rec_t;
 

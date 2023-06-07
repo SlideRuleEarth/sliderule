@@ -58,7 +58,7 @@ const struct luaL_Reg SwotL2Reader::LuaMetaTable[] = {
     {NULL,          NULL}
 };
 
-const char* SwotL2Reader::varRecType = "swotl2rec";
+const char* SwotL2Reader::varRecType = "swotl2var";
 const RecordObject::fieldDef_t SwotL2Reader::varRecDef[] = {
     {"granule",     RecordObject::STRING,   offsetof(var_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS},
     {"variable",    RecordObject::STRING,   offsetof(var_rec_t, variable),      MAX_VARIABLE_NAME_STR,  NULL, NATIVE_FLAGS},
@@ -69,14 +69,16 @@ const RecordObject::fieldDef_t SwotL2Reader::varRecDef[] = {
     {"data",        RecordObject::UINT8,    sizeof(var_rec_t),                  0,                      NULL, NATIVE_FLAGS}
 };
 
-const char* SwotL2Reader::scanRecType = "swotl2rec.scan";
+const char* SwotL2Reader::scanRecType = "swotl2geo.scan";
 const RecordObject::fieldDef_t SwotL2Reader::scanRecDef[] = {
+    {"scan_id",     RecordObject::UINT64,   offsetof(scan_rec_t, scan_id),      1,                      NULL, NATIVE_FLAGS},
     {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS},
     {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS}
 };
 
-const char* SwotL2Reader::geoRecType = "swotl2rec.geo";
+const char* SwotL2Reader::geoRecType = "swotl2geo";
 const RecordObject::fieldDef_t SwotL2Reader::geoRecDef[] = {
+    {"granule",     RecordObject::STRING,   offsetof(geo_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS},
     {"scan",        RecordObject::USER,     offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS}
 };
 
@@ -276,7 +278,6 @@ void SwotL2Reader::Region::polyregion (SwotParms* parms)
     int line = 0;
     while(line < lat.size)
     {
-print2term("LINE: %d, %ld\n", line, lat.size);
         bool inclusion = false;
 
         /* Project Line Coordinate */
@@ -376,15 +377,19 @@ void* SwotL2Reader::geoThread (void* parm)
     SwotParms* parms = reader->parms;
 
     /* Calculate Total Size of Record Data */
-    int total_size = sizeof(scan_rec_t) * reader->region.num_lines;
+    int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
 
     /* Create Record Object */
     RecordObject rec_obj(geoRecType, total_size);
     geo_rec_t* rec_data = (geo_rec_t*)rec_obj.getRecordData();
 
     /* Populate Record Object */
+    StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
     for(int i = 0; i < reader->region.num_lines; i++)
     {
+        rec_data->scan[i].scan_id = (uint32_t)reader->region.lat[i];
+        rec_data->scan[i].scan_id <<= 32;
+        rec_data->scan[i].scan_id |= (uint32_t)reader->region.lon[i];
         rec_data->scan[i].latitude = CONVERT_COORD(reader->region.lat[i]);
         rec_data->scan[i].longitude = CONVERT_COORD(reader->region.lon[i]);
     }
