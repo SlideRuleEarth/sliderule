@@ -97,7 +97,7 @@ if authenticate_to_lpdaac then
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 end
 if authenticate_to_podaac then
-    local script_parms = {earthdata="https://archive.podaac.earthdatacloud.nasa.gov/s3credentials", identity="podaac-cloud"}
+    local script_parms = {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"}
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("PodaacAuthScript")
 end
 
