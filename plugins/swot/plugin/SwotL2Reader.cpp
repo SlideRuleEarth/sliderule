@@ -510,3 +510,51 @@ void* SwotL2Reader::varThread (void* parm)
     /* Return */
     return NULL;
 }
+
+/*----------------------------------------------------------------------------
+ * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
+ *----------------------------------------------------------------------------*/
+int SwotL2Reader::luaStats (lua_State* L)
+{
+    bool status = false;
+    int num_obj_to_return = 1;
+    SwotL2Reader* lua_obj = NULL;
+
+    try
+    {
+        /* Get Self */
+        lua_obj = (SwotL2Reader*)getLuaSelf(L, 1);
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+
+    try
+    {
+        /* Get Clear Parameter */
+        bool with_clear = getLuaBoolean(L, 2, true, false);
+
+        /* Create Statistics Table */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "read",        lua_obj->stats.variables_read);
+        LuaEngine::setAttrInt(L, "filtered",    lua_obj->stats.variables_filtered);
+        LuaEngine::setAttrInt(L, "sent",        lua_obj->stats.variables_sent);
+        LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.variables_dropped);
+        LuaEngine::setAttrInt(L, "retried",     lua_obj->stats.variables_retried);
+
+        /* Clear if Requested */
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+
+        /* Set Success */
+        status = true;
+        num_obj_to_return = 2;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error returning stats %s: %s", lua_obj->getName(), e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_obj_to_return);
+}

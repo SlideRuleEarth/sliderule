@@ -84,7 +84,7 @@ int swot_open (lua_State *L)
  ******************************************************************************/
 
 extern "C" {
-void initgedi (void)
+void initswot (void)
 {
     /* Initialize Modules */
     SwotL2Reader::init();
@@ -99,7 +99,7 @@ void initgedi (void)
     print2term("%s plugin initialized (%s)\n", LUA_SWOT_LIBNAME, BINID);
 }
 
-void deinitgedi (void)
+void deinitswot (void)
 {
 }
 }

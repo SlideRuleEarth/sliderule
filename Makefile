@@ -8,6 +8,7 @@ ICESAT2_BUILD = $(BUILD)/icesat2
 GEDI_BUILD = $(BUILD)/gedi
 LANDSAT_BUILD = $(BUILD)/landsat
 USGS3DEP_BUILD = $(BUILD)/usgs3dep
+SWOT_BUILD = $(BUILD)/swot
 
 # when using the llvm toolchain to build the source
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -22,7 +23,7 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 default-build: ## default build of sliderule
 	make -j4 -C $(SLIDERULE_BUILD)
 
-all: default-build atlas pgc gedi icesat2 landsat ## build everything
+all: default-build atlas pgc gedi icesat2 landsat usgs3dep swot ## build everything
 
 config: config-release ## configure make for default build
 
@@ -47,13 +48,13 @@ config-development: prep ## configure make for development version of sliderule 
 config-development-debug: prep ## configure make for debug version of sliderule binary
 	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
 
-config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat config-usgs3dep ctags ## configure everything
-config-all-debug: config-development-debug config-atlas-debug config-pgc-debug config-gedi-debug config-icesat2-debug config-landsat-debug config-usgs3dep-debug ctags ## configure everything for debug
+config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat config-usgs3dep config-swot ctags ## configure everything
+config-all-debug: config-development-debug config-atlas-debug config-pgc-debug config-gedi-debug config-icesat2-debug config-landsat-debug config-usgs3dep-debug config-swot-debug ctags ## configure everything for debug
 
 install: ## install sliderule to system
 	make -C $(SLIDERULE_BUILD) install
 
-install-all: install install-atlas install-pgc install-gedi install-icesat2 install-landsat install-usgs3dep ## install everything
+install-all: install install-atlas install-pgc install-gedi install-icesat2 install-landsat install-usgs3dep install-swot ## install everything
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(SLIDERULE_BUILD)/install_manifest.txt
@@ -108,7 +109,7 @@ uninstall-pgc: ## uninstall most recent install of icesat2 plugin from system
 	xargs rm < $(PGC_BUILD)/install_manifest.txt
 
 ########################
-# Atlas Plugin Targets
+# ATLAS Plugin Targets
 ########################
 
 config-atlas: prep ## configure make for atlas plugin
@@ -127,7 +128,7 @@ uninstall-atlas: ## uninstall most recent install of atlas plugin from system
 	xargs rm < $(ATLAS_BUILD)/install_manifest.txt
 
 ########################
-# Icesat2 Plugin Targets
+# ICESat-2 Plugin Targets
 ########################
 
 config-icesat2: prep ## configure make for icesat2 plugin
@@ -146,7 +147,7 @@ uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from syste
 	xargs rm < $(ICESAT2_BUILD)/install_manifest.txt
 
 ########################
-# Gedi Plugin Targets
+# GEDI Plugin Targets
 ########################
 
 config-gedi: prep ## configure make for gedi plugin
@@ -184,7 +185,7 @@ uninstall-landsat: ## uninstall most recent install of icesat2 plugin from syste
 	xargs rm < $(LANDSAT_BUILD)/install_manifest.txt
 
 ##########################
-# usgs3dep Plugin Targets
+# USGS3DEP Plugin Targets
 ##########################
 
 config-usgs3dep-debug: prep ## configure make for usgs3dep plugin
@@ -202,6 +203,25 @@ install-usgs3dep: ## install icesat2 plugin to system
 uninstall-usgs3dep: ## uninstall most recent install of icesat2 plugin from system
 	xargs rm < $(USGS3DEP_BUILD)/install_manifest.txt
 
+##########################
+# SWOT Plugin Targets
+##########################
+
+config-swot-debug: prep ## configure make for usgs3dep plugin
+	cd $(SWOT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/swot
+
+config-swot: prep ## configure make for usgs3dep plugin
+	cd $(SWOT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/swot
+
+swot: ## build usgs3dep plugin
+	make -j4 -C $(SWOT_BUILD)
+
+install-swot: ## install icesat2 plugin to system
+	make -C $(SWOT_BUILD) install
+
+uninstall-swot: ## uninstall most recent install of icesat2 plugin from system
+	xargs rm < $(SWOT_BUILD)/install_manifest.txt
+
 ########################
 # Development Targets
 ########################
@@ -217,7 +237,7 @@ asan: prep ## build address sanitizer debug version of sliderule binary
 ctags: ## generate ctags
 	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
 	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(SLIDERULE_BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json $(USGS3DEP_BUILD)/compile_commands.json > compile_commands.json
+	/usr/bin/jq -s 'add' $(SLIDERULE_BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json $(USGS3DEP_BUILD)/compile_commands.json $(SWOT_BUILD)/compile_commands.json > compile_commands.json
 
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
@@ -255,6 +275,7 @@ prep: ## create necessary build directories
 	mkdir -p $(GEDI_BUILD)
 	mkdir -p $(LANDSAT_BUILD)
 	mkdir -p $(USGS3DEP_BUILD)
+	mkdir -p $(SWOT_BUILD)
 
 clean: ## clean last build
 	- make -C $(SLIDERULE_BUILD) clean
@@ -264,6 +285,7 @@ clean: ## clean last build
 	- make -C $(GEDI_BUILD) clean
 	- make -C $(LANDSAT_BUILD) clean
 	- make -C $(USGS3DEP_BUILD) clean
+	- make -C $(SWOT_BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)

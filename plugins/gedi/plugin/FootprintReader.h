@@ -501,7 +501,6 @@ void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
     }
 }
 
-
 /*----------------------------------------------------------------------------
  * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/

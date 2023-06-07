@@ -46,7 +46,7 @@
 #include "StringLib.h"
 #include "H5Array.h"
 
-#include "GediParms.h"
+#include "SwotParms.h"
 
 /******************************************************************************
  * SWOT L2 READER
