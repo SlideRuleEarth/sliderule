@@ -243,6 +243,8 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
 #
 def __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter):
 
+    global max_requested_resources
+
     # initialize return value
     resources = {} # [<url>] = <polygon>
 
@@ -296,6 +298,12 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
     # build return lists
     url_list = list(resources.keys())
     meta_list = list(resources.values())
+
+    # Check Resources are Under Limit
+    if(len(url_list) > max_requested_resources):
+        raise sliderule.FatalError('Exceeded maximum requested resources: {} (current max is {})\nConsider using earthdata.set_max_resources to set a higher limit.'.format(len(url_list), max_requested_resources))
+    else:
+        logger.info("Identified %d resources to process", len(url_list))
 
     if return_metadata:
         return (url_list,meta_list)

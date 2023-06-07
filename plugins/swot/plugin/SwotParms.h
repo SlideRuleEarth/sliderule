@@ -29,23 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_dataset__
-#define __h5_dataset__
+#ifndef __swot_parms__
+#define __swot_parms__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
 #include "LuaObject.h"
-#include "RecordObject.h"
-#include "DeviceObject.h"
-#include "Asset.h"
+#include "GeoJsonRaster.h"
+#include "List.h"
+#include "NetsvcParms.h"
 
 /******************************************************************************
- * HDF5 DATASET HANDLER
+ * SWOT PARAMETERS
  ******************************************************************************/
 
-class H5DatasetDevice: public DeviceObject
+class SwotParms: public NetsvcParms
 {
     public:
 
@@ -53,60 +54,39 @@ class H5DatasetDevice: public DeviceObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* recType;
-        static const RecordObject::fieldDef_t recDef[];
+        static const char* VARIABLES;
+        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
+        static const int EXPECTED_NUM_FIELDS = 16;
 
         /*--------------------------------------------------------------------
-         * Types
+         * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            int64_t     id;
-            uint32_t    datatype; // RecordObject::fieldType_t
-            uint32_t    offset;
-            uint32_t    size;
-        } h5dataset_t;
+        typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-
-    private:
+        static int          luaCreate           (lua_State* L);
+        static int64_t      deltatime2timestamp (double delta_time);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject*   recObj;
-        h5dataset_t*    recData;
-        Asset*          asset;
-        const char*     resource;
-        const char*     dataName;
-        uint8_t*        dataBuffer;
-        int             dataSize;
-        int             dataOffset;
-        bool            rawMode;
+        string_list_t       variables;
 
-        bool            connected;
-        char*           config; // <filename>(<type>,<access>,<io>)
+    private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    H5DatasetDevice     (lua_State* L, role_t _role, Asset* asset, const char* resource, const char* dataset_name, long id, bool raw_mode,
-                                            RecordObject::valType_t datatype, long col, long startrow, long numrows);
-                    ~H5DatasetDevice    (void);
-
-        bool        isConnected         (int num_open=0);   // is the file open
-        void        closeConnection     (void);             // close the file
-        int         writeBuffer         (const void* buf, int len, int timeout=SYS_TIMEOUT);
-        int         readBuffer          (void* buf, int len, int timeout=SYS_TIMEOUT);
-        int         getUniqueId         (void);             // returns file descriptor
-        const char* getConfig           (void);             // returns filename with attribute list
+                            SwotParms           (lua_State* L, int index);
+                            ~SwotParms          (void);
+        void                cleanup             (void);
+        void                get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
 };
 
-#endif  /* __h5_dataset__ */
+#endif  /* __swot_parms__ */
