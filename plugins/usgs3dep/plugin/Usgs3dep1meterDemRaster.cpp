@@ -161,8 +161,8 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     if(utm < minUTM || utm > maxUTM)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
 
-    const int nad83_2011_utm_zone1_epsg = 6330;
-    int epsg  = nad83_2011_utm_zone1_epsg + utm - 1;
+    const int NAD83_2011_UTM_ZONE_1N_EPSG = 6330;
+    int epsg  = NAD83_2011_UTM_ZONE_1N_EPSG + utm - 1;
     mlog(DEBUG, "New EPSG: %d", epsg);
 
     OGRSpatialReference horizontal;
