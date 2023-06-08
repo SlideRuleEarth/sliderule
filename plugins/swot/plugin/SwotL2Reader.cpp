@@ -45,7 +45,8 @@
  * MACROS
  ******************************************************************************/
 
-#define CONVERT_COORD(c) (((double)(c)) / 1000000.0)
+#define CONVERT_LAT(c) (((double)(c)) / 1000000.0)
+#define CONVERT_LON(c) (fmod(((((double)(c)) / 1000000.0) + 180.0), 360.0) - 180.0)
 
 /******************************************************************************
  * STATIC DATA
@@ -215,8 +216,8 @@ SwotL2Reader::~SwotL2Reader (void)
  *----------------------------------------------------------------------------*/
 SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* parms, H5Coro::context_t* context):
     read_timeout_ms (parms->read_timeout * 1000),
-    lat             (asset, resource, "latitude", context),
-    lon             (asset, resource, "longitude", context),
+    lat             (asset, resource, "latitude_nadir", context),
+    lon             (asset, resource, "longitude_nadir", context),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
@@ -292,7 +293,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* parms)
         bool inclusion = false;
 
         /* Project Line Coordinate */
-        MathLib::coord_t line_coord = {CONVERT_COORD(lon[line]), CONVERT_COORD(lat[line])};
+        MathLib::coord_t line_coord = {CONVERT_LON(lon[line]), CONVERT_LAT(lat[line])};
         MathLib::point_t line_point = MathLib::coord2point(line_coord, projection);
 
         /* Test Inclusion */
@@ -346,7 +347,7 @@ void SwotL2Reader::Region::rasterregion (SwotParms* parms)
     while(line < lat.size)
     {
         /* Check Inclusion */
-        bool inclusion = parms->raster->includes(CONVERT_COORD(lon[line]), CONVERT_COORD(lat[line]));
+        bool inclusion = parms->raster->includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
         inclusion_mask[line] = inclusion;
 
         /* If Coordinate Is In Raster */
@@ -423,8 +424,8 @@ void* SwotL2Reader::geoThread (void* parm)
         rec_data->scan[i].scan_id = (uint32_t)reader->region.lat[i];
         rec_data->scan[i].scan_id <<= 32;
         rec_data->scan[i].scan_id |= (uint32_t)reader->region.lon[i];
-        rec_data->scan[i].latitude = CONVERT_COORD(reader->region.lat[i]);
-        rec_data->scan[i].longitude = CONVERT_COORD(reader->region.lon[i]);
+        rec_data->scan[i].latitude = CONVERT_LAT(reader->region.lat[i]);
+        rec_data->scan[i].longitude = CONVERT_LON(reader->region.lon[i]);
     }
 
     /* Post Record */
