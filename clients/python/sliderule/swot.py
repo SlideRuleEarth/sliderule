@@ -299,9 +299,35 @@ def swotl2p(parm, asset=DEFAULT_ASSET, callbacks={}, resources=None):
         # Make API Processing Request
         rsps = sliderule.source('swotl2p', rqst, stream=True, callbacks=callbacks)
 
-        # Return Response
+        # Process Responses
+        results = {}
+        if len(rsps) > 0:
+            for rsp in rsps:
+                if 'swotl2var' in rsp['__rectype']:
+                    granule = rsp['granule']
+                    variable = rsp['variable']
+                    if granule not in results:
+                        results[granule] = {}
+                    if variable not in results[granule]:
+                        results[granule][variable] = {}
+                    data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
+                    num_rows = int(rsp['elements'] / rsp['width'])
+                    results[granule][variable] = data.reshape(num_rows, rsp['width'])
+                elif 'swotl2geo' == rsp['__rectype']:
+                    granule = rsp['granule']
+                    if granule not in results:
+                        results[granule] = {}
+                    latitudes = []
+                    longitudes = []
+                    for point in rsp['scan']:
+                        latitudes += point['latitude'],
+                        longitudes += point['longitude'],
+                    results[granule]['latitude'] = numpy.array(latitudes)
+                    results[granule]['longitude'] = numpy.array(longitudes)
+
+        # Return Results
         profiles[swotl2p.__name__] = time.perf_counter() - tstart
-        return rsps
+        return results
 
     # Handle Runtime Errors
     except RuntimeError as e:
