@@ -176,6 +176,7 @@ class SwotL2Reader: public LuaObject
                         SwotL2Reader        (lua_State* L, Asset* _asset, const char* _resource,
                                              const char* outq_name, SwotParms* _parms, bool _send_terminator=true);
                         ~SwotL2Reader       (void);
+        void            checkComplete       (void);
         static void*    varThread           (void* parm);
         static void*    geoThread           (void* parm);
         static int      luaStats            (lua_State* L);

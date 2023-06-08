@@ -140,7 +140,8 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     parms       = _parms;
     active      = true;
     numComplete = 0;
-    threadCount = 1 + parms->variables.length();
+    geoPid      = NULL;
+    varPid      = NULL;
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -153,20 +154,37 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     stats.variables_dropped    = 0;
     stats.variables_retried    = 0;
 
-    /* Initialize Geo Thread */
-    geoPid = new Thread(geoThread, this);
-
-    /* Initialize Variable Threads */
-    if(threadCount > 1)
+    /* Check If Anything to Process */
+    if(region.num_lines > 0)
     {
-        varPid = new Thread* [threadCount - 1];
-        for(int i = 0; i < threadCount - 1; i++)
+        /* Set Thread Count = geoThread + varThreads */
+        threadCount = 1 + parms->variables.length();
+
+        /* Initialize Geo Thread */
+        geoPid = new Thread(geoThread, this);
+
+        /* Initialize Variable Threads */
+        if(threadCount > 1)
         {
-            info_t* info = new info_t;
-            info->reader = this;
-            info->variable_name = parms->variables[i].str(true);
-            varPid[i] = new Thread(varThread, info);
+            varPid = new Thread* [threadCount - 1];
+            for(int i = 0; i < threadCount - 1; i++)
+            {
+                info_t* info = new info_t;
+                info->reader = this;
+                info->variable_name = parms->variables[i].str(true);
+                varPid[i] = new Thread(varThread, info);
+            }
         }
+    }
+    else
+    {
+        /* Report Empty Region */
+        mlog(INFO, "Empty spatial region for %s", resource);
+        LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, &active, "Empty spatial region for %s", resource);
+
+        /* Terminate */
+        threadCount = 0;
+        checkComplete();
     }
 }
 
@@ -178,7 +196,7 @@ SwotL2Reader::~SwotL2Reader (void)
     active = false;
 
     if(geoPid) delete geoPid;
-    for(int i = 0; i < threadCount; i++)
+    for(int i = 0; i < threadCount - 1; i++)
     {
         if(varPid[i]) delete varPid[i];
     }
@@ -222,13 +240,6 @@ SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* par
     else
     {
         num_lines = MIN(lat.size, lon.size);
-    }
-
-    /* Check If Anything to Process */
-    if(num_lines <= 0)
-    {
-        cleanup();
-        throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region for %s", resource);
     }
 
     /* Trim Geospatial Datasets Read from File */
@@ -368,6 +379,28 @@ void SwotL2Reader::Region::rasterregion (SwotParms* parms)
 }
 
 /*----------------------------------------------------------------------------
+ * checkComplete
+ *----------------------------------------------------------------------------*/
+void SwotL2Reader::checkComplete (void)
+{
+    /* Handle Global Reader Updates */
+    threadMut.lock();
+    {
+        /* Count Completion */
+        numComplete++;
+
+        /* Indicate End of Data */
+        if(numComplete >= threadCount)
+        {
+            mlog(INFO, "Completed processing resource %s", resource);
+            if(sendTerminator) outQ->postCopy("", 0);
+            signalComplete();
+        }
+    }
+    threadMut.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * geoThread
  *----------------------------------------------------------------------------*/
 void* SwotL2Reader::geoThread (void* parm)
@@ -404,21 +437,8 @@ void* SwotL2Reader::geoThread (void* parm)
         mlog(CRITICAL, "Failed (%d) to post geo record for %s", post_status, reader->resource);
     }
 
-    /* Handle Global Reader Updates */
-    reader->threadMut.lock();
-    {
-        /* Count Completion */
-        reader->numComplete++;
-
-        /* Indicate End of Data */
-        if(reader->numComplete == reader->threadCount)
-        {
-            mlog(INFO, "Completed processing resource %s", reader->resource);
-            if(reader->sendTerminator) reader->outQ->postCopy("", 0);
-            reader->signalComplete();
-        }
-    }
-    reader->threadMut.unlock();
+    /* Complete */
+    reader->checkComplete();
 
     /* Return */
     return NULL;
@@ -488,28 +508,19 @@ void* SwotL2Reader::varThread (void* parm)
         LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), reader->resource);
     }
 
-    /* Handle Global Reader Updates */
+    /* Update Statistics */
     reader->threadMut.lock();
     {
-        /* Count Completion */
-        reader->numComplete++;
-
-        /* Update Statistics */
         reader->stats.variables_read += local_stats.variables_read;
         reader->stats.variables_filtered += local_stats.variables_filtered;
         reader->stats.variables_sent += local_stats.variables_sent;
         reader->stats.variables_dropped += local_stats.variables_dropped;
         reader->stats.variables_retried += local_stats.variables_retried;
-
-        /* Indicate End of Data */
-        if(reader->numComplete == reader->threadCount)
-        {
-            mlog(INFO, "Completed processing resource %s", reader->resource);
-            if(reader->sendTerminator) reader->outQ->postCopy("", 0);
-            reader->signalComplete();
-        }
     }
     reader->threadMut.unlock();
+
+    /* Complete */
+    reader->checkComplete();
 
     /* Clean Up */
     if(results.data) delete [] results.data;
