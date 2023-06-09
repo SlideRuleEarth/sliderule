@@ -166,7 +166,7 @@ uint64_t RasterObject::fileDictAdd(const std::string& fileName)
 }
 
 /*----------------------------------------------------------------------------
- * luaSamples - :sample(lon, lat, gps) --> in|out
+ * luaSamples - :sample(lon, lat, [height], [gps]) --> in|out
  *----------------------------------------------------------------------------*/
 int RasterObject::luaSamples(lua_State *L)
 {
@@ -183,13 +183,13 @@ int RasterObject::luaSamples(lua_State *L)
         /* Get Coordinates */
         double lon    = getLuaFloat(L, 2);
         double lat    = getLuaFloat(L, 3);
-        double height = getLuaFloat(L, 4);
+        double height = getLuaFloat(L, 4, true, 0.0);
+        const char* closest_time_str = getLuaString(L, 5, true, NULL);
 
-        /* Get gps closest time (overrides params provided closest time)*/
+        /* Get gps closest time (overrides params provided closest time) */
         int64_t gps = 0;
-        if(lua_gettop(L) > 4)
+        if(closest_time_str != NULL)
         {
-            const char* closest_time_str = getLuaString(L, 5);
             gps = TimeLib::str2gpstime(closest_time_str);
         }
 

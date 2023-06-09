@@ -17,7 +17,8 @@ local args = {
     result_batch    = "atl03rec.photons",
     index_field     = "time",
     lon_field       = "longitude",
-    lat_field       = "latitude"
+    lat_field       = "latitude",
+    height_field    = "height"
 }
 
 local rqst_parms    = icesat2.parms(parms)

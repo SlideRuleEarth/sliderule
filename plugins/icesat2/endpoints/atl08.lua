@@ -18,7 +18,8 @@ local args = {
     result_batch    = "atl08rec.vegetation",
     index_field     = "extent_id",
     lon_field       = "lon",
-    lat_field       = "lat"
+    lat_field       = "lat",
+    height_field    = "h_te_median"
 }
 
 local rqst_parms    = icesat2.parms(parms)

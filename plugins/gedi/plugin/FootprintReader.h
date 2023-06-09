@@ -447,9 +447,7 @@ void FootprintReader<footprint_t>::Region::rasterregion (info_t* info)
     while(footprint < lat.size)
     {
         /* Check Inclusion */
-#warning FIX ME!!!
-        double height = 0;
-        bool inclusion = info->reader->parms->raster->includes(lon[footprint], lat[footprint], height);
+        bool inclusion = info->reader->parms->raster->includes(lon[footprint], lat[footprint]);
         inclusion_mask[footprint] = inclusion;
 
         /* If Coordinate Is In Raster */
