@@ -46,7 +46,7 @@
 PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
     VrtRaster(L, _parms)
 {
-    correctElevation = true;
+    dataIsElevation = true;
 
     /*
      * Pgc Mosaics uses one large VRT index file but we cannot open it here.

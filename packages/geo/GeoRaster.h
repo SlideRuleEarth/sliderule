@@ -129,7 +129,7 @@ class GeoRaster: public RasterObject
             double          cellSize;
             bbox_t          bbox;
             CoordTransform  cord;
-            double          geoidShift;
+            double          verticalShift;
 
             void clear(bool close = true);
             inline bool containsPoint(OGRPoint& p);
@@ -178,7 +178,7 @@ class GeoRaster: public RasterObject
 
             /* Last sample information */
             OGRPoint        point;
-            double          geoidShift;
+            double          verticalShift;
             sample_t        sample;
 
             void clear(bool close = true);
@@ -247,7 +247,7 @@ class GeoRaster: public RasterObject
         GeoIndex                    geoIndex;
         Dictionary<Raster*>         rasterDict;
         Mutex                       samplingMutex;
-        bool                        correctElevation;
+        bool                        dataIsElevation;
 
     private:
 

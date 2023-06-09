@@ -183,7 +183,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
-    correctElevation = false;
+    dataIsElevation = false;
 
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -370,11 +370,11 @@ void GeoRaster::processRaster(Raster* raster)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
 
             mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
-            raster->geoidShift = z0 - raster->point.getZ();
+            raster->verticalShift = z0 - raster->point.getZ();
         }
         else
         {
-            raster->geoidShift = geoIndex.geoidShift;
+            raster->verticalShift = geoIndex.verticalShift;
         }
 
         /*
@@ -627,9 +627,9 @@ void GeoRaster::readPixel(Raster *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
-        if(nodataCheck(raster) && correctElevation)
+        if(nodataCheck(raster) && dataIsElevation)
         {
-            raster->sample.value += raster->geoidShift;
+            raster->sample.value += raster->verticalShift;
         }
 
         // mlog(DEBUG, "Value: %.2lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
@@ -703,7 +703,7 @@ void GeoRaster::transformToIndexCRS(OGRPoint &p)
     double z0 = p.getZ();
     if (p.transform(geoIndex.cord.transf) == OGRERR_NONE)
     {
-        geoIndex.geoidShift = z0 - p.getZ();
+        geoIndex.verticalShift = z0 - p.getZ();
         return;
     }
 
@@ -760,7 +760,7 @@ void GeoRaster::GeoIndex::clear(bool close)
     rows = 0;
     cols = 0;
     cellSize = 0;
-    geoidShift = 0;
+    verticalShift = 0;
     bzero(&bbox, sizeof(bbox_t));
 }
 
@@ -824,25 +824,25 @@ void GeoRaster::resamplePixel(Raster *raster)
         args.eResampleAlg = parms->sampling_algo;
         double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
-        double geoidShift = 0;
+        double verticalShift = 0;
         bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
         if (validWindow)
         {
             readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
-            geoidShift = raster->geoidShift;
+            verticalShift = raster->verticalShift;
         }
         else
         {
             validWindow = readGeoIndexData(&raster->point, windowSize, offset, rbuf, 1, &args);
-            geoidShift = geoIndex.geoidShift;
+            verticalShift = geoIndex.verticalShift;
         }
 
         if(validWindow)
         {
             raster->sample.value = rbuf[0];
-            if(nodataCheck(raster) && correctElevation)
+            if(nodataCheck(raster) && dataIsElevation)
             {
-                raster->sample.value += geoidShift;
+                raster->sample.value += verticalShift;
             }
         }
         else
@@ -882,18 +882,18 @@ void GeoRaster::computeZonalStats(Raster *raster)
         samplesArray = new double[windowSize*windowSize];
         CHECKPTR(samplesArray);
 
-        double geoidShift = 0;
+        double verticalShift = 0;
         double noDataValue = raster->band->GetNoDataValue();
         bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
         if (validWindow)
         {
             readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
-            geoidShift = raster->geoidShift;
+            verticalShift = raster->verticalShift;
         }
         else
         {
             validWindow = readGeoIndexData(&raster->point, windowSize, radiusInPixels, samplesArray, windowSize, &args);
-            geoidShift = geoIndex.geoidShift;
+            verticalShift = geoIndex.verticalShift;
         }
 
         if(validWindow)
@@ -918,8 +918,8 @@ void GeoRaster::computeZonalStats(Raster *raster)
                     double value = samplesArray[y*windowSize + x];
                     if (value == noDataValue) continue;
 
-                    if(correctElevation)
-                        value += geoidShift;
+                    if(dataIsElevation)
+                        value += verticalShift;
 
                     double x2 = x + _col;  /* Current pixel in buffer */
                     double y2 = y + _row;
@@ -1087,7 +1087,7 @@ void GeoRaster::Raster::clear(bool close)
     gpsTime = 0;
     useTime = 0;
     point.empty();
-    geoidShift = 0;
+    verticalShift = 0;
     bzero(&sample, sizeof(sample_t));
 }
 

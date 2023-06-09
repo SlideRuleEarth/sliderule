@@ -76,7 +76,7 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
     CHECKPTR(fp);
     VSIFCloseL(fp);
 
-    correctElevation = true;
+    dataIsElevation = true;
 }
 
 /*----------------------------------------------------------------------------
