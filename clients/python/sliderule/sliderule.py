@@ -885,14 +885,14 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         except requests.exceptions.HTTPError as e:
             logger.info('{}'.format(e))
             logger.error('Provisioning system update request error => {}'.format(rsps_body["error_msg"]))
-    
+
     # Get number of nodes currently registered
     try:
         rsps = source("status", parm={"service":"sliderule"}, path="/discovery", silence=True)
         available_servers = rsps["nodes"]
     except FatalError:
         available_servers = 0
-    
+
     return available_servers, requested_nodes
 
 #
