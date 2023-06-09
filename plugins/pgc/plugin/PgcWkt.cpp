@@ -29,42 +29,62 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_strips_raster__
-#define __arcticdem_strips_raster__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "PgcDemStripsRaster.h"
 #include "PgcWkt.h"
+#include <fstream>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include "OsApi.h"
+
+
+#warning FIX ME ERIC!!!
+// const char* arcticWktFile = "/usr/local/include/sliderule/pgc/ITRF2014_3413.wkt";
+// const char* remaWktFile   = "/usr/local/include/sliderule/pgc/ITRF2014_3031.wkt";
+const char* arcticWktFile = "ITRF2014_3413.wkt";
+const char* remaWktFile   = "ITRF2014_3031.wkt";
+
+std::string arcticWkt2 = "NONE";
+std::string remaWkt2   = "NONE";
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * EXPORTED FUNCTIONS
  ******************************************************************************/
 
-class ArcticDemStripsRaster: public PgcDemStripsRaster
+const std::string& getArcticDemWkt2(void)
 {
-    public:
+    return arcticWkt2;
+}
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemStripsRaster(L, _parms); }
+const std::string& getRemaWkt2(void)
+{
+    return remaWkt2;
+}
 
-    protected:
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+void parseWktFiles(void)
+{
+    {
+        std::ifstream f(arcticWktFile);
+        if(f)
+        {
+            std::ostringstream ss;
+            ss << f.rdbuf();
+            arcticWkt2 = ss.str();
+        }
+    }
 
-        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, "arcticdem", "/n") {}
-
-        void overrideTargetCRS(OGRSpatialReference& target) override
-        { setCRSfromWkt(target, getArcticDemWkt2()); }
-};
-
-#endif  /* __arcticdem_strips_raster__ */
+    {
+        std::ifstream f(remaWktFile);
+        if(f)
+        {
+            std::ostringstream ss;
+            ss << f.rdbuf();
+            remaWkt2 = ss.str();
+        }
+    }
+}

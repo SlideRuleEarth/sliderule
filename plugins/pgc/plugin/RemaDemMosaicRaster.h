@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "PgcDemMosaicRaster.h"
+#include "PgcWkt.h"
 
 /******************************************************************************
  * REMA DEM MOSAIC RASTER CLASS
@@ -53,7 +54,7 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new RemaDemMosaicRaster(L, _parms); }
 
-        bool getRasterDate(raster_info_t& rinfo)
+        bool getRasterDate(raster_info_t& rinfo) override
         { return mosaicGetRasterDate(rinfo, "_dem.tif"); }
 
     protected:
@@ -64,6 +65,9 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
 
         RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
          PgcDemMosaicRaster(L, _parms) {}
+
+        void overrideTargetCRS(OGRSpatialReference& target) override
+        { setCRSfromWkt(target, getRemaWkt2()); }
 };
 
 #endif  /* __remadem_mosaic_raster__ */

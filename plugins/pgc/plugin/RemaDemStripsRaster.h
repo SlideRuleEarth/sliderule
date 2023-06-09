@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "PgcDemStripsRaster.h"
+#include "PgcWkt.h"
 
 /******************************************************************************
  * REMA DEM STRIPS RASTER CLASS
@@ -65,6 +66,9 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
 
         RemaDemStripsRaster(lua_State* L, GeoParms* _parms):
           PgcDemStripsRaster(L, _parms, "rema", "/s") {}
+
+        void overrideTargetCRS(OGRSpatialReference& target) override
+        { setCRSfromWkt(target, getRemaWkt2()); }
 };
 
 #endif  /* __remadem_strips_raster__ */

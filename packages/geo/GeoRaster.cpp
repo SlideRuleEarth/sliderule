@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <string>
 #include "OsApi.h"
 #include "core.h"
 #include "GeoRaster.h"
@@ -677,6 +678,17 @@ void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
 void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
 {
     std::ignore = target;
+}
+
+
+/*----------------------------------------------------------------------------
+ * setCRSfromWkt
+ *----------------------------------------------------------------------------*/
+void GeoRaster::setCRSfromWkt(OGRSpatialReference& sref, const std::string& wkt)
+{
+    // mlog(DEBUG, "%s", wkt.c_str());
+    OGRErr ogrerr = sref.importFromWkt(wkt.c_str());
+    CHECK_GDALERR(ogrerr);
 }
 
 

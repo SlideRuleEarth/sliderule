@@ -55,6 +55,7 @@ endif()
 target_sources(pgc
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcWkt.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemMosaicRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemStripsRaster.cpp
 )
@@ -74,12 +75,15 @@ install (TARGETS pgc LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcWkt.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemStripsRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
-        #${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemStripsRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemStripsRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ITRF2014_3031.wkt
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/ITRF2014_3413.wkt
     DESTINATION
         ${INSTALLDIR}/include/sliderule/pgc
 )

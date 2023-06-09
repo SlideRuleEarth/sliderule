@@ -217,6 +217,7 @@ class GeoRaster: public RasterObject
         virtual bool    findRasters           (OGRPoint& p) = 0;
         void            createTransform       (CoordTransform& cord, GDALDataset* dset);
         virtual void    overrideTargetCRS     (OGRSpatialReference& target);
+        void            setCRSfromWkt         (OGRSpatialReference& sref, const std::string& wkt);
         void            transformToIndexCRS   (OGRPoint& p);
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;

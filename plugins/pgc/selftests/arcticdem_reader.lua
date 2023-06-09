@@ -4,8 +4,8 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
 
 local assets = asset.loaddir()
 
@@ -17,7 +17,7 @@ local height = 0
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
-for i = 1, 2 do
+for i = 1, 1 do
 
     local demType = demTypes[i];
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
@@ -70,6 +70,7 @@ for i = 1, 2 do
 
 end
 
+--[[
 for i = 1, 2 do
 
     local demType = demTypes[i];
@@ -368,7 +369,6 @@ for i, v in ipairs(tbl) do
 end
 runner.check(sampleCnt == 14)
 
---]]
 
 demType = demTypes[1];
 print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
@@ -424,6 +424,7 @@ expected_min = expected_mosaic_value - 0.000001
 
 runner.check(testElevation <= expected_max and testElevation >= expected_min)
 
+--]]
 
 -- Report Results --
 

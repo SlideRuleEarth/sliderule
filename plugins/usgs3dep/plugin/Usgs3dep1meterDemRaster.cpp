@@ -155,14 +155,16 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     if(northFlag==0)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected", utm, northFlag?"N":"S");
 
-    const int minUTM = 1;
-    const int maxUTM = 60;
+    const int MIN_UTM = 1;
+    const int MAX_UTM = 60;
 
-    if(utm < minUTM || utm > maxUTM)
+    if(utm < MIN_UTM || utm > MAX_UTM)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
 
+    const int NAVD88_HEIGHT_EPSG          = 5703;
     const int NAD83_2011_UTM_ZONE_1N_EPSG = 6330;
-    int epsg  = NAD83_2011_UTM_ZONE_1N_EPSG + utm - 1;
+
+    const int epsg = NAD83_2011_UTM_ZONE_1N_EPSG + utm - 1;
     mlog(DEBUG, "New EPSG: %d", epsg);
 
     OGRSpatialReference horizontal;
@@ -170,7 +172,7 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 
     OGRErr ogrerr = horizontal.importFromEPSG(epsg);
     CHECK_GDALERR(ogrerr);
-    ogrerr = vertical.importFromEPSG(5703);     /* NAVD88 height, https://epsg.io/5703 */
+    ogrerr = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
     CHECK_GDALERR(ogrerr);
 
     ogrerr = target.SetCompoundCS("sliderule", &horizontal, &vertical);
