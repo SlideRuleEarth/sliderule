@@ -42,10 +42,10 @@ local function initialize(resource, parms, algo, args)
         rsps_bridge = core.bridge(args.result_q, rspq)
         sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required because GeoRaster is not thread safe
         for key,settings in pairs(parms[geo.PARMS]) do
-            local time_key = settings["use_poi_time"] and (args.time_key or "time") or nil
+            local time_field = settings["use_poi_time"] and (args.time_field or "time") or nil
             local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
             if robj then
-                local sampler = geo.sampler(robj, key, rspq, args.result_batch, args.index_field, args.lon_field, args.lat_field, time_key)
+                local sampler = geo.sampler(robj, key, rspq, args.result_batch, args.index_field, args.lon_field, args.lat_field, time_field, args.height_field)
                 if sampler then
                     sampler_disp:attach(sampler, args.result_rec)
                 else

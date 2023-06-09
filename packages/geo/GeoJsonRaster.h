@@ -67,7 +67,7 @@ class GeoJsonRaster: public VrtRaster
         static int            luaCreate      (lua_State* L);
         static GeoJsonRaster* create         (lua_State* L, int index);
 
-        bool                  includes       (double lon, double lat);
+        bool                  includes       (double lon, double lat, double height=0);
         virtual              ~GeoJsonRaster  (void);
 
     protected:

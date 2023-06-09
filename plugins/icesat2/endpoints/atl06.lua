@@ -18,7 +18,8 @@ local args = {
     result_batch    = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation",
     index_field     = "extent_id",
     lon_field       = "lon",
-    lat_field       = "lat"
+    lat_field       = "lat",
+    height_field    = "h_mean"
 }
 
 local rqst_parms    = icesat2.parms(parms)

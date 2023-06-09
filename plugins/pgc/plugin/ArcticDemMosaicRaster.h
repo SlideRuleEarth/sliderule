@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "PgcDemMosaicRaster.h"
+#include "PgcWkt.h"
 
 /******************************************************************************
  * ARCTICDEM MOSAIC RASTER CLASS
@@ -53,7 +54,7 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new ArcticDemMosaicRaster(L, _parms); }
 
-        bool getRasterDate(raster_info_t& rinfo)
+        bool getRasterDate(raster_info_t& rinfo) override
         { return mosaicGetRasterDate(rinfo, "_reg_dem.tif"); }
 
     protected:
@@ -64,6 +65,9 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
 
         ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
          PgcDemMosaicRaster(L, _parms) {}
+
+        void overrideTargetCRS(OGRSpatialReference& target) override
+        { setCRSfromWkt(target, getArcticDemWkt2()); }
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */

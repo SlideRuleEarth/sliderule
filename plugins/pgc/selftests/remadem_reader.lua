@@ -13,6 +13,7 @@ local assets = asset.loaddir()
 
 local lon = -80.0   -- DO NOT CHANGE lon and lat, later tests are hardcoded to these values!!!
 local lat = -80.0
+local height = 0
 
 local demTypes = {"rema-mosaic", "rema-strips"}
 local demTypeCnt = 2
@@ -23,7 +24,7 @@ for i = 1, demTypeCnt do
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat)
+    local tbl, status = dem:sample(lon, lat, height)
     runner.check(status == true)
     runner.check(tbl ~= nil)
 
@@ -79,7 +80,7 @@ for i = 1, demTypeCnt do
     runner.check(dem ~= nil)
 
     print(string.format("\n--------------------------------\nTest: %s Zonal Stats with qmask\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat)
+    local tbl, status = dem:sample(lon, lat, height)
     runner.check(status == true)
     runner.check(tbl ~= nil)
 
@@ -120,7 +121,7 @@ demType = demTypes[1];
 print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 sampleCnt = 0
 local el, fname
 for i, v in ipairs(tbl) do
@@ -146,7 +147,7 @@ demType = demTypes[2];
 print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 sampleCnt = 0
 local el, fname
 for i, v in ipairs(tbl) do

@@ -132,6 +132,7 @@ class RasterSampler: public DispatchObject
         RecordObject::field_t   lonField;
         RecordObject::field_t   latField;
         RecordObject::field_t   timeField;
+        RecordObject::field_t   heightField;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -140,7 +141,7 @@ class RasterSampler: public DispatchObject
                         RasterSampler           (lua_State* L, RasterObject* _raster, const char* raster_key,
                                                  const char* outq_name, const char* rec_type,
                                                  const char* index_key, const char* lon_key, const char* lat_key,
-                                                 const char* time_key);
+                                                 const char* time_key, const char* height_key);
                         ~RasterSampler          (void);
 
         bool            processRecord           (RecordObject* record, okey_t key) override;

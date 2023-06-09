@@ -55,7 +55,8 @@ local starttime = time.latch();
 for i=1, 5 do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
-    local  tbl, status = dem:sample(lon, lat)
+    local  height = 0
+    local  tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedRead = failedRead + 1
         print(string.format("======> FAILED to read", lon, lat))

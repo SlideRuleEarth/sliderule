@@ -24,6 +24,7 @@ f:close()
 
 local  lon = -179.0
 local  lat = 51.0
+local  height = 0
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
 
@@ -34,7 +35,7 @@ local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbou
 local sampleCnt = 0
 local ndvi = 0
 local gpsTime = 0
-local tbl, status = dem:sample(lon, lat)
+local tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -75,7 +76,7 @@ sampleCnt = 0
 local ndviCnt= 0
 local ndsiCnt= 0
 local ndwiCnt= 0
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -137,7 +138,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
 sampleCnt = 0
 local invalidSamples = 0
 
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -166,7 +167,7 @@ local expectedGroup = "T01UCS.2021026T225819.v2.0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -189,7 +190,7 @@ local expectedGroup = "T01UCS.2021001T225941.v2.0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override:  closest_time=%s\n--------------------------------", demType, tstrOverride, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat, tstrOverride)
+tbl, status = dem:sample(lon, lat, height, tstrOverride)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -210,7 +211,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
 local fmaskCnt  = 0
 local sampleCnt = 0
 local b03 = 0
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -253,7 +254,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
 fmaskCnt  = 0
 sampleCnt = 0
 b03 = 0
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -297,7 +298,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
 gpsTime = 0
 sampleCnt = 0
 b03 = 0
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -350,7 +351,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
                                      "B07", "B08", "B09", "B10", "B11", "B12", "B8A", },
                             catalog = contents }))
 sampleCnt = 0
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -421,9 +422,9 @@ local starttime = time.latch();
 for i=1, maxSamples do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
-    local  tbl, status = dem:sample(lon, lat)
+    local  tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
-        print(string.format("======> FAILED to read", lon, lat))
+        print(string.format("======> FAILED to read", lon, lat, height))
     else
         local ndvi, fname
         for j, v in ipairs(tbl) do

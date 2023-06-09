@@ -106,14 +106,14 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * includes
  *----------------------------------------------------------------------------*/
-bool GeoJsonRaster::includes(double lon, double lat)
+bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
     List<sample_t> slist;
     int sampleCnt = 0;
 
     try
     {
-        getSamples(lon, lat, 0, slist);
+        getSamples(lon, lat, height, 0, slist);
         sampleCnt = slist.length();
     }
     catch(const RunTimeException& e)

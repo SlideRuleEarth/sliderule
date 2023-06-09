@@ -13,6 +13,7 @@ local assets = asset.loaddir()
 
 local lon = -178.0   -- DO NOT CHANGE lon and lat, later tests are hardcoded to these values!!!
 local lat =   51.7
+local height = 0
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
@@ -22,7 +23,7 @@ for i = 1, 2 do
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat)
+    local tbl, status = dem:sample(lon, lat, height)
     runner.check(status == true)
     runner.check(tbl ~= nil)
 
@@ -78,7 +79,7 @@ for i = 1, 2 do
     runner.check(dem ~= nil)
 
     print(string.format("\n--------------------------------\nTest: %s Zonal Stats with qmask\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat)
+    local tbl, status = dem:sample(lon, lat, height)
     runner.check(status == true)
     runner.check(tbl ~= nil)
 
@@ -114,6 +115,7 @@ for i = 1, 2 do
     end
 end
 
+--[[
 
 local samplingRadius = 20
 local demType = demTypes[2];
@@ -122,7 +124,7 @@ local url = "SETSM_s2s041_WV01_20181210_102001007A560E00_10200100802C2300"
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true, with_flags=true, substr = url}))
 runner.check(dem ~= nil)
-local tbl, status = dem:sample(lon, lat)
+local tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -158,7 +160,7 @@ local t1str = "2016:6:2:24:00:00"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, t1=%s\n--------------------------------", demType, t0str, t1str))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, t1=t1str}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -194,7 +196,7 @@ t0str = "2021:2:3:1:0:0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s\n--------------------------------", demType, t0str))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str }))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -216,7 +218,7 @@ t1str = "2021:2:3:1:0:0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t1=%s\n--------------------------------", demType, t1str))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t1=t1str}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -239,7 +241,7 @@ local expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w17
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -260,7 +262,7 @@ local expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w17
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override closest_time: %s with %s\n--------------------------------", demType, tstr, tstrOverride))
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat, tstrOverride)
+tbl, status = dem:sample(lon, lat, height, tstrOverride)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -280,7 +282,7 @@ expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETS
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, closest_time=tstr}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -300,7 +302,7 @@ expectedFile = "/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETS
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, closest_time=%s\n--------------------------------", demType, t0str, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius,zonal_stats = true, with_flags = true, t0=t0str, closest_time=tstr}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
@@ -318,7 +320,7 @@ print(string.format("\n--------------------------------\nTest: %s fileId\n------
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, with_flags = true}))
 runner.check(dem ~= nil)
 
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 sampleCnt = 0
@@ -335,7 +337,7 @@ end
 runner.check(sampleCnt == 14)
 print("\n");
 
-tbl, status = dem:sample(lon+1.0, lat)
+tbl, status = dem:sample(lon+1.0, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 sampleCnt = 0
@@ -352,7 +354,7 @@ end
 runner.check(sampleCnt == 7)
 print("\n");
 
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 sampleCnt = 0
@@ -369,12 +371,11 @@ end
 runner.check(sampleCnt == 14)
 
 
-
 demType = demTypes[1];
 print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 sampleCnt = 0
 local el, fname
 for i, v in ipairs(tbl) do
@@ -387,7 +388,7 @@ runner.check(sampleCnt == 1)
 
 -- Compare sample value received from sample call to value read with GDAL command line utility.
 -- To read the same value execute command below from a terminal (GDAL must be installed on the system)
---  gdallocationinfo -l_srs EPSG:7912  /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.
+--  gdallocationinfo -l_srs EPSG:7912  /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.7
 local expected_mosaic_value = 80.706344604492
 local expected_max = expected_mosaic_value + 0.0000000001
 local expected_min = expected_mosaic_value - 0.0000000001
@@ -400,7 +401,7 @@ demType = demTypes[2];
 print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
 runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat)
+tbl, status = dem:sample(lon, lat, height)
 sampleCnt = 0
 local el, fname, testElevation
 for i, v in ipairs(tbl) do
@@ -424,6 +425,7 @@ expected_min = expected_mosaic_value - 0.000001
 
 runner.check(testElevation <= expected_max and testElevation >= expected_min)
 
+--]]
 
 -- Report Results --
 

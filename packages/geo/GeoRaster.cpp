@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <string>
 #include "OsApi.h"
 #include "core.h"
 #include "GeoRaster.h"
@@ -72,7 +73,7 @@ const char* GeoRaster::SAMPLES_RASTER_TAG = "Dem";
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, int64_t gps, List<sample_t>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
 
@@ -82,7 +83,7 @@ void GeoRaster::getSamples(double lon, double lat, int64_t gps, List<sample_t>& 
         slist.clear();
 
         /* Get samples, if none found, return */
-        if(sample(lon, lat, gps) == 0)
+        if(sample(lon, lat, height, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -182,6 +183,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
+    dataIsElevation = false;
 
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -357,16 +359,22 @@ void GeoRaster::processRaster(Raster* raster)
             createTransform(raster->cord, raster->dset);
         }
 
-        /* If point has not been projected yet, do it now */
+        /* If point has not been projected by geoIndexTransform, do it now */
         OGRSpatialReference *psref = raster->point.getSpatialReference();
-        if((psref == NULL) || !psref->IsProjected())
+        if(psref == NULL)
         {
-            mlog(DEBUG, "Before transform: (%lf, %lf)", raster->point.getX(), raster->point.getY());
+            double z0 = raster->point.getZ();
+            mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
 
             if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", raster->point.getX(), raster->point.getY());
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
 
-            mlog(DEBUG, "After  transform: (%lf, %lf)", raster->point.getX(), raster->point.getY());
+            mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
+            raster->verticalShift = z0 - raster->point.getZ();
+        }
+        else
+        {
+            raster->verticalShift = geoIndex.verticalShift;
         }
 
         /*
@@ -463,7 +471,7 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat, int64_t gps)
+int GeoRaster::sample(double lon, double lat, double height, int64_t gps)
 {
     invalidateCache();
 
@@ -471,8 +479,10 @@ int GeoRaster::sample(double lon, double lat, int64_t gps)
     if (geoIndex.dset == NULL)
         openGeoIndex(lon, lat);
 
-    OGRPoint p(lon, lat);
+    OGRPoint p(lon, lat, height);
+    mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", p.getX(), p.getY(), p.getZ());
     transformToIndexCRS(p);
+    mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", p.getX(), p.getY(), p.getZ());
 
     /* If point is not in current geoindex, find a new one */
     if (!geoIndex.containsPoint(p))
@@ -617,6 +627,11 @@ void GeoRaster::readPixel(Raster *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
+        if(nodataCheck(raster) && dataIsElevation)
+        {
+            raster->sample.value += raster->verticalShift;
+        }
+
         // mlog(DEBUG, "Value: %.2lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
         //      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
     }
@@ -667,6 +682,17 @@ void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
 
 
 /*----------------------------------------------------------------------------
+ * setCRSfromWkt
+ *----------------------------------------------------------------------------*/
+void GeoRaster::setCRSfromWkt(OGRSpatialReference& sref, const std::string& wkt)
+{
+    // mlog(DEBUG, "%s", wkt.c_str());
+    OGRErr ogrerr = sref.importFromWkt(wkt.c_str());
+    CHECK_GDALERR(ogrerr);
+}
+
+
+/*----------------------------------------------------------------------------
  * transformToIndexCRS
  *----------------------------------------------------------------------------*/
 void GeoRaster::transformToIndexCRS(OGRPoint &p)
@@ -674,7 +700,12 @@ void GeoRaster::transformToIndexCRS(OGRPoint &p)
     /* Vector index files do not have transforms */
     if (geoIndex.cord.transf == NULL) return;
 
-    if (p.transform(geoIndex.cord.transf) == OGRERR_NONE) return;
+    double z0 = p.getZ();
+    if (p.transform(geoIndex.cord.transf) == OGRERR_NONE)
+    {
+        geoIndex.verticalShift = z0 - p.getZ();
+        return;
+    }
 
     throw RunTimeException(DEBUG, RTE_ERROR, "Coordinates Transform failed");
 }
@@ -729,6 +760,7 @@ void GeoRaster::GeoIndex::clear(bool close)
     rows = 0;
     cols = 0;
     cellSize = 0;
+    verticalShift = 0;
     bzero(&bbox, sizeof(bbox_t));
 }
 
@@ -792,19 +824,26 @@ void GeoRaster::resamplePixel(Raster *raster)
         args.eResampleAlg = parms->sampling_algo;
         double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
+        double verticalShift = 0;
         bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
         if (validWindow)
         {
             readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+            verticalShift = raster->verticalShift;
         }
         else
         {
             validWindow = readGeoIndexData(&raster->point, windowSize, offset, rbuf, 1, &args);
+            verticalShift = geoIndex.verticalShift;
         }
 
         if(validWindow)
         {
             raster->sample.value = rbuf[0];
+            if(nodataCheck(raster) && dataIsElevation)
+            {
+                raster->sample.value += verticalShift;
+            }
         }
         else
         {
@@ -843,15 +882,18 @@ void GeoRaster::computeZonalStats(Raster *raster)
         samplesArray = new double[windowSize*windowSize];
         CHECKPTR(samplesArray);
 
+        double verticalShift = 0;
         double noDataValue = raster->band->GetNoDataValue();
         bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
         if (validWindow)
         {
             readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            verticalShift = raster->verticalShift;
         }
         else
         {
             validWindow = readGeoIndexData(&raster->point, windowSize, radiusInPixels, samplesArray, windowSize, &args);
+            verticalShift = geoIndex.verticalShift;
         }
 
         if(validWindow)
@@ -875,6 +917,9 @@ void GeoRaster::computeZonalStats(Raster *raster)
                 {
                     double value = samplesArray[y*windowSize + x];
                     if (value == noDataValue) continue;
+
+                    if(dataIsElevation)
+                        value += verticalShift;
 
                     double x2 = x + _col;  /* Current pixel in buffer */
                     double y2 = y + _row;
@@ -950,6 +995,27 @@ void GeoRaster::computeZonalStats(Raster *raster)
 
 
 /*----------------------------------------------------------------------------
+ * nodataCheck
+ *----------------------------------------------------------------------------*/
+bool GeoRaster::nodataCheck(Raster* raster)
+{
+    /*
+     * Replace nodata with NAN
+     */
+    const double a = raster->band->GetNoDataValue();
+    const double b = raster->sample.value;
+    const double epsilon = 0.000001;
+
+    if(std::fabs(a-b) < epsilon)
+    {
+        raster->sample.value = std::nanf("");
+        return false;
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * removeOldestRasterGroup
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::removeOldestRasterGroup(void)
@@ -1021,6 +1087,7 @@ void GeoRaster::Raster::clear(bool close)
     gpsTime = 0;
     useTime = 0;
     point.empty();
+    verticalShift = 0;
     bzero(&sample, sizeof(sample_t));
 }
 

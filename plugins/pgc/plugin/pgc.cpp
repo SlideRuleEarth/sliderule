@@ -35,6 +35,7 @@
 
 #include "core.h"
 #include "pgc.h"
+#include "PgcWkt.h"
 
 /******************************************************************************
  * DEFINES
@@ -94,6 +95,8 @@ void initpgc(void)
     ArcticDemStripsRaster::init();
     RemaDemMosaicRaster::init();
     RemaDemStripsRaster::init();
+
+    parseWktFiles();
 
     /* Register Rasters */
     RasterObject::registerRaster(LUA_ARCTIC_DEM_MOSAIC_RASTER_NAME, ArcticDemMosaicRaster::create);

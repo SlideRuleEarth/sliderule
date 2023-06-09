@@ -25,6 +25,7 @@ f:close()
 
 local  lon = -179.0
 local  lat = 51.0
+local  height = 0
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test\n-------------------------------------------------"))
 
@@ -32,7 +33,7 @@ local demType = "landsat-hls"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"B03", "NDVI"}, catalog = contents }))
 
 for i = 1, 1, 1 do
-    local tbl, status = dem:sample(lon, lat)
+    local tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         print(string.format("======> FAILED to read", lon, lat))
     else

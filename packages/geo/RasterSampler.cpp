@@ -112,9 +112,10 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* lon_key     = getLuaString(L, 6);
         const char* lat_key     = getLuaString(L, 7);
         const char* time_key    = getLuaString(L, 8, true, NULL);
+        const char* height_key  = getLuaString(L, 9, true, NULL);
 
         /* Create Dispatch */
-        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, index_key, lon_key, lat_key, time_key));
+        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, index_key, lon_key, lat_key, time_key, height_key));
     }
     catch(const RunTimeException& e)
     {
@@ -153,7 +154,7 @@ void RasterSampler::deinit (void)
 RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* raster_key,
                               const char* outq_name, const char* rec_type,
                               const char* index_key, const char* lon_key, const char* lat_key,
-                              const char* time_key):
+                              const char* time_key, const char* height_key):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
 {
     assert(_raster);
@@ -199,6 +200,16 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
             mlog(CRITICAL, "Failed to get field %s from record type: %s", time_key, rec_type);
         }
     }
+
+    heightField.type = RecordObject::INVALID_FIELD;
+    if(height_key)
+    {
+        heightField = RecordObject::getDefinedField(rec_type, height_key);
+        if(heightField.type == RecordObject::INVALID_FIELD)
+        {
+            mlog(CRITICAL, "Failed to get field %s from record type: %s", height_key, rec_type);
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -240,6 +251,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
     RecordObject::field_t lon_field = lonField;
     RecordObject::field_t lat_field = latField;
     RecordObject::field_t time_field = timeField;
+    RecordObject::field_t height_field = heightField;
 
     /* Loop Through Each Record in Batch */
     for(int extent = 0; extent < num_extents; extent++)
@@ -265,19 +277,27 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
             gps = TimeLib::sysex2gpstime(time_val);
         }
 
+        /* Get Height */
+        double height_val = 0.0;
+        if(height_field.type != RecordObject::INVALID_FIELD)
+        {
+            height_val = record->getValueReal(height_field);
+            height_field.offset += (recordSizeBytes * 8);
+        }
+
         /* Sample Raster */
         List<RasterObject::sample_t> slist;
         int num_samples = 0;
         try
         {
-            raster->getSamples(lon_val, lat_val, gps, slist);
+            raster->getSamples(lon_val, lat_val, height_val, gps, slist);
             num_samples = slist.length();
         }
         catch(const RunTimeException& e)
         {
             LuaEndpoint::generateExceptionStatus(RTE_ERROR, e.level(), outQ, NULL,
-                                                "Exception caught when sampling %s at %.3lf,%.3lf: %s",
-                                                rasterKey, lon_val, lat_val, e.what());
+                                                "Exception caught when sampling %s at %.3lf,%.3lf,%3lf: %s",
+                                                rasterKey, lon_val, lat_val, height_val, e.what());
         }
 
         if(raster->hasZonalStats())

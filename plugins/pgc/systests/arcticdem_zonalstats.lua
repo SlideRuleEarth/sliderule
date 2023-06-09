@@ -13,6 +13,7 @@ local assets = asset.loaddir()
 
 local  lon = 180.00
 local  lat = 66.34  -- Arctic Circle lat
+local  height = 0
 
 local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
 local demType = "arcticdem-mosaic"
@@ -22,7 +23,7 @@ for radius = 50, 100, 50
 do
     for i = 1, 8 do
         local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlgs[i], radius=radius, zonal_stats=true}))
-        local tbl, status = dem:sample(lon, lat)
+        local tbl, status = dem:sample(lon, lat, height)
         if status ~= true then
             print(string.format("======> FAILED to read",lon, lat))
         else
@@ -55,7 +56,7 @@ print(string.format("\n-------------------------------------------------\nTest %
 for radius = 50, 100, 50
 do
     local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlg, radius=radius, zonal_stats=true}))
-    local tbl, status = dem:sample(lon, lat)
+    local tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         print(string.format("======> FAILED to read",lon, lat))
     else

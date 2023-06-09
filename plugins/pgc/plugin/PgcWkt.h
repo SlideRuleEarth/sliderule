@@ -29,42 +29,19 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_strips_raster__
-#define __arcticdem_strips_raster__
+#ifndef __pgc_wkt__
+#define __pgc_wkt__
+
+#include <string>
 
 /******************************************************************************
- * INCLUDES
+ * EXPORTED FUNCTIONS
  ******************************************************************************/
 
-#include "PgcDemStripsRaster.h"
-#include "PgcWkt.h"
+const std::string& getArcticDemWkt2(void);
+const std::string& getRemaWkt2(void);
+void parseWktFiles(void);
 
-/******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
- ******************************************************************************/
+#endif  /* __pgc_wkt__ */
 
-class ArcticDemStripsRaster: public PgcDemStripsRaster
-{
-    public:
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemStripsRaster(L, _parms); }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, "arcticdem", "/n") {}
-
-        void overrideTargetCRS(OGRSpatialReference& target) override
-        { setCRSfromWkt(target, getArcticDemWkt2()); }
-};
-
-#endif  /* __arcticdem_strips_raster__ */

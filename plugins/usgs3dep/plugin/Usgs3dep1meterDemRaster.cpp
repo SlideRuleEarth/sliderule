@@ -75,6 +75,8 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
+
+    dataIsElevation = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -151,19 +153,18 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 
     /* Must be north */
     if(northFlag==0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected for continental USA", utm, northFlag?"N":"S");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected", utm, northFlag?"N":"S");
 
-    /*
-     * Continental USA UTM zones are 10N to 19N
-     * https://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system#/media/File:Utm-zones-USA.svg
-     */
-    const int minUTM = 10;
-    const int maxUTM = 19;
+    const int MIN_UTM = 1;
+    const int MAX_UTM = 60;
 
-    if(utm < minUTM || utm > maxUTM)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected for continental USA", utm, northFlag?"N":"S");
+    if(utm < MIN_UTM || utm > MAX_UTM)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
 
-    int epsg = 6339 + utm - minUTM;
+    const int NAVD88_HEIGHT_EPSG          = 5703;
+    const int NAD83_2011_UTM_ZONE_1N_EPSG = 6330;
+
+    const int epsg = NAD83_2011_UTM_ZONE_1N_EPSG + utm - 1;
     mlog(DEBUG, "New EPSG: %d", epsg);
 
     OGRSpatialReference horizontal;
@@ -171,7 +172,7 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 
     OGRErr ogrerr = horizontal.importFromEPSG(epsg);
     CHECK_GDALERR(ogrerr);
-    ogrerr = vertical.importFromEPSG(5703);     /* NAVD88 height, https://epsg.io/5703 */
+    ogrerr = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
     CHECK_GDALERR(ogrerr);
 
     ogrerr = target.SetCompoundCS("sliderule", &horizontal, &vertical);
