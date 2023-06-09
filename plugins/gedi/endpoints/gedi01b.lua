@@ -17,7 +17,8 @@ local args = {
     result_batch    = "gedi01brec.footprint",
     index_field     = "shot_number",
     lon_field       = "longitude",
-    lat_field       = "latitude"
+    lat_field       = "latitude",
+    height_field    = "elevation_start"
 }
 
 local rqst_parms    = gedi.parms(parms)

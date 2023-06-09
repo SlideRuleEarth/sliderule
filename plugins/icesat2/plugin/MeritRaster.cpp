@@ -117,8 +117,6 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
     (void)gps;
     (void)height;
 
-#warning FIX ME - what about height!!!
-
     /* Determine Upper Left Coordinates */
     int left_lon = ((int)floor(lon / 5.0)) * 5;
     int upper_lat = ((int)ceil(lat / 5.0)) * 5;
