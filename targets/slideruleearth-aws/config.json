@@ -6,6 +6,7 @@
     "authenticate_to_nsidc": true,
     "authenticate_to_ornldaac": true,
     "authenticate_to_lpdaac": true,
+    "authenticate_to_podaac": true,
     "register_as_service": true,
     "authenticate_to_ps": false
 }

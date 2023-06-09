@@ -1,6 +1,6 @@
-# ICESat-2 SlideRule Plugin top-level CMake build script
+# GEDI SlideRule Plugin top-level CMake build script
 
-project (ICESAT2 LANGUAGES CXX)
+project (GEDI LANGUAGES CXX)
 
 #################
 # CMake Options #
@@ -17,9 +17,9 @@ cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommend
 
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 
-###################
-# ICESat-2 Plugin #
-###################
+###############
+# GEDI Plugin #
+###############
 
 add_library (gedi MODULE "")
 

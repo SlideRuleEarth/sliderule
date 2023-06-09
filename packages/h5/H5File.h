@@ -69,7 +69,7 @@ class H5File: public LuaObject
 
         typedef struct {
             char        dataset[MAX_NAME_STR];
-            uint32_t    datatype; // RecordObject::valType_t
+            uint32_t    datatype; // RecordObject::fieldType_t
             uint32_t    elements; // number of values
             uint32_t    size; // total size in bytes
         } h5file_t;
