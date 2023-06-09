@@ -82,8 +82,14 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemStripsRaster.h
+    DESTINATION
+        ${INSTALLDIR}/include/sliderule/pgc
+)
+
+install (
+    FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ITRF2014_3031.wkt
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ITRF2014_3413.wkt
     DESTINATION
-        ${INSTALLDIR}/include/sliderule/pgc
+        ${CONFDIR}
 )

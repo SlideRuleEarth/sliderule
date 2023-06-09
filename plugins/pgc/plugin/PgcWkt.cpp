@@ -41,50 +41,48 @@
 #include "OsApi.h"
 
 
-#warning FIX ME ERIC!!!
-// const char* arcticWktFile = "/usr/local/include/sliderule/pgc/ITRF2014_3413.wkt";
-// const char* remaWktFile   = "/usr/local/include/sliderule/pgc/ITRF2014_3031.wkt";
-const char* arcticWktFile = "ITRF2014_3413.wkt";
-const char* remaWktFile   = "ITRF2014_3031.wkt";
+static std::string pgcArcticWkt2 = "";
+static std::string pgcRemaWkt2   = "";
 
-std::string arcticWkt2 = "NONE";
-std::string remaWkt2   = "NONE";
+static void loadWKtFile(std::string& str, const std::string& wktPath)
+{
+    print2term("%s\n", wktPath.c_str());
+    std::ifstream f(wktPath);
+    if(f)
+    {
+        std::ostringstream ss;
+        ss << f.rdbuf();
+        str = ss.str();
+    }
+}
+
 
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
 
+void parseWktFiles(void)
+{
+    const char* arcticWktFile = "ITRF2014_3413.wkt";
+    const char* remaWktFile   = "ITRF2014_3031.wkt";
+    std::stringstream ss;
+
+    ss << CONFDIR << PATH_DELIMETER << arcticWktFile;
+    loadWKtFile(pgcArcticWkt2, ss.str());
+
+    ss.str("");
+    ss << CONFDIR << PATH_DELIMETER << remaWktFile;
+    loadWKtFile(pgcRemaWkt2, ss.str());
+}
+
 const std::string& getArcticDemWkt2(void)
 {
-    return arcticWkt2;
+    return pgcArcticWkt2;
 }
 
 
 const std::string& getRemaWkt2(void)
 {
-    return remaWkt2;
+    return pgcRemaWkt2;
 }
 
-
-void parseWktFiles(void)
-{
-    {
-        std::ifstream f(arcticWktFile);
-        if(f)
-        {
-            std::ostringstream ss;
-            ss << f.rdbuf();
-            arcticWkt2 = ss.str();
-        }
-    }
-
-    {
-        std::ifstream f(remaWktFile);
-        if(f)
-        {
-            std::ostringstream ss;
-            ss << f.rdbuf();
-            remaWkt2 = ss.str();
-        }
-    }
-}
