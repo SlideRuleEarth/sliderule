@@ -11,7 +11,7 @@ if (LUA_FOUND AND READLINE_LIB)
     target_link_libraries (slideruleLib PUBLIC ${LUA_LIBRARIES})
     target_include_directories (slideruleLib PUBLIC ${LUA_INCLUDE_DIR})
 
-    target_link_libraries (slideruleLib PUBLIC readline)
+    target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 
     target_sources (slideruleLib
         PRIVATE
