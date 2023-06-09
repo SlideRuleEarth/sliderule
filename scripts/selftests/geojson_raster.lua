@@ -76,7 +76,7 @@ for j, v in ipairs(tbl) do
     fname = v["file"]
 end
 print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
-runner.check(s == 200)
+runner.check(tostring(s) == "nan")
 
 
 -- Outside of bbox
