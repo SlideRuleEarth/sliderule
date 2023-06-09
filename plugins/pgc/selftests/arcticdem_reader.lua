@@ -18,7 +18,6 @@ local height = 0
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
 for i = 1, 2 do
-
     local demType = demTypes[i];
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
     runner.check(dem ~= nil)
@@ -67,7 +66,6 @@ for i = 1, 2 do
     else
         runner.check(cellsize == 0.0)
     end
-
 end
 
 for i = 1, 2 do
@@ -134,7 +132,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.8f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) value: %6.8f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -167,7 +165,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -199,7 +197,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -221,7 +219,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -241,7 +239,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -262,7 +260,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -282,7 +280,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -302,7 +300,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -323,7 +321,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt)  -- getting back 14 unique strips, each with fileid 0 to 13
     sampleCnt = sampleCnt + 1
 end
@@ -340,7 +338,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt+14)  -- getting back 7 different strips, not previusly found, fileid 14 to 20
     sampleCnt = sampleCnt + 1
 end
@@ -357,88 +355,69 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt)  -- getting back the same 14 raster (from first sample call) fileid 0 to 13
     sampleCnt = sampleCnt + 1
 end
 runner.check(sampleCnt == 14)
 
 
-demType = demTypes[1];
-print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat, height)
-sampleCnt = 0
-local el, fname
-for i, v in ipairs(tbl) do
-    el = v["value"]
-    fname = v["file"]
-    print(string.format("(%02d) value: %6.8f   %s", i, el, fname))
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 1)
+-- Correct values test for different POIs
 
-local expected_mosaic_value = 80.71350098
-local expected_max = expected_mosaic_value + 0.00000001
-local expected_min = expected_mosaic_value - 0.00000001
+local lons = {-40, -40,   100,   150}
+local lats = { 70,  80,    70,    75}
+height = 0
 
-runner.check(el <= expected_max and el >= expected_min)
+local expResultsMosaic = {2969.2360839, 2154.9392089, 475.9624633, 19.8128376}
+local expResultsStrips = {2968.0156250, 2143.5781250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
 
+local expSamplesCnt = {8, 11, 4, 14}
 
+for i = 1, 2 do
+    local isMosaic = (i == 1)
 
-demType = demTypes[2];
-print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat, height)
-sampleCnt = 0
-local el, fname, testElevation
-for i, v in ipairs(tbl) do
-    el = v["value"]
-    fname = v["file"]
-    print(string.format("(%02d)  value: %6.2f   %s", i, el, fname))
-    sampleCnt = sampleCnt + 1
-    if sampleCnt == 2 then
-       testElevation = el
+    local demType = demTypes[i];
+    print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+
+    for j, lon in ipairs(lons) do
+        local sampleCnt = 0
+        lat = lats[j]
+        tbl, status = dem:sample(lon, lat, height)
+        if status ~= true then
+            print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
+        else
+            local el, fname
+            for k, v in ipairs(tbl) do
+                el = v["value"]
+                fname = v["file"]
+                print(string.format("(%02d) value: %16.7f   %s", k, el, fname))
+                sampleCnt = sampleCnt + 1
+
+                if k == 1 then -- Check all mosaics but only first strip for each POI
+                    if isMosaic then
+                        expected_value = expResultsMosaic[j]
+                    else
+                        expected_value = expResultsStrips[j]
+                    end
+                    -- print(string.format("(%02d) value: %16.7f  exp: %16.7f", k, el, expected_value))
+                    expected_max = expected_value + 0.0000001
+                    expected_min = expected_value - 0.0000001
+                    runner.check(el <= expected_max and el >= expected_min)
+                end
+            end
+        end
+
+        if isMosaic == true then
+            expectedSamplesCnt = 1
+        else
+            expectedSamplesCnt = expSamplesCnt[j]
+            print("\n")
+        end
+        -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
+        runner.check(sampleCnt == expectedSamplesCnt)
     end
 end
-runner.check(sampleCnt == 14)
-
-expected_mosaic_value = 632.90625000
-expected_max = expected_mosaic_value + 0.00000001
-expected_min = expected_mosaic_value - 0.00000001
-
-runner.check(testElevation <= expected_max and testElevation >= expected_min)
-
-
--- Tests requested by Dave
-
---[[
-demType = demTypes[1];
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-runner.check(dem ~= nil)
-lon = 179
-lat = 89
-height = 0
-tbl, status = dem:sample(lon, lat, height)
-sampleCnt = 0
-local el, fname
-for i, v in ipairs(tbl) do
-    el = v["value"]
-    fname = v["file"]
-    print(string.format("(%02d) value: %6.8f   %s", i, el, fname))
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 1)
-
-expected_mosaic_value = 80.71350098
-expected_max = expected_mosaic_value + 0.00000001
-expected_min = expected_mosaic_value - 0.00000001
-runner.check(el <= expected_max and el >= expected_min)
---]]
-
-
 
 -- Report Results --
 

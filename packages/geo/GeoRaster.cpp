@@ -183,7 +183,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     rasterRreader = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
-    dataIsElevation = false;
+    forceNotElevation = false;
 
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -627,7 +627,7 @@ void GeoRaster::readPixel(Raster *raster)
         /* Done reading, release block lock */
         block->DropLock();
 
-        if(nodataCheck(raster) && dataIsElevation)
+        if(nodataCheck(raster) && raster->dataIsElevation)
         {
             raster->sample.value += raster->verticalShift;
         }
@@ -840,7 +840,7 @@ void GeoRaster::resamplePixel(Raster *raster)
         if(validWindow)
         {
             raster->sample.value = rbuf[0];
-            if(nodataCheck(raster) && dataIsElevation)
+            if(nodataCheck(raster) && raster->dataIsElevation)
             {
                 raster->sample.value += verticalShift;
             }
@@ -918,7 +918,7 @@ void GeoRaster::computeZonalStats(Raster *raster)
                     double value = samplesArray[y*windowSize + x];
                     if (value == noDataValue) continue;
 
-                    if(dataIsElevation)
+                    if(raster->dataIsElevation)
                         value += verticalShift;
 
                     double x2 = x + _col;  /* Current pixel in buffer */
@@ -1074,6 +1074,7 @@ void GeoRaster::Raster::clear(bool close)
     groupId.clear();
     enabled = false;
     sampled = false;
+    dataIsElevation = false;
     fileName.clear();
     dataType = GDT_Unknown;
 
@@ -1143,6 +1144,10 @@ void GeoRaster::updateCache(OGRPoint& p)
                 assert(raster);
                 raster->fileName = key;
                 raster->gpsTime  = static_cast<double>(rinfo.gpsTime / 1000);
+                if(forceNotElevation)
+                    raster->dataIsElevation = false;
+                else
+                    raster->dataIsElevation = !rinfo.tag.compare(SAMPLES_RASTER_TAG);
             }
 
             raster->groupId      = groupId;
