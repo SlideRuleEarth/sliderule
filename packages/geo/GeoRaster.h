@@ -159,6 +159,7 @@ class GeoRaster: public RasterObject
         public:
             bool            enabled;
             bool            sampled;
+            bool            dataIsElevation;
             GDALDataset*    dset;
             GDALRasterBand* band;
             CoordTransform  cord;
@@ -247,7 +248,7 @@ class GeoRaster: public RasterObject
         GeoIndex                    geoIndex;
         Dictionary<Raster*>         rasterDict;
         Mutex                       samplingMutex;
-        bool                        dataIsElevation;
+        bool                        forceNotElevation;
 
     private:
 

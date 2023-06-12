@@ -18,7 +18,6 @@ local height = 0
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
 for i = 1, 2 do
-
     local demType = demTypes[i];
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
     runner.check(dem ~= nil)
@@ -32,7 +31,7 @@ for i = 1, 2 do
     for j, v in ipairs(tbl) do
         local el = v["value"]
         local fname = v["file"]
-        print(string.format("(%02d) %8.2f %s", j, el, fname))
+        print(string.format("(%02d) %8.2fm  %s", j, el, fname))
         runner.check(el ~= -1000000)  --INVALID_SAMPLE_VALUE from VrtRaster.h
         runner.check(string.len(fname) > 0)
         sampleCnt = sampleCnt + 1
@@ -67,7 +66,6 @@ for i = 1, 2 do
     else
         runner.check(cellsize == 0.0)
     end
-
 end
 
 for i = 1, 2 do
@@ -98,7 +96,7 @@ for i = 1, 2 do
         flags = v["flags"]
 
         if el ~= -9999.0 then
-            print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x   min: %6.2f   max: %6.2f   mean: %6.2f   median: %6.2f   stdev: %6.2f   mad: %6.2f", j, el, cnt, flags, min, max, mean, median, stdev, mad))
+            print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x   min: %6.2f   max: %6.2f   mean: %6.2f   median: %6.2f   stdev: %6.2f   mad: %6.2f", j, el, cnt, flags, min, max, mean, median, stdev, mad))
             runner.check(el ~= 0.0)
             runner.check(min <= el)
             runner.check(max >= el)
@@ -115,7 +113,6 @@ for i = 1, 2 do
     end
 end
 
---[[
 
 local samplingRadius = 20
 local demType = demTypes[2];
@@ -135,7 +132,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.8f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) value: %6.8f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -143,12 +140,10 @@ for i, v in ipairs(tbl) do
     --Only one strip should be sampled with the url filter
     runner.check(flags == 4)    -- Qualit mask for this strip/sample, 4 means cloud
     runner.check(cnt == 317)    -- Valid samples used in calculating zonal stats
-    -- runner.check(el > 452.4843 and el < 452.4850 )  -- Valid samples used in calculating zonal stats, worked with SLIDERULE EPSG:7665 but not with 7912
-    runner.check(el > 449.6562 and el < 449.6563)  -- Valid samples used in calculating zonal stats  (changed with new sliderule EPSG:7912)
+    runner.check(el > 452.4843 and el < 452.4850 )
 end
 
 runner.check(sampleCnt == 1)  -- Only one sample/strip returned
-
 
 
 
@@ -170,7 +165,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -178,15 +173,11 @@ for i, v in ipairs(tbl) do
     if i == 1 then
         runner.check(flags == 4) -- Qualit mask for this strip/sample, 4 means cloud
         runner.check(cnt == 317) -- Valid samples used in calculating zonal stats
-        -- runner.check(el > 773.03 and el < 773.04) -- Valid samples used in calculating zonal stats , worked with SLIDERULE EPSG:7665 but not with 7912
-
-        runner.check(el > 772.81 and el < 772.84) -- Valid samples used in calculating zonal stats
+        runner.check(el > 773.03 and el < 773.04)
     else
         runner.check(flags == 0) -- Qualit mask for this strip/sample, 4 means cloud
         runner.check(cnt == 317) -- Valid samples used in calculating zonal stats
-        -- runner.check(el > 80.2264 and el < 80.2266) -- Valid samples used in calculating zonal stats, worked with SLIDERULE EPSG:7665 but not with 7912
-
-        runner.check(el > 80.38 and el < 80.39) -- Valid samples used in calculating zonal stats
+        runner.check(el > 80.2264 and el < 80.2266)
     end
 end
 runner.check(sampleCnt == 2)
@@ -206,7 +197,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -228,7 +219,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x fname: %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -248,7 +239,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -269,7 +260,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -289,7 +280,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -309,7 +300,7 @@ runner.check(tbl ~= nil)
 sampleCnt = 0
 for i, v in ipairs(tbl) do
     local fname = v["file"]
-    print(string.format("(%02d) fname: %s", i, fname))
+    print(string.format("(%02d) %s", i, fname))
     runner.check( expectedFile == fname )
     sampleCnt = sampleCnt + 1
 end
@@ -330,7 +321,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) %6.2fm   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt)  -- getting back 14 unique strips, each with fileid 0 to 13
     sampleCnt = sampleCnt + 1
 end
@@ -347,7 +338,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) %6.2fm   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt+14)  -- getting back 7 different strips, not previusly found, fileid 14 to 20
     sampleCnt = sampleCnt + 1
 end
@@ -364,68 +355,69 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  fname: %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) %6.2fm   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt)  -- getting back the same 14 raster (from first sample call) fileid 0 to 13
     sampleCnt = sampleCnt + 1
 end
 runner.check(sampleCnt == 14)
 
 
-demType = demTypes[1];
-print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat, height)
-sampleCnt = 0
-local el, fname
-for i, v in ipairs(tbl) do
-    el = v["value"]
-    fname = v["file"]
-    print(string.format("(%02d) value: %6.2f   %s", i, el, fname))
-    sampleCnt = sampleCnt + 1
-end
-runner.check(sampleCnt == 1)
+-- Correct values test for different POIs
 
--- Compare sample value received from sample call to value read with GDAL command line utility.
--- To read the same value execute command below from a terminal (GDAL must be installed on the system)
---  gdallocationinfo -l_srs EPSG:7912  /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt -178.0 51.7
-local expected_mosaic_value = 80.706344604492
-local expected_max = expected_mosaic_value + 0.0000000001
-local expected_min = expected_mosaic_value - 0.0000000001
+local lons = {-178.0, -40, -40,   100,   150}
+local lats = {  51.7,  70,  80,    70,    75}
+height = 0
 
-runner.check(el <= expected_max and el >= expected_min)
+local expResultsMosaic = { 80.7135010,  2969.2360839, 2154.9392089, 475.9624633, 19.8128376}
+local expResultsStrips = {452.4843750,  2968.0156250, 2143.5781250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
 
+local expSamplesCnt = {14, 8, 11, 4, 14}
 
+for i = 1, 2 do
+    local isMosaic = (i == 1)
 
-demType = demTypes[2];
-print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-runner.check(dem ~= nil)
-tbl, status = dem:sample(lon, lat, height)
-sampleCnt = 0
-local el, fname, testElevation
-for i, v in ipairs(tbl) do
-    el = v["value"]
-    fname = v["file"]
-    print(string.format("(%02d)  value: %6.2f   %s", i, el, fname))
-    sampleCnt = sampleCnt + 1
-    if sampleCnt == 2 then
-       testElevation = el
+    local demType = demTypes[i];
+    print(string.format("\n--------------------------------\nTest: %s Reading Correct Values\n--------------------------------", demType))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+
+    for j, lon in ipairs(lons) do
+        local sampleCnt = 0
+        lat = lats[j]
+        tbl, status = dem:sample(lon, lat, height)
+        if status ~= true then
+            print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
+        else
+            local el, fname
+            for k, v in ipairs(tbl) do
+                el = v["value"]
+                fname = v["file"]
+                print(string.format("(%02d)   (%6.1f, %5.1f) %16.7fm   %s", k, lon, lat, el, fname))
+                sampleCnt = sampleCnt + 1
+
+                if k == 1 then -- Check all mosaics but only first strip for each POI
+                    if isMosaic then
+                        expected_value = expResultsMosaic[j]
+                    else
+                        expected_value = expResultsStrips[j]
+                    end
+                    -- print(string.format("(%02d) value: %16.7f  exp: %16.7f", k, el, expected_value))
+                    expected_max = expected_value + 0.0000001
+                    expected_min = expected_value - 0.0000001
+                    runner.check(el <= expected_max and el >= expected_min)
+                end
+            end
+        end
+
+        if isMosaic == true then
+            expectedSamplesCnt = 1
+        else
+            expectedSamplesCnt = expSamplesCnt[j]
+            print("\n")
+        end
+        -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
+        runner.check(sampleCnt == expectedSamplesCnt)
     end
 end
-runner.check(sampleCnt == 14)
-
--- Compare sample value received from sample call to value read with GDAL command line utility.
--- To read the same value execute command below from a terminal (GDAL must be installed on the system)
--- gdallocationinfo -l_srs EPSG:7912 /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20200222_1020010099A56800_1020010095159800_2m_lsf_seg1_dem.tif -178.0 51.7
-
-expected_mosaic_value = 633.742187
-expected_max = expected_mosaic_value + 0.000001
-expected_min = expected_mosaic_value - 0.000001
-
-runner.check(testElevation <= expected_max and testElevation >= expected_min)
-
---]]
 
 -- Report Results --
 

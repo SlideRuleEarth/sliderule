@@ -47,7 +47,6 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
     VctRaster(L, _parms),
     demName(dem_name)
 {
-    dataIsElevation = true;
     path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
     std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
