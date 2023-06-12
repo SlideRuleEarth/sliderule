@@ -408,7 +408,6 @@ void* SwotL2Reader::geoThread (void* parm)
 {
     /* Get Thread Info */
     SwotL2Reader* reader = (SwotL2Reader*)parm;
-    SwotParms* parms = reader->parms;
 
     /* Calculate Total Size of Record Data */
     int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
@@ -453,7 +452,6 @@ void* SwotL2Reader::varThread (void* parm)
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
     SwotL2Reader* reader = (SwotL2Reader*)info->reader;
-    SwotParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Initialize Results */

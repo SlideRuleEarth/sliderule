@@ -42,6 +42,10 @@ set (CONFDIR ${INSTALLDIR}/etc/sliderule)
 
 # Compile Definitions #
 target_compile_definitions (landsat PUBLIC BINID="${TGTVER}")
+target_compile_options (landsat PUBLIC -Wall) # turn on "all" warnings
+target_compile_options (landsat PUBLIC -Wextra) # turn on "extra" warnings
+target_compile_options (landsat PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
+target_compile_options (landsat PUBLIC -Wshadow) # turn on warning for inner scope var with same name as outer scope var
 if(ENABLE_ADDRESS_SANITIZER)
 	target_compile_options (landsat PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif()

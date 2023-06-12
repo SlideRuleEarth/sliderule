@@ -126,7 +126,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     /* If user specified only algortithm(s), add needed bands to dictionary of bands */
     if(ndsi || ndvi || ndwi)
     {
-        for (int i=0; i<ALGO_bandCnt; i++)
+        for (unsigned i=0; i<ALGO_bandCnt; i++)
         {
             const char* band = ALGO_bands[i];
             if(!bandsDict.find(band, &returnBandSample))
@@ -154,6 +154,8 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
+    (void)lon;
+    (void)lat;
     // file = "/data/hls/hls_trimmed.geojson";
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
