@@ -119,7 +119,8 @@ PYBIND11_MODULE(srpybin, m)
 
         .def(py::init<const std::string &,      // _asset
                       const std::string &,      // _resource
-                      const std::string &,      // format
+                      const std::string &,      // identity
+                      const std::string &,      // driver
                       const std::string &,      // path
                       const std::string &,      // region
                       const std::string &>())   // endpoint

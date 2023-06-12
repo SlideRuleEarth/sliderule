@@ -8,9 +8,9 @@ Version description of the v3.5.0 release of ICESat-2 SlideRule.  This document 
 
 * __3DEP Plugin [Feature Preview]__: Support for sampling the 3DEP 1m DEM rasters has been added, along with an update to the Python client to query the USGS TNM catalog.  See examples in the sliderule-python repo for more details at this time.
 
-- __Node.js Client [Feature Preview]__: The SlideRule team is now supporting a client in a second language: javascript.  This will ultimately support a future web-client development.  The current client only supports generic requests and returns data as a list of objects.
+* __Node.js Client [Feature Preview]__: The SlideRule team is now supporting a client in a second language: javascript.  This will ultimately support a future web-client development.  The current client only supports generic requests and returns data as a list of objects.
 
-- __SWOT Plugin [Feature Preview]__: Support added for subsetting the simulated L2 datasets provided by the SWOT project to the PODAAC.  A `swot.py` module in the Python client has also been added.
+* __SWOT Plugin [Feature Preview]__: Support added for subsetting the simulated L2 datasets provided by the SWOT project to the PODAAC.  A `swot.py` module in the Python client has also been added.
 
 ## Development Updates
 
