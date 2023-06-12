@@ -43,7 +43,7 @@
 #include "ccsds.h"
 #endif
 
-#ifdef __h5__
+#ifdef __geo__
 #include "geo.h"
 #endif
 
