@@ -1,6 +1,6 @@
 #
 # Notes:
-# 1. There is an issue loading a plugin from the python module initialization; which means in order to get any plugin functionality, the plugin
+#    There is an issue loading a plugin from the python module initialization; which means in order to get any plugin functionality, the plugin
 # 	 has to be linked to the python module.  This creates a chicken-and-egg problem where the plugin needs to binding core library in order to build,
 #	 and the bindings core library needs the plugin to build.  The _temporary_ workaround for this is to prebuild the core library and plugin, using
 #	 the server build of the core library, and then build the bindings and link against it.
@@ -60,9 +60,9 @@ config: prep ## configure make for python bindings (using system environent)
 	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
 
 config-conda: prep ## configure make for python bindings (using conda environment)
-	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
+	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(SLIDERULECFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+#	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
 
 bindings: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)

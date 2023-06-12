@@ -360,7 +360,7 @@ void GeoRaster::processRaster(Raster* raster)
         }
 
         /* If point has not been projected by geoIndexTransform, do it now */
-        OGRSpatialReference *psref = raster->point.getSpatialReference();
+        const OGRSpatialReference *psref = raster->point.getSpatialReference();
         if(psref == NULL)
         {
             double z0 = raster->point.getZ();

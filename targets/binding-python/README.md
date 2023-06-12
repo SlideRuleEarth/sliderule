@@ -53,7 +53,7 @@ sudo apt install liblua5.3-dev
 
 4. Install the necessary libraries (note that this list may be incomplete or conflict with dependencies in your current environment).
 ```bash
-conda install -c conda-forge readline lua openssl r-uuid libcurl Zlib gdal pybind11
+conda install -c conda-forge openssl r-uuid libcurl Zlib gdal pybind11
 ```
 
 ### Build
