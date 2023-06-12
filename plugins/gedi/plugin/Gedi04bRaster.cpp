@@ -52,8 +52,8 @@ void Gedi04bRaster::init(void)
  * create
  *----------------------------------------------------------------------------*/
 RasterObject* Gedi04bRaster::create(lua_State* L, GeoParms* _parms)
-{ 
-    return new Gedi04bRaster(L, _parms); 
+{
+    return new Gedi04bRaster(L, _parms);
 }
 
 /*----------------------------------------------------------------------------
@@ -74,7 +74,7 @@ Gedi04bRaster::Gedi04bRaster(lua_State *L, GeoParms* _parms):
     VrtRaster(L, _parms, std::string("/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt").c_str())
 {
     /* Initialize Date */
-    TimeLib::gmt_time_t gmtDate = {
+    gmtDate = {
         .year = 2021,
         .doy = 216,
         .hour = 0,

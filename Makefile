@@ -60,29 +60,6 @@ uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(SLIDERULE_BUILD)/install_manifest.txt
 
 ########################
-# Python Binding Targets
-########################
-
-PYTHONCFG  = -DPYTHON_BINDINGS=ON
-PYTHONCFG += -DUSE_H5_PACKAGE=ON
-PYTHONCFG += -DUSE_AWS_PACKAGE=ON
-PYTHONCFG += -DUSE_LEGACY_PACKAGE=ON
-PYTHONCFG += -DUSE_CCSDS_PACKAGE=ON
-PYTHONCFG += -DUSE_GEO_PACKAGE=ON
-PYTHONCFG += -DUSE_NETSVC_PACKAGE=ON
-PYTHONCFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
-PYTHONCFG += -DH5CORO_THREAD_POOL_SIZE=0
-PYTHONCFG += -DH5CORO_MAXIMUM_NAME_SIZE=192
-PYTHONCFG += -DICESAT2_PLUGIN_LIBPATH=/usr/local/etc/sliderule/icesat2.so
-PYTHONCFG += -DICESAT2_PLUGIN_INCPATH=/usr/local/include/sliderule/icesat2
-
-config-python: prep ## configure make for python bindings (using system environent)
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) $(ROOT)
-
-config-python-conda: prep ## configure make for python bindings (using conda environment)
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) $(ROOT)
-
-########################
 # Shared Library Targets
 ########################
 

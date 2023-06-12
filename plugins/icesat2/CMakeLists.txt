@@ -42,6 +42,10 @@ set (CONFDIR ${INSTALLDIR}/etc/sliderule)
 
 # Compile Definitions #
 target_compile_definitions (icesat2 PUBLIC BINID="${TGTVER}")
+target_compile_options (icesat2 PUBLIC -Wall) # turn on "all" warnings
+target_compile_options (icesat2 PUBLIC -Wextra) # turn on "extra" warnings
+target_compile_options (icesat2 PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
+target_compile_options (icesat2 PUBLIC -Wshadow) # turn on warning for inner scope var with same name as outer scope var
 if(ENABLE_ADDRESS_SANITIZER)
 	target_compile_options (icesat2 PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 endif()

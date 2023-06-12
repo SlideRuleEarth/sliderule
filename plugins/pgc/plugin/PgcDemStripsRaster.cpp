@@ -176,10 +176,10 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 flagsRinfo.fileName = fileName;
 
                 double gps = 0;
-                for(int i=0; i<DATES_CNT; i++)
+                for(int j=0; j<DATES_CNT; j++)
                 {
                     TimeLib::gmt_time_t gmt;
-                    gps += getGmtDate(feature, dates[i], gmt);
+                    gps += getGmtDate(feature, dates[j], gmt);
                 }
 
                 gps = gps/DATES_CNT;

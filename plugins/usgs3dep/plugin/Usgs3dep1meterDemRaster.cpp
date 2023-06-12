@@ -82,6 +82,8 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double lat)
 {
+    (void)lon;
+    (void)lat;
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
