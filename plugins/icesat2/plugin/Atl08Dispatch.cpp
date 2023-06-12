@@ -188,7 +188,6 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
     (void)key;
 
     vegetation_t result[Icesat2Parms::NUM_PAIR_TRACKS];
-    waveform_t* waveform[Icesat2Parms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Clear Results */

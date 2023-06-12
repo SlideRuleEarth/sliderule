@@ -128,6 +128,7 @@ PluginMetrics::region_t central_america = {
         {-104.58984375, 32.69486597787505},
         {-120.9375, 34.59704151614417}
      },
+     .points = {{0,0}},
     .num_points = 8
 };
 

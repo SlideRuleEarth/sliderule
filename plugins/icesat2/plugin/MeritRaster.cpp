@@ -87,10 +87,10 @@ MeritRaster::~MeritRaster(void)
  *----------------------------------------------------------------------------*/
 MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
     RasterObject(L, _parms),
-    asset(NULL),
     cacheLat(0),
     cacheLon(0),
-    cache(NULL)
+    cache(NULL),
+    asset(NULL)
 {
     /* Initialize Time */
     TimeLib::gmt_time_t gmt_date = {
@@ -195,9 +195,18 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
             .value = value,
             .time = ((double)gpsTime / (double)1000.0),
             .fileId = 0,
-            .flags = 0
+            .flags = 0,
+            .stats = {
+                .count = 0,
+                .min = 0,
+                .max = 0,
+                .mean = 0,
+                .median = 0,
+                .stdev = 0,
+                .mad = 0
+            }
         };
-        memset(&sample.stats, 0, sizeof(sample.stats));
+//        memset(&sample.stats, 0, sizeof(sample.stats));
 
         /* Return Sample */
         slist.add(sample);

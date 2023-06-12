@@ -217,7 +217,10 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
     elevationIndex = 0;
 
     /* Initialize Statistics */
-    memset(&stats, 0, sizeof(stats));
+    stats.h5atl03_rec_cnt = 0;
+    stats.filtered_cnt = 0;
+    stats.post_success_cnt = 0;
+    stats.post_dropped_cnt = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -640,7 +643,13 @@ int Atl06Dispatch::luaStats (lua_State* L)
         LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.post_dropped_cnt);
 
         /* Optionally Clear */
-        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear)
+        {
+            lua_obj->stats.h5atl03_rec_cnt = 0;
+            lua_obj->stats.filtered_cnt = 0;
+            lua_obj->stats.post_success_cnt = 0;
+            lua_obj->stats.post_dropped_cnt = 0;
+        }
 
         /* Set Success */
         status = true;
