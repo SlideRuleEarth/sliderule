@@ -255,7 +255,7 @@ cluster-tag: ## create version tag in this repository and release it on GitHub
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
-	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/rtd/release_notes/release_notes.html"
+	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/release_notes/release_notes.html"
 	make -C $(ROOT)/clients/nodejs publish
 
 cluster-release: ## release a version of the cluster; needs VERSION
