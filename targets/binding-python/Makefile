@@ -14,7 +14,7 @@ BUILDENV_SOURCE_DIR = $(ROOT)/targets/slideruleearth-aws
 BINDINGS_BUILD_DIR = $(BUILD)/srpy
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 ICESAT2_BUILD_DIR = $(BUILD)/icesat2
-BINDINGS_INSTALL_DIR = $(STAGE)/srpy
+BINDINGS_INSTALL_DIR ?= $(STAGE)/srpy
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -22,10 +22,6 @@ MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/icesat2-sliderule
 DOCKEROPTS ?=
-ARCH ?= arm
-
-MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
 
 SLIDERULECFG := -DUSE_H5_PACKAGE=ON
 SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
@@ -53,6 +49,7 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
 	mkdir -p $(ICESAT2_BUILD_DIR)
 	mkdir -p $(BINDINGS_BUILD_DIR)
+	echo $(PYTHONCFG)
 
 config: prep ## configure make for python bindings (using system environent)
 	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)
@@ -60,9 +57,9 @@ config: prep ## configure make for python bindings (using system environent)
 	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
 
 config-conda: prep ## configure make for python bindings (using conda environment)
-	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(SLIDERULECFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)
+	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) -DSERVER_APP=OFF $(SLIDERULECFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)
 	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-#	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
+	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
 
 bindings: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
@@ -86,9 +83,6 @@ bindings-docker: ## build srpy docker image using buildenv container; needs VERS
 	docker tag $(ECR)/srpy:latest $(ECR)/srpy:$(MAJOR_VERSION)
 
 bindings-full: buildenv-docker bindings-docker ## build srpy docker container from scratch; needs VERSION
-
-bindings-docker-run: ## run container with bindings build inside locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) //TODO
 
 bindings-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/srpy:$(VERSION)

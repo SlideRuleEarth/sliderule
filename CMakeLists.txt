@@ -34,6 +34,7 @@ endif()
 
 option (PYTHON_BINDINGS "Create Python bindings, including h5lite module" OFF)
 option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
+option (SERVER_APP "Create sliderule server binary" ON)
 
 # Library Options #
 
@@ -251,7 +252,7 @@ if(${PYTHON_BINDINGS})
 
     add_subdirectory (targets/binding-python)
 
-elseif(CMAKE_BUILD_PLATFORM MATCHES "Linux")
+elseif(${SERVER_APP} AND (CMAKE_BUILD_PLATFORM MATCHES "Linux"))
 
     add_subdirectory (targets/server-linux)
 
