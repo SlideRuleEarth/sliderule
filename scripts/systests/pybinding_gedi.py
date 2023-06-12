@@ -63,10 +63,13 @@ if __name__ == '__main__':
     h5file = srpybin.h5coro(asset, resource, identity, driver, path, region, endpoint)
     data = h5file.readp(datasets)
 
-    # plot
+    # display
     if __with_plotting:
         print("plotting data...")
         plot_agbd(data["/BEAM0000/agbd"])
+    else:
+        print("printing first 32 values of /BEAM0000/agbd ...")
+        print(data["/BEAM0000/agbd"][:32])
 
     # complete
     print("script complete")
