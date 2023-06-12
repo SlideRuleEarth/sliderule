@@ -31,7 +31,7 @@ for i = 1, 2 do
     for j, v in ipairs(tbl) do
         local el = v["value"]
         local fname = v["file"]
-        print(string.format("(%02d) %8.2f %s", j, el, fname))
+        print(string.format("(%02d) %8.2fm  %s", j, el, fname))
         runner.check(el ~= -1000000)  --INVALID_SAMPLE_VALUE from VrtRaster.h
         runner.check(string.len(fname) > 0)
         sampleCnt = sampleCnt + 1
@@ -96,7 +96,7 @@ for i = 1, 2 do
         flags = v["flags"]
 
         if el ~= -9999.0 then
-            print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x   min: %6.2f   max: %6.2f   mean: %6.2f   median: %6.2f   stdev: %6.2f   mad: %6.2f", j, el, cnt, flags, min, max, mean, median, stdev, mad))
+            print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x   min: %6.2f   max: %6.2f   mean: %6.2f   median: %6.2f   stdev: %6.2f   mad: %6.2f", j, el, cnt, flags, min, max, mean, median, stdev, mad))
             runner.check(el ~= 0.0)
             runner.check(min <= el)
             runner.check(max >= el)
@@ -165,7 +165,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -197,7 +197,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -219,7 +219,7 @@ for i, v in ipairs(tbl) do
     local fname = v["file"]
     local flags = v["flags"]
     local cnt = v["count"]
-    print(string.format("(%02d) value: %6.2f   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
+    print(string.format("(%02d) %6.2fm   cnt: %03d   qmask: 0x%x %s", i, el, cnt, flags, fname))
     runner.check(el ~= -1000000) --INVALID_SAMPLE_VALUE from VrtRaster.h
     runner.check(string.len(fname) > 0)
     sampleCnt = sampleCnt + 1
@@ -321,7 +321,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) %6.2fm   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt)  -- getting back 14 unique strips, each with fileid 0 to 13
     sampleCnt = sampleCnt + 1
 end
@@ -338,7 +338,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) %6.2fm   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt+14)  -- getting back 7 different strips, not previusly found, fileid 14 to 20
     sampleCnt = sampleCnt + 1
 end
@@ -355,7 +355,7 @@ for i, v in ipairs(tbl) do
     local flags = v["flags"]
     local time = v["time"]
     local fileid = v["fileid"]
-    print(string.format("(%02d) value: %6.2f   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
+    print(string.format("(%02d) %6.2fm   time: %.2f   qmask: 0x%x fileId: %02d  %s", i, el, time, flags, fileid, fname))
     runner.check(fileid == sampleCnt)  -- getting back the same 14 raster (from first sample call) fileid 0 to 13
     sampleCnt = sampleCnt + 1
 end
@@ -364,14 +364,14 @@ runner.check(sampleCnt == 14)
 
 -- Correct values test for different POIs
 
-local lons = {-40, -40,   100,   150}
-local lats = { 70,  80,    70,    75}
+local lons = {-178.0, -40, -40,   100,   150}
+local lats = {  51.7,  70,  80,    70,    75}
 height = 0
 
-local expResultsMosaic = {2969.2360839, 2154.9392089, 475.9624633, 19.8128376}
-local expResultsStrips = {2968.0156250, 2143.5781250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
+local expResultsMosaic = { 80.7135010,  2969.2360839, 2154.9392089, 475.9624633, 19.8128376}
+local expResultsStrips = {452.4843750,  2968.0156250, 2143.5781250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
 
-local expSamplesCnt = {8, 11, 4, 14}
+local expSamplesCnt = {14, 8, 11, 4, 14}
 
 for i = 1, 2 do
     local isMosaic = (i == 1)
@@ -391,7 +391,7 @@ for i = 1, 2 do
             for k, v in ipairs(tbl) do
                 el = v["value"]
                 fname = v["file"]
-                print(string.format("(%02d) value: %16.7f   %s", k, el, fname))
+                print(string.format("(%02d)   (%6.1f, %5.1f) %16.7fm   %s", k, lon, lat, el, fname))
                 sampleCnt = sampleCnt + 1
 
                 if k == 1 then -- Check all mosaics but only first strip for each POI
