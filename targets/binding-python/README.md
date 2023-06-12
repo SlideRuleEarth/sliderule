@@ -58,15 +58,17 @@ conda install -c conda-forge readline lua openssl r-uuid libcurl Zlib gdal pybin
 
 ### Build
 
-The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script being run.  For example, type: `export PYTHONPATH=/usr/local/lib` to set the Python path to the default installation directory.
+The Python bindings must be built for each target they are used on, and the resulting .so file must either be accessible from the **PYTHONPATH** or be installed into the current Python environment or copied to the same directory as the Python script being run.  For example, type: `export PYTHONPATH=/usr/local/lib` to set the Python path to the system installation directory.
 
-To build the bindings:
-1. `make config-icesat2`
-2. `make icesat2`
-3. `sudo make install-icesat2`
-4. `make config-python` (for system build) or `make config-python-conda` (for conda build)
-5. `make`
-6. `sudo make install`
+To build the bindings locally:
+1. `make config`
+2. `make`
+3. `sudo make install`
+
+To build the bindings locally using the active conda environment:
+1. `make config-conda`
+2. `make`
+3. `sudo make install`
 
 The results are found in the `/usr/local/lib` directory:
 * `srpybin.cpython-*.so` - the Python package
@@ -100,7 +102,8 @@ The pyH5Coro module contained within the SlideRule Python bindings is a Python w
 * Parameters
   * __asset__: name of the asset (only meaningful if credentials are setup)
   * __resource__: name of the H5 file
-  * __format__: type of access
+  * __identity__: name of credential store to use to get credentials
+  * __driver__: type of access
     * 'file': local file access
     * 's3': direct access to S3
     * 's3cache': caches entire file locally from S3 before reading
@@ -265,7 +268,7 @@ logger = srpybin.logger(srpybin.INFO)
 # parameters
 asset = "ornldaac"
 resource = "GEDI04_A_2019229131935_O03846_02_T03642_02_002_02_V002.h5"
-format = "s3"
+driver = "s3"
 path = "ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data"
 region = "us-west-2"
 endpoint = "https://s3.us-west-2.amazonaws.com"
@@ -288,7 +291,7 @@ srcredentials.provide({"accessKeyId":       s3credentials['accessKeyId'],
                       "expiration":         s3credentials["expiration"]})
 
 # perform read
-h5file = srpybin.h5coro(asset, resource, format, path, region, endpoint)
+h5file = srpybin.h5coro(asset, resource, driver, path, region, endpoint)
 data = h5file.readp(datasets)
 
 # display first 5 elements of agdb
