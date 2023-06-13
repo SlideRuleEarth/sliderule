@@ -4,9 +4,8 @@ find_package (GDAL)
 # Find PROJ Libraries
 find_package (PROJ)
 
-find_package(PkgConfig)
-pkg_check_modules(UUID uuid)
-
+# Find UUID Library
+find_library(LIBUUID_LIBRARY libuuid.so)
 
 # Build package
 if (GDAL_FOUND AND PROJ_FOUND)
@@ -15,8 +14,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
 
     target_compile_definitions (slideruleLib PUBLIC __geo__)
 
-
-    target_link_libraries (slideruleLib PUBLIC ${GDAL_LIBRARIES} ${PROJ_LIBRARIES} ${UUID_LIBRARIES})
+    target_link_libraries (slideruleLib PUBLIC ${GDAL_LIBRARIES} ${PROJ_LIBRARIES} ${LIBUUID_LIBRARY})
     target_include_directories (slideruleLib PUBLIC ${GDAL_INCLUDE_DIRS} ${PROJ_INCLUDE_DIRS})
 
     target_sources(slideruleLib

@@ -38,13 +38,6 @@ SHELL ["conda", "run", "-n", "srpy", "/bin/bash", "-c"]
 # Install conda-managed dependencies
 RUN conda install -c conda-forge openssl r-uuid libcurl Zlib gdal proj rapidjson pybind11
 
-# Install build dependencies
-RUN apt-get update && \
-  DEBIAN_FRONTEND=noninteractive \
-  apt-get install -y --no-install-recommends \
-  uuid-dev \
-  && rm -rf /var/lib/apt/lists/*
-
 # Copy sliderule source repository
 COPY sliderule /sliderule
 WORKDIR /sliderule/targets/binding-python
