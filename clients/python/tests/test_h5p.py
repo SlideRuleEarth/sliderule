@@ -4,7 +4,7 @@ import pytest
 import sliderule
 from sliderule import icesat2
 
-ATL06_FILE1 = "ATL06_20181019065445_03150111_004_01.h5"
+ATL06_FILE1 = "ATL06_20181019065445_03150111_005_01.h5"
 
 @pytest.mark.network
 class TestApi:

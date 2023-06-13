@@ -7,6 +7,7 @@ find_package (PROJ)
 find_package(PkgConfig)
 pkg_check_modules(UUID uuid)
 
+
 # Build package
 if (GDAL_FOUND AND PROJ_FOUND)
 

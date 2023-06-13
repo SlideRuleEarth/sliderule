@@ -58,7 +58,7 @@ Asset::IODriver* CumulusIODriver::create (const Asset* _asset, const char* resou
 /*----------------------------------------------------------------------------
  * Constructor
  *
- *  Example: /ATLAS/ATL06/004/2019/06/26/ATL06_20190626143632_13640310_004_01.h5
+ *  Example: /ATLAS/ATL06/004/2019/06/26/ATL06_20190626143632_13640310_005_01.h5
  *----------------------------------------------------------------------------*/
 CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     S3CurlIODriver(_asset)

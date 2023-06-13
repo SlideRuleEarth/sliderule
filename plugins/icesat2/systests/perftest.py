@@ -22,8 +22,8 @@ num_runs = 3
 # Open H5 Files
 if context == "local":
     # Create H5 Handles
-    atl08 = sliderule.h5coro("ATL08_20181214194017_11790102_004_01.h5", "file", "/data/ATLAS", "", "")
-    atl03 = sliderule.h5coro("ATL03_20181214194017_11790102_004_01.h5", "file", "/data/ATLAS", "", "")
+    atl08 = sliderule.h5coro("ATL08_20181214194017_11790102_005_01.h5", "file", "/data/ATLAS", "", "")
+    atl03 = sliderule.h5coro("ATL03_20181214194017_11790102_005_01.h5", "file", "/data/ATLAS", "", "")
 elif context == "remote":
     # Setup Credentials
     with open(credential_file, "r") as file:
@@ -31,8 +31,8 @@ elif context == "remote":
     nsidc_creds = sliderule.credentials("cumulus://nsidc-cumulus-prod-protected")
     nsidc_creds.provide(my_creds)
     # Create H5 Handles
-    atl08 = sliderule.h5coro("ATL08_20181214194017_11790102_004_01.h5", "cumulus", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
-    atl03 = sliderule.h5coro("ATL03_20181214194017_11790102_004_01.h5", "cumulus", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
+    atl08 = sliderule.h5coro("ATL08_20181214194017_11790102_005_01.h5", "cumulus", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
+    atl03 = sliderule.h5coro("ATL03_20181214194017_11790102_005_01.h5", "cumulus", "nsidc-cumulus-prod-protected", "us-west-2", "https://s3.us-west-2.amazonaws.com")
 
 # Build Dictionary of Statistics
 stats = {
