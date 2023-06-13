@@ -11,6 +11,8 @@ RUN apt-get update && \
   cmake \
   git \
   wget \
+  libreadline-dev \
+  liblua5.3-dev \
   libcurl4-openssl-dev \
   libtiff-dev \
   libsqlite3-dev \
@@ -34,7 +36,7 @@ RUN conda create --name srpy
 SHELL ["conda", "run", "-n", "srpy", "/bin/bash", "-c"]
 
 # Install conda-managed dependencies
-RUN conda install -c conda-forge lua readline openssl r-uuid libcurl Zlib gdal proj rapidjson pybind11
+RUN conda install -c conda-forge openssl r-uuid libcurl Zlib gdal proj rapidjson pybind11
 
 # Install build dependencies
 RUN apt-get update && \

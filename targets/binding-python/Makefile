@@ -29,10 +29,10 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(BINDINGS_BUILD_DIR)
 
 config: prep ## configure make for python bindings (using system environent)
-	cd $(BINDINGS_BUILD_DIR); cmake --debug-find -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
+	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
 
 config-conda: prep ## configure make for python bindings (using conda environment)
-	cd $(BINDINGS_BUILD_DIR); cmake --debug-find -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
+	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
 
 bindings: ## build the bindings
 	make -j4 -C $(BINDINGS_BUILD_DIR)
