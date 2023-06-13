@@ -75,8 +75,6 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
-
-    dataIsElevation = true;
 }
 
 /*----------------------------------------------------------------------------

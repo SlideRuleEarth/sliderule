@@ -253,6 +253,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         /* Open vrt as base class geoindex file. */
         openGeoIndex();
 
+        /* Don't treat samples in the rasters as elevation */
+        forceNotElevation = true;
+
         rasterCreated = true;
     }
     catch(const RunTimeException& e)
