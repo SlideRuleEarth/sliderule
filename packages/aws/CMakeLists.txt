@@ -1,16 +1,17 @@
 # Find cURL Library
 find_package (CURL)
+find_package (OpenSSL REQUIRED)
 
 # Build package
-if (CURL_FOUND)
+if (CURL_FOUND AND OPENSSL_FOUND)
 
     message (STATUS "Including aws package")
 
     target_compile_definitions (slideruleLib PUBLIC __aws__)
 
     target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})
-    target_link_libraries (slideruleLib PUBLIC ssl)
-    target_link_libraries (slideruleLib PUBLIC crypto)
+    target_link_libraries (slideruleLib PUBLIC OpenSSL::SSL)
+    target_link_libraries (slideruleLib PUBLIC OpenSSL::Crypto)
 
     target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
 

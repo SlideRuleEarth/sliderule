@@ -396,7 +396,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
@@ -509,7 +509,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
 
@@ -718,7 +718,7 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_004_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
