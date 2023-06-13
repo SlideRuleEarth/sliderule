@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <cmath>
 #include <string>
 #include "OsApi.h"
 #include "core.h"
@@ -925,7 +926,7 @@ void GeoRaster::computeZonalStats(Raster *raster)
                     double y2 = y + _row;
                     double xd = std::pow(x2 - x1, 2);
                     double yd = std::pow(y2 - y1, 2);
-                    double d  = sqrtf64(xd + yd);
+                    double d  = std::sqrt(xd + yd);
 
                     if(std::islessequal(d, radiusInPixels))
                     {
@@ -952,7 +953,7 @@ void GeoRaster::computeZonalStats(Raster *raster)
                     stdev += std::pow(value - mean, 2);
 
                     /* Median absolute deviation (MAD) */
-                    mad += fabsf64(value - mean);
+                    mad += std::fabs(value - mean);
                 }
 
                 stdev = std::sqrt(stdev / validSamplesCnt);
