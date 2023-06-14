@@ -57,11 +57,6 @@
  *----------------------------------------------------------------------------*/
 int gedi_version (lua_State* L)
 {
-    /* Display Version Information on Terminal */
-    print2term("GEDI Plugin Version: %s\n", BINID);
-    print2term("Build Information: %s\n", BUILDINFO);
-
-    /* Return Version Information to Lua */
     lua_pushstring(L, BINID);
     lua_pushstring(L, BUILDINFO);
     return 2;
