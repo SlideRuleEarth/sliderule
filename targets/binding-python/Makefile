@@ -10,7 +10,8 @@ DOCKEROPTS ?=
 
 SLIDERULE_SOURCE_DIR = $(ROOT)
 BINDINGS_BUILD_DIR = $(BUILD)/srpy
-BINDINGS_INSTALL_DIR ?= $(STAGE)/srpy
+BINDINGS_STAGE_DIR ?= $(STAGE)/srpy
+INSTALL_DIR ?= /usr/local/lib
 
 PYTHONCFG := -DPYTHON_BINDINGS=ON
 PYTHONCFG += -DUSE_H5_PACKAGE=ON
@@ -29,29 +30,28 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(BINDINGS_BUILD_DIR)
 
 config: prep ## configure make for python bindings (using system environent)
-	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
+	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BEST_EFFORT_CONDA_ENV=ON $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_STAGE_DIR) $(ROOT)
 
 config-conda: prep ## configure make for python bindings (using conda environment)
-	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_INSTALL_DIR) $(ROOT)
+	cd $(BINDINGS_BUILD_DIR); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(CONDA_PREFIX) $(PYTHONCFG) -DINSTALLDIR=$(BINDINGS_STAGE_DIR) $(ROOT)
 
 bindings: ## build the bindings
 	make -j4 -C $(BINDINGS_BUILD_DIR)
 	make -C $(BINDINGS_BUILD_DIR) install
 
 install: ## install bindings into system
-	cp $(BINDINGS_INSTALL_DIR)/lib/srpybin.cpython* /usr/local/lib
-	chmod 644 /usr/local/lib/srpybin.cpython*
+	cp $(BINDINGS_STAGE_DIR)/lib/srpybin.cpython* $(INSTALL_DIR)
+	chmod 644 $(INSTALL_DIR)/srpybin.cpython*
 
 bindings-docker: prep ## build docker container to run the bindings
-	mkdir -p $(BINDINGS_INSTALL_DIR)/sliderule
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(BINDINGS_INSTALL_DIR)/sliderule --exclude build --exclude stage
-	cp Dockerfile $(BINDINGS_INSTALL_DIR)/Dockerfile
-	cd $(BINDINGS_INSTALL_DIR); docker build --progress=plain $(DOCKEROPTS) -t $(ECR)/srpy:latest .
+	mkdir -p $(BINDINGS_STAGE_DIR)/sliderule
+	rsync -a $(SLIDERULE_SOURCE_DIR) $(BINDINGS_STAGE_DIR)/sliderule --exclude build --exclude stage
+	cp Dockerfile $(BINDINGS_STAGE_DIR)/Dockerfile
+	cd $(BINDINGS_STAGE_DIR); docker build --progress=plain $(DOCKEROPTS) -t $(ECR)/srpy:latest .
 	docker tag $(ECR)/srpy:latest $(ECR)/srpy:$(VERSION)
 	docker tag $(ECR)/srpy:latest $(ECR)/srpy:$(MAJOR_VERSION)
 
 bindings-docker-run: ## run the docker container locally; needs VERSION
-#	docker run -it --rm --name=python-app -p 8866:8866 --entrypoint /usr/local/etc/docker-entrypoint.sh $(REPO)/demo-client:$(VERSION)
 	docker run -it --rm --name=python-bindings $(ECR)/srpy:$(VERSION)
 
 distclean: ## fully remove all non-version controlled files and directories

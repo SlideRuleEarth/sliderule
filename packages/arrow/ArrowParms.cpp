@@ -33,7 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <lua.h>
 #include "core.h"
 #include "ArrowParms.h"
 
