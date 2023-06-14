@@ -12,7 +12,6 @@ RUN apt-get update && \
   git \
   && rm -rf /var/lib/apt/lists/*
 
-
 # Environment
 ENV PYTHONPATH=/usr/local/lib
 RUN conda create --name srpy
