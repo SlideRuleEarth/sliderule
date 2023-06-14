@@ -99,6 +99,21 @@ class GeoRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
+            std::string         tag;
+            std::string         fileName;
+            TimeLib::gmt_time_t gmtDate;
+            int64_t             gpsTime;
+        } raster_info_t;
+
+        typedef struct {
+            std::string             id;
+            Ordering<raster_info_t> list;
+            TimeLib::gmt_time_t     gmtDate;
+            int64_t                 gpsTime;
+        } rasters_group_t;
+
+
+        typedef struct {
             double lon_min;
             double lat_min;
             double lon_max;
@@ -119,72 +134,50 @@ class GeoRaster: public RasterObject
         };
 
 
-        class GeoIndex
+        class GeoDataSet
         {
         public:
+            CoordTransform  cord;
+            double          verticalShift;  /* Calculated for last POI transformed to target CRS */
             std::string     fileName;
             GDALDataset    *dset;
+            GDALRasterBand* band;
+            GDALDataType    dataType;
+            bool            dataIsElevation;
             uint32_t        rows;
             uint32_t        cols;
             double          cellSize;
             bbox_t          bbox;
-            CoordTransform  cord;
-            double          verticalShift;
+            int32_t         xBlockSize;
+            int32_t         yBlockSize;
+            uint32_t        radiusInPixels;
 
             void clear(bool close = true);
             inline bool containsPoint(OGRPoint& p);
 
-            GeoIndex(void) { clear(false); }
-           ~GeoIndex(void) { clear(); }
+            GeoDataSet(void) { clear(false); }
+           ~GeoDataSet(void) { clear(); }
         };
 
 
-        typedef struct {
-            std::string         tag;
-            std::string         fileName;
-            TimeLib::gmt_time_t gmtDate;
-            int64_t             gpsTime;
-        } raster_info_t;
-
-        typedef struct {
-            std::string             id;
-            Ordering<raster_info_t> list;
-            TimeLib::gmt_time_t     gmtDate;
-            int64_t                 gpsTime;
-        } rasters_group_t;
+        class GeoIndex: public GeoDataSet {};
 
 
-        class Raster
+        class Raster: public GeoDataSet
         {
         public:
             bool            enabled;
             bool            sampled;
-            bool            dataIsElevation;
-            GDALDataset*    dset;
-            GDALRasterBand* band;
-            CoordTransform  cord;
             std::string     groupId;
-            std::string     fileName;
-            GDALDataType    dataType;
-            uint32_t        rows;
-            uint32_t        cols;
-            bbox_t          bbox;
-            double          cellSize;
-            int32_t         xBlockSize;
-            int32_t         yBlockSize;
-            uint32_t        radiusInPixels;
 
             double          gpsTime;
             double          useTime;
 
             /* Last sample information */
             OGRPoint        point;
-            double          verticalShift;
             sample_t        sample;
 
-            void clear(bool close = true);
-            Raster(void) { clear(false); }
-           ~Raster (void) { clear(); }
+            Raster(void);
         };
 
 
@@ -287,7 +280,6 @@ class GeoRaster: public RasterObject
         void       computeZonalStats       (Raster* raster);
         bool       nodataCheck             (Raster* raster);
         uint32_t   removeOldestRasterGroup (void);
-
 };
 
 

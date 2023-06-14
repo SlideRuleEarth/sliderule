@@ -743,7 +743,7 @@ bool GeoRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffs
 /*----------------------------------------------------------------------------
  * containsPoint
  *----------------------------------------------------------------------------*/
-inline bool GeoRaster::GeoIndex::containsPoint(OGRPoint& p)
+inline bool GeoRaster::GeoDataSet::containsPoint(OGRPoint& p)
 {
     return (dset &&
             (p.getX() >= bbox.lon_min) && (p.getX() <= bbox.lon_max) &&
@@ -753,16 +753,23 @@ inline bool GeoRaster::GeoIndex::containsPoint(OGRPoint& p)
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-void GeoRaster::GeoIndex::clear(bool close)
+void GeoRaster::GeoDataSet::clear(bool close)
 {
+    cord.clear(close);
+    fileName.clear();
     if (close && dset) GDALClose((GDALDatasetH)dset);
     dset = NULL;
-    fileName.clear();
+    band = NULL;
+    dataType = GDT_Unknown;
+    dataIsElevation = false;
     rows = 0;
     cols = 0;
     cellSize = 0;
-    verticalShift = 0;
     bzero(&bbox, sizeof(bbox_t));
+    verticalShift = 0;
+    xBlockSize = 0;
+    yBlockSize = 0;
+    radiusInPixels = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -1064,34 +1071,17 @@ uint32_t GeoRaster::removeOldestRasterGroup(void)
 }
 
 /*----------------------------------------------------------------------------
- * clear
+ * Raster constructor
  *----------------------------------------------------------------------------*/
-void GeoRaster::Raster::clear(bool close)
+GeoRaster::Raster::Raster( void )
 {
-    if(close && dset) GDALClose((GDALDatasetH)dset);
-    dset = NULL;
-    band = NULL;
-    cord.clear();
-    groupId.clear();
     enabled = false;
     sampled = false;
-    dataIsElevation = false;
-    fileName.clear();
-    dataType = GDT_Unknown;
-
-    rows = 0;
-    cols = 0;
-    bzero(&bbox, sizeof(bbox_t));
-    cellSize = 0;
-    xBlockSize = 0;
-    yBlockSize = 0;
-    radiusInPixels = 0;
     gpsTime = 0;
     useTime = 0;
-    point.empty();
-    verticalShift = 0;
     bzero(&sample, sizeof(sample_t));
 }
+
 
 /*----------------------------------------------------------------------------
  * invaldiateCache
