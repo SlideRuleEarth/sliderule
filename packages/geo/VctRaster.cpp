@@ -155,7 +155,6 @@ void VctRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.dset)
         {
             geoIndex.clear();
-            geoIndex.cord.clear();
             layer = NULL;
         }
         throw;

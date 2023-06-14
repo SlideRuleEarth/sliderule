@@ -150,7 +150,6 @@ void VrtRaster::openGeoIndex(double lon, double lat)
         if (geoIndex.dset)
         {
             geoIndex.clear();
-            geoIndex.cord.clear();
             bzero(invGeot, sizeof(invGeot));
             band = NULL;
         }
