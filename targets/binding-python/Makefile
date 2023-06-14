@@ -6,8 +6,10 @@ VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
 MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
+ARCH = arm
 DOCKEROPTS ?=
 SCRIPT ?=
+
 
 SLIDERULE_SOURCE_DIR = $(ROOT)
 BINDINGS_BUILD_DIR = $(BUILD)/srpy
@@ -47,7 +49,7 @@ install: ## install bindings into system
 bindings-docker: prep ## build docker container to run the bindings
 	mkdir -p $(BINDINGS_STAGE_DIR)/sliderule
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(BINDINGS_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp Dockerfile $(BINDINGS_STAGE_DIR)/Dockerfile
+	cp Dockerfile.$(ARCH) $(BINDINGS_STAGE_DIR)/Dockerfile
 	cd $(BINDINGS_STAGE_DIR); docker build --progress=plain $(DOCKEROPTS) -t $(ECR)/srpy:latest .
 	docker tag $(ECR)/srpy:latest $(ECR)/srpy:$(VERSION)
 	docker tag $(ECR)/srpy:latest $(ECR)/srpy:$(MAJOR_VERSION)
@@ -55,11 +57,11 @@ bindings-docker: prep ## build docker container to run the bindings
 bindings-docker-run: ## run the docker container locally; needs VERSION
 	docker run -it --rm --name=python-bindings -v${HOME}:/root $(ECR)/srpy:$(VERSION) $(SCRIPT)
 
+systest:
+	make bindings-docker-run SCRIPT=/sliderule/scripts/systests/pybinding_gedi.py
+
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean
-
-t:
-	@echo
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
