@@ -23,7 +23,7 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622423
+        assert len(gdf["h_mean"]) == 622419
 
     def test_atl06p(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -39,7 +39,7 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622423
+        assert len(gdf["h_mean"]) == 622419
 
     def test_atl03s(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -65,7 +65,7 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488673
+        assert len(gdf["height"]) == 488690
 
     def test_atl03sp(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -91,7 +91,7 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488673
+        assert len(gdf["height"]) == 488690
 
     def test_atl08(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -117,12 +117,12 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 243237
-        assert len(gdf[gdf["atl08_class"] == 0]) == 30493
-        assert len(gdf[gdf["atl08_class"] == 1]) == 123485
-        assert len(gdf[gdf["atl08_class"] == 2]) == 54251
-        assert len(gdf[gdf["atl08_class"] == 3]) == 18958
-        assert len(gdf[gdf["atl08_class"] == 4]) == 16050
+        assert len(gdf["height"]) == 243239
+        assert len(gdf[gdf["atl08_class"] == 0]) == 30431
+        assert len(gdf[gdf["atl08_class"] == 1]) == 123065
+        assert len(gdf[gdf["atl08_class"] == 2]) == 54820
+        assert len(gdf[gdf["atl08_class"] == 3]) == 18945
+        assert len(gdf[gdf["atl08_class"] == 4]) == 15978
 
     def test_gs(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)

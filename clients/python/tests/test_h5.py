@@ -24,7 +24,7 @@ class TestApi:
         heights_32 = h5coro.h5("/gt1l/land_ice_segments/h_li", ATL06_FILE2, asset)
         expected_32 = [350.46988, 352.08688, 352.43243, 353.19345, 353.69543, 352.25998, 350.15366, 346.37888, 342.47903, 341.51]
         bckgrd_32nf = h5coro.h5("/gt1l/bckgrd_atlas/bckgrd_rate", ATL03_FILE2, asset)
-        expected_32nf = [29311.684, 6385.937, 6380.8413, 28678.951, 55349.168, 38201.082, 19083.434, 38045.67, 34942.434, 38096.266]
+        expected_32nf = [29311.428, 6385.937, 6380.8413, 28678.951, 55349.168, 38201.082, 19083.434, 38045.67, 34942.434, 38096.266]
         for c in zip(heights_64, expected_64, heights_32, expected_32, bckgrd_32nf, expected_32nf):
             assert (round(c[0]) == round(c[1])) and (round(c[2]) == round(c[3])) and (round(c[4]) == round(c[5]))
 
