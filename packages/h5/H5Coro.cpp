@@ -900,7 +900,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
     }
 
     /* Super Block Version 0 */
-    if(superblock_version == 0) 
+    if(superblock_version == 0)
     {
         /* Read and Verify Superblock Info */
         if(H5_ERROR_CHECKING)
@@ -949,7 +949,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
         }
     }
     /* Super Block Version 2 */
-    else // if(superblock_version == 2) 
+    else // if(superblock_version == 2)
     {
         /* Read Sizes */
         pos = 9;
