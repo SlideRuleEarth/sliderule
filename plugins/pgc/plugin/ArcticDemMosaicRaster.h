@@ -55,7 +55,7 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
         { return new ArcticDemMosaicRaster(L, _parms); }
 
         bool getRasterDate(raster_info_t& rinfo) override
-        { return mosaicGetRasterDate(rinfo, "_reg_dem.tif"); }
+        { return mosaicGetRasterDate(rinfo, 2023, 01, 18, 20, 23, 42); }
 
     protected:
 

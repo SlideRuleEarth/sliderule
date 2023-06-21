@@ -52,6 +52,7 @@ class PgcDemMosaicRaster: public VrtRaster
 
                 PgcDemMosaicRaster    (lua_State* L, GeoParms* _parms);
         bool    mosaicGetRasterDate   (raster_info_t& rinfo, const char* token);
+        bool    mosaicGetRasterDate   (raster_info_t& rinfo, int year, int month, int day, int hour, int minute, int second);
 };
 
 #endif  /* __pgcdem_mosaic_raster__ */

@@ -55,7 +55,7 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
         { return new RemaDemMosaicRaster(L, _parms); }
 
         bool getRasterDate(raster_info_t& rinfo) override
-        { return mosaicGetRasterDate(rinfo, "_dem.tif"); }
+        { return mosaicGetRasterDate(rinfo, 2023, 02, 24, 18, 51, 44); }
 
     protected:
 

@@ -60,88 +60,15 @@ PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, const char* token)
+bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, int year, int month, int day, int hour, int minute, int second)
 {
-#if 1
-    /* VRT file does not have date, tiles were composed over many years...*/
-    std::ignore = token;
-    rinfo.gpsTime = 0;
+    rinfo.gmtDate.year        = year;
+    rinfo.gmtDate.doy         = TimeLib::dayofyear(year, month, day);
+    rinfo.gmtDate.hour        = hour;
+    rinfo.gmtDate.minute      = minute;
+    rinfo.gmtDate.second      = second;
+    rinfo.gmtDate.millisecond = 0;
+    rinfo.gpsTime             = TimeLib::gmt2gpstime(rinfo.gmtDate);
     return true;
-
-#else
-    /*
-     * There is a metadata .json file in s3 bucket where raster is located.
-     * It contains two dates: 'start_date' and 'end_date'
-     *
-     * There isn't really a concept of a single date that applies to the mosaic tiles.
-     * The raster creation date is just the processing date and doesn't have anything to do with the date of the source pixels.
-     */
-
-    std::string featureFile = rinfo.fileName;
-    bool foundDate = false;
-
-    GDALDataset *dset = NULL;
-
-    const std::string key       = token;
-    const std::string fileType  = ".json";
-    const char* dateField       = "end_datetime";
-
-    bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
-
-    try
-    {
-        std::size_t pos = featureFile.rfind(key);
-        if (pos == std::string::npos)
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not find marker %s in file", key.c_str());
-
-        featureFile.replace(pos, key.length(), fileType.c_str());
-
-        dset = (GDALDataset *)GDALOpenEx(featureFile.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
-        if (dset == NULL)
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not open %s file", featureFile.c_str());
-
-        OGRLayer *layer = dset->GetLayer(0);
-        if (layer == NULL)
-            throw RunTimeException(ERROR, RTE_ERROR, "No layers found in feature file: %s", featureFile.c_str());
-
-        layer->ResetReading();
-        if(OGRFeature* feature = layer->GetNextFeature())
-        {
-            int i = feature->GetFieldIndex(dateField);
-            if (i != -1)
-            {
-                int year, month, day, hour, minute, second, timeZone;
-                year = month = day = hour = minute = second = timeZone = 0;
-                if (feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
-                {
-                    /*
-                     * Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown
-                     */
-                    if (timeZone == 100)
-                    {
-                        rinfo.gmtDate.year = year;
-                        rinfo.gmtDate.doy = TimeLib::dayofyear(year, month, day);
-                        rinfo.gmtDate.hour = hour;
-                        rinfo.gmtDate.minute = minute;
-                        rinfo.gmtDate.second = second;
-                        rinfo.gmtDate.millisecond = 0;
-                        rinfo.gpsTime = TimeLib::gmt2gpstime(rinfo.gmtDate);
-                        foundDate = true;
-                    }
-                    else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
-                }
-            }
-            OGRFeature::DestroyFeature(feature);
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
-    }
-
-    if (dset) GDALClose((GDALDatasetH)dset);
-
-    return foundDate;
-#endif
 }
 
