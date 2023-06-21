@@ -62,6 +62,13 @@ PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
  *----------------------------------------------------------------------------*/
 bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, const char* token)
 {
+#if 1
+    /* VRT file does not have date, tiles were composed over many years...*/
+    std::ignore = token;
+    rinfo.gpsTime = 0;
+    return true;
+
+#else
     /*
      * There is a metadata .json file in s3 bucket where raster is located.
      * It contains two dates: 'start_date' and 'end_date'
@@ -135,5 +142,6 @@ bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, const char* t
     if (dset) GDALClose((GDALDatasetH)dset);
 
     return foundDate;
+#endif
 }
 

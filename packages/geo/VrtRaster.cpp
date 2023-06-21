@@ -66,6 +66,8 @@ void VrtRaster::deinit (void)
 VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
     GeoRaster(L, _parms)
 {
+
+    useGeoIndex  = false;
     band = NULL;
     bzero(invGeot, sizeof(invGeot));
     groupId = 0;
@@ -174,61 +176,28 @@ void VrtRaster::getIndexFile(std::string &file, double lon, double lat)
  *----------------------------------------------------------------------------*/
 bool VrtRaster::findRasters(OGRPoint& p)
 {
-    const int32_t col = static_cast<int32_t>(floor(invGeot[0] + invGeot[1] * p.getX() + invGeot[2] * p.getY()));
-    const int32_t row = static_cast<int32_t>(floor(invGeot[3] + invGeot[4] * p.getX() + invGeot[5] * p.getY()));
+    std::ignore = p;
 
     rasterGroupList->clear();
 
-    bool validPixel = (col >= 0) && (row >= 0) && (col < geoIndex.dset->GetRasterXSize()) && (row < geoIndex.dset->GetRasterYSize());
-    if (!validPixel) return false;
-
-    CPLString str;
-    str.Printf("Pixel_%d_%d", col, row);
-
-    const char *mdata = band->GetMetadataItem(str, "LocationInfo");
-    if (mdata == NULL) return false; /* Pixel not in VRT file */
-
-    CPLXMLNode *root = CPLParseXMLString(mdata);
-    if (root && root->psChild && (root->eType == CXT_Element) && EQUAL(root->pszValue, "LocationInfo"))
+    const char* fname = vrtFile.c_str();
+    if(fname)
     {
-        for (CPLXMLNode *psNode = root->psChild; psNode != NULL; psNode = psNode->psNext)
-        {
-            if ((psNode->eType == CXT_Element) && EQUAL(psNode->pszValue, "File") && psNode->psChild)
-            {
-                char *fname = CPLUnescapeString(psNode->psChild->pszValue, NULL, CPLES_XML);
-                if (fname)
-                {
-                    rasters_group_t rgroup;
-                    raster_info_t rinfo;
-                    rinfo.fileName = fname;
-                    rinfo.tag = SAMPLES_RASTER_TAG;
+        rasters_group_t rgroup;
+        raster_info_t rinfo;
+        rinfo.fileName = fname;
+        rinfo.tag      = SAMPLES_RASTER_TAG;
 
-                    /* Get the date this raster was created */
-                    getRasterDate(rinfo);
+        /* Get the date this raster was created */
+        getRasterDate(rinfo);
 
-                    /* Create raster group with this raster file in it */
-                    rgroup.gmtDate = rinfo.gmtDate;
-                    rgroup.gpsTime = rinfo.gpsTime;
-                    rgroup.list.add(rgroup.list.length(), rinfo);
-                    rgroup.id = std::to_string(groupId++);
-                    rasterGroupList->add(rasterGroupList->length(), rgroup);
-                    CPLFree(fname);
-                    /*
-                     * VRT file can have many rasters in it with the same point of interest.
-                     * This is not how GDAL VRT is inteded to be used.
-                     * GDAL utilities in such a case use only one raster with POI (most likely the first found)
-                     * Do the same - if one raster has been found stop searching for more.
-                     *
-                     * NOTE: VRT dataset is used for resampling and zonal statistics.
-                     * Multiple raster threads are not allowed to read from the same dataset pointer.
-                     * Must break here so only one raster is sampled for given POI.
-                     */
-                    break;
-                }
-            }
-        }
+        /* Create raster group with this raster file in it */
+        rgroup.gmtDate = rinfo.gmtDate;
+        rgroup.gpsTime = rinfo.gpsTime;
+        rgroup.list.add(rgroup.list.length(), rinfo);
+        rgroup.id = std::to_string(groupId++);
+        rasterGroupList->add(rasterGroupList->length(), rgroup);
     }
-    if (root) CPLDestroyXMLNode(root);
 
     return (rasterGroupList->length() > 0);
 }
@@ -271,26 +240,6 @@ bool VrtRaster::findCachedRasters(OGRPoint& p)
     return (rasterGroupList->length() > 0);
 }
 
-
-/*----------------------------------------------------------------------------
- * readGeoIndexData
- *----------------------------------------------------------------------------*/
-bool VrtRaster::readGeoIndexData(OGRPoint *point, int srcWindowSize, int srcOffset,
-                                 void *data, int dstWindowSize, GDALRasterIOExtraArg *args)
-{
-    int  col = static_cast<int>(floor((point->getX() - geoIndex.bbox.lon_min) / geoIndex.cellSize));
-    int  row = static_cast<int>(floor((geoIndex.bbox.lat_max - point->getY()) / geoIndex.cellSize));
-    int _col = col - srcOffset;
-    int _row = row - srcOffset;
-
-    bool validWindow = containsWindow(_col, _row, geoIndex.cols, geoIndex.rows, srcWindowSize);
-    if (validWindow)
-    {
-        readRasterWithRetry(band, _col, _row, srcWindowSize, srcWindowSize, data, dstWindowSize, dstWindowSize, args);
-    }
-
-    return validWindow;
-}
 
 /*----------------------------------------------------------------------------
  * buildVRT

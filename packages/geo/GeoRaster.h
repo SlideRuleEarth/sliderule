@@ -212,7 +212,6 @@ class GeoRaster: public RasterObject
         void            createTransform       (CoordTransform& cord, GDALDataset* dset);
         virtual void    overrideTargetCRS     (OGRSpatialReference& target);
         void            setCRSfromWkt         (OGRSpatialReference& sref, const std::string& wkt);
-        void            transformToIndexCRS   (OGRPoint& p);
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
         virtual bool    findCachedRasters     (OGRPoint& p) = 0;
         int             radius2pixels         (double cellSize, int _radius);
@@ -222,9 +221,6 @@ class GeoRaster: public RasterObject
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
         int             sample                (double lon, double lat, double height, int64_t gps);
-
-        virtual bool    readGeoIndexData      (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                               void* data, int dstWindowSize, GDALRasterIOExtraArg* args);
 
         inline bool containsPoint (Raster* raster, OGRPoint& p)
         {
@@ -238,6 +234,7 @@ class GeoRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         Ordering<rasters_group_t>*  rasterGroupList;
+        bool                        useGeoIndex;
         GeoIndex                    geoIndex;
         Dictionary<Raster*>         rasterDict;
         Mutex                       samplingMutex;
