@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geo_raster__
-#define __geo_raster__
+#ifndef __geo_indexed_raster__
+#define __geo_indexed_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -77,7 +77,7 @@ do                                                                            \
  * GEO RASTER CLASS
  ******************************************************************************/
 
-class GeoRaster: public RasterObject
+class GeoIndexedRaster: public RasterObject
 {
     public:
 
@@ -182,7 +182,7 @@ class GeoRaster: public RasterObject
 
 
         typedef struct {
-            GeoRaster*  obj;
+            GeoIndexedRaster*  obj;
             Thread*     thread;
             Raster*     raster;
             Cond*       sync;
@@ -194,7 +194,7 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual         ~GeoRaster  (void);
+        virtual         ~GeoIndexedRaster  (void);
         void            getSamples  (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
 
     protected:
@@ -203,7 +203,7 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster             (lua_State* L, GeoParms* _parms);
+                        GeoIndexedRaster             (lua_State* L, GeoParms* _parms);
         virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         const char*     getUUID               (char* uuid_str);
@@ -282,4 +282,4 @@ class GeoRaster: public RasterObject
 
 
 
-#endif  /* __geo_raster__ */
+#endif  /* __geo_indexed_raster__ */

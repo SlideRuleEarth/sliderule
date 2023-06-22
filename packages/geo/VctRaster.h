@@ -36,14 +36,14 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
+#include "GeoIndexedRaster.h"
 #include "GeoParms.h"
 
 /******************************************************************************
  * VCT (Vector) RASTER CLASS
  ******************************************************************************/
 
-class VctRaster: public GeoRaster
+class VctRaster: public GeoIndexedRaster
 {
     public:
 

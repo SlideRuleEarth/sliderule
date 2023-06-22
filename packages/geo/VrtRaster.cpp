@@ -64,7 +64,7 @@ void VrtRaster::deinit (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 VrtRaster::VrtRaster(lua_State *L, GeoParms* _parms, const char* vrt_file):
-    GeoRaster(L, _parms)
+    GeoIndexedRaster(L, _parms)
 {
 
     useGeoIndex  = false;

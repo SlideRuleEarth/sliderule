@@ -37,7 +37,7 @@
 #include <string>
 #include "OsApi.h"
 #include "core.h"
-#include "GeoRaster.h"
+#include "GeoIndexedRaster.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -64,8 +64,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoRaster::FLAGS_RASTER_TAG   = "Fmask";
-const char* GeoRaster::SAMPLES_RASTER_TAG = "Dem";
+const char* GeoIndexedRaster::FLAGS_RASTER_TAG   = "Fmask";
+const char* GeoIndexedRaster::SAMPLES_RASTER_TAG = "Dem";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -74,7 +74,7 @@ const char* GeoRaster::SAMPLES_RASTER_TAG = "Dem";
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param)
+void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param)
 {
     std::ignore = param;
 
@@ -131,7 +131,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GeoRaster::~GeoRaster(void)
+GeoIndexedRaster::~GeoIndexedRaster(void)
 {
     /* Terminate all reader threads */
     for (uint32_t i=0; i < readerCount; i++)
@@ -176,7 +176,7 @@ GeoRaster::~GeoRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
+GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
     RasterObject(L, _parms)
 {
     /* Initialize Class Data Members */
@@ -212,7 +212,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
 {
     Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
     for(int i = 0; i < raster_iter.length; i++)
@@ -241,7 +241,7 @@ void GeoRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& 
 /*----------------------------------------------------------------------------
  * getGmtDate
  *----------------------------------------------------------------------------*/
-double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
+double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
 {
     bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
 
@@ -276,7 +276,7 @@ double GeoRaster::getGmtDate(const OGRFeature* feature, const char* field,  Time
 /*----------------------------------------------------------------------------
  * getUUID
  *----------------------------------------------------------------------------*/
-const char* GeoRaster::getUUID(char *uuid_str)
+const char* GeoIndexedRaster::getUUID(char *uuid_str)
 {
     uuid_t uuid;
     uuid_generate(uuid);
@@ -287,7 +287,7 @@ const char* GeoRaster::getUUID(char *uuid_str)
 /*----------------------------------------------------------------------------
  * radius2pixels
  *----------------------------------------------------------------------------*/
-int GeoRaster::radius2pixels(double cellSize, int _radius)
+int GeoIndexedRaster::radius2pixels(double cellSize, int _radius)
 {
     /*
      * Code supports rasters with units in meters (cellSize and radius must be in meters).
@@ -312,7 +312,7 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
  * processRaster
  * Thread-safe, can be called directly from main thread or reader thread
  *----------------------------------------------------------------------------*/
-void GeoRaster::processRaster(Raster* raster)
+void GeoIndexedRaster::processRaster(Raster* raster)
 {
     try
     {
@@ -397,7 +397,7 @@ void GeoRaster::processRaster(Raster* raster)
 /*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
-void GeoRaster::sampleRasters(void)
+void GeoIndexedRaster::sampleRasters(void)
 {
     /* Create additional reader threads if needed */
     createThreads();
@@ -443,7 +443,7 @@ void GeoRaster::sampleRasters(void)
 /*----------------------------------------------------------------------------
  * RasterIoWithRetry
  *----------------------------------------------------------------------------*/
-void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
+void GeoIndexedRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
 {
     /*
      * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
@@ -464,7 +464,7 @@ void GeoRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int 
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoRaster::sample(double lon, double lat, double height, int64_t gps)
+int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 {
     invalidateCache();
 
@@ -511,7 +511,7 @@ int GeoRaster::sample(double lon, double lat, double height, int64_t gps)
 /*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GeoRaster::readPixel(Raster *raster)
+void GeoIndexedRaster::readPixel(Raster *raster)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
@@ -636,7 +636,7 @@ void GeoRaster::readPixel(Raster *raster)
 /*----------------------------------------------------------------------------
  * createTransform
  *----------------------------------------------------------------------------*/
-void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
+void GeoIndexedRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
 {
     CHECKPTR(dset);
     cord.clear(true);
@@ -666,7 +666,7 @@ void GeoRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
 /*----------------------------------------------------------------------------
  * overrideTargetCRS
  *----------------------------------------------------------------------------*/
-void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
+void GeoIndexedRaster::overrideTargetCRS(OGRSpatialReference& target)
 {
     std::ignore = target;
 }
@@ -675,7 +675,7 @@ void GeoRaster::overrideTargetCRS(OGRSpatialReference& target)
 /*----------------------------------------------------------------------------
  * setCRSfromWkt
  *----------------------------------------------------------------------------*/
-void GeoRaster::setCRSfromWkt(OGRSpatialReference& sref, const std::string& wkt)
+void GeoIndexedRaster::setCRSfromWkt(OGRSpatialReference& sref, const std::string& wkt)
 {
     // mlog(DEBUG, "%s", wkt.c_str());
     OGRErr ogrerr = sref.importFromWkt(wkt.c_str());
@@ -686,7 +686,7 @@ void GeoRaster::setCRSfromWkt(OGRSpatialReference& sref, const std::string& wkt)
 /*----------------------------------------------------------------------------
  * containsWindow
  *----------------------------------------------------------------------------*/
-bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
+bool GeoIndexedRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
 {
     if (col < 0 || row < 0)
         return false;
@@ -700,7 +700,7 @@ bool GeoRaster::containsWindow(int col, int row, int maxCol, int maxRow, int win
 /*----------------------------------------------------------------------------
  * containsPoint
  *----------------------------------------------------------------------------*/
-inline bool GeoRaster::GeoDataSet::containsPoint(OGRPoint& p)
+inline bool GeoIndexedRaster::GeoDataSet::containsPoint(OGRPoint& p)
 {
     return (dset &&
             (p.getX() >= bbox.lon_min) && (p.getX() <= bbox.lon_max) &&
@@ -710,7 +710,7 @@ inline bool GeoRaster::GeoDataSet::containsPoint(OGRPoint& p)
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-void GeoRaster::GeoDataSet::clear(bool close)
+void GeoIndexedRaster::GeoDataSet::clear(bool close)
 {
     cord.clear(close);
     fileName.clear();
@@ -732,7 +732,7 @@ void GeoRaster::GeoDataSet::clear(bool close)
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-void GeoRaster::CoordTransform::clear(bool close)
+void GeoIndexedRaster::CoordTransform::clear(bool close)
 {
     if (close && transf) OGRCoordinateTransformation::DestroyCT(transf);
     transf = NULL;
@@ -743,7 +743,7 @@ void GeoRaster::CoordTransform::clear(bool close)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GeoRaster::resamplePixel(Raster *raster)
+void GeoIndexedRaster::resamplePixel(Raster *raster)
 {
     try
     {
@@ -816,7 +816,7 @@ void GeoRaster::resamplePixel(Raster *raster)
 /*----------------------------------------------------------------------------
  * parms->zonal_stats
  *----------------------------------------------------------------------------*/
-void GeoRaster::computeZonalStats(Raster *raster)
+void GeoIndexedRaster::computeZonalStats(Raster *raster)
 {
     double *samplesArray = NULL;
 
@@ -942,7 +942,7 @@ void GeoRaster::computeZonalStats(Raster *raster)
 /*----------------------------------------------------------------------------
  * nodataCheck
  *----------------------------------------------------------------------------*/
-bool GeoRaster::nodataCheck(Raster* raster)
+bool GeoIndexedRaster::nodataCheck(Raster* raster)
 {
     /*
      * Replace nodata with NAN
@@ -963,7 +963,7 @@ bool GeoRaster::nodataCheck(Raster* raster)
 /*----------------------------------------------------------------------------
  * removeOldestRasterGroup
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::removeOldestRasterGroup(void)
+uint32_t GeoIndexedRaster::removeOldestRasterGroup(void)
 {
     Raster* raster = NULL;
     Raster* oldestRaster = NULL;
@@ -1010,7 +1010,7 @@ uint32_t GeoRaster::removeOldestRasterGroup(void)
 /*----------------------------------------------------------------------------
  * Raster constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::Raster::Raster( void )
+GeoIndexedRaster::Raster::Raster( void )
 {
     enabled = false;
     sampled = false;
@@ -1023,7 +1023,7 @@ GeoRaster::Raster::Raster( void )
 /*----------------------------------------------------------------------------
  * invaldiateCache
  *----------------------------------------------------------------------------*/
-void GeoRaster::invalidateCache(void)
+void GeoIndexedRaster::invalidateCache(void)
 {
     Raster *raster = NULL;
     const char* key = rasterDict.first(&raster);
@@ -1043,7 +1043,7 @@ void GeoRaster::invalidateCache(void)
 /*----------------------------------------------------------------------------
  * updateCache
  *----------------------------------------------------------------------------*/
-void GeoRaster::updateCache(OGRPoint& p)
+void GeoIndexedRaster::updateCache(OGRPoint& p)
 {
     if (rasterGroupList->length() == 0)
         return;
@@ -1104,7 +1104,7 @@ void GeoRaster::updateCache(OGRPoint& p)
 /*----------------------------------------------------------------------------
  * filterRasters
  *----------------------------------------------------------------------------*/
-bool GeoRaster::filterRasters(int64_t gps)
+bool GeoIndexedRaster::filterRasters(int64_t gps)
 {
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
@@ -1185,7 +1185,7 @@ bool GeoRaster::filterRasters(int64_t gps)
 /*----------------------------------------------------------------------------
  * createThreads
  *----------------------------------------------------------------------------*/
-void GeoRaster::createThreads(void)
+void GeoIndexedRaster::createThreads(void)
 {
     uint32_t threadsNeeded = rasterDict.length();
     if (threadsNeeded <= readerCount)
@@ -1218,7 +1218,7 @@ void GeoRaster::createThreads(void)
 /*----------------------------------------------------------------------------
  * readingThread
  *----------------------------------------------------------------------------*/
-void* GeoRaster::readingThread(void *param)
+void* GeoIndexedRaster::readingThread(void *param)
 {
     reader_t *reader = (reader_t*)param;
     bool run = true;
@@ -1250,7 +1250,7 @@ void* GeoRaster::readingThread(void *param)
 /*----------------------------------------------------------------------------
  * getSampledRastersCount
  *----------------------------------------------------------------------------*/
-int GeoRaster::getSampledRastersCount(void)
+int GeoIndexedRaster::getSampledRastersCount(void)
 {
     Raster *raster = NULL;
     int cnt = 0;
@@ -1271,7 +1271,7 @@ int GeoRaster::getSampledRastersCount(void)
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
  *----------------------------------------------------------------------------*/
-int GeoRaster::luaDimensions(lua_State *L)
+int GeoIndexedRaster::luaDimensions(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1279,7 +1279,7 @@ int GeoRaster::luaDimensions(lua_State *L)
     try
     {
         /* Get Self */
-        GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->geoIndex.rows);
@@ -1301,7 +1301,7 @@ int GeoRaster::luaDimensions(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaBoundingBox - :bbox() --> (lon_min, lat_min, lon_max, lat_max)
  *----------------------------------------------------------------------------*/
-int GeoRaster::luaBoundingBox(lua_State *L)
+int GeoIndexedRaster::luaBoundingBox(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1309,7 +1309,7 @@ int GeoRaster::luaBoundingBox(lua_State *L)
     try
     {
         /* Get Self */
-        GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->geoIndex.bbox.lon_min);
@@ -1333,7 +1333,7 @@ int GeoRaster::luaBoundingBox(lua_State *L)
 /*----------------------------------------------------------------------------
  * luaCellSize - :cell() --> cell size
  *----------------------------------------------------------------------------*/
-int GeoRaster::luaCellSize(lua_State *L)
+int GeoIndexedRaster::luaCellSize(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
@@ -1341,7 +1341,7 @@ int GeoRaster::luaCellSize(lua_State *L)
     try
     {
         /* Get Self */
-        GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->geoIndex.cellSize);

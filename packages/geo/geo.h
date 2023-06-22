@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
+#include "GeoIndexedRaster.h"
 #include "VrtRaster.h"
 #include "VctRaster.h"
 #include "GeoJsonRaster.h"

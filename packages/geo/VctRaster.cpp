@@ -66,7 +66,7 @@ void VctRaster::deinit (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 VctRaster::VctRaster(lua_State *L, GeoParms* _parms):
-    GeoRaster(L, _parms)
+    GeoIndexedRaster(L, _parms)
 {
     layer = NULL;
 }
