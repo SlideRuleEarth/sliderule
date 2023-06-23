@@ -36,15 +36,16 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "VrtRaster.h"
+#include "GeoRaster.h"
 #include "GeoParms.h"
+#include <bits/stdint-intn.h>
 #include <uuid/uuid.h>
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
  ******************************************************************************/
 
-class GeoJsonRaster: public VrtRaster
+class GeoJsonRaster: public GeoRaster
 {
     public:
 
@@ -76,8 +77,8 @@ class GeoJsonRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                GeoJsonRaster   (lua_State *L, GeoParms* _parms, const char *image, long imagelength, double _cellsize);
-        bool    getRasterDate   (raster_info_t& rinfo);
+                GeoJsonRaster (lua_State *L, GeoParms* _parms, const char *image, long imagelength, double _cellsize);
+        int64_t getRasterDate (const char* fileName);
 
     private:
         /*--------------------------------------------------------------------
@@ -85,8 +86,7 @@ class GeoJsonRaster: public VrtRaster
          *--------------------------------------------------------------------*/
 
         std::string rasterFile;
-        TimeLib::gmt_time_t gmtDate;
-        char uuid_str[UUID_STR_LEN]; // temporary buffer
+        char uuid_str[UUID_STR_LEN];
 };
 
 #endif  /* __geojson_raster__ */

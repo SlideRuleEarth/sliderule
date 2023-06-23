@@ -133,8 +133,8 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
+    close();
     VSIUnlink(rasterFile.c_str());
-    VSIUnlink(vrtFile.c_str());
 }
 
 /******************************************************************************
@@ -159,7 +159,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
-    VrtRaster(L, _parms, std::string("/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt").c_str())
+    GeoRaster(L, _parms)
 {
     bool rasterCreated = false;
     GDALDataset *rasterDset = NULL;
@@ -168,9 +168,6 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
     jsonFile   = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
     rasterFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".tif";
-
-    /* Initialize Class Data Members */
-    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
 
     validatedParams(file, filelength, _cellsize);
 
@@ -238,24 +235,12 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         CHECK_GDALERR(cplerr);
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
 
-        /* Store raster creation time */
-        gmtDate = TimeLib::gmttime();
-
-        /* Must close raster to flush it into file */
+        /* Must close raster to flush it into file in vsimem */
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
 
-        /* Create vrt file, used in base class as index data set */
-        List<std::string> rasterList;
-        rasterList.add(rasterFile);
-        buildVRT(vrtFile, rasterList);
-
-        /* Open vrt as base class geoindex file. */
-        openGeoIndex();
-
-        /* Don't treat samples in the rasters as elevation */
-        forceNotElevation = true;
-
+        /* Open raster for sampling */
+        open(rasterFile.c_str());
         rasterCreated = true;
     }
     catch(const RunTimeException& e)
@@ -276,9 +261,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
+int64_t GeoJsonRaster::getRasterDate(const char* fileName)
 {
-    rinfo.gmtDate = gmtDate;
-    rinfo.gpsTime = TimeLib::gmt2gpstime(gmtDate);
-    return true;
+    std::ignore = fileName;
+    return TimeLib::gpstime();
 }

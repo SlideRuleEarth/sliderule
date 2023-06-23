@@ -44,31 +44,30 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
-    VrtRaster(L, _parms)
+    GeoRaster(L, _parms, vrtFile.append(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str())
 {
     /*
-     * Pgc Mosaics uses one large VRT index file but we cannot open it here.
-     * Derived classes (Arctic/Rema) override overrideTargetCRS() function.
-     * If we open VRT index file here the wrong overrideTargetCRS() will be called
-     * resulting in incorrect CRS transform.
+     * Pgc Mosaics use one VRT file.
      */
-
-     //openGeoIndex();
+     open();
 }
 
 
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-bool PgcDemMosaicRaster::mosaicGetRasterDate(raster_info_t& rinfo, int year, int month, int day, int hour, int minute, int second)
+int64_t PgcDemMosaicRaster::mosaicGetRasterDate(const char* fileName, int year, int month, int day, int hour, int minute, int second)
 {
-    rinfo.gmtDate.year        = year;
-    rinfo.gmtDate.doy         = TimeLib::dayofyear(year, month, day);
-    rinfo.gmtDate.hour        = hour;
-    rinfo.gmtDate.minute      = minute;
-    rinfo.gmtDate.second      = second;
-    rinfo.gmtDate.millisecond = 0;
-    rinfo.gpsTime             = TimeLib::gmt2gpstime(rinfo.gmtDate);
-    return true;
+    std::ignore = fileName;
+    TimeLib::gmt_time_t gmt;
+
+    gmt.year        = year;
+    gmt.doy         = TimeLib::dayofyear(year, month, day);
+    gmt.hour        = hour;
+    gmt.minute      = minute;
+    gmt.second      = second;
+    gmt.millisecond = 0;
+
+    return TimeLib::gmt2gpstime(gmt);
 }
 
