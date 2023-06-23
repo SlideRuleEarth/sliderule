@@ -831,7 +831,6 @@ void H5FileBuffer::readDataset (info_t* info)
                     /* Loop Through Each Chunk */
                     while(true)
                     {
-
                         /* Calculate Start Position */
                         uint64_t start = 0;
                         for(int i = 0; i < FLAT_NDIMS; i++)
@@ -927,7 +926,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
         if(H5_ERROR_CHECKING)
         {
             pos = 24;
-            uint64_t base_address = readField(8, &pos);
+            uint64_t base_address = readField(metaData.offsetsize, &pos);
             if(base_address != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
@@ -1037,7 +1036,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint64_t    huge_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Huge Objects in Heap
     uint64_t    huge_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Huge Objects in Heap
     uint64_t    tiny_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Tiny Objects in Heap
-    uint64_t    tiny_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Timing Objects in Heap
+    uint64_t    tiny_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Tiny Objects in Heap
     uint16_t    table_width         = (uint16_t)readField(2, &pos); // Table Width
     uint64_t    starting_blk_size   = (uint64_t)readField(metaData.lengthsize, &pos); // Starting Block Size
     uint64_t    max_dblk_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Maximum Direct Block Size
@@ -1062,7 +1061,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         print2term("Size of Huge Objects in Heap:                                    %lu\n", (unsigned long)huge_obj_size);
         print2term("Number of Huge Objects in Heap:                                  %lu\n", (unsigned long)huge_objs);
         print2term("Size of Tiny Objects in Heap:                                    %lu\n", (unsigned long)tiny_obj_size);
-        print2term("Number of Timing Objects in Heap:                                %lu\n", (unsigned long)tiny_objs);
+        print2term("Number of Tiny Objects in Heap:                                  %lu\n", (unsigned long)tiny_objs);
         print2term("Table Width:                                                     %lu\n", (unsigned long)table_width);
         print2term("Starting Block Size:                                             %lu\n", (unsigned long)starting_blk_size);
         print2term("Maximum Direct Block Size:                                       %lu\n", (unsigned long)max_dblk_size);
@@ -1343,7 +1342,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
                 if(!H5_INVALID(indirect_block_addr) && (dlvl >= highestDataLevel))
                 {
-                    /* Read Direct Block */
+                    /* Read Indirect Block */
                     int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
                     if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
@@ -2083,7 +2082,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Skip Over Maximum Dimensions */
         if(flags & MAX_DIM_PRESENT)
         {
-            int skip_bytes = metaData.ndims * metaData.lengthsize;
+            int skip_bytes = dimensionality * metaData.lengthsize;
             pos += skip_bytes;
         }
     }
@@ -2147,7 +2146,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order_index = readField(8, &pos);
+        uint64_t create_order_index = readField(metaData.offsetsize, &pos);
         if(H5_VERBOSE)
         {
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
