@@ -250,7 +250,6 @@ void initgeo (void)
 
     /* Initialize Modules */
     GeoIndexedRaster::init();
-    VrtRaster::init();
     VctRaster::init();
     RasterSampler::init();
 
@@ -271,7 +270,6 @@ void initgeo (void)
 void deinitgeo (void)
 {
     VctRaster::deinit();
-    VrtRaster::deinit();
     GeoIndexedRaster::deinit();
     GDALDestroy();
 }

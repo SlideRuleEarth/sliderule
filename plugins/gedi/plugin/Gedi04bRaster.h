@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "VrtRaster.h"
+#include "GeoRaster.h"
 #include "GeoParms.h"
 #include <uuid/uuid.h>
 
@@ -44,7 +44,7 @@
  * GEDI 04B RASTER CLASS
  ******************************************************************************/
 
-class Gedi04bRaster: public VrtRaster
+class Gedi04bRaster: public GeoRaster
 {
     public:
 
@@ -63,8 +63,7 @@ class Gedi04bRaster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                Gedi04bRaster   (lua_State *L, GeoParms* _parms);
-        bool    getRasterDate   (raster_info_t& rinfo);
+         Gedi04bRaster   (lua_State *L, GeoParms* _parms);
 
     private:
 
@@ -72,9 +71,7 @@ class Gedi04bRaster: public VrtRaster
          * Data
          *--------------------------------------------------------------------*/
 
-        TimeLib::gmt_time_t gmtDate;
-        int64_t gpsTime;
-        char uuid_str[UUID_STR_LEN]; // temporary buffer
+        GeoRaster::Raster* raster;
 };
 
 #endif  /* __gedi04b_raster__ */

@@ -77,14 +77,14 @@ class GeoJsonRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                GeoJsonRaster (lua_State *L, GeoParms* _parms, const char *image, long imagelength, double _cellsize);
-        int64_t getRasterDate (const char* fileName);
+        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* image, long imagelength, double _cellsize);
 
     private:
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
+        GeoRaster::Raster* raster;
         std::string rasterFile;
         char uuid_str[UUID_STR_LEN];
 };

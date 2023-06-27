@@ -54,8 +54,8 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new ArcticDemMosaicRaster(L, _parms); }
 
-        int64_t getRasterDate(const char* fileName) override
-        { return mosaicGetRasterDate(fileName, 2023, 01, 18, 20, 23, 42); }
+        int64_t getRasterDate(void) override
+        { return mosaicGetRasterDate(2023, 01, 18, 20, 23, 42); }
 
     protected:
 

@@ -133,7 +133,7 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
-    close();
+    delete raster;
     VSIUnlink(rasterFile.c_str());
 }
 
@@ -240,7 +240,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         rasterDset = NULL;
 
         /* Open raster for sampling */
-        open(rasterFile.c_str());
+        raster = new GeoRaster::Raster(rasterFile.c_str(), TimeLib::gpstime());
+        open(raster);
         rasterCreated = true;
     }
     catch(const RunTimeException& e)
@@ -255,14 +256,4 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
    if (!rasterCreated)
         throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
-}
-
-
-/*----------------------------------------------------------------------------
- * getRasterDate
- *----------------------------------------------------------------------------*/
-int64_t GeoJsonRaster::getRasterDate(const char* fileName)
-{
-    std::ignore = fileName;
-    return TimeLib::gpstime();
 }

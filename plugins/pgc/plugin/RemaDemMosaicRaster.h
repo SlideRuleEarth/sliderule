@@ -54,8 +54,8 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new RemaDemMosaicRaster(L, _parms); }
 
-        int64_t getRasterDate(const char* fileName) override
-        { return mosaicGetRasterDate(fileName, 2023, 02, 24, 18, 51, 44); }
+        int64_t getRasterDate(void) override
+        { return mosaicGetRasterDate(2023, 02, 24, 18, 51, 44); }
 
     protected:
 

@@ -50,11 +50,12 @@ class PgcDemMosaicRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                PgcDemMosaicRaster    (lua_State* L, GeoParms* _parms);
-        int64_t mosaicGetRasterDate   (const char* fileName, int year, int month, int day, int hour, int minute, int second);
+                 PgcDemMosaicRaster   (lua_State* L, GeoParms* _parms);
+        virtual ~PgcDemMosaicRaster   (void);
+        int64_t  mosaicGetRasterDate  (int year, int month, int day, int hour, int minute, int second);
 
     private:
-        std::string vrtFile;
+        GeoRaster::Raster* raster;
 };
 
 #endif  /* __pgcdem_mosaic_raster__ */

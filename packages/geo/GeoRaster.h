@@ -135,11 +135,36 @@ class GeoRaster: public RasterObject
             uint32_t        radiusInPixels;
 
             void clear(bool close = true);
-            inline bool containsPoint(OGRPoint& p);
 
             GeoDataSet(void) { clear(false); }
            ~GeoDataSet(void) { clear(); }
         };
+
+        class Raster: public GeoDataSet
+        {
+        public:
+            bool            enabled;
+            bool            sampled;
+            std::string     groupId;
+
+            double          gpsTime;
+            double          useTime;
+
+            /* Last sample information */
+            OGRPoint        point;
+            sample_t        sample;
+
+            Raster(const char* _fileName, double _gpsTime=0);
+
+            inline bool containsPoint(OGRPoint& p)
+            {
+                return (dset &&
+                        (p.getX() >= bbox.lon_min) && (p.getX() <= bbox.lon_max) &&
+                        (p.getY() >= bbox.lat_min) && (p.getY() <= bbox.lat_max));
+            }
+
+        };
+
 
         /*--------------------------------------------------------------------
          * Methods
@@ -154,11 +179,9 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster             (lua_State* L, GeoParms* _parms, const char* fileName=NULL, int64_t gps=0);
-        void            open                  (const char* fileName=NULL);
-        void            close                 (void);
-        void            readPOI               (void);
-        virtual int64_t getRasterDate         (const char* fileName);
+                        GeoRaster             (lua_State* L, GeoParms* _parms);
+        void            open                  (Raster* raster);
+        virtual int64_t getRasterDate         (void);
 
         const char*     getUUID               (char* uuid_str);
         void            createTransform       (CoordTransform& cord, GDALDataset* dset);
@@ -168,15 +191,6 @@ class GeoRaster: public RasterObject
         int             radius2pixels         (double cellSize, int _radius);
         void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
                                                void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
-
-        int             sample                (OGRPoint& point, int64_t gps);
-
-        inline bool containsPoint (OGRPoint& p)
-        {
-            return (raster.dset &&
-                (p.getX() >= raster.bbox.lon_min) && (p.getX() <= raster.bbox.lon_max) &&
-                (p.getY() >= raster.bbox.lat_min) && (p.getY() <= raster.bbox.lat_max));
-        }
 
         /*--------------------------------------------------------------------
          * Data
@@ -193,16 +207,7 @@ class GeoRaster: public RasterObject
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
-        GeoDataSet raster;
-        bool   sampled;
-        double rasterGpsTime;
-        double lastReadTime;
-
-        /* Last sample information */
-        OGRPoint poi;
-        sample_t poiSample;
-
-
+        Raster* _raster;
 
         /*--------------------------------------------------------------------
         * Methods
@@ -212,12 +217,11 @@ class GeoRaster: public RasterObject
         static int luaBoundingBox(lua_State* L);
         static int luaCellSize(lua_State* L);
 
-        static void* readingThread(void* param);
-
-        void readPixel(void);
-        void resamplePixel(void);
-        void computeZonalStats(void);
-        bool nodataCheck(void);
+        void       readPOI           (Raster* raster);
+        void       readPixel         (Raster* raster);
+        void       resamplePixel     (Raster* raster);
+        void       computeZonalStats (Raster* raster);
+        bool       nodataCheck       (Raster* raster);
 };
 
 

@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <bits/stdint-intn.h>
 #include "core.h"
 #include "geo.h"
 #include "Gedi03Raster.h"
@@ -61,6 +62,7 @@ RasterObject* Gedi03Raster::create(lua_State* L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 Gedi03Raster::~Gedi03Raster(void)
 {
+    delete raster;
 }
 
 /******************************************************************************
@@ -71,8 +73,10 @@ Gedi03Raster::~Gedi03Raster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Gedi03Raster::Gedi03Raster(lua_State *L, GeoParms* _parms):
-    VrtRaster(L, _parms, std::string("/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt").c_str())
+    GeoRaster(L, _parms)
 {
+    TimeLib::gmt_time_t gmtDate;
+
     /* Initialize Date */
     gmtDate = {
         .year = 2022,
@@ -84,29 +88,18 @@ Gedi03Raster::Gedi03Raster(lua_State *L, GeoParms* _parms):
     };
 
     /* Initialize Time */
-    gpsTime = TimeLib::gmt2gpstime(gmtDate);
+    int64_t gpsTime = TimeLib::gmt2gpstime(gmtDate);
 
-    /* Create VRT File with Raster */
     try
     {
-        List<std::string> rasterList;
         std::string rasterFile = std::string(_parms->asset->getPath()) + "/" + std::string(_parms->asset->getIndex());
-        rasterList.add(rasterFile);
-        buildVRT(vrtFile, rasterList);
-        openGeoIndex();
+
+        /* Open raster for sampling */
+        raster = new GeoRaster::Raster(rasterFile.c_str(), gpsTime);
+        open(raster);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating Gedi03Raster: %s", e.what());
     }
-}
-
-/*----------------------------------------------------------------------------
- * getRasterDate
- *----------------------------------------------------------------------------*/
-bool Gedi03Raster::getRasterDate(raster_info_t& rinfo)
-{
-    rinfo.gmtDate = gmtDate;
-    rinfo.gpsTime = gpsTime;
-    return true;
 }

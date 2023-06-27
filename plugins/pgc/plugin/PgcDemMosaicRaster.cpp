@@ -44,21 +44,33 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
-    GeoRaster(L, _parms, vrtFile.append(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str())
+    GeoRaster(L, _parms)
 {
     /*
      * Pgc Mosaics use one VRT file.
      */
-     open();
+    std::string vrtFile;
+    vrtFile.append(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str();
+
+    raster = new GeoRaster::Raster(vrtFile.c_str());
+    open(raster);
+}
+
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+PgcDemMosaicRaster::~PgcDemMosaicRaster(void)
+{
+    delete raster;
 }
 
 
 /*----------------------------------------------------------------------------
  * getRasterDate
  *----------------------------------------------------------------------------*/
-int64_t PgcDemMosaicRaster::mosaicGetRasterDate(const char* fileName, int year, int month, int day, int hour, int minute, int second)
+int64_t PgcDemMosaicRaster::mosaicGetRasterDate(int year, int month, int day, int hour, int minute, int second)
 {
-    std::ignore = fileName;
     TimeLib::gmt_time_t gmt;
 
     gmt.year        = year;
