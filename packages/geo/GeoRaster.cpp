@@ -86,18 +86,18 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
         OGRPoint point(lon, lat, height);
 
         /* Get sample, if none found, return */
-        _raster->point   = point;
-        _raster->sampled = false;
-        _raster->enabled = true;
-        bzero(&_raster->sample, sizeof(sample_t));
-        readPOI(_raster);
+        _raster.load()->point   = point;
+        _raster.load()->sampled = false;
+        _raster.load()->enabled = true;
+        bzero(&_raster.load()->sample, sizeof(sample_t));
+        readPOI(_raster.load());
 
-        if(_raster->sampled)
+        if(_raster.load()->sampled)
         {
             /* Update dictionary of used raster files */
-            _raster->sample.fileId = fileDictAdd(_raster->fileName);
-            _raster->sample.flags  = 0;
-            slist.add(_raster->sample);
+            _raster.load()->sample.fileId = fileDictAdd(_raster.load()->fileName);
+            _raster.load()->sample.flags  = 0;
+            slist.add(_raster.load()->sample);
         }
     }
     catch (const RunTimeException &e)
@@ -128,7 +128,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms):
     RasterObject(L, _parms)
 {
     /* Initialize Class Data Members */
-    _raster = NULL;
+    _raster.store(NULL);
 
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -188,7 +188,7 @@ int GeoRaster::radius2pixels(double cellSize, int _radius)
  *----------------------------------------------------------------------------*/
 void GeoRaster::open(Raster* raster)
 {
-    _raster = raster;
+    _raster.store(raster);
 
     if(raster->dset == NULL)
     {
@@ -790,8 +790,8 @@ int GeoRaster::luaDimensions(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushinteger(L, lua_obj->_raster->rows);
-        lua_pushinteger(L, lua_obj->_raster->cols);
+        lua_pushinteger(L, lua_obj->_raster.load()->rows);
+        lua_pushinteger(L, lua_obj->_raster.load()->cols);
         num_ret += 2;
 
         /* Set Return Status */
@@ -820,10 +820,10 @@ int GeoRaster::luaBoundingBox(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->_raster->bbox.lon_min);
-        lua_pushnumber(L, lua_obj->_raster->bbox.lat_min);
-        lua_pushnumber(L, lua_obj->_raster->bbox.lon_max);
-        lua_pushnumber(L, lua_obj->_raster->bbox.lat_max);
+        lua_pushnumber(L, lua_obj->_raster.load()->bbox.lon_min);
+        lua_pushnumber(L, lua_obj->_raster.load()->bbox.lat_min);
+        lua_pushnumber(L, lua_obj->_raster.load()->bbox.lon_max);
+        lua_pushnumber(L, lua_obj->_raster.load()->bbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */
@@ -852,7 +852,7 @@ int GeoRaster::luaCellSize(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->_raster->cellSize);
+        lua_pushnumber(L, lua_obj->_raster.load()->cellSize);
         num_ret += 1;
 
         /* Set Return Status */
