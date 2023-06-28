@@ -1168,9 +1168,16 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     else
     {
         uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
-        uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
+        const int MAX_BLOCK_OFFSET_SIZE = 8;
+        uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
+        if(H5_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "block offset size too large: %d", heap_info->blk_offset_size);
+        }
+        readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
         print2term("Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
-        print2term("Block Offset:                                                    0x%lx\n", blk_offset);
+        print2term("Block Offset:                                                    0x");
+        for(int i = 0; i < heap_info->blk_offset_size; i++) print2term("%02X", block_offset_buf[i]);
     }
 
     if(heap_info->dblk_checksum)
@@ -1272,9 +1279,16 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     else
     {
         uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
-        uint64_t blk_offset    = readField(heap_info->blk_offset_size, &pos); // Block Offset
+        const int MAX_BLOCK_OFFSET_SIZE = 8;
+        uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
+        if(H5_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "block offset size too large: %d", heap_info->blk_offset_size);
+        }
+        readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
         print2term("Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
-        print2term("Block Offset:                                                    0x%lx\n", blk_offset);
+        print2term("Block Offset:                                                    0x");
+        for(int i = 0; i < heap_info->blk_offset_size; i++) print2term("%02X", block_offset_buf[i]);
     }
 
     /* Calculate Number of Direct and Indirect Blocks (see III.G. Disk Format: Level 1G - Fractal Heap) */
@@ -1508,7 +1522,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 {
                     print2term("Chunk Offset:                                                    %ld (%ld)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
                     print2term("Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
-                    print2term("Buffer Bytes:                                                    %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
+                    print2term("Chunk Bytes:                                                     %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
                 }
 
                 /* Read Chunk */

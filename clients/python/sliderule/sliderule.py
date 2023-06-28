@@ -867,7 +867,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
             rsps.raise_for_status()
             requested_nodes = max(min(desired_nodes, rsps_body["max_nodes"]), rsps_body["min_nodes"])
             if requested_nodes != desired_nodes:
-                logger.info("Provisioning system desired nodes truncated to {}".format(requested_nodes))
+                logger.info("Provisioning system desired nodes overridden to {}".format(requested_nodes))
         except requests.exceptions.HTTPError as e:
             logger.info('{}'.format(e))
             logger.info('Provisioning system status request returned error => {}'.format(rsps_body["error_msg"]))

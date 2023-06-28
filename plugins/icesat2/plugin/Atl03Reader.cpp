@@ -1519,9 +1519,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     reader->sendExtentRecord(extent_id, info->track, state, atl03, &local_stats);
                 }
-                else
+                else if(state[Icesat2Parms::RPT_L].extent_photons.length() > 0 || state[Icesat2Parms::RPT_R].extent_photons.length() > 0)
                 {
-                    reader->sendFlatRecord (extent_id, info->track, state, atl03, &local_stats);
+                    reader->sendFlatRecord(extent_id, info->track, state, atl03, &local_stats);
                 }
 
 
