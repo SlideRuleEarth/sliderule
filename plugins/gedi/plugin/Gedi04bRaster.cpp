@@ -62,7 +62,6 @@ RasterObject* Gedi04bRaster::create(lua_State* L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 Gedi04bRaster::~Gedi04bRaster(void)
 {
-    delete raster;
 }
 
 /******************************************************************************
@@ -93,10 +92,7 @@ Gedi04bRaster::Gedi04bRaster(lua_State *L, GeoParms* _parms):
     try
     {
         std::string rasterFile = std::string(_parms->asset->getPath()) + "/" + std::string(_parms->asset->getIndex());
-
-        /* Open raster for sampling */
-        raster = new GeoRaster::Raster(rasterFile.c_str(), gpsTime);
-        open(raster);
+        openRaster(rasterFile.c_str(), gpsTime);
     }
     catch(const RunTimeException& e)
     {

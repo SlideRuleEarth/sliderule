@@ -84,7 +84,6 @@ class GeoJsonRaster: public GeoRaster
          * Data
          *--------------------------------------------------------------------*/
 
-        GeoRaster::Raster* raster;
         std::string rasterFile;
         char uuid_str[UUID_STR_LEN];
 };

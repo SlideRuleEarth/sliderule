@@ -133,7 +133,6 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
-    delete raster;
     VSIUnlink(rasterFile.c_str());
 }
 
@@ -239,9 +238,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
 
-        /* Open raster for sampling */
-        raster = new GeoRaster::Raster(rasterFile.c_str(), TimeLib::gpstime());
-        open(raster);
+        openRaster(rasterFile.c_str(), TimeLib::gpstime());
         rasterCreated = true;
     }
     catch(const RunTimeException& e)

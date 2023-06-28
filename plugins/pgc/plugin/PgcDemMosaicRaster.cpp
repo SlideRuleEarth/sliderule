@@ -51,18 +51,7 @@ PgcDemMosaicRaster::PgcDemMosaicRaster(lua_State *L, GeoParms* _parms):
      */
     std::string vrtFile;
     vrtFile.append(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str();
-
-    raster = new GeoRaster::Raster(vrtFile.c_str());
-    open(raster);
-}
-
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-PgcDemMosaicRaster::~PgcDemMosaicRaster(void)
-{
-    delete raster;
+    openRaster(vrtFile.c_str());
 }
 
 

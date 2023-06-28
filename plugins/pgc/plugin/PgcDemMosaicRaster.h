@@ -51,11 +51,7 @@ class PgcDemMosaicRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
                  PgcDemMosaicRaster   (lua_State* L, GeoParms* _parms);
-        virtual ~PgcDemMosaicRaster   (void);
         int64_t  mosaicGetRasterDate  (int year, int month, int day, int hour, int minute, int second);
-
-    private:
-        GeoRaster::Raster* raster;
 };
 
 #endif  /* __pgcdem_mosaic_raster__ */

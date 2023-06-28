@@ -154,7 +154,7 @@ class GeoRaster: public RasterObject
             OGRPoint        point;
             sample_t        sample;
 
-            Raster(const char* _fileName, double _gpsTime=0);
+            Raster(const char* _fileName="", double _gpsTime=0);
 
             inline bool containsPoint(OGRPoint& p)
             {
@@ -179,8 +179,9 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoRaster             (lua_State* L, GeoParms* _parms);
-        void            open                  (Raster* raster);
+                        GeoRaster             (lua_State* L, GeoParms* _parms, const char* _fileName="", double _gpsTime=0);
+        void            openRaster            (const char* _fileName="", double _gpsTime=0);
+        void            openRaster            (Raster* raster);
         virtual int64_t getRasterDate         (void);
 
         const char*     getUUID               (char* uuid_str);
@@ -207,7 +208,7 @@ class GeoRaster: public RasterObject
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
-        std::atomic<Raster*> _raster;
+        Raster _raster;
 
         /*--------------------------------------------------------------------
         * Methods
