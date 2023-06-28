@@ -36,14 +36,14 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PgcDemMosaicRaster.h"
+#include "GeoRaster.h"
 #include "PgcWkt.h"
 
 /******************************************************************************
  * REMA DEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-class RemaDemMosaicRaster: public PgcDemMosaicRaster
+class RemaDemMosaicRaster: public GeoRaster
 {
     public:
 
@@ -54,8 +54,6 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new RemaDemMosaicRaster(L, _parms); }
 
-        int64_t getRasterDate(void) override
-        { return mosaicGetRasterDate(2023, 02, 24, 18, 51, 44); }
 
     protected:
 
@@ -64,7 +62,9 @@ class RemaDemMosaicRaster: public PgcDemMosaicRaster
          *--------------------------------------------------------------------*/
 
         RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         PgcDemMosaicRaster(L, _parms) {}
+         GeoRaster(L, _parms,
+                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                  getRasterDate(2023, 02, 24, 18, 51, 44)) {}
 
         void overrideTargetCRS(OGRSpatialReference& target) override
         { setCRSfromWkt(target, getRemaWkt2()); }

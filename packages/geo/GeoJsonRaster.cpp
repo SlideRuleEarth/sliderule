@@ -108,7 +108,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    List<sample_t> slist;
+    List<RasterObject::sample_t> slist;
     int sampleCnt = 0;
 
     try
@@ -161,9 +161,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
     GeoRaster(L, _parms)
 {
     bool rasterCreated = false;
-    GDALDataset *rasterDset = NULL;
-    GDALDataset *jsonDset   = NULL;
-    std::string  jsonFile;
+    GDALDataset* rasterDset = NULL;
+    GDALDataset* jsonDset   = NULL;
+    std::string jsonFile;
 
     jsonFile   = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
     rasterFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".tif";
@@ -248,9 +248,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
    /* Cleanup */
    VSIUnlink(jsonFile.c_str());
-   if (jsonDset) GDALClose((GDALDatasetH)jsonDset);
-   if (rasterDset) GDALClose((GDALDatasetH)rasterDset);
+   if(jsonDset) GDALClose((GDALDatasetH)jsonDset);
+   if(rasterDset) GDALClose((GDALDatasetH)rasterDset);
 
-   if (!rasterCreated)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
+   if(!rasterCreated)
+       throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
 }
