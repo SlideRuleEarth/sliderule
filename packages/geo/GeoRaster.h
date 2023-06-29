@@ -53,7 +53,7 @@
  * GEO RASTER CLASS
  ******************************************************************************/
 
-class GeoRaster: public RasterObject, public GdalRaster
+class GeoRaster: public RasterObject
 {
     public:
 
@@ -66,7 +66,7 @@ class GeoRaster: public RasterObject, public GdalRaster
          *--------------------------------------------------------------------*/
 
         virtual         ~GeoRaster  (void);
-        virtual void    getSamples  (double lon, double lat, double height, int64_t gps, List<RasterObject::sample_t>& slist, void* param=NULL) override;
+        virtual void    getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample_t>& slist, void* param=NULL) override;
 
     protected:
 
@@ -74,7 +74,9 @@ class GeoRaster: public RasterObject, public GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-         GeoRaster  (lua_State* L, GeoParms* _parms, const char* _fileName="", double _gpsTime=0);
+              GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName="", double _gpsTime=0, const std::string& _targetWkt="");
+         void openRaster (const std::string& _fileName="", double _gpsTime=0, const std::string& _targetWkt="")
+           { raster.open(_fileName, _gpsTime, _targetWkt); }
 
         /*--------------------------------------------------------------------
          * Data
@@ -91,6 +93,7 @@ class GeoRaster: public RasterObject, public GdalRaster
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
+        GdalRaster raster;
 
         /*--------------------------------------------------------------------
         * Methods

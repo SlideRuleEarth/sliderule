@@ -38,6 +38,7 @@
 
 #include "RasterObject.h"
 #include "OsApi.h"
+#include "RasterSample.h"
 #include "TimeLib.h"
 #include "GeoParms.h"
 #include "Ordering.h"
@@ -175,7 +176,7 @@ class GeoIndexedRaster: public RasterObject
 
             /* Last sample information */
             OGRPoint        point;
-            sample_t        sample;
+            RasterSample_t        sample;
 
             Raster(void);
         };
@@ -195,7 +196,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         virtual         ~GeoIndexedRaster  (void);
-        void            getSamples  (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
+        void            getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample_t>& slist, void* param=NULL) override;
 
     protected:
 
@@ -204,7 +205,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                         GeoIndexedRaster             (lua_State* L, GeoParms* _parms);
-        virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags);
+        virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample_t>& slist, uint32_t flags);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         const char*     getUUID               (char* uuid_str);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;

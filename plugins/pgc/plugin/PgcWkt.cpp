@@ -75,14 +75,14 @@ void parseWktFiles(void)
     loadWKtFile(pgcRemaWkt2, ss.str());
 }
 
-const std::string& getArcticDemWkt2(void)
+const char* getArcticDemWkt2(void)
 {
-    return pgcArcticWkt2;
+    return pgcArcticWkt2.c_str();
 }
 
 
-const std::string& getRemaWkt2(void)
+const char* getRemaWkt2(void)
 {
-    return pgcRemaWkt2;
+    return pgcRemaWkt2.c_str();
 }
 

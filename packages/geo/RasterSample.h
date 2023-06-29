@@ -29,42 +29,32 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arcticdem_mosaic_raster__
-#define __arcticdem_mosaic_raster__
+#ifndef __raster_sample__
+#define __raster_sample__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
-#include "PgcWkt.h"
+#include "OsApi.h"
 
-/******************************************************************************
- * ARCTICDEM MOSAIC RASTER CLASS
- ******************************************************************************/
-
-class ArcticDemMosaicRaster: public GeoRaster
+typedef struct
 {
-    public:
+    double value;
+    double time;   // gps seconds
+    uint64_t fileId;
+    uint32_t flags;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    struct
+    {
+        uint32_t count;
+        double min;
+        double max;
+        double mean;
+        double median;
+        double stdev;
+        double mad;
+    } stats;
+} RasterSample_t;
 
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemMosaicRaster(L, _parms); }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         GeoRaster(L, _parms,
-                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
-                  TimeLib::datetime2gps(2023, 01, 18, 20, 23, 42),
-                  getArcticDemWkt2()) {}
-};
-
-#endif  /* __arcticdem_mosaic_raster__ */
+#endif  /* __raster_sample__ */

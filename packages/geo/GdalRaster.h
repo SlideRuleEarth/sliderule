@@ -39,8 +39,7 @@
 #include "OsApi.h"
 #include "TimeLib.h"
 #include "GeoParms.h"
-#include "Ordering.h"
-#include "List.h"
+#include "RasterSample.h"
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
@@ -71,6 +70,8 @@ do                                                                            \
 
 
 
+const char* getUUID(char* uuid_str);
+
 
 /******************************************************************************
  * GEO RASTER CLASS
@@ -88,30 +89,9 @@ class GdalRaster
         static const int MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int SLIDERULE_EPSG                = 7912;
 
-        static const char* FLAGS_RASTER_TAG;
-        static const char* SAMPLES_RASTER_TAG;
-
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
-        typedef struct {
-            double    value;
-            double    time; // gps seconds
-            uint64_t  fileId;
-            uint32_t  flags;
-
-            struct {
-                uint32_t count;
-                double   min;
-                double   max;
-                double   mean;
-                double   median;
-                double   stdev;
-                double   mad;
-            } stats;
-        } sample_t;
-
 
         typedef struct
         {
@@ -128,89 +108,33 @@ class GdalRaster
             OGRSpatialReference source;
             OGRSpatialReference target;
 
-            void clear(bool close = true);
-            CoordTransform(void) { clear(false); }
-           ~CoordTransform(void) { clear(); }
+            CoordTransform(void);
+           ~CoordTransform(void);
         };
-
-        class GeoDataSet
-        {
-        public:
-            CoordTransform  cord;
-            double          verticalShift;  /* Calculated for last POI transformed to target CRS */
-            std::string     fileName;
-            GDALDataset    *dset;
-            GDALRasterBand* band;
-            GDALDataType    dataType;
-            bool            dataIsElevation;
-            uint32_t        rows;
-            uint32_t        cols;
-            double          cellSize;
-            bbox_t          bbox;
-            int32_t         xBlockSize;
-            int32_t         yBlockSize;
-            uint32_t        radiusInPixels;
-
-            void clear(bool close = true);
-
-            GeoDataSet(void) { clear(false); }
-           ~GeoDataSet(void) { clear(); }
-        };
-
-        class Raster: public GeoDataSet
-        {
-        public:
-            bool            enabled;
-            bool            sampled;
-            std::string     groupId;
-
-            double          gpsTime;
-            double          useTime;
-
-            /* Last sample information */
-            OGRPoint        point;
-            sample_t        sample;
-
-            Raster(const char* _fileName="", double _gpsTime=0);
-
-            inline bool containsPoint(OGRPoint& p)
-            {
-                return (dset &&
-                        (p.getX() >= bbox.lon_min) && (p.getX() <= bbox.lon_max) &&
-                        (p.getY() >= bbox.lat_min) && (p.getY() <= bbox.lat_max));
-            }
-        };
-
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GdalRaster   (GeoParms* _parms, const char* _fileName="", double _gpsTime=0);
-        virtual        ~GdalRaster   (void);
-        void            openRaster   (const char* _fileName="", double _gpsTime=0);
+                        GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
+                       ~GdalRaster     (void);
+        void            open           (const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
+        void            open           (void);
+        void            setPOI         (OGRPoint& _point);
+        void            readPOI        (void);
+        RasterSample_t* getSample      (void) { return sampled ? &sample : NULL; }
+        const char*     getFileName    (void) { return fileName.c_str(); }
+        int             getRows        (void) { return rows; }
+        int             getCols        (void) { return cols; }
+        bbox_t&         getBbox        (void) { return bbox; }
+        double          getCellSize    (void) { return cellSize; }
 
-        int64_t         getRasterDate(int year, int month, int day, int hour, int minute, int second);
-
-        Raster _raster;
-        void readPOI(Raster* raster);
 
         protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-
-        void            openRaster            (Raster* raster);
-
-        const char*     getUUID               (char* uuid_str);
-        void            createTransform       (CoordTransform& cord, GDALDataset* dset);
-        virtual void    overrideTargetCRS     (OGRSpatialReference& target);
-        void            setCRSfromWkt         (OGRSpatialReference& sref, const std::string& wkt);
-        bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
-        int             radius2pixels         (double cellSize, int _radius);
-        void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
-                                               void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 
         /*--------------------------------------------------------------------
          * Data
@@ -225,17 +149,47 @@ class GdalRaster
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
-        GeoParms* parms;
+        GeoParms*      parms;
+        std::string    targetWkt;
+
+        bool           enabled;
+        bool           sampled;
+        std::string    groupId;
+
+        double         gpsTime;  /* Time the raster data was collected and/or generated */
+        double         useTime;  /* Time the raster was last read/sampled */
+
+        /* Last sample information */
+        OGRPoint        point;
+        RasterSample_t  sample;
+
+        CoordTransform  cord;
+        double          verticalShift;  /* Calculated for last POI transformed to target CRS */
+        std::string     fileName;
+        GDALDataset    *dset;
+        GDALRasterBand* band;
+        bool            dataIsElevation;
+        uint32_t        rows;
+        uint32_t        cols;
+        double          cellSize;
+        bbox_t          bbox;
+        uint32_t        radiusInPixels;
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        // void       readPOI           (Raster* raster);
-        void       readPixel         (Raster* raster);
-        void       resamplePixel     (Raster* raster);
-        void       computeZonalStats (Raster* raster);
-        bool       nodataCheck       (Raster* raster);
+        void        readPixel           (void);
+        void        resamplePixel       (void);
+        void        computeZonalStats   (void);
+        bool        nodataCheck         (void);
+        void        createTransform     (void);
+        inline bool containsPoint       (void);
+        bool        containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);
+        int         radius2pixels       (int _radius);
+        void        readRasterWithRetry (int col, int row, int colSize, int rowSize,
+                                         void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+
 };
 
 

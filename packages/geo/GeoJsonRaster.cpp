@@ -108,7 +108,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    List<RasterObject::sample_t> slist;
+    List<RasterSample_t> slist;
     int sampleCnt = 0;
 
     try
@@ -238,7 +238,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
 
-        openRaster(rasterFile.c_str(), TimeLib::gpstime());
+        openRaster(rasterFile, TimeLib::gpstime());
         rasterCreated = true;
     }
     catch(const RunTimeException& e)

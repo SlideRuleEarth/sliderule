@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "LandsatHlsRaster.h"
+#include "RasterSample.h"
 #include "TimeLib.h"
 
 #include <strings.h>
@@ -230,7 +231,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<RasterSample_t>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;
@@ -293,7 +294,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
         }
     }
 
-    sample_t sample;
+    RasterSample_t sample;
     double groupTime = rgroup.gpsTime / 1000;
     std::string groupName = rgroup.id + " {\"algo\": \"";
 

@@ -36,6 +36,7 @@
 #include <cmath>
 #include <string>
 #include "OsApi.h"
+#include "RasterSample.h"
 #include "core.h"
 #include "GeoIndexedRaster.h"
 
@@ -74,7 +75,7 @@ const char* GeoIndexedRaster::SAMPLES_RASTER_TAG = "Dem";
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param)
+void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterSample_t>& slist, void* param)
 {
     std::ignore = param;
 
@@ -212,7 +213,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<RasterSample_t>& slist, uint32_t flags)
 {
     Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
     for(int i = 0; i < raster_iter.length; i++)
@@ -1016,7 +1017,7 @@ GeoIndexedRaster::Raster::Raster( void )
     sampled = false;
     gpsTime = 0;
     useTime = 0;
-    bzero(&sample, sizeof(sample_t));
+    bzero(&sample, sizeof(sample));
 }
 
 
@@ -1033,7 +1034,7 @@ void GeoIndexedRaster::invalidateCache(void)
         raster->enabled = false;
         raster->sampled = false;
         raster->point.empty();
-        bzero(&raster->sample, sizeof(sample_t));
+        bzero(&raster->sample, sizeof(RasterSample_t));
         raster->sample.value = INVALID_SAMPLE_VALUE;
         key = rasterDict.next(&raster);
     }

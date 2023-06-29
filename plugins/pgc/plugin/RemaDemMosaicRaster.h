@@ -64,10 +64,8 @@ class RemaDemMosaicRaster: public GeoRaster
         RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
          GeoRaster(L, _parms,
                   std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
-                  getRasterDate(2023, 02, 24, 18, 51, 44)) {}
-
-        void overrideTargetCRS(OGRSpatialReference& target) override
-        { setCRSfromWkt(target, getRemaWkt2()); }
+                  TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44),
+                  getRemaWkt2()) {}
 };
 
 #endif  /* __remadem_mosaic_raster__ */

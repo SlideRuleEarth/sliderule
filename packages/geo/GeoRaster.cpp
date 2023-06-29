@@ -71,7 +71,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterObject::sample_t>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterSample_t>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -84,23 +84,15 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
         OGRPoint point(lon, lat, height);
 
         /* Get sample, if none found, return */
-        _raster.point   = point;
-        _raster.sampled = false;
-        _raster.enabled = true;
-        bzero(&_raster.sample, sizeof(RasterObject::sample_t));
-        readPOI(&_raster);
+        raster.setPOI(point);
+        raster.readPOI();
 
-        if(_raster.sampled)
+
+        if(RasterSample_t* rs = raster.getSample())
         {
             /* Update dictionary of used raster files */
-            _raster.sample.fileId = fileDictAdd(_raster.fileName);
-            _raster.sample.flags  = 0;
-
-            RasterObject::sample_t s;
-            memcpy(&s, &_raster.sample, sizeof(s));
-
-            // slist.add(_raster.sample);
-            slist.add(s);
+            rs->fileId = fileDictAdd(raster.getFileName());
+            slist.add(*rs);
         }
     }
     catch (const RunTimeException &e)
@@ -127,9 +119,9 @@ GeoRaster::~GeoRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const char* _fileName, double _gpsTime):
+GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt):
     RasterObject(L, _parms),
-    GdalRaster(_parms, _fileName, _gpsTime)
+    raster(_parms, _fileName, _gpsTime, _targetWkt)
 {
 
     /* Add Lua Functions */
@@ -173,8 +165,8 @@ int GeoRaster::luaDimensions(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushinteger(L, lua_obj->_raster.rows);
-        lua_pushinteger(L, lua_obj->_raster.cols);
+        lua_pushinteger(L, lua_obj->raster.getRows());
+        lua_pushinteger(L, lua_obj->raster.getCols());
         num_ret += 2;
 
         /* Set Return Status */
@@ -203,10 +195,11 @@ int GeoRaster::luaBoundingBox(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->_raster.bbox.lon_min);
-        lua_pushnumber(L, lua_obj->_raster.bbox.lat_min);
-        lua_pushnumber(L, lua_obj->_raster.bbox.lon_max);
-        lua_pushnumber(L, lua_obj->_raster.bbox.lat_max);
+        GdalRaster::bbox_t& bbox = lua_obj->raster.getBbox();
+        lua_pushnumber(L, bbox.lon_min);
+        lua_pushnumber(L, bbox.lat_min);
+        lua_pushnumber(L, bbox.lon_max);
+        lua_pushnumber(L, bbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */
@@ -235,7 +228,7 @@ int GeoRaster::luaCellSize(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->_raster.cellSize);
+        lua_pushnumber(L, lua_obj->raster.getCellSize());
         num_ret += 1;
 
         /* Set Return Status */

@@ -36,6 +36,7 @@
 #include <cmath>
 #include <string>
 #include "OsApi.h"
+#include "RasterSample.h"
 #include "core.h"
 #include "GdalRaster.h"
 
@@ -60,45 +61,10 @@
 #include "gdal.h"
 #include "ogr_spatialref.h"
 
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-const char* GdalRaster::FLAGS_RASTER_TAG   = "Fmask";
-const char* GdalRaster::SAMPLES_RASTER_TAG = "Dem";
-
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GdalRaster::~GdalRaster(void)
-{
-}
-
-
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const char* _fileName, double _gpsTime)
-{
-    /* Initialize Class Data Members */
-    _raster.fileName = _fileName;
-    _raster.gpsTime  = _gpsTime;
-    parms = _parms;
-}
-
-
 /*----------------------------------------------------------------------------
  * getUUID
  *----------------------------------------------------------------------------*/
-const char* GdalRaster::getUUID(char *uuid_str)
+const char* getUUID(char *uuid_str)
 {
     uuid_t uuid;
     uuid_generate(uuid);
@@ -106,132 +72,163 @@ const char* GdalRaster::getUUID(char *uuid_str)
     return uuid_str;
 }
 
+
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+/******************************************************************************
+ * PUBLIC METHODS
+ ******************************************************************************/
+
 /*----------------------------------------------------------------------------
- * radius2pixels
+ * Constructor
  *----------------------------------------------------------------------------*/
-int GdalRaster::radius2pixels(double cellSize, int _radius)
+GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt)
 {
-    /*
-     * Code supports only rasters with units in meters (cellSize and radius must be in meters).
-     */
-    int csize = static_cast<int>(cellSize);
+    /* Initialize Class Data Members */
+    parms    = _parms;
+    fileName = _fileName;
+    gpsTime  = _gpsTime;
+    useTime  = 0;
+    targetWkt= _targetWkt;
 
-    if (_radius == 0) return 0;
-    if (csize == 0) csize = 1;
+    enabled = false;
+    sampled = false;
+    bzero(&sample, sizeof(RasterSample_t));
 
-    int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
-    int radiusInPixels = radiusInMeters / csize;
-    return radiusInPixels;
+    dset = NULL;
+    band = NULL;
+    dataIsElevation = false;
+    rows = 0;
+    cols = 0;
+    cellSize = 0;
+    bzero(&bbox, sizeof(bbox_t));
+    verticalShift = 0;
+    radiusInPixels = 0;
 }
 
 /*----------------------------------------------------------------------------
- * openRaster
+ * Destructor
  *----------------------------------------------------------------------------*/
-void GdalRaster::openRaster(const char* _fileName, double _gpsTime)
+GdalRaster::~GdalRaster(void)
 {
-    if(_raster.dset == NULL)
+    if(dset) GDALClose((GDALDatasetH)dset);
+}
+
+/*----------------------------------------------------------------------------
+ * open
+ *----------------------------------------------------------------------------*/
+void GdalRaster::open(const std::string& _fileName, double _gpsTime, const std::string& _targetWkt)
+{
+    if(dset == NULL)
     {
-        if(strlen(_fileName) > 0)
-            _raster.fileName = _fileName;
+        if(_fileName.length() > 0)
+            fileName = _fileName;
 
         if(_gpsTime > 0)
-            _raster.gpsTime = _gpsTime;
+            gpsTime = _gpsTime;
 
-        openRaster(&_raster);
+        if(_targetWkt.length() > 0)
+            targetWkt = _targetWkt;
+
+        open();
     }
-    else
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster, already opened with file: %s", _raster.fileName.c_str());
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster, already opened with file: %s", fileName.c_str());
 }
 
-
 /*----------------------------------------------------------------------------
- * openRaster
+ * open
  *----------------------------------------------------------------------------*/
-void GdalRaster::openRaster(Raster* raster)
+void GdalRaster::open(void)
 {
-    if(raster->dset == NULL)
+    if(dset == NULL)
     {
-        raster->dset = (GDALDataset*)GDALOpenEx(raster->fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
-        if(raster->dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", raster->fileName.c_str());
+        dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if(dset == NULL)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
 
-        mlog(DEBUG, "Opened %s", raster->fileName.c_str());
+        mlog(DEBUG, "Opened %s", fileName.c_str());
 
         /* Store information about raster */
-        raster->cols = raster->dset->GetRasterXSize();
-        raster->rows = raster->dset->GetRasterYSize();
+        cols = dset->GetRasterXSize();
+        rows = dset->GetRasterYSize();
 
         /* Get raster boundry box */
         double geot[6] = {0};
-        CPLErr err     = raster->dset->GetGeoTransform(geot);
+        CPLErr err     = dset->GetGeoTransform(geot);
         CHECK_GDALERR(err);
-        raster->bbox.lon_min = geot[0];
-        raster->bbox.lon_max = geot[0] + raster->cols * geot[1];
-        raster->bbox.lat_max = geot[3];
-        raster->bbox.lat_min = geot[3] + raster->rows * geot[5];
+        bbox.lon_min = geot[0];
+        bbox.lon_max = geot[0] + cols * geot[1];
+        bbox.lat_max = geot[3];
+        bbox.lat_min = geot[3] + rows * geot[5];
 
-        raster->cellSize       = geot[1];
-        raster->radiusInPixels = radius2pixels(raster->cellSize, parms->sampling_radius);
+        cellSize       = geot[1];
+        radiusInPixels = radius2pixels(parms->sampling_radius);
 
         /* Limit maximum sampling radius */
-        if(raster->radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+        if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR,
                                    "Sampling radius is too big: %d: max allowed %d meters",
-                                   parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(raster->cellSize));
+                                   parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
         }
 
         /* Get raster block size */
-        raster->band = raster->dset->GetRasterBand(1);
-        CHECKPTR(raster->band);
-        raster->band->GetBlockSize(&raster->xBlockSize, &raster->yBlockSize);
-
-        /* Get raster data type */
-        raster->dataType = raster->band->GetRasterDataType();
+        band = dset->GetRasterBand(1);
+        CHECKPTR(band);
 
         /* Create coordinates transform for raster */
-        createTransform(raster->cord, raster->dset);
+        createTransform();
     }
 }
 
+/*----------------------------------------------------------------------------
+ * setPOI
+ *----------------------------------------------------------------------------*/
+void GdalRaster::setPOI(OGRPoint& _point)
+{
+    point   = _point;
+    sampled = false;
+    enabled = true;
+    bzero(&sample, sizeof(RasterSample_t));
+}
 
 /*----------------------------------------------------------------------------
  * readPOI
- * Thread-safe, can be called directly from main thread or reader thread
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPOI(Raster* raster)
+void GdalRaster::readPOI(void)
 {
     try
     {
-        if (raster->dset == NULL)
-            openRaster(raster);
+        if (dset == NULL) open();
 
-        double z0 = raster->point.getZ();
-        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
+        double z0 = point.getZ();
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", point.getX(), point.getY(), point.getZ());
 
-        if(raster->point.transform(raster->cord.transf) != OGRERR_NONE)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
+        if(point.transform(cord.transf) != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", point.getX(), point.getY(), point.getZ());
 
-        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", raster->point.getX(), raster->point.getY(), raster->point.getZ());
-        raster->verticalShift = z0 - raster->point.getZ();
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", point.getX(), point.getY(), point.getZ());
+        verticalShift = z0 - point.getZ();
 
         /*
          * Attempt to read raster only if it contains the point of interest.
          */
-        if (!raster->containsPoint(raster->point))
-            return;
+        if(containsPoint())
+        {
+            if(parms->sampling_algo == GRIORA_NearestNeighbour)
+                readPixel();
+            else
+                resamplePixel();
 
-        if (parms->sampling_algo == GRIORA_NearestNeighbour)
-            readPixel(raster);
-        else
-            resamplePixel(raster);
+            sampled = true;
+            useTime = TimeLib::gpstime();
+            sample.time = gpsTime;
 
-        raster->sampled = true;
-        raster->useTime = TimeLib::gpstime();
-        raster->sample.time = raster->gpsTime;
-
-        if (parms->zonal_stats)
-            computeZonalStats(raster);
+            if(parms->zonal_stats)
+                computeZonalStats();
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -240,44 +237,10 @@ void GdalRaster::readPOI(Raster* raster)
 }
 
 
-/*----------------------------------------------------------------------------
- * getRasterDate
- *----------------------------------------------------------------------------*/
-int64_t GdalRaster::getRasterDate(int year, int month, int day, int hour, int minute, int second)
-{
-    TimeLib::gmt_time_t gmt;
 
-    gmt.year        = year;
-    gmt.doy         = TimeLib::dayofyear(year, month, day);
-    gmt.hour        = hour;
-    gmt.minute      = minute;
-    gmt.second      = second;
-    gmt.millisecond = 0;
-
-    return TimeLib::gmt2gpstime(gmt);
-}
-
-/*----------------------------------------------------------------------------
- * RasterIoWithRetry
- *----------------------------------------------------------------------------*/
-void GdalRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
-{
-    /*
-     * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
-     * There is no way to detect this condition based on the error code returned.
-     * Because of it, always retry failed read.
-     */
-    int cnt = 2;
-    CPLErr err = CE_None;
-    do
-    {
-        err = band->RasterIO(GF_Read, col, row, colSize, rowSize, data, dataColSize, dataRowSize, GDT_Float64, 0, 0, args);
-    } while (err != CE_None && cnt--);
-
-    if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
-}
-
-
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -286,24 +249,28 @@ void GdalRaster::readRasterWithRetry(GDALRasterBand *band, int col, int row, int
 /*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPixel(Raster *raster)
+void GdalRaster::readPixel(void)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int32_t col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
-        const int32_t row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+        const int32_t col = static_cast<int32_t>(floor((point.getX() - bbox.lon_min) / cellSize));
+        const int32_t row = static_cast<int32_t>(floor((bbox.lat_max - point.getY()) / cellSize));
+
+        int xBlockSize = 0;
+        int yBlockSize = 0;
+        band->GetBlockSize(&xBlockSize, &yBlockSize);
 
         /* Raster offsets to block of interest */
-        uint32_t xblk = col / raster->xBlockSize;
-        uint32_t yblk = row / raster->yBlockSize;
+        uint32_t xblk = col / xBlockSize;
+        uint32_t yblk = row / yBlockSize;
 
         GDALRasterBlock *block = NULL;
         int cnt = 2;
         do
         {
             /* Retry read if error */
-            block = raster->band->GetLockedBlockRef(xblk, yblk, false);
+            block = band->GetLockedBlockRef(xblk, yblk, false);
         } while (block == NULL && cnt--);
         CHECKPTR(block);
 
@@ -313,72 +280,72 @@ void GdalRaster::readPixel(Raster *raster)
         CHECKPTR(data);
 
         /* Calculate col, row inside of block */
-        uint32_t _col = col % raster->xBlockSize;
-        uint32_t _row = row % raster->yBlockSize;
-        uint32_t offset = _row * raster->xBlockSize + _col;
+        uint32_t _col = col % xBlockSize;
+        uint32_t _row = row % yBlockSize;
+        uint32_t offset = _row * xBlockSize + _col;
 
-        switch(raster->dataType)
+        switch(band->GetRasterDataType())
         {
             case GDT_Byte:
             {
                 uint8_t *p = (uint8_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_UInt16:
             {
                 uint16_t *p = (uint16_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_Int16:
             {
                 int16_t *p = (int16_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_UInt32:
             {
                 uint32_t *p = (uint32_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_Int32:
             {
                 int32_t *p = (int32_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_Int64:
             {
                 int64_t *p = (int64_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_UInt64:
             {
                 uint64_t *p = (uint64_t *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_Float32:
             {
                 float *p = (float *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
             case GDT_Float64:
             {
                 double *p = (double *)data;
-                raster->sample.value = (double)p[offset];
+                sample.value = (double)p[offset];
             }
             break;
 
@@ -387,19 +354,19 @@ void GdalRaster::readPixel(Raster *raster)
                  * Complex numbers are supported but not needed at this point.
                  */
                 block->DropLock();
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported dataType in raster: %s:", raster->fileName.c_str());
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported data type in raster: %s:", fileName.c_str());
         }
 
         /* Done reading, release block lock */
         block->DropLock();
 
-        if(nodataCheck(raster) && raster->dataIsElevation)
+        if(nodataCheck() && dataIsElevation)
         {
-            raster->sample.value += raster->verticalShift;
+            sample.value += verticalShift;
         }
 
         // mlog(DEBUG, "Value: %.2lf, col: %u, row: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
-        //      raster->sample.value, col, row, xblk, yblk, _col, _row, offset);
+        //      sample.value, col, row, xblk, yblk, _col, _row, offset);
     }
     catch (const RunTimeException &e)
     {
@@ -407,128 +374,15 @@ void GdalRaster::readPixel(Raster *raster)
     }
 }
 
-
-/*----------------------------------------------------------------------------
- * createTransform
- *----------------------------------------------------------------------------*/
-void GdalRaster::createTransform(CoordTransform& cord, GDALDataset* dset)
-{
-    CHECKPTR(dset);
-    cord.clear(true);
-
-    OGRErr ogrerr = cord.source.importFromEPSG(SLIDERULE_EPSG);
-    CHECK_GDALERR(ogrerr);
-
-    const char* projref = dset->GetProjectionRef();
-    CHECKPTR(projref);
-    // mlog(DEBUG, "%s", projref);
-
-    ogrerr = cord.target.importFromWkt(projref);
-    CHECK_GDALERR(ogrerr);
-
-    overrideTargetCRS(cord.target);
-
-    /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-    cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-    cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-    cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-    if(cord.transf == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
-}
-
-
-/*----------------------------------------------------------------------------
- * overrideTargetCRS
- *----------------------------------------------------------------------------*/
-void GdalRaster::overrideTargetCRS(OGRSpatialReference& target)
-{
-    std::ignore = target;
-}
-
-
-/*----------------------------------------------------------------------------
- * setCRSfromWkt
- *----------------------------------------------------------------------------*/
-void GdalRaster::setCRSfromWkt(OGRSpatialReference& sref, const std::string& wkt)
-{
-    // mlog(DEBUG, "%s", wkt.c_str());
-    OGRErr ogrerr = sref.importFromWkt(wkt.c_str());
-    CHECK_GDALERR(ogrerr);
-}
-
-
-/*----------------------------------------------------------------------------
- * containsWindow
- *----------------------------------------------------------------------------*/
-bool GdalRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
-{
-    if (col < 0 || row < 0)
-        return false;
-
-    if ((col + windowSize >= maxCol) || (row + windowSize >= maxRow))
-        return false;
-
-    return true;
-}
-
-
-/*----------------------------------------------------------------------------
- * Raster constructor
- *----------------------------------------------------------------------------*/
-GdalRaster::Raster::Raster(const char* _fileName, double _gpsTime)
-{
-    fileName = _fileName;
-    enabled = false;
-    sampled = false;
-    gpsTime = _gpsTime;
-    useTime = 0;
-    bzero(&sample, sizeof(sample_t));
-}
-
-
-/*----------------------------------------------------------------------------
- * clear
- *----------------------------------------------------------------------------*/
-void GdalRaster::GeoDataSet::clear(bool close)
-{
-    cord.clear(close);
-    fileName.clear();
-    if (close && dset) GDALClose((GDALDatasetH)dset);
-    dset = NULL;
-    band = NULL;
-    dataType = GDT_Unknown;
-    dataIsElevation = false;
-    rows = 0;
-    cols = 0;
-    cellSize = 0;
-    bzero(&bbox, sizeof(bbox_t));
-    verticalShift = 0;
-    xBlockSize = 0;
-    yBlockSize = 0;
-    radiusInPixels = 0;
-}
-
-/*----------------------------------------------------------------------------
- * clear
- *----------------------------------------------------------------------------*/
-void GdalRaster::CoordTransform::clear(bool close)
-{
-    if (close && transf) OGRCoordinateTransformation::DestroyCT(transf);
-    transf = NULL;
-    source.Clear();
-    target.Clear();
-}
-
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::resamplePixel(Raster* raster)
+void GdalRaster::resamplePixel(void)
 {
     try
     {
-        int col = static_cast<int>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
-        int row = static_cast<int>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+        int col = static_cast<int>(floor((point.getX() - bbox.lon_min) / cellSize));
+        int row = static_cast<int>(floor((bbox.lat_max - point.getY()) / cellSize));
 
         int windowSize, offset;
 
@@ -557,8 +411,8 @@ void GdalRaster::resamplePixel(Raster* raster)
         }
         else
         {
-            windowSize = raster->radiusInPixels * 2 + 1;  // Odd window size around pixel
-            offset = raster->radiusInPixels;
+            windowSize = radiusInPixels * 2 + 1;  // Odd window size around pixel
+            offset = radiusInPixels;
         }
 
         int _col = col - offset;
@@ -569,21 +423,21 @@ void GdalRaster::resamplePixel(Raster* raster)
         args.eResampleAlg = parms->sampling_algo;
         double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
-        bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        bool validWindow = containsWindow(_col, _row, cols, rows, windowSize);
         if (validWindow)
         {
-            readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
+            readRasterWithRetry(_col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
 
-            raster->sample.value = rbuf[0];
-            if(nodataCheck(raster) && raster->dataIsElevation)
+            sample.value = rbuf[0];
+            if(nodataCheck() && dataIsElevation)
             {
-                raster->sample.value += raster->verticalShift;
+                sample.value += verticalShift;
             }
         }
         else
         {
-            /* At least return pixel value if unable to resample raster and/or raster index data set */
-            readPixel(raster);
+            /* At least return pixel value if unable to resample raster */
+            readPixel();
         }
     }
     catch (const RunTimeException &e)
@@ -592,20 +446,18 @@ void GdalRaster::resamplePixel(Raster* raster)
     }
 }
 
-
 /*----------------------------------------------------------------------------
- * parms->zonal_stats
+ * computeZonalStats
  *----------------------------------------------------------------------------*/
-void GdalRaster::computeZonalStats(Raster *raster)
+void GdalRaster::computeZonalStats(void)
 {
     double *samplesArray = NULL;
 
     try
     {
-        int col = static_cast<int32_t>(floor((raster->point.getX() - raster->bbox.lon_min) / raster->cellSize));
-        int row = static_cast<int32_t>(floor((raster->bbox.lat_max - raster->point.getY()) / raster->cellSize));
+        int col = static_cast<int32_t>(floor((point.getX() - bbox.lon_min) / cellSize));
+        int row = static_cast<int32_t>(floor((bbox.lat_max - point.getY()) / cellSize));
 
-        int radiusInPixels = raster->radiusInPixels;
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
         int _col = col - radiusInPixels;
@@ -617,11 +469,10 @@ void GdalRaster::computeZonalStats(Raster *raster)
         samplesArray = new double[windowSize*windowSize];
         CHECKPTR(samplesArray);
 
-        double noDataValue = raster->band->GetNoDataValue();
-        bool validWindow = containsWindow(_col, _row, raster->cols, raster->rows, windowSize);
+        bool validWindow = containsWindow(_col, _row, cols, rows, windowSize);
         if (validWindow)
         {
-            readRasterWithRetry(raster->band, _col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            readRasterWithRetry(_col, _row, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
 
             /* One of the windows (raster or index data set) was valid. Compute zonal stats */
             double min = std::numeric_limits<double>::max();
@@ -641,10 +492,10 @@ void GdalRaster::computeZonalStats(Raster *raster)
                 for (int x = 0; x < windowSize; x++)
                 {
                     double value = samplesArray[y*windowSize + x];
-                    if (value == noDataValue) continue;
+                    if (value == band->GetNoDataValue()) continue;
 
-                    if(raster->dataIsElevation)
-                        value += raster->verticalShift;
+                    if(dataIsElevation)
+                        value += verticalShift;
 
                     double x2 = x + _col;  /* Current pixel in buffer */
                     double y2 = y + _row;
@@ -699,13 +550,13 @@ void GdalRaster::computeZonalStats(Raster *raster)
                 }
 
                 /* Store calculated zonal stats */
-                raster->sample.stats.count  = validSamplesCnt;
-                raster->sample.stats.min    = min;
-                raster->sample.stats.max    = max;
-                raster->sample.stats.mean   = mean;
-                raster->sample.stats.median = median;
-                raster->sample.stats.stdev  = stdev;
-                raster->sample.stats.mad    = mad;
+                sample.stats.count  = validSamplesCnt;
+                sample.stats.min    = min;
+                sample.stats.max    = max;
+                sample.stats.mean   = mean;
+                sample.stats.median = median;
+                sample.stats.stdev  = stdev;
+                sample.stats.mad    = mad;
             }
         }
         else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
@@ -718,24 +569,140 @@ void GdalRaster::computeZonalStats(Raster *raster)
     if (samplesArray) delete[] samplesArray;
 }
 
-
 /*----------------------------------------------------------------------------
  * nodataCheck
  *----------------------------------------------------------------------------*/
-bool GdalRaster::nodataCheck(Raster* raster)
+bool GdalRaster::nodataCheck(void)
 {
     /*
      * Replace nodata with NAN
      */
-    const double a = raster->band->GetNoDataValue();
-    const double b = raster->sample.value;
+    const double a = band->GetNoDataValue();
+    const double b = sample.value;
     const double epsilon = 0.000001;
 
     if(std::fabs(a-b) < epsilon)
     {
-        raster->sample.value = std::nanf("");
+        sample.value = std::nanf("");
         return false;
     }
 
     return true;
 }
+
+
+/*----------------------------------------------------------------------------
+ * createTransform
+ *----------------------------------------------------------------------------*/
+void GdalRaster::createTransform(void)
+{
+    CHECKPTR(dset);
+
+    OGRErr ogrerr = cord.source.importFromEPSG(SLIDERULE_EPSG);
+    CHECK_GDALERR(ogrerr);
+
+    if(targetWkt.length() > 0)
+    {
+        ogrerr = cord.target.importFromWkt(targetWkt.c_str());
+        mlog(DEBUG, "CRS from caller: %s", targetWkt.c_str());
+    }
+    else
+    {
+        const char* projref = dset->GetProjectionRef();
+        CHECKPTR(projref);
+        ogrerr = cord.target.importFromWkt(projref);
+        mlog(DEBUG, "CRS from raster: %s", projref);
+    }
+    CHECK_GDALERR(ogrerr);
+
+    /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+    cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+    cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
+    if(cord.transf == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+}
+
+/*----------------------------------------------------------------------------
+ * containsPoint
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::containsPoint(void)
+{
+    return (dset &&
+            (point.getX() >= bbox.lon_min) && (point.getX() <= bbox.lon_max) &&
+            (point.getY() >= bbox.lat_min) && (point.getY() <= bbox.lat_max));
+}
+
+/*----------------------------------------------------------------------------
+ * containsWindow
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
+{
+    if (col < 0 || row < 0)
+        return false;
+
+    if ((col + windowSize >= maxCol) || (row + windowSize >= maxRow))
+        return false;
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * radius2pixels
+ *----------------------------------------------------------------------------*/
+int GdalRaster::radius2pixels(int _radius)
+{
+    /*
+     * Code supports only rasters with units in meters (cellSize and radius must be in meters).
+     */
+    int csize = static_cast<int>(cellSize);
+
+    if (_radius == 0) return 0;
+    if (csize == 0) csize = 1;
+
+    int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
+    return radiusInMeters / csize;
+}
+
+/*----------------------------------------------------------------------------
+ * RasterIoWithRetry
+ *----------------------------------------------------------------------------*/
+void GdalRaster::readRasterWithRetry(int col, int row, int colSize, int rowSize, void *data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args)
+{
+    /*
+     * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
+     * There is no way to detect this condition based on the error code returned.
+     * Because of it, always retry failed read.
+     */
+    int cnt = 2;
+    CPLErr err = CE_None;
+    do
+    {
+        err = band->RasterIO(GF_Read, col, row, colSize, rowSize, data, dataColSize, dataRowSize, GDT_Float64, 0, 0, args);
+    } while (err != CE_None && cnt--);
+
+    if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+}
+
+
+
+
+/*----------------------------------------------------------------------------
+ * CoordTransform constructor
+ *----------------------------------------------------------------------------*/
+GdalRaster::CoordTransform::CoordTransform(void)
+{
+    transf = NULL;
+    source.Clear();
+    target.Clear();
+}
+
+/*----------------------------------------------------------------------------
+ * CoordTransform destructor
+ *----------------------------------------------------------------------------*/
+GdalRaster::CoordTransform::~CoordTransform(void)
+{
+    if(transf) OGRCoordinateTransformation::DestroyCT(transf);
+}
+
