@@ -47,8 +47,16 @@ from sliderule import version
 # GLOBALS
 ###############################################################################
 
-# WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
-EPSG_MERCATOR = "EPSG:4326"
+# Coordinate Reference system definition for WGS84 Ellipsoid ensemble
+# Coordinate system on the surface of a sphere or ellipsoid of reference.
+EPSG_WGS84 = "EPSG:4326"
+
+#Output CRS for SlideRule GeoDataFrame
+#SLIDERULE_EPSG = EPSG_WGS84
+
+#This is 3D CRS for ITRF2014 realization with 2010.0 epoch: https://epsg.io/7912
+#Note: using GRS80 ellipsoid, negligible difference in inverse flattening from WGS84
+SLIDERULE_EPSG = "EPSG:7912"
 
 PUBLIC_URL = "slideruleearth.io"
 PUBLIC_ORG = "sliderule"
@@ -509,8 +517,8 @@ def gdf2poly(gdf):
 #
 def emptyframe(**kwargs):
     # set default keyword arguments
-    kwargs['crs'] = EPSG_MERCATOR
-    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
+    kwargs['crs'] = SLIDERULE_EPSG
+    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
 
 #
 # Process Output File
@@ -544,14 +552,14 @@ def getvalues(data, dtype, size):
 #
 #  Dictionary to GeoDataFrame
 #
-def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", **kwargs):
+def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key="h_mean", **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
 
     # Set Default Keyword Arguments
     kwargs['index_key'] = "time"
-    kwargs['crs'] = EPSG_MERCATOR
+    kwargs['crs'] = SLIDERULE_EPSG 
 
     # Check Empty Columns
     if len(columns) <= 0:
@@ -561,7 +569,11 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     columns['time'] = columns[time_key].astype('datetime64[ns]')
 
     # Generate Geometry Column
-    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    #2D point geometry
+    #geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    #3D point geometry
+    #This enables 3D CRS transformations using the to_crs() method
+    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
     del columns[lon_key]
     del columns[lat_key]
 
@@ -571,7 +583,7 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     else:
         df = columns
 
-    # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
+    # Build GeoDataFrame (default geometry is crs=SLIDERULE_EPSG)
     gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
 
     # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
@@ -1221,7 +1233,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
         # create geodataframe
         p = Polygon([point for point in zip(lons, lats)])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_MERCATOR)
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_WGS84)
 
         # Convert to geojson file
         gdf.to_file(tempfile, driver="GeoJSON")
@@ -1295,6 +1307,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         "raster": {
             "data": datafile, # geojson file
             "length": len(datafile), # geojson file length
-            "cellsize": cellsize  # untis are in crs/projection
+            "cellsize": cellsize  # units are in crs/projection
         }
     }
