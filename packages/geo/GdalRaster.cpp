@@ -96,6 +96,7 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
     enabled = false;
     sampled = false;
 
+    transf = NULL;
     dset = NULL;
     band = NULL;
     dataIsElevation = false;
@@ -113,6 +114,7 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
 GdalRaster::~GdalRaster(void)
 {
     if(dset) GDALClose((GDALDatasetH)dset);
+    if(transf) OGRCoordinateTransformation::DestroyCT(transf);
 }
 
 /*----------------------------------------------------------------------------
@@ -205,7 +207,7 @@ void GdalRaster::readPOI(void)
         double z0 = point.getZ();
         mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", point.getX(), point.getY(), point.getZ());
 
-        if(point.transform(cord.transf) != OGRERR_NONE)
+        if(point.transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", point.getX(), point.getY(), point.getZ());
 
         mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", point.getX(), point.getY(), point.getZ());
@@ -597,29 +599,29 @@ void GdalRaster::createTransform(void)
 {
     CHECKPTR(dset);
 
-    OGRErr ogrerr = cord.source.importFromEPSG(SLIDERULE_EPSG);
+    OGRErr ogrerr = sourceCRS.importFromEPSG(SLIDERULE_EPSG);
     CHECK_GDALERR(ogrerr);
 
     if(targetWkt.length() > 0)
     {
-        ogrerr = cord.target.importFromWkt(targetWkt.c_str());
+        ogrerr = targetCRS.importFromWkt(targetWkt.c_str());
         mlog(DEBUG, "CRS from caller: %s", targetWkt.c_str());
     }
     else
     {
         const char* projref = dset->GetProjectionRef();
         CHECKPTR(projref);
-        ogrerr = cord.target.importFromWkt(projref);
+        ogrerr = targetCRS.importFromWkt(projref);
         mlog(DEBUG, "CRS from raster: %s", projref);
     }
     CHECK_GDALERR(ogrerr);
 
     /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
-    cord.target.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-    cord.source.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    targetCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+    sourceCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-    cord.transf = OGRCreateCoordinateTransformation(&cord.source, &cord.target);
-    if(cord.transf == NULL)
+    transf = OGRCreateCoordinateTransformation(&sourceCRS, &targetCRS);
+    if(transf == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
 }
 
@@ -683,25 +685,3 @@ void GdalRaster::readRasterWithRetry(int col, int row, int colSize, int rowSize,
 
     if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
 }
-
-
-
-
-/*----------------------------------------------------------------------------
- * CoordTransform constructor
- *----------------------------------------------------------------------------*/
-GdalRaster::CoordTransform::CoordTransform(void)
-{
-    transf = NULL;
-    source.Clear();
-    target.Clear();
-}
-
-/*----------------------------------------------------------------------------
- * CoordTransform destructor
- *----------------------------------------------------------------------------*/
-GdalRaster::CoordTransform::~CoordTransform(void)
-{
-    if(transf) OGRCoordinateTransformation::DestroyCT(transf);
-}
-

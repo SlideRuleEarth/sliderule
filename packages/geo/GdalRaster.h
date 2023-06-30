@@ -101,17 +101,6 @@ class GdalRaster
             double lat_max;
         } bbox_t;
 
-        class CoordTransform
-        {
-        public:
-            OGRCoordinateTransformation *transf;
-            OGRSpatialReference source;
-            OGRSpatialReference target;
-
-            CoordTransform(void);
-           ~CoordTransform(void);
-        };
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -163,8 +152,12 @@ class GdalRaster
         OGRPoint        point;
         RasterSample    sample;
 
-        CoordTransform  cord;
         double          verticalShift;  /* Calculated for last POI transformed to target CRS */
+
+        OGRCoordinateTransformation* transf;
+        OGRSpatialReference sourceCRS;
+        OGRSpatialReference targetCRS;
+
         std::string     fileName;
         GDALDataset    *dset;
         GDALRasterBand* band;
