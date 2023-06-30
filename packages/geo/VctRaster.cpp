@@ -90,10 +90,10 @@ VctRaster::~VctRaster(void)
  *----------------------------------------------------------------------------*/
 void VctRaster::openGeoIndex(double lon, double lat)
 {
+#if 0
     std::string newVctFile;
 
     getIndexFile(newVctFile, lon, lat);
-
     /* Is it already opened with the same file? */
     if (geoIndex.dset != NULL && geoIndex.fileName == newVctFile)
         return;
@@ -142,7 +142,7 @@ void VctRaster::openGeoIndex(double lon, double lat)
         geoIndex.cellSize = 0;
 
         /* Vector index files should be in geographic CRS, no need to create transform */
-        geoIndex.cord.clear(true);
+        // geoIndex.cord.clear(true);
 
         /*
          * For vector files cellSize is unknown. Cannot validate radiusInPixels
@@ -154,11 +154,12 @@ void VctRaster::openGeoIndex(double lon, double lat)
     {
         if (geoIndex.dset)
         {
-            geoIndex.clear();
+            // geoIndex.clear();
             layer = NULL;
         }
         throw;
     }
+#endif
 }
 
 
@@ -186,7 +187,7 @@ void VctRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
 /*----------------------------------------------------------------------------
  * findCachedRaster
  *----------------------------------------------------------------------------*/
-bool VctRaster::findCachedRasters(OGRPoint& p)
+bool VctRaster::findCachedRasters(GdalRaster::Point& p)
 {
     /*
      * Cached rasters cannot be used at this point.

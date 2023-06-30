@@ -36,11 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "TimeLib.h"
 #include "GeoParms.h"
 #include "RasterSample.h"
-#include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
 
 /******************************************************************************

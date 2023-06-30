@@ -33,33 +33,21 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <cmath>
-#include <string>
-#include "OsApi.h"
 #include "RasterSample.h"
-#include "core.h"
 #include "GdalRaster.h"
 
 #ifdef __aws__
 #include "aws.h"
 #endif
 
+#include <algorithm>
 #include <uuid/uuid.h>
-#include <ogr_geometry.h>
-#include <ogrsf_frmts.h>
+
 #include <gdal.h>
 #include <gdalwarper.h>
-#include <ogr_spatialref.h>
 #include <gdal_priv.h>
-#include <algorithm>
-#include <cstring>
-#include <tuple>
-
-#include "cpl_minixml.h"
-#include "cpl_string.h"
-#include "cpl_vsi.h"
-#include "gdal.h"
-#include "ogr_spatialref.h"
+#include <ogr_geometry.h>
+#include <ogr_spatialref.h>
 
 
 /******************************************************************************

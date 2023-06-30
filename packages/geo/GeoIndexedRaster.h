@@ -36,42 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "GdalRaster.h"
 #include "RasterObject.h"
-#include "OsApi.h"
-#include "RasterSample.h"
-#include "TimeLib.h"
-#include "GeoParms.h"
-#include "Ordering.h"
-#include "List.h"
-#include <ogr_geometry.h>
-#include <ogrsf_frmts.h>
-
-/******************************************************************************
- * Typedef and macros used by geo package
- ******************************************************************************/
-
-#define CHECKPTR(p)                                                           \
-do                                                                            \
-{                                                                             \
-    if ((p) == NULL)                                                          \
-    {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
-              "NULL pointer detected (%s():%d)", __FUNCTION__, __LINE__);     \
-    }                                                                         \
-} while (0)
-
-
-#define CHECK_GDALERR(e)                                                      \
-do                                                                            \
-{                                                                             \
-    if ((e))   /* CPLErr and OGRErr types have 0 for no error  */             \
-    {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
-              "GDAL ERROR detected: %d (%s():%d)", e, __FUNCTION__, __LINE__);\
-    }                                                                         \
-} while (0)
-
-
 
 
 /******************************************************************************
@@ -122,70 +88,21 @@ class GeoIndexedRaster: public RasterObject
         } bbox_t;
 
 
-        class CoordTransform
+        class GeoIndex
         {
         public:
-            OGRCoordinateTransformation *transf;
-            OGRSpatialReference source;
-            OGRSpatialReference target;
-
-            void clear(bool close = true);
-            CoordTransform(void) { clear(false); }
-           ~CoordTransform(void) { clear(); }
-        };
-
-
-        class GeoDataSet
-        {
-        public:
-            CoordTransform  cord;
-            double          verticalShift;  /* Calculated for last POI transformed to target CRS */
             std::string     fileName;
             GDALDataset    *dset;
             GDALRasterBand* band;
-            GDALDataType    dataType;
-            bool            dataIsElevation;
             uint32_t        rows;
             uint32_t        cols;
             double          cellSize;
             bbox_t          bbox;
-            int32_t         xBlockSize;
-            int32_t         yBlockSize;
-            uint32_t        radiusInPixels;
-
-            void clear(bool close = true);
-            inline bool containsPoint(OGRPoint& p);
-
-            GeoDataSet(void) { clear(false); }
-           ~GeoDataSet(void) { clear(); }
         };
-
-
-        class GeoIndex: public GeoDataSet {};
-
-
-        class Raster: public GeoDataSet
-        {
-        public:
-            bool            enabled;
-            bool            sampled;
-            std::string     groupId;
-
-            double          gpsTime;
-            double          useTime;
-
-            /* Last sample information */
-            OGRPoint        point;
-            RasterSample        sample;
-
-            Raster(void);
-        };
-
 
         typedef struct {
-            GeoIndexedRaster*  obj;
             Thread*     thread;
-            Raster*     raster;
+            GdalRaster* raster;
             Cond*       sync;
             bool        run;
         } reader_t;
@@ -204,31 +121,18 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoIndexedRaster             (lua_State* L, GeoParms* _parms);
+                        GeoIndexedRaster      (lua_State* L, GeoParms* _parms);
         virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         const char*     getUUID               (char* uuid_str);
         virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
-        virtual bool    findRasters           (OGRPoint& p) = 0;
-        void            createTransform       (CoordTransform& cord, GDALDataset* dset);
-        virtual void    overrideTargetCRS     (OGRSpatialReference& target);
+        virtual bool    findRasters           (GdalRaster::Point& p) = 0;
+        // virtual void    overrideTargetCRS     (OGRSpatialReference& target);
         void            setCRSfromWkt         (OGRSpatialReference& sref, const std::string& wkt);
         bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
-        virtual bool    findCachedRasters     (OGRPoint& p) = 0;
-        int             radius2pixels         (double cellSize, int _radius);
+        virtual bool    findCachedRasters     (GdalRaster::Point& p) = 0;
         void            sampleRasters         (void);
-        void            processRaster         (Raster* raster);
-        void            readRasterWithRetry   (GDALRasterBand* band, int col, int row, int colSize, int rowSize,
-                                               void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
-
         int             sample                (double lon, double lat, double height, int64_t gps);
-
-        inline bool containsPoint (Raster* raster, OGRPoint& p)
-        {
-            return (raster && raster->dset &&
-                (p.getX() >= raster->bbox.lon_min) && (p.getX() <= raster->bbox.lon_max) &&
-                (p.getY() >= raster->bbox.lat_min) && (p.getY() <= raster->bbox.lat_max));
-        }
 
         /*--------------------------------------------------------------------
          * Data
@@ -237,7 +141,7 @@ class GeoIndexedRaster: public RasterObject
         Ordering<rasters_group_t>*  rasterGroupList;
         bool                        useGeoIndex;
         GeoIndex                    geoIndex;
-        Dictionary<Raster*>         rasterDict;
+        Dictionary<GdalRaster*>     rasterDict;
         Mutex                       samplingMutex;
         bool                        forceNotElevation;
 
@@ -270,13 +174,9 @@ class GeoIndexedRaster: public RasterObject
 
         bool       filterRasters           (int64_t gps);
         void       createThreads           (void);
-        void       updateCache             (OGRPoint& p);
+        void       updateCache             (GdalRaster::Point& p);
         void       invalidateCache         (void);
         int        getSampledRastersCount  (void);
-        void       readPixel               (Raster* raster);
-        void       resamplePixel           (Raster* raster);
-        void       computeZonalStats       (Raster* raster);
-        bool       nodataCheck             (Raster* raster);
         uint32_t   removeOldestRasterGroup (void);
 };
 

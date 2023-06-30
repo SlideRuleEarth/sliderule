@@ -38,10 +38,6 @@
 
 #include "GdalRaster.h"
 #include "RasterObject.h"
-#include "OsApi.h"
-#include "TimeLib.h"
-#include "Ordering.h"
-#include "List.h"
 
 /******************************************************************************
  * Typedef and macros used by geo package

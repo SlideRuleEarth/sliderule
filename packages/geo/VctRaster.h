@@ -65,7 +65,7 @@ class VctRaster: public GeoIndexedRaster
         void         openGeoIndex      (double lon=0, double lat=0) override;
         virtual void getIndexFile      (std::string& file, double lon, double lat) = 0;
         virtual void getIndexBbox      (bbox_t& bbox, double lon=0, double lat=0);
-        bool         findCachedRasters (OGRPoint &p) override;
+        bool         findCachedRasters (GdalRaster::Point &p) override;
 
         /*--------------------------------------------------------------------
          * Data
