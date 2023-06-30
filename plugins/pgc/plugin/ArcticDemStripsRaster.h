@@ -36,6 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <string>
 #include "PgcDemStripsRaster.h"
 #include "PgcWkt.h"
 
@@ -52,7 +53,7 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemStripsRaster(L, _parms); }
+        { return new ArcticDemStripsRaster(L, _parms, getArcticDemWkt2()); }
 
     protected:
 
@@ -60,11 +61,9 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, "arcticdem", "/n") {}
+        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms, const char* wkt):
+          PgcDemStripsRaster(L, _parms, "arcticdem", "/n", wkt) {}
 
-        void overrideTargetCRS(OGRSpatialReference& target) override
-        { setCRSfromWkt(target, getArcticDemWkt2()); }
 };
 
 #endif  /* __arcticdem_strips_raster__ */

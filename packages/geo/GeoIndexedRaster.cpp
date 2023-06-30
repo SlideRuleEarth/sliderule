@@ -43,6 +43,7 @@
 #include <gdal_priv.h>
 #include <ogr_geometry.h>
 #include <ogr_spatialref.h>
+#include <sliderule/RasterObject.h>
 
 // #include "cpl_minixml.h"
 // #include "cpl_string.h"
@@ -60,6 +61,21 @@ const char* GeoIndexedRaster::SAMPLES_RASTER_TAG = "Dem";
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::init (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::deinit (void)
+{
+}
+
 
 /*----------------------------------------------------------------------------
  * getSamples
@@ -177,6 +193,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
     RasterObject(L, _parms)
 {
     /* Initialize Class Data Members */
+    parms = _parms;
     rasterGroupList = new Ordering<rasters_group_t>;
     rasterRreader   = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
@@ -265,13 +282,13 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
     getIndexFile(newFile, lon, lat);
 
     /* Is it already opened with the same file? */
-    if(dset && indexFile == newFile)
+    if(indexDset && indexFile == newFile)
         return;
 
     try
     {
         /* Cleanup previous */
-        if(dset)
+        if(indexDset)
         {
             /* Free cached features for this vector index file */
             for(int i = 0; i < featuresList.length(); i++)
@@ -281,17 +298,17 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
             }
             featuresList.clear();
 
-            GDALClose((GDALDatasetH)dset);
-            dset = NULL;
+            GDALClose((GDALDatasetH)indexDset);
+            indexDset = NULL;
         }
 
         /* Open new vector data set*/
-        dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
-        if (dset == NULL)
+        indexDset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if (indexDset == NULL)
             throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newFile.c_str());
 
         indexFile = newFile;
-        layer = dset->GetLayer(0);
+        layer = indexDset->GetLayer(0);
         CHECKPTR(layer);
 
         /* For now assume the first layer has the features we need
@@ -305,8 +322,8 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
             OGRFeature::DestroyFeature(feature);
         }
 
-        cols = dset->GetRasterXSize();
-        rows = dset->GetRasterYSize();
+        cols = indexDset->GetRasterXSize();
+        rows = indexDset->GetRasterYSize();
 
         OGREnvelope env;
         OGRErr err = layer->GetExtent(&env);
@@ -323,7 +340,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
     }
     catch (const RunTimeException &e)
     {
-        if (dset)
+        if (indexDset)
         {
             // geoIndex.clear();
             layer = NULL;
@@ -387,21 +404,23 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 {
     invalidateCache();
 
+    //TODO: check if point is contained in geometry of index vector not just the bbox
+
     /* Initial call, open raster index data set if not already opened */
-    // if (dset == NULL)
-    //     openGeoIndex(lon, lat);
+    if (indexDset == NULL)
+        openGeoIndex(lon, lat);
 
     GdalRaster::Point p(lon, lat, height);
     mlog(DEBUG, "lon,lat,height: (%.4lf, %.4lf, %.4lf)", p.x, p.y, p.z);
 
     /* If point is not in current geoindex, find a new one */
-    // if (useGeoIndex && !geoIndex.containsPoint(p))
+    if (!containsPoint(p))
     {
         openGeoIndex(lon, lat);
 
         /* Check against newly opened geoindex */
-        // if (!geoIndex.containsPoint(p))
-        //     return 0;
+        if (!containsPoint(p))
+            return 0;
     }
 
     if(findRasters(p) && filterRasters(gps))
@@ -495,7 +514,6 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& p)
     if (rasterGroupList->length() == 0)
         return;
 
-    const char *key  = NULL;
     GdalRaster *raster = NULL;
 
     /* Check new tif file list against rasters in dictionary */
@@ -504,19 +522,19 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& p)
     {
         const rasters_group_t& rgroup = group_iter[i].value;
         const std::string& groupId = rgroup.id;
+        const std::string& wkt = rgroup.wkt;
         Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
 
         for(int j = 0; j < raster_iter.length; j++)
         {
             const raster_info_t& rinfo = raster_iter[j].value;
-            key = rinfo.fileName.c_str();
+            const char* key = rinfo.fileName.c_str();
 
             bool inCache = rasterDict.find(key, &raster);
             if(!inCache)
             {
                 /* Create new raster */
-                std::string targetWKT;  //TBD: must set it here (from constructor?)
-                // raster = new GdalRaster(this->_parms, key, static_cast<double>(rinfo.gpsTime / 1000), targetWKT );
+                raster = new GdalRaster(parms, key, static_cast<double>(rinfo.gpsTime / 1000), wkt);
                 assert(raster);
                 // if(forceNotElevation)
                 //     raster->dataIsElevation = false;
@@ -525,11 +543,8 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& p)
             }
 
             raster->setPOI(p);
-            // raster->groupId      = groupId;
-            // raster->enabled      = true;
-            // raster->point        = p;
-            // raster->sample.value = INVALID_SAMPLE_VALUE;
-            // raster->useTime      = TimeLib::latchtime();
+            raster->setGroupId(groupId);
+            raster->setUseTime(TimeLib::latchtime());
 
             if(!inCache)
             {

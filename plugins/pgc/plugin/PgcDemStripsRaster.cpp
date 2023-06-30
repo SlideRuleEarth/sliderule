@@ -46,7 +46,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix):
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, const char* wkt):
     GeoIndexedRaster(L, _parms),
     demName(dem_name)
 {
@@ -56,6 +56,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path supplied to geocells: %s", path2geocells.c_str());
     filePath = path2geocells.substr(0, pos);
     groupId = 0;
+    targetWkt = wkt;
 }
 
 /*----------------------------------------------------------------------------
@@ -172,6 +173,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 rgroup.gmtDate = rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup.gpsTime = rinfo.gpsTime = static_cast<int64_t>(gps);
                 rgroup.id = std::to_string(groupId++);
+                rgroup.wkt = targetWkt;
                 rgroup.list.add(rgroup.list.length(), rinfo);
 
                 if(flagsRinfo.fileName.length() > 0)

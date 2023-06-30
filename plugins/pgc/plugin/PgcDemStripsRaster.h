@@ -50,7 +50,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                 PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const char* dem_name, const char* geo_suffix);
+                 PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, const char* wkt);
         void     getIndexFile       (std::string& file, double lon=0, double lat=0 ) override;
         bool     findRasters        (GdalRaster::Point& p) override;
 
@@ -63,6 +63,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
         std::string demName;
         std::string path2geocells;
         uint32_t    groupId;
+        const char* targetWkt;
 };
 
 #endif  /* __pgcdem_strips_raster__ */

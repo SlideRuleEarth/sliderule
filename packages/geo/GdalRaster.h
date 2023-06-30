@@ -38,7 +38,9 @@
 
 #include "GeoParms.h"
 #include "RasterSample.h"
+#include <bits/stdint-intn.h>
 #include <ogrsf_frmts.h>
+#include <string>
 
 /******************************************************************************
  * Typedef and macros used by GDAL class
@@ -129,6 +131,8 @@ class GdalRaster
         void            open           (const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
         void            open           (void);
         void            setPOI         (const Point& _poi);
+        void            setGroupId     (const std::string& id) { groupId = id; }
+        void            setUseTime     (int64_t gps) { useTime = gps; }
         void            samplePOI      (void);
         RasterSample*   getSample      (void) { return sampled ? &sample : NULL; }
         const char*     getFileName    (void) { return fileName.c_str(); }

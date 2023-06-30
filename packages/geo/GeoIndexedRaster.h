@@ -70,6 +70,7 @@ class GeoIndexedRaster: public RasterObject
         } raster_info_t;
 
         typedef struct {
+            std::string             wkt;
             std::string             id;
             Ordering<raster_info_t> list;
             TimeLib::gmt_time_t     gmtDate;
@@ -90,6 +91,8 @@ class GeoIndexedRaster: public RasterObject
 
         virtual         ~GeoIndexedRaster  (void);
         void            getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
+        static void     init        (void);
+        static void     deinit      (void);
 
     protected:
 
@@ -105,6 +108,14 @@ class GeoIndexedRaster: public RasterObject
         virtual bool    findRasters           (GdalRaster::Point& p) = 0;
         void            sampleRasters         (void);
         int             sample                (double lon, double lat, double height, int64_t gps);
+
+        bool containsPoint(GdalRaster::Point& poi)
+        {
+            return (indexDset &&
+                    (poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
+                    (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max));
+        }
+
 
         /*--------------------------------------------------------------------
          * Data
@@ -131,11 +142,13 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
+        GeoParms*          parms;
+
         reader_t*          rasterRreader;
         uint32_t           readerCount;
 
         std::string        indexFile;
-        GDALDataset       *dset;
+        GDALDataset       *indexDset;
         GdalRaster::bbox_t bbox;
         uint32_t           rows;
         uint32_t           cols;
