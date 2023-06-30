@@ -93,6 +93,24 @@ class GdalRaster
          * Typedefs
          *--------------------------------------------------------------------*/
 
+        class Point
+        {
+        public:
+            Point(double _x=0, double _y=0, double _z=0):
+              x(_x), y(_y), z(_z) {}
+
+            Point(const Point& p):
+              x(p.x), y(p.y), z(p.z) {}
+
+            Point& operator = (const Point& p)
+              { x=p.x; y=p.y; z=p.z; return *this; }
+
+            double x;
+            double y;
+            double z;
+        };
+
+
         typedef struct
         {
             double lon_min;
@@ -109,8 +127,8 @@ class GdalRaster
                        ~GdalRaster     (void);
         void            open           (const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
         void            open           (void);
-        void            setPOI         (OGRPoint& _point);
-        void            readPOI        (void);
+        void            setPOI         (const Point& _poi);
+        void            samplePOI      (void);
         RasterSample*   getSample      (void) { return sampled ? &sample : NULL; }
         const char*     getFileName    (void) { return fileName.c_str(); }
         int             getRows        (void) { return rows; }
@@ -149,8 +167,8 @@ class GdalRaster
         double         useTime;  /* Time the raster was last read/sampled */
 
         /* Last sample information */
-        OGRPoint        point;
-        RasterSample    sample;
+        Point          poi;
+        RasterSample   sample;
 
         double          verticalShift;  /* Calculated for last POI transformed to target CRS */
 

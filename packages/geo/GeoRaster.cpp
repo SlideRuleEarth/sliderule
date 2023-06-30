@@ -81,13 +81,9 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
     {
         slist.clear();
 
-        OGRPoint point(lon, lat, height);
-
-        /* Get sample, if none found, return */
-        raster.setPOI(point);
-        raster.readPOI();
-
-
+        GdalRaster::Point p(lon, lat, height);
+        raster.setPOI(p);
+        raster.samplePOI();
         if(RasterSample* rs = raster.getSample())
         {
             /* Update dictionary of used raster files */

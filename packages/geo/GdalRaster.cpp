@@ -187,31 +187,31 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * setPOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::setPOI(OGRPoint& _point)
+void GdalRaster::setPOI(const Point& _poi)
 {
-    point   = _point;
+    poi = _poi;
     sampled = false;
     enabled = true;
     sample.clear();
 }
 
 /*----------------------------------------------------------------------------
- * readPOI
+ * samplePOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPOI(void)
+void GdalRaster::samplePOI(void)
 {
     try
     {
         if (dset == NULL) open();
 
-        double z0 = point.getZ();
-        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", point.getX(), point.getY(), point.getZ());
+        double z0 = poi.z;
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
 
-        if(point.transform(transf) != OGRERR_NONE)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", point.getX(), point.getY(), point.getZ());
+        if(!transf->Transform(1, &poi.x, &poi.y, &poi.z))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi.x, poi.y, poi.z);
 
-        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", point.getX(), point.getY(), point.getZ());
-        verticalShift = z0 - point.getZ();
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
+        verticalShift = z0 - poi.z;
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -255,8 +255,8 @@ void GdalRaster::readPixel(void)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int32_t col = static_cast<int32_t>(floor((point.getX() - bbox.lon_min) / cellSize));
-        const int32_t row = static_cast<int32_t>(floor((bbox.lat_max - point.getY()) / cellSize));
+        const int32_t col = static_cast<int32_t>(floor((poi.x - bbox.lon_min) / cellSize));
+        const int32_t row = static_cast<int32_t>(floor((bbox.lat_max - poi.y) / cellSize));
 
         int xBlockSize = 0;
         int yBlockSize = 0;
@@ -382,8 +382,8 @@ void GdalRaster::resamplePixel(void)
 {
     try
     {
-        int col = static_cast<int>(floor((point.getX() - bbox.lon_min) / cellSize));
-        int row = static_cast<int>(floor((bbox.lat_max - point.getY()) / cellSize));
+        int col = static_cast<int>(floor((poi.x - bbox.lon_min) / cellSize));
+        int row = static_cast<int>(floor((bbox.lat_max - poi.y) / cellSize));
 
         int windowSize, offset;
 
@@ -456,8 +456,8 @@ void GdalRaster::computeZonalStats(void)
 
     try
     {
-        int col = static_cast<int32_t>(floor((point.getX() - bbox.lon_min) / cellSize));
-        int row = static_cast<int32_t>(floor((bbox.lat_max - point.getY()) / cellSize));
+        int col = static_cast<int32_t>(floor((poi.x - bbox.lon_min) / cellSize));
+        int row = static_cast<int32_t>(floor((bbox.lat_max - poi.y) / cellSize));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
@@ -631,8 +631,8 @@ void GdalRaster::createTransform(void)
 bool GdalRaster::containsPoint(void)
 {
     return (dset &&
-            (point.getX() >= bbox.lon_min) && (point.getX() <= bbox.lon_max) &&
-            (point.getY() >= bbox.lat_min) && (point.getY() <= bbox.lat_max));
+            (poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
+            (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max));
 }
 
 /*----------------------------------------------------------------------------
