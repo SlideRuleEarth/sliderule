@@ -34,6 +34,9 @@
  ******************************************************************************/
 
 #include "PgcDemStripsRaster.h"
+#include <ogr_geometry.h>
+#include "GdalRaster.h"
+#include "GeoIndexedRaster.h"
 #include "TimeLib.h"
 
 /******************************************************************************
@@ -44,7 +47,7 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix):
-    VctRaster(L, _parms),
+    GeoIndexedRaster(L, _parms),
     demName(dem_name)
 {
     path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
@@ -100,27 +103,9 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * getIndexBbox
- *----------------------------------------------------------------------------*/
-void PgcDemStripsRaster::getIndexBbox(bbox_t &bbox, double lon, double lat)
-{
-    /* PgcDEM geocells are 1x1 degree */
-    const double geocellSize = 1.0;
-
-    lat = floor(lat);
-    lon = floor(lon);
-
-    bbox.lon_min = lon;
-    bbox.lat_min = lat;
-    bbox.lon_max = lon + geocellSize;
-    bbox.lat_max = lat + geocellSize;
-}
-
-
-/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::findRasters(OGRPoint& p)
+bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 {
     /*
      * Could get date from filename but will read from geojson index file instead.
@@ -141,10 +126,11 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
-            OGRGeometry *geo = feature->GetGeometryRef();
+            OGRGeometry* geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(!geo->Contains(&p)) continue;
+            OGRPoint point(p.x, p.y, p.z);
+            if(!geo->Contains(&point)) continue;
 
             const char *fname = feature->GetFieldAsString(SAMPLES_RASTER_TAG);
             if(fname && strlen(fname) > 0)
@@ -198,7 +184,7 @@ bool PgcDemStripsRaster::findRasters(OGRPoint& p)
                 rasterGroupList->add(rasterGroupList->length(), rgroup);
             }
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.x, p.y);
     }
     catch (const RunTimeException &e)
     {

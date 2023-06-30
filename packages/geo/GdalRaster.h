@@ -171,7 +171,7 @@ class GdalRaster
         Point          poi;
         RasterSample   sample;
 
-        double          verticalShift;  /* Calculated for last POI transformed to target CRS */
+        double         verticalShift;  /* Calculated for last POI transformed to target CRS */
 
         OGRCoordinateTransformation* transf;
         OGRSpatialReference sourceCRS;

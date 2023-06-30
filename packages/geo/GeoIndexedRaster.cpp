@@ -156,6 +156,13 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
     }
 
     if (rasterGroupList) delete rasterGroupList;
+
+    /* Destroy all features */
+    for(int i = 0; i < featuresList.length(); i++)
+    {
+        OGRFeature* feature = featuresList[i];
+        OGRFeature::DestroyFeature(feature);
+    }
 }
 
 
@@ -171,11 +178,10 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
 {
     /* Initialize Class Data Members */
     rasterGroupList = new Ordering<rasters_group_t>;
-    rasterRreader = new reader_t[MAX_READER_THREADS];
+    rasterRreader   = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
     readerCount = 0;
     forceNotElevation = false;
-    useGeoIndex       = true;
 
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -251,6 +257,83 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
 }
 
 /*----------------------------------------------------------------------------
+ * openGeoIndex
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::openGeoIndex(double lon, double lat)
+{
+    std::string newFile;
+    getIndexFile(newFile, lon, lat);
+
+    /* Is it already opened with the same file? */
+    if(dset && indexFile == newFile)
+        return;
+
+    try
+    {
+        /* Cleanup previous */
+        if(dset)
+        {
+            /* Free cached features for this vector index file */
+            for(int i = 0; i < featuresList.length(); i++)
+            {
+                OGRFeature* feature = featuresList[i];
+                OGRFeature::DestroyFeature(feature);
+            }
+            featuresList.clear();
+
+            GDALClose((GDALDatasetH)dset);
+            dset = NULL;
+        }
+
+        /* Open new vector data set*/
+        dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if (dset == NULL)
+            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newFile.c_str());
+
+        indexFile = newFile;
+        layer = dset->GetLayer(0);
+        CHECKPTR(layer);
+
+        /* For now assume the first layer has the features we need
+         * Clone all features and store them for performance/speed of feature lookup
+         */
+        layer->ResetReading();
+        while(OGRFeature* feature = layer->GetNextFeature())
+        {
+            OGRFeature* newFeature = feature->Clone();
+            featuresList.add(newFeature);
+            OGRFeature::DestroyFeature(feature);
+        }
+
+        cols = dset->GetRasterXSize();
+        rows = dset->GetRasterYSize();
+
+        OGREnvelope env;
+        OGRErr err = layer->GetExtent(&env);
+        if(err == OGRERR_NONE )
+        {
+            bbox.lon_min = env.MinX;
+            bbox.lat_min = env.MinY;
+            bbox.lon_max = env.MaxX;
+            bbox.lat_max = env.MaxY;
+            mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+        }
+
+        mlog(DEBUG, "Opened: %s", newFile.c_str());
+    }
+    catch (const RunTimeException &e)
+    {
+        if (dset)
+        {
+            // geoIndex.clear();
+            layer = NULL;
+        }
+        throw;
+    }
+}
+
+
+/*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::sampleRasters(void)
@@ -305,8 +388,8 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
     invalidateCache();
 
     /* Initial call, open raster index data set if not already opened */
-    if (useGeoIndex && geoIndex.dset == NULL)
-        openGeoIndex(lon, lat);
+    // if (dset == NULL)
+    //     openGeoIndex(lon, lat);
 
     GdalRaster::Point p(lon, lat, height);
     mlog(DEBUG, "lon,lat,height: (%.4lf, %.4lf, %.4lf)", p.x, p.y, p.z);
@@ -321,18 +404,10 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
         //     return 0;
     }
 
-    if (findCachedRasters(p))
+    if(findRasters(p) && filterRasters(gps))
     {
-        /* Rasters alredy in cache have been previously filtered  */
+        updateCache(p);
         sampleRasters();
-    }
-    else
-    {
-        if(findRasters(p) && filterRasters(gps))
-        {
-            updateCache(p);
-            sampleRasters();
-        }
     }
 
     return getSampledRastersCount();
@@ -343,21 +418,6 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
-
-
-/*----------------------------------------------------------------------------
- * containsWindow
- *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
-{
-    if (col < 0 || row < 0)
-        return false;
-
-    if ((col + windowSize >= maxCol) || (row + windowSize >= maxRow))
-        return false;
-
-    return true;
-}
 
 
 /*----------------------------------------------------------------------------
@@ -667,9 +727,9 @@ int GeoIndexedRaster::luaDimensions(lua_State *L)
         /* Get Self */
         GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
 
-        /* Set Return Values */
-        lua_pushinteger(L, lua_obj->geoIndex.rows);
-        lua_pushinteger(L, lua_obj->geoIndex.cols);
+        /* Return dimensions of index vector file */
+        lua_pushinteger(L, lua_obj->rows);
+        lua_pushinteger(L, lua_obj->cols);
         num_ret += 2;
 
         /* Set Return Status */
@@ -692,16 +752,17 @@ int GeoIndexedRaster::luaBoundingBox(lua_State *L)
     bool status = false;
     int num_ret = 1;
 
+
     try
     {
         /* Get Self */
         GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
 
-        /* Set Return Values */
-        lua_pushnumber(L, lua_obj->geoIndex.bbox.lon_min);
-        lua_pushnumber(L, lua_obj->geoIndex.bbox.lat_min);
-        lua_pushnumber(L, lua_obj->geoIndex.bbox.lon_max);
-        lua_pushnumber(L, lua_obj->geoIndex.bbox.lat_max);
+        /* Return bbox of index vector file */
+        lua_pushnumber(L, lua_obj->bbox.lon_min);
+        lua_pushnumber(L, lua_obj->bbox.lat_min);
+        lua_pushnumber(L, lua_obj->bbox.lon_max);
+        lua_pushnumber(L, lua_obj->bbox.lat_max);
         num_ret += 4;
 
         /* Set Return Status */
@@ -726,11 +787,11 @@ int GeoIndexedRaster::luaCellSize(lua_State *L)
 
     try
     {
-        /* Get Self */
-        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
+        /* Cannot return cell sizes of index vector file */
+        int cellSize = 0;
 
         /* Set Return Values */
-        lua_pushnumber(L, lua_obj->geoIndex.cellSize);
+        lua_pushnumber(L, cellSize);
         num_ret += 1;
 
         /* Set Return Status */

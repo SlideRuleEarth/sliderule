@@ -52,11 +52,8 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int   INVALID_SAMPLE_VALUE = -1000000;
-        static const int   MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_CACHED_RASTERS = 50;
-        static const int   SLIDERULE_EPSG = 7912;
 
         static const char* FLAGS_RASTER_TAG;
         static const char* SAMPLES_RASTER_TAG;
@@ -78,27 +75,6 @@ class GeoIndexedRaster: public RasterObject
             TimeLib::gmt_time_t     gmtDate;
             int64_t                 gpsTime;
         } rasters_group_t;
-
-
-        typedef struct {
-            double lon_min;
-            double lat_min;
-            double lon_max;
-            double lat_max;
-        } bbox_t;
-
-
-        class GeoIndex
-        {
-        public:
-            std::string     fileName;
-            GDALDataset    *dset;
-            GDALRasterBand* band;
-            uint32_t        rows;
-            uint32_t        cols;
-            double          cellSize;
-            bbox_t          bbox;
-        };
 
         typedef struct {
             Thread*     thread;
@@ -124,13 +100,9 @@ class GeoIndexedRaster: public RasterObject
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms);
         virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        const char*     getUUID               (char* uuid_str);
-        virtual void    openGeoIndex          (double lon = 0, double lat = 0) = 0;
+        void            openGeoIndex          (double lon = 0, double lat = 0);
+        virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
         virtual bool    findRasters           (GdalRaster::Point& p) = 0;
-        // virtual void    overrideTargetCRS     (OGRSpatialReference& target);
-        void            setCRSfromWkt         (OGRSpatialReference& sref, const std::string& wkt);
-        bool            containsWindow        (int col, int row, int maxCol, int maxRow, int windowSize);
-        virtual bool    findCachedRasters     (GdalRaster::Point& p) = 0;
         void            sampleRasters         (void);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
@@ -138,12 +110,12 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Ordering<rasters_group_t>*  rasterGroupList;
-        bool                        useGeoIndex;
-        GeoIndex                    geoIndex;
-        Dictionary<GdalRaster*>     rasterDict;
         Mutex                       samplingMutex;
+        Ordering<rasters_group_t>*  rasterGroupList;
+        Dictionary<GdalRaster*>     rasterDict;
+        List<OGRFeature*>           featuresList;
         bool                        forceNotElevation;
+        OGRLayer *layer;
 
     private:
 
@@ -159,8 +131,14 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        reader_t*    rasterRreader;
-        uint32_t     readerCount;
+        reader_t*          rasterRreader;
+        uint32_t           readerCount;
+
+        std::string        indexFile;
+        GDALDataset       *dset;
+        GdalRaster::bbox_t bbox;
+        uint32_t           rows;
+        uint32_t           cols;
 
         /*--------------------------------------------------------------------
          * Methods

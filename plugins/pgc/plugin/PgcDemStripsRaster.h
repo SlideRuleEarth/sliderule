@@ -36,13 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "VctRaster.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
  * PGC DEM STRIPS RASTER CLASS
  ******************************************************************************/
 
-class PgcDemStripsRaster: public VctRaster
+class PgcDemStripsRaster: public GeoIndexedRaster
 {
     protected:
 
@@ -52,8 +52,7 @@ class PgcDemStripsRaster: public VctRaster
 
                  PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const char* dem_name, const char* geo_suffix);
         void     getIndexFile       (std::string& file, double lon=0, double lat=0 ) override;
-        void     getIndexBbox       (bbox_t& bbox, double lon=0, double lat=0) override;
-        bool     findRasters        (OGRPoint &p) override;
+        bool     findRasters        (GdalRaster::Point& p) override;
 
     private:
 

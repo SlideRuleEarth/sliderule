@@ -33,6 +33,8 @@
  *INCLUDES
  ******************************************************************************/
 
+#include "RasterObject.h"
+#include "RasterSampler.h"
 #include "core.h"
 #include "geo.h"
 #include <gdal.h>
@@ -250,7 +252,6 @@ void initgeo (void)
 
     /* Initialize Modules */
     GeoIndexedRaster::init();
-    VctRaster::init();
     RasterSampler::init();
 
     /* Register GDAL custom error handler */
@@ -269,8 +270,8 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
-    VctRaster::deinit();
     GeoIndexedRaster::deinit();
+    RasterSampler::deinit();
     GDALDestroy();
 }
 }
