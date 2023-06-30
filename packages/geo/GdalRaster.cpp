@@ -61,6 +61,11 @@
 #include "gdal.h"
 #include "ogr_spatialref.h"
 
+
+/******************************************************************************
+ * Utility functions
+ ******************************************************************************/
+
 /*----------------------------------------------------------------------------
  * getUUID
  *----------------------------------------------------------------------------*/
@@ -72,6 +77,26 @@ const char* getUUID(char *uuid_str)
     return uuid_str;
 }
 
+/*----------------------------------------------------------------------------
+ * initGDALforAWS
+ *----------------------------------------------------------------------------*/
+void initGDALforAWS(GeoParms* _parms)
+{
+    if(_parms->asset)
+    {
+#ifdef __aws__
+        const char* identity = _parms->asset->getIdentity();
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        if(credentials.provided)
+        {
+            const char* path = _parms->asset->getPath();
+            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
+            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
+            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
+        }
+#endif
+    }
+}
 
 /******************************************************************************
  * STATIC DATA

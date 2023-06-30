@@ -39,10 +39,6 @@
 #include "OsApi.h"
 #include "core.h"
 
-#ifdef __aws__
-#include "aws.h"
-#endif
-
 #include <uuid/uuid.h>
 #include <ogr_geometry.h>
 #include <ogrsf_frmts.h>
@@ -126,20 +122,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileNam
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
 
     /* Establish Credentials */
-    #ifdef __aws__
-    if(_parms->asset)
-    {
-        const char* identity = _parms->asset->getIdentity();
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
-        if(credentials.provided)
-        {
-            const char* path = _parms->asset->getPath();
-            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
-            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
-            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
-        }
-    }
-    #endif
+    initGDALforAWS(_parms);
 }
 
 
