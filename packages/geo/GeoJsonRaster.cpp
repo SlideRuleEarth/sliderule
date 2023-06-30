@@ -108,7 +108,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    List<RasterSample_t> slist;
+    List<RasterSample> slist;
     int sampleCnt = 0;
 
     try

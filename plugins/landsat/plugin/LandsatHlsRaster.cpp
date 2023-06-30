@@ -231,7 +231,7 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<RasterSample_t>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;
@@ -294,14 +294,14 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
         }
     }
 
-    RasterSample_t sample;
+    RasterSample sample;
     double groupTime = rgroup.gpsTime / 1000;
     std::string groupName = rgroup.id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)
     {
-        bzero(&sample, sizeof(sample));
+        sample.clear();
         if((green != invalid) && (swir16 != invalid))
             sample.value = (green - swir16) / (green + swir16);
         else sample.value = invalid;
@@ -313,7 +313,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
 
     if(ndvi)
     {
-        bzero(&sample, sizeof(sample));
+        sample.clear();
         if((red != invalid) && (nir08 != invalid))
             sample.value = (nir08 - red) / (nir08 + red);
         else sample.value = invalid;
@@ -325,7 +325,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
 
     if(ndwi)
     {
-        bzero(&sample, sizeof(sample));
+        sample.clear();
         if((nir08 != invalid) && (swir16 != invalid))
             sample.value = (nir08 - swir16) / (nir08 + swir16);
         else sample.value = invalid;

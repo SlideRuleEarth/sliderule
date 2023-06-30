@@ -122,7 +122,7 @@ class GdalRaster
         void            open           (void);
         void            setPOI         (OGRPoint& _point);
         void            readPOI        (void);
-        RasterSample_t* getSample      (void) { return sampled ? &sample : NULL; }
+        RasterSample*   getSample      (void) { return sampled ? &sample : NULL; }
         const char*     getFileName    (void) { return fileName.c_str(); }
         int             getRows        (void) { return rows; }
         int             getCols        (void) { return cols; }
@@ -161,7 +161,7 @@ class GdalRaster
 
         /* Last sample information */
         OGRPoint        point;
-        RasterSample_t  sample;
+        RasterSample    sample;
 
         CoordTransform  cord;
         double          verticalShift;  /* Calculated for last POI transformed to target CRS */

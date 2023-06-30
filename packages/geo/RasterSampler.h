@@ -101,7 +101,7 @@ class RasterSampler: public DispatchObject
             uint64_t            index;
             char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
-            RasterSample_t      samples[];
+            RasterSample        samples[];
         } zs_geo_t;
 
         /* File Directory Entry Record */

@@ -194,7 +194,7 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Get samples */
-        List<RasterSample_t> slist;
+        List<RasterSample> slist;
         lua_obj->getSamples(lon, lat, height, gps, slist, NULL);
 
         if(slist.length() > 0)
@@ -204,7 +204,7 @@ int RasterObject::luaSamples(lua_State *L)
 
             for(int i = 0; i < slist.length(); i++)
             {
-                const RasterSample_t& sample = slist[i];
+                const RasterSample& sample = slist[i];
                 const char* fileName = "";
 
                 /* Find fileName from fileId */

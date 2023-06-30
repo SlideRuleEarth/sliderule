@@ -38,8 +38,13 @@
 
 #include "OsApi.h"
 
-typedef struct
+/******************************************************************************
+ * RASTER SAMPLE CLASS
+ ******************************************************************************/
+
+class RasterSample
 {
+public:
     double value;
     double time;   // gps seconds
     uint64_t fileId;
@@ -55,6 +60,12 @@ typedef struct
         double stdev;
         double mad;
     } stats;
-} RasterSample_t;
+
+   void clear (void) { value=0; time=0; fileId=0; flags=0; bzero(&stats, sizeof(stats)); }
+
+   RasterSample (double _value=0, double _time=0, double _fileId=0, double _flags=0)
+    { value=_value; time=_time; fileId=_fileId; flags=_flags; bzero(&stats, sizeof(stats)); }
+
+};
 
 #endif  /* __raster_sample__ */

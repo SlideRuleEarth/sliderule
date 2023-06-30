@@ -95,7 +95,6 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
 
     enabled = false;
     sampled = false;
-    bzero(&sample, sizeof(RasterSample_t));
 
     dset = NULL;
     band = NULL;
@@ -191,7 +190,7 @@ void GdalRaster::setPOI(OGRPoint& _point)
     point   = _point;
     sampled = false;
     enabled = true;
-    bzero(&sample, sizeof(RasterSample_t));
+    sample.clear();
 }
 
 /*----------------------------------------------------------------------------

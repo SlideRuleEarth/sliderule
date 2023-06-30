@@ -71,7 +71,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterSample_t>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -88,7 +88,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
         raster.readPOI();
 
 
-        if(RasterSample_t* rs = raster.getSample())
+        if(RasterSample* rs = raster.getSample())
         {
             /* Update dictionary of used raster files */
             rs->fileId = fileDictAdd(raster.getFileName());
