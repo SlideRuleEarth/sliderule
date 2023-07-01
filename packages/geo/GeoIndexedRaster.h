@@ -100,11 +100,12 @@ class GeoIndexedRaster: public RasterObject
 
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms);
         virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags);
+        uint32_t        getGroupFlags         (const rasters_group_t& rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         void            openGeoIndex          (double lon = 0, double lat = 0);
         virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
         virtual bool    findRasters           (GdalRaster::Point& p) = 0;
-        void            sampleRasters         (void);
+        void            sampleRasters         (uint32_t);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
         bool containsPoint(GdalRaster::Point& poi)
@@ -160,8 +161,8 @@ class GeoIndexedRaster: public RasterObject
         static void* readingThread (void *param);
 
         bool       filterRasters           (int64_t gps);
-        void       createThreads           (void);
-        void       updateCache             (GdalRaster::Point& p);
+        void       createThreads           (uint32_t cnt);
+        uint32_t   updateCache             (GdalRaster::Point& p);
         void       invalidateCache         (void);
         int        getSampledRastersCount  (void);
         uint32_t   removeOldestRasterGroup (void);

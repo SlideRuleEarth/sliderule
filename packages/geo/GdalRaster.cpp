@@ -205,6 +205,7 @@ void GdalRaster::setPOI(const Point& _poi)
     poi = _poi;
     sampled = false;
     enabled = true;
+    useTime = TimeLib::latchtime();
     sample.clear();
 }
 
@@ -215,7 +216,10 @@ void GdalRaster::samplePOI(void)
 {
     try
     {
-        if (dset == NULL) open();
+        if(!enabled)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Attempting to sample disabled raster");
+
+        if(dset == NULL) open();
 
         double z0 = poi.z;
         mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
@@ -237,7 +241,6 @@ void GdalRaster::samplePOI(void)
                 resamplePixel();
 
             sampled = true;
-            useTime = TimeLib::gpstime();
             sample.time = gpsTime;
 
             if(parms->zonal_stats)
@@ -246,7 +249,7 @@ void GdalRaster::samplePOI(void)
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error reading raster: %s", e.what());
+        mlog(e.level(), "Error sampling raster: %s", e.what());
     }
 }
 
@@ -618,14 +621,14 @@ void GdalRaster::createTransform(void)
     if(targetWkt.length() > 0)
     {
         ogrerr = targetCRS.importFromWkt(targetWkt.c_str());
-        mlog(DEBUG, "CRS from caller: %s", targetWkt.c_str());
+        // mlog(DEBUG, "CRS from caller: %s", targetWkt.c_str());
     }
     else
     {
         const char* projref = dset->GetProjectionRef();
         CHECKPTR(projref);
         ogrerr = targetCRS.importFromWkt(projref);
-        mlog(DEBUG, "CRS from raster: %s", projref);
+        // mlog(DEBUG, "CRS from raster: %s", projref);
     }
     CHECK_GDALERR(ogrerr);
 

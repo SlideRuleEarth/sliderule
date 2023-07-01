@@ -119,6 +119,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
     try
     {
         rasterGroupList->clear();
+        OGRPoint point(p.x, p.y, p.z);
 
         for(int i = 0; i < featuresList.length(); i++)
         {
@@ -126,7 +127,6 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
             OGRGeometry* geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            OGRPoint point(p.x, p.y, p.z);
             if(!geo->Contains(&point)) continue;
 
             const char *fname = feature->GetFieldAsString(SAMPLES_RASTER_TAG);

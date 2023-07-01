@@ -46,23 +46,23 @@ for i = 1, 2 do
     print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
     local rows, cols = dem:dim()
     print(string.format("dimensions: rows: %d, cols: %d", rows, cols))
-    -- runner.check(rows ~= 0)
-    -- runner.check(cols ~= 0)
+    runner.check(rows ~= 0)
+    runner.check(cols ~= 0)
 
     print(string.format("\n--------------------------------\nTest: %s bbox\n--------------------------------", demType))
     local lon_min, lat_min, lon_max, lat_max = dem:bbox()
-    print(string.format("lon_min: %d, lat_min: %d, lon_max: %d, lan_max: %d", lon_min, lat_min, lon_max, lat_max))
-    -- runner.check(lon_min ~= 0)
-    -- runner.check(lat_min ~= 0)
-    -- runner.check(lon_max ~= 0)
-    -- runner.check(lon_max ~= 0)
+    print(string.format("lon_min: %.2f, lat_min: %.2f, lon_max: %.2f, lan_max: %.2f", lon_min, lat_min, lon_max, lat_max))
+    runner.check(lon_min ~= 0)
+    runner.check(lat_min ~= 0)
+    runner.check(lon_max ~= 0)
+    runner.check(lon_max ~= 0)
 
     print(string.format("\n--------------------------------\nTest: %s cellsize\n--------------------------------", demType))
     local cellsize = dem:cell()
     print(string.format("cellsize: %d", cellsize))
 
     if demType == "arcticdem-mosaic" then
-        -- runner.check(cellsize == 2.0)
+        runner.check(cellsize == 2.0)
     else
         runner.check(cellsize == 0.0)
     end
@@ -423,6 +423,9 @@ for i = 1, 1 do
         runner.check(sampleCnt == expectedSamplesCnt)
     end
 end
+
+--[[
+]]
 
 -- Report Results --
 

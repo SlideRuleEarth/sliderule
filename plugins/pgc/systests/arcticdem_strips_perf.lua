@@ -3,8 +3,8 @@ asset = require("asset")
 csv = require("csv")
 json = require("json")
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 local assets = asset.loaddir()
 
@@ -43,8 +43,6 @@ local el, status
 local maxPoints = 10000
 failedSamples = 0
 
---[[
---]]
 
 print(string.format("\n------------------\nTest: Reading %d times the same points\n------------------\n", maxPoints))
 
