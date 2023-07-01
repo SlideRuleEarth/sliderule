@@ -134,14 +134,14 @@ class GdalRaster
         void               open           (const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
         void               open           (void);
         void               setPOI         (const Point& _poi);
+        void               samplePOI      (void);
 
         void               setFileName    (std::string& _fileName ) { fileName = _fileName; }
         void               setGroupId     (const std::string& id) { groupId = id; }
         const std::string& getFileName    (void) { return fileName;}
-        int64_t            getUseTime     (void) { return useTime; }
+        double             getUseTime     (void) { return useTime; }
         const std::string& getGroupId     (void) { return groupId; }
 
-        void               samplePOI      (void);
         RasterSample*      getSample      (void) { return (enabled && sampled) ? &sample : NULL; }
         void               disable        (void) { enabled = false; }
         bool               isEnabled      (void) { return enabled; }

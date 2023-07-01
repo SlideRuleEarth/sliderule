@@ -465,9 +465,8 @@ uint32_t GeoIndexedRaster::removeOldestRasterGroup(void)
 {
     GdalRaster* raster = NULL;
     GdalRaster* oldestRaster = NULL;
-    double now = TimeLib::latchtime();
-    double max = std::numeric_limits<double>::min();
     uint32_t removedRasters = 0;
+    double max = std::numeric_limits<double>::min();
 
     /* Find oldest raster and it's groupId */
     const char* key = rasterDict.first(&raster);
@@ -476,7 +475,7 @@ uint32_t GeoIndexedRaster::removeOldestRasterGroup(void)
         assert(raster);
         if(!raster->isEnabled())
         {
-            double elapsedTime = now - raster->getUseTime();
+            double elapsedTime = TimeLib::latchtime() - raster->getUseTime();
             if(elapsedTime > max)
             {
                 max = elapsedTime;
