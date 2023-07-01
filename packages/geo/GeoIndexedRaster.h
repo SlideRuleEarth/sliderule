@@ -65,8 +65,6 @@ class GeoIndexedRaster: public RasterObject
         typedef struct {
             std::string         tag;
             std::string         fileName;
-            TimeLib::gmt_time_t gmtDate;
-            int64_t             gpsTime;
         } raster_info_t;
 
         typedef struct {
@@ -141,8 +139,6 @@ class GeoIndexedRaster: public RasterObject
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        GeoParms*          parms;
 
         reader_t*          rasterRreader;
         uint32_t           readerCount;

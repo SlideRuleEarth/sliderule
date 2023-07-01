@@ -34,10 +34,6 @@
  ******************************************************************************/
 
 #include "PgcDemStripsRaster.h"
-#include <ogr_geometry.h>
-#include "GdalRaster.h"
-#include "GeoIndexedRaster.h"
-#include "TimeLib.h"
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -53,7 +49,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
     path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
     std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
-        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path supplied to geocells: %s", path2geocells.c_str());
+        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
     filePath = path2geocells.substr(0, pos);
     groupId = 0;
     targetWkt = wkt;
@@ -149,8 +145,6 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 
                 rinfo.fileName = fileName;
                 rinfo.tag = SAMPLES_RASTER_TAG;
-                bzero(&rinfo.gmtDate, sizeof(TimeLib::gmt_time_t));
-                rinfo.gpsTime = 0;
 
                 const std::string endToken    = "_dem.tif";
                 const std::string newEndToken = "_bitmask.tif";
@@ -170,8 +164,8 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 }
 
                 gps = gps/DATES_CNT;
-                rgroup.gmtDate = rinfo.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
-                rgroup.gpsTime = rinfo.gpsTime = static_cast<int64_t>(gps);
+                rgroup.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
+                rgroup.gpsTime = static_cast<int64_t>(gps);
                 rgroup.id = std::to_string(groupId++);
                 rgroup.wkt = targetWkt;
                 rgroup.list.add(rgroup.list.length(), rinfo);
@@ -179,8 +173,6 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 if(flagsRinfo.fileName.length() > 0)
                 {
                     flagsRinfo.tag = FLAGS_RASTER_TAG;
-                    flagsRinfo.gmtDate = rinfo.gmtDate;
-                    flagsRinfo.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);
                 }
                 rasterGroupList->add(rasterGroupList->length(), rgroup);

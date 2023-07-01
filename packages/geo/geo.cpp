@@ -33,10 +33,11 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "RasterObject.h"
+#include "GeoIndexedRaster.h"
+#include "GeoJsonRaster.h"
 #include "RasterSampler.h"
-#include "core.h"
 #include "geo.h"
+
 #include <gdal.h>
 #include <cpl_conv.h>
 #include <proj.h>

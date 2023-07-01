@@ -193,7 +193,6 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
     RasterObject(L, _parms)
 {
     /* Initialize Class Data Members */
-    parms = _parms;
     rasterGroupList = new Ordering<rasters_group_t>;
     rasterRreader   = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
@@ -523,8 +522,9 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& p)
         const rasters_group_t& rgroup = group_iter[i].value;
         const std::string& groupId = rgroup.id;
         const std::string& wkt = rgroup.wkt;
-        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+        const double gpsTime = static_cast<double>(rgroup.gpsTime / 1000);
 
+        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
         for(int j = 0; j < raster_iter.length; j++)
         {
             const raster_info_t& rinfo = raster_iter[j].value;
@@ -534,7 +534,7 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& p)
             if(!inCache)
             {
                 /* Create new raster */
-                raster = new GdalRaster(parms, key, static_cast<double>(rinfo.gpsTime / 1000), wkt);
+                raster = new GdalRaster(parms, key, gpsTime, wkt);
                 assert(raster);
                 // if(forceNotElevation)
                 //     raster->dataIsElevation = false;
@@ -595,7 +595,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
                 /* Temporal filter */
                 if(parms->filter_time)
                 {
-                    if(!TimeLib::gmtinrange(rinfo.gmtDate, parms->start_time, parms->stop_time))
+                    if(!TimeLib::gmtinrange(rgroup.gmtDate, parms->start_time, parms->stop_time))
                     {
                         removeGroup = true;
                         break;

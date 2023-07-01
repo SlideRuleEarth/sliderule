@@ -36,12 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
-#include "GeoIndexedRaster.h"
-#include "GeoJsonRaster.h"
-#include "RasterObject.h"
-#include "RasterSampler.h"
-#include "GeoParms.h"
 
 /******************************************************************************
  * PROTOTYPES

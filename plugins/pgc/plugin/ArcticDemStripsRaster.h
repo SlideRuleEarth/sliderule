@@ -36,7 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <string>
 #include "PgcDemStripsRaster.h"
 #include "PgcWkt.h"
 
