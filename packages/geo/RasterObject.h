@@ -37,12 +37,8 @@
  ******************************************************************************/
 
 #include "LuaObject.h"
-#include "OsApi.h"
-#include "TimeLib.h"
 #include "GeoParms.h"
 #include "RasterSample.h"
-#include "Ordering.h"
-#include "List.h"
 
 /******************************************************************************
  * RASTER OBJECT CLASS

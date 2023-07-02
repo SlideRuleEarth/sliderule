@@ -43,12 +43,6 @@
 #include <algorithm>
 #include <uuid/uuid.h>
 
-#include <gdal.h>
-#include <gdalwarper.h>
-#include <gdal_priv.h>
-#include <ogr_geometry.h>
-#include <ogr_spatialref.h>
-
 
 /******************************************************************************
  * Utility functions
@@ -97,28 +91,27 @@ void initGDALforAWS(GeoParms* _parms)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt)
+GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt) :
+   parms    (_parms),
+   targetWkt(_targetWkt),
+   enabled  (false),
+   sampled  (false),
+   groupId  (),
+   gpsTime  (_gpsTime),
+   useTime  (0),
+   poi      (),
+   sample   (),
+   transf   (NULL),
+   fileName (_fileName),
+   dset     (NULL),
+   band     (NULL),
+   dataIsElevation(false),
+   rows(0),
+   cols(0),
+   cellSize(0),
+   bbox(),
+   radiusInPixels(0)
 {
-    /* Initialize Class Data Members */
-    parms    = _parms;
-    fileName = _fileName;
-    gpsTime  = _gpsTime;
-    useTime  = 0;
-    targetWkt= _targetWkt;
-
-    enabled = false;
-    sampled = false;
-
-    transf = NULL;
-    dset = NULL;
-    band = NULL;
-    dataIsElevation = false;
-    rows = 0;
-    cols = 0;
-    cellSize = 0;
-    bzero(&bbox, sizeof(bbox_t));
-    verticalShift = 0;
-    radiusInPixels = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -222,12 +215,12 @@ void GdalRaster::samplePOI(void)
         if(dset == NULL) open();
 
         double z0 = poi.z;
-        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
+        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
 
         if(!transf->Transform(1, &poi.x, &poi.y, &poi.z))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi.x, poi.y, poi.z);
 
-        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
+        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
         verticalShift = z0 - poi.z;
 
         /*

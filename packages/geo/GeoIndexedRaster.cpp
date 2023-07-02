@@ -36,20 +36,12 @@
 #include "GeoIndexedRaster.h"
 
 #include <algorithm>
-#include <string>
-
 #include <gdal.h>
 #include <gdalwarper.h>
 #include <gdal_priv.h>
 #include <ogr_geometry.h>
 #include <ogr_spatialref.h>
-#include <sliderule/RasterObject.h>
 
-// #include "cpl_minixml.h"
-// #include "cpl_string.h"
-// #include "cpl_vsi.h"
-// #include "gdal.h"
-// #include "ogr_spatialref.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -138,7 +130,7 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
             }
             reader->sync->unlock();
 
-            delete reader->thread;  /* delte thread waits on thread to join */
+            delete reader->thread;  /* delete thread waits on thread to join */
             delete reader->sync;
         }
     }
@@ -164,6 +156,7 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
         OGRFeature* feature = featuresList[i];
         OGRFeature::DestroyFeature(feature);
     }
+    featuresList.clear();
 }
 
 
@@ -175,15 +168,14 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
-    RasterObject(L, _parms)
+    RasterObject(L, _parms),
+    rasterGroupList (new Ordering<rasters_group_t>),
+    rasterRreader   (new reader_t[MAX_READER_THREADS]),
+    readerCount(0),
+    indexDset(NULL)
 {
     /* Initialize Class Data Members */
-    rasterGroupList = new Ordering<rasters_group_t>;
-    rasterRreader   = new reader_t[MAX_READER_THREADS];
     bzero(rasterRreader, sizeof(reader_t)*MAX_READER_THREADS);
-    readerCount = 0;
-    indexDset = NULL;
-    forceNotElevation = false;
 
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);

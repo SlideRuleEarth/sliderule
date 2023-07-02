@@ -36,6 +36,8 @@
 #include "OsApi.h"
 #include "core.h"
 #include "RasterObject.h"
+#include "Ordering.h"
+#include "List.h"
 
 #ifdef __aws__
 #include "aws.h"

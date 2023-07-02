@@ -38,6 +38,7 @@
 
 #include "GdalRaster.h"
 #include "RasterObject.h"
+#include "Ordering.h"
 
 
 /******************************************************************************
@@ -87,7 +88,7 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual         ~GeoIndexedRaster  (void);
+        virtual        ~GeoIndexedRaster  (void);
         void            getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
         static void     init        (void);
         static void     deinit      (void);

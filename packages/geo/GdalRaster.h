@@ -38,9 +38,7 @@
 
 #include "GeoParms.h"
 #include "RasterSample.h"
-#include <bits/stdint-intn.h>
 #include <ogrsf_frmts.h>
-#include <string>
 
 /******************************************************************************
  * Typedef and macros used by GDAL class

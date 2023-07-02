@@ -61,11 +61,20 @@ public:
         double mad;
     } stats;
 
-   void clear (void) { value=0; time=0; fileId=0; flags=0; bzero(&stats, sizeof(stats)); }
+   void clear (void)
+   {
+       value  = 0;
+       time   = 0;
+       fileId = 0;
+       flags  = 0;
+       bzero(&stats, sizeof(stats));
+   }
 
-   RasterSample (double _value=0, double _time=0, double _fileId=0, double _flags=0)
-    { value=_value; time=_time; fileId=_fileId; flags=_flags; bzero(&stats, sizeof(stats)); }
-
+   RasterSample (double _value=0, double _time=0, double _fileId=0, double _flags=0) :
+    value (_value),
+    time  (_time),
+    fileId(_fileId),
+    flags (_flags) {}
 };
 
 #endif  /* __raster_sample__ */
