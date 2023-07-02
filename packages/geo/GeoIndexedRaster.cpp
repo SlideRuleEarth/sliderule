@@ -519,8 +519,6 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
     for (int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t& rgroup = group_iter[i].value;
-        const std::string& groupId = rgroup.id;
-        const std::string& wkt = rgroup.wkt;
         const double gpsTime = static_cast<double>(rgroup.gpsTime / 1000);
 
         Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
@@ -533,7 +531,7 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
             if(!inCache)
             {
                 /* Create new raster */
-                raster = new GdalRaster(parms, rinfo.fileName, gpsTime, groupId, wkt.c_str());
+                raster = new GdalRaster(parms, rinfo.fileName, gpsTime, rgroup.id, rgroup.wkt);
                 assert(raster);
                 // if(forceNotElevation)
                 //     raster->dataIsElevation = false;
