@@ -33,9 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
 #include "GeoJsonRaster.h"
-
 #include <gdalwarper.h>
 
 
@@ -133,7 +131,7 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
-    VSIUnlink(rasterFile.c_str());
+    VSIUnlink(getFileName().c_str());
 }
 
 /******************************************************************************
@@ -158,15 +156,13 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
-    GeoRaster(L, _parms)
+    GeoRaster(L, _parms, ("/vsimem/" + GdalRaster::generateUuid() + ".tif"), TimeLib::gpstime())
 {
     bool rasterCreated = false;
     GDALDataset* rasterDset = NULL;
     GDALDataset* jsonDset   = NULL;
-    std::string jsonFile;
-
-    jsonFile   = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
-    rasterFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".tif";
+    const std::string  jsonFile    = "/vsimem/" + GdalRaster::generateUuid() + ".geojson";
+    const std::string& rasterFile  = getFileName();
 
     validatedParams(file, filelength, _cellsize);
 
@@ -237,8 +233,6 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
         /* Must close raster to flush it into file in vsimem */
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
-
-        openRaster(rasterFile, TimeLib::gpstime());
         rasterCreated = true;
     }
     catch(const RunTimeException& e)

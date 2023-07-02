@@ -66,14 +66,6 @@ do                                                                            \
 } while (0)
 
 
-
-/******************************************************************************
- * Utility functions
- ******************************************************************************/
-const char* getUUID(char* uuid_str);
-void initGDALforAWS(GeoParms* _parms);
-
-
 /******************************************************************************
  * GEO RASTER CLASS
  ******************************************************************************/
@@ -81,7 +73,6 @@ void initGDALforAWS(GeoParms* _parms);
 class GdalRaster
 {
     public:
-
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -93,7 +84,6 @@ class GdalRaster
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
         class Point
         {
         public:
@@ -106,7 +96,7 @@ class GdalRaster
             Point& operator = (const Point& p)
               { x=p.x; y=p.y; z=p.z; return *this; }
 
-            void clear()
+            void clear(void)
               { x=0; y=0; z=0; }
 
             double x;
@@ -127,12 +117,14 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
+                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& id, const std::string& _targetWkt="");
                           ~GdalRaster     (void);
-        void               open           (const std::string& _fileName, double _gpsTime, const std::string& _targetWkt);
         void               open           (void);
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);
+
+        static std::string generateUuid   (void);
+        static void        initAwsAccess  (GeoParms* _parms);
 
         void               setFileName    (std::string& _fileName ) { fileName = _fileName; }
         void               setGroupId     (const std::string& id) { groupId = id; }
@@ -149,17 +141,6 @@ class GdalRaster
         bbox_t&            getBbox        (void) { return bbox; }
         double             getCellSize    (void) { return cellSize; }
 
-
-        protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
     private:
 
         /*--------------------------------------------------------------------
@@ -169,6 +150,7 @@ class GdalRaster
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
+
         GeoParms*      parms;
         std::string    targetWkt;
 
@@ -213,7 +195,6 @@ class GdalRaster
         int         radius2pixels       (int _radius);
         void        readRasterWithRetry (int col, int row, int colSize, int rowSize,
                                          void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
-
 };
 
 

@@ -105,7 +105,7 @@ class GeoIndexedRaster: public RasterObject
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         void            openGeoIndex          (double lon = 0, double lat = 0);
         virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
-        virtual bool    findRasters           (GdalRaster::Point& p) = 0;
+        virtual bool    findRasters           (GdalRaster::Point& poi) = 0;
         void            sampleRasters         (uint32_t);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
@@ -122,11 +122,10 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         Mutex                       samplingMutex;
-        Ordering<rasters_group_t>*  rasterGroupList;
+        Ordering<rasters_group_t>*  groupList;
         Dictionary<GdalRaster*>     rasterDict;
         List<OGRFeature*>           featuresList;
         bool                        forceNotElevation;
-        OGRLayer *layer;
 
     private:
 
@@ -134,16 +133,16 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int DATA_TO_SAMPLE = 0;
-        static const int DATA_SAMPLED = 1;
+        static const int DATA_TO_SAMPLE   = 0;
+        static const int DATA_SAMPLED     = 1;
         static const int NUM_SYNC_SIGNALS = 2;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        reader_t*          rasterRreader;
-        uint32_t           readerCount;
+        reader_t*          readers;
+        uint32_t           readersCnt;
 
         std::string        indexFile;
         GDALDataset       *indexDset;
@@ -163,7 +162,7 @@ class GeoIndexedRaster: public RasterObject
 
         bool       filterRasters           (int64_t gps);
         void       createThreads           (uint32_t cnt);
-        uint32_t   updateCache             (GdalRaster::Point& p);
+        uint32_t   updateCache             (GdalRaster::Point& poi);
         void       invalidateCache         (void);
         int        getSampledRastersCount  (void);
         uint32_t   removeOldestRasterGroup (void);

@@ -70,15 +70,16 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-              GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName="", double _gpsTime=0, const std::string& _targetWkt="");
-         void openRaster (const std::string& _fileName="", double _gpsTime=0, const std::string& _targetWkt="")
-           { raster.open(_fileName, _gpsTime, _targetWkt); }
+              GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt="");
+
+         const std::string& getFileName(void)
+         {
+             return raster.getFileName();
+         }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        Mutex   samplingMutex;
 
     private:
 
@@ -90,6 +91,7 @@ class GeoRaster: public RasterObject
         * Data
         *--------------------------------------------------------------------*/
         GdalRaster raster;
+        uint64_t   fileId;
 
         /*--------------------------------------------------------------------
         * Methods

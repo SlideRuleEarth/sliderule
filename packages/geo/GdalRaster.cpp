@@ -45,42 +45,6 @@
 
 
 /******************************************************************************
- * Utility functions
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * getUUID
- *----------------------------------------------------------------------------*/
-const char* getUUID(char *uuid_str)
-{
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse_lower(uuid, uuid_str);
-    return uuid_str;
-}
-
-/*----------------------------------------------------------------------------
- * initGDALforAWS
- *----------------------------------------------------------------------------*/
-void initGDALforAWS(GeoParms* _parms)
-{
-    if(_parms->asset)
-    {
-#ifdef __aws__
-        const char* identity = _parms->asset->getIdentity();
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
-        if(credentials.provided)
-        {
-            const char* path = _parms->asset->getPath();
-            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
-            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
-            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
-        }
-#endif
-    }
-}
-
-/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -91,12 +55,12 @@ void initGDALforAWS(GeoParms* _parms)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt) :
+GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _groupId, const std::string& _targetWkt) :
    parms    (_parms),
    targetWkt(_targetWkt),
    enabled  (false),
    sampled  (false),
-   groupId  (),
+   groupId  (_groupId),
    gpsTime  (_gpsTime),
    useTime  (0),
    poi      (),
@@ -121,27 +85,6 @@ GdalRaster::~GdalRaster(void)
 {
     if(dset) GDALClose((GDALDatasetH)dset);
     if(transf) OGRCoordinateTransformation::DestroyCT(transf);
-}
-
-/*----------------------------------------------------------------------------
- * open
- *----------------------------------------------------------------------------*/
-void GdalRaster::open(const std::string& _fileName, double _gpsTime, const std::string& _targetWkt)
-{
-    if(dset == NULL)
-    {
-        if(_fileName.length() > 0)
-            fileName = _fileName;
-
-        if(_gpsTime > 0)
-            gpsTime = _gpsTime;
-
-        if(_targetWkt.length() > 0)
-            targetWkt = _targetWkt;
-
-        open();
-    }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster, already opened with file: %s", fileName.c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -233,16 +176,52 @@ void GdalRaster::samplePOI(void)
             else
                 resamplePixel();
 
-            sampled = true;
-            sample.time = gpsTime;
-
             if(parms->zonal_stats)
                 computeZonalStats();
+
+            sampled = true;
+            sample.time = gpsTime;
         }
     }
     catch (const RunTimeException &e)
     {
+        sampled = false;
         mlog(e.level(), "Error sampling raster: %s", e.what());
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * generateUuid
+ *----------------------------------------------------------------------------*/
+std::string GdalRaster::generateUuid(void)
+{
+    char uuid_str[UUID_STR_LEN];
+    uuid_t uuid;
+    uuid_generate(uuid);
+    uuid_unparse_lower(uuid, uuid_str);
+    return std::string(uuid_str);
+}
+
+
+/*----------------------------------------------------------------------------
+ * initAwsAccess
+ *----------------------------------------------------------------------------*/
+void GdalRaster::initAwsAccess(GeoParms* _parms)
+{
+    if(_parms->asset)
+    {
+#ifdef __aws__
+        const char* identity = _parms->asset->getIdentity();
+        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        if(credentials.provided)
+        {
+            const char* path = _parms->asset->getPath();
+            VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
+            VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
+            VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
+        }
+#endif
     }
 }
 

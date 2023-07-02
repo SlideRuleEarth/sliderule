@@ -118,7 +118,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
     const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
     try
     {
-        rasterGroupList->clear();
+        groupList->clear();
         OGRPoint point(p.x, p.y, p.z);
 
         for(int i = 0; i < featuresList.length(); i++)
@@ -175,17 +175,17 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                     flagsRinfo.tag = FLAGS_RASTER_TAG;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);
                 }
-                rasterGroupList->add(rasterGroupList->length(), rgroup);
+                groupList->add(groupList->length(), rgroup);
             }
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.x, p.y);
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList->length(), p.x, p.y);
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (rasterGroupList->length() > 0);
+    return (groupList->length() > 0);
 }
 
 

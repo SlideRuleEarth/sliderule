@@ -364,21 +364,16 @@ runner.check(sampleCnt == 14)
 
 -- Correct values test for different POIs
 
-local lons = {-178.0, -40, 100,   150}
+local lons = {-178.1, -40, 100,   150}
 local lats = {  51.7,  70,  70,    75}
 height = 0
 
---NOTE: first mosaic result is sometimes 80.7063446
---                         and sometimes 80.7135010
---Figure out what is going on when reading this POI in VRT...
+local expResultsMosaic = { 61.0235023,  2969.2360839, 475.9624633, 19.8128376}
+local expResultsStrips = { 63.2500000,  2968.0156250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
 
---local expResultsMosaic = { 80.7063446,  2969.2360839, 475.9624633, 19.8128376}
-local expResultsMosaic = { 80.7135010,  2969.2360839, 475.9624633, 19.8128376}
-local expResultsStrips = {452.4843750,  2968.0156250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
+local expSamplesCnt = {9, 8, 4, 14}
 
-local expSamplesCnt = {14, 8, 4, 14}
-
-for i = 1, 1 do
+for i = 1, 2 do
     local isMosaic = (i == 1)
 
     local demType = demTypes[i];
@@ -424,8 +419,6 @@ for i = 1, 1 do
     end
 end
 
---[[
-]]
 
 -- Report Results --
 

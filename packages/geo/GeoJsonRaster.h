@@ -38,8 +38,6 @@
 
 #include "GeoRaster.h"
 #include "GeoParms.h"
-#include <bits/stdint-intn.h>
-#include <uuid/uuid.h>
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
@@ -83,9 +81,6 @@ class GeoJsonRaster: public GeoRaster
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        std::string rasterFile;
-        char uuid_str[UUID_STR_LEN];
 };
 
 #endif  /* __geojson_raster__ */

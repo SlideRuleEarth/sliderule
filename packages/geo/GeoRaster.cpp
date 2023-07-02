@@ -51,28 +51,22 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
     std::ignore = gps;
     std::ignore = param;
 
-    samplingMutex.lock();
     try
     {
-        slist.clear();
-
         GdalRaster::Point p(lon, lat, height);
         raster.setPOI(p);
         raster.samplePOI();
         if(RasterSample* rs = raster.getSample())
         {
-            /* Update dictionary of used raster files */
-            rs->fileId = fileDictAdd(raster.getFileName());
+            rs->fileId = fileId;
             slist.add(*rs);
         }
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
-        samplingMutex.unlock();
         throw;  // rethrow exception
     }
-    samplingMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -92,16 +86,16 @@ GeoRaster::~GeoRaster(void)
  *----------------------------------------------------------------------------*/
 GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt):
     RasterObject(L, _parms),
-    raster(_parms, _fileName, _gpsTime, _targetWkt)
+    raster       (_parms, _fileName, _gpsTime, _targetWkt),
+    fileId       (fileDictAdd(_fileName))
 {
-
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
     LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
 
     /* Establish Credentials */
-    initGDALforAWS(_parms);
+    GdalRaster::initAwsAccess(_parms);
 }
 
 
