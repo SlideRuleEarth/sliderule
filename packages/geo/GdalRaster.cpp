@@ -58,11 +58,9 @@
 GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _groupId, const std::string& _targetWkt) :
    parms    (_parms),
    targetWkt(_targetWkt),
-   enabled  (false),
-   sampled  (false),
+  _sampled  (false),
    groupId  (_groupId),
    gpsTime  (_gpsTime),
-   useTime  (0),
    poi      (),
    sample   (),
    transf   (NULL),
@@ -139,9 +137,7 @@ void GdalRaster::open(void)
 void GdalRaster::setPOI(const Point& _poi)
 {
     poi = _poi;
-    sampled = false;
-    enabled = true;
-    useTime = TimeLib::latchtime();
+    _sampled = false;
     sample.clear();
 }
 
@@ -152,10 +148,8 @@ void GdalRaster::samplePOI(void)
 {
     try
     {
-        if(!enabled)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Attempting to sample disabled raster");
-
-        if(dset == NULL) open();
+        if(dset == NULL)
+            open();
 
         double z0 = poi.z;
         // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
@@ -179,13 +173,13 @@ void GdalRaster::samplePOI(void)
             if(parms->zonal_stats)
                 computeZonalStats();
 
-            sampled = true;
+            _sampled = true;
             sample.time = gpsTime;
         }
     }
     catch (const RunTimeException &e)
     {
-        sampled = false;
+        _sampled = false;
         mlog(e.level(), "Error sampling raster: %s", e.what());
     }
 }

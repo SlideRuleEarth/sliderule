@@ -53,13 +53,15 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
 
     try
     {
-        GdalRaster::Point p(lon, lat, height);
-        raster.setPOI(p);
+        GdalRaster::Point poi(lon, lat, height);
+        raster.setPOI(poi);
         raster.samplePOI();
-        if(RasterSample* rs = raster.getSample())
+
+        if(raster.sampled())
         {
-            rs->fileId = fileId;
-            slist.add(*rs);
+            RasterSample& sample = raster.getSample();
+            sample.fileId = fileId;
+            slist.add(sample);
         }
     }
     catch (const RunTimeException &e)
@@ -147,7 +149,7 @@ int GeoRaster::luaBoundingBox(lua_State *L)
         GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
 
         /* Set Return Values */
-        GdalRaster::bbox_t& bbox = lua_obj->raster.getBbox();
+        GdalRaster::bbox_t bbox = lua_obj->raster.getBbox();
         lua_pushnumber(L, bbox.lon_min);
         lua_pushnumber(L, bbox.lat_min);
         lua_pushnumber(L, bbox.lon_max);

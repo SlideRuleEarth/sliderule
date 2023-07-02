@@ -136,14 +136,14 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
     delete [] readers;
 
     /* Close all rasters */
-    GdalRaster* raster = NULL;
-    const char* key  = rasterDict.first(&raster);
+    cacheitem_t* citem;
+    const char* key  = cache.first(&citem);
     while (key != NULL)
     {
-        assert(raster);
-        delete raster;
-        raster = NULL;
-        key = rasterDict.next(&raster);
+        cache.remove(key);
+        delete citem->raster;
+        delete citem;
+        key = cache.next(&citem);
     }
 
     if (groupList) delete groupList;
@@ -194,19 +194,18 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
         const raster_info_t& rinfo = raster_iter[i].value;
         if(strcmp(SAMPLES_RASTER_TAG, rinfo.tag.c_str()) == 0)
         {
-            GdalRaster* raster  = NULL;
             const char* key = rinfo.fileName.c_str();
 
-            if(rasterDict.find(key, &raster))
+            cacheitem_t* citem;
+            if(cache.find(key, &citem))
             {
-                assert(raster);
-                if(raster->isEnabled() && raster->isSampled())
+                if(citem->enabled && citem->raster->sampled())
                 {
                     /* Update dictionary of used raster files */
-                    RasterSample* rs = raster->getSample();
-                    rs->fileId = fileDictAdd(raster->getFileName());
-                    rs->flags  = flags;
-                    slist.add(*rs);
+                    RasterSample& sample = citem->raster->getSample();
+                    sample.fileId = fileDictAdd(citem->raster->getFileName());
+                    sample.flags  = flags;
+                    slist.add(sample);
                 }
             }
         }
@@ -226,15 +225,14 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t& rgroup)
         const raster_info_t& rinfo = raster_iter[j].value;
         if(strcmp(FLAGS_RASTER_TAG, rinfo.tag.c_str()) == 0)
         {
-            GdalRaster* raster  = NULL;
+            cacheitem_t* citem;
             const char* key = rinfo.fileName.c_str();
-            if(rasterDict.find(key, &raster))
+            if(cache.find(key, &citem))
             {
-                assert(raster);
-                if(raster->isEnabled() && raster->isSampled())
+                if(citem->enabled && citem->raster->sampled())
                 {
-                    RasterSample* sp = raster->getSample();
-                    if(sp) flags = sp->value;
+                    RasterSample& sample = citem->raster->getSample();
+                    flags = sample.value;
                 }
             }
             break;
@@ -364,24 +362,23 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
 
     /* For each raster which is marked to be sampled, give it to the reader thread */
     int signaledReaders = 0;
-    GdalRaster *raster = NULL;
-    const char *key = rasterDict.first(&raster);
+    cacheitem_t* citem;
+    const char *key = cache.first(&citem);
     int i = 0;
     while (key != NULL)
     {
-        assert(raster);
-        if (raster->isEnabled())
+        if (citem->enabled)
         {
             reader_t *reader = &readers[i++];
             reader->sync->lock();
             {
-                reader->raster = raster;
+                reader->raster = citem->raster;
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
             reader->sync->unlock();
         }
-        key = rasterDict.next(&raster);
+        key = cache.next(&citem);
     }
 
     /* Did not signal any reader threads, don't wait */
@@ -449,43 +446,42 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
  *----------------------------------------------------------------------------*/
 uint32_t GeoIndexedRaster::removeOldestRasterGroup(void)
 {
-    GdalRaster* raster = NULL;
     GdalRaster* oldestRaster = NULL;
     uint32_t removedRasters = 0;
     double max = std::numeric_limits<double>::min();
 
     /* Find oldest raster and it's groupId */
-    const char* key = rasterDict.first(&raster);
+    cacheitem_t* citem;
+    const char* key = cache.first(&citem);
     while(key != NULL)
     {
-        assert(raster);
-        if(!raster->isEnabled())
+        if(!citem->enabled)
         {
-            double elapsedTime = TimeLib::latchtime() - raster->getUseTime();
+            double elapsedTime = TimeLib::latchtime() - citem->useTime;
             if(elapsedTime > max)
             {
                 max = elapsedTime;
-                oldestRaster = raster;
+                oldestRaster = citem->raster;
             }
         }
-        key = rasterDict.next(&raster);
+        key = cache.next(&citem);
     }
 
     if(oldestRaster == NULL) return 0;
 
     /* Remove all rasters from the oldest group if they are not enabled */
     const std::string& oldestId = oldestRaster->getGroupId();
-    key = rasterDict.first(&raster);
+    key = cache.first(&citem);
     while(key != NULL)
     {
-        assert(raster);
-        if(!raster->isEnabled() && (raster->getGroupId() == oldestId))
+        if(!citem->enabled && (citem->raster->getGroupId() == oldestId))
         {
-            rasterDict.remove(key);
-            delete raster;
+            cache.remove(key);
+            delete citem->raster;
+            delete citem;
             removedRasters++;
         }
-        key = rasterDict.next(&raster);
+        key = cache.next(&citem);
     }
 
     return removedRasters;
@@ -496,13 +492,12 @@ uint32_t GeoIndexedRaster::removeOldestRasterGroup(void)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::invalidateCache(void)
 {
-    GdalRaster *raster = NULL;
-    const char* key = rasterDict.first(&raster);
+    cacheitem_t* citem;
+    const char* key = cache.first(&citem);
     while (key != NULL)
     {
-        assert(raster);
-        raster->disable();
-        key = rasterDict.next(&raster);
+        citem->enabled = false;
+        key = cache.next(&citem);
     }
 }
 
@@ -513,7 +508,6 @@ void GeoIndexedRaster::invalidateCache(void)
 uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
 {
     uint32_t rasters2sample = 0;
-    GdalRaster *raster = NULL;
 
     Ordering<rasters_group_t>::Iterator group_iter(*groupList);
     for (int i = 0; i < group_iter.length; i++)
@@ -527,24 +521,27 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
             const raster_info_t& rinfo = raster_iter[j].value;
             const char* key = rinfo.fileName.c_str();
 
-            bool inCache = rasterDict.find(key, &raster);
+            cacheitem_t* citem;
+            bool inCache = cache.find(key, &citem);
             if(!inCache)
             {
-                /* Create new raster */
-                raster = new GdalRaster(parms, rinfo.fileName, gpsTime, rgroup.id, rgroup.wkt);
-                assert(raster);
+                /* Create new cache item with raster */
+                citem = new cacheitem_t();
+                citem->raster = new GdalRaster(parms, rinfo.fileName, gpsTime, rgroup.id, rgroup.wkt);
                 // if(forceNotElevation)
                 //     raster->dataIsElevation = false;
                 // else
                 //     raster->dataIsElevation = !rinfo.tag.compare(SAMPLES_RASTER_TAG);
             }
 
-            raster->setPOI(poi);
+            citem->raster->setPOI(poi);
+            citem->useTime = TimeLib::latchtime();
+            citem->enabled = true;
 
             if(!inCache)
             {
                 /* Add new raster to dictionary */
-                rasterDict.add(key, raster);
+                cache.add(key, citem);
             }
 
             rasters2sample++;
@@ -552,7 +549,7 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
     }
 
     /* Maintain cache from getting too big */
-    while(rasterDict.length() > MAX_CACHED_RASTERS)
+    while(cache.length() > MAX_CACHED_RASTERS)
     {
         uint32_t removedRasters = removeOldestRasterGroup();
         if(removedRasters == 0) break;
@@ -713,16 +710,15 @@ void* GeoIndexedRaster::readingThread(void *param)
  *----------------------------------------------------------------------------*/
 int GeoIndexedRaster::getSampledRastersCount(void)
 {
-    GdalRaster *raster = NULL;
     int cnt = 0;
 
     /* Not all rasters in dictionary were sampled, find out how many were */
-    const char *key = rasterDict.first(&raster);
+    cacheitem_t* citem;
+    const char *key = cache.first(&citem);
     while (key != NULL)
     {
-        assert(raster);
-        if (raster->isEnabled() && raster->isSampled()) cnt++;
-        key = rasterDict.next(&raster);
+        if (citem->enabled && citem->raster->sampled()) cnt++;
+        key = cache.next(&citem);
     }
 
     return cnt;

@@ -131,7 +131,7 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
-    VSIUnlink(getFileName().c_str());
+    VSIUnlink(rasterFileName.c_str());
 }
 
 /******************************************************************************
@@ -161,8 +161,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
     bool rasterCreated = false;
     GDALDataset* rasterDset = NULL;
     GDALDataset* jsonDset   = NULL;
-    const std::string  jsonFile    = "/vsimem/" + GdalRaster::generateUuid() + ".geojson";
-    const std::string& rasterFile  = getFileName();
+    const std::string jsonFile = "/vsimem/" + GdalRaster::generateUuid() + ".geojson";
+    rasterFileName = getFileName();
 
     validatedParams(file, filelength, _cellsize);
 
@@ -191,7 +191,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
         GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
         CHECKPTR(driver);
-        rasterDset = (GDALDataset *)driver->Create(rasterFile.c_str(), cols, rows, 1, GDT_Byte, options);
+        rasterDset = (GDALDataset *)driver->Create(rasterFileName.c_str(), cols, rows, 1, GDT_Byte, options);
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};
@@ -228,7 +228,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
         CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
-        mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
+        mlog(DEBUG, "Rasterized geojson into raster %s", rasterFileName.c_str());
 
         /* Must close raster to flush it into file in vsimem */
         GDALClose((GDALDatasetH)rasterDset);

@@ -72,7 +72,7 @@ class GeoRaster: public RasterObject
 
               GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _targetWkt="");
 
-         const std::string& getFileName(void)
+         const std::string getFileName(void)
          {
              return raster.getFileName();
          }

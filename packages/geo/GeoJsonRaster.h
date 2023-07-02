@@ -78,9 +78,12 @@ class GeoJsonRaster: public GeoRaster
         GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* image, long imagelength, double _cellsize);
 
     private:
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
+         std::string rasterFileName;
 };
 
 #endif  /* __geojson_raster__ */

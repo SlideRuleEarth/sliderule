@@ -83,6 +83,12 @@ class GeoIndexedRaster: public RasterObject
             bool        run;
         } reader_t;
 
+        typedef struct {
+            bool        enabled;
+            double      useTime;
+            GdalRaster* raster;
+        } cacheitem_t;
+
 
         /*--------------------------------------------------------------------
          * Methods
@@ -123,7 +129,7 @@ class GeoIndexedRaster: public RasterObject
 
         Mutex                       samplingMutex;
         Ordering<rasters_group_t>*  groupList;
-        Dictionary<GdalRaster*>     rasterDict;
+        Dictionary<cacheitem_t*>    cache;
         List<OGRFeature*>           featuresList;
         bool                        forceNotElevation;
 

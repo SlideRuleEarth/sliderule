@@ -122,24 +122,23 @@ class GdalRaster
         void               open           (void);
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);
+        void               setFileName    (std::string& _fileName ) { fileName = _fileName; }
+        void               setGroupId     (const std::string& id) { groupId = id; }
+        std::string        getFileName    (void) { return fileName;}
+        std::string        getGroupId     (void) { return groupId; }
+        RasterSample&      getSample      (void) { return sample; }
+        bool               sampled        (void) { return _sampled; }
+        int                getRows        (void) { return rows; }
+        int                getCols        (void) { return cols; }
+        bbox_t             getBbox        (void) { return bbox; }
+        double             getCellSize    (void) { return cellSize; }
+
+        /*--------------------------------------------------------------------
+         * Static Methods
+         *--------------------------------------------------------------------*/
 
         static std::string generateUuid   (void);
         static void        initAwsAccess  (GeoParms* _parms);
-
-        void               setFileName    (std::string& _fileName ) { fileName = _fileName; }
-        void               setGroupId     (const std::string& id) { groupId = id; }
-        const std::string& getFileName    (void) { return fileName;}
-        double             getUseTime     (void) { return useTime; }
-        const std::string& getGroupId     (void) { return groupId; }
-
-        RasterSample*      getSample      (void) { return (enabled && sampled) ? &sample : NULL; }
-        void               disable        (void) { enabled = false; }
-        bool               isEnabled      (void) { return enabled; }
-        bool               isSampled      (void) { return sampled; }
-        int                getRows        (void) { return rows; }
-        int                getCols        (void) { return cols; }
-        bbox_t&            getBbox        (void) { return bbox; }
-        double             getCellSize    (void) { return cellSize; }
 
     private:
 
@@ -154,17 +153,14 @@ class GdalRaster
         GeoParms*      parms;
         std::string    targetWkt;
 
-        bool           enabled;
-        bool           sampled;
+        bool          _sampled;
         std::string    groupId;
 
         double         gpsTime;  /* Time the raster data was collected and/or generated */
-        double         useTime;  /* Time the raster was last read/sampled */
 
         /* Last sample information */
         Point          poi;
         RasterSample   sample;
-
         double         verticalShift;  /* Calculated for last POI transformed to target CRS */
 
         OGRCoordinateTransformation* transf;
