@@ -97,7 +97,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         virtual        ~GeoIndexedRaster  (void);
-        void            getSamples        (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
+        void            getSamples        (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) final;
         static void     init              (void);
         static void     deinit            (void);
 

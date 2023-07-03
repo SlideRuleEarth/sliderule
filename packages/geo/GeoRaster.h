@@ -62,7 +62,7 @@ class GeoRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         virtual         ~GeoRaster  (void);
-        virtual void    getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
+        virtual void    getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) final;
 
     protected:
 
