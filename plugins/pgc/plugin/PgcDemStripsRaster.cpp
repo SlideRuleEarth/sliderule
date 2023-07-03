@@ -45,12 +45,14 @@
 PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb):
     GeoIndexedRaster(L, _parms, cb),
     demName(dem_name),
+    path2geocells(_parms->asset->getPath() + std::string(geo_suffix)),
     groupId(0)
 {
-    path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
+
     std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
+
     filePath = path2geocells.substr(0, pos);
 }
 
@@ -122,8 +124,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
      * the two images can be up to 30 days apart.
      *
      */
-    const int DATES_CNT = 2;
-    const char* dates[DATES_CNT] = {"start_datetime", "end_datetime"};
+    std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
         groupList->clear();
@@ -140,7 +141,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
             /* geojson index files hosted by PGC only contain listing of dems
              * In order to read quality mask raster for each strip we need to build a path to it.
              */
-            const char *fname = feature->GetFieldAsString(SAMPLES_RASTER_TAG);
+            const char *fname = feature->GetFieldAsString(DEM_TAG);
             if(fname && strlen(fname) > 0)
             {
                 std::string fileName(fname);
@@ -154,9 +155,8 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
-                demRinfo.tag = SAMPLES_RASTER_TAG;
+                demRinfo.tag = DEM_TAG;
                 demRinfo.fileName = fileName;
-                demRinfo.gpsTime = 0; /* TBD */
 
                 const std::string endToken    = "_dem.tif";
                 const std::string newEndToken = "_bitmask.tif";
@@ -167,18 +167,17 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 } else fileName.clear();
 
                 raster_info_t flagsRinfo;
-                flagsRinfo.tag = FLAGS_RASTER_TAG;
+                flagsRinfo.tag = FLAGS_TAG;
                 flagsRinfo.fileName = fileName;
-                flagsRinfo.gpsTime = 0; /* TBD */
 
                 double gps = 0;
-                for(int j=0; j<DATES_CNT; j++)
+                for(auto &s: dates)
                 {
                     TimeLib::gmt_time_t gmt;
-                    gps += getGmtDate(feature, dates[j], gmt);
+                    gps += getGmtDate(feature, s, gmt);
                 }
 
-                gps = gps/DATES_CNT;
+                gps = gps/dates.size();
 
                 /* Set rasters gps time */
                 demRinfo.gpsTime   = static_cast<int64_t>(gps);

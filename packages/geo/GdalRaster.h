@@ -78,7 +78,6 @@ class GdalRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int INVALID_SAMPLE_VALUE          = -1000000;
         static const int MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int SLIDERULE_EPSG                = 7912;
 
@@ -114,8 +113,7 @@ class GdalRaster
         };
 
 
-        typedef struct
-        {
+        typedef struct {
             double lon_min;
             double lat_min;
             double lon_max;
@@ -191,7 +189,6 @@ class GdalRaster
         void        computeZonalStats   (void);
         bool        nodataCheck         (void);
         void        createTransform     (void);
-        inline bool containsPoint       (void);
         bool        containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);
         int         radius2pixels       (int _radius);
         void        readRasterWithRetry (int col, int row, int colSize, int rowSize,

@@ -47,8 +47,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* GeoIndexedRaster::FLAGS_RASTER_TAG   = "Fmask";
-const char* GeoIndexedRaster::SAMPLES_RASTER_TAG = "Dem";
+const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
+const char* GeoIndexedRaster::DEM_TAG   = "Dem";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -186,10 +186,9 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
     for(int i = 0; i < raster_iter.length; i++)
     {
         const raster_info_t& rinfo = raster_iter[i].value;
-        if(strcmp(SAMPLES_RASTER_TAG, rinfo.tag.c_str()) == 0)
+        if(strcmp(DEM_TAG, rinfo.tag.c_str()) == 0)
         {
             const char* key = rinfo.fileName.c_str();
-
             cacheitem_t* item;
             if(cache.find(key, &item))
             {
@@ -217,7 +216,7 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t& rgroup)
     for(int j = 0; j < raster_iter.length; j++)
     {
         const raster_info_t& rinfo = raster_iter[j].value;
-        if(strcmp(FLAGS_RASTER_TAG, rinfo.tag.c_str()) == 0)
+        if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) == 0)
         {
             cacheitem_t* item;
             const char* key = rinfo.fileName.c_str();
@@ -235,7 +234,6 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t& rgroup)
 
     return flags;
 }
-
 
 /*----------------------------------------------------------------------------
  * getGmtDate
@@ -386,16 +384,13 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
  *----------------------------------------------------------------------------*/
 int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 {
-    std::ignore = gps;
-
     invalidateCache();
 
-    /* Initial call, open raster index data set if not already opened */
+    /* Initial call, open index file if not already opened */
     if(featuresList.isempty())
         openGeoIndex(lon, lat);
 
     GdalRaster::Point poi(lon, lat, height);
-
     if(!withinExtent(poi))
     {
         openGeoIndex(lon, lat);
@@ -417,309 +412,6 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
-
-
-/*----------------------------------------------------------------------------
- * removeOldestCacheItem
- *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::removeOldestCacheItem(void)
-{
-    uint32_t removedCnt = 0;
-    double max = std::numeric_limits<double>::min();
-
-    /* Find oldest raster and it's groupId */
-    cacheitem_t* oldestItem = NULL;
-    cacheitem_t* item;
-
-    const char* key = cache.first(&item);
-    while(key != NULL)
-    {
-        if(!item->enabled)
-        {
-            double elapsedTime = TimeLib::latchtime() - item->useTime;
-            if(elapsedTime > max)
-            {
-                max        = elapsedTime;
-                oldestItem = item;
-            }
-        }
-        key = cache.next(&item);
-    }
-
-    if(oldestItem == NULL)
-    {
-        /* Cache is empty, did not find oldest item */
-        return 0;
-    }
-
-    /* Remove all cache items from the oldest group if they are not enabled */
-    const std::string& oldestId = oldestItem->groupId;
-    key                         = cache.first(&item);
-    while(key != NULL)
-    {
-        if(!item->enabled && (item->groupId == oldestId))
-        {
-            cache.remove(key);
-            delete item->raster;
-            delete item;
-            removedCnt++;
-        }
-        key = cache.next(&item);
-    }
-
-    return removedCnt;
-}
-
-/*----------------------------------------------------------------------------
- * invaldiateCache
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::invalidateCache(void)
-{
-    cacheitem_t* item;
-    const char* key = cache.first(&item);
-    while(key != NULL)
-    {
-        item->enabled = false;
-        key = cache.next(&item);
-    }
-}
-
-
-/*----------------------------------------------------------------------------
- * updateCache
- *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
-{
-    uint32_t rasters2sample = 0;
-
-    Ordering<rasters_group_t>::Iterator group_iter(*groupList);
-    for(int i = 0; i < group_iter.length; i++)
-    {
-        const rasters_group_t& rgroup = group_iter[i].value;
-
-        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-        for(int j = 0; j < raster_iter.length; j++)
-        {
-            const raster_info_t& rinfo = raster_iter[j].value;
-            const char* key            = rinfo.fileName.c_str();
-
-            cacheitem_t* item;
-            bool inCache = cache.find(key, &item);
-            if(!inCache)
-            {
-                /* Create new cache item with raster */
-                item = new cacheitem_t();
-                item->raster = new GdalRaster(parms, rinfo.fileName,
-                                              static_cast<double>(rinfo.gpsTime / 1000),
-                                              rinfo.dataIsElevation, crscb);
-            }
-
-            item->raster->setPOI(poi);
-            item->useTime = TimeLib::latchtime();
-            item->enabled = true;
-
-            if(!inCache)
-            {
-                /* Add new raster to dictionary */
-                cache.add(key, item);
-            }
-            rasters2sample++;
-        }
-    }
-
-    /* Maintain cache from getting too big */
-    while(cache.length() > MAX_CACHED_RASTERS)
-    {
-        uint32_t cnt = removeOldestCacheItem();
-        if(cnt == 0) break;
-        else mlog(DEBUG, "Removed %u items from cache", cnt);
-    }
-
-    return rasters2sample;
-}
-
-/*----------------------------------------------------------------------------
- * filterRasters
- *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::filterRasters(int64_t gps)
-{
-    /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
-    if(parms->url_substring || parms->filter_time )
-    {
-        Ordering<rasters_group_t>::Iterator group_iter(*groupList);
-        for(int i = 0; i < group_iter.length; i++)
-        {
-            const rasters_group_t& rgroup = group_iter[i].value;
-            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-            bool removeGroup = false;
-
-            for(int j = 0; j < raster_iter.length; j++)
-            {
-                const raster_info_t& rinfo = raster_iter[j].value;
-
-                /* URL filter */
-                if(parms->url_substring)
-                {
-                    if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
-                    {
-                        removeGroup = true;
-                        break;
-                    }
-                }
-
-                /* Temporal filter */
-                if(parms->filter_time)
-                {
-                    if(!TimeLib::gmtinrange(rgroup.gmtDate, parms->start_time, parms->stop_time))
-                    {
-                        removeGroup = true;
-                        break;
-                    }
-                }
-            }
-
-            if(removeGroup)
-                groupList->remove(group_iter[i].key);
-        }
-    }
-
-    /* Closest time filter - using raster group time, not individual reaster time */
-    int64_t closestGps = 0;
-    if(gps > 0)
-        closestGps = gps;
-    else if (parms->filter_closest_time)
-        closestGps = TimeLib::gmt2gpstime(parms->closest_time);
-
-    if(closestGps > 0)
-    {
-        int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
-
-        /* Find raster group with the closesest time */
-        Ordering<rasters_group_t>::Iterator iter(*groupList);
-        for(int i = 0; i < iter.length; i++)
-        {
-            int64_t gpsTime = iter[i].value.gpsTime;
-            int64_t delta   = abs(closestGps - gpsTime);
-
-            if(delta < minDelta)
-                minDelta = delta;
-        }
-
-        /* Remove all groups with greater delta */
-        for(int i = 0; i < iter.length; i++)
-        {
-            int64_t gpsTime = iter[i].value.gpsTime;
-            int64_t delta   = abs(closestGps - gpsTime);
-
-            if(delta > minDelta)
-                groupList->remove(iter[i].key);
-        }
-    }
-
-    return (groupList->length() > 0);
-}
-
-/*----------------------------------------------------------------------------
- * createThreads
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::createThreads(uint32_t cnt)
-{
-    uint32_t threadsNeeded = cnt;
-
-    if(threadsNeeded <= readersCnt)
-        return;
-
-    uint32_t newThreadsCnt = threadsNeeded - readersCnt;
-    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAllowed: %d\n", newThreadsCnt, readersCnt, threadsNeeded, MAX_READER_THREADS);
-
-    if(newThreadsCnt > MAX_READER_THREADS)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR,
-                               "Too many rasters to read: %d, max reading threads allowed: %d\n",
-                               newThreadsCnt, MAX_READER_THREADS);
-    }
-
-    for(uint32_t i = 0; i < newThreadsCnt; i++)
-    {
-        reader_t* reader = &readers[readersCnt];
-        reader->raster   = NULL;
-        reader->run      = true;
-        reader->sync     = new Cond(NUM_SYNC_SIGNALS);
-        reader->thread   = new Thread(readingThread, reader);
-        readersCnt++;
-    }
-    assert(readersCnt == threadsNeeded);
-}
-
-
-/*----------------------------------------------------------------------------
- * readingThread
- *----------------------------------------------------------------------------*/
-void* GeoIndexedRaster::readingThread(void *param)
-{
-    reader_t *reader = (reader_t*)param;
-    bool run = true;
-
-    while(run)
-    {
-        reader->sync->lock();
-        {
-            /* Wait for raster to work on */
-            while((reader->raster == NULL) && reader->run)
-                reader->sync->wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
-
-            if(reader->raster != NULL)
-            {
-                reader->raster->samplePOI();
-                reader->raster = NULL; /* Done with this raster */
-                reader->sync->signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
-            }
-
-            run = reader->run;
-        }
-        reader->sync->unlock();
-    }
-
-    return NULL;
-}
-
-
-/*----------------------------------------------------------------------------
- * getSampledRastersCount
- *----------------------------------------------------------------------------*/
-int GeoIndexedRaster::getSampledRastersCount(void)
-{
-    int cnt = 0;
-
-    /* Not all rasters in dictionary were sampled, find out how many were */
-    cacheitem_t* item;
-    const char *key = cache.first(&item);
-    while(key != NULL)
-    {
-        if (item->enabled && item->raster->sampled()) cnt++;
-        key = cache.next(&item);
-    }
-
-    return cnt;
-}
-
-/*----------------------------------------------------------------------------
- * destroyFeaturesList
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::destroyFeaturesList(void)
-{
-    int len = featuresList.length();
-    if(len > 0)
-    {
-        for(int i = 0; i < len; i++)
-        {
-            OGRFeature* feature = featuresList[i];
-            OGRFeature::DestroyFeature(feature);
-        }
-        featuresList.clear();
-    }
-}
-
 
 /*----------------------------------------------------------------------------
  * luaDimensions - :dim() --> rows, cols
@@ -811,4 +503,302 @@ int GeoIndexedRaster::luaCellSize(lua_State *L)
 
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * readingThread
+ *----------------------------------------------------------------------------*/
+void* GeoIndexedRaster::readingThread(void *param)
+{
+    reader_t *reader = (reader_t*)param;
+    bool run = true;
+
+    while(run)
+    {
+        reader->sync->lock();
+        {
+            /* Wait for raster to work on */
+            while((reader->raster == NULL) && reader->run)
+                reader->sync->wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
+
+            if(reader->raster != NULL)
+            {
+                reader->raster->samplePOI();
+                reader->raster = NULL; /* Done with this raster */
+                reader->sync->signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+            }
+
+            run = reader->run;
+        }
+        reader->sync->unlock();
+    }
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * createThreads
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::createThreads(uint32_t cnt)
+{
+    uint32_t threadsNeeded = cnt;
+
+    if(threadsNeeded <= readersCnt)
+        return;
+
+    uint32_t newThreadsCnt = threadsNeeded - readersCnt;
+    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAllowed: %d\n", newThreadsCnt, readersCnt, threadsNeeded, MAX_READER_THREADS);
+
+    if(newThreadsCnt > MAX_READER_THREADS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Too many rasters to read: %d, max reading threads allowed: %d\n",
+                               newThreadsCnt, MAX_READER_THREADS);
+    }
+
+    for(uint32_t i = 0; i < newThreadsCnt; i++)
+    {
+        reader_t* reader = &readers[readersCnt];
+        reader->raster   = NULL;
+        reader->run      = true;
+        reader->sync     = new Cond(NUM_SYNC_SIGNALS);
+        reader->thread   = new Thread(readingThread, reader);
+        readersCnt++;
+    }
+    assert(readersCnt == threadsNeeded);
+}
+
+/*----------------------------------------------------------------------------
+ * updateCache
+ *----------------------------------------------------------------------------*/
+uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
+{
+    uint32_t rasters2sample = 0;
+
+    Ordering<rasters_group_t>::Iterator group_iter(*groupList);
+    for(int i = 0; i < group_iter.length; i++)
+    {
+        const rasters_group_t& rgroup = group_iter[i].value;
+
+        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+        for(int j = 0; j < raster_iter.length; j++)
+        {
+            const raster_info_t& rinfo = raster_iter[j].value;
+            const char* key            = rinfo.fileName.c_str();
+
+            cacheitem_t* item;
+            bool inCache = cache.find(key, &item);
+            if(!inCache)
+            {
+                /* Create new cache item with raster */
+                item = new cacheitem_t();
+                item->raster = new GdalRaster(parms, rinfo.fileName,
+                                              static_cast<double>(rinfo.gpsTime / 1000),
+                                              rinfo.dataIsElevation, crscb);
+            }
+
+            item->raster->setPOI(poi);
+            item->useTime = TimeLib::latchtime();
+            item->enabled = true;
+
+            if(!inCache)
+            {
+                /* Add new raster to dictionary */
+                cache.add(key, item);
+            }
+            rasters2sample++;
+        }
+    }
+
+    /* Maintain cache from getting too big */
+    while(cache.length() > MAX_CACHED_RASTERS)
+    {
+        uint32_t cnt = removeOldestCacheItem();
+        if(cnt == 0) break;
+        else mlog(DEBUG, "Removed %u items from cache", cnt);
+    }
+
+    return rasters2sample;
+}
+
+/*----------------------------------------------------------------------------
+ * invaldiateCache
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::invalidateCache(void)
+{
+    cacheitem_t* item;
+    const char* key = cache.first(&item);
+    while(key != NULL)
+    {
+        item->enabled = false;
+        key = cache.next(&item);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * filterRasters
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::filterRasters(int64_t gps)
+{
+    /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
+    if(parms->url_substring || parms->filter_time )
+    {
+        Ordering<rasters_group_t>::Iterator group_iter(*groupList);
+        for(int i = 0; i < group_iter.length; i++)
+        {
+            const rasters_group_t& rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            bool removeGroup = false;
+
+            for(int j = 0; j < raster_iter.length; j++)
+            {
+                const raster_info_t& rinfo = raster_iter[j].value;
+
+                /* URL filter */
+                if(parms->url_substring)
+                {
+                    if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
+                    {
+                        removeGroup = true;
+                        break;
+                    }
+                }
+
+                /* Temporal filter */
+                if(parms->filter_time)
+                {
+                    if(!TimeLib::gmtinrange(rgroup.gmtDate, parms->start_time, parms->stop_time))
+                    {
+                        removeGroup = true;
+                        break;
+                    }
+                }
+            }
+
+            if(removeGroup)
+                groupList->remove(group_iter[i].key);
+        }
+    }
+
+    /* Closest time filter - using raster group time, not individual reaster time */
+    int64_t closestGps = 0;
+    if(gps > 0)
+        closestGps = gps;
+    else if (parms->filter_closest_time)
+        closestGps = TimeLib::gmt2gpstime(parms->closest_time);
+
+    if(closestGps > 0)
+    {
+        int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
+
+        /* Find raster group with the closesest time */
+        Ordering<rasters_group_t>::Iterator iter(*groupList);
+        for(int i = 0; i < iter.length; i++)
+        {
+            int64_t gpsTime = iter[i].value.gpsTime;
+            int64_t delta   = abs(closestGps - gpsTime);
+
+            if(delta < minDelta)
+                minDelta = delta;
+        }
+
+        /* Remove all groups with greater delta */
+        for(int i = 0; i < iter.length; i++)
+        {
+            int64_t gpsTime = iter[i].value.gpsTime;
+            int64_t delta   = abs(closestGps - gpsTime);
+
+            if(delta > minDelta)
+                groupList->remove(iter[i].key);
+        }
+    }
+
+    return (groupList->length() > 0);
+}
+
+/*----------------------------------------------------------------------------
+ * removeOldestCacheItem
+ *----------------------------------------------------------------------------*/
+uint32_t GeoIndexedRaster::removeOldestCacheItem(void)
+{
+    uint32_t removedCnt = 0;
+    double max = std::numeric_limits<double>::min();
+
+    /* Find oldest raster and it's groupId */
+    cacheitem_t* oldestItem = NULL;
+    cacheitem_t* item;
+
+    const char* key = cache.first(&item);
+    while(key != NULL)
+    {
+        if(!item->enabled)
+        {
+            double elapsedTime = TimeLib::latchtime() - item->useTime;
+            if(elapsedTime > max)
+            {
+                max        = elapsedTime;
+                oldestItem = item;
+            }
+        }
+        key = cache.next(&item);
+    }
+
+    if(oldestItem == NULL)
+    {
+        /* Cache is empty, did not find oldest item */
+        return 0;
+    }
+
+    /* Remove all cache items from the oldest group if they are not enabled */
+    const std::string& oldestId = oldestItem->groupId;
+    key                         = cache.first(&item);
+    while(key != NULL)
+    {
+        if(!item->enabled && (item->groupId == oldestId))
+        {
+            cache.remove(key);
+            delete item->raster;
+            delete item;
+            removedCnt++;
+        }
+        key = cache.next(&item);
+    }
+
+    return removedCnt;
+}
+
+/*----------------------------------------------------------------------------
+ * getSampledRastersCount
+ *----------------------------------------------------------------------------*/
+int GeoIndexedRaster::getSampledRastersCount(void)
+{
+    int cnt = 0;
+
+    /* Not all rasters in dictionary were sampled, find out how many were */
+    cacheitem_t* item;
+    const char *key = cache.first(&item);
+    while(key != NULL)
+    {
+        if (item->enabled && item->raster->sampled()) cnt++;
+        key = cache.next(&item);
+    }
+
+    return cnt;
+}
+
+/*----------------------------------------------------------------------------
+ * destroyFeaturesList
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::destroyFeaturesList(void)
+{
+    int len = featuresList.length();
+    if(len > 0)
+    {
+        for(int i = 0; i < len; i++)
+        {
+            OGRFeature* feature = featuresList[i];
+            OGRFeature::DestroyFeature(feature);
+        }
+        featuresList.clear();
+    }
 }

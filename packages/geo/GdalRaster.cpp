@@ -162,7 +162,8 @@ void GdalRaster::samplePOI(void)
         /*
          * Attempt to read raster only if it contains the point of interest.
          */
-        if(containsPoint())
+        if((poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
+           (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max))
         {
             if(parms->sampling_algo == GRIORA_NearestNeighbour)
                 readPixel();
@@ -414,14 +415,11 @@ void GdalRaster::resamplePixel(void)
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = parms->sampling_algo;
-        double  rbuf[1] = {INVALID_SAMPLE_VALUE};
 
         bool validWindow = containsWindow(_col, _row, cols, rows, windowSize);
         if (validWindow)
         {
-            readRasterWithRetry(_col, _row, windowSize, windowSize, rbuf, 1, 1, &args);
-
-            sample.value = rbuf[0];
+            readRasterWithRetry(_col, _row, windowSize, windowSize, &sample.value, 1, 1, &args);
             if(nodataCheck() && dataIsElevation)
             {
                 sample.value += verticalShift;
@@ -460,7 +458,6 @@ void GdalRaster::computeZonalStats(void)
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = parms->sampling_algo;
         samplesArray = new double[windowSize*windowSize];
-        CHECKPTR(samplesArray);
 
         bool validWindow = containsWindow(_col, _row, cols, rows, windowSize);
         if (validWindow)
@@ -471,8 +468,8 @@ void GdalRaster::computeZonalStats(void)
             double min = std::numeric_limits<double>::max();
             double max = std::numeric_limits<double>::min();
             double sum = 0;
+            double nodata = band->GetNoDataValue();
             std::vector<double> validSamples;
-
             /*
              * Only use pixels within radius from pixel containing point of interest.
              * Ignore nodata values.
@@ -485,7 +482,7 @@ void GdalRaster::computeZonalStats(void)
                 for (int x = 0; x < windowSize; x++)
                 {
                     double value = samplesArray[y*windowSize + x];
-                    if (value == band->GetNoDataValue()) continue;
+                    if (value == nodata) continue;
 
                     if(dataIsElevation)
                         value += verticalShift;
@@ -614,15 +611,6 @@ void GdalRaster::createTransform(void)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
 }
 
-/*----------------------------------------------------------------------------
- * containsPoint
- *----------------------------------------------------------------------------*/
-bool GdalRaster::containsPoint(void)
-{
-    return (dset &&
-            (poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
-            (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max));
-}
 
 /*----------------------------------------------------------------------------
  * containsWindow
