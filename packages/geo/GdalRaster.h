@@ -66,12 +66,9 @@ do                                                                            \
 } while (0)
 
 
-typedef void (*overrideCRS_t)(OGRSpatialReference& crs);
-// using overrideCRS_t = void(*)(OGRSpatialReference& crs);
-
 
 /******************************************************************************
- * GEO RASTER CLASS
+ * GDAL RASTER CLASS
  ******************************************************************************/
 
 class GdalRaster
@@ -88,6 +85,13 @@ class GdalRaster
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
+
+        /*--------------------------------------------------------------------
+        * overrideCRS_t
+        *     callback definition for overriding Spatial Reference System.
+        *     NOTE: implementation must be thread-safe
+        *--------------------------------------------------------------------*/
+        typedef OGRErr (*overrideCRS_t)(OGRSpatialReference& crs);
 
         class Point
         {
@@ -122,8 +126,8 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, overrideCRS_t cb);
-                          ~GdalRaster     (void);
+                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb);
+        virtual           ~GdalRaster     (void);
         void               open           (void);
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);

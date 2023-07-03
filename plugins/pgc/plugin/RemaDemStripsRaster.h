@@ -67,11 +67,8 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
         RemaDemStripsRaster(lua_State* L, GeoParms* _parms):
           PgcDemStripsRaster(L, _parms, "rema", "/s", &overrideTargetCRS) {}
 
-        static void overrideTargetCRS(OGRSpatialReference& target)
-        {
-            OGRErr ogrerr = target.importFromWkt(getRemaWkt2());
-            CHECK_GDALERR(ogrerr);
-        }
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target)
+        { return target.importFromWkt(getRemaWkt2()); }
 };
 
 #endif  /* __remadem_strips_raster__ */

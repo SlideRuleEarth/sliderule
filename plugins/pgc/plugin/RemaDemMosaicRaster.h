@@ -65,13 +65,11 @@ class RemaDemMosaicRaster: public GeoRaster
          GeoRaster(L, _parms,
                   std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
                   TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44),
+                  true, /* Data is elevation */
                   &overrideTargetCRS) {}
 
-        static void overrideTargetCRS(OGRSpatialReference& target)
-        {
-            OGRErr ogrerr = target.importFromWkt(getRemaWkt2());
-            CHECK_GDALERR(ogrerr);
-        }
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target)
+        { return target.importFromWkt(getRemaWkt2()); }
 };
 
 #endif  /* __remadem_mosaic_raster__ */

@@ -64,6 +64,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
+            bool                dataIsElevation;
             std::string         tag;
             std::string         fileName;
             int64_t             gpsTime;
@@ -96,9 +97,9 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         virtual        ~GeoIndexedRaster  (void);
-        void            getSamples  (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
-        static void     init        (void);
-        static void     deinit      (void);
+        void            getSamples        (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
+        static void     init              (void);
+        static void     deinit            (void);
 
     protected:
 
@@ -106,7 +107,7 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoIndexedRaster      (lua_State* L, GeoParms* _parms, overrideCRS_t cb=NULL);
+                        GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
         virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags);
         uint32_t        getGroupFlags         (const rasters_group_t& rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
@@ -148,15 +149,15 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        reader_t*          readers;
-        uint32_t           readersCnt;
-        overrideCRS_t      crscb;
+        reader_t*                 readers;
+        uint32_t                  readersCnt;
+        GdalRaster::overrideCRS_t crscb;
 
-        std::string        indexFile;
-        GDALDataset       *indexDset;
-        GdalRaster::bbox_t bbox;
-        uint32_t           rows;
-        uint32_t           cols;
+        std::string               indexFile;
+        GDALDataset              *indexDset;
+        GdalRaster::bbox_t        bbox;
+        uint32_t                  rows;
+        uint32_t                  cols;
 
         /*--------------------------------------------------------------------
          * Methods

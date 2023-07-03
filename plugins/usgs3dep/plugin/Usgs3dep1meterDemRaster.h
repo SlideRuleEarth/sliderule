@@ -36,13 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "VctRaster.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
  * USGS3DEP 1METER DEM RASTER CLASS
  ******************************************************************************/
 
-class Usgs3dep1meterDemRaster: public VctRaster
+class Usgs3dep1meterDemRaster: public GeoIndexedRaster
 {
     public:
 
@@ -70,10 +70,12 @@ class Usgs3dep1meterDemRaster: public VctRaster
          *--------------------------------------------------------------------*/
 
                 Usgs3dep1meterDemRaster (lua_State* L, GeoParms* _parms);
+               ~Usgs3dep1meterDemRaster (void);
 
-        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) override;
-        bool    findRasters      (OGRPoint &p) override;
-        void    overrideTargetCRS(OGRSpatialReference& target) override;
+        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
+        bool    findRasters      (GdalRaster::Point &p) final;
+
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target);
 
         /*--------------------------------------------------------------------
          * Data

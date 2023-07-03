@@ -55,7 +55,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, overrideCRS_t cb) :
+GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb) :
    parms      (_parms),
   _sampled    (false),
    gpsTime    (_gpsTime),
@@ -66,7 +66,7 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    fileName   (_fileName),
    dset       (NULL),
    band       (NULL),
-   dataIsElevation(false),
+   dataIsElevation(_dataIsElevation),
    rows       (0),
    cols       (0),
    cellSize   (0),
@@ -150,14 +150,14 @@ void GdalRaster::samplePOI(void)
         if(dset == NULL)
             open();
 
-        double z0 = poi.z;
+        double z = poi.z;
         // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
 
         if(!transf->Transform(1, &poi.x, &poi.y, &poi.z))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi.x, poi.y, poi.z);
 
         // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
-        verticalShift = z0 - poi.z;
+        verticalShift = z - poi.z;
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -600,7 +600,8 @@ void GdalRaster::createTransform(void)
 
     if(overrideCRS)
     {
-        overrideCRS(targetCRS);
+        ogrerr = overrideCRS(targetCRS);
+        CHECK_GDALERR(ogrerr);
         // mlog(DEBUG, "CRS from raster: %s", projref);
     }
 

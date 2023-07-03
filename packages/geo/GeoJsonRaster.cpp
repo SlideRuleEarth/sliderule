@@ -156,7 +156,7 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
-    GeoRaster(L, _parms, ("/vsimem/" + GdalRaster::generateUuid() + ".tif"), TimeLib::gpstime())
+    GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::generateUuid() + ".tif"), TimeLib::gpstime(), false /* not elevation*/ )
 {
     bool rasterCreated = false;
     GDALDataset* rasterDset = NULL;

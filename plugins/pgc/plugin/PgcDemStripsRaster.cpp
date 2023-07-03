@@ -42,7 +42,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, overrideCRS_t cb):
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb):
     GeoIndexedRaster(L, _parms, cb),
     demName(dem_name),
     groupId(0)
@@ -52,6 +52,13 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
     filePath = path2geocells.substr(0, pos);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+PgcDemStripsRaster::~PgcDemStripsRaster(void)
+{
 }
 
 /*----------------------------------------------------------------------------
@@ -104,13 +111,15 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 {
     /*
-     * Could get date from filename but will read from geojson index file instead.
-     * It contains two dates: 'start_date' and 'end_date'
+     * Find rasters and their dates.
+     * geojson index file contains two dates: 'start_date' and 'end_date'
+     * Calculate the rster date as mid point between start and end dates.
      *
-     * The date in the filename is the date of the earliest image of the stereo pair.
+     * The file name/path contains a date in it.
+     * We cannot use it because it is the date of the earliest image of the stereo pair.
      * For intrack pairs (pairs collected intended for stereo) the two images are acquired within a few minutes of each other.
      * For cross-track images (opportunistic stereo pairs made from mono collects)
-     * the two images can be from up to 30 days apart.
+     * the two images can be up to 30 days apart.
      *
      */
     const int DATES_CNT = 2;
@@ -128,6 +137,9 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 
             if(!geo->Contains(&point)) continue;
 
+            /* geojson index files hosted by PGC only contain listing of dems
+             * In order to read quality mask raster for each strip we need to build a path to it.
+             */
             const char *fname = feature->GetFieldAsString(SAMPLES_RASTER_TAG);
             if(fname && strlen(fname) > 0)
             {
@@ -139,11 +151,12 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 fileName = filePath + fileName.substr(pos);
 
                 rasters_group_t rgroup;
-                raster_info_t rinfo;
-                raster_info_t flagsRinfo;
 
-                rinfo.fileName = fileName;
-                rinfo.tag = SAMPLES_RASTER_TAG;
+                raster_info_t demRinfo;
+                demRinfo.dataIsElevation = true;
+                demRinfo.tag = SAMPLES_RASTER_TAG;
+                demRinfo.fileName = fileName;
+                demRinfo.gpsTime = 0; /* TBD */
 
                 const std::string endToken    = "_dem.tif";
                 const std::string newEndToken = "_bitmask.tif";
@@ -153,7 +166,10 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                     fileName.replace(pos, endToken.length(), newEndToken.c_str());
                 } else fileName.clear();
 
+                raster_info_t flagsRinfo;
+                flagsRinfo.tag = FLAGS_RASTER_TAG;
                 flagsRinfo.fileName = fileName;
+                flagsRinfo.gpsTime = 0; /* TBD */
 
                 double gps = 0;
                 for(int j=0; j<DATES_CNT; j++)
@@ -164,20 +180,18 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 
                 gps = gps/DATES_CNT;
 
+                /* Set rasters gps time */
+                demRinfo.gpsTime   = static_cast<int64_t>(gps);
+                flagsRinfo.gpsTime = static_cast<int64_t>(gps);
+
                 /* Set raster group time and group id */
                 rgroup.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup.gpsTime = static_cast<int64_t>(gps);
-                rgroup.id = std::to_string(groupId++);
-
-                /* Set raster gps time */
-                rinfo.gpsTime = static_cast<int64_t>(gps);
-
-                rgroup.list.add(rgroup.list.length(), rinfo);
+                rgroup.id      = std::to_string(groupId++);
+                rgroup.list.add(rgroup.list.length(), demRinfo);
 
                 if(flagsRinfo.fileName.length() > 0)
                 {
-                    flagsRinfo.tag = FLAGS_RASTER_TAG;
-                    flagsRinfo.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);
                 }
                 groupList->add(groupList->length(), rgroup);
