@@ -51,11 +51,8 @@ from sliderule import version
 # Coordinate system on the surface of a sphere or ellipsoid of reference.
 EPSG_WGS84 = "EPSG:4326"
 
-#Output CRS for SlideRule GeoDataFrame
-#SLIDERULE_EPSG = EPSG_WGS84
-
-#This is 3D CRS for ITRF2014 realization with 2010.0 epoch: https://epsg.io/7912
-#Note: using GRS80 ellipsoid, negligible difference in inverse flattening from WGS84
+# This is 3D CRS for ITRF2014 realization with 2010.0 epoch: https://epsg.io/7912
+# Note: using GRS80 ellipsoid, negligible difference in inverse flattening from WGS84
 SLIDERULE_EPSG = "EPSG:7912"
 
 PUBLIC_URL = "slideruleearth.io"
@@ -552,7 +549,7 @@ def getvalues(data, dtype, size):
 #
 #  Dictionary to GeoDataFrame
 #
-def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key="h_mean", **kwargs):
+def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_keys=[], **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -569,11 +566,17 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     columns['time'] = columns[time_key].astype('datetime64[ns]')
 
     # Generate Geometry Column
-    #2D point geometry
-    #geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
-    #3D point geometry
-    #This enables 3D CRS transformations using the to_crs() method
-    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
+    # 3D point geometry
+    # This enables 3D CRS transformations using the to_crs() method
+    height_key = None
+    for k in height_keys:
+        if k in columns:
+            height_key = k
+            break
+    if height_key != None:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
+    else:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
     del columns[lon_key]
     del columns[lat_key]
 
