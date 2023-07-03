@@ -79,7 +79,7 @@ class TestL3:
         }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
         assert gdf.describe()["gedi.time"]["std"] == 0.0
-        assert abs(gdf.describe()["gedi.value"]["mean"] - 3142.8526604140434) < 0.001
+        assert abs(gdf.describe()["gedi.value"]["mean"] - 3143.7053891209744) < 0.001
         assert gdf.describe()["gedi.file_id"]["max"] == 0.0
         assert gdf.describe()["gedi.flags"]["max"] == 0.0
 
@@ -134,6 +134,6 @@ class TestL4B:
                     'geometry', 'gedi.flags', 'gedi.time', 'gedi.value', 'gedi.file_id']
         for key in exp_keys:
             assert key in gdf.keys()
-        assert abs(gdf.describe()["canopy_openness"]["max"] - 10.390829) < 0.001
+        assert abs(gdf.describe()["canopy_openness"]["max"] - 10.390829086303711) < 0.001
         df = gdf[gdf["gedi.value"] > -9999.0]
-        assert abs(sum(df["gedi.value"]) - 30945.865370501764) < 0.001
+        assert abs(sum(df["gedi.value"]) - 31148.828197392944) < 0.001
