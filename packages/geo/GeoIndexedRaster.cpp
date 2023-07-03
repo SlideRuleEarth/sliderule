@@ -164,11 +164,12 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms):
+GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, overrideCRS_t cb):
     RasterObject (L, _parms),
     groupList    (new Ordering<rasters_group_t>),
     readers      (new reader_t[MAX_READER_THREADS]),
     readersCnt   (0),
+    crscb        (cb),
     indexDset    (NULL)
 {
     /* Initialize Class Data Members */
@@ -527,7 +528,7 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
             {
                 /* Create new cache item with raster */
                 citem = new cacheitem_t();
-                citem->raster = new GdalRaster(parms, rinfo.fileName, gpsTime, rgroup.id, rgroup.wkt);
+                citem->raster = new GdalRaster(parms, rinfo.fileName, gpsTime, rgroup.id, crscb);
                 // if(forceNotElevation)
                 //     raster->dataIsElevation = false;
                 // else

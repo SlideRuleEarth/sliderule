@@ -66,6 +66,10 @@ do                                                                            \
 } while (0)
 
 
+typedef void (*overrideCRS_t)(OGRSpatialReference& crs);
+// using overrideCRS_t = void(*)(OGRSpatialReference& crs);
+
+
 /******************************************************************************
  * GEO RASTER CLASS
  ******************************************************************************/
@@ -84,6 +88,7 @@ class GdalRaster
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
+
         class Point
         {
         public:
@@ -117,7 +122,7 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& id, const std::string& _targetWkt="");
+                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& id, overrideCRS_t cb);
                           ~GdalRaster     (void);
         void               open           (void);
         void               setPOI         (const Point& _poi);
@@ -137,6 +142,7 @@ class GdalRaster
          * Static Methods
          *--------------------------------------------------------------------*/
 
+        static void        setCRSfromWkt  (OGRSpatialReference& sref, const char* wkt);
         static std::string generateUuid   (void);
         static void        initAwsAccess  (GeoParms* _parms);
 
@@ -151,7 +157,6 @@ class GdalRaster
         *--------------------------------------------------------------------*/
 
         GeoParms*      parms;
-        std::string    targetWkt;
 
         bool          _sampled;
         std::string    groupId;
@@ -166,6 +171,7 @@ class GdalRaster
         OGRCoordinateTransformation* transf;
         OGRSpatialReference sourceCRS;
         OGRSpatialReference targetCRS;
+        overrideCRS_t       overrideCRS;
 
         std::string     fileName;
         GDALDataset    *dset;

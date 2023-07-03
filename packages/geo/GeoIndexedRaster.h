@@ -69,11 +69,10 @@ class GeoIndexedRaster: public RasterObject
         } raster_info_t;
 
         typedef struct {
-            std::string             wkt;
-            std::string             id;
-            Ordering<raster_info_t> list;
-            TimeLib::gmt_time_t     gmtDate;
-            int64_t                 gpsTime;
+            std::string               id;
+            Ordering<raster_info_t>   list;
+            TimeLib::gmt_time_t       gmtDate;
+            int64_t                   gpsTime;
         } rasters_group_t;
 
         typedef struct {
@@ -105,7 +104,7 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoIndexedRaster      (lua_State* L, GeoParms* _parms);
+                        GeoIndexedRaster      (lua_State* L, GeoParms* _parms, overrideCRS_t cb=NULL);
         virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags);
         uint32_t        getGroupFlags         (const rasters_group_t& rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
@@ -149,6 +148,7 @@ class GeoIndexedRaster: public RasterObject
 
         reader_t*          readers;
         uint32_t           readersCnt;
+        overrideCRS_t      crscb;
 
         std::string        indexFile;
         GDALDataset       *indexDset;

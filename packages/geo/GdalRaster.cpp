@@ -55,23 +55,23 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _groupId, const std::string& _targetWkt) :
-   parms    (_parms),
-   targetWkt(_targetWkt),
-  _sampled  (false),
-   groupId  (_groupId),
-   gpsTime  (_gpsTime),
-   poi      (),
-   sample   (),
-   transf   (NULL),
-   fileName (_fileName),
-   dset     (NULL),
-   band     (NULL),
+GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _groupId, overrideCRS_t cb) :
+   parms      (_parms),
+  _sampled    (false),
+   groupId    (_groupId),
+   gpsTime    (_gpsTime),
+   poi        (),
+   sample     (),
+   transf     (NULL),
+   overrideCRS(cb),
+   fileName   (_fileName),
+   dset       (NULL),
+   band       (NULL),
    dataIsElevation(false),
-   rows(0),
-   cols(0),
-   cellSize(0),
-   bbox(),
+   rows       (0),
+   cols       (0),
+   cellSize   (0),
+   bbox       (),
    radiusInPixels(0)
 {
 }
@@ -182,6 +182,17 @@ void GdalRaster::samplePOI(void)
         _sampled = false;
         mlog(e.level(), "Error sampling raster: %s", e.what());
     }
+}
+
+
+/*----------------------------------------------------------------------------
+ * setCRSfromWkt
+ *----------------------------------------------------------------------------*/
+void GdalRaster::setCRSfromWkt(OGRSpatialReference& sref, const char* wkt)
+{
+    // mlog(DEBUG, "%s", wkt.c_str());
+    OGRErr ogrerr = sref.importFromWkt(wkt);
+    CHECK_GDALERR(ogrerr);
 }
 
 
@@ -579,24 +590,20 @@ bool GdalRaster::nodataCheck(void)
  *----------------------------------------------------------------------------*/
 void GdalRaster::createTransform(void)
 {
-    CHECKPTR(dset);
-
     OGRErr ogrerr = sourceCRS.importFromEPSG(SLIDERULE_EPSG);
     CHECK_GDALERR(ogrerr);
 
-    if(targetWkt.length() > 0)
+    const char* projref = dset->GetProjectionRef();
+    CHECKPTR(projref);
+    ogrerr = targetCRS.importFromWkt(projref);
+    CHECK_GDALERR(ogrerr);
+    // mlog(DEBUG, "CRS from raster: %s", projref);
+
+    if(overrideCRS)
     {
-        ogrerr = targetCRS.importFromWkt(targetWkt.c_str());
-        // mlog(DEBUG, "CRS from caller: %s", targetWkt.c_str());
-    }
-    else
-    {
-        const char* projref = dset->GetProjectionRef();
-        CHECKPTR(projref);
-        ogrerr = targetCRS.importFromWkt(projref);
+        overrideCRS(targetCRS);
         // mlog(DEBUG, "CRS from raster: %s", projref);
     }
-    CHECK_GDALERR(ogrerr);
 
     /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
     targetCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);

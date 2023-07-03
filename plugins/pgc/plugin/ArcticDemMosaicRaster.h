@@ -64,7 +64,13 @@ class ArcticDemMosaicRaster: public GeoRaster
          GeoRaster(L, _parms,
                   std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
                   TimeLib::datetime2gps(2023, 01, 18, 20, 23, 42),
-                  getArcticDemWkt2()) {}
+                  &overrideTargetCRS) {}
+
+        static void overrideTargetCRS(OGRSpatialReference& target)
+        {
+            OGRErr ogrerr = target.importFromWkt(getArcticDemWkt2());
+            CHECK_GDALERR(ogrerr);
+        }
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */

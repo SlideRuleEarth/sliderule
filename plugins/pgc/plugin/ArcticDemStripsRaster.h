@@ -52,7 +52,7 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, GeoParms* _parms)
-        { return new ArcticDemStripsRaster(L, _parms, getArcticDemWkt2()); }
+        { return new ArcticDemStripsRaster(L, _parms); }
 
     protected:
 
@@ -60,9 +60,14 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms, const char* wkt):
-          PgcDemStripsRaster(L, _parms, "arcticdem", "/n", wkt) {}
+        ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
+          PgcDemStripsRaster(L, _parms, "arcticdem", "/n", &overrideTargetCRS) {}
 
+        static void overrideTargetCRS(OGRSpatialReference& target)
+        {
+            OGRErr ogrerr = target.importFromWkt(getArcticDemWkt2());
+            CHECK_GDALERR(ogrerr);
+        }
 };
 
 #endif  /* __arcticdem_strips_raster__ */
