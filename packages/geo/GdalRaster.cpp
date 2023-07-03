@@ -55,10 +55,9 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& _groupId, overrideCRS_t cb) :
+GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, overrideCRS_t cb) :
    parms      (_parms),
   _sampled    (false),
-   groupId    (_groupId),
    gpsTime    (_gpsTime),
    poi        (),
    sample     (),

@@ -44,14 +44,14 @@
  *----------------------------------------------------------------------------*/
 PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, overrideCRS_t cb):
     GeoIndexedRaster(L, _parms, cb),
-    demName(dem_name)
+    demName(dem_name),
+    groupId(0)
 {
     path2geocells.append(_parms->asset->getPath()).append(geo_suffix);
     std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
     filePath = path2geocells.substr(0, pos);
-    groupId = 0;
 }
 
 /*----------------------------------------------------------------------------

@@ -88,7 +88,7 @@ GeoRaster::~GeoRaster(void)
  *----------------------------------------------------------------------------*/
 GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, overrideCRS_t cb):
     RasterObject(L, _parms),
-    raster       (_parms, _fileName, _gpsTime, "", cb),
+    raster       (_parms, _fileName, _gpsTime, cb),
     fileId       (fileDictAdd(_fileName))
 {
     /* Add Lua Functions */

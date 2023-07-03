@@ -84,6 +84,7 @@ class GeoIndexedRaster: public RasterObject
         } reader_t;
 
         typedef struct {
+            std::string groupId;
             bool        enabled;
             double      useTime;
             GdalRaster* raster;
@@ -171,8 +172,8 @@ class GeoIndexedRaster: public RasterObject
         void       createThreads           (uint32_t cnt);
         uint32_t   updateCache             (GdalRaster::Point& poi);
         void       invalidateCache         (void);
+        uint32_t   removeOldestCacheItem   (void);
         int        getSampledRastersCount  (void);
-        uint32_t   removeOldestRasterGroup (void);
 };
 
 

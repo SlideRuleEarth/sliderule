@@ -122,15 +122,13 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, const std::string& id, overrideCRS_t cb);
+                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, overrideCRS_t cb);
                           ~GdalRaster     (void);
         void               open           (void);
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);
         void               setFileName    (std::string& _fileName ) { fileName = _fileName; }
-        void               setGroupId     (const std::string& id) { groupId = id; }
         std::string        getFileName    (void) { return fileName;}
-        std::string        getGroupId     (void) { return groupId; }
         RasterSample&      getSample      (void) { return sample; }
         bool               sampled        (void) { return _sampled; }
         int                getRows        (void) { return rows; }
@@ -157,10 +155,7 @@ class GdalRaster
         *--------------------------------------------------------------------*/
 
         GeoParms*      parms;
-
         bool          _sampled;
-        std::string    groupId;
-
         double         gpsTime;  /* Time the raster data was collected and/or generated */
 
         /* Last sample information */
