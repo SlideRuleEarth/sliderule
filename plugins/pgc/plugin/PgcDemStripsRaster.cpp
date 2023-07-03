@@ -163,14 +163,21 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 }
 
                 gps = gps/DATES_CNT;
+
+                /* Set raster group time and group id */
                 rgroup.gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup.gpsTime = static_cast<int64_t>(gps);
                 rgroup.id = std::to_string(groupId++);
+
+                /* Set raster gps time */
+                rinfo.gpsTime = static_cast<int64_t>(gps);
+
                 rgroup.list.add(rgroup.list.length(), rinfo);
 
                 if(flagsRinfo.fileName.length() > 0)
                 {
                     flagsRinfo.tag = FLAGS_RASTER_TAG;
+                    flagsRinfo.gpsTime = rinfo.gpsTime;
                     rgroup.list.add(rgroup.list.length(), flagsRinfo);
                 }
                 groupList->add(groupList->length(), rgroup);

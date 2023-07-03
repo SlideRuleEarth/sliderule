@@ -180,10 +180,10 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
 
             if(!geo->Contains(&p)) continue;
 
+            /* Set raster group time and group id */
             rasters_group_t rgroup;
             rgroup.id = feature->GetFieldAsString("id");
-            double gps = getGmtDate(feature, "datetime", rgroup.gmtDate);
-            rgroup.gpsTime = gps;
+            rgroup.gpsTime = getGmtDate(feature, "datetime", rgroup.gmtDate);
 
             /* Find each requested band in the index file */
             bool val;
@@ -207,8 +207,6 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                     rinfo.fileName = filePath + fileName.substr(pos);
                     rinfo.tag = bandName;
                     rinfo.gpsTime = rgroup.gpsTime;
-                    rinfo.gmtDate = rgroup.gmtDate;
-
                     rgroup.list.add(rgroup.list.length(), rinfo);
                 }
                 bandName = bandsDict.next(&val);
