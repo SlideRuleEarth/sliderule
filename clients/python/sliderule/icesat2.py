@@ -139,7 +139,7 @@ def __calcspot(sc_orient, track, pair):
 #
 # Flatten Batches
 #
-def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_keys):
+def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
 
     # Latch Start Time
     tstart_flatten = time.perf_counter()
@@ -239,7 +239,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, lon_key='lon', lat_key='lat', height_keys=height_keys)
+    gdf = sliderule.todataframe(columns, lon_key='lon', lat_key='lat', height_key=height_key)
 
     # Merge Ancillary Fields
     tstart_merge = time.perf_counter()
@@ -372,7 +372,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_keys=['h_mean']):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -401,8 +401,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
                         whether to provide all sampled values as numpy arrays even if there is only a single value
-        height_keys:    list
-                        list of strings identifying the name of the columns to try in the order provided for the 3D CRS transformation
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
 
     Returns
     -------
@@ -451,7 +451,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id, as_numpy_array, height_keys)
+        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id, as_numpy_array, height_key)
 
         # Return Response
         profiles[atl06p.__name__] = time.perf_counter() - tstart
@@ -488,7 +488,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, height_keys=['height']):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, height_key=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -514,8 +514,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
-        height_keys:    list
-                        list of strings identifying the name of the columns to try in the order provided for the 3D CRS transformation
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
 
     Returns
     -------
@@ -652,7 +652,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     profiles["flatten"] = time.perf_counter() - tstart_flatten
 
                     # Create DataFrame
-                    gdf = sliderule.todataframe(columns, lat_key="latitude", lon_key="longitude", height_keys=height_keys)
+                    gdf = sliderule.todataframe(columns, lat_key="latitude", lon_key="longitude", height_key=height_key)
 
                     # Calculate Spot Column
                     gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
@@ -698,7 +698,7 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL08
 #
-def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_keys=['h_te_median', 'h_max_canopy', 'h_min_canopy', 'h_mean_canopy', 'h_canopy']):
+def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns geolocated vegatation statistics.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -727,8 +727,8 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
                         whether to provide all sampled values as numpy arrays even if there is only a single value
-        height_keys:    list
-                        list of strings identifying the name of the columns to try in the order provided for the 3D CRS transformation
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
 
     Returns
     -------
@@ -753,7 +753,7 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id, as_numpy_array, height_keys)
+        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id, as_numpy_array, height_key)
 
         # Return Response
         profiles[atl08p.__name__] = time.perf_counter() - tstart

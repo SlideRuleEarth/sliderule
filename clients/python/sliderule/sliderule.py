@@ -549,7 +549,7 @@ def getvalues(data, dtype, size):
 #
 #  Dictionary to GeoDataFrame
 #
-def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_keys=[], **kwargs):
+def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key=None, **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
@@ -568,15 +568,10 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     # Generate Geometry Column
     # 3D point geometry
     # This enables 3D CRS transformations using the to_crs() method
-    height_key = None
-    for k in height_keys:
-        if k in columns:
-            height_key = k
-            break
-    if height_key != None:
-        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
-    else:
+    if height_key == None:
         geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    else:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
     del columns[lon_key]
     del columns[lat_key]
 
