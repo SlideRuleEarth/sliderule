@@ -117,9 +117,9 @@ class GeoIndexedRaster: public RasterObject
         void            sampleRasters         (uint32_t);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
-        bool containsPoint(GdalRaster::Point& poi)
+        bool withinExtent(GdalRaster::Point& poi)
         {
-            return (indexDset &&
+            return ((featuresList.length() > 0) &&
                     (poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
                     (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max));
         }
@@ -154,7 +154,6 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::overrideCRS_t crscb;
 
         std::string               indexFile;
-        GDALDataset              *indexDset;
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
@@ -175,6 +174,7 @@ class GeoIndexedRaster: public RasterObject
         void       invalidateCache         (void);
         uint32_t   removeOldestCacheItem   (void);
         int        getSampledRastersCount  (void);
+        void       destroyFeaturesList     (void);
 };
 
 

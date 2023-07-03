@@ -148,14 +148,8 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 
     if (groupList) delete groupList;
 
-    /* Destroy all features */
-    for(int i = 0; i < featuresList.length(); i++)
-    {
-        OGRFeature* feature = featuresList[i];
-        OGRFeature::DestroyFeature(feature);
-    }
+    destroyFeaturesList();
 }
-
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -169,8 +163,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     groupList    (new Ordering<rasters_group_t>),
     readers      (new reader_t[MAX_READER_THREADS]),
     readersCnt   (0),
-    crscb        (cb),
-    indexDset    (NULL)
+    crscb        (cb)
 {
     /* Initialize Class Data Members */
     bzero(readers, sizeof(reader_t)*MAX_READER_THREADS);
@@ -287,49 +280,38 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
     std::string newFile;
     getIndexFile(newFile, lon, lat);
 
-    /* Is it already opened with the same file? */
-    if(indexDset && indexFile == newFile)
+    /* Trying to open the same file? */
+    if(featuresList.isempty() && newFile == indexFile)
         return;
 
+    GDALDataset* dset = NULL;
     try
     {
-        /* Cleanup previous */
-        if(indexDset)
-        {
-            /* Free cached features for this vector index file */
-            for(int i = 0; i < featuresList.length(); i++)
-            {
-                OGRFeature* feature = featuresList[i];
-                OGRFeature::DestroyFeature(feature);
-            }
-            featuresList.clear();
-
-            GDALClose((GDALDatasetH)indexDset);
-            indexDset = NULL;
-        }
+        destroyFeaturesList();
 
         /* Open new vector data set*/
-        indexDset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
-        if (indexDset == NULL)
+        dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        if (dset == NULL)
             throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newFile.c_str());
 
         indexFile = newFile;
-        OGRLayer* layer = indexDset->GetLayer(0);
+        OGRLayer* layer = dset->GetLayer(0);
         CHECKPTR(layer);
 
-        /* For now assume the first layer has the features we need
+        /*
          * Clone all features and store them for performance/speed of feature lookup
          */
         layer->ResetReading();
         while(OGRFeature* feature = layer->GetNextFeature())
         {
-            OGRFeature* newFeature = feature->Clone();
-            featuresList.add(newFeature);
+            OGRFeature* fp = feature->Clone();
+            featuresList.add(fp);
             OGRFeature::DestroyFeature(feature);
         }
 
-        cols = indexDset->GetRasterXSize();
-        rows = indexDset->GetRasterYSize();
+        cols = dset->GetRasterXSize();
+        rows = dset->GetRasterYSize();
+
 
         OGREnvelope env;
         OGRErr err = layer->GetExtent(&env);
@@ -342,12 +324,13 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
             mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
         }
 
-        mlog(DEBUG, "Opened: %s", newFile.c_str());
+        GDALClose((GDALDatasetH)dset);
+        mlog(DEBUG, "Loaded index file features from: %s", newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
-        if(indexDset) GDALClose((GDALDatasetH)indexDset);
-        indexDset = NULL;
+        if(dset) GDALClose((GDALDatasetH)dset);
+        destroyFeaturesList();
         throw;
     }
 }
@@ -408,20 +391,17 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
     invalidateCache();
 
     /* Initial call, open raster index data set if not already opened */
-    if(indexDset == NULL)
+    if(featuresList.isempty())
         openGeoIndex(lon, lat);
 
     GdalRaster::Point poi(lon, lat, height);
-    mlog(DEBUG, "lon,lat,height: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
 
-    /* If point is not in current geoindex, find a new one */
-#warning "check if point is contained in geometry of index vector not just the bbox"
-    if(!containsPoint(poi))
+    if(!withinExtent(poi))
     {
         openGeoIndex(lon, lat);
 
         /* Check against newly opened geoindex */
-        if(!containsPoint(poi))
+        if(!withinExtent(poi))
             return 0;
     }
 
@@ -721,6 +701,23 @@ int GeoIndexedRaster::getSampledRastersCount(void)
     }
 
     return cnt;
+}
+
+/*----------------------------------------------------------------------------
+ * destroyFeaturesList
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::destroyFeaturesList(void)
+{
+    int len = featuresList.length();
+    if(len > 0)
+    {
+        for(int i = 0; i < len; i++)
+        {
+            OGRFeature* feature = featuresList[i];
+            OGRFeature::DestroyFeature(feature);
+        }
+        featuresList.clear();
+    }
 }
 
 
