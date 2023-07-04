@@ -99,7 +99,7 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
     try
     {
         OGRPoint point(p.x, p.y, p.z);
-        groupList->clear();
+        groupList.clear();
 
         for(int i = 0; i < featuresList.length(); i++)
         {
@@ -109,10 +109,9 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
 
             if(!geo->Contains(&point)) continue;
 
-            rasters_group_t rgroup;
-            rgroup.id = feature->GetFieldAsString("id");
-            double gps = getGmtDate(feature, "datetime", rgroup.gmtDate);
-            rgroup.gpsTime = gps;
+            rasters_group_t* rgroup = new rasters_group_t;
+            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
 
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
@@ -124,21 +123,21 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = DEM_TAG;
                 rinfo.fileName        = filePath + fileName.substr(pos);
-                rinfo.gpsTime         = rgroup.gpsTime;
-                rgroup.list.add(rgroup.list.length(), rinfo);
+                rinfo.gpsTime         = rgroup->gpsTime;
+                rgroup->list.add(rgroup->list.length(), rinfo);
             }
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
-            groupList->add(groupList->length(), rgroup);
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->list.length());
+            groupList.add(groupList.length(), rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList->length(), point.getX(), point.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList->length() > 0);
+    return (groupList.length() > 0);
 }
 
 

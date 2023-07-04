@@ -169,7 +169,7 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
     try
     {
         OGRPoint point(p.x, p.y, p.z);
-        groupList->clear();
+        groupList.clear();
 
         for(int i = 0; i < featuresList.length(); i++)
         {
@@ -180,9 +180,9 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
             if(!geo->Contains(&point)) continue;
 
             /* Set raster group time and group id */
-            rasters_group_t rgroup;
-            rgroup.id = feature->GetFieldAsString("id");
-            rgroup.gpsTime = getGmtDate(feature, "datetime", rgroup.gmtDate);
+            rasters_group_t* rgroup = new rasters_group_t;
+            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
 
             /* Find each requested band in the index file */
             bool val;
@@ -206,40 +206,40 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
                     rinfo.tag = bandName;
-                    rinfo.gpsTime = rgroup.gpsTime;
-                    rgroup.list.add(rgroup.list.length(), rinfo);
+                    rinfo.gpsTime = rgroup->gpsTime;
+                    rgroup->list.add(rgroup->list.length(), rinfo);
                 }
                 bandName = bandsDict.next(&val);
             }
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
-            groupList->add(groupList->length(), rgroup);
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->list.length());
+            groupList.add(groupList.length(), rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList->length(), point.getX(), point.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList->length() > 0);
+    return (groupList.length() > 0);
 }
 
 
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;
     bool isS2 = false;
     std::size_t pos;
 
-    pos = rgroup.id.find("HLS.L30");
+    pos = rgroup->id.find("HLS.L30");
     if(pos != std::string::npos) isL8 = true;
 
-    pos = rgroup.id.find("HLS.S30");
+    pos = rgroup->id.find("HLS.S30");
     if(pos != std::string::npos) isS2 = true;
 
     if(!isL8 && !isS2)
@@ -250,7 +250,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
     green = red = nir08 = swir16 = invalid;
 
     /* Collect samples for all rasters */
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+    Ordering<raster_info_t>::Iterator raster_iter(rgroup->list);
     for(int j = 0; j < raster_iter.length; j++)
     {
         const raster_info_t& rinfo = raster_iter[j].value;
@@ -293,8 +293,8 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
     }
 
     RasterSample sample;
-    double groupTime = rgroup.gpsTime / 1000;
-    std::string groupName = rgroup.id + " {\"algo\": \"";
+    double groupTime = rgroup->gpsTime / 1000;
+    std::string groupName = rgroup->id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)

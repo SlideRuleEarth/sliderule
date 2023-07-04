@@ -108,8 +108,8 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
-        virtual void    getGroupSamples       (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags);
-        uint32_t        getGroupFlags         (const rasters_group_t& rgroup);
+        virtual void    getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags);
+        uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         void            openGeoIndex          (double lon = 0, double lat = 0);
         virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
@@ -131,7 +131,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         Mutex                       samplingMutex;
-        Ordering<rasters_group_t>*  groupList;
+        Ordering<rasters_group_t*>  groupList;
         Dictionary<cacheitem_t*>    cache;
         List<OGRFeature*>           featuresList;
         bool                        forceNotElevation;
@@ -150,7 +150,7 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        std::vector<reader_t*>    readers;
+        List<reader_t*>           readers;
         GdalRaster::overrideCRS_t crscb;
 
         std::string               indexFile;

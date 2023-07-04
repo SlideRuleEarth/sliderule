@@ -86,10 +86,10 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
             return;
         }
 
-        Ordering<rasters_group_t>::Iterator iter(*groupList);
+        Ordering<rasters_group_t*>::Iterator iter(groupList);
         for(int i = 0; i < iter.length; i++)
         {
-            const rasters_group_t& rgroup = iter[i].value;
+            const rasters_group_t* rgroup = iter[i].value;
             uint32_t flags = 0;
 
             /* Get flags value for this group of rasters */
@@ -115,8 +115,10 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
     /* Terminate all reader threads */
-    for(auto& reader : readers)
+    List<reader_t*>::Iterator reader_iter(readers);
+    for(int i = 0; i < reader_iter.length; i++)
     {
+        reader_t* reader = readers[i];
         if(reader->thread != NULL)
         {
             reader->sync->lock();
@@ -143,7 +145,12 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
         key = cache.next(&item);
     }
 
-    if (groupList) delete groupList;
+    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+    for(int i = 0; i < groupList.length(); i++)
+    {
+        const rasters_group_t* rgroup = group_iter[i].value;
+        delete rgroup;
+    }
 
     destroyFeaturesList();
 }
@@ -157,7 +164,6 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
     RasterObject (L, _parms),
-    groupList    (new Ordering<rasters_group_t>),
     crscb        (cb)
 {
     /* Add Lua Functions */
@@ -172,12 +178,12 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags)
 {
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-    for(int i = 0; i < raster_iter.length; i++)
+    Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
+    for(int i = 0; i < info_iter.length; i++)
     {
-        const raster_info_t& rinfo = raster_iter[i].value;
+        const raster_info_t& rinfo = info_iter[i].value;
         if(strcmp(DEM_TAG, rinfo.tag.c_str()) == 0)
         {
             const char* key = rinfo.fileName.c_str();
@@ -200,14 +206,14 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t& rgroup, List<Rast
 /*----------------------------------------------------------------------------
  * getGroupFlags
  *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t& rgroup)
+uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
 {
     uint32_t flags = 0;
 
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-    for(int j = 0; j < raster_iter.length; j++)
+    Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
+    for(int j = 0; j < info_iter.length; j++)
     {
-        const raster_info_t& rinfo = raster_iter[j].value;
+        const raster_info_t& rinfo = info_iter[j].value;
         if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) == 0)
         {
             cacheitem_t* item;
@@ -338,6 +344,7 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
     int signaledReaders = 0;
     int i = 0;
     cacheitem_t* item;
+
     const char* key = cache.first(&item);
     while(key != NULL)
     {
@@ -355,9 +362,6 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
         key = cache.next(&item);
     }
 
-    /* If did not signal any reader threads, don't wait */
-    if(signaledReaders == 0) return;
-
     /* Wait for readers to finish sampling */
     for(int j = 0; j < signaledReaders; j++)
     {
@@ -368,7 +372,7 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
                 reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
         }
         reader->sync->unlock();
-    }
+        }
 }
 
 /*----------------------------------------------------------------------------
@@ -533,14 +537,14 @@ void* GeoIndexedRaster::readingThread(void *param)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::createThreads(uint32_t cnt)
 {
-    uint32_t threadsNeeded = cnt;
-    uint32_t threadsNow    = readers.size();
+    int threadsNeeded = cnt;
+    int threadsNow    = readers.length();
 
     if(threadsNeeded <= threadsNow)
         return;
 
-    uint32_t newThreadsCnt = threadsNeeded - threadsNow;
-    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAlowed: %d\n",
+    int newThreadsCnt = threadsNeeded - threadsNow;
+    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAllowed: %d\n",
          newThreadsCnt, threadsNow, threadsNeeded, MAX_READER_THREADS);
 
     if(newThreadsCnt > MAX_READER_THREADS)
@@ -550,16 +554,16 @@ void GeoIndexedRaster::createThreads(uint32_t cnt)
                                newThreadsCnt, MAX_READER_THREADS);
     }
 
-    for(uint32_t i = 0; i < newThreadsCnt; i++)
+    for(int i = 0; i < newThreadsCnt; i++)
     {
         reader_t* r = new reader_t;
         r->raster = NULL;
         r->run    = true;
         r->sync   = new Cond(NUM_SYNC_SIGNALS);
         r->thread = new Thread(readingThread, r);
-        readers.push_back(r);
+        readers.add(r);
     }
-    assert(readers.size() == threadsNeeded);
+    assert(readers.length() == threadsNeeded);
 }
 
 /*----------------------------------------------------------------------------
@@ -569,15 +573,14 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
 {
     uint32_t rasters2sample = 0;
 
-    Ordering<rasters_group_t>::Iterator group_iter(*groupList);
+    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
-        const rasters_group_t& rgroup = group_iter[i].value;
-
-        Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-        for(int j = 0; j < raster_iter.length; j++)
+        const rasters_group_t* rgroup = group_iter[i].value;
+        Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
+        for(int j = 0; j < info_iter.length; j++)
         {
-            const raster_info_t& rinfo = raster_iter[j].value;
+            const raster_info_t& rinfo = info_iter[j].value;
             const char* key            = rinfo.fileName.c_str();
 
             cacheitem_t* item;
@@ -597,7 +600,6 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
 
             if(!inCache)
             {
-                /* Add new raster to dictionary */
                 cache.add(key, item);
             }
             rasters2sample++;
@@ -637,20 +639,19 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
     {
-        Ordering<rasters_group_t>::Iterator group_iter(*groupList);
+        Ordering<rasters_group_t*>::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
-            const rasters_group_t& rgroup = group_iter[i].value;
-            Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
+            const rasters_group_t* rgroup = group_iter[i].value;
+            Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
             bool removeGroup = false;
 
-            for(int j = 0; j < raster_iter.length; j++)
+            for(int j = 0; j < info_iter.length; j++)
             {
-                const raster_info_t& rinfo = raster_iter[j].value;
-
                 /* URL filter */
                 if(parms->url_substring)
                 {
+                    const raster_info_t& rinfo = info_iter[j].value;
                     if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
                     {
                         removeGroup = true;
@@ -661,7 +662,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
                 /* Temporal filter */
                 if(parms->filter_time)
                 {
-                    if(!TimeLib::gmtinrange(rgroup.gmtDate, parms->start_time, parms->stop_time))
+                    if(!TimeLib::gmtinrange(rgroup->gmtDate, parms->start_time, parms->stop_time))
                     {
                         removeGroup = true;
                         break;
@@ -670,44 +671,58 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
             }
 
             if(removeGroup)
-                groupList->remove(group_iter[i].key);
+            {
+                groupList.remove(group_iter[i].key);
+                delete rgroup;
+            }
         }
     }
 
     /* Closest time filter - using raster group time, not individual reaster time */
     int64_t closestGps = 0;
     if(gps > 0)
+    {
+        /* Caller provided gps time, use it insead of time from params */
         closestGps = gps;
+    }
     else if (parms->filter_closest_time)
+    {
+        /* Params provided closest time */
         closestGps = TimeLib::gmt2gpstime(parms->closest_time);
+    }
 
     if(closestGps > 0)
     {
         int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
-        /* Find raster group with the closesest time */
-        Ordering<rasters_group_t>::Iterator iter(*groupList);
-        for(int i = 0; i < iter.length; i++)
+        /* Find raster group with the closest time */
+        Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+        for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gpsTime = iter[i].value.gpsTime;
+            const rasters_group_t* rgroup = group_iter[i].value;
+            int64_t gpsTime = rgroup->gpsTime;
             int64_t delta   = abs(closestGps - gpsTime);
 
             if(delta < minDelta)
                 minDelta = delta;
         }
 
-        /* Remove all groups with greater delta */
-        for(int i = 0; i < iter.length; i++)
+        /* Remove all groups with greater time delta */
+        for(int i = 0; i < group_iter.length; i++)
         {
-            int64_t gpsTime = iter[i].value.gpsTime;
+            const rasters_group_t* rgroup = group_iter[i].value;
+            int64_t gpsTime = rgroup->gpsTime;
             int64_t delta   = abs(closestGps - gpsTime);
 
             if(delta > minDelta)
-                groupList->remove(iter[i].key);
+            {
+                groupList.remove(group_iter[i].key);
+                delete rgroup;
+            }
         }
     }
 
-    return (groupList->length() > 0);
+    return (groupList.length() > 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -730,7 +745,7 @@ uint32_t GeoIndexedRaster::removeOldestCacheItem(void)
             double elapsedTime = TimeLib::latchtime() - item->useTime;
             if(elapsedTime > max)
             {
-                max        = elapsedTime;
+                max = elapsedTime;
                 oldestItem = item;
             }
         }
@@ -745,7 +760,7 @@ uint32_t GeoIndexedRaster::removeOldestCacheItem(void)
 
     /* Remove all cache items from the oldest group if they are not enabled */
     const std::string& oldestId = oldestItem->groupId;
-    key                         = cache.first(&item);
+    key = cache.first(&item);
     while(key != NULL)
     {
         if(!item->enabled && (item->groupId == oldestId))
@@ -785,14 +800,12 @@ int GeoIndexedRaster::getSampledRastersCount(void)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::destroyFeaturesList(void)
 {
-    int len = featuresList.length();
-    if(len > 0)
+    if(featuresList.isempty()) return;
+
+    for(int i = 0; i < featuresList.length(); i++)
     {
-        for(int i = 0; i < len; i++)
-        {
-            OGRFeature* feature = featuresList[i];
-            OGRFeature::DestroyFeature(feature);
-        }
-        featuresList.clear();
+        OGRFeature* feature = featuresList[i];
+        OGRFeature::DestroyFeature(feature);
     }
+    featuresList.clear();
 }

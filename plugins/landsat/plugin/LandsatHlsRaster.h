@@ -85,7 +85,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
         bool    findRasters      (GdalRaster::Point &p) final;
-        void    getGroupSamples  (const rasters_group_t& rgroup, List<RasterSample>& slist, uint32_t flags) final;
+        void    getGroupSamples  (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags) final;
 
         /*--------------------------------------------------------------------
          * Data
