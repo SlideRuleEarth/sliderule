@@ -128,7 +128,6 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
     try
     {
         OGRPoint point(p.x, p.y, p.z);
-        emptyGroupsList();
 
         for(int i = 0; i < featuresList.length(); i++)
         {

@@ -116,7 +116,6 @@ class GeoIndexedRaster: public RasterObject
         virtual bool    findRasters           (GdalRaster::Point& poi) = 0;
         void            sampleRasters         (uint32_t cnt);
         int             sample                (double lon, double lat, double height, int64_t gps);
-        void            emptyGroupsList       (void);
 
         /* Inline for performance */
         bool withinExtent(GdalRaster::Point& poi)
@@ -176,6 +175,7 @@ class GeoIndexedRaster: public RasterObject
         uint32_t   removeOldestCacheItem   (void);
         int        getSampledRastersCount  (void);
         void       emptyFeaturesList       (void);
+        void       emptyGroupsList         (void);
 };
 
 

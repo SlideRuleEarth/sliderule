@@ -375,6 +375,7 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
 int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 {
     invalidateCache();
+    emptyGroupsList();
 
     /* Initial call, open index file if not already opened */
     if(featuresList.isempty())
@@ -809,9 +810,9 @@ void GeoIndexedRaster::emptyFeaturesList(void)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::emptyGroupsList(void)
 {
-    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
-    if(group_iter.length == 0) return;
+    if(groupList.isempty()) return;
 
+    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
