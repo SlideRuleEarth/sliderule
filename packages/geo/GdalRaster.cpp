@@ -197,9 +197,9 @@ void GdalRaster::setCRSfromWkt(OGRSpatialReference& sref, const char* wkt)
 
 
 /*----------------------------------------------------------------------------
- * generateUuid
+ * getUUID
  *----------------------------------------------------------------------------*/
-std::string GdalRaster::generateUuid(void)
+std::string GdalRaster::getUUID(void)
 {
     char uuid_str[UUID_STR_LEN];
     uuid_t uuid;

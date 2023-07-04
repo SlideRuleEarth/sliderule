@@ -129,7 +129,7 @@ class GdalRaster
         void               open           (void);
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);
-        void               setFileName    (std::string& _fileName ) { fileName = _fileName; }
+        void               setFileName    (const std::string& _fileName ) { fileName = _fileName; }
         std::string        getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         bool               sampled        (void) { return _sampled; }
@@ -143,7 +143,7 @@ class GdalRaster
          *--------------------------------------------------------------------*/
 
         static void        setCRSfromWkt  (OGRSpatialReference& sref, const char* wkt);
-        static std::string generateUuid   (void);
+        static std::string getUUID        (void);
         static void        initAwsAccess  (GeoParms* _parms);
 
     private:

@@ -81,7 +81,7 @@ const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa
 LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
  GeoIndexedRaster(L, _parms),
  filePath(_parms->asset->getPath()),
- indexFile("/vsimem/" + GdalRaster::generateUuid() + ".geojson")
+ indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
     ndsi = ndvi = ndwi = false;
 

@@ -60,7 +60,7 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
 Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms):
  GeoIndexedRaster(L, _parms, &overrideTargetCRS),
  filePath(_parms->asset->getPath()),
- indexFile("/vsimem/" + GdalRaster::generateUuid() + ".geojson")
+ indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
