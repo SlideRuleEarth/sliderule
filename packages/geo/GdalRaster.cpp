@@ -121,7 +121,6 @@ void GdalRaster::open(void)
                                    parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
         }
 
-        /* Get raster block size */
         band = dset->GetRasterBand(1);
         CHECKPTR(band);
 
@@ -510,27 +509,23 @@ void GdalRaster::computeZonalStats(void)
             int validSamplesCnt = validSamples.size();
             if(validSamplesCnt > 0)
             {
-                double stdev = 0;
-                double mad   = 0;
+                double stdev = 0;  /* Standard deviation */
+                double mad   = 0;  /* Median absolute deviation (MAD) */
                 double mean  = sum / validSamplesCnt;
 
                 for(int i = 0; i < validSamplesCnt; i++)
                 {
                     double value = validSamples[i];
-
-                    /* Standard deviation */
                     stdev += std::pow(value - mean, 2);
-
-                    /* Median absolute deviation (MAD) */
-                    mad += std::fabs(value - mean);
+                    mad   += std::fabs(value - mean);
                 }
 
                 stdev = std::sqrt(stdev / validSamplesCnt);
                 mad   = mad / validSamplesCnt;
 
                 /*
-                 * Median
-                 * For performance use nth_element algorithm since it sorts only part of the vector
+                 * Calculate median
+                 * For performance use nth_element algorithm from std library since it sorts only part of the vector
                  * NOTE: (vector will be reordered by nth_element)
                  */
                 std::size_t n = validSamplesCnt / 2;
