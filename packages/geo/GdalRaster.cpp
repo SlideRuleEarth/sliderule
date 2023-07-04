@@ -268,78 +268,83 @@ void GdalRaster::readPixel(void)
         } while (block == NULL && cnt--);
         CHECKPTR(block);
 
-        /* Get data block pointer, no copy but block is locked */
+        /* Get data block pointer, no memory copied but block is locked */
         void *data = block->GetDataRef();
-        if (data == NULL) block->DropLock();
-        CHECKPTR(data);
+        if (data == NULL)
+        {
+            /* Before bailing release the block... */
+            block->DropLock();
+            CHECKPTR(data);
+        }
 
         /* Calculate col, row inside of block */
         uint32_t _col = col % xBlockSize;
         uint32_t _row = row % yBlockSize;
         uint32_t offset = _row * xBlockSize + _col;
 
+        /* Be carefull using offset based on the pixel data type */
         switch(band->GetRasterDataType())
         {
             case GDT_Byte:
             {
-                uint8_t *p = (uint8_t *)data;
-                sample.value = (double)p[offset];
+                uint8_t* p   = static_cast<uint8_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_UInt16:
             {
-                uint16_t *p = (uint16_t *)data;
-                sample.value = (double)p[offset];
+                uint16_t* p  = static_cast<uint16_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_Int16:
             {
-                int16_t *p = (int16_t *)data;
-                sample.value = (double)p[offset];
+                int16_t* p   = static_cast<int16_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_UInt32:
             {
-                uint32_t *p = (uint32_t *)data;
-                sample.value = (double)p[offset];
+                uint32_t* p  = static_cast<uint32_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_Int32:
             {
-                int32_t *p = (int32_t *)data;
-                sample.value = (double)p[offset];
+                int32_t* p   = static_cast<int32_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_Int64:
             {
-                int64_t *p = (int64_t *)data;
-                sample.value = (double)p[offset];
+                int64_t* p   = static_cast<int64_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_UInt64:
             {
-                uint64_t *p = (uint64_t *)data;
-                sample.value = (double)p[offset];
+                uint64_t* p  = static_cast<uint64_t*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_Float32:
             {
-                float *p = (float *)data;
-                sample.value = (double)p[offset];
+                float* p     = static_cast<float*>(data);
+                sample.value = p[offset];
             }
             break;
 
             case GDT_Float64:
             {
-                double *p = (double *)data;
-                sample.value = (double)p[offset];
+                double* p    = static_cast<double*>(data);
+                sample.value = p[offset];
             }
             break;
 
@@ -609,21 +614,6 @@ void GdalRaster::createTransform(void)
     transf = OGRCreateCoordinateTransformation(&sourceCRS, &targetCRS);
     if(transf == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
-}
-
-
-/*----------------------------------------------------------------------------
- * containsWindow
- *----------------------------------------------------------------------------*/
-bool GdalRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize )
-{
-    if (col < 0 || row < 0)
-        return false;
-
-    if ((col + windowSize >= maxCol) || (row + windowSize >= maxRow))
-        return false;
-
-    return true;
 }
 
 /*----------------------------------------------------------------------------

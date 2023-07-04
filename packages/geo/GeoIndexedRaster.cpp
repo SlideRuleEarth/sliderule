@@ -115,25 +115,22 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
     /* Terminate all reader threads */
-    for (uint32_t i=0; i < readersCnt; i++)
+    for(auto& reader : readers)
     {
-        reader_t *reader = &readers[i];
-        if (reader->thread != NULL)
+        if(reader->thread != NULL)
         {
             reader->sync->lock();
             {
-                reader->raster = NULL; /* No raster to read     */
-                reader->run = false;   /* Set run flag to false */
+                reader->raster = NULL;  /* No raster to read     */
+                reader->run    = false; /* Set run flag to false */
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
             }
             reader->sync->unlock();
 
-            delete reader->thread;  /* delete thread waits on thread to join */
+            delete reader->thread; /* delete thread waits on thread to join */
             delete reader->sync;
         }
     }
-
-    delete [] readers;
 
     /* Close all rasters */
     cacheitem_t* item;
@@ -161,13 +158,8 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
     RasterObject (L, _parms),
     groupList    (new Ordering<rasters_group_t>),
-    readers      (new reader_t[MAX_READER_THREADS]),
-    readersCnt   (0),
     crscb        (cb)
 {
-    /* Initialize Class Data Members */
-    bzero(readers, sizeof(reader_t)*MAX_READER_THREADS);
-
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
     LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
@@ -344,14 +336,14 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
 
     /* For each raster which is marked to be sampled, give it to the reader thread */
     int signaledReaders = 0;
+    int i = 0;
     cacheitem_t* item;
     const char* key = cache.first(&item);
-    int i           = 0;
     while(key != NULL)
     {
         if(item->enabled)
         {
-            reader_t* reader = &readers[i++];
+            reader_t* reader = readers[i++];
             reader->sync->lock();
             {
                 reader->raster = item->raster;
@@ -363,13 +355,13 @@ void GeoIndexedRaster::sampleRasters(uint32_t cnt)
         key = cache.next(&item);
     }
 
-    /* Did not signal any reader threads, don't wait */
+    /* If did not signal any reader threads, don't wait */
     if(signaledReaders == 0) return;
 
     /* Wait for readers to finish sampling */
     for(int j = 0; j < signaledReaders; j++)
     {
-        reader_t* reader = &readers[j];
+        reader_t* reader = readers[j];
         reader->sync->lock();
         {
             while(reader->raster != NULL)
@@ -542,12 +534,14 @@ void* GeoIndexedRaster::readingThread(void *param)
 void GeoIndexedRaster::createThreads(uint32_t cnt)
 {
     uint32_t threadsNeeded = cnt;
+    uint32_t threadsNow    = readers.size();
 
-    if(threadsNeeded <= readersCnt)
+    if(threadsNeeded <= threadsNow)
         return;
 
-    uint32_t newThreadsCnt = threadsNeeded - readersCnt;
-    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAllowed: %d\n", newThreadsCnt, readersCnt, threadsNeeded, MAX_READER_THREADS);
+    uint32_t newThreadsCnt = threadsNeeded - threadsNow;
+    mlog(DEBUG, "Creating %d new threads, currentThreads: %d, neededThreads: %d, maxAlowed: %d\n",
+         newThreadsCnt, threadsNow, threadsNeeded, MAX_READER_THREADS);
 
     if(newThreadsCnt > MAX_READER_THREADS)
     {
@@ -558,14 +552,14 @@ void GeoIndexedRaster::createThreads(uint32_t cnt)
 
     for(uint32_t i = 0; i < newThreadsCnt; i++)
     {
-        reader_t* reader = &readers[readersCnt];
-        reader->raster   = NULL;
-        reader->run      = true;
-        reader->sync     = new Cond(NUM_SYNC_SIGNALS);
-        reader->thread   = new Thread(readingThread, reader);
-        readersCnt++;
+        reader_t* r = new reader_t;
+        r->raster = NULL;
+        r->run    = true;
+        r->sync   = new Cond(NUM_SYNC_SIGNALS);
+        r->thread = new Thread(readingThread, r);
+        readers.push_back(r);
     }
-    assert(readersCnt == threadsNeeded);
+    assert(readers.size() == threadsNeeded);
 }
 
 /*----------------------------------------------------------------------------

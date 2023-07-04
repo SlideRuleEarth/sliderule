@@ -117,6 +117,7 @@ class GeoIndexedRaster: public RasterObject
         void            sampleRasters         (uint32_t cnt);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
+        /* Inline for performance */
         bool withinExtent(GdalRaster::Point& poi)
         {
             return ((featuresList.length() > 0) &&
@@ -149,8 +150,7 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        reader_t*                 readers;
-        uint32_t                  readersCnt;
+        std::vector<reader_t*>    readers;
         GdalRaster::overrideCRS_t crscb;
 
         std::string               indexFile;

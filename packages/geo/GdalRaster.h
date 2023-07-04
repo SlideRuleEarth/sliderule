@@ -189,10 +189,17 @@ class GdalRaster
         void        computeZonalStats   (void);
         bool        nodataCheck         (void);
         void        createTransform     (void);
-        bool        containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);
         int         radius2pixels       (int _radius);
         void        readRasterWithRetry (int col, int row, int colSize, int rowSize,
                                          void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+
+        /* Inline for performance */
+        bool containsWindow(int col, int row, int maxCol, int maxRow, int windowSize)
+        {
+            if(col < 0 || row < 0) return false;
+            if((col + windowSize >= maxCol) || (row + windowSize >= maxRow)) return false;
+            return true;
+        }
 };
 
 
