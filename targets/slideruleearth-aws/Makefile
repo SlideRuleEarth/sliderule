@@ -66,6 +66,8 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/l
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
 TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
+MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
+STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
 SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
 SLIDERULECFG += -DUSE_ARROW_PACKAGE=ON
 SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
@@ -134,6 +136,12 @@ run: ## run the server locally
 
 selftest: ## run the self test on the server code
 	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
+
+perfmtest: ## run mosaics performance test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
+
+perfstest: ## run strips performance test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

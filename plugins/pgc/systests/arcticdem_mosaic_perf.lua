@@ -20,7 +20,7 @@ local  height = 0
 local _lon = lon
 local _lat = lat
 
-print('\n------------------\nTest: AWS mosaic\n------------')
+print(string.format("\n------------------------------------\nMosaics reading one point\n------------------------------------"))
 local dem = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat, height)
@@ -29,70 +29,53 @@ local dtime = stoptime - starttime
 
 if status ~= true then
     failedSamples = failedSamples + 1
-    print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
+    print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
 else
-    if verbose then
-        for j, v in ipairs(tbl) do
-            local el = v["value"]
-            local fname = v["file"]
-            print(string.format("(%02d) %20f     %s", j, el, fname))
-        end
+    for j, v in ipairs(tbl) do
+        local el = v["value"]
+        local fname = v["file"]
+        print(string.format("(%02d) %20f     %s", j, el, fname))
     end
 end
+print(string.format("%d points read, time: %f, failed reads: %d", 1, dtime, failedSamples))
 
-print(string.format("ExecTime: %f, failed reads: %d", dtime, failedSamples))
 
-local max_cnt = 100000
-
---[[
---]]
-
-print('\n------------------\nTest: Reading', max_cnt, '  points (THE SAME POINT)\n------------')
+local maxPoints = 100000
+print(string.format("\n------------------------------------\nMosaics reading %d same points\n------------------------------------", maxPoints))
 failedSamples = 0
 starttime = time.latch();
 intervaltime = starttime
 
-for i = 1, max_cnt
+for i = 1, maxPoints
 do
     tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
+        print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
     end
 end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print(string.format("\n%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
+print(string.format("%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
 
 -- os.exit()
 
---[[
---]]
-
 -- About 500 points read from the same raster before opening a new one
-max_cnt = 1000
-print('\n------------------\nTest: Reading', max_cnt, '  different points (Average case of DIFFERENT RASTER)\n------------')
+maxPoints = 100
+print(string.format("\n------------------------------------\nMosaics reading %d different points\n------------------------------------", maxPoints))
 lon = _lon
 lat = _lat
 failedSamples = 0
 starttime = time.latch();
 intervaltime = starttime
 
-for i = 1, max_cnt
+for i = 1, maxPoints
 do
     tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
-    end
-
-    modulovalue = 1000
-    if (i % modulovalue == 0) then
-        midtime = time.latch();
-        dtime = midtime-intervaltime
-        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
-        intervaltime = time.latch();
+        print(string.format("Point: %d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     end
 
     lon = lon + 0.001
@@ -100,30 +83,25 @@ end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
-print('\n')
-print(string.format("%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
-
--- os.exit();
-
+print(string.format("%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
 
 
 -- Every point in different mosaic raster (absolute worse case performance)
 -- Walking around arctic circle hitting different raster each time
-max_cnt = 120
-
-print('\n------------------\nTest: Reading', max_cnt, '  different points (DiFERENT RASTERs, walk around Arctic Circle)\n------------')
+maxPoints = 100
+print(string.format("\n------------------------------------\nMosaics reading %d different geocells\n------------------------------------", maxPoints))
 lon = _lon
 lat = _lat
 failedSamples = 0
 starttime = time.latch();
 intervaltime = starttime
 
-for i = 1, max_cnt
+for i = 1, maxPoints
 do
     tbl, status = dem:sample(lon, lat, height)
     if status ~= true then
         failedSamples = failedSamples + 1
-        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
+        print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
     else
         if verbose then
             for j, v in ipairs(tbl) do
@@ -138,20 +116,16 @@ do
     if (i % modulovalue == 0) then
         midtime = time.latch();
         dtime = midtime-intervaltime
-        print(string.format("Point: %d, (%.3f, %.3f), time: %.3f", i, lon, lat, dtime))
+        print(string.format("Point: %4d, (%7.2f, %.2f), time: %.2f", i, lon, lat, dtime))
         intervaltime = time.latch();
     end
 
-    -- NOTE: COGs are 1x1 degree but if I increment lon by 1.1 or 1.2
-    --       ocasionally I hit the same raster twice.
-    --  Incrementing by 1.5 degree gives absolute worse case scenario.
-    --  Every point read is from different raster then the last one.
-    lon = lon + 1.5
+    lon = lon + 0.7
 end
 
 stoptime = time.latch();
 dtime = stoptime-starttime
 print('\n')
-print(string.format("%d points read, time: %f, failed reads: %d", max_cnt, dtime, failedSamples))
+print(string.format("%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
 
 sys.quit()
