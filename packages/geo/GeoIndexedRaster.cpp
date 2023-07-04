@@ -145,14 +145,8 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
         key = cache.next(&item);
     }
 
-    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
-    for(int i = 0; i < groupList.length(); i++)
-    {
-        const rasters_group_t* rgroup = group_iter[i].value;
-        delete rgroup;
-    }
-
-    destroyFeaturesList();
+    emptyGroupsList();
+    emptyFeaturesList();
 }
 
 /******************************************************************************
@@ -283,7 +277,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
     GDALDataset* dset = NULL;
     try
     {
-        destroyFeaturesList();
+        emptyFeaturesList();
 
         /* Open new vector data set*/
         dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
@@ -326,7 +320,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
     catch (const RunTimeException &e)
     {
         if(dset) GDALClose((GDALDatasetH)dset);
-        destroyFeaturesList();
+        emptyFeaturesList();
         throw;
     }
 }
@@ -796,9 +790,9 @@ int GeoIndexedRaster::getSampledRastersCount(void)
 }
 
 /*----------------------------------------------------------------------------
- * destroyFeaturesList
+ * emptyFeaturesList
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::destroyFeaturesList(void)
+void GeoIndexedRaster::emptyFeaturesList(void)
 {
     if(featuresList.isempty()) return;
 
@@ -809,3 +803,20 @@ void GeoIndexedRaster::destroyFeaturesList(void)
     }
     featuresList.clear();
 }
+
+/*----------------------------------------------------------------------------
+ * emptyGroupsList
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::emptyGroupsList(void)
+{
+    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+    if(group_iter.length == 0) return;
+
+    for(int i = 0; i < groupList.length(); i++)
+    {
+        const rasters_group_t* rgroup = group_iter[i].value;
+        delete rgroup;
+    }
+    groupList.clear();
+}
+

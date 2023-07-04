@@ -127,8 +127,8 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
     std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
-        groupList.clear();
         OGRPoint point(p.x, p.y, p.z);
+        emptyGroupsList();
 
         for(int i = 0; i < featuresList.length(); i++)
         {

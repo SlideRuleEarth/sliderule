@@ -130,12 +130,12 @@ class GdalRaster
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);
         void               setFileName    (const std::string& _fileName ) { fileName = _fileName; }
-        std::string        getFileName    (void) { return fileName;}
+        const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         bool               sampled        (void) { return _sampled; }
         int                getRows        (void) { return rows; }
         int                getCols        (void) { return cols; }
-        bbox_t             getBbox        (void) { return bbox; }
+        const bbox_t&      getBbox        (void) { return bbox; }
         double             getCellSize    (void) { return cellSize; }
 
         /*--------------------------------------------------------------------

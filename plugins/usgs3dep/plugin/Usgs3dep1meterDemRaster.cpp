@@ -99,7 +99,7 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
     try
     {
         OGRPoint point(p.x, p.y, p.z);
-        groupList.clear();
+        emptyGroupsList();
 
         for(int i = 0; i < featuresList.length(); i++)
         {
