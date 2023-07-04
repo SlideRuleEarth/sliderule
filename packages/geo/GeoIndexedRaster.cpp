@@ -812,7 +812,7 @@ void GeoIndexedRaster::emptyGroupsList(void)
     Ordering<rasters_group_t*>::Iterator group_iter(groupList);
     if(group_iter.length == 0) return;
 
-    for(int i = 0; i < groupList.length(); i++)
+    for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
         delete rgroup;
