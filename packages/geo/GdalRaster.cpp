@@ -248,16 +248,16 @@ void GdalRaster::readPixel(void)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int32_t col = static_cast<int32_t>(floor((poi.x - bbox.lon_min) / cellSize));
-        const int32_t row = static_cast<int32_t>(floor((bbox.lat_max - poi.y) / cellSize));
+        const int col = static_cast<int>(floor((poi.x - bbox.lon_min) / cellSize));
+        const int row = static_cast<int>(floor((bbox.lat_max - poi.y) / cellSize));
 
         int xBlockSize = 0;
         int yBlockSize = 0;
         band->GetBlockSize(&xBlockSize, &yBlockSize);
 
         /* Raster offsets to block of interest */
-        uint32_t xblk = col / xBlockSize;
-        uint32_t yblk = row / yBlockSize;
+        int xblk = col / xBlockSize;
+        int yblk = row / yBlockSize;
 
         GDALRasterBlock *block = NULL;
         int cnt = 2;
@@ -278,9 +278,9 @@ void GdalRaster::readPixel(void)
         }
 
         /* Calculate col, row inside of block */
-        uint32_t _col = col % xBlockSize;
-        uint32_t _row = row % yBlockSize;
-        uint32_t offset = _row * xBlockSize + _col;
+        int _col = col % xBlockSize;
+        int _row = row % yBlockSize;
+        int offset = _row * xBlockSize + _col;
 
         /* Be carefull using offset based on the pixel data type */
         switch(band->GetRasterDataType())
@@ -358,7 +358,6 @@ void GdalRaster::readPixel(void)
 
         /* Done reading, release block lock */
         block->DropLock();
-
         if(nodataCheck() && dataIsElevation)
         {
             sample.value += verticalShift;
@@ -451,8 +450,8 @@ void GdalRaster::computeZonalStats(void)
 
     try
     {
-        int col = static_cast<int32_t>(floor((poi.x - bbox.lon_min) / cellSize));
-        int row = static_cast<int32_t>(floor((bbox.lat_max - poi.y) / cellSize));
+        int col = static_cast<int>(floor((poi.x - bbox.lon_min) / cellSize));
+        int row = static_cast<int>(floor((bbox.lat_max - poi.y) / cellSize));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
@@ -502,20 +501,20 @@ void GdalRaster::computeZonalStats(void)
                     {
                         if (value < min) min = value;
                         if (value > max) max = value;
-                        sum += value; /* double may lose precision on overflows, should be ok...*/
+                        sum += value;
                         validSamples.push_back(value);
                     }
                 }
             }
 
             int validSamplesCnt = validSamples.size();
-            if (validSamplesCnt > 0)
+            if(validSamplesCnt > 0)
             {
                 double stdev = 0;
                 double mad   = 0;
                 double mean  = sum / validSamplesCnt;
 
-                for (int i = 0; i < validSamplesCnt; i++)
+                for(int i = 0; i < validSamplesCnt; i++)
                 {
                     double value = validSamples[i];
 
@@ -537,7 +536,7 @@ void GdalRaster::computeZonalStats(void)
                 std::size_t n = validSamplesCnt / 2;
                 std::nth_element(validSamples.begin(), validSamples.begin() + n, validSamples.end());
                 double median = validSamples[n];
-                if (!(validSamplesCnt & 0x1))
+                if(!(validSamplesCnt & 0x1))
                 {
                     /* Even number of samples, calculate average of two middle samples */
                     std::nth_element(validSamples.begin(), validSamples.begin() + n-1, validSamples.end());
@@ -556,12 +555,12 @@ void GdalRaster::computeZonalStats(void)
         }
         else mlog(WARNING, "Cannot compute zonal stats, sampling window outside of raster bbox");
     }
-    catch (const RunTimeException &e)
+    catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error computing zonal stats: %s", e.what());
     }
 
-    if (samplesArray) delete[] samplesArray;
+    if(samplesArray) delete[] samplesArray;
 }
 
 /*----------------------------------------------------------------------------
@@ -607,7 +606,7 @@ void GdalRaster::createTransform(void)
         // mlog(DEBUG, "CRS from raster: %s", projref);
     }
 
-    /* Force traditional axis order to avoid lat,lon and lon,lat API madness */
+    /* Force traditional axis order (lon, loat) */
     targetCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
     sourceCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
@@ -626,11 +625,25 @@ int GdalRaster::radius2pixels(int _radius)
      */
     int csize = static_cast<int>(cellSize);
 
-    if (_radius == 0) return 0;
-    if (csize == 0) csize = 1;
+    if(_radius == 0) return 0;
+    if(csize == 0) csize = 1;
 
     int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
     return radiusInMeters / csize;
+}
+
+/*----------------------------------------------------------------------------
+ * containsWindow
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::containsWindow(int col, int row, int maxCol, int maxRow, int windowSize)
+{
+    if(col < 0 || row < 0)
+        return false;
+
+    if((col + windowSize >= maxCol) || (row + windowSize >= maxRow))
+        return false;
+
+    return true;
 }
 
 /*----------------------------------------------------------------------------
