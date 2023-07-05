@@ -52,6 +52,7 @@ const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
 const char* GeoParms::USE_POI_TIME          = "use_poi_time";
+const char* GeoParms::PROJ_PIPELINE         = "proj_pipeline";
 const char* GeoParms::CATALOG               = "catalog";
 const char* GeoParms::BANDS                 = "bands";
 const char* GeoParms::ASSET                 = "asset";
@@ -115,6 +116,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     url_substring       (NULL),
     filter_closest_time (false),
     use_poi_time        (false),
+    proj_pipeline       (NULL),
     catalog             (NULL),
     asset_name          (NULL),
     asset               (NULL),
@@ -225,6 +227,12 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             lua_getfield(L, index, USE_POI_TIME);
             use_poi_time = LuaObject::getLuaBoolean(L, -1, true, use_poi_time, &field_provided);
             if(field_provided) mlog(DEBUG, "Setting %s to %d", USE_POI_TIME, (int)use_poi_time);
+            lua_pop(L, 1);
+
+            /* PROJ pipeline for projection transform */
+            lua_getfield(L, index, PROJ_PIPELINE);
+            proj_pipeline = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
+            if(proj_pipeline) mlog(DEBUG, "Setting %s to %s", PROJ_PIPELINE, proj_pipeline);
             lua_pop(L, 1);
 
             /* Catalog */

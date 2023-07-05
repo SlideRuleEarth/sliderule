@@ -70,7 +70,7 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-              GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
+         GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
 
          const std::string getFileName(void)
          {

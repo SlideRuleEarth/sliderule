@@ -73,6 +73,7 @@ class GeoParms: public LuaObject
         static const char* URL_SUBSTRING;
         static const char* CLOSEST_TIME;
         static const char* USE_POI_TIME;
+        static const char* PROJ_PIPELINE;
         static const char* CATALOG;
         static const char* BANDS;
         static const char* ASSET;
@@ -113,6 +114,7 @@ class GeoParms: public LuaObject
         bool                filter_closest_time;
         TimeLib::gmt_time_t closest_time;
         bool                use_poi_time;
+        const char*         proj_pipeline;
         const char*         catalog;
         band_list_t         bands;
         const char*         asset_name;

@@ -63,6 +63,7 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    sample     (),
    transf     (NULL),
    overrideCRS(cb),
+   aoi        (),
    fileName   (_fileName),
    dset       (NULL),
    band       (NULL),
@@ -601,11 +602,31 @@ void GdalRaster::createTransform(void)
         // mlog(DEBUG, "CRS from raster: %s", projref);
     }
 
-    /* Force traditional axis order (lon, loat) */
+    OGRCoordinateTransformationOptions options;
+    if(parms->proj_pipeline)
+    {
+        /* User specified proj pipeline */
+        if(!options.SetCoordinateOperation(parms->proj_pipeline, false))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set user PROJ pipeline");
+        mlog(DEBUG, "Set PROJ pipeline: %s", parms->proj_pipeline);
+    }
+
+    /* Limit to area of interest if AOI was set */
+    bbox_t empty = {0, 0, 0, 0};
+    if(memcmp(&aoi, &empty, sizeof(bbox_t)))
+    {
+        if(!options.SetAreaOfInterest(aoi.lon_min, aoi.lat_min, aoi.lon_max, aoi.lat_max))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set AOI");
+
+        mlog(DEBUG, "Limited AOI to: lon/lat Min (%.2lf, %.2lf), lon/lat Max (%.2lf, %.2lf)",
+             aoi.lon_min, aoi.lat_min, aoi.lon_max, aoi.lat_max);
+    }
+
+    /* Force traditional axis order (lon, lat) */
     targetCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
     sourceCRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-    transf = OGRCreateCoordinateTransformation(&sourceCRS, &targetCRS);
+    transf = OGRCreateCoordinateTransformation(&sourceCRS, &targetCRS, options);
     if(transf == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
 }
