@@ -205,7 +205,6 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
                     rinfo.tag = bandName;
-                    rinfo.gpsTime = rgroup->gpsTime;
                     rgroup->list.add(rgroup->list.length(), rinfo);
                 }
                 bandName = bandsDict.next(&val);

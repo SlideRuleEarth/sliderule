@@ -175,12 +175,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                     TimeLib::gmt_time_t gmt;
                     gps += getGmtDate(feature, s, gmt);
                 }
-
                 gps = gps/dates.size();
-
-                /* Set rasters gps time */
-                demRinfo.gpsTime   = static_cast<int64_t>(gps);
-                flagsRinfo.gpsTime = static_cast<int64_t>(gps);
 
                 /* Set raster group time and group id */
                 rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));

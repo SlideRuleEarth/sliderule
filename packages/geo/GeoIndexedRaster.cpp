@@ -585,7 +585,7 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
                 /* Create new cache item with raster */
                 item = new cacheitem_t();
                 item->raster = new GdalRaster(parms, rinfo.fileName,
-                                              static_cast<double>(rinfo.gpsTime / 1000),
+                                              static_cast<double>(rgroup->gpsTime / 1000),
                                               rinfo.dataIsElevation, crscb);
 
                 /* Set area of interest from index file extent */

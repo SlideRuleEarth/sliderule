@@ -67,7 +67,6 @@ class GeoIndexedRaster: public RasterObject
             bool         dataIsElevation;
             std::string  tag;
             std::string  fileName;
-            int64_t      gpsTime;
         } raster_info_t;
 
         typedef struct {

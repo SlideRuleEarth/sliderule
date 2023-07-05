@@ -122,7 +122,6 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = DEM_TAG;
                 rinfo.fileName        = filePath + fileName.substr(pos);
-                rinfo.gpsTime         = rgroup->gpsTime;
                 rgroup->list.add(rgroup->list.length(), rinfo);
             }
 
