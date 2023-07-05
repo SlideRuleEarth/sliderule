@@ -127,7 +127,7 @@ def __cmr_filter_urls(search_results, data_formats):
             # Exclude links with duplicate filenames (they would overwrite)
             continue
         unique_filenames.add(filename)
-        if any([extension in link['href'] for extension in data_formats]):
+        if any([link['href'].endswith(extension) for extension in data_formats]):
             resource = link['href'].split("/")[-1]
             urls.append(resource)
     # return filtered urls
