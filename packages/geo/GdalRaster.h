@@ -112,13 +112,8 @@ class GdalRaster
             double z;
         };
 
-
-        typedef struct {
-            double lon_min;
-            double lat_min;
-            double lon_max;
-            double lat_max;
-        } bbox_t;
+        /* import bbox_t into this namespace from GeoParms.h */
+        using bbox_t=GeoParms::bbox_t;
 
         /*--------------------------------------------------------------------
          * Methods
