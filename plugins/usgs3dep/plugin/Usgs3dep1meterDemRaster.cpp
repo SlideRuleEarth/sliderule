@@ -109,6 +109,7 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
             if(!geo->Contains(&point)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
+            rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
 
@@ -122,10 +123,10 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = DEM_TAG;
                 rinfo.fileName        = filePath + fileName.substr(pos);
-                rgroup->list.add(rgroup->list.length(), rinfo);
+                rgroup->infovect.push_back(rinfo);
             }
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->list.length());
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             groupList.add(groupList.length(), rgroup);
         }
         mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());

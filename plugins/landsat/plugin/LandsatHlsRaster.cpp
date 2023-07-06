@@ -64,6 +64,8 @@ const char* LandsatHlsRaster::ALGO_bands[] = {"B03", "B04", "B05", "B06", "B8A",
 #define ALGO_nameCnt (sizeof (ALGO_names) / sizeof (const char *))
 #define ALGO_bandCnt (sizeof (ALGO_bands) / sizeof (const char *))
 
+#define MAX_LANDSAT_RASTER_GROUP_SIZE (std::max(S2_bandCnt, L8_bandCnt) + ALGO_nameCnt)
+
 const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected";
 
 
@@ -180,6 +182,7 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
 
             /* Set raster group time and group id */
             rasters_group_t* rgroup = new rasters_group_t;
+            rgroup->infovect.reserve(MAX_LANDSAT_RASTER_GROUP_SIZE);
             rgroup->id = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
 
@@ -205,12 +208,12 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
                     rinfo.tag = bandName;
-                    rgroup->list.add(rgroup->list.length(), rinfo);
+                    rgroup->infovect.push_back(rinfo);
                 }
                 bandName = bandsDict.next(&val);
             }
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->list.length());
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             groupList.add(groupList.length(), rgroup);
         }
         mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());
@@ -248,10 +251,8 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
     green = red = nir08 = swir16 = invalid;
 
     /* Collect samples for all rasters */
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup->list);
-    for(int j = 0; j < raster_iter.length; j++)
+    for(const auto& rinfo: rgroup->infovect)
     {
-        const raster_info_t& rinfo = raster_iter[j].value;
         const char* key = rinfo.fileName.c_str();
         cacheitem_t* item;
         if(cache.find(key, &item))

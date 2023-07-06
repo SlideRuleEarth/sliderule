@@ -70,10 +70,10 @@ class GeoIndexedRaster: public RasterObject
         } raster_info_t;
 
         typedef struct {
-            std::string             id;
-            Ordering<raster_info_t> list;
-            TimeLib::gmt_time_t     gmtDate;
-            int64_t                 gpsTime;
+            std::string                id;
+            std::vector<raster_info_t> infovect;
+            TimeLib::gmt_time_t        gmtDate;
+            int64_t                    gpsTime;
         } rasters_group_t;
 
         typedef struct {
