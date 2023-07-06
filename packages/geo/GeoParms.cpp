@@ -392,7 +392,7 @@ void GeoParms::getAoiBbox (lua_State* L, int index, bool* provided)
     /* Must be table of coordinates */
     if(!lua_istable(L, index))
     {
-        mlog(ERROR, "bounding box must be upplied as a table");
+        mlog(DEBUG, "bounding box must be supplied as a table");
         return;
     }
 

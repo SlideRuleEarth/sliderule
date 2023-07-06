@@ -174,6 +174,115 @@ for i = 1, 2 do
     end
 end
 
+--One sample run with extent limit
+lons = {-170}
+lats = { -85}
+height = 0
+
+local extentbox = {-175, -90, -165, -80}
+
+local expResultsMosaic = {1341.6015625}
+local expResultsStrips = {1349.5468750}  -- Only first strip samples for each lon/lat strip group
+local expSamplesCnt = {6}
+
+for i = 1, 2 do
+    local isMosaic = (i == 1)
+
+    local demType = demTypes[i];
+    print(string.format("\n--------------------------------\nTest: %s Reading Correct Values with AOI box\n--------------------------------", demType))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox}))
+
+    for j, lon in ipairs(lons) do
+        local sampleCnt = 0
+        lat = lats[j]
+        tbl, status = dem:sample(lon, lat, height)
+        if status ~= true then
+            print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
+        else
+            local el, fname
+            for k, v in ipairs(tbl) do
+                el = v["value"]
+                fname = v["file"]
+                print(string.format("(%02d)   (%6.1f, %5.1f) %16.7fm   %s", k, lon, lat, el, fname))
+                sampleCnt = sampleCnt + 1
+
+                if k == 1 then -- Check all mosaics but only first strip for each POI
+                    if isMosaic then
+                        expected_value = expResultsMosaic[j]
+                    else
+                        expected_value = expResultsStrips[j]
+                    end
+                    -- print(string.format("(%02d) value: %16.7f  exp: %16.7f", k, el, expected_value))
+                    expected_max = expected_value + 0.0000001
+                    expected_min = expected_value - 0.0000001
+                    runner.check(el <= expected_max and el >= expected_min)
+                end
+            end
+        end
+
+        if isMosaic == true then
+            expectedSamplesCnt = 1
+        else
+            expectedSamplesCnt = expSamplesCnt[j]
+            print("\n")
+        end
+        -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
+        runner.check(sampleCnt == expectedSamplesCnt)
+    end
+end
+
+
+--pipline is an output from projinfo tool ran as:
+--projinfo -s EPSG:4326 -t EPSG:3031 -o proj
+local pipeline = "+proj=pipeline +step +proj=axisswap +order=2,1 +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84"
+for i = 1, 1 do
+    local isMosaic = (i == 1)
+
+    local demType = demTypes[i];
+    print(string.format("\n--------------------------------\nTest: %s Reading Correct Values with proj pipeline\n--------------------------------", demType))
+    print(string.format("%s", pipeline))
+    print(string.format("\n----------------------------------------------------------------------------------------------------------------------", demType))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", proj_pipeline=pipeline}))
+
+    for j, lon in ipairs(lons) do
+        local sampleCnt = 0
+        lat = lats[j]
+        tbl, status = dem:sample(lon, lat, height)
+        if status ~= true then
+            print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
+        else
+            local el, fname
+            for k, v in ipairs(tbl) do
+                el = v["value"]
+                fname = v["file"]
+                print(string.format("(%02d)   (%6.1f, %5.1f) %16.7fm   %s", k, lon, lat, el, fname))
+                sampleCnt = sampleCnt + 1
+
+                if k == 1 then -- Check all mosaics but only first strip for each POI
+                    if isMosaic then
+                        expected_value = expResultsMosaic[j]
+                    else
+                        expected_value = expResultsStrips[j]
+                    end
+                    -- print(string.format("(%02d) value: %16.7f  exp: %16.7f", k, el, expected_value))
+                    expected_max = expected_value + 0.0000001
+                    expected_min = expected_value - 0.0000001
+                    runner.check(el <= expected_max and el >= expected_min)
+                end
+            end
+        end
+
+        if isMosaic == true then
+            expectedSamplesCnt = 1
+        else
+            expectedSamplesCnt = expSamplesCnt[j]
+            print("\n")
+        end
+        -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
+        runner.check(sampleCnt == expectedSamplesCnt)
+    end
+end
+
 -- Report Results --
 
 runner.report()

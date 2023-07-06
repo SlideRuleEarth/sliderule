@@ -63,7 +63,6 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    sample     (),
    transf     (NULL),
    overrideCRS(cb),
-   aoi        (),
    fileName   (_fileName),
    dset       (NULL),
    band       (NULL),
@@ -612,14 +611,15 @@ void GdalRaster::createTransform(void)
     }
 
     /* Limit to area of interest if AOI was set */
+    bbox_t* aoi = &parms->aoi_bbox;
     bbox_t empty = {0, 0, 0, 0};
-    if(memcmp(&aoi, &empty, sizeof(bbox_t)))
+    if(memcmp(aoi, &empty, sizeof(bbox_t)))
     {
-        if(!options.SetAreaOfInterest(aoi.lon_min, aoi.lat_min, aoi.lon_max, aoi.lat_max))
+        if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set AOI");
 
         mlog(DEBUG, "Limited AOI to: lon/lat Min (%.2lf, %.2lf), lon/lat Max (%.2lf, %.2lf)",
-             aoi.lon_min, aoi.lat_min, aoi.lon_max, aoi.lat_max);
+             aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
     }
 
     /* Force traditional axis order (lon, lat) */

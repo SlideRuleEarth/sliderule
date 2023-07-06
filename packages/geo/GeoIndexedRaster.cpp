@@ -575,14 +575,14 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
             bool inCache = cache.find(key, &item);
             if(!inCache)
             {
+                /* Limit area of interest to the extent of vector index file */
+                parms->aoi_bbox = bbox;
+
                 /* Create new cache item with raster */
                 item = new cacheitem_t();
                 item->raster = new GdalRaster(parms, rinfo.fileName,
                                               static_cast<double>(rgroup->gpsTime / 1000),
                                               rinfo.dataIsElevation, crscb);
-
-                /* Set area of interest from index file extent */
-                item->raster->setAOI(bbox);
             }
 
             item->raster->setPOI(poi);
