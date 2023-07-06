@@ -112,13 +112,8 @@ class GdalRaster
             double z;
         };
 
-
-        typedef struct {
-            double lon_min;
-            double lat_min;
-            double lon_max;
-            double lat_max;
-        } bbox_t;
+        /* import bbox_t into this namespace from GeoParms.h */
+        using bbox_t=GeoParms::bbox_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -129,8 +124,6 @@ class GdalRaster
         void               open           (void);
         void               setPOI         (const Point& _poi);
         void               samplePOI      (void);
-        void               setAOI         (const bbox_t& _aoi) { aoi = _aoi; }
-        const bbox_t&      getAOI         (void) { return aoi; }
         void               setFileName    (const std::string& _fileName ) { fileName = _fileName; }
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
@@ -171,7 +164,6 @@ class GdalRaster
         OGRSpatialReference sourceCRS;
         OGRSpatialReference targetCRS;
         overrideCRS_t       overrideCRS;
-        bbox_t              aoi;
 
         std::string     fileName;
         GDALDataset    *dset;
