@@ -151,6 +151,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 fileName = filePath + fileName.substr(pos);
 
                 rasters_group_t* rgroup = new rasters_group_t;
+                rgroup->infovect.reserve(2); /* PGC uses group is 1 data raster + flags raster */
 
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
@@ -170,27 +171,22 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 flagsRinfo.fileName = fileName;
 
                 double gps = 0;
-                for(auto &s: dates)
+                for(auto& s: dates)
                 {
                     TimeLib::gmt_time_t gmt;
                     gps += getGmtDate(feature, s, gmt);
                 }
-
                 gps = gps/dates.size();
-
-                /* Set rasters gps time */
-                demRinfo.gpsTime   = static_cast<int64_t>(gps);
-                flagsRinfo.gpsTime = static_cast<int64_t>(gps);
 
                 /* Set raster group time and group id */
                 rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup->gpsTime = static_cast<int64_t>(gps);
                 rgroup->id      = std::to_string(groupId++);
-                rgroup->list.add(rgroup->list.length(), demRinfo);
+                rgroup->infovect.push_back(demRinfo);
 
                 if(flagsRinfo.fileName.length() > 0)
                 {
-                    rgroup->list.add(rgroup->list.length(), flagsRinfo);
+                    rgroup->infovect.push_back(flagsRinfo);
                 }
                 groupList.add(groupList.length(), rgroup);
             }

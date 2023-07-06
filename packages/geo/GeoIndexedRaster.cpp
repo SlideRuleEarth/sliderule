@@ -174,10 +174,8 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags)
 {
-    Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
-    for(int i = 0; i < info_iter.length; i++)
+    for(const auto& rinfo: rgroup->infovect)
     {
-        const raster_info_t& rinfo = info_iter[i].value;
         if(strcmp(DEM_TAG, rinfo.tag.c_str()) == 0)
         {
             const char* key = rinfo.fileName.c_str();
@@ -204,10 +202,8 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
 {
     uint32_t flags = 0;
 
-    Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
-    for(int j = 0; j < info_iter.length; j++)
+    for(const auto& rinfo: rgroup->infovect)
     {
-        const raster_info_t& rinfo = info_iter[j].value;
         if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) == 0)
         {
             cacheitem_t* item;
@@ -572,12 +568,9 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
     for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
-        Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
-        for(int j = 0; j < info_iter.length; j++)
+        for(const auto& rinfo : rgroup->infovect)
         {
-            const raster_info_t& rinfo = info_iter[j].value;
-            const char* key            = rinfo.fileName.c_str();
-
+            const char* key = rinfo.fileName.c_str();
             cacheitem_t* item;
             bool inCache = cache.find(key, &item);
             if(!inCache)
@@ -585,7 +578,7 @@ uint32_t GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
                 /* Create new cache item with raster */
                 item = new cacheitem_t();
                 item->raster = new GdalRaster(parms, rinfo.fileName,
-                                              static_cast<double>(rinfo.gpsTime / 1000),
+                                              static_cast<double>(rgroup->gpsTime / 1000),
                                               rinfo.dataIsElevation, crscb);
 
                 /* Set area of interest from index file extent */
@@ -641,15 +634,13 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
-            Ordering<raster_info_t>::Iterator info_iter(rgroup->list);
             bool removeGroup = false;
 
-            for(int j = 0; j < info_iter.length; j++)
+            for(const auto& rinfo : rgroup->infovect)
             {
                 /* URL filter */
                 if(parms->url_substring)
                 {
-                    const raster_info_t& rinfo = info_iter[j].value;
                     if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
                     {
                         removeGroup = true;
