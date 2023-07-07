@@ -51,6 +51,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
     std::ignore = gps;
     std::ignore = param;
 
+    samplingMutex.lock();
     try
     {
         GdalRaster::Point poi(lon, lat, height);
@@ -66,8 +67,10 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
+        samplingMutex.unlock();
         throw;  // rethrow exception
     }
+    samplingMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------
