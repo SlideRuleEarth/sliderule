@@ -61,10 +61,10 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         ArcticDemStripsRaster(lua_State* L, GeoParms* _parms):
-          PgcDemStripsRaster(L, _parms, "arcticdem", "/n") {}
+          PgcDemStripsRaster(L, _parms, "arcticdem", "/n", &overrideTargetCRS) {}
 
-        void overrideTargetCRS(OGRSpatialReference& target) override
-        { setCRSfromWkt(target, getArcticDemWkt2()); }
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target)
+        { return target.importFromWkt(getArcticDemWkt2()); }
 };
 
 #endif  /* __arcticdem_strips_raster__ */

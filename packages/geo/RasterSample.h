@@ -29,61 +29,52 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __vrt_raster__
-#define __vrt_raster__
+#ifndef __raster_sample__
+#define __raster_sample__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
-#include "GeoParms.h"
+#include "OsApi.h"
 
 /******************************************************************************
- * VRT RASTER CLASS
+ * RASTER SAMPLE CLASS
  ******************************************************************************/
 
-class VrtRaster: public GeoRaster
+class RasterSample
 {
-    public:
+public:
+    double value;
+    double time;   // gps seconds
+    uint64_t fileId;
+    uint32_t flags;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    struct
+    {
+        uint32_t count;
+        double min;
+        double max;
+        double mean;
+        double median;
+        double stdev;
+        double mad;
+    } stats;
 
-        static void init    (void);
-        static void deinit  (void);
+   void clear (void)
+   {
+       value  = 0;
+       time   = 0;
+       fileId = 0;
+       flags  = 0;
+       bzero(&stats, sizeof(stats));
+   }
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                     VrtRaster          (lua_State* L, GeoParms* _parms, const char* vrt_file=NULL);
-        void         openGeoIndex       (double lon=0, double lat=0) override;
-        virtual void getIndexFile       (std::string& file, double lon=0, double lat=0);
-        virtual bool getRasterDate      (raster_info_t& rinfo) = 0;
-        bool         readGeoIndexData   (OGRPoint* point, int srcWindowSize, int srcOffset,
-                                         void *data, int dstWindowSize, GDALRasterIOExtraArg *args) override;
-
-        bool         findRasters        (OGRPoint &p) override;
-        bool         findCachedRasters  (OGRPoint &p) override;
-        void         buildVRT           (std::string& vrt_file, List<std::string>& rlist);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-        std::string     vrtFile;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-        GDALRasterBand *band;
-        double          invGeot[6];
-        uint32_t        groupId;
+   RasterSample (double _value=0, double _time=0, double _fileId=0, double _flags=0) :
+    value (_value),
+    time  (_time),
+    fileId(_fileId),
+    flags (_flags) {}
 };
 
-#endif  /* __vrt_raster__ */
+#endif  /* __raster_sample__ */

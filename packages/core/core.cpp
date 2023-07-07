@@ -162,11 +162,11 @@ void initcore (void)
     OsApi::init(os_print);
 
     /* Initialize Libraries */
+    EventLib::init(EVENTQ);  /* Must be called first to handle events (mlog msgs) */
     MsgQ::init();
     SockLib::init();
     TTYLib::init();
     TimeLib::init();
-    EventLib::init(EVENTQ);
     LuaEngine::init();
 
     /* Register IO Drivers */

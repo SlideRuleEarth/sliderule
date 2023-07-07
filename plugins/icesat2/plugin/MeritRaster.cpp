@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "RasterSample.h"
 #include "core.h"
 #include "h5.h"
 #include "geo.h"
@@ -111,7 +112,7 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param)
+void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param)
 {
     (void)param;
     (void)gps;
@@ -191,22 +192,7 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
         }
 
         /* Build Sample */
-        sample_t sample = {
-            .value = value,
-            .time = ((double)gpsTime / (double)1000.0),
-            .fileId = 0,
-            .flags = 0,
-            .stats = {
-                .count = 0,
-                .min = 0,
-                .max = 0,
-                .mean = 0,
-                .median = 0,
-                .stdev = 0,
-                .mad = 0
-            }
-        };
-//        memset(&sample.stats, 0, sizeof(sample.stats));
+        RasterSample sample(value, ((double)gpsTime / (double)1000.0));
 
         /* Return Sample */
         slist.add(sample);

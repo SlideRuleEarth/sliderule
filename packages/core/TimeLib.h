@@ -128,12 +128,13 @@ class TimeLib
         static date_t       gmt2date        (const gmt_time_t& gmt_time); // returns date (taking into account leap years)
         static int64_t      gmt2gpstime     (const gmt_time_t& gmt_time); // returns milliseconds from gps epoch to time specified in gmt_time
         static int64_t      str2gpstime     (const char* time_str); // returns milliseconds from gps epoch to time specified in time_str
+        static int64_t      datetime2gps    (int year, int month=0, int day=0, int hour=0, int minute=0, int second=0, int millisecond=0);
         static int          dayofyear       (int year, int month, int day_of_month);
         static int          daysinmonth     (int year, int month);
         static const char*  getmonthname    (int month); // [1..12] --> ["January".."December"]
         static bool         gmtinrange      (const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end); // returns true if in range
 
-    private:
+        private:
 
         /*--------------------------------------------------------------------
          * Constants

@@ -51,7 +51,7 @@ for i = 1, 2 do
 
     print(string.format("\n--------------------------------\nTest: %s bbox\n--------------------------------", demType))
     local lon_min, lat_min, lon_max, lat_max = dem:bbox()
-    print(string.format("lon_min: %d, lat_min: %d, lon_max: %d, lan_max: %d", lon_min, lat_min, lon_max, lat_max))
+    print(string.format("lon_min: %.2f, lat_min: %.2f, lon_max: %.2f, lan_max: %.2f", lon_min, lat_min, lon_max, lat_max))
     runner.check(lon_min ~= 0)
     runner.check(lat_min ~= 0)
     runner.check(lon_max ~= 0)
@@ -364,14 +364,14 @@ runner.check(sampleCnt == 14)
 
 -- Correct values test for different POIs
 
-local lons = {-178.0, -40, 100,   150}
+local lons = {-178.1, -40, 100,   150}
 local lats = {  51.7,  70,  70,    75}
 height = 0
 
-local expResultsMosaic = { 80.7135010,  2969.2360839, 475.9624633, 19.8128376}
-local expResultsStrips = {452.4843750,  2968.0156250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
+local expResultsMosaic = { 61.2274551,  2969.2360839, 475.9624633, 19.8128376}
+local expResultsStrips = { 63.2500000,  2968.0156250, 474.1562500, 10.2968750}  -- Only first strip samples for each lon/lat strip group
 
-local expSamplesCnt = {14, 8, 4, 14}
+local expSamplesCnt = {9, 8, 4, 14}
 
 for i = 1, 2 do
     local isMosaic = (i == 1)
@@ -418,6 +418,7 @@ for i = 1, 2 do
         runner.check(sampleCnt == expectedSamplesCnt)
     end
 end
+
 
 -- Report Results --
 

@@ -615,6 +615,23 @@ int64_t TimeLib::str2gpstime (const char* time_str)
 }
 
 /*----------------------------------------------------------------------------
+ * datetime2gps
+ *----------------------------------------------------------------------------*/
+int64_t TimeLib::datetime2gps(int year, int month, int day, int hour, int minute, int second, int millisecond)
+{
+    TimeLib::gmt_time_t gmt;
+
+    gmt.year        = year;
+    gmt.doy         = dayofyear(year, month, day);
+    gmt.hour        = hour;
+    gmt.minute      = minute;
+    gmt.second      = second;
+    gmt.millisecond = millisecond;
+
+    return gmt2gpstime(gmt);
+}
+
+/*----------------------------------------------------------------------------
  * dayofyear
  *----------------------------------------------------------------------------*/
 int TimeLib::dayofyear(int year, int month, int day_of_month)
@@ -691,6 +708,7 @@ bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start
 
    return ((gpsTime >= gpsStart) && (gpsTime <= gpsEnd));
 }
+
 
 /******************************************************************************
  * PRIVATE METHODS

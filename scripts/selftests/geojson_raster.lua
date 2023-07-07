@@ -24,9 +24,25 @@ local len = string.len(vectorfile)
 local cellsize = 0.01
 local params = {data = vectorfile, length = len, cellsize = cellsize}
 
-print('\n------------------\nTest01: Create\n------------------')
 local robj = geo.geojson(params)
 runner.check(robj ~= nil)
+
+
+print('\n------------------\nTest01: sample\n------------------')
+local lon = -108
+local lat =   39
+local height = 0
+local tbl, status = robj:sample(lon, lat, height)
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+local el, file
+for j, v in ipairs(tbl) do
+    s = v["value"]
+    fname = v["file"]
+end
+print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
+runner.check(s == 1)
 
 
 print('\n------------------\nTest02: dim\n------------------')
@@ -49,23 +65,8 @@ local _cellsize = robj:cell()
 print(string.format("cellsize: %f", _cellsize))
 runner.check(_cellsize == cellsize)
 
-print('\n------------------\nTest05: sample\n------------------')
-local lon = -108
-local lat =   39
-local height = 0
-local tbl, status = robj:sample(lon, lat, height)
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-local el, file
-for j, v in ipairs(tbl) do
-    s = v["value"]
-    fname = v["file"]
-end
-print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
-runner.check(s == 1)
-
 -- Edge of bbox
+print('\n------------------\nTest05: edge of bbox\n------------------')
 lon = -108.34
 lat =   38.90
 tbl, status = robj:sample(lon, lat, height)
@@ -80,6 +81,7 @@ runner.check(tostring(s) == "nan")
 
 
 -- Outside of bbox
+print('\n------------------\nTest06: outside bbox\n------------------')
 lon = -100
 lat =   40
 tbl, status = robj:sample(lon, lat, height)

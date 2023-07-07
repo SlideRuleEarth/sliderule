@@ -36,6 +36,8 @@
 #include "OsApi.h"
 #include "core.h"
 #include "RasterObject.h"
+#include "Ordering.h"
+#include "List.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -194,7 +196,7 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Get samples */
-        List<sample_t> slist;
+        List<RasterSample> slist;
         lua_obj->getSamples(lon, lat, height, gps, slist, NULL);
 
         if(slist.length() > 0)
@@ -204,7 +206,7 @@ int RasterObject::luaSamples(lua_State *L)
 
             for(int i = 0; i < slist.length(); i++)
             {
-                const sample_t& sample = slist[i];
+                const RasterSample& sample = slist[i];
                 const char* fileName = "";
 
                 /* Find fileName from fileId */

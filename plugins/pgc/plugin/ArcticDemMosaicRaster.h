@@ -36,14 +36,14 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PgcDemMosaicRaster.h"
+#include "GeoRaster.h"
 #include "PgcWkt.h"
 
 /******************************************************************************
  * ARCTICDEM MOSAIC RASTER CLASS
  ******************************************************************************/
 
-class ArcticDemMosaicRaster: public PgcDemMosaicRaster
+class ArcticDemMosaicRaster: public GeoRaster
 {
     public:
 
@@ -54,9 +54,6 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
         { return new ArcticDemMosaicRaster(L, _parms); }
 
-        bool getRasterDate(raster_info_t& rinfo) override
-        { return mosaicGetRasterDate(rinfo, "_reg_dem.tif"); }
-
     protected:
 
         /*--------------------------------------------------------------------
@@ -64,10 +61,14 @@ class ArcticDemMosaicRaster: public PgcDemMosaicRaster
          *--------------------------------------------------------------------*/
 
         ArcticDemMosaicRaster(lua_State* L, GeoParms* _parms):
-         PgcDemMosaicRaster(L, _parms) {}
+         GeoRaster(L, _parms,
+                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                  TimeLib::datetime2gps(2023, 01, 18, 20, 23, 42),
+                  true, /* Data is elevation */
+                  &overrideTargetCRS) {}
 
-        void overrideTargetCRS(OGRSpatialReference& target) override
-        { setCRSfromWkt(target, getArcticDemWkt2()); }
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target)
+        { return target.importFromWkt(getArcticDemWkt2()); }
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */

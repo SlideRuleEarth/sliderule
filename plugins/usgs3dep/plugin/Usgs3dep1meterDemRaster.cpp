@@ -34,10 +34,7 @@
  ******************************************************************************/
 
 #include "Usgs3dep1meterDemRaster.h"
-#include "TimeLib.h"
 
-#include <uuid/uuid.h>
-#include <limits>
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -60,21 +57,26 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms):
-    VctRaster(L, _parms)
+Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms):
+ GeoIndexedRaster(L, _parms, &overrideTargetCRS),
+ filePath(_parms->asset->getPath()),
+ indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
-    char uuid_str[UUID_STR_LEN];
-
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
-    filePath.append(_parms->asset->getPath());
-    indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
-
-    /* Create in memory index file (geojson) */
+    /* Create in memory index file */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
+{
+    VSIUnlink(indexFile.c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -82,8 +84,8 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State *L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double lat)
 {
-    (void)lon;
-    (void)lat;
+    std::ignore = lon;
+    std::ignore = lat;
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
@@ -92,11 +94,11 @@ void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
+bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
 {
     try
     {
-        rasterGroupList->clear();
+        OGRPoint point(p.x, p.y, p.z);
 
         for(int i = 0; i < featuresList.length(); i++)
         {
@@ -104,12 +106,12 @@ bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
             OGRGeometry *geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(!geo->Contains(&p)) continue;
+            if(!geo->Contains(&point)) continue;
 
-            rasters_group_t rgroup;
-            rgroup.id = feature->GetFieldAsString("id");
-            double gps = getGmtDate(feature, "datetime", rgroup.gmtDate);
-            rgroup.gpsTime = gps;
+            rasters_group_t* rgroup = new rasters_group_t;
+            rgroup->infovect.reserve(1);
+            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
 
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
@@ -118,33 +120,32 @@ bool Usgs3dep1meterDemRaster::findRasters(OGRPoint& p)
                 const size_t pos = strlen(URL_str);
 
                 raster_info_t rinfo;
-                rinfo.fileName = filePath + fileName.substr(pos);
-                rinfo.tag      = SAMPLES_RASTER_TAG;
-                rinfo.gpsTime  = rgroup.gpsTime;
-                rinfo.gmtDate  = rgroup.gmtDate;
-
-                rgroup.list.add(rgroup.list.length(), rinfo);
+                rinfo.dataIsElevation = true;
+                rinfo.tag             = VALUE_TAG;
+                rinfo.fileName        = filePath + fileName.substr(pos);
+                rgroup->infovect.push_back(rinfo);
             }
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
-            rasterGroupList->add(rasterGroupList->length(), rgroup);
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+            groupList.add(groupList.length(), rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (rasterGroupList->length() > 0);
+    return (groupList.length() > 0);
 }
 
 
 /*----------------------------------------------------------------------------
  * overrideTargetCRS
  *----------------------------------------------------------------------------*/
-void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
+OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 {
+    OGRErr ogrerr   = OGRERR_FAILURE;
     int northFlag   = 0;
     int utm         = target.GetUTMZone(&northFlag);
 
@@ -153,13 +154,19 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 
     /* Must be north */
     if(northFlag==0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, UTM %d%s detected", utm, northFlag?"N":"S");
+    {
+        mlog(ERROR, "Failed to override target CRS, UTM %d%s detected", utm, northFlag?"N":"S");
+        return ogrerr;
+    }
 
     const int MIN_UTM = 1;
     const int MAX_UTM = 60;
 
     if(utm < MIN_UTM || utm > MAX_UTM)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
+    {
+        mlog(ERROR, "Failed to override target CRS, invalid UTM %d%s detected", utm, northFlag ? "N" : "S");
+        return ogrerr;
+    }
 
     const int NAVD88_HEIGHT_EPSG          = 5703;
     const int NAD83_2011_UTM_ZONE_1N_EPSG = 6330;
@@ -170,13 +177,17 @@ void Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     OGRSpatialReference horizontal;
     OGRSpatialReference vertical;
 
-    OGRErr ogrerr = horizontal.importFromEPSG(epsg);
-    CHECK_GDALERR(ogrerr);
-    ogrerr = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
-    CHECK_GDALERR(ogrerr);
+    OGRErr er1 = horizontal.importFromEPSG(epsg);
+    OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
+    OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
-    ogrerr = target.SetCompoundCS("sliderule", &horizontal, &vertical);
-    CHECK_GDALERR(ogrerr);
+    if(((er1 == er2) == er3) == OGRERR_NONE)
+    {
+        ogrerr = OGRERR_NONE;
+    }
+    else mlog(ERROR, "Failed to overried target CRS");
+
+    return ogrerr;
     // target.dumpReadable();
 }
 
