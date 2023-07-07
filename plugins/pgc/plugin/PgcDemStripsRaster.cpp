@@ -181,7 +181,6 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
                 /* Set raster group time and group id */
                 rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup->gpsTime = static_cast<int64_t>(gps);
-                rgroup->id      = std::to_string(groupId++);
                 rgroup->infovect.push_back(demRinfo);
 
                 if(flagsRinfo.fileName.length() > 0)

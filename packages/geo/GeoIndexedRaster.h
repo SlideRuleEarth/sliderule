@@ -54,7 +54,6 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_CACHED_RASTERS = 50;
 
         static const char* FLAGS_TAG;
         static const char* DEM_TAG;
@@ -77,6 +76,7 @@ class GeoIndexedRaster: public RasterObject
         } rasters_group_t;
 
         typedef struct {
+            GeoIndexedRaster* obj;
             Thread*     thread;
             GdalRaster* raster;
             Cond*       sync;
@@ -84,7 +84,6 @@ class GeoIndexedRaster: public RasterObject
         } reader_t;
 
         typedef struct {
-            std::string groupId;
             bool        enabled;
             double      useTime;
             GdalRaster* raster;
@@ -113,7 +112,7 @@ class GeoIndexedRaster: public RasterObject
         void            openGeoIndex          (double lon = 0, double lat = 0);
         virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
         virtual bool    findRasters           (GdalRaster::Point& poi) = 0;
-        void            sampleRasters         (uint32_t cnt);
+        void            sampleRasters         (void);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
         /* Inline for performance */
@@ -156,6 +155,7 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
+        std::atomic_int           sampledRastersCnt;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -167,12 +167,10 @@ class GeoIndexedRaster: public RasterObject
 
         static void* readingThread (void *param);
 
-        void       createThreads           (uint32_t cnt);
-        uint32_t   updateCache             (GdalRaster::Point& poi);
+        void       createThreads           (void);
+        void       updateCache             (GdalRaster::Point& poi);
         void       invalidateCache         (void);
         bool       filterRasters           (int64_t gps);
-        uint32_t   removeOldestCacheItem   (void);
-        int        getSampledRastersCount  (void);
         void       emptyFeaturesList       (void);
         void       emptyGroupsList         (void);
 };
