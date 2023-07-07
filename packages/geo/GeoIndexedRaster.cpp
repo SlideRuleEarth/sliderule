@@ -511,22 +511,26 @@ void* GeoIndexedRaster::readingThread(void *param)
             /* Wait for raster to work on */
             while((reader->raster == NULL) && reader->run)
                 reader->sync->wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
+        }
+        reader->sync->unlock();
 
-            if(reader->raster != NULL)
+        if(reader->raster != NULL)
+        {
+            reader->raster->samplePOI();
+            if(reader->raster->sampled())
             {
-                reader->raster->samplePOI();
-                if(reader->raster->sampled())
-                {
-                    reader->obj->sampledRastersCnt.fetch_add(1, std::memory_order_relaxed);
-                }
+                reader->obj->sampledRastersCnt.fetch_add(1, std::memory_order_relaxed);
+            }
 
+            reader->sync->lock();
+            {
                 reader->raster = NULL; /* Done with this raster */
                 reader->sync->signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
             }
-
-            run = reader->run;
+            reader->sync->unlock();
         }
-        reader->sync->unlock();
+
+        run = reader->run;
     }
 
     return NULL;
@@ -567,7 +571,6 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
     Ordering<rasters_group_t*>::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
-        uint32_t rastersInGroupCnt = group_iter.length;
         const rasters_group_t* rgroup = group_iter[i].value;
         for(const auto& rinfo : rgroup->infovect)
         {
@@ -576,15 +579,6 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
             bool inCache = cache.find(key, &item);
             if(!inCache)
             {
-                /* Create new cache item. Limit cache items to the max number of reader threads */
-                uint32_t needCnt = cache.length() + rastersInGroupCnt;
-                if(needCnt > MAX_READER_THREADS)
-                {
-                    throw RunTimeException(CRITICAL, RTE_ERROR,
-                                           "Too many rasters to read: %d, max allowed: %d, limit your AOI or termporal range (use filters)\n",
-                                           needCnt, MAX_READER_THREADS);
-                }
-
                 /* Limit area of interest to the extent of vector index file */
                 parms->aoi_bbox = bbox;
 
@@ -624,6 +618,14 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
             }
             key = cache.next(&item);
         }
+    }
+
+    /* Check for max limit of concurent reading raster threads */
+    if(cache.length() > MAX_READER_THREADS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Too many rasters to read: %d, max allowed: %d, limit your AOI or termporal range or use filters\n",
+                               cache.length(), MAX_READER_THREADS);
     }
 }
 
