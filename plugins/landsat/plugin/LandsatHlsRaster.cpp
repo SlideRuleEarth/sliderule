@@ -46,12 +46,12 @@
 /* Landsat 8 */
 const char* LandsatHlsRaster::L8_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B09", "B10", "B11",
-                                           "SAA", "SZA", "VAA", "VZA", FLAGS_TAG};
+                                           "SAA", "SZA", "VAA", "VZA", "Fmask"};
 /* Sentinel 2 */
 const char* LandsatHlsRaster::S2_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B08", "B09", "B10",
                                            "B11", "B12", "B8A", "SAA", "SZA",
-                                           "VAA", "VZA", FLAGS_TAG};
+                                           "VAA", "VZA", "Fmask"};
 /* Algorithm names (not real bands) */
 const char* LandsatHlsRaster::ALGO_names[] = {"NDSI", "NDVI", "NDWI"};
 
@@ -134,7 +134,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     /* If user specified flags, add group's Fmask to dictionary of bands */
     if(_parms->flags_file)
     {
-        const char* band = FLAGS_TAG;
+        const char* band = "Fmask";
         if(!bandsDict.find(band, &returnBandSample))
         {
             returnBandSample = false;
@@ -207,7 +207,16 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
                     raster_info_t rinfo;
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
-                    rinfo.tag = bandName;
+
+                    if(strcmp(bandName, "Fmask") == 0)
+                    {
+                        /* Use base class generic flags tag */
+                        rinfo.tag = FLAGS_TAG;
+                    }
+                    else
+                    {
+                        rinfo.tag = bandName;
+                    }
                     rgroup->infovect.push_back(rinfo);
                 }
                 bandName = bandsDict.next(&val);

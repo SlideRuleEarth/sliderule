@@ -140,7 +140,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
             /* geojson index files hosted by PGC only contain listing of dems
              * In order to read quality mask raster for each strip we need to build a path to it.
              */
-            const char *fname = feature->GetFieldAsString(DEM_TAG);
+            const char *fname = feature->GetFieldAsString("Dem");
             if(fname && strlen(fname) > 0)
             {
                 std::string fileName(fname);
@@ -155,7 +155,7 @@ bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
 
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
-                demRinfo.tag = DEM_TAG;
+                demRinfo.tag = VALUE_TAG;
                 demRinfo.fileName = fileName;
 
                 const std::string endToken    = "_dem.tif";

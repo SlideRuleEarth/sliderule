@@ -121,7 +121,7 @@ bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
 
                 raster_info_t rinfo;
                 rinfo.dataIsElevation = true;
-                rinfo.tag             = DEM_TAG;
+                rinfo.tag             = VALUE_TAG;
                 rinfo.fileName        = filePath + fileName.substr(pos);
                 rgroup->infovect.push_back(rinfo);
             }

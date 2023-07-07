@@ -54,8 +54,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
     try
     {
         GdalRaster::Point poi(lon, lat, height);
-        raster.setPOI(poi);
-        raster.samplePOI();
+        raster.samplePOI(poi);
 
         if(raster.sampled())
         {

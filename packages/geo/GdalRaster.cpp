@@ -59,7 +59,6 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    parms      (_parms),
   _sampled    (false),
    gpsTime    (_gpsTime),
-   poi        (),
    sample     (),
    transf     (NULL),
    overrideCRS(cb),
@@ -85,69 +84,18 @@ GdalRaster::~GdalRaster(void)
 }
 
 /*----------------------------------------------------------------------------
- * open
- *----------------------------------------------------------------------------*/
-void GdalRaster::open(void)
-{
-    if(dset == NULL)
-    {
-        dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
-        if(dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
-
-        mlog(DEBUG, "Opened %s", fileName.c_str());
-
-        /* Store information about raster */
-        cols = dset->GetRasterXSize();
-        rows = dset->GetRasterYSize();
-
-        /* Get raster boundry box */
-        double geot[6] = {0};
-        CPLErr err     = dset->GetGeoTransform(geot);
-        CHECK_GDALERR(err);
-        bbox.lon_min = geot[0];
-        bbox.lon_max = geot[0] + cols * geot[1];
-        bbox.lat_max = geot[3];
-        bbox.lat_min = geot[3] + rows * geot[5];
-
-        cellSize       = geot[1];
-        radiusInPixels = radius2pixels(parms->sampling_radius);
-
-        /* Limit maximum sampling radius */
-        if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR,
-                                   "Sampling radius is too big: %d: max allowed %d meters",
-                                   parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
-        }
-
-        band = dset->GetRasterBand(1);
-        CHECKPTR(band);
-
-        /* Create coordinates transform for raster */
-        createTransform();
-    }
-}
-
-/*----------------------------------------------------------------------------
- * setPOI
- *----------------------------------------------------------------------------*/
-void GdalRaster::setPOI(const Point& _poi)
-{
-    poi = _poi;
-    _sampled = false;
-    sample.clear();
-}
-
-/*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::samplePOI(void)
+void GdalRaster::samplePOI(const Point& _poi)
 {
     try
     {
         if(dset == NULL)
             open();
+
+        Point poi = _poi;
+        _sampled = false;
+        sample.clear();
 
         double z = poi.z;
         // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
@@ -165,12 +113,12 @@ void GdalRaster::samplePOI(void)
            (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max))
         {
             if(parms->sampling_algo == GRIORA_NearestNeighbour)
-                readPixel();
+                readPixel(poi);
             else
-                resamplePixel();
+                resamplePixel(poi);
 
             if(parms->zonal_stats)
-                computeZonalStats();
+                computeZonalStats(poi);
 
             _sampled = true;
             sample.time = gpsTime;
@@ -240,9 +188,51 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * open
+ *----------------------------------------------------------------------------*/
+void GdalRaster::open(void)
+{
+    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+    if(dset == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
+
+    mlog(DEBUG, "Opened %s", fileName.c_str());
+
+    /* Store information about raster */
+    cols = dset->GetRasterXSize();
+    rows = dset->GetRasterYSize();
+
+    /* Get raster boundry box */
+    double geot[6] = {0};
+    CPLErr err     = dset->GetGeoTransform(geot);
+    CHECK_GDALERR(err);
+    bbox.lon_min = geot[0];
+    bbox.lon_max = geot[0] + cols * geot[1];
+    bbox.lat_max = geot[3];
+    bbox.lat_min = geot[3] + rows * geot[5];
+
+    cellSize       = geot[1];
+    radiusInPixels = radius2pixels(parms->sampling_radius);
+
+    /* Limit maximum sampling radius */
+    if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Sampling radius is too big: %d: max allowed %d meters",
+                               parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
+    }
+
+    band = dset->GetRasterBand(1);
+    CHECKPTR(band);
+
+    /* Create coordinates transform for raster */
+    createTransform();
+}
+
+/*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPixel(void)
+void GdalRaster::readPixel(const Point& poi)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
@@ -374,7 +364,7 @@ void GdalRaster::readPixel(void)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::resamplePixel(void)
+void GdalRaster::resamplePixel(const Point& poi)
 {
     try
     {
@@ -431,7 +421,7 @@ void GdalRaster::resamplePixel(void)
         else
         {
             /* At least return pixel value if unable to resample raster */
-            readPixel();
+            readPixel(poi);
         }
     }
     catch (const RunTimeException &e)
@@ -443,7 +433,7 @@ void GdalRaster::resamplePixel(void)
 /*----------------------------------------------------------------------------
  * computeZonalStats
  *----------------------------------------------------------------------------*/
-void GdalRaster::computeZonalStats(void)
+void GdalRaster::computeZonalStats(const Point& poi)
 {
     double *samplesArray = NULL;
 

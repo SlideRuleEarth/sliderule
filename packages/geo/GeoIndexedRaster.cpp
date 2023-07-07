@@ -48,7 +48,7 @@
  ******************************************************************************/
 
 const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
-const char* GeoIndexedRaster::DEM_TAG   = "Dem";
+const char* GeoIndexedRaster::VALUE_TAG = "Value";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -177,7 +177,7 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
 {
     for(const auto& rinfo: rgroup->infovect)
     {
-        if(strcmp(DEM_TAG, rinfo.tag.c_str()) == 0)
+        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) == 0)
         {
             const char* key = rinfo.fileName.c_str();
             cacheitem_t* item;
@@ -326,7 +326,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
 /*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::sampleRasters(void)
+void GeoIndexedRaster::sampleRasters(GdalRaster::Point& poi)
 {
     /* Create additional reader threads if needed */
     createThreads();
@@ -345,6 +345,7 @@ void GeoIndexedRaster::sampleRasters(void)
             reader->sync->lock();
             {
                 reader->raster = item->raster;
+                reader->poi = poi;
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
@@ -393,8 +394,8 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 
     if(findRasters(poi) && filterRasters(gps))
     {
-        updateCache(poi);
-        sampleRasters();
+        updateCache();
+        sampleRasters(poi);
     }
 
     return sampledRastersCnt;
@@ -516,7 +517,7 @@ void* GeoIndexedRaster::readingThread(void *param)
 
         if(reader->raster != NULL)
         {
-            reader->raster->samplePOI();
+            reader->raster->samplePOI(reader->poi);
             if(reader->raster->sampled())
             {
                 reader->obj->sampledRastersCnt.fetch_add(1, std::memory_order_relaxed);
@@ -552,6 +553,7 @@ void GeoIndexedRaster::createThreads(void)
     {
         reader_t* r = new reader_t;
         r->obj    = this;
+        r->poi.clear();
         r->raster = NULL;
         r->run    = true;
         r->sync   = new Cond(NUM_SYNC_SIGNALS);
@@ -564,7 +566,7 @@ void GeoIndexedRaster::createThreads(void)
 /*----------------------------------------------------------------------------
  * updateCache
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
+void GeoIndexedRaster::updateCache(void)
 {
     /* Cache contains items/rasters from previous sample run */
 
@@ -589,7 +591,6 @@ void GeoIndexedRaster::updateCache(GdalRaster::Point& poi)
                                               rinfo.dataIsElevation, crscb);
             }
 
-            item->raster->setPOI(poi);
             item->useTime = TimeLib::latchtime();
             item->enabled = true;
 

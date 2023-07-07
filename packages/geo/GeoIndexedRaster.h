@@ -56,7 +56,7 @@ class GeoIndexedRaster: public RasterObject
         static const int   MAX_READER_THREADS = 200;
 
         static const char* FLAGS_TAG;
-        static const char* DEM_TAG;
+        static const char* VALUE_TAG;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -77,6 +77,7 @@ class GeoIndexedRaster: public RasterObject
 
         typedef struct {
             GeoIndexedRaster* obj;
+            GdalRaster::Point poi;
             Thread*     thread;
             GdalRaster* raster;
             Cond*       sync;
@@ -112,7 +113,7 @@ class GeoIndexedRaster: public RasterObject
         void            openGeoIndex          (double lon = 0, double lat = 0);
         virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
         virtual bool    findRasters           (GdalRaster::Point& poi) = 0;
-        void            sampleRasters         (void);
+        void            sampleRasters         (GdalRaster::Point& poi);
         int             sample                (double lon, double lat, double height, int64_t gps);
 
         /* Inline for performance */
@@ -168,7 +169,7 @@ class GeoIndexedRaster: public RasterObject
         static void* readingThread (void *param);
 
         void       createThreads           (void);
-        void       updateCache             (GdalRaster::Point& poi);
+        void       updateCache             (void);
         void       invalidateCache         (void);
         bool       filterRasters           (int64_t gps);
         void       emptyFeaturesList       (void);

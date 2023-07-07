@@ -121,10 +121,7 @@ class GdalRaster
 
                            GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb);
         virtual           ~GdalRaster     (void);
-        void               open           (void);
-        void               setPOI         (const Point& _poi);
-        void               samplePOI      (void);
-        void               setFileName    (const std::string& _fileName ) { fileName = _fileName; }
+        void               samplePOI      (const Point& poi);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         bool               sampled        (void) { return _sampled; }
@@ -156,7 +153,6 @@ class GdalRaster
         double         gpsTime;  /* Time the raster data was collected and/or generated */
 
         /* Last sample information */
-        Point          poi;
         RasterSample   sample;
         double         verticalShift;  /* Calculated for last POI transformed to target CRS */
 
@@ -179,9 +175,10 @@ class GdalRaster
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        readPixel           (void);
-        void        resamplePixel       (void);
-        void        computeZonalStats   (void);
+        void        open                (void);
+        void        readPixel           (const Point& poi);
+        void        resamplePixel       (const Point& poi);
+        void        computeZonalStats   (const Point& poi);
         inline bool nodataCheck         (void);
         void        createTransform     (void);
         int         radius2pixels       (int _radius);
@@ -189,8 +186,5 @@ class GdalRaster
         inline void readRasterWithRetry (int col, int row, int colSize, int rowSize,
                                          void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
 };
-
-
-
 
 #endif  /* __gdal_raster__ */
