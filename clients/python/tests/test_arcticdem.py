@@ -14,8 +14,19 @@ class TestMosaic:
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         rqst = {"samples": {"asset": "arcticdem-mosaic"}, "coordinates": [[-178.0,51.7]]}
         rsps = sliderule.source("samples", rqst)
+
+        # old way of reading mosaics generated these results
+        # assert abs(rsps["samples"][0][0]["value"] - 80.713500976562) < 0.001
+        # assert rsps["samples"][0][0]["file"] == '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/70_09/70_09_2_1_2m_v3.0_reg_dem.tif'
+
+        # Note: sliderule code uses custom target WKT2 projections for PGC data sets.
+        # I don't know why sometimes returned value is 61.2 and sometimes 80.71
+        # This needs to be investigated with the science team. Code is correct because many other points always return the same value.
+        # This has never happened for strips but only for large VRT file.
+        # assert abs(rsps["samples"][0][0]["value"] - 61.2274551391602) < 0.001
         assert abs(rsps["samples"][0][0]["value"] - 80.713500976562) < 0.001
-        assert rsps["samples"][0][0]["file"] == '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/70_09/70_09_2_1_2m_v3.0_reg_dem.tif'
+        assert rsps["samples"][0][0]["file"] ==  '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt'
+
 
     def test_nearestneighbour(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -60,7 +71,12 @@ class TestMosaic:
         assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < 0.0001
         assert gdf["mosaic.count"].describe()["max"] == 81
         assert gdf["mosaic.stdev"].describe()["count"] == 954
-        assert gdf["mosaic.time"][0] == 1176076818.0
+
+        # old 'way' time was for the tile/strip rasters
+        # assert gdf["mosaic.time"][0] == 1176076818.0
+
+        # new 'way' time is for the vrt which was created by PGC for sliderule recently
+        assert gdf["mosaic.time"][0] == 1358108640000.0
 
 @pytest.mark.network
 class TestStrips:
