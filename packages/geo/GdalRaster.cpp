@@ -202,16 +202,21 @@ void GdalRaster::open(void)
     cols = dset->GetRasterXSize();
     rows = dset->GetRasterYSize();
 
-    /* Get raster boundry box */
-    double geot[6] = {0};
-    CPLErr err     = dset->GetGeoTransform(geot);
+    CPLErr err = dset->GetGeoTransform(geoTransform);
     CHECK_GDALERR(err);
-    bbox.lon_min = geot[0];
-    bbox.lon_max = geot[0] + cols * geot[1];
-    bbox.lat_max = geot[3];
-    bbox.lat_min = geot[3] + rows * geot[5];
+    if(!GDALInvGeoTransform(geoTransform, invGeoTrnasform))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
+    }
 
-    cellSize       = geot[1];
+    /* Get raster boundry box */
+    CHECK_GDALERR(err);
+    bbox.lon_min = geoTransform[0];
+    bbox.lon_max = geoTransform[0] + cols * geoTransform[1];
+    bbox.lat_max = geoTransform[3];
+    bbox.lat_min = geoTransform[3] + rows * geoTransform[5];
+
+    cellSize       = geoTransform[1];
     radiusInPixels = radius2pixels(parms->sampling_radius);
 
     /* Limit maximum sampling radius */
@@ -237,8 +242,10 @@ void GdalRaster::readPixel(const Point& poi)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int col = static_cast<int>(floor((poi.x - bbox.lon_min) / cellSize));
-        const int row = static_cast<int>(floor((bbox.lat_max - poi.y) / cellSize));
+        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
+        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+
+        // mlog(DEBUG, "%dP, %dL\n", col, row);
 
         int xBlockSize = 0;
         int yBlockSize = 0;
@@ -368,8 +375,8 @@ void GdalRaster::resamplePixel(const Point& poi)
 {
     try
     {
-        int col = static_cast<int>(floor((poi.x - bbox.lon_min) / cellSize));
-        int row = static_cast<int>(floor((bbox.lat_max - poi.y) / cellSize));
+        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
+        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
 
         int windowSize, offset;
 
@@ -439,8 +446,8 @@ void GdalRaster::computeZonalStats(const Point& poi)
 
     try
     {
-        int col = static_cast<int>(floor((poi.x - bbox.lon_min) / cellSize));
-        int row = static_cast<int>(floor((bbox.lat_max - poi.y) / cellSize));
+        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
+        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
