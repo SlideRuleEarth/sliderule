@@ -170,9 +170,7 @@ class GdalRaster
         double          cellSize;
         bbox_t          bbox;
         uint32_t        radiusInPixels;
-
-        double geoTransform[6];
-        double invGeoTrnasform[6];
+        double          invGeoTrnasform[6];
 
         /*--------------------------------------------------------------------
         * Methods

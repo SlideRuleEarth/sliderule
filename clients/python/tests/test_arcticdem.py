@@ -8,24 +8,43 @@ from sliderule import icesat2
 
 TESTDIR = Path(__file__).parent
 
+sigma = 1.0e-9
+
+vrtLon = -178.0
+vrtLat =   51.7
+vrtElevation = 80.713500976562
+vrtFile      = '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt'
+vrtFileTime  = 1358108640000.0
+
 @pytest.mark.network
 class TestMosaic:
     def test_vrt(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        rqst = {"samples": {"asset": "arcticdem-mosaic"}, "coordinates": [[-178.0,51.7]]}
+        rqst = {"samples": {"asset": "arcticdem-mosaic"}, "coordinates": [[vrtLon,vrtLat]]}
         rsps = sliderule.source("samples", rqst)
+        assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
+        assert rsps["samples"][0][0]["file"] ==  vrtFile
+        assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
-        # old way of reading mosaics generated these results
-        # assert abs(rsps["samples"][0][0]["value"] - 80.713500976562) < 0.001
-        # assert rsps["samples"][0][0]["file"] == '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/70_09/70_09_2_1_2m_v3.0_reg_dem.tif'
 
-        # Note: sliderule code uses custom target WKT2 projections for PGC data sets.
-        # I don't know why sometimes returned value is 61.2 and sometimes 80.71
-        # This needs to be investigated with the science team. Code is correct because many other points always return the same value.
-        # This has never happened for strips but only for large VRT file.
-        # assert abs(rsps["samples"][0][0]["value"] - 61.2274551391602) < 0.001
-        assert abs(rsps["samples"][0][0]["value"] - 80.713500976562) < 0.001
-        assert rsps["samples"][0][0]["file"] ==  '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt'
+    def test_vrt_with_aoi(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        bbox = [-179, 50, -177, 52]
+        rqst = {"samples": {"asset": "arcticdem-mosaic", "aoi_bbox" : bbox}, "coordinates": [[vrtLon,vrtLat]]}
+        rsps = sliderule.source("samples", rqst)
+        assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
+        assert rsps["samples"][0][0]["file"] ==  vrtFile
+        assert rsps["samples"][0][0]["time"] ==  vrtFileTime
+
+    def test_vrt_with_proj_pipeline(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        # Output from:     projinfo -s EPSG:4326 -t EPSG:3413 -o proj
+        pipeline = "+proj=pipeline +step +proj=axisswap +order=2,1 +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +x_0=0 +y_0=0 +ellps=WGS84"
+        rqst = {"samples": {"asset": "arcticdem-mosaic", "proj_pipeline" : pipeline}, "coordinates": [[vrtLon,vrtLat]]}
+        rsps = sliderule.source("samples", rqst)
+        assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
+        assert rsps["samples"][0][0]["file"] ==  vrtFile
+        assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
 
     def test_nearestneighbour(self, domain, asset, organization, desired_nodes):
@@ -47,7 +66,7 @@ class TestMosaic:
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405900
-        assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < 0.0001
+        assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < sigma
 
     def test_zonal_stats(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -68,19 +87,14 @@ class TestMosaic:
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405900
-        assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < 0.0001
+        assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < sigma
         assert gdf["mosaic.count"].describe()["max"] == 81
         assert gdf["mosaic.stdev"].describe()["count"] == 954
-
-        # old 'way' time was for the tile/strip rasters
-        # assert gdf["mosaic.time"][0] == 1176076818.0
-
-        # new 'way' time is for the vrt which was created by PGC for sliderule recently
-        assert gdf["mosaic.time"][0] == 1358108640000.0
+        assert gdf["mosaic.time"][0] == vrtFileTime
 
 @pytest.mark.network
 class TestStrips:
-    def test_vct(self, domain, organization, desired_nodes):
+    def test_indexed_raster(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
                                 {'lon': -46.34013213284274, 'lat': 65.49860245693627},

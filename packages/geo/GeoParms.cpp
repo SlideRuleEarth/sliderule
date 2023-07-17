@@ -240,7 +240,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             /* AOI BBOX */
             lua_getfield(L, index, AOI_BBOX);
             getAoiBbox(L, -1, &field_provided);
-            if(field_provided) mlog(CRITICAL, "Setting %s to [%.4lf, %.4lf, %.4lf, %.4lf]", AOI_BBOX, aoi_bbox.lon_min, aoi_bbox.lat_min, aoi_bbox.lon_max, aoi_bbox.lat_max);
+            if(field_provided) mlog(DEBUG, "Setting %s to [%.4lf, %.4lf, %.4lf, %.4lf]", AOI_BBOX, aoi_bbox.lon_min, aoi_bbox.lat_min, aoi_bbox.lon_max, aoi_bbox.lat_max);
             lua_pop(L, 1);
 
             /* Catalog */

@@ -22,6 +22,8 @@ f:close()
 
 -- Unit Test --
 
+local  sigma = 1.0e-9
+
 local  lon = -179.0
 local  lat = 51.0
 local  height = 0
@@ -30,6 +32,15 @@ print(string.format("\n-------------------------------------------------\nLandsa
 
 local demType = "landsat-hls"
 
+local expResults = {{-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
+                    { 0.533333333333, 1293837135.0, 'HLS.S30.T01UCS.2021004T230941.v2.0 {"algo": "NDVI"}'},
+                    { 0.017137180230, 1294009336.0, 'HLS.S30.T01UCS.2021006T225929.v2.0 {"algo": "NDVI"}'},
+                    { 0.011408052369, 1294269135.0, 'HLS.S30.T01UCS.2021009T230929.v2.0 {"algo": "NDVI"}'},
+                    { 0.093959731544, 1294441339.0, 'HLS.S30.T01UCS.2021011T225921.v2.0 {"algo": "NDVI"}'},
+                    { 0.756097560976, 1294701137.0, 'HLS.S30.T01UCS.2021014T230921.v2.0 {"algo": "NDVI"}'},
+                    { 0.026548672566, 1294873337.0, 'HLS.S30.T01UCS.2021016T225909.v2.0 {"algo": "NDVI"}'},
+                    {-0.022610551591, 1295565136.0, 'HLS.S30.T01UCS.2021024T230841.v2.0 {"algo": "NDVI"}'},
+                    {-1.105263157895, 1295737338.0, 'HLS.S30.T01UCS.2021026T225819.v2.0 {"algo": "NDVI"}'}}
 
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
 local sampleCnt = 0
@@ -40,35 +51,49 @@ if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
     local value, fname, time
-    for j, v in ipairs(tbl) do
+    for i, v in ipairs(tbl) do
         value = v["value"]
-        fname = v["file"]
         time  = v["time"]
-
+        fname = v["file"]
+        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
         sampleCnt = sampleCnt + 1
-        if sampleCnt == 1 then
-            ndvi = value
-            gpsTime = time
-        end
-        print(string.format("(%02d) value %10.3f, time %.2f, fname: %s", j, value, time, fname))
 
-        -- only group names with algo string should be returned as a file name, example:
-        -- HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}
-        runner.check(string.find(fname, "{\"algo\": \"NDVI\"}"))
-        runner.check(time ~= 0.0)
+        runner.check(math.abs(value - expResults[i][1]) < sigma)
+        runner.check(time == expResults[i][2])
+        runner.check(fname == expResults[i][3])
     end
 end
+runner.check(sampleCnt == #expResults)
+dem=nil
 
-runner.check(sampleCnt == 9)
 
-local expected_value = -0.259439 -- first ndvi from the group of samples
-local expected_max = expected_value + 0.00001
-local expected_min = expected_value - 0.00001
-
-runner.check(ndvi <= expected_max and ndvi >= expected_min)
-runner.check(gpsTime == 1293577339.0)
-dem = nil
-
+expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDSI"}'},
+              {-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
+              {-0.203145478375, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDWI"}'},
+              { 0.114285714286, 1293837135.0, 'HLS.S30.T01UCS.2021004T230941.v2.0 {"algo": "NDSI"}'},
+              { 0.533333333333, 1293837135.0, 'HLS.S30.T01UCS.2021004T230941.v2.0 {"algo": "NDVI"}'},
+              {-0.603448275862, 1293837135.0, 'HLS.S30.T01UCS.2021004T230941.v2.0 {"algo": "NDWI"}'},
+              {-0.047725899715, 1294009336.0, 'HLS.S30.T01UCS.2021006T225929.v2.0 {"algo": "NDSI"}'},
+              { 0.017137180230, 1294009336.0, 'HLS.S30.T01UCS.2021006T225929.v2.0 {"algo": "NDVI"}'},
+              { 0.005977237370, 1294009336.0, 'HLS.S30.T01UCS.2021006T225929.v2.0 {"algo": "NDWI"}'},
+              { 0.480214002398, 1294269135.0, 'HLS.S30.T01UCS.2021009T230929.v2.0 {"algo": "NDSI"}'},
+              { 0.011408052369, 1294269135.0, 'HLS.S30.T01UCS.2021009T230929.v2.0 {"algo": "NDVI"}'},
+              { 0.477005893545, 1294269135.0, 'HLS.S30.T01UCS.2021009T230929.v2.0 {"algo": "NDWI"}'},
+              {-1.722222222222, 1294441339.0, 'HLS.S30.T01UCS.2021011T225921.v2.0 {"algo": "NDSI"}'},
+              { 0.093959731544, 1294441339.0, 'HLS.S30.T01UCS.2021011T225921.v2.0 {"algo": "NDVI"}'},
+             {-10.878787878788, 1294441339.0, 'HLS.S30.T01UCS.2021011T225921.v2.0 {"algo": "NDWI"}'},
+              { 1.400000000000, 1294701137.0, 'HLS.S30.T01UCS.2021014T230921.v2.0 {"algo": "NDSI"}'},
+              { 0.756097560976, 1294701137.0, 'HLS.S30.T01UCS.2021014T230921.v2.0 {"algo": "NDVI"}'},
+              { 1.250000000000, 1294701137.0, 'HLS.S30.T01UCS.2021014T230921.v2.0 {"algo": "NDWI"}'},
+              {-1.834437086093, 1294873337.0, 'HLS.S30.T01UCS.2021016T225909.v2.0 {"algo": "NDSI"}'},
+              { 0.026548672566, 1294873337.0, 'HLS.S30.T01UCS.2021016T225909.v2.0 {"algo": "NDVI"}'},
+              {-1.743589743590, 1294873337.0, 'HLS.S30.T01UCS.2021016T225909.v2.0 {"algo": "NDWI"}'},
+              { 0.591664149804, 1295565136.0, 'HLS.S30.T01UCS.2021024T230841.v2.0 {"algo": "NDSI"}'},
+              {-0.022610551591, 1295565136.0, 'HLS.S30.T01UCS.2021024T230841.v2.0 {"algo": "NDVI"}'},
+              { 0.566435061464, 1295565136.0, 'HLS.S30.T01UCS.2021024T230841.v2.0 {"algo": "NDWI"}'},
+              {-2.333333333333, 1295737338.0, 'HLS.S30.T01UCS.2021026T225819.v2.0 {"algo": "NDSI"}'},
+              {-1.105263157895, 1295737338.0, 'HLS.S30.T01UCS.2021026T225819.v2.0 {"algo": "NDVI"}'},
+              {-0.965811965812, 1295737338.0, 'HLS.S30.T01UCS.2021026T225819.v2.0 {"algo": "NDWI"}'}}
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI, NDSI, NDWI)\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
@@ -81,58 +106,29 @@ if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
     local value, fname, time
-    for j, v in ipairs(tbl) do
+    for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
         time  = v["time"]
 
         sampleCnt = sampleCnt + 1
+        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
+        runner.check(math.abs(value - expResults[i][1]) < sigma)
+        runner.check(time == expResults[i][2])
+        runner.check(fname == expResults[i][3])
 
-        print(string.format("(%02d) value %10.3f, time %.2f, fname: %s", j, value, time, fname))
-
-        if string.find(fname, "NDSI") then
-            ndsiCnt = ndsiCnt + 1
-            if sampleCnt == 1 then
-                local ndsi = value
-                expected_value = 0.06517 -- first ndwi from the group of samples
-                expected_max = expected_value + 0.00001
-                expected_min = expected_value - 0.00001
-                runner.check(ndsi <= expected_max and ndsi >= expected_min)
-            end
-        end
-
-        if string.find(fname, "NDWI") then
-            ndwiCnt = ndwiCnt + 1
-            if sampleCnt == 1 then
-                local ndwi = value
-                expected_value = -0.24315 -- first ndwi from the group of samples
-                expected_max = expected_value + 0.00001
-                expected_min = expected_value - 0.00001
-                runner.check(ndwi <= expected_max and ndwi >= expected_min)
-            end
-        end
-
-        if string.find(fname, "NDVI") then
-            ndviCnt = ndviCnt + 1
-            if sampleCnt == 1 then
-                local ndvi = value
-                expected_value = -0.25944 -- first ndvi from the group of samples
-                expected_max = expected_value + 0.00001
-                expected_min = expected_value - 0.00001
-                runner.check(ndvi <= expected_max and ndvi >= expected_min)
-            end
-        end
-        runner.check(time ~= 0.0)
     end
 end
+runner.check(sampleCnt == #expResults)
+dem=nil
 
-runner.check(sampleCnt == 27)
-runner.check(ndviCnt == 9)
-runner.check(ndsiCnt == 9)
-runner.check(ndwiCnt == 9)
+
+
+expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDSI"}'},
+              {-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
+              {-0.203145478375, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDWI"}'}}
 
 local url = "HLS.S30.T01UCS.2021001T22594"
-
 print(string.format("\n--------------------------------\nTest: %s URL/GROUP Filter: %s\n--------------------------------", demType, url))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, substr = url, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
 sampleCnt = 0
@@ -143,22 +139,21 @@ if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
     local value, fname, time
-    for j, v in ipairs(tbl) do
+    for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
         time  = v["time"]
 
         sampleCnt = sampleCnt + 1
-        print(string.format("(%02d) value %10.3f, time %.2f, fname: %s", j, value, time, fname))
-        if string.find(fname, url) == false then
-            invalidSamples = invalidSamples + 1
-        end
-        runner.check(time ~= 0.0)
+        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
+        runner.check(math.abs(value - expResults[i][1]) < sigma)
+        runner.check(time == expResults[i][2])
+        runner.check(fname == expResults[i][3])
     end
 end
+runner.check(sampleCnt == #expResults)
+dem=nil
 
-runner.check(sampleCnt == 3)
-runner.check(invalidSamples == 0)
 
 
 local tstr = "2021:2:4:23:3:0"
@@ -176,11 +171,12 @@ local value, fname
 for i, v in ipairs(tbl) do
     fname = v["file"]
     value = v["value"]
-    print(string.format("(%02d) value %10.3f, fname: %s", i, value, fname))
+    print(string.format("(%02d) value %16.12f, fname: %s", i, value, fname))
     runner.check( string.find(fname, expectedGroup))
     sampleCnt = sampleCnt + 1
 end
 runner.check(sampleCnt == 3)  -- 3 groups with closest time
+dem = nil
 
 
 local tstr          = "2021:2:4:23:3:0"
@@ -199,11 +195,24 @@ local value, fname
 for i, v in ipairs(tbl) do
     fname = v["file"]
     value = v["value"]
-    print(string.format("(%02d) value %10.3f, fname: %s", i, value, fname))
+    print(string.format("(%02d) value %16.12f, fname: %s", i, value, fname))
     runner.check( string.find(fname, expectedGroup))
     sampleCnt = sampleCnt + 1
 end
 runner.check(sampleCnt == 3)  -- 3 groups with closest time
+dem = nil
+
+
+
+expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021001T225941.v2.0/HLS.S30.T01UCS.2021001T225941.v2.0.B03.tif'},
+              {  117.0, 1293837135.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021004T230941.v2.0/HLS.S30.T01UCS.2021004T230941.v2.0.B03.tif'},
+              { 5517.0, 1294009336.0, 0x42, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021006T225929.v2.0/HLS.S30.T01UCS.2021006T225929.v2.0.B03.tif'},
+              {16047.0, 1294269135.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021009T230929.v2.0/HLS.S30.T01UCS.2021009T230929.v2.0.B03.tif'},
+              {  -52.0, 1294441339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021011T225921.v2.0/HLS.S30.T01UCS.2021011T225921.v2.0.B03.tif'},
+              {  -24.0, 1294701137.0, 0x60, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021014T230921.v2.0/HLS.S30.T01UCS.2021014T230921.v2.0.B03.tif'},
+              {  -63.0, 1294873337.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021016T225909.v2.0/HLS.S30.T01UCS.2021016T225909.v2.0.B03.tif'},
+              { 7905.0, 1295565136.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021024T230841.v2.0/HLS.S30.T01UCS.2021024T230841.v2.0.B03.tif'},
+              {  -46.0, 1295737338.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021026T225819.v2.0/HLS.S30.T01UCS.2021026T225819.v2.0.B03.tif'}}
 
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and qualit flags)\n-------------------------------------------------"))
@@ -216,37 +225,44 @@ if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
     local value, fname, time, flags
-    for j, v in ipairs(tbl) do
+    for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
         time  = v["time"]
         flags = v["flags"]
+        sampleCnt = sampleCnt + 1
 
-        print(string.format("(%02d) value %10.3f, time %10.3f, qmask 0x%x, %s", j, value, time, flags, fname))
-
-        if string.find(fname, "B03.tif") then
-            sampleCnt = sampleCnt + 1
-            if sampleCnt == 1 then
-                b03 = value
-                runner.check(flags == 0xC2) -- first qualit mask
-            end
-        end
-
-        if string.find(fname, "Fmask.tif") then
-            fmaskCnt = fmaskCnt + 1
-        end
-
-        runner.check(flags ~= 0) -- all flags should be non zero
+        print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, time, flags, fname))
+        runner.check(math.abs(value - expResults[i][1]) < sigma)
+        runner.check(time == expResults[i][2])
+        runner.check(flags == expResults[i][3])
+        runner.check(fname == expResults[i][4])
     end
 end
+runner.check(sampleCnt == #expResults)
+dem = nil
 
-runner.check(sampleCnt == 9)
-runner.check(fmaskCnt  == 0)
 
-expected_value = 523.0 -- first b03 from the group of samples
-expected_max = expected_value + 0.00001
-expected_min = expected_value - 0.00001
-runner.check(b03 <= expected_max and b03 >= expected_min)
+
+
+expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021001T225941.v2.0/HLS.S30.T01UCS.2021001T225941.v2.0.B03.tif'},
+              {  194.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021001T225941.v2.0/HLS.S30.T01UCS.2021001T225941.v2.0.Fmask.tif'},
+              {  117.0, 1293837135.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021004T230941.v2.0/HLS.S30.T01UCS.2021004T230941.v2.0.B03.tif'},
+              {  224.0, 1293837135.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021004T230941.v2.0/HLS.S30.T01UCS.2021004T230941.v2.0.Fmask.tif'},
+              { 5517.0, 1294009336.0, 0x42, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021006T225929.v2.0/HLS.S30.T01UCS.2021006T225929.v2.0.B03.tif'},
+              {   66.0, 1294009336.0, 0x42, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021006T225929.v2.0/HLS.S30.T01UCS.2021006T225929.v2.0.Fmask.tif'},
+              {16047.0, 1294269135.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021009T230929.v2.0/HLS.S30.T01UCS.2021009T230929.v2.0.B03.tif'},
+              {  194.0, 1294269135.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021009T230929.v2.0/HLS.S30.T01UCS.2021009T230929.v2.0.Fmask.tif'},
+              {  -52.0, 1294441339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021011T225921.v2.0/HLS.S30.T01UCS.2021011T225921.v2.0.B03.tif'},
+              {  194.0, 1294441339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021011T225921.v2.0/HLS.S30.T01UCS.2021011T225921.v2.0.Fmask.tif'},
+              {  -24.0, 1294701137.0, 0x60, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021014T230921.v2.0/HLS.S30.T01UCS.2021014T230921.v2.0.B03.tif'},
+              {   96.0, 1294701137.0, 0x60, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021014T230921.v2.0/HLS.S30.T01UCS.2021014T230921.v2.0.Fmask.tif'},
+              {  -63.0, 1294873337.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021016T225909.v2.0/HLS.S30.T01UCS.2021016T225909.v2.0.B03.tif'},
+              {  194.0, 1294873337.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021016T225909.v2.0/HLS.S30.T01UCS.2021016T225909.v2.0.Fmask.tif'},
+              { 7905.0, 1295565136.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021024T230841.v2.0/HLS.S30.T01UCS.2021024T230841.v2.0.B03.tif'},
+              {  194.0, 1295565136.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021024T230841.v2.0/HLS.S30.T01UCS.2021024T230841.v2.0.Fmask.tif'},
+              {  -46.0, 1295737338.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021026T225819.v2.0/HLS.S30.T01UCS.2021026T225819.v2.0.B03.tif'},
+              {  224.0, 1295737338.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021026T225819.v2.0/HLS.S30.T01UCS.2021026T225819.v2.0.Fmask.tif'}}
 
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and Fmask raster)\n-------------------------------------------------"))
@@ -259,89 +275,22 @@ if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
     local value, fname, flags
-    for j, v in ipairs(tbl) do
+    for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
+        time  = v["time"]
         flags = v["flags"]
-
-        print(string.format("(%02d) value: %10.3f qmask: 0x%x, %s", j, value, flags, fname))
-
-        if string.find(fname, "B03.tif") then
-            sampleCnt = sampleCnt + 1
-            if sampleCnt == 1 then
-                b03 = value
-                runner.check(flags == 0xC2) -- first qualit mask
-            end
-        end
-
-        if string.find(fname, "Fmask.tif") then
-            fmaskCnt = fmaskCnt + 1
-        end
-
-        runner.check(flags ~= 0) -- all flags should be non zero
-    end
-end
-
-runner.check(sampleCnt == 9)
-runner.check(fmaskCnt  == 9)
-
-expected_value = 523.0 -- first b03 from the group of samples
-expected_max = expected_value + 0.00001
-expected_min = expected_value - 0.00001
-runner.check(b03 <= expected_max and b03 >= expected_min)
-
-
-
-print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 Zonal stats)\n-------------------------------------------------"))
-local samplingRadius = 120
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = samplingRadius, zonal_stats=true, with_flags=true, bands = {"B03"}, catalog = contents }))
-gpsTime = 0
-sampleCnt = 0
-b03 = 0
-tbl, status = dem:sample(lon, lat, height)
-if status ~= true then
-    print(string.format("======> FAILED to read", lon, lat))
-else
-    local value, time, fname, cnt, min, max, mean, median, stdev, mad, flags
-    for j, v in ipairs(tbl) do
-        value = v["value"]
-        time = v["time"]
-        fname = v["file"]
-        cnt = v["count"]
-        min = v["min"]
-        max = v["max"]
-        mean = v["mean"]
-        median = v["median"]
-        stdev = v["stdev"]
-        mad = v["mad"]
-        flags = v["flags"]
-
-        if el ~= -9999.0 then
-            print(string.format("(%02d) value: %10.2f, time: %.2f,  cnt: %03d   qmask: 0x%x   min: %10.2f   max: %10.2f   mean: %10.2f   median: %10.2f   stdev: %10.2f   mad: %10.2f", j, value, time, cnt, flags, min, max, mean, median, stdev, mad))
-            runner.check(value ~= 0.0)
-            runner.check(time ~= 0.0)
-            runner.check(min <= value)
-            runner.check(max >= value)
-            runner.check(mean ~= 0.0)
-            runner.check(stdev ~= 0.0)
-        end
-
         sampleCnt = sampleCnt + 1
-        if sampleCnt == 1 then
-            b03 = value
-            gpsTime = time
-        end
 
-        runner.check(string.find(fname, "B03.tif"))
+        print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, time, flags, fname))
+        runner.check(math.abs(value - expResults[i][1]) < sigma)
+        runner.check(time == expResults[i][2])
+        runner.check(flags == expResults[i][3])
+        runner.check(fname == expResults[i][4])
     end
 end
-runner.check(sampleCnt == 9)
-expected_value = 523.0 -- first b03 from the group of samples
-expected_max = expected_value + 0.00001
-expected_min = expected_value - 0.00001
-runner.check(b03 <= expected_max and b03 >= expected_min)
-runner.check(gpsTime == 1293577339.0)
-
+runner.check(sampleCnt == #expResults)
+dem = nil
 
 
 print(string.format("\n-------------------------------------------------\nMany Rasters (189) Test\n-------------------------------------------------"))
@@ -350,7 +299,8 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
                                      "B01", "B02", "B03", "B04", "B05", "B06",
                                      "B07", "B08", "B09", "B10", "B11", "B12", "B8A", },
                             catalog = contents }))
-sampleCnt = 0
+
+                            sampleCnt = 0
 tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
@@ -409,15 +359,11 @@ end
 f:close()
 
 local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
-local badFileCnt = 0
-local badNDVICnt = 0
 
 print(string.format("\n-------------------------------------------------\nLandsat Grand Mesa test\n-------------------------------------------------"))
 
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents }))
 sampleCnt = 0
-
-local starttime = time.latch();
 
 for i=1, maxSamples do
     local  lon = arr[i][1]
@@ -431,34 +377,14 @@ for i=1, maxSamples do
             ndvi = v["value"]
             fname = v["file"]
 
-            runner.check(fname == expectedFile)
-            if fname ~= expectedFile then
-                print(string.format("======> wrong group: %s", fname))
-                badFileCnt = badFileCnt + 1
-            end
-
             local expectedNDVI = ndvi_results[i]
-            local delta = 0.0000000000000001
-            local min = expectedNDVI - delta
-            local max = expectedNDVI + delta
-
-            runner.check(ndvi <= max and ndvi >= min)
-            if (ndvi > max or ndvi < min) then
-                print(string.format("======> wrong ndvi: %0.16f, expected: %0.16f", ndvi, expectedNDVI))
-                badNDVICnt = badNDVICnt + 1
-            end
+            runner.check(math.abs(ndvi - expectedNDVI) < sigma)
+            runner.check(fname == expectedFile)
         end
     end
     sampleCnt = sampleCnt + 1
 end
-
-local stoptime = time.latch();
-local dtime = stoptime - starttime
-
-print(string.format("Samples: %d, ExecTime: %f", sampleCnt, dtime))
 runner.check(sampleCnt == maxSamples)
-runner.check(badFileCnt == 0)
-runner.check(badNDVICnt == 0)
 
 -- Report Results --
 

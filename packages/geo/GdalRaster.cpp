@@ -202,6 +202,7 @@ void GdalRaster::open(void)
     cols = dset->GetRasterXSize();
     rows = dset->GetRasterYSize();
 
+    double geoTransform[6];
     CPLErr err = dset->GetGeoTransform(geoTransform);
     CHECK_GDALERR(err);
     if(!GDALInvGeoTransform(geoTransform, invGeoTrnasform))

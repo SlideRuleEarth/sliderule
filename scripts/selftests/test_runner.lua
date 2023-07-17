@@ -75,20 +75,26 @@ end
 if __pgc__ then
     local pgc_td = td .. "../../plugins/pgc/selftests/"
     runner.script(pgc_td .. "arcticdem_reader.lua")
+    runner.script(pgc_td .. "temporal_filter_test.lua")
+    runner.script(pgc_td .. "url_filter_test.lua")
+    runner.script(pgc_td .. "zonal_stats_test.lua")
+    runner.script(pgc_td .. "resampling_test.lua")
+    runner.script(pgc_td .. "aoi_bbox_test.lua")
+    runner.script(pgc_td .. "proj_pipeline_test.lua")
     runner.script(pgc_td .. "remadem_reader.lua")
 end
 
 -- Run Landsat Plugin Self Tests
 if __landsat__ then
-    local pgc_td = td .. "../../plugins/landsat/selftests/"
-    runner.script(pgc_td .. "landsat_reader.lua")
+    local landsat_td = td .. "../../plugins/landsat/selftests/"
+    runner.script(landsat_td .. "landsat_reader.lua")
 end
 
 
 -- Run usgs3dep Plugin Self Tests
-if __landsat__ then
-    local pgc_td = td .. "../../plugins/usgs3dep/selftests/"
-    runner.script(pgc_td .. "usgs3dep_reader.lua")
+if __usgs3dep__ then
+    local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
+    runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 
 
