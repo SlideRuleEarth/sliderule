@@ -104,8 +104,8 @@ class widgets:
 
         # dropdown menu for setting data release
         self.release = ipywidgets.Dropdown(
-            options=['003', '004', '005'],
-            value='005',
+            options=['003', '004', '005', '006'],
+            value='006',
             description='Release:',
             description_tooltip="Release: ICESat-2 data release",
             disabled=False,
@@ -351,7 +351,7 @@ class widgets:
         # slider for setting maximum number of iterations
         # (not including initial least-squares-fit selection)
         self.iteration = ipywidgets.IntSlider(
-            value=1,
+            value=6,
             min=0,
             max=20,
             step=1,
@@ -431,6 +431,9 @@ class widgets:
             readout_format='0.1f',
             style=self.style,
         )
+
+        # watch widgets for changes
+        self.length.observe(self.set_default_values_from_length)
 
         # dropdown menu for setting map projection
         # Global: Web Mercator (EPSG:3857)
@@ -731,6 +734,14 @@ class widgets:
         """end time in ISO format
         """
         return self.end_date.value.isoformat()
+
+    # function for setting default values when segment length changes
+    def set_default_values_from_length(self, sender):
+        """function for setting default values when segment length changes
+        """
+        self.step.value = int(self.length.value//2)
+        self.spread.value = self.length.value/2.0
+        self.count.value = np.maximum(5, self.length.value//4)
 
     # function for setting available map layers
     def set_layers(self, sender):
