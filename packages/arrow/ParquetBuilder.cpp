@@ -398,12 +398,12 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
-    ArrowParms* parms = NULL;
+    ArrowParms* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        parms                       = (ArrowParms*)getLuaObject(L, 1, ArrowParms::OBJECT_TYPE);
+        _parms                      = (ArrowParms*)getLuaObject(L, 1, ArrowParms::OBJECT_TYPE);
         const char* outq_name       = getLuaString(L, 2);
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
@@ -434,11 +434,11 @@ int ParquetBuilder::luaCreate (lua_State* L)
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, parms, outq_name, inq_name, rec_type, batch_rec_type, id, geo, index_key));
+        return createLuaObject(L, new ParquetBuilder(L, _parms, outq_name, inq_name, rec_type, batch_rec_type, id, geo, index_key));
     }
     catch(const RunTimeException& e)
     {
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
         return returnLuaStatus(L, false);
     }
@@ -473,7 +473,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* id, geo_data_t geo, const char* index_key):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
-    assert(parms);
+    assert(_parms);
     assert(outq_name);
     assert(inq_name);
     assert(rec_type);
