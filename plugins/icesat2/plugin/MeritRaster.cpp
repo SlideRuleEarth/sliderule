@@ -112,7 +112,7 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param)
+void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
 {
     (void)param;
     (void)gps;
@@ -195,7 +195,7 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
         RasterSample sample(value, ((double)gpsTime / (double)1000.0));
 
         /* Return Sample */
-        slist.add(sample);
+        slist.push_back(sample);
     }
     catch(const RunTimeException& e)
     {

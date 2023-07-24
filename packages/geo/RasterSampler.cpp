@@ -286,12 +286,12 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key)
         }
 
         /* Sample Raster */
-        List<RasterSample> slist;
+        std::vector<RasterSample> slist;
         int num_samples = 0;
         try
         {
             raster->getSamples(lon_val, lat_val, height_val, gps, slist);
-            num_samples = slist.length();
+            num_samples = slist.size();
         }
         catch(const RunTimeException& e)
         {

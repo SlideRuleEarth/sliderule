@@ -196,15 +196,15 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Get samples */
-        List<RasterSample> slist;
+        std::vector<RasterSample> slist;
         lua_obj->getSamples(lon, lat, height, gps, slist, NULL);
 
-        if(slist.length() > 0)
+        if(slist.size() > 0)
         {
             /* Create return table */
-            lua_createtable(L, slist.length(), 0);
+            lua_createtable(L, slist.size(), 0);
 
-            for(int i = 0; i < slist.length(); i++)
+            for(uint32_t i = 0; i < slist.size(); i++)
             {
                 const RasterSample& sample = slist[i];
                 const char* fileName = "";

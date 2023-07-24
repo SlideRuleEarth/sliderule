@@ -239,7 +239,7 @@ bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;
@@ -279,7 +279,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
                 if(bandsDict.find(bandName, &returnBandSample))
                 {
                     if(returnBandSample)
-                        slist.add(sample);
+                        slist.push_back(sample);
                 }
 
                 /* green and red bands are the same for L8 and S2 */
@@ -314,7 +314,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
 
         sample.time   = groupTime;
         sample.fileId = fileDictAdd(groupName + "NDSI\"}");
-        slist.add(sample);
+        slist.push_back(sample);
     }
 
     if(ndvi)
@@ -326,7 +326,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
 
         sample.time   = groupTime;
         sample.fileId = fileDictAdd(groupName + "NDVI\"}");
-        slist.add(sample);
+        slist.push_back(sample);
     }
 
     if(ndwi)
@@ -338,7 +338,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
 
         sample.time   = groupTime;
         sample.fileId = fileDictAdd(groupName + "NDWI\"}");
-        slist.add(sample);
+        slist.push_back(sample);
     }
 }
 

@@ -72,7 +72,7 @@ void GeoIndexedRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param)
+void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
 {
     std::ignore = param;
 
@@ -173,7 +173,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
 {
     for(const auto& rinfo: rgroup->infovect)
     {
@@ -189,7 +189,7 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
                     RasterSample& sample = item->raster->getSample();
                     sample.fileId = fileDictAdd(item->raster->getFileName());
                     sample.flags  = flags;
-                    slist.add(sample);
+                    slist.push_back(sample);
                 }
             }
         }

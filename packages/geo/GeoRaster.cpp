@@ -46,7 +46,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -61,7 +61,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, L
         {
             RasterSample& sample = raster.getSample();
             sample.fileId = fileId;
-            slist.add(sample);
+            slist.push_back(sample);
         }
     }
     catch (const RunTimeException &e)

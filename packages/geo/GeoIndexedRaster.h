@@ -97,7 +97,7 @@ class GeoIndexedRaster: public RasterObject
 
         static void     init              (void);
         static void     deinit            (void);
-        void            getSamples        (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) final;
+        void            getSamples        (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) final;
         virtual        ~GeoIndexedRaster  (void);
 
     protected:
@@ -107,7 +107,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
-        virtual void    getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags);
+        virtual void    getGroupSamples       (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         void            openGeoIndex          (double lon = 0, double lat = 0);
