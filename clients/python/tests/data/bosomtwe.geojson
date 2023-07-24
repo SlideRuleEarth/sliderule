@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "name": "6_30_N__1_24_W",
+  "crs": {
+    "type": "name",
+    "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }
+  },
+  "features": [ {
+    "type": "Feature",
+    "properties": { },
+    "geometry": { "type": "Polygon", "coordinates": [ [ [ -1.8499999999999999, 6.95 ], [ -1.8499999999999999, 6.05 ], [ -0.95, 6.05 ], [ -0.95, 6.95 ], [ -1.8499999999999999, 6.95 ] ] ] }
+  } ]
+}
