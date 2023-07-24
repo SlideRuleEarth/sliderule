@@ -36,15 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "VrtRaster.h"
-#include "GeoParms.h"
-#include <uuid/uuid.h>
+#include "GeoRaster.h"
 
 /******************************************************************************
  * GEDI 03 RASTER CLASS
  ******************************************************************************/
 
-class Gedi03Raster: public VrtRaster
+class Gedi03Raster: public GeoRaster
 {
     public:
 
@@ -52,9 +50,10 @@ class Gedi03Raster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void             init            (void);
-        static RasterObject*    create          (lua_State* L, GeoParms* _parms);
-        virtual                 ~Gedi03Raster   (void);
+        static void init (void) {}
+
+        static RasterObject* create (lua_State* L, GeoParms* _parms)
+        { return new Gedi03Raster(L, _parms); }
 
     protected:
 
@@ -63,18 +62,11 @@ class Gedi03Raster: public VrtRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                Gedi03Raster    (lua_State *L, GeoParms* _parms);
-        bool    getRasterDate   (raster_info_t& rinfo);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        TimeLib::gmt_time_t gmtDate;
-        int64_t gpsTime;
-        char uuid_str[UUID_STR_LEN]; // temporary buffer
+        Gedi03Raster(lua_State* L, GeoParms* _parms) :
+         GeoRaster(L, _parms,
+                 std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                 TimeLib::datetime2gps(2022, 1, 19),
+                 true /* Data is elevation */) {}
 };
 
 #endif  /* __gedi03_raster__ */

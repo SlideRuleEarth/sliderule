@@ -33,9 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
 #include "GeoJsonRaster.h"
-
 #include <gdalwarper.h>
 
 
@@ -108,7 +106,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    List<sample_t> slist;
+    List<RasterSample> slist;
     int sampleCnt = 0;
 
     try
@@ -133,8 +131,7 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
-    VSIUnlink(rasterFile.c_str());
-    VSIUnlink(vrtFile.c_str());
+    VSIUnlink(rasterFileName.c_str());
 }
 
 /******************************************************************************
@@ -159,18 +156,13 @@ static void validatedParams(const char *file, long filelength, double _cellsize)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
-    VrtRaster(L, _parms, std::string("/vsimem/" + std::string(getUUID(uuid_str)) + ".vrt").c_str())
+    GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/ )
 {
     bool rasterCreated = false;
-    GDALDataset *rasterDset = NULL;
-    GDALDataset *jsonDset   = NULL;
-    std::string  jsonFile;
-
-    jsonFile   = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
-    rasterFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".tif";
-
-    /* Initialize Class Data Members */
-    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
+    GDALDataset* rasterDset = NULL;
+    GDALDataset* jsonDset   = NULL;
+    const std::string jsonFile = "/vsimem/" + GdalRaster::getUUID() + ".geojson";
+    rasterFileName = getFileName();
 
     validatedParams(file, filelength, _cellsize);
 
@@ -199,7 +191,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
         GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
         CHECKPTR(driver);
-        rasterDset = (GDALDataset *)driver->Create(rasterFile.c_str(), cols, rows, 1, GDT_Byte, options);
+        rasterDset = (GDALDataset *)driver->Create(rasterFileName.c_str(), cols, rows, 1, GDT_Byte, options);
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};
@@ -236,26 +228,11 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
         CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
-        mlog(DEBUG, "Rasterized geojson into raster %s", rasterFile.c_str());
+        mlog(DEBUG, "Rasterized geojson into raster %s", rasterFileName.c_str());
 
-        /* Store raster creation time */
-        gmtDate = TimeLib::gmttime();
-
-        /* Must close raster to flush it into file */
+        /* Must close raster to flush it into file in vsimem */
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
-
-        /* Create vrt file, used in base class as index data set */
-        List<std::string> rasterList;
-        rasterList.add(rasterFile);
-        buildVRT(vrtFile, rasterList);
-
-        /* Open vrt as base class geoindex file. */
-        openGeoIndex();
-
-        /* Don't treat samples in the rasters as elevation */
-        forceNotElevation = true;
-
         rasterCreated = true;
     }
     catch(const RunTimeException& e)
@@ -265,20 +242,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
    /* Cleanup */
    VSIUnlink(jsonFile.c_str());
-   if (jsonDset) GDALClose((GDALDatasetH)jsonDset);
-   if (rasterDset) GDALClose((GDALDatasetH)rasterDset);
+   if(jsonDset) GDALClose((GDALDatasetH)jsonDset);
+   if(rasterDset) GDALClose((GDALDatasetH)rasterDset);
 
-   if (!rasterCreated)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
-}
-
-
-/*----------------------------------------------------------------------------
- * getRasterDate
- *----------------------------------------------------------------------------*/
-bool GeoJsonRaster::getRasterDate(raster_info_t& rinfo)
-{
-    rinfo.gmtDate = gmtDate;
-    rinfo.gpsTime = TimeLib::gmt2gpstime(gmtDate);
-    return true;
+   if(!rasterCreated)
+       throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
 }

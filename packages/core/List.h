@@ -87,6 +87,7 @@ class List
         T&      get         (int index);
         bool    set         (int index, T& data, bool with_delete=true);
         int     length      (void) const;
+        bool    isempty     (void) const;
         void    clear       (void);
         void    sort        (void);
 
@@ -418,6 +419,15 @@ template <class T, int LIST_BLOCK_SIZE>
 int List<T, LIST_BLOCK_SIZE>::length(void) const
 {
     return len;
+}
+
+/*----------------------------------------------------------------------------
+ * isempty
+ *----------------------------------------------------------------------------*/
+template <class T, int LIST_BLOCK_SIZE>
+bool List<T, LIST_BLOCK_SIZE>::isempty(void) const
+{
+    return (len == 0);
 }
 
 /*----------------------------------------------------------------------------

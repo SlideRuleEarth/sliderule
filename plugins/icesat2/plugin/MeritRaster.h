@@ -38,6 +38,7 @@
 
 #include "RasterObject.h"
 #include "GeoParms.h"
+#include "RasterSample.h"
 
 /******************************************************************************
  * MERIT RASTER CLASS
@@ -77,7 +78,7 @@ class MeritRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                 MeritRaster     (lua_State *L, GeoParms* _parms);
-        void    getSamples      (double lon, double lat, double height, int64_t gps, List<sample_t>& slist, void* param=NULL) override;
+        void    getSamples      (double lon, double lat, double height, int64_t gps, List<RasterSample>& slist, void* param=NULL) override;
 
     private:
 

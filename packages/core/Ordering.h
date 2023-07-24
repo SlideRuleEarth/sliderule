@@ -104,6 +104,7 @@ class Ordering
         T&          get         (K key, searchMode_t smode=EXACT_MATCH);
         bool        remove      (K key, searchMode_t smode=EXACT_MATCH);
         long        length      (void);
+        bool        isempty     (void);
         void        flush       (void);
         void        clear       (void);
 
@@ -385,6 +386,15 @@ template <class T, typename K>
 long Ordering<T,K>::length(void)
 {
     return len;
+}
+
+/*----------------------------------------------------------------------------
+ * isempty
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+bool Ordering<T,K>::isempty(void)
+{
+    return (len == 0);
 }
 
 /*----------------------------------------------------------------------------

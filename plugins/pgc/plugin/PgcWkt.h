@@ -32,14 +32,13 @@
 #ifndef __pgc_wkt__
 #define __pgc_wkt__
 
-#include <string>
 
 /******************************************************************************
  * EXPORTED FUNCTIONS
  ******************************************************************************/
 
-const std::string& getArcticDemWkt2(void);
-const std::string& getRemaWkt2(void);
+const char* getArcticDemWkt2(void);
+const char* getRemaWkt2(void);
 void parseWktFiles(void);
 
 #endif  /* __pgc_wkt__ */

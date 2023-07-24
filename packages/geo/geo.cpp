@@ -33,8 +33,11 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "GeoIndexedRaster.h"
+#include "GeoJsonRaster.h"
+#include "RasterSampler.h"
 #include "geo.h"
+
 #include <gdal.h>
 #include <cpl_conv.h>
 #include <proj.h>
@@ -249,9 +252,7 @@ void initgeo (void)
     test_projlib();
 
     /* Initialize Modules */
-    GeoRaster::init();
-    VrtRaster::init();
-    VctRaster::init();
+    GeoIndexedRaster::init();
     RasterSampler::init();
 
     /* Register GDAL custom error handler */
@@ -270,9 +271,8 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
-    VctRaster::deinit();
-    VrtRaster::deinit();
-    GeoRaster::deinit();
+    GeoIndexedRaster::deinit();
+    RasterSampler::deinit();
     GDALDestroy();
 }
 }

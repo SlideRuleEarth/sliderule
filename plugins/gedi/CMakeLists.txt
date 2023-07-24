@@ -61,9 +61,7 @@ target_sources(gedi
     ${CMAKE_CURRENT_LIST_DIR}/plugin/gedi.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi01bReader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi02aReader.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi03Raster.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04aReader.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/Gedi04bRaster.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/GediParms.cpp
 )
 

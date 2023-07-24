@@ -40,6 +40,19 @@ logger = logging.getLogger(__name__)
 profiles = {}
 
 ###############################################################################
+# UTILITIES
+###############################################################################
+
+#
+# poly2bbox
+#
+def poly2bbox(poly):
+    lats = [p["lat"] for p in poly]
+    lons = [p["lon"] for p in poly]
+    bbox = [ min(lons), min(lats), max(lons), max(lats) ]
+    return bbox
+
+###############################################################################
 # APIs
 ###############################################################################
 
@@ -63,7 +76,7 @@ def sample(asset, coordinates, parms={}):
     -------
     GeoDataFrame
         geolocated sampled values along with metadata
-    
+
     Examples
     --------
         >>> import sliderule
@@ -72,15 +85,15 @@ def sample(asset, coordinates, parms={}):
     # Massage Arguments
     if type(coordinates[0]) != list:
         coorindates = [coorindates]
-    
+
     # Perform Request
     rqst = {"samples": {"asset": asset, **parms}, "coordinates": coordinates}
     rsps = sliderule.source("samples", rqst)
-    
+
     # Sanity Check Response
     if len(rsps) <= 0:
         return sliderule.emptyframe()
-    
+
     # Count Records
     num_records = 0
     for input_coord_response in rsps["samples"]:
@@ -100,26 +113,26 @@ def sample(asset, coordinates, parms={}):
 
     # Build Initial Columns
     columns = {
-        'time': numpy.empty(num_records, numpy.int64), 
-        'latitude': numpy.empty(num_records, numpy.double), 
-        'longitude': numpy.empty(num_records, numpy.double), 
-        'file': [], 
+        'time': numpy.empty(num_records, numpy.int64),
+        'latitude': numpy.empty(num_records, numpy.double),
+        'longitude': numpy.empty(num_records, numpy.double),
+        'file': [],
         'value': numpy.empty(num_records, value_nptype)
     }
     if 'with_flags' in parms:
         columns = {
-            'flags': numpy.empty(num_records, flags_nptype), 
+            'flags': numpy.empty(num_records, flags_nptype),
             **columns
         }
     if 'zonal_stats' in parms:
         columns = {
-            'count': numpy.empty(num_records, count_nptype), 
-            'min': numpy.empty(num_records, min_nptype), 
-            'max': numpy.empty(num_records, max_nptype), 
-            'mean': numpy.empty(num_records, mean_nptype), 
-            'median': numpy.empty(num_records, median_nptype), 
-            'stdev': numpy.empty(num_records, stdev_nptype), 
-            'mad': numpy.empty(num_records, mad_nptype), 
+            'count': numpy.empty(num_records, count_nptype),
+            'min': numpy.empty(num_records, min_nptype),
+            'max': numpy.empty(num_records, max_nptype),
+            'mean': numpy.empty(num_records, mean_nptype),
+            'median': numpy.empty(num_records, median_nptype),
+            'stdev': numpy.empty(num_records, stdev_nptype),
+            'mad': numpy.empty(num_records, mad_nptype),
             **columns
         }
 

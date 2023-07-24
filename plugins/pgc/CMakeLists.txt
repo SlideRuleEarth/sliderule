@@ -60,7 +60,6 @@ target_sources(pgc
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcWkt.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemMosaicRaster.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemStripsRaster.cpp
 )
 
@@ -80,7 +79,6 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcWkt.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemStripsRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemMosaicRaster.h

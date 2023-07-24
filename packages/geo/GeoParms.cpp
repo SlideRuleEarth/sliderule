@@ -52,6 +52,8 @@ const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
 const char* GeoParms::USE_POI_TIME          = "use_poi_time";
+const char* GeoParms::PROJ_PIPELINE         = "proj_pipeline";
+const char* GeoParms::AOI_BBOX              = "aoi_bbox";
 const char* GeoParms::CATALOG               = "catalog";
 const char* GeoParms::BANDS                 = "bands";
 const char* GeoParms::ASSET                 = "asset";
@@ -115,6 +117,8 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     url_substring       (NULL),
     filter_closest_time (false),
     use_poi_time        (false),
+    proj_pipeline       (NULL),
+    aoi_bbox            {0, 0, 0, 0},
     catalog             (NULL),
     asset_name          (NULL),
     asset               (NULL),
@@ -227,6 +231,18 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             if(field_provided) mlog(DEBUG, "Setting %s to %d", USE_POI_TIME, (int)use_poi_time);
             lua_pop(L, 1);
 
+            /* PROJ pipeline for projection transform */
+            lua_getfield(L, index, PROJ_PIPELINE);
+            proj_pipeline = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
+            if(proj_pipeline) mlog(DEBUG, "Setting %s to %s", PROJ_PIPELINE, proj_pipeline);
+            lua_pop(L, 1);
+
+            /* AOI BBOX */
+            lua_getfield(L, index, AOI_BBOX);
+            getAoiBbox(L, -1, &field_provided);
+            if(field_provided) mlog(CRITICAL, "Setting %s to [%.4lf, %.4lf, %.4lf, %.4lf]", AOI_BBOX, aoi_bbox.lon_min, aoi_bbox.lat_min, aoi_bbox.lon_max, aoi_bbox.lat_max);
+            lua_pop(L, 1);
+
             /* Catalog */
             lua_getfield(L, index, CATALOG);
             const char* catalog_str = LuaObject::getLuaString(L, -1, true, NULL);
@@ -302,6 +318,12 @@ void GeoParms::cleanup (void)
         asset->releaseLuaObject();
         asset = NULL;
     }
+
+    if(proj_pipeline)
+    {
+        delete [] proj_pipeline;
+        proj_pipeline = NULL;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -357,6 +379,53 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
     {
         mlog(ERROR, "Bands must be provided as a table or string");
     }
+}
+
+/*----------------------------------------------------------------------------
+ * getAoiBbox - [min_lon, min_lat, max_lon, max_lat]
+ *----------------------------------------------------------------------------*/
+void GeoParms::getAoiBbox (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    *provided = false;
+
+    /* Must be table of coordinates */
+    if(!lua_istable(L, index))
+    {
+        mlog(DEBUG, "bounding box must be supplied as a table");
+        return;
+    }
+
+    /* Get Number of Points in BBOX */
+    int num_points = lua_rawlen(L, index);
+    if(num_points != 4)
+    {
+        mlog(ERROR, "bounding box must be supplied as four points");
+        return;
+    }
+
+    /* Get Minimum Longitude */
+    lua_rawgeti(L, index, 1);
+    aoi_bbox.lon_min = LuaObject::getLuaFloat(L, -1);
+    lua_pop(L, 1);
+
+    /* Get Minimum Latitude */
+    lua_rawgeti(L, index, 2);
+    aoi_bbox.lat_min = LuaObject::getLuaFloat(L, -1);
+    lua_pop(L, 1);
+
+    /* Get Maximum Longitude */
+    lua_rawgeti(L, index, 3);
+    aoi_bbox.lon_max = LuaObject::getLuaFloat(L, -1);
+    lua_pop(L, 1);
+
+    /* Get Maximum Latitude */
+    lua_rawgeti(L, index, 4);
+    aoi_bbox.lat_max = LuaObject::getLuaFloat(L, -1);
+    lua_pop(L, 1);
+
+    /* Set Provided */
+    *provided = true;
 }
 
 /*----------------------------------------------------------------------------

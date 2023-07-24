@@ -73,6 +73,8 @@ class GeoParms: public LuaObject
         static const char* URL_SUBSTRING;
         static const char* CLOSEST_TIME;
         static const char* USE_POI_TIME;
+        static const char* PROJ_PIPELINE;
+        static const char* AOI_BBOX;
         static const char* CATALOG;
         static const char* BANDS;
         static const char* ASSET;
@@ -98,6 +100,13 @@ class GeoParms: public LuaObject
 
         typedef MgList<const char*, 8, true> band_list_t;
 
+        typedef struct {
+            double lon_min;
+            double lat_min;
+            double lon_max;
+            double lat_max;
+        } bbox_t;
+
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
@@ -113,6 +122,8 @@ class GeoParms: public LuaObject
         bool                filter_closest_time;
         TimeLib::gmt_time_t closest_time;
         bool                use_poi_time;
+        const char*         proj_pipeline;
+        bbox_t              aoi_bbox;
         const char*         catalog;
         band_list_t         bands;
         const char*         asset_name;
@@ -136,6 +147,8 @@ class GeoParms: public LuaObject
         void                cleanup         (void);
         GDALRIOResampleAlg  str2algo        (const char* str);
         void                getLuaBands     (lua_State* L, int index, bool* provided);
+        void                getAoiBbox      (lua_State* L, int index, bool* provided);
+
         static int          luaAssetName    (lua_State* L);
         static int          luaAssetRegion  (lua_State* L);
         static int          luaSetKeySpace  (lua_State* L);

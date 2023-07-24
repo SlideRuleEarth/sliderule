@@ -36,14 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <string>
-#include "VctRaster.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
- * ARCTICDEM STRIPS RASTER CLASS
+ * LANDSAT RASTER CLASS
  ******************************************************************************/
 
-class LandsatHlsRaster: public VctRaster
+class LandsatHlsRaster: public GeoIndexedRaster
 {
     public:
 
@@ -82,10 +81,11 @@ class LandsatHlsRaster: public VctRaster
          *--------------------------------------------------------------------*/
 
                 LandsatHlsRaster (lua_State* L, GeoParms* _parms);
+       virtual ~LandsatHlsRaster (void);
 
-        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) override;
-        bool    findRasters      (OGRPoint &p) override;
-        void    getGroupSamples  (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags) override;
+        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
+        bool    findRasters      (GdalRaster::Point &p) final;
+        void    getGroupSamples  (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags) final;
 
         /*--------------------------------------------------------------------
          * Data

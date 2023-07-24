@@ -34,11 +34,6 @@
  ******************************************************************************/
 
 #include "LandsatHlsRaster.h"
-#include "TimeLib.h"
-
-#include <strings.h>
-#include <uuid/uuid.h>
-#include <cstring>
 
 /******************************************************************************
  * PRIVATE IMPLEMENTATION
@@ -51,12 +46,12 @@
 /* Landsat 8 */
 const char* LandsatHlsRaster::L8_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B09", "B10", "B11",
-                                           "SAA", "SZA", "VAA", "VZA", FLAGS_RASTER_TAG};
+                                           "SAA", "SZA", "VAA", "VZA", "Fmask"};
 /* Sentinel 2 */
 const char* LandsatHlsRaster::S2_bands[] = {"B01", "B02", "B03", "B04", "B05",
                                            "B06", "B07", "B08", "B09", "B10",
                                            "B11", "B12", "B8A", "SAA", "SZA",
-                                           "VAA", "VZA", FLAGS_RASTER_TAG};
+                                           "VAA", "VZA", "Fmask"};
 /* Algorithm names (not real bands) */
 const char* LandsatHlsRaster::ALGO_names[] = {"NDSI", "NDVI", "NDWI"};
 
@@ -68,6 +63,8 @@ const char* LandsatHlsRaster::ALGO_bands[] = {"B03", "B04", "B05", "B06", "B8A",
 #define S2_bandCnt   (sizeof (S2_bands)   / sizeof (const char *))
 #define ALGO_nameCnt (sizeof (ALGO_names) / sizeof (const char *))
 #define ALGO_bandCnt (sizeof (ALGO_bands) / sizeof (const char *))
+
+#define MAX_LANDSAT_RASTER_GROUP_SIZE (std::max(S2_bandCnt, L8_bandCnt) + ALGO_nameCnt)
 
 const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected";
 
@@ -84,10 +81,10 @@ const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa
  * Constructor
  *----------------------------------------------------------------------------*/
 LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
-    VctRaster(L, _parms)
+ GeoIndexedRaster(L, _parms),
+ filePath(_parms->asset->getPath()),
+ indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
-    char uuid_str[UUID_STR_LEN];
-
     ndsi = ndvi = ndwi = false;
 
     if(_parms->catalog == NULL)
@@ -95,9 +92,6 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 
     if(_parms->bands.length() == 0)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
-
-    filePath.append(_parms->asset->getPath());
-    indexFile = "/vsimem/" + std::string(getUUID(uuid_str)) + ".geojson";
 
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
@@ -137,10 +131,10 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
         }
     }
 
-    /* If user specified flags, add group Fmask to dictionary of bands */
+    /* If user specified flags, add group's Fmask to dictionary of bands */
     if(_parms->flags_file)
     {
-        const char* band = FLAGS_RASTER_TAG;
+        const char* band = "Fmask";
         if(!bandsDict.find(band, &returnBandSample))
         {
             returnBandSample = false;
@@ -150,13 +144,20 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 }
 
 /*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+LandsatHlsRaster::~LandsatHlsRaster(void)
+{
+    VSIUnlink(indexFile.c_str());
+}
+
+/*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 {
-    (void)lon;
-    (void)lat;
-    // file = "/data/hls/hls_trimmed.geojson";
+    std::ignore = lon;
+    std::ignore = lat;
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
@@ -165,11 +166,11 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool LandsatHlsRaster::findRasters(OGRPoint& p)
+bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
 {
     try
     {
-        rasterGroupList->clear();
+        OGRPoint point(p.x, p.y, p.z);
 
         for(int i = 0; i < featuresList.length(); i++)
         {
@@ -177,12 +178,13 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
             OGRGeometry *geo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(!geo->Contains(&p)) continue;
+            if(!geo->Contains(&point)) continue;
 
-            rasters_group_t rgroup;
-            rgroup.id = feature->GetFieldAsString("id");
-            double gps = getGmtDate(feature, "datetime", rgroup.gmtDate);
-            rgroup.gpsTime = gps;
+            /* Set raster group time and group id */
+            rasters_group_t* rgroup = new rasters_group_t;
+            rgroup->infovect.reserve(MAX_LANDSAT_RASTER_GROUP_SIZE);
+            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
 
             /* Find each requested band in the index file */
             bool val;
@@ -203,44 +205,51 @@ bool LandsatHlsRaster::findRasters(OGRPoint& p)
                     const size_t pos = strlen(URL_str);
 
                     raster_info_t rinfo;
+                    rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
-                    rinfo.tag = bandName;
-                    rinfo.gpsTime = rgroup.gpsTime;
-                    rinfo.gmtDate = rgroup.gmtDate;
 
-                    rgroup.list.add(rgroup.list.length(), rinfo);
+                    if(strcmp(bandName, "Fmask") == 0)
+                    {
+                        /* Use base class generic flags tag */
+                        rinfo.tag = FLAGS_TAG;
+                    }
+                    else
+                    {
+                        rinfo.tag = bandName;
+                    }
+                    rgroup->infovect.push_back(rinfo);
                 }
                 bandName = bandsDict.next(&val);
             }
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup.id.c_str(), rgroup.list.length());
-            rasterGroupList->add(rasterGroupList->length(), rgroup);
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+            groupList.add(groupList.length(), rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", rasterGroupList->length(), p.getX(), p.getY());
+        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (rasterGroupList->length() > 0);
+    return (groupList.length() > 0);
 }
 
 
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<sample_t>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;
     bool isS2 = false;
     std::size_t pos;
 
-    pos = rgroup.id.find("HLS.L30");
+    pos = rgroup->id.find("HLS.L30");
     if(pos != std::string::npos) isL8 = true;
 
-    pos = rgroup.id.find("HLS.S30");
+    pos = rgroup->id.find("HLS.S30");
     if(pos != std::string::npos) isS2 = true;
 
     if(!isL8 && !isS2)
@@ -251,20 +260,18 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
     green = red = nir08 = swir16 = invalid;
 
     /* Collect samples for all rasters */
-    Ordering<raster_info_t>::Iterator raster_iter(rgroup.list);
-    for(int j = 0; j < raster_iter.length; j++)
+    for(const auto& rinfo: rgroup->infovect)
     {
-        const raster_info_t& rinfo = raster_iter[j].value;
-        const char* key            = rinfo.fileName.c_str();
-        Raster* raster             = NULL;
-        if(rasterDict.find(key, &raster))
+        const char* key = rinfo.fileName.c_str();
+        cacheitem_t* item;
+        if(cache.find(key, &item))
         {
-            assert(raster);
-            if(raster->enabled && raster->sampled)
+            if(item->enabled && item->raster->sampled())
             {
                 /* Update dictionary of used raster files */
-                raster->sample.fileId = fileDictAdd(raster->fileName);
-                raster->sample.flags  = flags;
+                RasterSample& sample  = item->raster->getSample();
+                sample.fileId = fileDictAdd(item->raster->getFileName());
+                sample.flags  = flags;
 
                 /* Is this band's sample to be returned to the user? */
                 bool returnBandSample = false;
@@ -272,35 +279,35 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
                 if(bandsDict.find(bandName, &returnBandSample))
                 {
                     if(returnBandSample)
-                        slist.add(raster->sample);
+                        slist.add(sample);
                 }
 
                 /* green and red bands are the same for L8 and S2 */
-                if(rinfo.tag == "B03") green = raster->sample.value;
-                if(rinfo.tag == "B04") red = raster->sample.value;
+                if(rinfo.tag == "B03") green = sample.value;
+                if(rinfo.tag == "B04") red = sample.value;
 
                 if(isL8)
                 {
-                    if(rinfo.tag == "B05") nir08 = raster->sample.value;
-                    if(rinfo.tag == "B06") swir16 = raster->sample.value;
+                    if(rinfo.tag == "B05") nir08 = sample.value;
+                    if(rinfo.tag == "B06") swir16 = sample.value;
                 }
                 else /* Must be Sentinel2 */
                 {
-                    if(rinfo.tag == "B8A") nir08 = raster->sample.value;
-                    if(rinfo.tag == "B11") swir16 = raster->sample.value;
+                    if(rinfo.tag == "B8A") nir08 = sample.value;
+                    if(rinfo.tag == "B11") swir16 = sample.value;
                 }
             }
         }
     }
 
-    sample_t sample;
-    double groupTime = rgroup.gpsTime / 1000;
-    std::string groupName = rgroup.id + " {\"algo\": \"";
+    RasterSample sample;
+    double groupTime = rgroup->gpsTime / 1000;
+    std::string groupName = rgroup->id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)
     {
-        bzero(&sample, sizeof(sample));
+        sample.clear();
         if((green != invalid) && (swir16 != invalid))
             sample.value = (green - swir16) / (green + swir16);
         else sample.value = invalid;
@@ -312,7 +319,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
 
     if(ndvi)
     {
-        bzero(&sample, sizeof(sample));
+        sample.clear();
         if((red != invalid) && (nir08 != invalid))
             sample.value = (nir08 - red) / (nir08 + red);
         else sample.value = invalid;
@@ -324,7 +331,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t& rgroup, List<samp
 
     if(ndwi)
     {
-        bzero(&sample, sizeof(sample));
+        sample.clear();
         if((nir08 != invalid) && (swir16 != invalid))
             sample.value = (nir08 - swir16) / (nir08 + swir16);
         else sample.value = invalid;
