@@ -166,7 +166,7 @@ if __name__ == '__main__':
     }
 
     # Override Parameters
-    parms = parse_command_line(sys.argv, parms)
+    parse_command_line(sys.argv, parms)
 
     # Default Request
     rqst = {
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     }
 
     # Override Request
-    rqst = parse_command_line(sys.argv, rqst)
+    parse_command_line(sys.argv, rqst)
 
     # Set URL and Organization
     sliderule.set_url(parms["url"])

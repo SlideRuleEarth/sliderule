@@ -1032,7 +1032,7 @@ def gps2utc (gps_time, as_str=True):
 
     Parameters
     ----------
-        gps_time:   int
+        gps_time:   float
                     number of seconds since GPS epoch (January 6, 1980)
         as_str:     bool
                     if True, returns the time as a string; if False, returns the time as datatime object
@@ -1048,7 +1048,7 @@ def gps2utc (gps_time, as_str=True):
         >>> sliderule.gps2utc(1235331234)
         '2019-02-27 19:34:03'
     '''
-    rsps = source("time", {"time": gps_time, "input": "GPS", "output": "DATE"})
+    rsps = source("time", {"time": int(gps_time * 1000), "input": "GPS", "output": "DATE"})
     if as_str:
         return rsps["time"]
     else:

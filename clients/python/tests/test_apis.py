@@ -38,7 +38,7 @@ class TestTime:
 
     def test_gps2utc(self, domain, organization, desired_nodes):
         sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        utc = sliderule.gps2utc(1235331234000)
+        utc = sliderule.gps2utc(1235331234)
         assert utc == '2019-02-27T19:33:36Z'
 
 #

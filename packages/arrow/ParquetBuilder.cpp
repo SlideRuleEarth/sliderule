@@ -585,6 +585,9 @@ void* ParquetBuilder::builderThread(void* parm)
         return NULL;
     }
 
+    /* Start Trace */
+    uint32_t trace_id = start_trace(INFO, ORIGIN, "parquet_builder", "{\"filename\":\"%s\"}", builder->fileName);
+
     /* Loop Forever */
     while(builder->active)
     {
@@ -681,6 +684,9 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Signal Completion */
     builder->signalComplete();
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 
     /* Exit Thread */
     return NULL;

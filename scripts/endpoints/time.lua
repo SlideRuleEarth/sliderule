@@ -21,7 +21,7 @@
 --                          ms = 4 bytes of milliseconds in the current day
 --                  GMT -   UTC time represented as
 --                          "<year>:<day of year>:<hour in day>:<minute in hour>:<second in minute>"
---                  GPS -   seconds since GPS epoch "January 6, 1980"
+--                  GPS -   milliseconds since GPS epoch "January 6, 1980"
 --                  DATE-   UTC time represented as
 --                          "<year>-<month>-<day of month>T<hour in day>:<minute in hour>:<second in minute>Z""
 --              3. The GMT output is always in Day of Year format
