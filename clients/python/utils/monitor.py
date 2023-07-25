@@ -39,11 +39,11 @@ def display_trace(trace, depth):
     stop_time       = trace["stop"]['time']
     sec_from_origin = start_time / 1e3
     sec_duration    = (stop_time - start_time) / 1e3
-    dt              = sliderule.gps2utc(sec_from_origin)
+    dt              = sec_from_origin # sliderule.gps2utc(sec_from_origin)
     name            = trace["start"]['name']
     attributes      = trace["start"]['attr']
     # Print trace
-    print('{} ({:7.3f} sec):{:{indent}}{:{width}} <{}> {} [{}]'.format(dt, sec_duration, "", str(name), thread_id, attributes, trace_id, indent=depth, width=30-depth))
+    print('{:.3f} ({:7.3f} sec):{:{indent}}{:{width}} <{}> {} [{}]'.format(dt, sec_duration, "", str(name), thread_id, attributes, trace_id, indent=depth, width=30-depth))
     # Recurse on children
     for child in trace["children"]:
         display_trace(child, depth + 2)
