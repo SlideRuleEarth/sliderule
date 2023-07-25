@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "Uluru",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "name": "Uluru" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 130.852689177411321, -25.158834723644738 ], [ 131.229882084981341, -25.158834723644738 ], [ 131.230629001630007, -25.532293047971489 ], [ 130.858664510600562, -25.534533797917447 ], [ 130.852689177411321, -25.158834723644738 ] ] ] } }
+]
+}

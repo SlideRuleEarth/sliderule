@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "name": "48_36_N__82_0_E",
+  "crs": {
+    "type": "name",
+    "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }
+  },
+  "features": [ {
+    "type": "Feature",
+    "properties": { },
+    "geometry": { "type": "Polygon", "coordinates": [ [ [ 81.55, 49.050000000000004 ], [ 81.55, 48.15 ], [ 82.45, 48.15 ], [ 82.45, 49.050000000000004 ], [ 81.55, 49.050000000000004 ] ] ] }
+  } ]
+}
