@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     # Defaults
     cfg = {
-        "region": "examples/grandmesa.geojson",
+        "region": "tests/data/grandmesa.geojson",
         "tolerance": 0.0,
         "dataset": "ATL03",
         "version": "005",
