@@ -436,6 +436,7 @@ struct H5Coro
         long                    startrow;
         long                    numrows;
         context_t*              context;
+        uint32_t                traceid;
         H5Future*               h5f;
     } read_rqst_t;
 
@@ -445,7 +446,7 @@ struct H5Coro
 
     static void         init            (int num_threads);
     static void         deinit          (void);
-    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL, bool _meta_only=false);
+    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL, bool _meta_only=false, uint32_t parent_trace_id=ORIGIN);
     static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
 
     static H5Future*    readp           (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);

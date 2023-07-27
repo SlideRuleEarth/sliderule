@@ -107,7 +107,6 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
 {
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     /* Set Record */
     recObj = new RecordObject(recType);
@@ -135,7 +134,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     /* Read File */
     try
     {
-        H5Coro::info_t info = H5Coro::read(asset, resource, dataName, datatype, col, startrow, numrows);
+        H5Coro::info_t info = H5Coro::read(asset, resource, dataName, datatype, col, startrow, numrows, NULL, false, trace_id);
         recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;

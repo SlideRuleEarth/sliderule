@@ -129,7 +129,7 @@ void* H5File::readThread (void* parm)
     try
     {
         /* Read Dataset */
-        results = H5Coro::read(info->h5file->asset, info->h5file->resource, info->dataset, info->valtype, info->col, info->startrow, info->numrows, &(info->h5file->context));
+        results = H5Coro::read(info->h5file->asset, info->h5file->resource, info->dataset, info->valtype, info->col, info->startrow, info->numrows, &(info->h5file->context), false, info->h5file->traceId);
     }
     catch (const RunTimeException& e)
     {

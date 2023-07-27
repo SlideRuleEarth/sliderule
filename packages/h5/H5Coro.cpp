@@ -3444,12 +3444,11 @@ void H5Coro::deinit (void)
 /*----------------------------------------------------------------------------
  * read
  *----------------------------------------------------------------------------*/
-H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context, bool _meta_only)
+H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context, bool _meta_only, uint32_t parent_trace_id)
 {
     info_t info;
 
     /* Start Trace */
-    uint32_t parent_trace_id = EventLib::grabId();
     uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
 
     /* Open Resource and Read Dataset */
@@ -3690,6 +3689,7 @@ H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* d
         .startrow       = startrow,
         .numrows        = numrows,
         .context        = context,
+        .traceid        = EventLib::grabId(),
         .h5f            = new H5Future()
     };
 
@@ -3724,7 +3724,7 @@ void* H5Coro::reader_thread (void* parm)
             bool valid;
             try
             {
-                rqst.h5f->info = read(rqst.asset, rqst.resource, rqst.datasetname, rqst.valtype, rqst.col, rqst.startrow, rqst.numrows, rqst.context);
+                rqst.h5f->info = read(rqst.asset, rqst.resource, rqst.datasetname, rqst.valtype, rqst.col, rqst.startrow, rqst.numrows, rqst.context, false, rqst.traceid);
                 valid = true;
             }
             catch(const RunTimeException& e)

@@ -207,6 +207,9 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     numComplete = 0;
     memset(readerPid, 0, sizeof(readerPid));
 
+    /* Set Thread Specific Trace ID for H5Coro */
+    EventLib::stashId (traceId);
+
     /* Read Global Resource Information */
     try
     {
@@ -1236,7 +1239,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     uint32_t extent_counter = 0;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try

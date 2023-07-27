@@ -173,7 +173,7 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
         if(!value_cached)
         {
             H5Coro::context_t context;
-            H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context);
+            H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
             assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
             int32_t* tile = (int32_t*)info.data;
 

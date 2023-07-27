@@ -460,12 +460,11 @@ void* SwotL2Reader::varThread (void* parm)
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
-    EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Read Dataset */
-        results = H5Coro::read(reader->asset, reader->resource, info->variable_name, RecordObject::DYNAMIC, H5Coro::ALL_COLS, reader->region.first_line, reader->region.num_lines, &(reader->context));
+        results = H5Coro::read(reader->asset, reader->resource, info->variable_name, RecordObject::DYNAMIC, H5Coro::ALL_COLS, reader->region.first_line, reader->region.num_lines, &(reader->context), false, trace_id);
 
         /* Post Results to Output Queue */
         if(results.data)
