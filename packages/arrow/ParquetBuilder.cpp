@@ -587,6 +587,7 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, builder->traceId, "parquet_builder", "{\"filename\":\"%s\"}", builder->fileName);
+    EventLib::stashId(trace_id);
 
     /* Loop Forever */
     while(builder->active)
@@ -699,10 +700,15 @@ void ParquetBuilder::processRecordBatch (int num_rows)
 {
     batch_t batch;
 
+    /* Start Trace */
+    uint32_t parent_trace_id = EventLib::grabId();
+    uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "%s", "{}");
+
     /* Loop Through Fields in Schema */
     vector<shared_ptr<arrow::Array>> columns;
     for(int i = 0; i < fieldIterator->length; i++)
     {
+        uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": \"%d\", \"rows\": %d}", i, batch.rows);
         RecordObject::field_t field = (*fieldIterator)[i];
         shared_ptr<arrow::Array> column;
 
@@ -958,15 +964,19 @@ void ParquetBuilder::processRecordBatch (int num_rows)
 
         /* Add Column to Columns */
         columns.push_back(column);
+        stop_trace(INFO, field_trace_id);
     }
 
     /* Add Geometry Column (if GeoParquet) */
     if(geoData.as_geo)
     {
+        uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
         RecordObject::field_t lon_field = geoData.lon_field;
         RecordObject::field_t lat_field = geoData.lat_field;
         shared_ptr<arrow::Array> column;
         arrow::BinaryBuilder builder;
+        (void)builder.Reserve(num_rows);
+        (void)builder.ReserveData(num_rows * sizeof(wkbpoint_t));
         unsigned long key = recordBatch.first(&batch);
         while(key != (unsigned long)INVALID_KEY)
         {
@@ -984,7 +994,7 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                     .x = batch.record->getValueReal(lon_field),
                     .y = batch.record->getValueReal(lat_field)
                 };
-                (void)builder.Append((uint8_t*)&point, sizeof(wkbpoint_t));
+                (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(wkbpoint_t));
                 lon_field.offset += rowSizeBytes * 8;
                 lat_field.offset += rowSizeBytes * 8;
             }
@@ -994,16 +1004,20 @@ void ParquetBuilder::processRecordBatch (int num_rows)
         }
         (void)builder.Finish(&column);
         columns.push_back(column);
+        stop_trace(INFO, geo_trace_id);
     }
 
     /* Build and Write Table */
+    uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
     if(pimpl->parquetWriter)
     {
         shared_ptr<arrow::Table> table = arrow::Table::Make(pimpl->schema, columns);
         (void)pimpl->parquetWriter->WriteTable(*table, num_rows);
     }
+    stop_trace(INFO, write_trace_id);
 
     /* Clear Record Batch */
+    uint32_t clear_trace_id = start_trace(INFO, trace_id, "clear_batch", "%s", "{}");
     unsigned long key = recordBatch.first(&batch);
     while(key != (unsigned long)INVALID_KEY)
     {
@@ -1012,6 +1026,10 @@ void ParquetBuilder::processRecordBatch (int num_rows)
         key = recordBatch.next(&batch);
     }
     recordBatch.clear();
+    stop_trace(INFO, clear_trace_id);
+
+    /* Stop Trace */
+    stop_trace(INFO, trace_id);
 }
 
 /*----------------------------------------------------------------------------

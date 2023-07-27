@@ -79,9 +79,12 @@ def write_sta_setup(filename, perf_ids):
         index += 1
     f.close()
 
-def build_event_list(trace, depth, max_depth, names, events, perf_ids):
-    # Get Perf ID
+def build_event_list(trace, depth, max_depth, names, events, perf_ids, filter_list):
     name = trace["name"]
+    # Filter
+    if name.split(".")[0] in filter_list:
+        return
+    # Get Perf ID
     perf_id = names.index(name)
     perf_ids[name] = {"id": perf_id, "depth": depth}
     # Append Events
@@ -93,24 +96,20 @@ def build_event_list(trace, depth, max_depth, names, events, perf_ids):
     # Recurse on Children
     if (depth < max_depth) or (max_depth == 0):
         for child in trace["children"]:
-            build_event_list(child, depth + 1, max_depth, names, events, perf_ids)
+            build_event_list(child, depth + 1, max_depth, names, events, perf_ids, filter_list)
 
 def console_output(origins):
     # Output traces to console
     for trace in origins:
         display_trace(trace, 1)
 
-def sta_output(idlist, depth, names, traces):
+def sta_output(filter_list, depth, names, traces):
     global origins
     # Build list of events and names
     events = []
     perf_ids = {}
-    if len(idlist) > 0:
-        for trace_id in idlist:
-            build_event_list(traces[trace_id], 1, depth, names, events, perf_ids)
-    else:
-        for trace in origins:
-            build_event_list(trace, 1, depth, names, events, perf_ids)
+    for trace in origins:
+        build_event_list(trace, 1, depth, names, events, perf_ids, filter_list)
     # Build and sort data frame
     df = pandas.DataFrame(events)
     df = df.sort_values("time")
@@ -162,7 +161,7 @@ if __name__ == '__main__':
         "organization": None,
         "fmt": "console",
         "depth": 0,
-        "ids": []
+        "filter": []
     }
 
     # Override Parameters
@@ -185,11 +184,9 @@ if __name__ == '__main__':
     # Connect to SlideRule
     rsps = sliderule.source("event", rqst, stream=True, callbacks={'eventrec': process_event})
 
-    # Flatten names to get indexes
+    # Flatten Names to Get Indexes
     names = list(names)
 
-    # Run commanded operation
-    if parms["fmt"] == "console":
-        console_output(origins)
-    elif parms["fmt"] == "sta":
-        sta_output(parms["ids"], parms["depth"], names, traces)
+    # Output Traces
+    console_output(origins)
+    sta_output(parms["filter"], parms["depth"], names, traces)

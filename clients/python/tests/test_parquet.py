@@ -91,3 +91,20 @@ class TestParquet:
         assert len(gdf) == 20660
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.349347328')
         assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582347520')
+
+    def test_atl03_perf(self, domain, asset, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        resource = "ATL03_20200212232313_07370602_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "poly": region["poly"],
+            "srt": icesat2.SRT_LAND,
+            "cnf": icesat2.CNF_SURFACE_LOW,
+            "ats": 3.0,
+            "cnt": 2,
+            "len": 10.0,
+            "res": 10.0,
+            "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True } }
+        gdf = icesat2.atl03sp(parms, asset=asset, resources=[resource])
+        os.remove("testfile5.parquet")
+        assert len(gdf) == 791696
