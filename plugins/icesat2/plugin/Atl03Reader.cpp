@@ -213,18 +213,11 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
-        /* Read ATL03 Global Data */
-        sc_orient = NULL;
-        sc_orient = new H5Array<int8_t> (asset, resource, "/orbit_info/sc_orient", &context);
-
         /* Set Metrics */
         PluginMetrics::setRegion(parms);
 
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
-
-        /* Join Global Data */
-        sc_orient->join(read_timeout_ms, true);
 
         /* Read ATL03 Track Data */
         if(parms->track == Icesat2Parms::ALL_TRACKS)
@@ -287,8 +280,6 @@ Atl03Reader::~Atl03Reader (void)
 
     delete [] resource;
     delete [] resource08;
-
-    if(sc_orient) delete sc_orient;
 
     asset->releaseLuaObject();
 }
@@ -542,6 +533,7 @@ void Atl03Reader::Region::rasterregion (info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
+    sc_orient           (info->reader->asset, info->reader->resource,              "/orbit_info/sc_orient",       &info->reader->context),
     velocity_sc         (info->reader->asset, info->reader->resource, info->track, "geolocation/velocity_sc",     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->asset, info->reader->resource, info->track, "geolocation/delta_time",      &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id          (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_id",      &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -595,6 +587,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     }
 
     /* Join Hardcoded Reads */
+    sc_orient.join(info->reader->read_timeout_ms, true);
     velocity_sc.join(info->reader->read_timeout_ms, true);
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_id.join(info->reader->read_timeout_ms, true);
@@ -778,7 +771,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
                         /* Run ABoVE Classifier (if specified) */
                         if(info->reader->parms->phoreal.above_classifier && (gt[t][atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
                         {
-                            uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)(*info->reader->sc_orient)[0], (Icesat2Parms::track_t)info->track, t);
+                            uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, t);
                             if( (atl03.solar_elevation[t][atl03_segment] <= 5.0) &&
                                 ((spot == 1) || (spot == 3) || (spot == 5)) &&
                                 (atl03.signal_conf_ph[t][atl03_photon] == Icesat2Parms::CNF_SURFACE_HIGH) &&
@@ -1656,7 +1649,7 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     extent_t* extent = (extent_t*)record.getRecordData();
     extent->extent_id = extent_id;
     extent->reference_pair_track = track;
-    extent->spacecraft_orientation = (*sc_orient)[0];
+    extent->spacecraft_orientation = atl03.sc_orient[0];
     extent->reference_ground_track_start = start_rgt;
     extent->cycle_start = start_cycle;
 
@@ -1728,7 +1721,7 @@ bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState&
     uint32_t ph_out = 0;
     for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
-        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)(*sc_orient)[0], (Icesat2Parms::track_t)track, t);
+        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)track, t);
         uint32_t segment_id = calculateSegmentId(t, state, atl03);
 
         /* Populate Photons */

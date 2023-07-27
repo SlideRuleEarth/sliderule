@@ -215,6 +215,7 @@ class Atl03Reader: public LuaObject
                 ~Atl03Data          (void);
 
                 /* Read Data */
+                H5Array<int8_t>     sc_orient;
                 GTArray<float>      velocity_sc;
                 GTArray<double>     segment_delta_time;
                 GTArray<int32_t>    segment_id;
@@ -339,14 +340,13 @@ class Atl03Reader: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Parms*          parms;
+        Icesat2Parms*       parms;
         bool                flatten;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context08; // for ATL08 file
 
-        H5Array<int8_t>*    sc_orient;
         int32_t             start_rgt;
         int32_t             start_cycle;
         int32_t             start_region;
