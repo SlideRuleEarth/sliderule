@@ -53,6 +53,7 @@ int arrow_open (lua_State* L)
 {
     static const struct luaL_Reg arrow_functions[] = {
         {"parquet",     ParquetBuilder::luaCreate},
+//        {"parquet",     ParquetWriter::luaCreate},
         {"parms",       ArrowParms::luaCreate},
         {NULL,          NULL}
     };
@@ -75,6 +76,7 @@ void initarrow (void)
 {
     /* Initialize Modules */
     ParquetBuilder::init();
+    ParquetWriter::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);

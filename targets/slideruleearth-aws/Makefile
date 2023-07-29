@@ -68,6 +68,7 @@ ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbr
 TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
 MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
+USERCFG ?=
 SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
 SLIDERULECFG += -DUSE_ARROW_PACKAGE=ON
 SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
@@ -76,6 +77,7 @@ SLIDERULECFG += -DUSE_NETSVC_PACKAGE=ON
 SLIDERULECFG += -DUSE_GEO_PACKAGE=ON
 SLIDERULECFG += -DUSE_LEGACY_PACKAGE=OFF
 SLIDERULECFG += -DUSE_CCSDS_PACKAGE=OFF
+SLIDERULECFG += $(USERCFG)
 
 all: sliderule
 

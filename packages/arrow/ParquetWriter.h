@@ -29,11 +29,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __parquet_builder__
-#define __parquet_builder__
+#ifndef __parquet_writer__
+#define __parquet_writer__
 
 /*
- * ParquetBuilder works on batches of records.  It expects the `batch_rec_type`
+ * ParquetWriter works on batches of records.  It expects the `batch_rec_type`
  * passed into the constructor to be the type that defines each of the column headings,
  * then it expects to receive records that are arrays (or batches) of that record
  * type.  The field defined as an array is transparent to this class - it just
@@ -53,10 +53,10 @@
 #include "MsgQ.h"
 
 /******************************************************************************
- * PARQUET BUILDER CLASS
+ * PARQUET WRITER DISPATCH CLASS
  ******************************************************************************/
 
-class ParquetBuilder: public LuaObject
+class ParquetWriter: public LuaObject
 {
     public:
 
@@ -158,11 +158,11 @@ class ParquetBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, ArrowParms* parms,
+                            ParquetWriter          (lua_State* L, ArrowParms* parms,
                                                      const char* outq_name, const char* inq_name,
                                                      const char* rec_type, const char* batch_rec_type,
                                                      const char* id, geo_data_t geo, const char* index_key);
-                            ~ParquetBuilder         (void);
+                            ~ParquetWriter         (void);
 
         static void*        builderThread           (void* parm);
         void                processRecordBatch      (int num_rows);
@@ -170,4 +170,4 @@ class ParquetBuilder: public LuaObject
         bool                send2Client             (void);
 };
 
-#endif  /* __parquet_builder__ */
+#endif  /* __parquet_writer__ */
