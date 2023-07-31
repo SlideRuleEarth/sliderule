@@ -238,7 +238,7 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     if(lvl < trace_level) return parent;
 
     /* Initialize Trace */
-    event.systime   = TimeLib::gpstime();
+    event.systime   = TimeLib::latchtime() * 1000000; // us
     event.tid       = Thread::getId();
     event.id        = trace_id++;;
     event.parent    = parent;
@@ -280,7 +280,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
     if(lvl < trace_level) return;
 
     /* Initialize Trace */
-    event.systime   = TimeLib::gpstime();
+    event.systime   = TimeLib::latchtime() * 1000000; // us
     event.tid       = 0;
     event.id        = id;
     event.parent    = ORIGIN;
@@ -292,7 +292,6 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
 
     /* Copy IP Address */
     StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
-
 
     /* Send Event */
     sendEvent(&event, 1);

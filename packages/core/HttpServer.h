@@ -111,6 +111,7 @@ class HttpServer: public LuaObject
 
         typedef struct {
             char*                       id;
+            uint32_t                    trace_id;
             rqst_state_t                rqst_state;
             rsps_state_t                rsps_state;
             double                      start_time;

@@ -198,7 +198,7 @@ void* LuaEndpoint::requestThread (void* parm)
     const char* script_pathname = LuaEngine::sanitize(request->resource);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, lua_endpoint->getTraceId(), "lua_endpoint", "{\"rqst_id\":\"%s\", \"verb\":\"%s\", \"resource\":\"%s\"}", request->id, verb2str(request->verb), request->resource);
+    uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
     mlog(lua_endpoint->logLevel, "%s %s: %s", verb2str(request->verb), request->resource, request->body);

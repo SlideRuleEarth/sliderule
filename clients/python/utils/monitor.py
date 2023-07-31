@@ -37,9 +37,9 @@ def display_trace(trace, depth):
     thread_id       = trace["start"]['tid']
     start_time      = trace["start"]['time']
     stop_time       = trace["stop"]['time']
-    sec_from_origin = start_time / 1e3
-    sec_duration    = (stop_time - start_time) / 1e3
-    dt              = sec_from_origin # sliderule.gps2utc(sec_from_origin)
+    sec_from_origin = start_time / 1e6
+    sec_duration    = (stop_time - start_time) / 1e6
+    dt              = sec_from_origin
     name            = trace["start"]['name']
     attributes      = trace["start"]['attr']
     # Print trace

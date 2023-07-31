@@ -66,7 +66,7 @@ class ParquetBuilder: public LuaObject
 
         static const int LIST_BLOCK_SIZE = 32;
         static const int FILE_NAME_MAX_LEN = 128;
-        static const int FILE_BUFFER_RSPS_SIZE = 0x1000000; // 16MB
+        static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
         static const int ROW_GROUP_SIZE = 0x4000000; // 64MB
         static const int QUEUE_BUFFER_FACTOR = 3;
 

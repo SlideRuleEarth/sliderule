@@ -87,7 +87,6 @@ class LuaObject
 
         const char*         getType             (void);
         const char*         getName             (void);
-        uint32_t            getTraceId          (void);
 
         static int          luaGetByName        (lua_State* L);
         static int          getLuaNumParms      (lua_State* L);

@@ -55,6 +55,7 @@ EndpointObject::Request::Request (const char* _id):
     headers(EXPECTED_MAX_HEADER_FIELDS)
 {
     id          = StringLib::duplicate(_id);
+    trace_id    = ORIGIN;
     path        = NULL;
     resource    = NULL;
     verb        = UNRECOGNIZED;

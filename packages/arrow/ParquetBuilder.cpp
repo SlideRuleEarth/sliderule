@@ -704,13 +704,13 @@ void ParquetBuilder::processRecordBatch (int num_rows)
 
     /* Start Trace */
     uint32_t parent_trace_id = EventLib::grabId();
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "%s", "{}");
+    uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
 
     /* Loop Through Fields in Schema */
     vector<shared_ptr<arrow::Array>> columns;
     for(int i = 0; i < fieldIterator->length; i++)
     {
-        uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": \"%d\", \"rows\": %d}", i, batch.rows);
+        uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
         RecordObject::field_t field = (*fieldIterator)[i];
         shared_ptr<arrow::Array> column;
 

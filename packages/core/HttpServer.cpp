@@ -160,8 +160,10 @@ void HttpServer::initConnection (connection_t* connection)
     connection->keep_alive = false;
     connection->id = new char [REQUEST_ID_LEN];
     StringLib::format(connection->id, REQUEST_ID_LEN, "%s.%ld", getName(), cnt);
+    connection->trace_id = start_trace(DEBUG, ORIGIN, "http_server", "{\"rqst_id\":\"%s\"}", connection->id);
     connection->rsps_state.rspq = new Subscriber(connection->id);
     connection->request = new EndpointObject::Request(connection->id);
+    connection->request->trace_id = connection->trace_id;
 }
 
 /*----------------------------------------------------------------------------
@@ -185,6 +187,9 @@ void HttpServer::deinitConnection (connection_t* connection)
 
     /* Request freed only if present, o/w memory owned by EndpointObject */
     if(connection->request) delete connection->request;
+
+    /* Stop Trace */
+    stop_trace(DEBUG, connection->trace_id);
 }
 
 /*----------------------------------------------------------------------------
@@ -374,7 +379,7 @@ int HttpServer::onRead(int fd)
     int status = 0;
     connection_t* connection = connections[fd];
     rqst_state_t* state = &connection->rqst_state;
-
+    uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
 
     /* Determine Buffer to Read Into */
     uint8_t* buf; // pointer to buffer to read into
@@ -499,6 +504,9 @@ int HttpServer::onRead(int fd)
         status = INVALID_RC; // will close socket
     }
 
+    /* Stop Trace */
+    stop_trace(DEBUG, trace_id);
+
     return status;
 }
 
@@ -512,6 +520,7 @@ int HttpServer::onWrite(int fd)
     int status = 0;
     connection_t* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
+    uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
     bool ref_complete = false;
 
     uint8_t* buffer;
@@ -633,6 +642,9 @@ int HttpServer::onWrite(int fd)
             status = 0; // will keep socket open
         }
     }
+
+    /* Stop Trace */
+    stop_trace(DEBUG, trace_id);
 
     return status;
 }
