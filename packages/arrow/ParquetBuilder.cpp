@@ -518,7 +518,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Create Writer Properties */
     parquet::WriterProperties::Builder writer_props_builder;
-    writer_props_builder.compression(parquet::Compression::GZIP);
+    writer_props_builder.compression(parquet::Compression::SNAPPY);
     writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
     shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
@@ -663,6 +663,7 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Send File to User */
     const char* _path = builder->parms->path;
+    uint32_t send_trace_id = start_trace(INFO, trace_id, "send_file", "{\"path\": \"%s\"}", _path);
     int _path_len = StringLib::size(_path);
     if((_path_len > 5) &&
         (_path[0] == 's') &&
@@ -682,6 +683,7 @@ void* ParquetBuilder::builderThread(void* parm)
         /* Stream Back to Client */
         builder->send2Client();
     }
+    stop_trace(INFO, send_trace_id);
 
     /* Signal Completion */
     builder->signalComplete();
