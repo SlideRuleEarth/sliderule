@@ -104,6 +104,9 @@ The asset name tells SlideRule where to get the data, and what format the data s
     gedil2a,                    iam-role,       s3,         sliderule/data/GEDI,                                                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     gedil1b,                    iam-role,       s3,         sliderule/data/GEDI,                                                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     merit-dem,                  iam-role,       s3,         sliderule/data/MERIT,                                                   nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    swot-sim-ecco-llc4320,      podaac-cloud,   s3,         podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1, nil,       us-west-2,  https://s3.us-west-2.amazonaws.com
+    swot-sim-glorys,            podaac-cloud,   s3,         podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1, nil,             us-west-2,  https://s3.us-west-2.amazonaws.com
+    usgs3dep-1meter-dem,        nil,            nil,        /vsis3/prd-tnm,                                                         nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     landsat-hls,                lpdaac-cloud,   nil,        /vsis3/lp-prod-protected,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
     arcticdem-mosaic,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m,                     2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
     arcticdem-strips,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com

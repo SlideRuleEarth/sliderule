@@ -19,7 +19,7 @@ SlideRule's asset directory is a list of datasets that SlideRule has access to. 
 The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on); the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
 
 |asset|raster|description|
-|:---:|:---:|:---:|
+|:---:|:---:|:----|
 |icesat2| | The ICESat-2 Standard Data Products: ATL03, ATL06, and ATL08|
 |gedil4a| | GEDI L4A Footprint Level Aboveground Biomass Density|
 |gedil3-elevation| *| GEDI L3 gridded ground elevation|
@@ -30,6 +30,9 @@ The following datasets are currently provided in SlideRule's Asset Directory (wi
 |gedil2a| | GEDI L2A Elevation and Height Metrics Data Global Footprint|
 |gedil1b| | GEDI L1B Geolocated Waveforms|
 |merit-dem| *| MERIT Digital Elevation Model|
+|swot-sim-ecco-llc4320| *| Simulated SWOT Data|
+|swot-sim-glorys| *| Simulated SWOT Data|
+|usgs3dep-1meter-dem| *| USGS 3DEP 1m Digital Elevation Model|
 |landsat-hls| *| Harminized LandSat Sentinal-2|
 |arcticdem-mosaic| *| PGC Arctic Digital Elevation Model Mosaic|
 |arcticdem-strips| *| PGC Arctic Digital Elevation Model Strips|
