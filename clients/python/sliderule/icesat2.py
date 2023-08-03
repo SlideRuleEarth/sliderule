@@ -51,7 +51,7 @@ profiles = {}
 DEFAULT_ASSET="icesat2"
 
 # default standard data product version
-DEFAULT_ICESAT2_SDP_VERSION='005'
+DEFAULT_ICESAT2_SDP_VERSION='006'
 
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2

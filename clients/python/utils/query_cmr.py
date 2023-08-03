@@ -17,7 +17,7 @@ if __name__ == '__main__':
         "region": "tests/data/grandmesa.geojson",
         "tolerance": 0.0,
         "dataset": "ATL03",
-        "version": "005",
+        "version": "006",
     }
 
     # Command line parameters

@@ -55,9 +55,9 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                               {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "formats": [".h5"],    "collections": [] },
-    "ATL06":                                               {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "ATL08":                                               {"provider": "NSIDC_ECS",   "version": "005",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "ATL03":                                               {"provider": "NSIDC_ECS",   "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [] },
+    "ATL06":                                               {"provider": "NSIDC_ECS",   "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "ATL08":                                               {"provider": "NSIDC_ECS",   "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
     "GEDI01_B":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
     "GEDI02_A":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
     "GEDI02_B":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".tiff"],  "collections": []},
