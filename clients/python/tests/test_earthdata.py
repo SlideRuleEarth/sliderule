@@ -31,6 +31,18 @@ class TestCMR:
         assert isinstance(granules, list)
         assert 'ATL03_20181017222812_02950102_006_02.h5' in granules
 
+    def test_collection(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        entries = earthdata.__cmr_collection_query('NSIDC_ECS', 'ATL03')
+        assert isinstance(entries, list)
+        assert entries[0]['short_name'] == 'ATL03'
+
+    def test_max_version(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        max_version = earthdata.__cmr_max_version('NSIDC_ECS', 'ATL03')
+        assert isinstance(max_version, str)
+        assert int(max_version) >= 6
+
 #
 # STAC
 #
