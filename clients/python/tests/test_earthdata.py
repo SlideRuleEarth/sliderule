@@ -3,6 +3,8 @@
 import pytest
 import sliderule
 from sliderule import icesat2, earthdata
+from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
+from sliderule.earthdata import __cmr_max_version as cmr_max_version
 from pathlib import Path
 import os
 import json
@@ -33,13 +35,13 @@ class TestCMR:
 
     def test_collection(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        entries = earthdata.__cmr_collection_query('NSIDC_ECS', 'ATL03')
+        entries = cmr_collection_query('NSIDC_ECS', 'ATL03')
         assert isinstance(entries, list)
         assert entries[0]['short_name'] == 'ATL03'
 
     def test_max_version(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
-        max_version = earthdata.__cmr_max_version('NSIDC_ECS', 'ATL03')
+        max_version = cmr_max_version('NSIDC_ECS', 'ATL03')
         assert isinstance(max_version, str)
         assert int(max_version) >= 6
 
