@@ -45,6 +45,7 @@ end
 -- Run Raster Self Tests --
 if __geo__ then
     runner.script(td .. "geojson_raster.lua")
+    runner.script(td .. "geouser_raster.lua")
 end
 
 -- Run Legacy Self Tests --

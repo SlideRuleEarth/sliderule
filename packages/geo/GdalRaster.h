@@ -121,6 +121,7 @@ class GdalRaster
 
                            GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb);
         virtual           ~GdalRaster     (void);
+        void               open           (void);
         void               samplePOI      (const Point& poi);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
@@ -176,7 +177,6 @@ class GdalRaster
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        open                (void);
         void        readPixel           (const Point& poi);
         void        resamplePixel       (const Point& poi);
         void        computeZonalStats   (const Point& poi);

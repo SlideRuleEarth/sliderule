@@ -84,6 +84,60 @@ GdalRaster::~GdalRaster(void)
 }
 
 /*----------------------------------------------------------------------------
+ * open
+ *----------------------------------------------------------------------------*/
+void GdalRaster::open(void)
+{
+    if(dset)
+    {
+        mlog(DEBUG, "Raster already opened: %s", fileName.c_str());
+        return;
+    }
+
+    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+    if(dset == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
+
+    mlog(DEBUG, "Opened %s", fileName.c_str());
+
+    /* Store information about raster */
+    cols = dset->GetRasterXSize();
+    rows = dset->GetRasterYSize();
+
+    double geoTransform[6];
+    CPLErr err = dset->GetGeoTransform(geoTransform);
+    CHECK_GDALERR(err);
+    if(!GDALInvGeoTransform(geoTransform, invGeoTrnasform))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
+    }
+
+    /* Get raster boundry box */
+    CHECK_GDALERR(err);
+    bbox.lon_min = geoTransform[0];
+    bbox.lon_max = geoTransform[0] + cols * geoTransform[1];
+    bbox.lat_max = geoTransform[3];
+    bbox.lat_min = geoTransform[3] + rows * geoTransform[5];
+
+    cellSize       = geoTransform[1];
+    radiusInPixels = radius2pixels(parms->sampling_radius);
+
+    /* Limit maximum sampling radius */
+    if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR,
+                               "Sampling radius is too big: %d: max allowed %d meters",
+                               parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
+    }
+
+    band = dset->GetRasterBand(1);
+    CHECKPTR(band);
+
+    /* Create coordinates transform for raster */
+    createTransform();
+}
+
+/*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
 void GdalRaster::samplePOI(const Point& _poi)
@@ -186,54 +240,6 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * open
- *----------------------------------------------------------------------------*/
-void GdalRaster::open(void)
-{
-    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
-    if(dset == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
-
-    mlog(DEBUG, "Opened %s", fileName.c_str());
-
-    /* Store information about raster */
-    cols = dset->GetRasterXSize();
-    rows = dset->GetRasterYSize();
-
-    double geoTransform[6];
-    CPLErr err = dset->GetGeoTransform(geoTransform);
-    CHECK_GDALERR(err);
-    if(!GDALInvGeoTransform(geoTransform, invGeoTrnasform))
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
-    }
-
-    /* Get raster boundry box */
-    CHECK_GDALERR(err);
-    bbox.lon_min = geoTransform[0];
-    bbox.lon_max = geoTransform[0] + cols * geoTransform[1];
-    bbox.lat_max = geoTransform[3];
-    bbox.lat_min = geoTransform[3] + rows * geoTransform[5];
-
-    cellSize       = geoTransform[1];
-    radiusInPixels = radius2pixels(parms->sampling_radius);
-
-    /* Limit maximum sampling radius */
-    if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR,
-                               "Sampling radius is too big: %d: max allowed %d meters",
-                               parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
-    }
-
-    band = dset->GetRasterBand(1);
-    CHECKPTR(band);
-
-    /* Create coordinates transform for raster */
-    createTransform();
-}
 
 /*----------------------------------------------------------------------------
  * readPixel

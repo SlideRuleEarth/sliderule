@@ -19,7 +19,7 @@ f:close()
 
 -- Unit Test --
 
-local  sigma = 1.0e-9
+local  sigma = 1.0e-4
 local  lon =    -108.1
 local  lat =      39.1
 local  height = 2630.0

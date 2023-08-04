@@ -35,6 +35,7 @@
 
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
+#include "GeoUserRaster.h"
 #include "RasterSampler.h"
 #include "geo.h"
 
@@ -204,6 +205,7 @@ int geo_open (lua_State* L)
 {
     static const struct luaL_Reg geo_functions[] = {
         {"geojson",     GeoJsonRaster::luaCreate},
+        {"userraster",  GeoUserRaster::luaCreate},
         {"raster",      RasterObject::luaCreate},
         {"sampler",     RasterSampler::luaCreate},
         {"parms",       GeoParms::luaCreate},

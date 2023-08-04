@@ -29,12 +29,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __math_lib__
-#define __math_lib__
+#ifndef __geouser_raster__
+#define __geouser_raster__
 
-#include "List.h"
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
 
-class MathLib
+#include "GeoRaster.h"
+#include "GeoParms.h"
+
+/******************************************************************************
+ * GEOUSER RASTER CLASS
+ ******************************************************************************/
+
+class GeoUserRaster: public GeoRaster
 {
     public:
 
@@ -42,64 +51,35 @@ class MathLib
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAXFREQSPEC = 8192;
-        static const int LOG2DATASIZE = 13;
-        static const double EARTHRADIUS;
-        static const char* B64CHARS;
-        static const int B64INDEX[256];
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        /* Complex Number */
-        typedef struct {
-            double r;
-            double i;
-        } complex_t;
-
-        /* Geospatial Projection */
-        typedef enum {
-            NORTH_POLAR,
-            SOUTH_POLAR,
-            PLATE_CARREE
-        } proj_t;
-
-        /* Geospatial Coordinate */
-        typedef struct {
-            double  lon;
-            double  lat;
-        } coord_t;
-
-        /* Cartesian Coordinate */
-        typedef struct {
-            double  x;
-            double  y;
-        } point_t;
+        static const char* RASTERDATA_KEY;
+        static const char* RASTERLENGTH_KEY;
+        static const char* GPSTIME_KEY;
+        static const char* ELEVATION_KEY;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static double   FFT         (double result[], int data[], unsigned long size);
-        static point_t  coord2point (const coord_t c, proj_t projection);
-        static coord_t  point2coord (const point_t p, proj_t projection);
-        static bool     inpoly      (point_t* poly, int len, point_t point);
+        static int            luaCreate      (lua_State* L);
+        static GeoUserRaster* create         (lua_State* L, int index);
 
-        static const std::string b64encode(const void* data, const size_t &len);
-        static const std::string b64decode(const void* data, const size_t &len);
+        virtual              ~GeoUserRaster  (void);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        GeoUserRaster(lua_State* L, GeoParms* _parms, const char* image, long imagelength, double gps, bool iselevation);
 
     private:
 
         /*--------------------------------------------------------------------
-         * Methods
+         * Data
          *--------------------------------------------------------------------*/
 
-        static void     swapComplex         (complex_t *a, complex_t *b);
-        static void     bitReverse          (complex_t data[], unsigned long size);
-        static void     freqCorrelation     (complex_t data[], unsigned long size, int isign);
-        static double   getPolarMagnitude   (double ReX, double ImX);
-        static double   getPolarPhase       (double ReX, double ImX);
+         std::string rasterFileName;
 };
 
-#endif /* __math_lib__ */
+#endif  /* __geouser_raster__ */

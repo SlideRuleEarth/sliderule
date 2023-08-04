@@ -77,6 +77,11 @@ class GeoRaster: public RasterObject
              return raster.getFileName();
          }
 
+         void openRaster(void)
+         {
+            raster.open();
+         }
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

@@ -24,6 +24,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.cpp
@@ -42,6 +43,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSample.h
