@@ -178,6 +178,35 @@ def __cmr_granule_metadata(search_results):
     # - polygons as geodataframe geometry
     return granule_metadata
 
+def __cmr_collection_query(provider, short_name):
+    """Perform a CMR query for collection metadata."""
+    # build params
+    cmr_query_type = 'collections'
+    cmr_format = 'json'
+    CMR_URL = 'https://cmr.earthdata.nasa.gov'
+    cmr_query_url = '/'.join([CMR_URL, 'search', f'{cmr_query_type}.{cmr_format}'])
+    # build list of CMR query parameters
+    params = []
+    params.append(f'?provider={provider}')
+    params.append(f'&short_name={short_name}')
+    # full CMR query url
+    cmr_query_url += "".join(params)
+    logger.debug(f'cmr request={cmr_query_url}\n')
+    # ssl context
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    # query CMR for collection metadata
+    req = urllib.request.Request(cmr_query_url)
+    response = urllib.request.urlopen(req, context=ctx)
+    # read the CMR search as JSON
+    search_results = json.loads(response.read().decode('utf8'))
+    # return only valid collection entries
+    if 'feed' not in search_results or 'entry' not in search_results['feed']:
+        return []
+    else:
+        return search_results['feed']['entry']
+
 def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     """Perform a scrolling CMR query for files matching input criteria."""
     kwargs.setdefault('polygon',None)
@@ -309,6 +338,19 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
         return (url_list,meta_list)
     else:
         return url_list
+
+#
+# Get the maximum available version for a dataset from CMR
+#
+def __cmr_max_version(provider, short_name):
+    """Get the maximum version of a dataset from CMR."""
+    entries = __cmr_collection_query(provider, short_name)
+    version_ids = [e['version_id'] for e in entries]
+    # return only when there was valid collection entries
+    if not version_ids:
+        return None
+    else:
+        return max(version_ids)
 
 #
 # Build a GeoJSON Response from STAC Query Response
