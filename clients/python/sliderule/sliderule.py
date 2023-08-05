@@ -76,7 +76,7 @@ try:
     from sklearn.cluster import KMeans
     clustering_enabled = True
 except:
-    logger.warning("Unable to import sklearn... clustering support disabled")
+    logger.info("Unable to import sklearn... clustering support disabled")
 
 recdef_table = {}
 
