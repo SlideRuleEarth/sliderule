@@ -4,7 +4,7 @@
 
 ## Background
 
-With release v2.0.0, SlideRule supports private clusters - clusters that can only be accessed by authenticated users affiliated with the cluster.  Prior to v2.0.0, all of SlideRule's services were provided by a single cluster of nodes executing in AWS us-west-2, available publicly to anyone on the internet. This makes SlideRule's services easy to access, yet suffers when many users try to access SlideRule at the same time.  The SlideRule team can only allocated a certainl level of funding towards a public cluster and cannot satisfy the processing needs of everyone at once.
+With release v2.0.0, SlideRule supports private clusters - clusters that can only be accessed by authenticated users affiliated with the cluster.  Prior to v2.0.0, all of SlideRule's services were provided by a single cluster of nodes executing in AWS us-west-2, available publicly to anyone on the internet. This makes SlideRule's services easy to access, yet suffers when many users try to access SlideRule at the same time.  The SlideRule team can only allocate a certain level of funding towards a public cluster and cannot satisfy the processing needs of everyone at once.
 
 For users of SlideRule that have access to their own funding, private clusters provide a way to have access to all of SlideRules services without having to share the processing power behind those services with other users or organizations.  In order to manage private clusters and authenticate users, the SlideRule team developed a system called the SlideRule Provisioning System.  The SlideRule Provisioning System provides the following functionality:
 
