@@ -364,9 +364,13 @@ TimeLib::date_t TimeLib::gmt2date (const gmt_time_t& gmt_time)
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
 {
+    bool leap_year = (gmt_time.year % 4 == 0);
+
     /* Check GMT Time Passed In */
     if( (gmt_time.year < 1980 || gmt_time.year > (1980 + MAX_GPS_YEARS)) ||
-        (gmt_time.doy < 0 || gmt_time.doy > 365) ||
+        (gmt_time.doy < 0) ||
+        (!leap_year && gmt_time.doy > 365) ||
+        (leap_year  && gmt_time.doy > 366) ||
         (gmt_time.hour < 0 || gmt_time.hour > 24) ||
         (gmt_time.minute < 0 || gmt_time.minute > 60) ||
         (gmt_time.second < 0 || gmt_time.second > 60) ||
