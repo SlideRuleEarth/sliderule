@@ -1,7 +1,7 @@
 from sliderule import sliderule, earthdata
 import sys
 
-earthdata.set_max_resources(1000)
+earthdata.set_max_resources(2000)
 
 geojson = sys.argv[1]
 region = sliderule.toregion(geojson)
