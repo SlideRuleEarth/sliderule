@@ -29,27 +29,63 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __pgc_plugin__
-#define __pgc_plugin__
+#ifndef __esa_worldcover_10meter_raster__
+#define __esa_worldcover_10meter_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
-#include "RemaDemMosaicRaster.h"
-#include "RemaDemStripsRaster.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * ESA WORLD COVER 10 METER RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initpgc (void);
-void deinitpgc (void);
-}
+class EsaWorldCover10meterRaster: public GeoIndexedRaster
+{
+    public:
 
-#endif  /* __pgc_plugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+        static const char* URL_str;
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static RasterObject* create(lua_State* L, GeoParms* _parms)
+                          { return new EsaWorldCover10meterRaster(L, _parms); }
 
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                EsaWorldCover10meterRaster (lua_State* L, GeoParms* _parms);
+               ~EsaWorldCover10meterRaster (void);
+
+        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
+        bool    findRasters      (GdalRaster::Point &p) final;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        std::string filePath;
+        std::string indexFile;
+};
+
+#endif  /* __esa_worldcover_10meter_raster__ */

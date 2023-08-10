@@ -29,27 +29,76 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __pgc_plugin__
-#define __pgc_plugin__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
-#include "RemaDemMosaicRaster.h"
-#include "RemaDemStripsRaster.h"
+#include "core.h"
+#include "opendata.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * DEFINES
+ ******************************************************************************/
+
+#define LUA_OPENDATA_LIBNAME                   "opendata"
+#define LUA_ESA_WORLDCOVER_10METER_RASTER_NAME "esa-worldcover-10meter"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * opendata_version
+ *----------------------------------------------------------------------------*/
+int opendata_version (lua_State* L)
+{
+    lua_pushstring(L, BINID);
+    lua_pushstring(L, BUILDINFO);
+    return 2;
+}
+
+/*----------------------------------------------------------------------------
+ * opendata_open
+ *----------------------------------------------------------------------------*/
+int opendata_open (lua_State *L)
+{
+    static const struct luaL_Reg opendata_functions[] = {
+        {"version",         opendata_version},
+        {NULL,              NULL}
+    };
+
+    /* Set Library */
+    luaL_newlib(L, opendata_functions);
+
+    return 1;
+}
+
+/******************************************************************************
+ * EXPORTED FUNCTIONS
  ******************************************************************************/
 
 extern "C" {
-void initpgc (void);
-void deinitpgc (void);
+void initopendata(void)
+{
+    /* Initialize Modules */
+    EsaWorldCover10meterRaster::init();
+
+    /* Register Rasters */
+    RasterObject::registerRaster(LUA_ESA_WORLDCOVER_10METER_RASTER_NAME, EsaWorldCover10meterRaster::create);
+
+    /* Extend Lua */
+    LuaEngine::extend(LUA_OPENDATA_LIBNAME, opendata_open);
+
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_OPENDATA_LIBNAME, BINID);
+
+    /* Display Status */
+    print2term("%s plugin initialized (%s)\n", LUA_OPENDATA_LIBNAME, BINID);
 }
 
-#endif  /* __pgc_plugin__ */
-
-
+void deinitopendata (void)
+{
+    /* Uninitialize Modules */
+    EsaWorldCover10meterRaster::deinit();
+}
+}

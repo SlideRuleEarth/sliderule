@@ -1,0 +1,301 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2020_AWS_V1:ESA_WorldCover_10m_2020_v100_N36W108",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -108,
+                            36
+                        ],
+                        [
+                            -105,
+                            36
+                        ],
+                        [
+                            -105,
+                            39
+                        ],
+                        [
+                            -108,
+                            39
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-12-31T23:59:59Z",
+                "start_datetime": "2020-01-01T00:00:00Z",
+                "end_datetime": "2020-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v100/2020/map/ESA_WorldCover_10m_2020_v100_N36W108_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2020_AWS_V1:ESA_WorldCover_10m_2020_v100_N36W111",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -111,
+                            39
+                        ],
+                        [
+                            -111,
+                            36
+                        ],
+                        [
+                            -108,
+                            36
+                        ],
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -111,
+                            39
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-12-31T23:59:59Z",
+                "start_datetime": "2020-01-01T00:00:00Z",
+                "end_datetime": "2020-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v100/2020/map/ESA_WorldCover_10m_2020_v100_N36W111_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2020_AWS_V1:ESA_WorldCover_10m_2020_v100_N39W108",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -108,
+                            42
+                        ],
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -105,
+                            39
+                        ],
+                        [
+                            -105,
+                            42
+                        ],
+                        [
+                            -108,
+                            42
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-12-31T23:59:59Z",
+                "start_datetime": "2020-01-01T00:00:00Z",
+                "end_datetime": "2020-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v100/2020/map/ESA_WorldCover_10m_2020_v100_N39W108_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2020_AWS_V1:ESA_WorldCover_10m_2020_v100_N39W111",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -111,
+                            42
+                        ],
+                        [
+                            -111,
+                            39
+                        ],
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -108,
+                            42
+                        ],
+                        [
+                            -111,
+                            42
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2020-12-31T23:59:59Z",
+                "start_datetime": "2020-01-01T00:00:00Z",
+                "end_datetime": "2020-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v100/2020/map/ESA_WorldCover_10m_2020_v100_N39W111_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2021_AWS_V2:ESA_WorldCover_10m_2021_v200_N36W108",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -108,
+                            36
+                        ],
+                        [
+                            -105,
+                            36
+                        ],
+                        [
+                            -105,
+                            39
+                        ],
+                        [
+                            -108,
+                            39
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2021-12-31T23:59:59Z",
+                "start_datetime": "2021-01-01T00:00:00Z",
+                "end_datetime": "2021-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v200/2021/map/ESA_WorldCover_10m_2021_v200_N36W108_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2021_AWS_V2:ESA_WorldCover_10m_2021_v200_N36W111",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -111,
+                            39
+                        ],
+                        [
+                            -111,
+                            36
+                        ],
+                        [
+                            -108,
+                            36
+                        ],
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -111,
+                            39
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2021-12-31T23:59:59Z",
+                "start_datetime": "2021-01-01T00:00:00Z",
+                "end_datetime": "2021-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v200/2021/map/ESA_WorldCover_10m_2021_v200_N36W111_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2021_AWS_V2:ESA_WorldCover_10m_2021_v200_N39W108",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -108,
+                            42
+                        ],
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -105,
+                            39
+                        ],
+                        [
+                            -105,
+                            42
+                        ],
+                        [
+                            -108,
+                            42
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2021-12-31T23:59:59Z",
+                "start_datetime": "2021-01-01T00:00:00Z",
+                "end_datetime": "2021-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v200/2021/map/ESA_WorldCover_10m_2021_v200_N39W108_Map.tif"
+            }
+        },
+        {
+            "type": "Feature",
+            "id": "urn:eop:VITO:ESA_WorldCover_10m_2021_AWS_V2:ESA_WorldCover_10m_2021_v200_N39W111",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -111,
+                            42
+                        ],
+                        [
+                            -111,
+                            39
+                        ],
+                        [
+                            -108,
+                            39
+                        ],
+                        [
+                            -108,
+                            42
+                        ],
+                        [
+                            -111,
+                            42
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "datetime": "2021-12-31T23:59:59Z",
+                "start_datetime": "2021-01-01T00:00:00Z",
+                "end_datetime": "2021-12-31T23:59:59Z",
+                "url": "s3://esa-worldcover/v200/2021/map/ESA_WorldCover_10m_2021_v200_N39W111_Map.tif"
+            }
+        }
+    ]
+}

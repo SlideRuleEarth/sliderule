@@ -29,27 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __pgc_plugin__
-#define __pgc_plugin__
+#ifndef __opendata_plugin__
+#define __opendata_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
-#include "RemaDemMosaicRaster.h"
-#include "RemaDemStripsRaster.h"
+#include "EsaWorldCover10meterRaster.h"
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initpgc (void);
-void deinitpgc (void);
+void initopendata(void);
+void deinitopendata(void);
 }
 
-#endif  /* __pgc_plugin__ */
+#endif  /* __opendata_plugin__ */
 
 
