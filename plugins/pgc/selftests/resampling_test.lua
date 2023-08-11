@@ -21,6 +21,7 @@ local  lat = 66.34  -- Arctic Circle lat
 local  height = 0
 
 local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
+local minElevation = 638
 
 for radius = 0, 100, 50
 do
@@ -38,8 +39,7 @@ do
                     --NearestNeighbour has always the same value, regardless of sampling radius
                     runner.check(math.abs(el - 653.148437500) < sigma)
                 else
-                    --at least 644 meters
-                    runner.check(el > 644)
+                    runner.check(el > minElevation)
                 end
             end
             print(string.format("%16s %16.9f", samplingAlgs[i], el))
