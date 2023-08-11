@@ -36,7 +36,7 @@ do
                 el = v["value"]
                 if i == 1 then
                     --NearestNeighbour has always the same value, regardless of sampling radius
-                    runner.check(math.abs(el - 650.664001465) < sigma)
+                    runner.check(math.abs(el - 653.148437500) < sigma)
                 else
                     --at least 644 meters
                     runner.check(el > 644)

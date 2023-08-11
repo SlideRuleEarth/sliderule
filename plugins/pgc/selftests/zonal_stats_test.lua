@@ -26,13 +26,13 @@ tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
-local expElevation = 19.812837600708
-local expMin       = 18.918535232544
-local expMax       = 20.307407379150
-local expMean      = 19.765134437464
-local expMedian    = 19.833356857300
-local expStdev     =  0.331736795754
-local expMad       =  0.274090053286
+local expElevation = 19.890625000000
+local expMin       = 18.929687500000
+local expMax       = 20.335937500000
+local expMean      = 19.829359132581
+local expMedian    = 19.914062500000
+local expStdev     =  0.355630373179
+local expMad       =  0.298961002355
 local expCnt       = 709
 
 sampleCnt = 0
@@ -68,13 +68,13 @@ tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
-expElevation = 19.812837600708
-expMin       = 19.567863464355
-expMax       = 19.988794326782
-expMean      = 19.796006614779
-expMedian    = 19.802295684814
-expStdev     =  0.102205825908
-expMad       =  0.084735066257
+expElevation = 19.890625000000
+expMin       = 19.578125000000
+expMax       = 20.054687500000
+expMean      = 19.845003858025
+expMedian    = 19.851562500000
+expStdev     =  0.117738908413
+expMad       =  0.099748990245
 expCnt       = 81
 
 sampleCnt = 0
