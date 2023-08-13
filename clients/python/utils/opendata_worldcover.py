@@ -54,7 +54,7 @@ with open(jsonFile, 'w') as outfile:
 
 geojson = __build_geojson(rsp)
 
-#for debugging, write stac endpoint response to file
-jsonFile = 'trimmed_worldcover.json'
+#for debugging, write trimmed stac endpoint response to file
+jsonFile = 'grand_mesa_10m_worldcover.json'
 with open(jsonFile, 'w') as outfile:
     json.dump(geojson, outfile)

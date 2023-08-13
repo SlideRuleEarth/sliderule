@@ -5,8 +5,8 @@ csv = require("csv")
 json = require("json")
 local _,td = runner.srcscript()
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
 local assets = asset.loaddir()
@@ -40,10 +40,8 @@ local  height = 2630.0
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter\n-------------------------------------------------"))
 
 
-local expResults = {{2638.032147717071, 1289671725.0, '/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x23y434_CO_MesaCo_QL2_UTM12_2016.tif'},
-                    {math.nan,          1289671840.0, '/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x23y434_CO_MesaCo_QL2_UTM13_2015.tif'},
-                    {2638.115155529571, 1289671830.0, '/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x75y434_CO_MesaCo_QL2_UTM12_2016.tif'},
-                    {math.nan,          1289671872.0, '/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x75y434_CO_MesaCo_QL2_UTM13_2015.tif'}}
+local expResults = {{20.0, 1277683217.0, '/vsis3/esa-worldcover/v100/2020/map/ESA_WorldCover_10m_2020_v100_N39W111_Map.tif'},
+                    {10.0, 1309262417.0, '/vsis3/esa-worldcover/v200/2021/map/ESA_WorldCover_10m_2021_v200_N39W111_Map.tif'}}
 
 local demType = "esa-worldcover-10meter"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))

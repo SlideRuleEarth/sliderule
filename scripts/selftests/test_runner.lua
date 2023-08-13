@@ -98,6 +98,12 @@ if __usgs3dep__ then
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 
+-- Run opendata Plugin Self Tests
+if __opendata__ then
+    local opendata_td = td .. "../../plugins/opendata/selftests/"
+    runner.script(opendata_td .. "worldcover_reader.lua")
+end
+
 
 if maxRuns > 1 then
     print(string.format("\n--------------------------------\nTest Repeat Run: %d of %d finished\n--------------------------------", runNum, maxRuns))
