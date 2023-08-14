@@ -15,6 +15,11 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
 resource "aws_launch_configuration" "sliderule-instance" {
   image_id                    = data.aws_ami.sliderule_cluster_ami.id
   instance_type               = "r6g.xlarge"
+  root_block_device {
+    volume_type               = "gp2"
+    volume_size               = 8
+    delete_on_termination     = true
+  }
   key_name                    = var.key_pair_name
   associate_public_ip_address = true
   security_groups             = [aws_security_group.sliderule-sg.id]

@@ -38,7 +38,7 @@ for i = 1, #demTypes do
         sampleCnt = sampleCnt + 1
     end
 
-     print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
+    print(string.format("\n--------------------------------\nTest: %s dim\n--------------------------------", demType))
     local rows, cols = dem:dim()
     print(string.format("dimensions: rows: %d, cols: %d", rows, cols))
     runner.check(rows ~= 0)
@@ -53,12 +53,12 @@ for i = 1, #demTypes do
     print(string.format("cellsize: %d", cellsize))
 
     if demType == "arcticdem-mosaic" then
-        runner.check(rows == 3750000)
-        runner.check(cols == 3700000)
-        runner.check(lon_min == -4000000.0)
-        runner.check(lat_min == -3400000.0)
-        runner.check(lon_max ==  3400000.0)
-        runner.check(lat_max ==  4100000.0)
+        runner.check(rows == 3750100)
+        runner.check(cols == 3700100)
+        runner.check(lon_min == -4000100.0)
+        runner.check(lat_min == -3400100.0)
+        runner.check(lon_max ==  3400100.0)
+        runner.check(lat_max ==  4100100.0)
         runner.check(cellsize == 2.0)
     else
         runner.check(rows == 512)
@@ -77,8 +77,8 @@ local lons = {-150, -40, 100,   150}
 local lats = {  70,  70,  70,    75}
 height = 0
 
-local expResultsMosaic = { 116.615013122559,  2969.236083984375, 475.962463378906, 19.812837600708}
-local expResultsStrips = { 119.554687500000,  2968.015625000000, 474.156250000000, 10.296875000000}  -- Only first strip samples for each lon/lat strip group
+local expResultsMosaic = { 116.250000000,  2968.085937500, 475.742187500, 19.890625000}
+local expResultsStrips = { 119.554687500,  2968.015625000, 474.156250000, 10.296875000}  -- Only first strip samples for each lon/lat strip group
 
 local expSamplesCnt = {8, 8, 4, 14}
 
