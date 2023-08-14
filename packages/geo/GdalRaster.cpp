@@ -218,14 +218,19 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
     if(_parms->asset)
     {
 #ifdef __aws__
+        const char* path = _parms->asset->getPath();
         const char* identity = _parms->asset->getIdentity();
         CredentialStore::Credential credentials = CredentialStore::get(identity);
         if(credentials.provided)
         {
-            const char* path = _parms->asset->getPath();
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
             VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey);
             VSISetPathSpecificOption(path, "AWS_SESSION_TOKEN", credentials.sessionToken);
+        }
+        else
+        {
+            /* same as AWS CLI option '--no-sign-request' */
+            VSISetPathSpecificOption(path, "AWS_NO_SIGN_REQUEST", "YES");
         }
 #endif
     }

@@ -29,27 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __pgc_plugin__
-#define __pgc_plugin__
+#ifndef __esa_worldcover_10meter_raster__
+#define __esa_worldcover_10meter_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "ArcticDemMosaicRaster.h"
-#include "ArcticDemStripsRaster.h"
-#include "RemaDemMosaicRaster.h"
-#include "RemaDemStripsRaster.h"
+#include "GeoRaster.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * ESA WORLD COVER 10 METER RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initpgc (void);
-void deinitpgc (void);
-}
+class EsaWorldCover10meterRaster: public GeoRaster
+{
+    public:
 
-#endif  /* __pgc_plugin__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static RasterObject* create(lua_State* L, GeoParms* _parms)
+                          { return new EsaWorldCover10meterRaster(L, _parms); }
 
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        EsaWorldCover10meterRaster (lua_State* L, GeoParms* _parms):
+         GeoRaster(L, _parms,
+                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0),  /* Mid point for year data was collected */
+                  false /* Data is elevation */ ) {}
+
+};
+
+#endif  /* __esa_worldcover_10meter_raster__ */
