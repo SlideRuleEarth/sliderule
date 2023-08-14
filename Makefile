@@ -292,7 +292,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(ROOT)/clients/python && ./clean.sh
 	- find -name ".cookies" -exec rm {} \;
-	- rm compile_commands.json
+	- rm -f compile_commands.json
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

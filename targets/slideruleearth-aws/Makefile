@@ -39,6 +39,7 @@ PGC_BUILD_DIR = $(BUILD)/pgc
 LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
 USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
+OPENDATA_BUILD_DIR = $(BUILD)/opendata
 SWOT_BUILD_DIR = $(BUILD)/swot
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
@@ -88,6 +89,7 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(LANDSAT_BUILD_DIR)
 	mkdir -p $(GEDI_BUILD_DIR)
 	mkdir -p $(USGS3DEP_BUILD_DIR)
+	mkdir -p $(OPENDATA_BUILD_DIR)
 	mkdir -p $(SWOT_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols
@@ -97,6 +99,7 @@ config-debug: prep ## configure the server for running locally with debug symbol
 	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 	cd $(USGS3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
 	cd $(SWOT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
 
 config-release: prep ## configure server to run release version locally (useful for using valgrind)
@@ -106,6 +109,7 @@ config-release: prep ## configure server to run release version locally (useful 
 	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 	cd $(USGS3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
 	cd $(SWOT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
 
 config-asan: prep ## configure server to run with address sanitizer locally
@@ -115,6 +119,7 @@ config-asan: prep ## configure server to run with address sanitizer locally
 	cd $(LANDSAT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
 	cd $(GEDI_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
 	cd $(USGS3DEP_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
 	cd $(SWOT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
 
 sliderule: ## build the server using the local configuration
@@ -130,6 +135,8 @@ sliderule: ## build the server using the local configuration
 	make -C $(GEDI_BUILD_DIR) install
 	make -j4 -C $(USGS3DEP_BUILD_DIR)
 	make -C $(USGS3DEP_BUILD_DIR) install
+	make -j4 -C $(OPENDATA_BUILD_DIR)
+	make -C $(OPENDATA_BUILD_DIR) install
 	make -j4 -C $(SWOT_BUILD_DIR)
 	make -C $(SWOT_BUILD_DIR) install
 
