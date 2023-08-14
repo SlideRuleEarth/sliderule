@@ -10,14 +10,6 @@ json = require("json")
 -- Setup --
 
 local assets = asset.loaddir()
-
-local _,td = runner.srcscript()
-local geojsonfile = td.."../data/grand_mesa_10m_worldcover.geojson"
-local f = io.open(geojsonfile, "r")
-local contents = f:read("*all")
-f:close()
-
-
 local _,td = runner.srcscript()
 local poifile = td.."../../landsat/data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")
@@ -42,7 +34,7 @@ end
 print(string.format("\n-------------------------------------------------\nesa-worldcover 10meter Grand Mesa test\n-------------------------------------------------"))
 
 local demType = "esa-worldcover-10meter"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0 }))
 
 local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
 local failedRead = 0

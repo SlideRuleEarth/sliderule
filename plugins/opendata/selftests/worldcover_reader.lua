@@ -10,19 +10,12 @@ local _,td = runner.srcscript()
 
 -- Setup --
 local assets = asset.loaddir()
-
-local _,td = runner.srcscript()
-local geojsonfile = td.."../data/grand_mesa_10m_worldcover.geojson"
-local f = io.open(geojsonfile, "r")
-local contents = f:read("*all")
-f:close()
-
 -- Unit Test --
 
 local  sigma = 1.0e-9
 local  lon =    -108.1
 local  lat =      39.1
-local  height = 2630.0
+local  height =    0.0
 
 
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter\n-------------------------------------------------"))
@@ -30,7 +23,7 @@ print(string.format("\n-------------------------------------------------\nesa wo
 local expResults = {{20.0, 1309046423000, '/vsis3/esa-worldcover/v100/2020/ESA_WorldCover_10m_2020_v100_Map_AWS.vrt'}}
 
 local demType = "esa-worldcover-10meter"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 local tbl, status = dem:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
