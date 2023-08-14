@@ -36,24 +36,16 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
 
 /******************************************************************************
  * ESA WORLD COVER 10 METER RASTER CLASS
  ******************************************************************************/
 
-class EsaWorldCover10meterRaster: public GeoIndexedRaster
+class EsaWorldCover10meterRaster: public GeoRaster
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-        static const char* URL_str;
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
 
         /*--------------------------------------------------------------------
          * Methods
@@ -69,23 +61,12 @@ class EsaWorldCover10meterRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                EsaWorldCover10meterRaster (lua_State* L, GeoParms* _parms);
-               ~EsaWorldCover10meterRaster (void);
+        EsaWorldCover10meterRaster (lua_State* L, GeoParms* _parms):
+         GeoRaster(L, _parms,
+                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0),  /* Mid point for year data was collected */
+                  false /* Data is elevation */ ) {}
 
-        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
-        bool    findRasters      (GdalRaster::Point &p) final;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-        std::string filePath;
-        std::string indexFile;
 };
 
 #endif  /* __esa_worldcover_10meter_raster__ */

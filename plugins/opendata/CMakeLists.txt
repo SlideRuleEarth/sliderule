@@ -59,7 +59,6 @@ endif()
 target_sources(opendata
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/opendata.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/EsaWorldCover10meterRaster.cpp
 )
 
 # Include Directories #
