@@ -34,7 +34,7 @@ WORKDIR /
 RUN git clone https://github.com/apache/arrow.git
 RUN mkdir -p /build/arrow
 WORKDIR /build/arrow
-RUN cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON
+RUN cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON
 RUN make -j8
 RUN make install
 
