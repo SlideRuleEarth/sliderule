@@ -13,9 +13,9 @@ sigma = 1.0e-9
 vrtLon = -108.1
 vrtLat =   39.1
 
-vrtValue     = 20
-vrtFile      = '/vsis3/esa-worldcover/v100/2020/ESA_WorldCover_10m_2020_v100_Map_AWS.vrt'
-vrtFileTime  = 1309046423000.0
+vrtValue     = 10
+vrtFile      = '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt'
+vrtFileTime  = 1309046418000
 
 @pytest.mark.network
 class TestMosaic:

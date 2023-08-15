@@ -63,9 +63,11 @@ class EsaWorldCover10meterRaster: public GeoRaster
 
         EsaWorldCover10meterRaster (lua_State* L, GeoParms* _parms):
          GeoRaster(L, _parms,
-                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                  _parms->asset->getIndex(),
                   TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0),  /* Mid point for year data was collected */
                   false /* Data is elevation */ ) {}
+
+    private:
 
 };
 

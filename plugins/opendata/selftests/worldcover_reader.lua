@@ -20,7 +20,7 @@ local  height =    0.0
 
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter\n-------------------------------------------------"))
 
-local expResults = {{20.0, 1309046418000, '/vsis3/esa-worldcover/v100/2020/ESA_WorldCover_10m_2020_v100_Map_AWS.vrt'}}
+local expResults = {{10.0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt'}}
 
 local demType = "esa-worldcover-10meter"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
