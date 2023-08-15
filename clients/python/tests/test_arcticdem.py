@@ -10,10 +10,10 @@ TESTDIR = Path(__file__).parent
 
 sigma = 1.0e-9
 
-vrtLon = -178.0
-vrtLat =   51.7
-vrtElevation = 80.713500976562
-vrtFile      = '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m/2m_dem_tiles.vrt'
+vrtLon = -150.0
+vrtLat =  70.0
+vrtElevation = 116.250000000
+vrtFile      = '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1/2m_dem_tiles.vrt'
 vrtFileTime  = 1358108640000.0
 
 @pytest.mark.network
@@ -66,7 +66,7 @@ class TestMosaic:
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405900
-        assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < sigma
+        assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
 
     def test_zonal_stats(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
@@ -87,7 +87,7 @@ class TestMosaic:
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405900
-        assert abs(gdf["mosaic.value"].describe()["min"] - 605.48828125) < sigma
+        assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
         assert gdf["mosaic.count"].describe()["max"] == 81
         assert gdf["mosaic.stdev"].describe()["count"] == 954
         assert gdf["mosaic.time"][0] == vrtFileTime
