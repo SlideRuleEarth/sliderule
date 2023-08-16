@@ -50,7 +50,8 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
-    {"distance",        RecordObject::DOUBLE,   offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
+    {"distance",        RecordObject::FLOAT,    offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
+    {"across",          RecordObject::FLOAT,    offsetof(photon_t, across),         1,  NULL, NATIVE_FLAGS},
     {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS},
     {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS},
     {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS},
@@ -540,6 +541,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     segment_dist_x      (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_dist_x",  &info->reader->context, 0, region.first_segment, region.num_segments),
     solar_elevation     (info->reader->asset, info->reader->resource, info->track, "geolocation/solar_elevation", &info->reader->context, 0, region.first_segment, region.num_segments),
     dist_ph_along       (info->reader->asset, info->reader->resource, info->track, "heights/dist_ph_along",       &info->reader->context, 0, region.first_photon,  region.num_photons),
+    dist_ph_across      (info->reader->asset, info->reader->resource, info->track, "heights/dist_ph_across",      &info->reader->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->reader->asset, info->reader->resource, info->track, "heights/h_ph",                &info->reader->context, 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->asset, info->reader->resource, info->track, "heights/signal_conf_ph",      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
     quality_ph          (info->reader->asset, info->reader->resource, info->track, "heights/quality_ph",          &info->reader->context, 0, region.first_photon,  region.num_photons),
@@ -594,6 +596,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     segment_dist_x.join(info->reader->read_timeout_ms, true);
     solar_elevation.join(info->reader->read_timeout_ms, true);
     dist_ph_along.join(info->reader->read_timeout_ms, true);
+    dist_ph_across.join(info->reader->read_timeout_ms, true);
     h_ph.join(info->reader->read_timeout_ms, true);
     signal_conf_ph.join(info->reader->read_timeout_ms, true);
     quality_ph.join(info->reader->read_timeout_ms, true);
@@ -1420,7 +1423,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .time_ns = parms->deltatime2timestamp(atl03.delta_time[t][current_photon]),
                                 .latitude = atl03.lat_ph[t][current_photon],
                                 .longitude = atl03.lon_ph[t][current_photon],
-                                .distance = along_track_distance - (state.extent_length / 2.0),
+                                .distance = (float)(along_track_distance - (state.extent_length / 2.0)),
+                                .across = atl03.dist_ph_across[t][current_photon],
                                 .height = atl03.h_ph[t][current_photon],
                                 .relief = relief,
                                 .landcover = landcover_flag,

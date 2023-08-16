@@ -95,7 +95,8 @@ class Atl03Reader: public LuaObject
             int64_t         time_ns;    // nanoseconds since GPS epoch
             double          latitude;
             double          longitude;
-            double          distance;   // double[]: dist_ph_along
+            float           distance;   // float[]: dist_ph_along
+            float           across;     // float[]: dist_ph_across
             float           height;     // float[]: h_ph
             float           relief;     // float[]: ATL08 ph_h
             uint8_t         landcover;  // ATL08 land cover flags
@@ -222,6 +223,7 @@ class Atl03Reader: public LuaObject
                 GTArray<double>     segment_dist_x;
                 GTArray<float>      solar_elevation;
                 GTArray<float>      dist_ph_along;
+                GTArray<float>      dist_ph_across;
                 GTArray<float>      h_ph;
                 GTArray<int8_t>     signal_conf_ph;
                 GTArray<int8_t>     quality_ph;

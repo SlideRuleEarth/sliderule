@@ -288,6 +288,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"latitude"``: latitude (-90.0 to 90.0)
 - ``"longitude"``: longitude (-180.0 to 180.0)
 - ``"distance"``: along track distance of the photon in meters (with respect to the center of the segment)
+- ``"across"``: across track distance of the photon in meters
 - ``"height"``: height of the photon in meters
 - ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
 - ``"background_rate"``: background photon counts per second
@@ -320,7 +321,7 @@ The elevation GeoDataFrame has the following columns:
 - ``"lon"``: longitude (-180.0 to 180.0) [*in compact*]
 - ``"h_mean"``: elevation in meters from ellipsoid [*in compact*]
 - ``"dh_fit_dx"``: along-track slope
-- ``"dh_fit_dy"``: across-track slope
+- ``"atc_y"``: across-track distance
 - ``"w_surface_window_final"``: width of the window used to select the final set of photons used in the calculation
 - ``"rms_misfit"``: measured error in the linear fit of the surface
 - ``"h_sigma"``: error estimate for the least squares fit model

@@ -127,11 +127,11 @@ class Atl06Dispatch: public DispatchObject
             double              longitude;
             double              distance;               // distance from the equator
             double              h_mean;                 // meters from ellipsoid
-            double              along_track_slope;
-            double              across_track_slope;
-            double              window_height;
-            double              rms_misfit;
             double              h_sigma;
+            float               along_track_slope;
+            float               across_track_dist;
+            float               window_height;
+            float               rms_misfit;
         } elevation_t;
 
         /* (Normal) ATL06 Record */
@@ -159,6 +159,7 @@ class Atl06Dispatch: public DispatchObject
             double      latitude;
             double      longitude;
             double      time_ns;
+            double      across_track_dist;
         } lsf_t;
 
         typedef struct {

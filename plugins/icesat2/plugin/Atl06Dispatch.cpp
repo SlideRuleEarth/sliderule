@@ -115,11 +115,11 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
     {"lat",                     RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
     {"lon",                     RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
     {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS},
-    {"dh_fit_dx",               RecordObject::DOUBLE,   offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
-    {"dh_fit_dy",               RecordObject::DOUBLE,   offsetof(elevation_t, across_track_slope),  1,  NULL, NATIVE_FLAGS},
-    {"w_surface_window_final",  RecordObject::DOUBLE,   offsetof(elevation_t, window_height),       1,  NULL, NATIVE_FLAGS},
-    {"rms_misfit",              RecordObject::DOUBLE,   offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS},
-    {"h_sigma",                 RecordObject::DOUBLE,   offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS}
+    {"h_sigma",                 RecordObject::DOUBLE,   offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS},
+    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, along_track_slope),   1,  NULL, NATIVE_FLAGS},
+    {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, across_track_dist),   1,  NULL, NATIVE_FLAGS},
+    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, window_height),       1,  NULL, NATIVE_FLAGS},
+    {"rms_misfit",              RecordObject::FLOAT,    offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl06Dispatch::atRecType = "atl06rec";
@@ -539,6 +539,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
         result[t].elevation.latitude = fit.latitude;
         result[t].elevation.longitude = fit.longitude;
         result[t].elevation.time_ns = (int64_t)fit.time_ns;
+        result[t].elevation.across_track_dist = (float)fit.across_track_dist;
     }
 }
 
@@ -748,6 +749,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, point_t*
         fit.latitude = 0.0;
         fit.longitude = 0.0;
         fit.time_ns = 0.0;
+        fit.across_track_dist = 0.0;
 
         if(size > 0)
         {
@@ -769,6 +771,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, point_t*
                 double lat_y = ph->latitude;
                 double lon_y = ph->longitude;
                 double gps_y = ph->time_ns;
+                double atc_y = ph->across;
 
                 /* Shift Longitudes */
                 if(shift_lon)
@@ -784,6 +787,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, point_t*
                 fit.latitude += gig_1 * lat_y;
                 fit.longitude += gig_1 * lon_y;
                 fit.time_ns += gig_1 * gps_y;
+                fit.across_track_dist += gig_1 * atc_y;
             }
 
             /* Check if Longitude Needs to be Shifted Back */
