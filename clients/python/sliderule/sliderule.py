@@ -321,12 +321,17 @@ def __parse_native(data, callbacks):
                     rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
                     rawdata = rawbits[len(rectype) + 1:]
                     rec     = __decode_native(rectype, rawdata)
-                    if callbacks != None and rectype in callbacks:
-                        # Execute Call-Back on Record
-                        callbacks[rectype](rec)
+                    if rectype == "conrec":
+                        # parse records contained in record
+                        contained_recs = __parse_native(rawdata[rec["start"]], callbacks)
+                        recs += contained_recs
                     else:
-                        # Append Record
-                        recs.append(rec)
+                        if callbacks != None and rectype in callbacks:
+                            # Execute Call-Back on Record
+                            callbacks[rectype](rec)
+                        else:
+                            # Append Record
+                            recs.append(rec)
                     # Reset Record Parsing
                     rec_rsps.clear()
                     rec_size_index = 0
