@@ -78,23 +78,6 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"data",            RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::phFlatRecType = "flat03rec.photons";
-const RecordObject::fieldDef_t Atl03Reader::phFlatRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(flat_photon_t, extent_id),         1,  NULL, NATIVE_FLAGS},
-    {"track",       RecordObject::UINT8,    offsetof(flat_photon_t, track),             1,  NULL, NATIVE_FLAGS},
-    {"spot",        RecordObject::UINT8,    offsetof(flat_photon_t, spot),              1,  NULL, NATIVE_FLAGS},
-    {"pair",        RecordObject::UINT8,    offsetof(flat_photon_t, pair),              1,  NULL, NATIVE_FLAGS},
-    {"rgt",         RecordObject::UINT16,   offsetof(flat_photon_t, rgt),               1,  NULL, NATIVE_FLAGS},
-    {"cycle",       RecordObject::UINT16,   offsetof(flat_photon_t, cycle),             1,  NULL, NATIVE_FLAGS},
-    {"segment_id",  RecordObject::UINT32,   offsetof(flat_photon_t, segment_id),        1,  NULL, NATIVE_FLAGS},
-    {"photon",      RecordObject::USER,     offsetof(flat_photon_t, photon),            1,  phRecType, NATIVE_FLAGS}
-};
-
-const char* Atl03Reader::exFlatRecType = "flat03rec";
-const RecordObject::fieldDef_t Atl03Reader::exFlatRecDef[] = {
-    {"photons",     RecordObject::USER,     0,   0,  phFlatRecType, NATIVE_FLAGS} // variable length
-};
-
 const char* Atl03Reader::phAncRecType = "phrec"; // photon ancillary atl03 record
 const RecordObject::fieldDef_t Atl03Reader::phAncRecDef[] = {
     {"extent_id",   RecordObject::UINT64,   offsetof(anc_photon_t, extent_id),      1,  NULL, NATIVE_FLAGS},
@@ -127,7 +110,7 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>, <flatten>)
+ * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Atl03Reader::luaCreate (lua_State* L)
 {
@@ -142,10 +125,9 @@ int Atl03Reader::luaCreate (lua_State* L)
         const char* outq_name = getLuaString(L, 3);
         parms = (Icesat2Parms*)getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE);
         bool send_terminator = getLuaBoolean(L, 5, true, true);
-        bool flatten = getLuaBoolean(L, 6, true, false);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03Reader(L, asset, resource, outq_name, parms, send_terminator, flatten));
+        return createLuaObject(L, new Atl03Reader(L, asset, resource, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
@@ -163,8 +145,6 @@ void Atl03Reader::init (void)
 {
     RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
     RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
-    RECDEF(phFlatRecType,   phFlatRecDef,   sizeof(flat_photon_t),  NULL /* "extent_id" */);
-    RECDEF(exFlatRecType,   exFlatRecDef,   1,                      NULL);
     RECDEF(phAncRecType,    phAncRecDef,    sizeof(anc_photon_t),   NULL /* "extent_id" */);
     RECDEF(exAncRecType,    exAncRecDef,    sizeof(anc_extent_t),   NULL /* "extent_id" */);
 }
@@ -172,7 +152,7 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator, bool _flatten):
+Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -185,7 +165,6 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     asset = _asset;
     resource = StringLib::duplicate(_resource);
     parms = _parms;
-    flatten = _flatten;
 
     /* Generate ATL08 Resource Name */
     SafeString atl08_resource("%s", resource);
@@ -1514,20 +1493,28 @@ void* Atl03Reader::subsettingThread (void* parm)
                                      (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
                                      Icesat2Parms::EXTENT_ID_PHOTONS;
 
-                /* Build and Send Extent Record */
-                if(!reader->flatten)
-                {
-                    reader->sendExtentRecord(extent_id, info->track, state, atl03, &local_stats);
-                }
-                else if(state[Icesat2Parms::RPT_L].extent_photons.length() > 0 || state[Icesat2Parms::RPT_R].extent_photons.length() > 0)
-                {
-                    reader->sendFlatRecord(extent_id, info->track, state, atl03, &local_stats);
-                }
+                /* Build Extent and Ancillary Records */
+                vector<RecordObject*> rec_list;
+                int rec_total_size = 0;
+                reader->generateExtentRecord(extent_id, info->track, state, atl03, rec_list, rec_total_size);
+                reader->generateAncillaryGeoRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, state, rec_list, rec_total_size);
+                reader->generateAncillaryPhRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, state, rec_list, rec_total_size);
 
-
-                /* Send Ancillary Records */
-                reader->sendAncillaryGeoRecords(extent_id, parms->atl03_geo_fields, &atl03.anc_geo_data, state, &local_stats);
-                reader->sendAncillaryPhRecords(extent_id, parms->atl03_ph_fields, &atl03.anc_ph_data, state, &local_stats);
+                /* Send Records */
+                if(rec_list.size() == 1)
+                {
+                    reader->postRecord(*(rec_list[0]), local_stats);
+                }
+                else if(rec_list.size() > 1)
+                {
+                    /* Send Container Record */
+                    ContainerRecord container(rec_list.size(), rec_total_size);
+                    for(size_t i = 0; i < rec_list.size(); i++)
+                    {
+                        container.addRecord(*(rec_list[i]));
+                    }
+                    reader->postRecord(container, local_stats);
+                }
             }
             else // neither pair in extent valid
             {
@@ -1640,17 +1627,18 @@ uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& a
 }
 
 /*----------------------------------------------------------------------------
- * sendExtentRecord
+ * generateExtentRecord
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
+void Atl03Reader::generateExtentRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
 {
     /* Calculate Extent Record Size */
     int num_photons = state[Icesat2Parms::RPT_L].extent_photons.length() + state[Icesat2Parms::RPT_R].extent_photons.length();
     int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
+    total_size += extent_bytes;
 
     /* Allocate and Initialize Extent Record */
-    RecordObject record(exRecType, extent_bytes);
-    extent_t* extent = (extent_t*)record.getRecordData();
+    RecordObject* record = new RecordObject(exRecType, extent_bytes);
+    extent_t* extent = (extent_t*)record->getRecordData();
     extent->extent_id = extent_id;
     extent->reference_pair_track = track;
     extent->spacecraft_orientation = atl03.sc_orient[0];
@@ -1704,68 +1692,27 @@ bool Atl03Reader::sendExtentRecord (uint64_t extent_id, uint8_t track, TrackStat
     extent->photon_offset[Icesat2Parms::RPT_L] = offsetof(extent_t, photons); // pointers are set to offset from start of record data
     extent->photon_offset[Icesat2Parms::RPT_R] = offsetof(extent_t, photons) + (sizeof(photon_t) * extent->photon_count[Icesat2Parms::RPT_L]);
 
-    /* Post Segment Record */
-    return postRecord(&record, local_stats);
+    /* Add Extent Record */
+    rec_list.push_back(record);
 }
 
 /*----------------------------------------------------------------------------
- * sendFlatRecord
+ * generateAncillaryGeoRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendFlatRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats)
-{
-    /* Calculate Extent Record Size */
-    int num_photons = state[Icesat2Parms::RPT_L].extent_photons.length() + state[Icesat2Parms::RPT_R].extent_photons.length();
-    int extent_bytes = sizeof(flat_photon_t) * num_photons;
-
-    /* Allocate and Initialize Extent Record */
-    RecordObject record(exFlatRecType, extent_bytes);
-    flat_photon_t* extent = (flat_photon_t*)record.getRecordData();
-
-    /* Populate Extent */
-    uint32_t ph_out = 0;
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-    {
-        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)track, t);
-        uint32_t segment_id = calculateSegmentId(t, state, atl03);
-
-        /* Populate Photons */
-        if(num_photons > 0)
-        {
-            for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
-            {
-                flat_photon_t* photon = &extent[ph_out++];
-                photon->extent_id = extent_id;
-                photon->track = track;
-                photon->spot = spot;
-                photon->pair = t;
-                photon->rgt = start_rgt;
-                photon->cycle = start_cycle;
-                photon->segment_id = segment_id;
-                photon->photon = state[t].extent_photons[p];
-            }
-        }
-    }
-
-    /* Post Segment Record */
-    return postRecord(&record, local_stats);
-}
-
-/*----------------------------------------------------------------------------
- * sendAncillaryGeoRecords
- *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+void Atl03Reader::generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list)
     {
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict->get((*field_list)[i].str());
+            GTDArray* array = field_dict[(*field_list)[i].str()];
 
             /* Create Ancillary Record */
             int record_size = offsetof(anc_extent_t, data) + array->gt[Icesat2Parms::RPT_L].elementSize() + array->gt[Icesat2Parms::RPT_R].elementSize();
-            RecordObject record(exAncRecType, record_size);
-            anc_extent_t* data = (anc_extent_t*)record.getRecordData();
+            RecordObject* record = new RecordObject(exAncRecType, record_size);
+            anc_extent_t* data = (anc_extent_t*)record->getRecordData();
+            total_size += record_size;
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
@@ -1777,35 +1724,31 @@ bool Atl03Reader::sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::str
             int32_t start_element[Icesat2Parms::NUM_PAIR_TRACKS] = {state[Icesat2Parms::RPT_L].extent_segment, state[Icesat2Parms::RPT_R].extent_segment};
             array->serialize(&data->data[0], start_element, num_elements);
 
-            /* Post Ancillary Record */
-            postRecord(&record, local_stats);
+            /* Add Ancillary Record */
+            rec_list.push_back(record);
         }
-        return true;
-    }
-    else
-    {
-        return false;
     }
 }
 
 /*----------------------------------------------------------------------------
- * sendAncillaryPhRecords
+ * generateAncillaryPhRecords
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats)
+void Atl03Reader::generateAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list)
     {
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict->get((*field_list)[i].str());
+            GTDArray* array = field_dict[(*field_list)[i].str()];
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_photon_t, data) +
                                 (array->gt[Icesat2Parms::RPT_L].elementSize() * state[Icesat2Parms::RPT_L].photon_indices->length()) +
                                 (array->gt[Icesat2Parms::RPT_R].elementSize() * state[Icesat2Parms::RPT_R].photon_indices->length());
-            RecordObject record(phAncRecType, record_size);
-            anc_photon_t* data = (anc_photon_t*)record.getRecordData();
+            RecordObject* record = new RecordObject(phAncRecType, record_size);
+            anc_photon_t* data = (anc_photon_t*)record->getRecordData();
+            total_size += record_size;
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
@@ -1824,41 +1767,34 @@ bool Atl03Reader::sendAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::stri
                 }
             }
 
-            /* Post Ancillary Record */
-            postRecord(&record, local_stats);
+            /* Add Ancillary Record */
+            rec_list.push_back(record);
         }
-        return true;
-    }
-    else
-    {
-        return false;
     }
 }
 
 /*----------------------------------------------------------------------------
  * postRecord
  *----------------------------------------------------------------------------*/
-bool Atl03Reader::postRecord (RecordObject* record, stats_t* local_stats)
+void Atl03Reader::postRecord (RecordObject& record, stats_t& local_stats)
 {
     uint8_t* rec_buf = NULL;
-    int rec_bytes = record->serialize(&rec_buf, RecordObject::REFERENCE);
+    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
     int post_status = MsgQ::STATE_TIMEOUT;
     while(active && (post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
     {
-        local_stats->extents_retried++;
+        local_stats.extents_retried++;
     }
 
     /* Update Statistics */
     if(post_status > 0)
     {
-        local_stats->extents_sent++;
-        return true;
+        local_stats.extents_sent++;
     }
     else
     {
-        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record->getRecordType(), outQ->getName(), post_status);
-        local_stats->extents_dropped++;
-        return false;
+        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record.getRecordType(), outQ->getName(), post_status);
+        local_stats.extents_dropped++;
     }
 }
 

@@ -25,14 +25,10 @@ local rqst_parms    = icesat2.parms(parms)
 local proc          = georesource.initialize(resource, parms, nil, args)
 
 if proc then
-    local flatten = false
     if parms[arrow.PARMS] then
         local output_parms = arrow.parms(parms[arrow.PARMS])
-        if output_parms:isparquet() then
-            flatten = true
-        end
     end
 
-    local reader    = icesat2.atl03(proc.asset, resource, args.result_q, rqst_parms, false, flatten)
+    local reader    = icesat2.atl03(proc.asset, resource, args.result_q, rqst_parms, false)
     local status    = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, true)
 end

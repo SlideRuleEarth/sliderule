@@ -168,7 +168,8 @@ void initcore (void)
     TTYLib::init();
     TimeLib::init();
     LuaEngine::init();
-
+    ContainerRecord::init();
+    
     /* Register IO Drivers */
     Asset::registerDriver(Asset::IODriver::FORMAT, Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);

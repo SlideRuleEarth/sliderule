@@ -49,6 +49,8 @@
 #include "GTDArray.h"
 #include "Icesat2Parms.h"
 
+using std::vector;
+
 /******************************************************************************
  * ATL03 READER
  ******************************************************************************/
@@ -68,12 +70,6 @@ class Atl03Reader: public LuaObject
 
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
-
-        static const char* phFlatRecType;
-        static const RecordObject::fieldDef_t phFlatRecDef[];
-
-        static const char* exFlatRecType;
-        static const RecordObject::fieldDef_t exFlatRecDef[];
 
         static const char* phAncRecType;
         static const RecordObject::fieldDef_t phAncRecDef[];
@@ -125,18 +121,6 @@ class Atl03Reader: public LuaObject
             uint32_t        photon_offset[Icesat2Parms::NUM_PAIR_TRACKS];
             photon_t        photons[]; // zero length field
         } extent_t;
-
-        /* Flattened Photon Fields */
-        typedef struct {
-            uint64_t        extent_id;
-            uint8_t         track; // 1, 2, 3
-            uint8_t         spot; // 1, 2, 3, 4, 5, 6
-            uint8_t         pair; // pair track - 0: left, 1: right
-            uint16_t        rgt;
-            uint16_t        cycle;
-            uint32_t        segment_id;
-            photon_t        photon;
-        } flat_photon_t;
 
         /* Photon Ancillary Record */
         typedef struct {
@@ -343,7 +327,6 @@ class Atl03Reader: public LuaObject
         const int           read_timeout_ms;
         Publisher*          outQ;
         Icesat2Parms*       parms;
-        bool                flatten;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
@@ -357,22 +340,21 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader             (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true, bool _flatten=false);
-                            ~Atl03Reader            (void);
+                            Atl03Reader                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
+                            ~Atl03Reader                (void);
 
-        static void*        subsettingThread        (void* parm);
+        static void*        subsettingThread            (void* parm);
 
-        double              calculateBackground     (int t, TrackState& state, Atl03Data& atl03);
-        uint32_t            calculateSegmentId      (int t, TrackState& state, Atl03Data& atl03);
-        bool                sendExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
-        bool                sendFlatRecord          (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, stats_t* local_stats);
-        bool                sendAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
-        bool                sendAncillaryPhRecords  (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>* field_dict, TrackState& state, stats_t* local_stats);
-        bool                postRecord              (RecordObject* record, stats_t* local_stats);
-        void                parseResource           (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
+        double              calculateBackground         (int t, TrackState& state, Atl03Data& atl03);
+        uint32_t            calculateSegmentId          (int t, TrackState& state, Atl03Data& atl03);
+        void                generateExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateAncillaryPhRecords  (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size);
+        void                postRecord                  (RecordObject& record, stats_t& local_stats);
+        void                parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 
-        static int          luaParms                (lua_State* L);
-        static int          luaStats                (lua_State* L);
+        static int          luaParms                    (lua_State* L);
+        static int          luaStats                    (lua_State* L);
 
         /* Unit Tests */
         friend class UT_Atl03Reader;
