@@ -95,9 +95,10 @@ PublisherDispatch::~PublisherDispatch(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool PublisherDispatch::processRecord(RecordObject* record, okey_t key)
+bool PublisherDispatch::processRecord(RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
+    (void)records;
     unsigned char* buffer; // reference to serial buffer
     int size = record->serialize(&buffer, RecordObject::REFERENCE);
     if(size > 0)    return (pubQ->postCopy(buffer, size) > 0);

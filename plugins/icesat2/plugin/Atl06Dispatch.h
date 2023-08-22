@@ -196,7 +196,7 @@ class Atl06Dispatch: public DispatchObject
                         Atl06Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
                         ~Atl06Dispatch                  (void);
 
-        bool            processRecord                   (RecordObject* record, okey_t key) override;
+        bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 

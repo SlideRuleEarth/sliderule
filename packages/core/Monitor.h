@@ -96,7 +96,7 @@ class Monitor: public DispatchObject
                     Monitor         (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
                     ~Monitor        (void);
 
-        bool        processRecord   (RecordObject* record, okey_t key) override;
+        bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
 
         int         textOutput      (EventLib::event_t* event, char* event_buffer);
         int         jsonOutput      (EventLib::event_t* event, char* event_buffer);

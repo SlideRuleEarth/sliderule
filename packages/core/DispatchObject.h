@@ -40,6 +40,9 @@
 #include "RecordObject.h"
 #include "OsApi.h"
 
+#include <vector>
+using std::vector;
+
 /******************************************************************************
  * DISPATCH OBJECT (PURE VIRTUAL)
  ******************************************************************************/
@@ -55,12 +58,18 @@ class DispatchObject: public LuaObject
         static const char* OBJECT_TYPE;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef vector<RecordObject*> recVec_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         virtual         ~DispatchObject     (void) = 0;
 
-        virtual bool    processRecord      (RecordObject* record, okey_t key) = 0;
+        virtual bool    processRecord      (RecordObject* record, okey_t key, recVec_t* records) = 0;
         virtual bool    processTimeout     (void);
         virtual bool    processTermination (void);
 

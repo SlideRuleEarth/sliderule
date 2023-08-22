@@ -142,8 +142,10 @@ void MetricDispatch::freeSerialBuffer(void* obj, void* parm)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool MetricDispatch::processRecord (RecordObject* record, okey_t key)
+bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
+    (void)records;
+    
     /* Get Record ID and Key */
     long id = record->getRecordId();
     bool enabled = true;

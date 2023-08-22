@@ -183,7 +183,7 @@ Atl08Dispatch::~Atl08Dispatch(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
+bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
 

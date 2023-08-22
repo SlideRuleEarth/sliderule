@@ -230,9 +230,10 @@ RasterSampler::~RasterSampler(void)
  *          each extent (up to 256 per record) will produce a single output record with one point
  *          that one point may have multiple samples associated with it
  *----------------------------------------------------------------------------*/
-bool RasterSampler::processRecord (RecordObject* record, okey_t key)
+bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
+    (void)records;
 
     bool status = true;
 

@@ -123,8 +123,10 @@ LimitDispatch::~LimitDispatch(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool LimitDispatch::processRecord (RecordObject* record, okey_t key)
+bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
+    (void)records;
+    
     bool status = true;
     bool enabled = true;
 

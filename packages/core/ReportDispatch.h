@@ -152,7 +152,7 @@ class ReportDispatch: public DispatchObject
         bool            flushRow            (void);
 
         /* overridden methods */
-        virtual bool    processRecord       (RecordObject* record, okey_t key);
+        virtual bool    processRecord       (RecordObject* record, okey_t key, recVec_t* records) override;
 
         /* lua functions */
         static int      luaSetIndexDisplay  (lua_State* L);

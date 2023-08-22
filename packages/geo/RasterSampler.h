@@ -144,7 +144,7 @@ class RasterSampler: public DispatchObject
                                                  const char* time_key, const char* height_key);
                         ~RasterSampler          (void);
 
-        bool            processRecord           (RecordObject* record, okey_t key) override;
+        bool            processRecord           (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout          (void) override;
         bool            processTermination      (void) override;
 };

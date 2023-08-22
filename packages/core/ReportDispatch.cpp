@@ -329,8 +329,10 @@ ReportDispatch::~ReportDispatch (void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool ReportDispatch::processRecord (RecordObject* record, okey_t key)
+bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
+    (void)records;
+    
     okey_t index = key;
 
     /* Sanity Check */

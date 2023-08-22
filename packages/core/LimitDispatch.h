@@ -87,7 +87,7 @@ class LimitDispatch: public DispatchObject
                     ~LimitDispatch      (void);
 
         /* overridden methods */
-        bool        processRecord       (RecordObject* record, okey_t key);
+        bool        processRecord       (RecordObject* record, okey_t key, recVec_t* records);
 
         /* meta functions */
         static int  luaSetLogLevel      (lua_State* L);

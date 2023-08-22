@@ -236,7 +236,7 @@ Atl06Dispatch::~Atl06Dispatch(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key)
+bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
 

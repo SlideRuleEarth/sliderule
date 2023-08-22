@@ -104,7 +104,7 @@ class CaptureDispatch: public DispatchObject
         static void freeCaptureEntry    (void* obj, void* parm);
 
         /* overridden methods */
-        bool        processRecord       (RecordObject* record, okey_t key);
+        bool        processRecord       (RecordObject* record, okey_t key, recVec_t* records);
 
         /* meta functions */
         static int  luaCapture          (lua_State* L);

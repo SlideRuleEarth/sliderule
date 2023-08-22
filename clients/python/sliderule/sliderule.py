@@ -154,6 +154,25 @@ class TransientError(RuntimeError):
 ###############################################################################
 
 #
+# __StreamSource
+#
+class __StreamSource:
+    def __init__(self, data):
+        self.source = data
+    def __iter__(self):
+        for line in self.source.iter_content(None):
+            yield line
+
+#
+# __BufferSource
+#
+class __BufferSource:
+    def __init__(self, data):
+        self.source = data
+    def __iter__(self):
+        yield self.source
+
+#
 #  __populate
 #
 def __populate(rectype):
@@ -170,7 +189,7 @@ def __parse_json(data):
     data: request response
     """
     lines = []
-    for line in data.iter_content(None):
+    for line in data:
         lines.append(line)
     response = b''.join(lines)
     return json.loads(response)
@@ -283,7 +302,7 @@ def __parse_native(data, callbacks):
 
     duration = 0.0
 
-    for line in data.iter_content(None):
+    for line in data:
 
         # Capture Start Time (for duration)
         tstart = time.perf_counter()
@@ -323,7 +342,8 @@ def __parse_native(data, callbacks):
                     rec     = __decode_native(rectype, rawdata)
                     if rectype == "conrec":
                         # parse records contained in record
-                        contained_recs = __parse_native(rawdata[rec["start"]], callbacks)
+                        buffer = __BufferSource(rawdata[rec["start"]:])
+                        contained_recs = __parse_native(buffer, callbacks)
                         recs += contained_recs
                     else:
                         if callbacks != None and rectype in callbacks:
@@ -704,13 +724,14 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
                 data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
             data.raise_for_status()
             # Parse Response
+            stream = __StreamSource(data)
             format = data.headers['Content-Type']
             if format == 'text/plain':
-                rsps = __parse_json(data)
+                rsps = __parse_json(stream)
             elif format == 'application/json':
-                rsps = __parse_json(data)
+                rsps = __parse_json(stream)
             elif format == 'application/octet-stream':
-                rsps = __parse_native(data, callbacks)
+                rsps = __parse_native(stream, callbacks)
             else:
                 raise FatalError('unsupported content type: %s' % (format))
             # Success

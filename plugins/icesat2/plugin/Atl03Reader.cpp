@@ -1515,6 +1515,12 @@ void* Atl03Reader::subsettingThread (void* parm)
                     }
                     reader->postRecord(container, local_stats);
                 }
+
+                /* Clean Up Records */
+                for(auto& rec: rec_list)
+                {
+                    delete rec;
+                }
             }
             else // neither pair in extent valid
             {
@@ -1634,7 +1640,6 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, uint8_t track, Track
     /* Calculate Extent Record Size */
     int num_photons = state[Icesat2Parms::RPT_L].extent_photons.length() + state[Icesat2Parms::RPT_R].extent_photons.length();
     int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
-    total_size += extent_bytes;
 
     /* Allocate and Initialize Extent Record */
     RecordObject* record = new RecordObject(exRecType, extent_bytes);
@@ -1693,6 +1698,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, uint8_t track, Track
     extent->photon_offset[Icesat2Parms::RPT_R] = offsetof(extent_t, photons) + (sizeof(photon_t) * extent->photon_count[Icesat2Parms::RPT_L]);
 
     /* Add Extent Record */
+    total_size += record->getAllocatedMemory();
     rec_list.push_back(record);
 }
 
@@ -1712,7 +1718,6 @@ void Atl03Reader::generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms:
             int record_size = offsetof(anc_extent_t, data) + array->gt[Icesat2Parms::RPT_L].elementSize() + array->gt[Icesat2Parms::RPT_R].elementSize();
             RecordObject* record = new RecordObject(exAncRecType, record_size);
             anc_extent_t* data = (anc_extent_t*)record->getRecordData();
-            total_size += record_size;
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
@@ -1725,6 +1730,7 @@ void Atl03Reader::generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms:
             array->serialize(&data->data[0], start_element, num_elements);
 
             /* Add Ancillary Record */
+            total_size += record->getAllocatedMemory();
             rec_list.push_back(record);
         }
     }
@@ -1748,7 +1754,6 @@ void Atl03Reader::generateAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::
                                 (array->gt[Icesat2Parms::RPT_R].elementSize() * state[Icesat2Parms::RPT_R].photon_indices->length());
             RecordObject* record = new RecordObject(phAncRecType, record_size);
             anc_photon_t* data = (anc_photon_t*)record->getRecordData();
-            total_size += record_size;
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
@@ -1768,6 +1773,7 @@ void Atl03Reader::generateAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::
             }
 
             /* Add Ancillary Record */
+            total_size += record->getAllocatedMemory();
             rec_list.push_back(record);
         }
     }

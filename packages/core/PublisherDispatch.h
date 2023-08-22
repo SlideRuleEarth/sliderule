@@ -76,7 +76,7 @@ class PublisherDispatch: public DispatchObject
                 PublisherDispatch   (lua_State* L, const char* recq_name);
                 ~PublisherDispatch  (void);
 
-        bool    processRecord       (RecordObject* record, okey_t key);
+        bool    processRecord       (RecordObject* record, okey_t key, recVec_t* records);
 };
 
 #endif  /* __publisher_dispatch__ */

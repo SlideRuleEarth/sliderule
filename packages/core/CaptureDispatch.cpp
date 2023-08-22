@@ -111,9 +111,10 @@ void CaptureDispatch::freeCaptureEntry (void* obj, void* parm)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool CaptureDispatch::processRecord (RecordObject* record, okey_t key)
+bool CaptureDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
+    (void)records;
 
     capMut.lock();
     {
