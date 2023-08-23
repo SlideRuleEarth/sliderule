@@ -560,8 +560,11 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         if sample_photon_record == None and len(rsp['data']) > 0:
                             sample_photon_record = rsp
                     elif 'extrec' == rsp['__rectype']:
-                        # Get Field Type
-                        field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                        # Get Field Name and Type
+                        if rsp['field_type'] == 0:
+                            field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                        elif rsp['field_type'] == 1:
+                            field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in extent_field_types:
                             extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
@@ -570,9 +573,12 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         # Save of Values per Extent ID per Field Name
                         data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
                         extent_dictionary[extent_id][field_name] = data
-                    elif 'phrec' == rsp['__rectype']:
-                        # Get Field Type
-                        field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                    elif 'ancrec' == rsp['__rectype']:
+                        # Get Field Name and Type
+                        if rsp['field_type'] == 0:
+                            field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                        elif rsp['field_type'] == 1:
+                            field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in photon_field_types:
                             photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry

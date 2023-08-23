@@ -71,11 +71,8 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const char* phAncRecType;
-        static const RecordObject::fieldDef_t phAncRecDef[];
-
-        static const char* exAncRecType;
-        static const RecordObject::fieldDef_t exAncRecDef[];
+        static const char* ancRecType;
+        static const RecordObject::fieldDef_t ancRecDef[];
 
         static const char* OBJECT_TYPE;
 
@@ -122,22 +119,21 @@ class Atl03Reader: public LuaObject
             photon_t        photons[]; // zero length field
         } extent_t;
 
-        /* Photon Ancillary Record */
+        /* Ancillary Field Types */
+        typedef enum {
+            PHOTON_ANC_TYPE = 0,
+            EXTENT_ANC_TYPE = 1
+        } anc_type_t;
+
+        /* Ancillary Record */
         typedef struct {
             uint64_t        extent_id;
+            uint8_t         field_type; // anc_type_t
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
             uint32_t        num_elements[Icesat2Parms::NUM_PAIR_TRACKS];
             uint8_t         data[];
-        } anc_photon_t;
-
-        /* Extent Ancillary Record */
-        typedef struct {
-            uint64_t        extent_id;
-            uint8_t         field_index; // position in request parameter list
-            uint8_t         data_type; // RecordObject::fieldType_t
-            uint8_t         data[];
-        } anc_extent_t;
+        } anc_t;
 
         /* Statistics */
         typedef struct {
@@ -291,7 +287,6 @@ class Atl03Reader: public LuaObject
                     double          start_seg_portion;  // portion of segment extent is starting from
                     bool            track_complete;     // flag when track processing has finished
                     int32_t         bckgrd_in;          // bckgrd index
-                    List<int32_t>*  photon_indices;     // used for ancillary data
                     List<photon_t>  extent_photons;     // list of individual photons in extent
                     int32_t         extent_segment;     // current segment extent is pulling photons from
                     bool            extent_valid;       // flag for validity of extent (atl06 checks)
@@ -348,8 +343,7 @@ class Atl03Reader: public LuaObject
         double              calculateBackground         (int t, TrackState& state, Atl03Data& atl03);
         uint32_t            calculateSegmentId          (int t, TrackState& state, Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        void                generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size);
-        void                generateAncillaryPhRecords  (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, anc_type_t type,  List<int32_t>** indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         void                parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

@@ -78,21 +78,14 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"data",            RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::phAncRecType = "phrec"; // photon ancillary atl03 record
-const RecordObject::fieldDef_t Atl03Reader::phAncRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(anc_photon_t, extent_id),      1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(anc_photon_t, field_index),    1,  NULL, NATIVE_FLAGS},
-    {"num_elements",RecordObject::UINT32,   offsetof(anc_photon_t, num_elements),   2,  NULL, NATIVE_FLAGS},
-    {"datatype",    RecordObject::UINT8,    offsetof(anc_photon_t, data_type),      1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(anc_photon_t, data),           0,  NULL, NATIVE_FLAGS} // variable length
-};
-
-const char* Atl03Reader::exAncRecType = "extrec"; // extent ancillary atl03 record
-const RecordObject::fieldDef_t Atl03Reader::exAncRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(anc_extent_t, extent_id),     1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(anc_extent_t, field_index),   1,  NULL, NATIVE_FLAGS},
-    {"datatype",    RecordObject::UINT8,    offsetof(anc_extent_t, data_type),     1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(anc_extent_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
+const char* Atl03Reader::ancRecType = "ancrec"; // ancillary atl03 record
+const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
+    {"extent_id",   RecordObject::UINT64,   offsetof(anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
+    {"field_type",  RecordObject::UINT8,    offsetof(anc_t, field_type),    1,  NULL, NATIVE_FLAGS},
+    {"field_index", RecordObject::UINT8,    offsetof(anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
+    {"num_elements",RecordObject::UINT32,   offsetof(anc_t, num_elements),  2,  NULL, NATIVE_FLAGS},
+    {"datatype",    RecordObject::UINT8,    offsetof(anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
+    {"data",        RecordObject::UINT8,    offsetof(anc_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
 };
 
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
@@ -145,8 +138,7 @@ void Atl03Reader::init (void)
 {
     RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
     RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
-    RECDEF(phAncRecType,    phAncRecDef,    sizeof(anc_photon_t),   NULL /* "extent_id" */);
-    RECDEF(exAncRecType,    exAncRecDef,    sizeof(anc_extent_t),   NULL /* "extent_id" */);
+    RECDEF(ancRecType,      ancRecDef,      sizeof(anc_t),          NULL /* "extent_id" */);
 }
 
 /*----------------------------------------------------------------------------
@@ -555,7 +547,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
         }
     }
 
-    /* Read Ancillary Geocorrection Fields */
+    /* Read Ancillary Photon Fields */
     if(photon_fields)
     {
         for(int i = 0; i < photon_fields->length(); i++)
@@ -597,7 +589,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
         }
     }
 
-    /* Join Ancillary Geocorrection Reads */
+    /* Join Ancillary Photon Reads */
     if(photon_fields)
     {
         GTDArray* array = NULL;
@@ -1166,7 +1158,6 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
     gt[Icesat2Parms::RPT_L].start_seg_portion  = 0.0;
     gt[Icesat2Parms::RPT_L].track_complete     = false;
     gt[Icesat2Parms::RPT_L].bckgrd_in          = 0;
-    gt[Icesat2Parms::RPT_L].photon_indices     = NULL;
     gt[Icesat2Parms::RPT_L].extent_segment     = 0;
     gt[Icesat2Parms::RPT_L].extent_valid       = true;
 
@@ -1179,7 +1170,6 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
     gt[Icesat2Parms::RPT_R].start_seg_portion = 0.0;
     gt[Icesat2Parms::RPT_R].track_complete    = false;
     gt[Icesat2Parms::RPT_R].bckgrd_in         = 0;
-    gt[Icesat2Parms::RPT_R].photon_indices    = NULL;
     gt[Icesat2Parms::RPT_R].extent_segment    = 0;
     gt[Icesat2Parms::RPT_R].extent_valid      = true;
 }
@@ -1189,8 +1179,6 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::~TrackState (void)
 {
-    if(gt[Icesat2Parms::RPT_L].photon_indices) delete gt[Icesat2Parms::RPT_L].photon_indices;
-    if(gt[Icesat2Parms::RPT_R].photon_indices) delete gt[Icesat2Parms::RPT_R].photon_indices;
 }
 
 /*----------------------------------------------------------------------------
@@ -1212,6 +1200,8 @@ void* Atl03Reader::subsettingThread (void* parm)
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     uint32_t extent_counter = 0;
+    List<int32_t>* segment_indices[Icesat2Parms::NUM_PAIR_TRACKS] = {NULL, NULL};    // used for ancillary data
+    List<int32_t>* photon_indices[Icesat2Parms::NUM_PAIR_TRACKS] = {NULL, NULL};     // used for ancillary data
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -1270,11 +1260,18 @@ void* Atl03Reader::subsettingThread (void* parm)
                 state[t].extent_valid = true;
                 state[t].extent_photons.clear();
 
+                /* Ancillary Extent Fields */
+                if(parms->atl03_geo_fields)
+                {
+                    if(segment_indices[t]) segment_indices[t]->clear();
+                    else                   segment_indices[t] = new List<int32_t>;
+                }
+
                 /* Ancillary Photon Fields */
                 if(parms->atl03_ph_fields)
                 {
-                    if(state[t].photon_indices) state[t].photon_indices->clear();
-                    else                        state[t].photon_indices = new List<int32_t>;
+                    if(photon_indices[t]) photon_indices[t]->clear();
+                    else                  photon_indices[t] = new List<int32_t>;
                 }
 
                 /* Traverse Photons Until Desired Along Track Distance Reached */
@@ -1416,9 +1413,15 @@ void* Atl03Reader::subsettingThread (void* parm)
                             state[t].extent_photons.add(ph);
 
                             /* Index Photon for Ancillary Fields */
-                            if(state[t].photon_indices)
+                            if(segment_indices[t])
                             {
-                                state[t].photon_indices->add(current_photon);
+                                segment_indices[t]->add(current_segment);
+                            }
+                            /* Index Photon for Ancillary Fields */
+
+                            if(photon_indices[t])
+                            {
+                                photon_indices[t]->add(current_photon);
                             }
                         } while(false);
                     }
@@ -1497,8 +1500,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                 vector<RecordObject*> rec_list;
                 int rec_total_size = 0;
                 reader->generateExtentRecord(extent_id, info->track, state, atl03, rec_list, rec_total_size);
-                reader->generateAncillaryGeoRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, state, rec_list, rec_total_size);
-                reader->generateAncillaryPhRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, state, rec_list, rec_total_size);
+                reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
 
                 /* Send Records */
                 if(rec_list.size() == 1)
@@ -1559,6 +1562,13 @@ void* Atl03Reader::subsettingThread (void* parm)
         }
     }
     reader->threadMut.unlock();
+
+    /* Clean Up Indices */
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    {
+        if(segment_indices[t]) delete segment_indices[t];
+        if(photon_indices[t]) delete photon_indices[t];
+    }
 
     /* Clean Up Info */
     delete info;
@@ -1703,9 +1713,16 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, uint8_t track, Track
 }
 
 /*----------------------------------------------------------------------------
- * generateAncillaryGeoRecords
+ * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (
+    uint64_t extent_id, 
+    Icesat2Parms::string_list_t* field_list, 
+    MgDictionary<GTDArray*>& field_dict, 
+    anc_type_t type,
+    List<int32_t>** indices,
+    vector<RecordObject*>& rec_list, 
+    int& total_size)
 {
     if(field_list)
     {
@@ -1715,60 +1732,27 @@ void Atl03Reader::generateAncillaryGeoRecords (uint64_t extent_id, Icesat2Parms:
             GTDArray* array = field_dict[(*field_list)[i].str()];
 
             /* Create Ancillary Record */
-            int record_size = offsetof(anc_extent_t, data) + array->gt[Icesat2Parms::RPT_L].elementSize() + array->gt[Icesat2Parms::RPT_R].elementSize();
-            RecordObject* record = new RecordObject(exAncRecType, record_size);
-            anc_extent_t* data = (anc_extent_t*)record->getRecordData();
+            int record_size =   offsetof(anc_t, data) +
+                                (array->gt[Icesat2Parms::RPT_L].elementSize() * indices[Icesat2Parms::RPT_L]->length()) +
+                                (array->gt[Icesat2Parms::RPT_R].elementSize() * indices[Icesat2Parms::RPT_R]->length());
+            RecordObject* record = new RecordObject(ancRecType, record_size);
+            anc_t* data = (anc_t*)record->getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
+            data->field_type = type;
             data->field_index = i;
             data->data_type = array->gt[Icesat2Parms::RPT_L].elementType();
-
-            /* Populate Ancillary Data */
-            uint32_t num_elements[Icesat2Parms::NUM_PAIR_TRACKS] = {1, 1};
-            int32_t start_element[Icesat2Parms::NUM_PAIR_TRACKS] = {state[Icesat2Parms::RPT_L].extent_segment, state[Icesat2Parms::RPT_R].extent_segment};
-            array->serialize(&data->data[0], start_element, num_elements);
-
-            /* Add Ancillary Record */
-            total_size += record->getAllocatedMemory();
-            rec_list.push_back(record);
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * generateAncillaryPhRecords
- *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryPhRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, TrackState& state, vector<RecordObject*>& rec_list, int& total_size)
-{
-    if(field_list)
-    {
-        for(int i = 0; i < field_list->length(); i++)
-        {
-            /* Get Data Array */
-            GTDArray* array = field_dict[(*field_list)[i].str()];
-
-            /* Create Ancillary Record */
-            int record_size =   offsetof(anc_photon_t, data) +
-                                (array->gt[Icesat2Parms::RPT_L].elementSize() * state[Icesat2Parms::RPT_L].photon_indices->length()) +
-                                (array->gt[Icesat2Parms::RPT_R].elementSize() * state[Icesat2Parms::RPT_R].photon_indices->length());
-            RecordObject* record = new RecordObject(phAncRecType, record_size);
-            anc_photon_t* data = (anc_photon_t*)record->getRecordData();
-
-            /* Populate Ancillary Record */
-            data->extent_id = extent_id;
-            data->field_index = i;
-            data->data_type = array->gt[Icesat2Parms::RPT_L].elementType();
-            data->num_elements[Icesat2Parms::RPT_L] = state[Icesat2Parms::RPT_L].photon_indices->length();
-            data->num_elements[Icesat2Parms::RPT_R] = state[Icesat2Parms::RPT_R].photon_indices->length();
+            data->num_elements[Icesat2Parms::RPT_L] = indices[Icesat2Parms::RPT_L]->length();
+            data->num_elements[Icesat2Parms::RPT_R] = indices[Icesat2Parms::RPT_R]->length();
 
             /* Populate Ancillary Data */
             uint64_t bytes_written = 0;
             for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
             {
-                for(int p = 0; p < state[t].photon_indices->length(); p++)
+                for(int p = 0; p < indices[t]->length(); p++)
                 {
-                    bytes_written += array->gt[t].serialize(&data->data[bytes_written], state[t].photon_indices->get(p), 1);
+                    bytes_written += array->gt[Icesat2Parms::RPT_L].serialize(&data->data[bytes_written], indices[t]->get(p), 1);
                 }
             }
 
