@@ -10,6 +10,31 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
     value               = "${var.cluster_name}-node"
     propagate_at_launch = true
   }
+
+  # the following match the provider "aws" default tags in providers.tf ...
+  tag {
+    key                 = "Owner"
+    value               = "SlideRule"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Project"
+    value               = "cluster-${var.cluster_name}"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "terraform-base-path"
+    value               = replace(path.cwd, "/^.*?(${local.terraform-git-repo}\\/)/", "$1")
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "cost-grouping"
+    value               = "${var.cluster_name}"
+    propagate_at_launch = true
+  }
 }
 
 resource "aws_launch_configuration" "sliderule-instance" {
