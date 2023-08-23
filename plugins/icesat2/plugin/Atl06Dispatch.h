@@ -74,11 +74,6 @@ class Atl06Dispatch: public DispatchObject
         static const uint16_t PFLAG_MAX_ITERATIONS_REACHED  = 0x0004;   // RqstParm::MAX_ITERATIONS
         static const uint16_t PFLAG_OUT_OF_BOUNDS           = 0x0008;
 
-        static const char* elCompactRecType;
-        static const RecordObject::fieldDef_t elCompactRecDef[];
-        static const char* atCompactRecType;
-        static const RecordObject::fieldDef_t atCompactRecDef[];
-
         static const char* elRecType;
         static const RecordObject::fieldDef_t elRecDef[];
         static const char* atRecType;
@@ -99,20 +94,7 @@ class Atl06Dispatch: public DispatchObject
             uint32_t                post_dropped_cnt;
         } stats_t;
 
-        /* Compact Elevation Measurement */
-        typedef struct {
-            int64_t             time_ns;                // nanoseconds from GPS epoch
-            double              latitude;
-            double              longitude;
-            double              h_mean;                 // meters from ellipsoid
-        } elevation_compact_t;
-
-        /* Compact ATL06 Record */
-        typedef struct {
-            elevation_compact_t elevation[BATCH_SIZE];
-        } atl06_compact_t;
-
-        /* (Normal) Elevation Measurement */
+        /* Elevation Measurement */
         typedef struct {
             uint64_t            extent_id;              // unique identifier
             uint32_t            segment_id;             // closest atl06 segment
@@ -179,7 +161,6 @@ class Atl06Dispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         RecordObject*       recObj;
-        atl06_compact_t*    recCompactData;
         atl06_t*            recData;
         Publisher*          outQ;
 

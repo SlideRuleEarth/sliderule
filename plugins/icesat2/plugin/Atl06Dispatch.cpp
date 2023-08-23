@@ -83,23 +83,6 @@ const double Atl06Dispatch::RDE_SCALE_FACTOR = 1.3490;
 const double Atl06Dispatch::SIGMA_BEAM = 4.25; // meters
 const double Atl06Dispatch::SIGMA_XMIT = 0.00000000068; // seconds
 
-/* Compact Record Definitions */
-
-const char* Atl06Dispatch::elCompactRecType = "atl06rec-compact.elevation"; // elevation measurement record
-const RecordObject::fieldDef_t Atl06Dispatch::elCompactRecDef[] = {
-    {"time",                    RecordObject::TIME8,    offsetof(elevation_compact_t, time_ns),     1,  NULL, NATIVE_FLAGS},
-    {"lat",                     RecordObject::DOUBLE,   offsetof(elevation_compact_t, latitude),    1,  NULL, NATIVE_FLAGS},
-    {"lon",                     RecordObject::DOUBLE,   offsetof(elevation_compact_t, longitude),   1,  NULL, NATIVE_FLAGS},
-    {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_compact_t, h_mean),      1,  NULL, NATIVE_FLAGS}
-};
-
-const char* Atl06Dispatch::atCompactRecType = "atl06rec-compact";
-const RecordObject::fieldDef_t Atl06Dispatch::atCompactRecDef[] = {
-    {"elevation",               RecordObject::USER,     offsetof(atl06_compact_t, elevation),       0,  elCompactRecType, NATIVE_FLAGS}
-};
-
-/* (Normal) Record Definitions */
-
 const char* Atl06Dispatch::elRecType = "atl06rec.elevation"; // extended elevation measurement record
 const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
     {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),           1,  NULL, NATIVE_FLAGS},
@@ -167,17 +150,13 @@ int Atl06Dispatch::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::init (void)
 {
-    RECDEF(elRecType,           elRecDef,           sizeof(elevation_t),            NULL);
-    RECDEF(elCompactRecType,    elCompactRecDef,    sizeof(elevation_compact_t),    NULL);
-
     /*
      * Note: the size associated with these records includes only one elevation;
      * this forces any software accessing more than one elevation to manage
      * the size of the record manually.
      */
-
-    RECDEF(atRecType,           atRecDef,           offsetof(atl06_t, elevation[1]),            NULL);
-    RECDEF(atCompactRecType,    atCompactRecDef,    offsetof(atl06_compact_t, elevation[1]),    NULL);
+    RECDEF(elRecType, elRecDef, sizeof(elevation_t),                NULL);
+    RECDEF(atRecType, atRecDef, offsetof(atl06_t, elevation[1]),    NULL);
 }
 
 /******************************************************************************
@@ -201,16 +180,8 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
      * this extends the memory available past the one elevation provided in the
      * definition.
      */
-    if(!parms->compact)
-    {
-        recObj = new RecordObject(atRecType, sizeof(atl06_t));
-        recData = (atl06_t*)recObj->getRecordData();
-    }
-    else
-    {
-        recObj = new RecordObject(atCompactRecType, sizeof(atl06_compact_t));
-        recCompactData = (atl06_compact_t*)recObj->getRecordData();
-    }
+    recObj = new RecordObject(atRecType, sizeof(atl06_t));
+    recData = (atl06_t*)recObj->getRecordData();
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
@@ -570,27 +541,14 @@ void Atl06Dispatch::postResult (result_t* result)
             /* Populate Elevation */
             if(elevation)
             {
-                if(!parms->compact)
-                {
-                    recData->elevation[elevationIndex++] = *elevation;
-                }
-                else
-                {
-                    recCompactData->elevation[elevationIndex].time_ns = elevation->time_ns;
-                    recCompactData->elevation[elevationIndex].latitude = elevation->latitude;
-                    recCompactData->elevation[elevationIndex].longitude = elevation->longitude;
-                    recCompactData->elevation[elevationIndex].h_mean = elevation->h_mean;
-                    elevationIndex++;
-                }
+                recData->elevation[elevationIndex++] = *elevation;
             }
 
             /* Check If ATL06 Record Should Be Posted*/
             if((!result && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
             {
                 /* Calculate Record Size (according to number of elevations) */
-                int size;
-                if(!parms->compact) size = elevationIndex * sizeof(elevation_t);
-                else                size = elevationIndex * sizeof(elevation_compact_t);
+                int size = elevationIndex * sizeof(elevation_t);
 
                 /* Serialize Record */
                 unsigned char* buffer;
