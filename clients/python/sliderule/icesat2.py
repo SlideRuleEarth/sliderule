@@ -162,18 +162,15 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array)
             if rectype in rsp['__rectype']:
                 records += rsp,
                 num_records += len(rsp[batch_column])
-            elif 'extrec' == rsp['__rectype']:
-                field_name = parm['atl03_geo_fields'][rsp['field_index']]
+            elif 'atl06anc' == rsp['__rectype']:
+                if rsp['anc_type'] == 0:
+                    field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                elif rsp['anc_type'] == 1:
+                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
                 if field_name not in field_dictionary:
                     field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                # Parse Ancillary Data
-                data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
-                # Add Left Pair Track Entry
-                field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']) | numpy.uint64(0x2),
-                field_dictionary[field_name][field_name] += data[LEFT_PAIR],
-                # Add Right Pair Track Entry
-                field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']) | numpy.uint64(0x3),
-                field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+                field_dictionary[field_name]['extent_id'] += rsp['extent_id'],
+                field_dictionary[field_name][field_name] += rsp['value'],
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue
@@ -546,8 +543,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
             sample_photon_record = None
             photon_records = []
             num_photons = 0
-            extent_dictionary = {}
-            extent_field_types = {} # ['field_name'] = nptype
             photon_dictionary = {}
             photon_field_types = {} # ['field_name'] = nptype
             if len(rsps) > 0:
@@ -559,25 +554,11 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         num_photons += len(rsp['data'])
                         if sample_photon_record == None and len(rsp['data']) > 0:
                             sample_photon_record = rsp
-                    elif 'extrec' == rsp['__rectype']:
+                    elif 'atl03anc' == rsp['__rectype']:
                         # Get Field Name and Type
-                        if rsp['field_type'] == 0:
+                        if rsp['anc_type'] == 0:
                             field_name = parm['atl03_ph_fields'][rsp['field_index']]
-                        elif rsp['field_type'] == 1:
-                            field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                        if field_name not in extent_field_types:
-                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
-                        # Initialize Extent Dictionary Entry
-                        if extent_id not in extent_dictionary:
-                            extent_dictionary[extent_id] = {}
-                        # Save of Values per Extent ID per Field Name
-                        data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
-                        extent_dictionary[extent_id][field_name] = data
-                    elif 'ancrec' == rsp['__rectype']:
-                        # Get Field Name and Type
-                        if rsp['field_type'] == 0:
-                            field_name = parm['atl03_ph_fields'][rsp['field_index']]
-                        elif rsp['field_type'] == 1:
+                        elif rsp['anc_type'] == 1:
                             field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in photon_field_types:
                             photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
@@ -598,8 +579,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         fielddef = sliderule.get_definition("atl03rec.photons", field)
                         if len(fielddef) > 0:
                             columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                    for field in extent_field_types.keys():
-                        columns[field] = numpy.empty(num_photons, extent_field_types[field])
                     for field in photon_field_types.keys():
                         columns[field] = numpy.empty(num_photons, photon_field_types[field])
                     # Populate Columns
@@ -609,10 +588,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         pair = 0
                         left_cnt = record["count"][0]
                         extent_id = record['extent_id']
-                        # Get Extent Fields to Add to Extent
-                        extent_field_dictionary = {}
-                        if extent_id in extent_dictionary:
-                            extent_field_dictionary = extent_dictionary[extent_id]
                         # Get Photon Fields to Add to Extent
                         photon_field_dictionary = {}
                         if extent_id in photon_dictionary:
@@ -634,9 +609,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                             for field in photon.keys():
                                 if field in columns:
                                     columns[field][ph_cnt] = photon[field]
-                            # Add Ancillary Extent Fields
-                            for field in extent_field_dictionary:
-                                columns[field][ph_cnt] = extent_field_dictionary[field][pair]
                             # Add Ancillary Extent Fields
                             for field in photon_field_dictionary:
                                 columns[field][ph_cnt] = photon_field_dictionary[field][ph_index]

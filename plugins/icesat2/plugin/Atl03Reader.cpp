@@ -78,7 +78,7 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"data",            RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
-const char* Atl03Reader::ancRecType = "ancrec"; // ancillary atl03 record
+const char* Atl03Reader::ancRecType = "atl03anc"; // ancillary atl03 record
 const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
     {"extent_id",   RecordObject::UINT64,   offsetof(anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
     {"anc_type",    RecordObject::UINT8,    offsetof(anc_t, anc_type),      1,  NULL, NATIVE_FLAGS},

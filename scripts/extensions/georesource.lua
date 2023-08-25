@@ -68,7 +68,6 @@ local function initialize(resource, parms, algo, args)
         -- Attach Exception and Ancillary Record Forwarding --
         local except_pub = core.publish(rspq)
         algo_disp:attach(except_pub, "exceptrec") -- exception records
-        algo_disp:attach(except_pub, "extrec") -- ancillary records
 
         -- Attach Algorithm --
         algo_disp:attach(algo, args.source_rec)
