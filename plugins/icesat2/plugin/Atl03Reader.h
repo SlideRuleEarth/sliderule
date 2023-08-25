@@ -133,9 +133,8 @@ class Atl03Reader: public LuaObject
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
             uint8_t         data[];
-
-            template<typename T>
-            T* extractAncillary (int track);
+            
+            double* extractAncillary (int track);
         } anc_t;
 
         /* Statistics */

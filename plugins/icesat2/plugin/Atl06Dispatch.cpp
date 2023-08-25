@@ -234,14 +234,15 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     /* Build Ancillary Inputs */
     if(records)
     {
-        for(auto& rec: *records)
+        for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
         {
+            RecordObject* rec = records->at(i);
             Atl03Reader::anc_t* anc_rec = (Atl03Reader::anc_t*)rec->getRecordData();
             for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
             {
                 /* Build Array of Values 
                  * to be used by iterativeFitStage..lsf */
-                double* values = anc_rec->extractAncillary<double>(t);
+                double* values = anc_rec->extractAncillary(t); // `new` memory allocated here
                 result[t].anc_values.push_back(values);
 
                 /* Prepopulate Ancillary Field Structure
@@ -291,7 +292,23 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     if(parms->stages[Icesat2Parms::STAGE_LSF]) iterativeFitStage(extent, result);
 
     /* Post Results */
-    postResult(result); // deallocates memory
+    postResult(result);
+
+    /* Free Memory Allocations */
+    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    {
+        /* Delete Ancillary Value Arrays */
+        for(double* values: result[t].anc_values)
+        {
+            delete [] values;
+        }
+
+        /* Delete Photon Aray */
+        if(result[t].photons)
+        {
+            delete [] result[t].photons;
+        }
+    }
 
     /* Bump Statistics */
     stats.h5atl03_rec_cnt++;
@@ -571,7 +588,6 @@ void Atl06Dispatch::postResult (result_t* result)
                     }
                     ancillaryIndex++;
                 }
-
             }
             else
             {
@@ -631,12 +647,6 @@ void Atl06Dispatch::postResult (result_t* result)
             }
         }
         postingMutex.unlock();
-
-        /* Free Photons Array (allocated during initialization) */
-        if(result && result[t].photons)
-        {
-            delete [] result[t].photons;
-        }
     }
 }
 
