@@ -111,71 +111,71 @@ T* Atl03Reader::anc_t::extractAncillary (int track)
     if(size > 0) dst = new T[size];
 
     uint32_t offset = 0;
-    if(t == 1) offset = num_elements[0];
+    if(track == 1) offset = num_elements[0];
 
     switch(data_type)
     {
-        case INT8:
+        case RecordObject::INT8:
         {
             int8_t* src = &data[offset * sizeof(int8_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case INT16:
+        case RecordObject::INT16:
         {
             int16_t* src = &data[offset * sizeof(int16_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case INT32:     
+        case RecordObject::INT32:     
         {
             int32_t* src = &data[offset * sizeof(int32_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case INT64:     
+        case RecordObject::INT64:     
         {
             int64_t* src = &data[offset * sizeof(int64_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case UINT8:     
+        case RecordObject::UINT8:     
         {
             uint8_t* src = &data[offset * sizeof(uint8_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case UINT16:    
+        case RecordObject::UINT16:    
         {
             uint16_t* src = &data[offset * sizeof(uint16_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case UINT32:    
+        case RecordObject::UINT32:    
         {
             uint32_t* src = &data[offset * sizeof(uint32_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case UINT64:    
+        case RecordObject::UINT64:    
         {
             uint64_t* src = &data[offset * sizeof(uint64_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case FLOAT:    
+        case RecordObject::FLOAT:    
         {
             float* src = &data[offset * sizeof(float)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case DOUBLE:    
+        case RecordObject::DOUBLE:    
         {
             double* src = &data[offset * sizeof(double)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];
             break;
         }
-        case TIME8:     
+        case RecordObject::TIME8:     
         {
             int64_t* src = &data[offset * sizeof(int64_t)];
             for(int i = 0; i < size; i++) dst[i] = (T)src[i];

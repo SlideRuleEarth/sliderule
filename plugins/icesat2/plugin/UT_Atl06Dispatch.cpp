@@ -104,10 +104,13 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
     int extent_bytes = sizeof(Atl03Reader::extent_t) + (sizeof(Atl03Reader::photon_t) * num_photons);
     RecordObject* record = new RecordObject(Atl03Reader::exRecType, extent_bytes);
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
-    extent->photons[0].distance = 1.0;
-    extent->photons[1].distance = 2.0;
-    extent->photons[2].distance = 3.0;
-    extent->photons[3].distance = 4.0;
+    extent->photons[0].x_atc = 1.0;
+    extent->photons[1].x_atc = 2.0;
+    extent->photons[2].x_atc = 3.0;
+    extent->photons[3].x_atc = 4.0;
+
+    /* Allocation Result Structure */
+    Atl06Dispatch::result_t result;
 
     try
     {
@@ -120,7 +123,9 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
         extent->photons[2].height = 6.0;
         extent->photons[3].height = 8.0;
         Atl06Dispatch::point_t v1[num_photons] = { {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0} };
-        Atl06Dispatch::lsf_t fit1 = Atl06Dispatch::lsf(extent, v1, num_photons, false);
+        result.photons = v1;
+        result.elevation.photon_count = num_photons;
+        Atl06Dispatch::lsf_t fit1 = Atl06Dispatch::lsf(extent, result, false);
         if(fit1.height != 0.0 || fabs(fit1.slope - 2.0) > tolerance)
         {
             mlog(CRITICAL, "Failed LSF test01: %lf, %lf", fit1.height, fit1.slope);
@@ -133,7 +138,9 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
         extent->photons[2].height = 6.0;
         extent->photons[3].height = 7.0;
         Atl06Dispatch::point_t v2[num_photons] = { {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0} };
-        Atl06Dispatch::lsf_t fit2 = Atl06Dispatch::lsf(extent, v2, num_photons, false);
+        result.photons = v2;
+        result.elevation.photon_count = num_photons;
+        Atl06Dispatch::lsf_t fit2 = Atl06Dispatch::lsf(extent, result, false);
         if(fabs(fit2.height - 3.0) > tolerance || fabs(fit2.slope - 1.0) > tolerance)
         {
             mlog(CRITICAL, "Failed LSF test02: %lf, %lf", fit2.height, fit2.slope);

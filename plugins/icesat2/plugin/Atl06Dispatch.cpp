@@ -536,7 +536,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
         }
 
         /* Calculate Latitude, Longitude, and GPS Time using Least Squares Fit */
-        lsf_t fit = lsf(extent, result[t], true);
+        lsf(extent, result[t], true);
     }
 }
 
@@ -827,8 +827,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             result.elevation.y_atc = (float)y_atc;
 
             /* Ancillary Fields - Calculate G^-g and m */
-            for(double*& values: result.anc_values)
-            for(int a = 0; a < result.anc_values.size(); a++)
+            for(size_t a = 0; a < result.anc_values.size(); a++)
             {
                 double* values = result.anc_values[a];
                 result.anc_fields[a].value = 0;
