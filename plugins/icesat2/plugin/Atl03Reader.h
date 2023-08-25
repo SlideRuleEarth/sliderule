@@ -85,19 +85,19 @@ class Atl03Reader: public LuaObject
 
         /* Photon Fields */
         typedef struct {
-            int64_t         time_ns;    // nanoseconds since GPS epoch
+            int64_t         time_ns;        // nanoseconds since GPS epoch
             double          latitude;
             double          longitude;
-            float           distance;   // float[]: dist_ph_along
-            float           across;     // float[]: dist_ph_across
-            float           height;     // float[]: h_ph
-            float           relief;     // float[]: ATL08 ph_h
-            uint8_t         landcover;  // ATL08 land cover flags
-            uint8_t         snowcover;  // ATL08 snow cover flags
-            uint8_t         atl08_class;// ATL08 classification
-            int8_t          atl03_cnf;  // ATL03 confidence level
-            int8_t          quality_ph; // ATL03 photon quality
-            uint8_t         yapc_score; // YAPC weight of photon
+            float           x_atc;          // float[]: dist_ph_along
+            float           y_atc;          // float[]: dist_ph_across
+            float           height;         // float[]: h_ph
+            float           relief;         // float[]: ATL08 ph_h
+            uint8_t         landcover;      // ATL08 land cover flags
+            uint8_t         snowcover;      // ATL08 snow cover flags
+            uint8_t         atl08_class;    // ATL08 classification
+            int8_t          atl03_cnf;      // ATL03 confidence level
+            int8_t          quality_ph;     // ATL03 photon quality
+            uint8_t         yapc_score;     // YAPC weight of photon
         } photon_t;
 
         /* Extent Record */
@@ -128,11 +128,14 @@ class Atl03Reader: public LuaObject
         /* Ancillary Record */
         typedef struct {
             uint64_t        extent_id;
-            uint8_t         field_type; // anc_type_t
+            uint32_t        num_elements[Icesat2Parms::NUM_PAIR_TRACKS];
+            uint8_t         anc_type; // anc_type_t
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
-            uint32_t        num_elements[Icesat2Parms::NUM_PAIR_TRACKS];
             uint8_t         data[];
+
+            template<typename T>
+            T* extractAncillary (int track);
         } anc_t;
 
         /* Statistics */

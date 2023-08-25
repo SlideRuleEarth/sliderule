@@ -239,7 +239,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array)
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, lon_key='lon', lat_key='lat')
+    gdf = sliderule.todataframe(columns)
 
     # Merge Ancillary Fields
     tstart_merge = time.perf_counter()
@@ -654,7 +654,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     profiles["flatten"] = time.perf_counter() - tstart_flatten
 
                     # Create DataFrame
-                    gdf = sliderule.todataframe(columns, lat_key="latitude", lon_key="longitude")
+                    gdf = sliderule.todataframe(columns)
 
                     # Calculate Spot Column
                     gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)

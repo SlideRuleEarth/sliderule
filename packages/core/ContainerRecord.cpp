@@ -95,12 +95,12 @@ ContainerRecord::~ContainerRecord()
 /*----------------------------------------------------------------------------
  * addRecord
  *----------------------------------------------------------------------------*/
-bool ContainerRecord::addRecord(RecordObject& record)
+bool ContainerRecord::addRecord(RecordObject& record, int size)
 {
     if(recsContained < container->rec_cnt)
     {
         uint8_t* rec_buf = NULL;
-        int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+        int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE, size);
 
         /* populate entry */
         container->entries[recsContained].rec_offset = recsOffset;

@@ -47,7 +47,8 @@
 #include "Atl03Reader.h"
 #include "Icesat2Parms.h"
 
-#include <atomic>
+#include <vector>
+using std::vector;
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -79,6 +80,11 @@ class Atl06Dispatch: public DispatchObject
         static const char* atRecType;
         static const RecordObject::fieldDef_t atRecDef[];
 
+        static const char* ancFieldRecType;
+        static const RecordObject::fieldDef_t ancFieldRecDef[];
+        static const char* ancRecType;
+        static const RecordObject::fieldDef_t ancRecDef[];
+
         static const char* LuaMetaName;
         static const struct luaL_Reg LuaMetaTable[];
 
@@ -107,19 +113,32 @@ class Atl06Dispatch: public DispatchObject
             int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;
             double              longitude;
-            double              distance;               // distance from the equator
+            double              x_atc;                  // distance from the equator
             double              h_mean;                 // meters from ellipsoid
             double              h_sigma;
-            float               along_track_slope;
-            float               across_track_dist;
+            float               dh_fit_dx;
+            float               y_atc;
             float               window_height;
             float               rms_misfit;
         } elevation_t;
 
-        /* (Normal) ATL06 Record */
+        /* ATL06 Record */
         typedef struct {
             elevation_t         elevation[BATCH_SIZE];
         } atl06_t;
+
+        /* Ancillary Field Record */
+        typedef struct {
+            uint8_t             anc_type;     // Atl03Reader::anc_type_t
+            uint8_t             field_index;    // position in request parameter list
+            double              value;
+        } anc_field_t;
+
+        /* Ancillary Record */
+        typedef struct {
+            uint64_t            extent_id;
+            anc_field_t         fields[];
+        } anc_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -135,37 +154,38 @@ class Atl06Dispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            double      height;
-            double      slope;
-            double      y_sigma;
-            double      latitude;
-            double      longitude;
-            double      time_ns;
-            double      across_track_dist;
+            double          height;
+            double          slope;
+            double          y_sigma;
         } lsf_t;
 
         typedef struct {
-            uint32_t    p;  // index into photon array
-            double      r;  // residual
+            uint32_t        p;  // index into photon array
+            double          r;  // residual
         } point_t;
 
        /* Algorithm Result */
         typedef struct {
-            bool        provided;
-            elevation_t elevation;
-            point_t*    photons;
+            bool                provided;
+            elevation_t         elevation;
+            point_t*            photons;
+            vector<anc_field_t> anc_fields;
+            vector<double*>     anc_values;
         } result_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject*       recObj;
-        atl06_t*            recData;
+        RecordObject        elevationRecord;
+        atl06_t*            elevationRecordData;
+        RecordObject*       ancillaryRecords[BATCH_SIZE]; // because there are variable number of fields, this cannot be predefined
+        int                 ancillaryTotalSize;
         Publisher*          outQ;
 
-        Mutex               elevationMutex;
+        Mutex               postingMutex;
         int                 elevationIndex;
+        int                 ancillaryIndex;
 
         Icesat2Parms*       parms;
         stats_t             stats;
@@ -181,13 +201,12 @@ class Atl06Dispatch: public DispatchObject
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
-        void            initializationStage             (Atl03Reader::extent_t* extent, result_t* result);
         void            iterativeFitStage               (Atl03Reader::extent_t* extent, result_t* result);
         void            postResult                      (result_t* result);
 
         static int      luaStats                        (lua_State* L);
 
-        static lsf_t    lsf                             (Atl03Reader::extent_t* extent, point_t* array, int size, bool final);
+        static lsf_t    lsf                             (Atl03Reader::extent_t* extent, result_t& result, bool final);
         static void     quicksort                       (point_t* array, int start, int end);
         static int      quicksortpartition              (point_t* array, int start, int end);
 

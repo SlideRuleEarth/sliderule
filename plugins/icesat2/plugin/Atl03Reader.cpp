@@ -50,8 +50,8 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
-    {"distance",        RecordObject::FLOAT,    offsetof(photon_t, distance),       1,  NULL, NATIVE_FLAGS},
-    {"across",          RecordObject::FLOAT,    offsetof(photon_t, across),         1,  NULL, NATIVE_FLAGS},
+    {"x_atc",           RecordObject::FLOAT,    offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
+    {"y_atc",           RecordObject::FLOAT,    offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
     {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS},
     {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS},
     {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS},
@@ -81,7 +81,7 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
 const char* Atl03Reader::ancRecType = "ancrec"; // ancillary atl03 record
 const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
     {"extent_id",   RecordObject::UINT64,   offsetof(anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
-    {"field_type",  RecordObject::UINT8,    offsetof(anc_t, field_type),    1,  NULL, NATIVE_FLAGS},
+    {"anc_type",    RecordObject::UINT8,    offsetof(anc_t, anc_type),      1,  NULL, NATIVE_FLAGS},
     {"field_index", RecordObject::UINT8,    offsetof(anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
     {"num_elements",RecordObject::UINT32,   offsetof(anc_t, num_elements),  2,  NULL, NATIVE_FLAGS},
     {"datatype",    RecordObject::UINT8,    offsetof(anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
@@ -101,6 +101,95 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
 /******************************************************************************
  * ATL03 READER CLASS
  ******************************************************************************/
+
+template<typename T>
+T* Atl03Reader::anc_t::extractAncillary (int track)
+{
+    uint32_t size = num_elements[track];
+
+    T* dst = NULL;
+    if(size > 0) dst = new T[size];
+
+    uint32_t offset = 0;
+    if(t == 1) offset = num_elements[0];
+
+    switch(data_type)
+    {
+        case INT8:
+        {
+            int8_t* src = &data[offset * sizeof(int8_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case INT16:
+        {
+            int16_t* src = &data[offset * sizeof(int16_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case INT32:     
+        {
+            int32_t* src = &data[offset * sizeof(int32_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case INT64:     
+        {
+            int64_t* src = &data[offset * sizeof(int64_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case UINT8:     
+        {
+            uint8_t* src = &data[offset * sizeof(uint8_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case UINT16:    
+        {
+            uint16_t* src = &data[offset * sizeof(uint16_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case UINT32:    
+        {
+            uint32_t* src = &data[offset * sizeof(uint32_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case UINT64:    
+        {
+            uint64_t* src = &data[offset * sizeof(uint64_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case FLOAT:    
+        {
+            float* src = &data[offset * sizeof(float)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case DOUBLE:    
+        {
+            double* src = &data[offset * sizeof(double)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        case TIME8:     
+        {
+            int64_t* src = &data[offset * sizeof(int64_t)];
+            for(int i = 0; i < size; i++) dst[i] = (T)src[i];
+            break;
+        }
+        default:        
+        {
+            size = 0; // unable to extract
+            break;
+        }
+    }
+
+    return dst;
+}
 
 /*----------------------------------------------------------------------------
  * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
@@ -1296,12 +1385,12 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                     /* Update Along Track Distance and Progress */
                     double delta_distance = atl03.segment_dist_x[t][current_segment] - state[t].start_distance;
-                    double along_track_distance = delta_distance + atl03.dist_ph_along[t][current_photon];
+                    double x_atc = delta_distance + atl03.dist_ph_along[t][current_photon];
                     int32_t along_track_segments = current_segment - state[t].extent_segment;
 
                     /* Set Next Extent's First Photon */
                     if((!step_complete) &&
-                       ((!parms->dist_in_seg && along_track_distance >= parms->extent_step) ||
+                       ((!parms->dist_in_seg && x_atc >= parms->extent_step) ||
                         (parms->dist_in_seg && along_track_segments >= (int32_t)parms->extent_step)))
                     {
                         state[t].ph_in = current_photon;
@@ -1311,7 +1400,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     }
 
                     /* Check if Photon within Extent's Length */
-                    if((!parms->dist_in_seg && along_track_distance < parms->extent_length) ||
+                    if((!parms->dist_in_seg && x_atc < parms->extent_length) ||
                        (parms->dist_in_seg && along_track_segments < parms->extent_length))
                     {
                         do
@@ -1399,8 +1488,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                                 .time_ns = parms->deltatime2timestamp(atl03.delta_time[t][current_photon]),
                                 .latitude = atl03.lat_ph[t][current_photon],
                                 .longitude = atl03.lon_ph[t][current_photon],
-                                .distance = (float)(along_track_distance - (state.extent_length / 2.0)),
-                                .across = atl03.dist_ph_across[t][current_photon],
+                                .x_atc = (float)(x_atc - (state.extent_length / 2.0)),
+                                .y_atc = atl03.dist_ph_across[t][current_photon],
                                 .height = atl03.h_ph[t][current_photon],
                                 .relief = relief,
                                 .landcover = landcover_flag,
@@ -1477,7 +1566,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 if(state[t].extent_photons.length() > 1)
                 {
                     int32_t last = state[t].extent_photons.length() - 1;
-                    double along_track_spread = state[t].extent_photons[last].distance - state[t].extent_photons[0].distance;
+                    double along_track_spread = state[t].extent_photons[last].x_atc - state[t].extent_photons[0].x_atc;
                     if(along_track_spread < parms->along_track_spread)
                     {
                         state[t].extent_valid = false;
@@ -1740,7 +1829,7 @@ void Atl03Reader::generateAncillaryRecords (
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;
-            data->field_type = type;
+            data->anc_type = type;
             data->field_index = i;
             data->data_type = array->gt[Icesat2Parms::RPT_L].elementType();
             data->num_elements[Icesat2Parms::RPT_L] = indices[Icesat2Parms::RPT_L]->length();
@@ -1752,7 +1841,7 @@ void Atl03Reader::generateAncillaryRecords (
             {
                 for(int p = 0; p < indices[t]->length(); p++)
                 {
-                    bytes_written += array->gt[Icesat2Parms::RPT_L].serialize(&data->data[bytes_written], indices[t]->get(p), 1);
+                    bytes_written += array->gt[t].serialize(&data->data[bytes_written], indices[t]->get(p), 1);
                 }
             }
 
