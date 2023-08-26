@@ -625,13 +625,13 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
             lua_pushnil(L); // for record
         }
     }
-    else if(status != MsgQ::STATE_TIMEOUT)
+    else
     {
         mlog(CRITICAL, "Failed (%d) to receive record on message queue %s", status, msg_data->sub->getName());
         lua_pushnil(L); // for record
     }
 
-    /* Failed to receive record */
+    /* Status terminator */
     lua_pushboolean(L, terminator);
     return 2;
 }

@@ -51,7 +51,6 @@ const char* ContainerRecord::recType = "conrec";
 RecordObject::fieldDef_t ContainerRecord::recDef[] =
 {
     {"count",       UINT32, offsetof(rec_t, rec_cnt),           1,   NULL, NATIVE_FLAGS},
-    {"start",       UINT32, offsetof(rec_t, start_of_recs),     1,   NULL, NATIVE_FLAGS},
     {"records",     USER,   offsetof(rec_t, entries),           0,   entryRecType, NATIVE_FLAGS} // variable length
 };
 
@@ -82,7 +81,6 @@ ContainerRecord::ContainerRecord(int rec_cnt, int size):
     recsOffset = hdrSize(rec_cnt);
     container = (rec_t*)recordData;
     container->rec_cnt = rec_cnt;
-    container->start_of_recs = recsOffset;
 }
 
 /*----------------------------------------------------------------------------
