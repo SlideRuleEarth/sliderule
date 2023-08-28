@@ -561,6 +561,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
             for(auto& rec: rec_list)
             {
                 dispatchRecord(rec, &rec_list);
+                delete rec;
             }
         }
 

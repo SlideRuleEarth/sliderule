@@ -33,17 +33,20 @@ algo_disp:run()
 reader = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "recq", parms)
 
 while true do
-    rec = resultq:recvrecord(10000)
+    rec = resultq:recvrecord(3000)
     if rec == nil then
         break
     end
     cnt = cnt + 1
-    print("Rx: ", cnt)
-    runner.check(rec:getvalue("count") == 2, rec:getvalue("count"))    
+    if cnt < 85 then
+        runner.check(rec:getvalue("count") == 257, string.format('Expected different number of records in container: %d', rec:getvalue("count")))    
+    else -- last batch
+        runner.check(rec:getvalue("count") == 245, string.format('Expected different number of records in container: %d', rec:getvalue("count")))    
+    end
 end
 resultq:destroy()
 
-runner.check(cnt >= 1, "failed to read sufficient number of contaner records")    
+runner.check(cnt >= 85, "failed to read sufficient number of contaner records")    
 
 -- Report Results --
 

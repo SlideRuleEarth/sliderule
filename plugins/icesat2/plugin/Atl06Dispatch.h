@@ -129,7 +129,7 @@ class Atl06Dispatch: public DispatchObject
 
         /* Ancillary Field Record */
         typedef struct {
-            uint8_t             anc_type;     // Atl03Reader::anc_type_t
+            uint8_t             anc_type;       // Atl03Reader::anc_type_t
             uint8_t             field_index;    // position in request parameter list
             double              value;
         } anc_field_t;

@@ -163,12 +163,14 @@ int Atl06Dispatch::luaCreate (lua_State* L)
 void Atl06Dispatch::init (void)
 {
     /*
-     * Note: the size associated with these records includes only one elevation;
-     * this forces any software accessing more than one elevation to manage
+     * Note: the size associated with these records includes only one element;
+     * this forces any software accessing more than one element to manage
      * the size of the record manually.
      */
-    RECDEF(elRecType, elRecDef, sizeof(elevation_t),                NULL);
-    RECDEF(atRecType, atRecDef, offsetof(atl06_t, elevation[1]),    NULL);
+    RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),                NULL);
+    RECDEF(atRecType,       atRecDef,       offsetof(atl06_t, elevation[1]),    NULL);
+    RECDEF(ancFieldRecType, ancFieldRecDef, sizeof(anc_field_t),                NULL);
+    RECDEF(ancRecType,      ancRecDef,      offsetof(anc_t, fields[1]),         NULL);
 }
 
 /******************************************************************************
@@ -298,7 +300,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
     {
         /* Delete Ancillary Value Arrays */
-        for(double* values: result[t].anc_values)
+        for(auto& values: result[t].anc_values)
         {
             delete [] values;
         }
@@ -619,11 +621,13 @@ void Atl06Dispatch::postResult (result_t* result)
                 {
                     /* Build Container Record */
                     int num_recs = ancillaryIndex + 1;
-                    ContainerRecord container(num_recs, elevation_rec_size + ancillaryTotalSize);
+                    ancillaryTotalSize += elevationRecord.getAllocatedMemory();
+                    ContainerRecord container(num_recs, ancillaryTotalSize);
                     container.addRecord(elevationRecord, elevation_rec_size);
                     for(int i = 0; i < ancillaryIndex; i++)
                     {
                         container.addRecord(*ancillaryRecords[i]);
+                        delete ancillaryRecords[i];
                     }
 
                     /* Serialize Elevation Batch Record */
@@ -644,6 +648,7 @@ void Atl06Dispatch::postResult (result_t* result)
                 /* Reset Indices */
                 elevationIndex = 0;
                 ancillaryIndex = 0;
+                ancillaryTotalSize = 0;
             }
         }
         postingMutex.unlock();
