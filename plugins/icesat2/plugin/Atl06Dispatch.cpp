@@ -619,9 +619,13 @@ void Atl06Dispatch::postResult (result_t* result)
                 }
                 else // send container record
                 {
+                    /* Get Size of Elevation Batch Record */
+                    unsigned char* er_buffer = NULL;
+                    int er_bufsize = elevationRecord.serialize(&er_buffer, RecordObject::REFERENCE, elevation_rec_size);
+                    ancillaryTotalSize += er_bufsize;
+
                     /* Build Container Record */
                     int num_recs = ancillaryIndex + 1;
-                    ancillaryTotalSize += elevationRecord.getAllocatedMemory();
                     ContainerRecord container(num_recs, ancillaryTotalSize);
                     container.addRecord(elevationRecord, elevation_rec_size);
                     for(int i = 0; i < ancillaryIndex; i++)

@@ -163,14 +163,15 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array)
                 records += rsp,
                 num_records += len(rsp[batch_column])
             elif 'atl06anc' == rsp['__rectype']:
-                if rsp['anc_type'] == 0:
-                    field_name = parm['atl03_ph_fields'][rsp['field_index']]
-                elif rsp['anc_type'] == 1:
-                    field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                if field_name not in field_dictionary:
-                    field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                field_dictionary[field_name]['extent_id'] += rsp['extent_id'],
-                field_dictionary[field_name][field_name] += rsp['value'],
+                for field_rec in rsp['fields']:
+                    if field_rec['anc_type'] == 0:
+                        field_name = parm['atl03_ph_fields'][field_rec['field_index']]
+                    elif field_rec['anc_type'] == 1:
+                        field_name = parm['atl03_geo_fields'][field_rec['field_index']]
+                    if field_name not in field_dictionary:
+                        field_dictionary[field_name] = {'extent_id': [], field_name: []}
+                    field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']),
+                    field_dictionary[field_name][field_name] += field_rec['value'],
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue

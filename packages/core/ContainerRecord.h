@@ -54,6 +54,7 @@ class ContainerRecord: public RecordObject
 
         typedef struct {
             uint32_t    rec_cnt;
+            uint32_t    start_of_recs;
             entry_t     entries[1];
         } rec_t;
 
