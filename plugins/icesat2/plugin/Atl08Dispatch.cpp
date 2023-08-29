@@ -187,33 +187,26 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
 {
     (void)key;
 
-    vegetation_t result[Icesat2Parms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
-    /* Clear Results */
-    memset(result, 0, sizeof(result));
-
-    /* Process Extent */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Check Extent */
+    if(extent->photon_count <= 0)
     {
-        /* Check Extent */
-        if(extent->photon_count[t] <= 0)
-        {
-            continue;
-        }
-
-        /* Initialize Results */
-        geolocateResult(extent, t, result);
-
-        /* Execute Algorithm Stages */
-        if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
-        {
-            phorealAlgorithm(extent, t, result);
-        }
-
-        /* Post Results */
-        postResult(t, result);
+        return true;
     }
+
+    /* Initialize Results */
+    vegetation_t result;
+    geolocateResult(extent, result);
+
+    /* Execute Algorithm Stages */
+    if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+    {
+        phorealAlgorithm(extent, result);
+    }
+
+    /* Post Results */
+    postResult(&result);
 
     /* Return Status */
     return true;
@@ -234,40 +227,40 @@ bool Atl08Dispatch::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool Atl08Dispatch::processTermination (void)
 {
-    postResult(-1, NULL);
+    postResult(NULL);
     return true;
 }
 
 /*----------------------------------------------------------------------------
  * geolocateResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, vegetation_t* result)
+void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
     Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
     Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
 
     /* Extent Attributes */
-    result[t].extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
-    result[t].segment_id = extent->segment_id[t];
-    result[t].rgt = extent->reference_ground_track_start;
-    result[t].cycle = extent->cycle_start;
-    result[t].spot = Icesat2Parms::getSpotNumber(sc_orient, track, t);
-    result[t].gt = Icesat2Parms::getGroundTrack(sc_orient, track, t);
-    result[t].photon_count = extent->photon_count[t];
-    result[t].solar_elevation = extent->solar_elevation[t];
+    result.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
+    result.segment_id = extent->segment_id;
+    result.rgt = extent->reference_ground_track;
+    result.cycle = extent->cycle;
+    result.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->reference_pair_track);
+    result.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->reference_pair_track);
+    result.photon_count = extent->photon_count;
+    result.solar_elevation = extent->solar_elevation;
 
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
-    uint32_t num_ph = extent->photon_count[t];
+    Atl03Reader::photon_t* ph = extent->photons;
+    uint32_t num_ph = extent->photon_count;
 
     /* Calculate Geolocation Fields */
     if(num_ph == 0)
     {
-        result[t].time_ns = 0;
-        result[t].latitude = 0.0;
-        result[t].longitude = 0.0;
-        result[t].x_atc = extent->segment_distance[t];
+        result.time_ns = 0;
+        result.latitude = 0.0;
+        result.longitude = 0.0;
+        result.x_atc = extent->segment_distance;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
@@ -290,10 +283,10 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         }
 
         /* Calculate Averages */
-        result[t].time_ns = (int64_t)((time_ns_min + time_ns_max) / 2.0);
-        result[t].latitude = (latitude_min + latitude_max) / 2.0;
-        result[t].longitude = (longitude_min + longitude_max) / 2.0;
-        result[t].x_atc = ((x_atc_min + x_atc_max) / 2.0) + extent->segment_distance[t];
+        result.time_ns = (int64_t)((time_ns_min + time_ns_max) / 2.0);
+        result.latitude = (latitude_min + latitude_max) / 2.0;
+        result.longitude = (longitude_min + longitude_max) / 2.0;
+        result.x_atc = ((x_atc_min + x_atc_max) / 2.0) + extent->segment_distance;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEAN)
     {
@@ -307,39 +300,39 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
             sum_time_ns += ph[i].time_ns;
             sum_latitude += ph[i].latitude;
             sum_longitude += ph[i].longitude;
-            sum_x_atc += ph[i].x_atc + extent->segment_distance[t];
+            sum_x_atc += ph[i].x_atc + extent->segment_distance;
         }
 
         /* Calculate Averages */
-        result[t].time_ns = (int64_t)(sum_time_ns / num_ph);
-        result[t].latitude = sum_latitude / num_ph;
-        result[t].longitude = sum_longitude / num_ph;
-        result[t].x_atc = sum_x_atc / num_ph;
+        result.time_ns = (int64_t)(sum_time_ns / num_ph);
+        result.latitude = sum_latitude / num_ph;
+        result.longitude = sum_longitude / num_ph;
+        result.x_atc = sum_x_atc / num_ph;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
         uint32_t center_ph = num_ph / 2;
         if(num_ph % 2 == 1) // Odd Number of Photons
         {
-            result[t].time_ns = ph[center_ph].time_ns;
-            result[t].latitude = ph[center_ph].latitude;
-            result[t].longitude = ph[center_ph].longitude;
-            result[t].x_atc = ph[center_ph].x_atc + extent->segment_distance[t];
+            result.time_ns = ph[center_ph].time_ns;
+            result.latitude = ph[center_ph].latitude;
+            result.longitude = ph[center_ph].longitude;
+            result.x_atc = ph[center_ph].x_atc + extent->segment_distance;
         }
         else // Even Number of Photons
         {
-            result[t].time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
-            result[t].latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
-            result[t].longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
-            result[t].x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance[t];
+            result.time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
+            result.latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
+            result.longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
+            result.x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance;
         }
     }
 
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
     {
-        result[t].landcover = Icesat2Parms::INVALID_FLAG;
-        result[t].snowcover = Icesat2Parms::INVALID_FLAG;
+        result.landcover = Icesat2Parms::INVALID_FLAG;
+        result.snowcover = Icesat2Parms::INVALID_FLAG;
     }
     else
     {
@@ -348,31 +341,31 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            double diff = abs(ph[i].time_ns - result[t].time_ns);
+            double diff = abs(ph[i].time_ns - result.time_ns);
             if(diff < diff_min)
             {
                 diff_min = diff;
                 center_ph = i;
             }
         }
-        result[t].landcover = ph[center_ph].landcover;
-        result[t].snowcover = ph[center_ph].snowcover;
+        result.landcover = ph[center_ph].landcover;
+        result.snowcover = ph[center_ph].snowcover;
     }
 }
 
 /*----------------------------------------------------------------------------
  * phorealAlgorithm
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vegetation_t* result)
+void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
-    long num_ph = extent->photon_count[t];
+    Atl03Reader::photon_t* ph = extent->photons;
+    uint32_t num_ph = extent->photon_count;
 
     /* Determine Number of Ground and Vegetation Photons */
     long gnd_cnt = 0;
     long veg_cnt = 0;
-    for(long i = 0; i < num_ph; i++)
+    for(uint32_t i = 0; i < num_ph; i++)
     {
         if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
         {
@@ -383,8 +376,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             veg_cnt++;
         }
     }
-    result[t].ground_photon_count = gnd_cnt;
-    result[t].vegetation_photon_count = veg_cnt;
+    result.ground_photon_count = gnd_cnt;
+    result.vegetation_photon_count = veg_cnt;
 
     /* Create Ground and Vegetation Photon Index Arrays */
     long* gnd_index = new long [gnd_cnt];
@@ -430,30 +423,30 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         max_h = 0.0;
         min_h = 0.0;
     }
-    result[t].h_max_canopy = max_h;
-    result[t].h_min_canopy = min_h;
-    result[t].h_mean_canopy = sum_h / (double)veg_cnt;
+    result.h_max_canopy = max_h;
+    result.h_min_canopy = min_h;
+    result.h_mean_canopy = sum_h / (double)veg_cnt;
 
     /* Calculate Stdev of Heights */
     double std_h = 0.0;
     for(long i = 0; i < veg_cnt; i++)
     {
-        double delta = (ph[veg_index[i]].relief - result[t].h_mean_canopy);
+        double delta = (ph[veg_index[i]].relief - result.h_mean_canopy);
         std_h += delta * delta;
     }
-    result[t].canopy_openness = sqrt(std_h / (double)veg_cnt);
+    result.canopy_openness = sqrt(std_h / (double)veg_cnt);
 
     /* Calculate Number of Bins */
     int num_bins = (int)ceil((max_h - min_h) / parms->phoreal.binsize);
     if(num_bins > MAX_BINS)
     {
         mlog(WARNING, "Maximum number of bins truncated from %d to maximum allowed of %d", num_bins, MAX_BINS);
-        result[t].pflags |= BIN_OVERFLOW_FLAG;
+        result.pflags |= BIN_OVERFLOW_FLAG;
         num_bins = MAX_BINS;
     }
     else if(num_bins <= 0)
     {
-        result[t].pflags |= BIN_UNDERFLOW_FLAG;
+        result.pflags |= BIN_UNDERFLOW_FLAG;
         num_bins = 1;
     }
 
@@ -474,7 +467,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = (waveform_t*)waverec.getRecordData();
-        data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
+        data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
         for(int b = 0; b < num_bins; b++)
@@ -508,7 +501,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             h_te_median = ph[gnd_index[i0]].height;
         }
     }
-    result[t].h_te_median = h_te_median;
+    result.h_te_median = h_te_median;
 
     /* Calculate Percentiles */
     {
@@ -520,7 +513,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
                 double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
                 if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
-                    result[t].canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
+                    result.canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
                     break;
                 }
                 b++;
@@ -532,7 +525,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
             if(percentage >= 98.0 && cbins[b] > 0)
             {
-                result[t].h_canopy = ph[veg_index[cbins[b] - 1]].relief;
+                result.h_canopy = ph[veg_index[cbins[b] - 1]].relief;
                 break;
             }
             b++;
@@ -549,12 +542,12 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::postResult (int t, vegetation_t* result)
+void Atl08Dispatch::postResult (vegetation_t* result)
 {
     batchMutex.lock();
     {
         /* Populate Batch Record */
-        if(result) recData->vegetation[batchIndex++] = result[t];
+        if(result) recData->vegetation[batchIndex++] = *result;
 
         /* Check If Batch Record Should Be Posted*/
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)

@@ -64,18 +64,17 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
 
 const char* Atl03Reader::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
-    {"track",           RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),           1,  NULL, NATIVE_FLAGS},
-    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation),         1,  NULL, NATIVE_FLAGS},
-    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track_start),   1,  NULL, NATIVE_FLAGS},
-    {"cycle",           RecordObject::UINT16,   offsetof(extent_t, cycle_start),                    1,  NULL, NATIVE_FLAGS},
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),                      1,  NULL, NATIVE_FLAGS},
-    {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id[0]),                  2,  NULL, NATIVE_FLAGS},
-    {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance[0]),            2,  NULL, NATIVE_FLAGS}, // distance from equator
-    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate[0]),             2,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation[0]),             2,  NULL, NATIVE_FLAGS},
-    {"count",           RecordObject::UINT32,   offsetof(extent_t, photon_count[0]),                2,  NULL, NATIVE_FLAGS},
-    {"photons",         RecordObject::USER,     offsetof(extent_t, photon_offset[0]),               2,  phRecType, NATIVE_FLAGS | RecordObject::POINTER},
-    {"data",            RecordObject::USER,     offsetof(extent_t, photons),                        0,  phRecType, NATIVE_FLAGS} // variable length
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),   1,  NULL, NATIVE_FLAGS},
+    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS},
+    {"cycle",           RecordObject::UINT16,   offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
+    {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id),             1,  NULL, NATIVE_FLAGS},
+    {"count",           RecordObject::UINT32,   offsetof(extent_t, photon_count),           1,  NULL, NATIVE_FLAGS},
+    {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance),       1,  NULL, NATIVE_FLAGS}, // distance from equator
+    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
+    {"data",            RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* Atl03Reader::ancRecType = "atl03anc"; // ancillary atl03 record
@@ -102,88 +101,82 @@ const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
  * ATL03 READER CLASS
  ******************************************************************************/
 
-double* Atl03Reader::anc_t::extractAncillary (int track)
+double* Atl03Reader::anc_t::extractAncillary (void)
 {
-    int size = num_elements[track];
-
     double* dst = NULL;
-    if(size > 0) dst = new double[size];
-
-    uint32_t offset = 0;
-    if(track == 1) offset = num_elements[0];
+    if(num_elements > 0) dst = new double[num_elements];
 
     switch(data_type)
     {
         case RecordObject::INT8:
         {
-            int8_t* src = (int8_t*)&data[offset * sizeof(int8_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            int8_t* src = (int8_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::INT16:
         {
-            int16_t* src = (int16_t*)&data[offset * sizeof(int16_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            int16_t* src = (int16_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::INT32:     
         {
-            int32_t* src = (int32_t*)&data[offset * sizeof(int32_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            int32_t* src = (int32_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::INT64:     
         {
-            int64_t* src = (int64_t*)&data[offset * sizeof(int64_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            int64_t* src = (int64_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::UINT8:     
         {
-            uint8_t* src = (uint8_t*)&data[offset * sizeof(uint8_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            uint8_t* src = (uint8_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::UINT16:    
         {
-            uint16_t* src = (uint16_t*)&data[offset * sizeof(uint16_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            uint16_t* src = (uint16_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::UINT32:    
         {
-            uint32_t* src = (uint32_t*)&data[offset * sizeof(uint32_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            uint32_t* src = (uint32_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::UINT64:    
         {
-            uint64_t* src = (uint64_t*)&data[offset * sizeof(uint64_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            uint64_t* src = (uint64_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::FLOAT:    
         {
-            float* src = (float*)&data[offset * sizeof(float)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            float* src = (float*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::DOUBLE:    
         {
-            double* src = (double*)&data[offset * sizeof(double)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            double* src = (double*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::TIME8:     
         {
-            int64_t* src = (int64_t*)&data[offset * sizeof(int64_t)];
-            for(int i = 0; i < size; i++) dst[i] = (double)src[i];
+            int64_t* src = (int64_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         default:        
         {
-            size = 0; // unable to extract
-            break;
+            break; // unable to extract
         }
     }
 
@@ -1325,7 +1318,7 @@ void* Atl03Reader::subsettingThread (void* parm)
         /* Traverse All Photons In Dataset */
         while( reader->active && (!state[Icesat2Parms::RPT_L].track_complete || !state[Icesat2Parms::RPT_R].track_complete) )
         {
-            /* Select Photons for Extent from each Track */
+            /* Process Photons for Extent from each Track */
             for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
             {
                 /* Skip Completed Tracks */
@@ -1571,51 +1564,52 @@ void* Atl03Reader::subsettingThread (void* parm)
                         state[t].extent_valid = false;
                     }
                 }
-            }
 
-            /* Create Extent Record */
-            if(state[Icesat2Parms::RPT_L].extent_valid || state[Icesat2Parms::RPT_R].extent_valid || parms->pass_invalid)
-            {
-                /* Generate Extent ID */
-                uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
-                                     ((uint64_t)reader->start_cycle << 36) |
-                                     ((uint64_t)reader->start_region << 32) |
-                                     ((uint64_t)info->track << 30) |
-                                     (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
-                                     Icesat2Parms::EXTENT_ID_PHOTONS;
-
-                /* Build Extent and Ancillary Records */
-                vector<RecordObject*> rec_list;
-                int rec_total_size = 0;
-                reader->generateExtentRecord(extent_id, info->track, state, atl03, rec_list, rec_total_size);
-                reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
-
-                /* Send Records */
-                if(rec_list.size() == 1)
+                /* Create Extent Record */
+                if(state[t].extent_valid || parms->pass_invalid)
                 {
-                    reader->postRecord(*(rec_list[0]), local_stats);
-                }
-                else if(rec_list.size() > 1)
-                {
-                    /* Send Container Record */
-                    ContainerRecord container(rec_list.size(), rec_total_size);
-                    for(size_t i = 0; i < rec_list.size(); i++)
+                    /* Generate Extent ID */
+                    uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
+                                         ((uint64_t)reader->start_cycle << 36) |
+                                         ((uint64_t)reader->start_region << 32) |
+                                         ((uint64_t)info->track << 30) |
+                                         (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
+                                         Icesat2Parms::EXTENT_ID_PHOTONS |
+                                         t; // track
+
+                    /* Build Extent and Ancillary Records */
+                    vector<RecordObject*> rec_list;
+                    int rec_total_size = 0;
+                    reader->generateExtentRecord(extent_id, t, info->track, state, atl03, rec_list, rec_total_size);
+                    reader->generateAncillaryRecords(extent_id, t, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    reader->generateAncillaryRecords(extent_id, t, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+
+                    /* Send Records */
+                    if(rec_list.size() == 1)
                     {
-                        container.addRecord(*(rec_list[i]));
+                        reader->postRecord(*(rec_list[0]), local_stats);
                     }
-                    reader->postRecord(container, local_stats);
-                }
+                    else if(rec_list.size() > 1)
+                    {
+                        /* Send Container Record */
+                        ContainerRecord container(rec_list.size(), rec_total_size);
+                        for(size_t i = 0; i < rec_list.size(); i++)
+                        {
+                            container.addRecord(*(rec_list[i]));
+                        }
+                        reader->postRecord(container, local_stats);
+                    }
 
-                /* Clean Up Records */
-                for(auto& rec: rec_list)
-                {
-                    delete rec;
+                    /* Clean Up Records */
+                    for(auto& rec: rec_list)
+                    {
+                        delete rec;
+                    }
                 }
-            }
-            else // neither pair in extent valid
-            {
-                local_stats.extents_filtered++;
+                else // neither pair in extent valid
+                {
+                    local_stats.extents_filtered++;
+                }
             }
 
             /* Bump Extent Counter */
@@ -1733,67 +1727,41 @@ uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& a
 /*----------------------------------------------------------------------------
  * generateExtentRecord
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateExtentRecord (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateExtentRecord (uint64_t extent_id, int t, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
 {
     /* Calculate Extent Record Size */
-    int num_photons = state[Icesat2Parms::RPT_L].extent_photons.length() + state[Icesat2Parms::RPT_R].extent_photons.length();
+    int num_photons = state[t].extent_photons.length();
     int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
     /* Allocate and Initialize Extent Record */
     RecordObject* record = new RecordObject(exRecType, extent_bytes);
     extent_t* extent = (extent_t*)record->getRecordData();
-    extent->extent_id = extent_id;
-    extent->reference_pair_track = track;
-    extent->spacecraft_orientation = atl03.sc_orient[0];
-    extent->reference_ground_track_start = start_rgt;
-    extent->cycle_start = start_cycle;
+    extent->valid                   = state[t].extent_valid;
+    extent->extent_id               = extent_id;
+    extent->reference_pair_track    = track;
+    extent->spacecraft_orientation  = atl03.sc_orient[0];
+    extent->reference_ground_track  = start_rgt;
+    extent->cycle                   = start_cycle;
+    extent->segment_id              = calculateSegmentId(t, state, atl03);
+    extent->segment_distance        = state[t].seg_distance;
+    extent->extent_length           = state.extent_length;
+    extent->background_rate         = calculateBackground(t, state, atl03);
+    extent->solar_elevation         = atl03.solar_elevation[t][state[t].extent_segment];
+    extent->photon_count            = state[t].extent_photons.length();
 
-    /* Populate Extent */
-    uint32_t ph_out = 0;
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Calculate Spacecraft Velocity */
+    int32_t sc_v_offset = state[t].extent_segment * 3;
+    double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
+    double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
+    double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
+    double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
+    extent->spacecraft_velocity  = (float)spacecraft_velocity;
+
+    /* Populate Photons */
+    for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
     {
-        /* Calculate Spacecraft Velocity */
-        int32_t sc_v_offset = state[t].extent_segment * 3;
-        double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
-        double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
-        double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
-        double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
-
-        /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
-        double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment]; // start with first segment in extent
-        if(!parms->dist_in_seg)
-        {
-            atl06_segment_id += state[t].start_seg_portion; // add portion of first segment that first photon is included
-            atl06_segment_id += (int)((parms->extent_length / ATL03_SEGMENT_LENGTH) / 2.0); // add half the length of the extent
-        }
-        else // dist_in_seg is true
-        {
-            atl06_segment_id += (int)(parms->extent_length / 2.0);
-        }
-
-        /* Populate Attributes */
-        extent->valid[t]                = state[t].extent_valid;
-        extent->segment_id[t]           = calculateSegmentId(t, state, atl03);
-        extent->segment_distance[t]     = state[t].seg_distance;
-        extent->extent_length[t]        = state.extent_length;
-        extent->spacecraft_velocity[t]  = spacecraft_velocity;
-        extent->background_rate[t]      = calculateBackground(t, state, atl03);
-        extent->solar_elevation[t]      = atl03.solar_elevation[t][state[t].extent_segment];
-        extent->photon_count[t]         = state[t].extent_photons.length();
-
-        /* Populate Photons */
-        if(num_photons > 0)
-        {
-            for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
-            {
-                extent->photons[ph_out++] = state[t].extent_photons[p];
-            }
-        }
+        extent->photons[p] = state[t].extent_photons[p];
     }
-
-    /* Set Photon Pointer Fields */
-    extent->photon_offset[Icesat2Parms::RPT_L] = offsetof(extent_t, photons); // pointers are set to offset from start of record data
-    extent->photon_offset[Icesat2Parms::RPT_R] = offsetof(extent_t, photons) + (sizeof(photon_t) * extent->photon_count[Icesat2Parms::RPT_L]);
 
     /* Add Extent Record */
     total_size += record->getAllocatedMemory();
@@ -1804,7 +1772,8 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, uint8_t track, Track
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
 void Atl03Reader::generateAncillaryRecords (
-    uint64_t extent_id, 
+    uint64_t extent_id,
+    int t,
     Icesat2Parms::string_list_t* field_list, 
     MgDictionary<GTDArray*>& field_dict, 
     anc_type_t type,
@@ -1821,8 +1790,7 @@ void Atl03Reader::generateAncillaryRecords (
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_t, data) +
-                                (array->gt[Icesat2Parms::RPT_L].elementSize() * indices[Icesat2Parms::RPT_L]->length()) +
-                                (array->gt[Icesat2Parms::RPT_R].elementSize() * indices[Icesat2Parms::RPT_R]->length());
+                                (array->gt[t].elementSize() * indices[t]->length());
             RecordObject* record = new RecordObject(ancRecType, record_size);
             anc_t* data = (anc_t*)record->getRecordData();
 
@@ -1830,18 +1798,14 @@ void Atl03Reader::generateAncillaryRecords (
             data->extent_id = extent_id;
             data->anc_type = type;
             data->field_index = i;
-            data->data_type = array->gt[Icesat2Parms::RPT_L].elementType();
-            data->num_elements[Icesat2Parms::RPT_L] = indices[Icesat2Parms::RPT_L]->length();
-            data->num_elements[Icesat2Parms::RPT_R] = indices[Icesat2Parms::RPT_R]->length();
+            data->data_type = array->gt[t].elementType();
+            data->num_elements = indices[t]->length();
 
             /* Populate Ancillary Data */
             uint64_t bytes_written = 0;
-            for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+            for(int p = 0; p < indices[t]->length(); p++)
             {
-                for(int p = 0; p < indices[t]->length(); p++)
-                {
-                    bytes_written += array->gt[t].serialize(&data->data[bytes_written], indices[t]->get(p), 1);
-                }
+                bytes_written += array->gt[t].serialize(&data->data[bytes_written], indices[t]->get(p), 1);
             }
 
             /* Add Ancillary Record */

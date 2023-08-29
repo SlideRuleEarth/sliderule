@@ -102,20 +102,19 @@ class Atl03Reader: public LuaObject
 
         /* Extent Record */
         typedef struct {
-            bool            valid[Icesat2Parms::NUM_PAIR_TRACKS];
+            bool            valid;
             uint8_t         reference_pair_track; // 1, 2, or 3
             uint8_t         spacecraft_orientation; // sc_orient_t
-            uint16_t        reference_ground_track_start;
-            uint16_t        cycle_start;
+            uint16_t        reference_ground_track;
+            uint16_t        cycle;
+            uint32_t        segment_id;
+            uint32_t        photon_count;
+            float           solar_elevation;
+            float           spacecraft_velocity; // meters per second
+            double          segment_distance;
+            double          extent_length; // meters
+            double          background_rate; // PE per second
             uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
-            uint32_t        segment_id[Icesat2Parms::NUM_PAIR_TRACKS];
-            double          segment_distance[Icesat2Parms::NUM_PAIR_TRACKS];
-            double          extent_length[Icesat2Parms::NUM_PAIR_TRACKS]; // meters
-            double          spacecraft_velocity[Icesat2Parms::NUM_PAIR_TRACKS]; // meters per second
-            double          background_rate[Icesat2Parms::NUM_PAIR_TRACKS]; // PE per second
-            float           solar_elevation[Icesat2Parms::NUM_PAIR_TRACKS];
-            uint32_t        photon_count[Icesat2Parms::NUM_PAIR_TRACKS];
-            uint32_t        photon_offset[Icesat2Parms::NUM_PAIR_TRACKS];
             photon_t        photons[]; // zero length field
         } extent_t;
 
@@ -128,13 +127,13 @@ class Atl03Reader: public LuaObject
         /* Ancillary Record */
         typedef struct {
             uint64_t        extent_id;
-            uint32_t        num_elements[Icesat2Parms::NUM_PAIR_TRACKS];
+            uint32_t        num_elements;
             uint8_t         anc_type; // anc_type_t
             uint8_t         field_index; // position in request parameter list
             uint8_t         data_type; // RecordObject::fieldType_t
             uint8_t         data[];
             
-            double* extractAncillary (int track);
+            double* extractAncillary (void);
         } anc_t;
 
         /* Statistics */
@@ -344,8 +343,8 @@ class Atl03Reader: public LuaObject
 
         double              calculateBackground         (int t, TrackState& state, Atl03Data& atl03);
         uint32_t            calculateSegmentId          (int t, TrackState& state, Atl03Data& atl03);
-        void                generateExtentRecord        (uint64_t extent_id, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        void                generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, anc_type_t type,  List<int32_t>** indices, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateExtentRecord        (uint64_t extent_id, int t, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateAncillaryRecords    (uint64_t extent_id, int t, Icesat2Parms::string_list_t* field_list, MgDictionary<GTDArray*>& field_dict, anc_type_t type,  List<int32_t>** indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         void                parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

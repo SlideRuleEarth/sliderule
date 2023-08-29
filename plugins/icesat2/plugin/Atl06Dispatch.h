@@ -201,7 +201,7 @@ class Atl06Dispatch: public DispatchObject
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
-        void            iterativeFitStage               (Atl03Reader::extent_t* extent, result_t* result);
+        void            iterativeFitStage               (Atl03Reader::extent_t* extent, result_t& result);
         void            postResult                      (result_t* result);
 
         static int      luaStats                        (lua_State* L);

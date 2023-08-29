@@ -227,8 +227,8 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     (void)key;
 
     /* Declare and Clear Results */
-    result_t result[Icesat2Parms::NUM_PAIR_TRACKS];
-    memset(result, 0, sizeof(result_t) * Icesat2Parms::NUM_PAIR_TRACKS);
+    result_t result;
+    result.provided = false;
 
     /* Get Input */
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
@@ -240,21 +240,19 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         {
             RecordObject* rec = records->at(i);
             Atl03Reader::anc_t* anc_rec = (Atl03Reader::anc_t*)rec->getRecordData();
-            for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-            {
-                /* Build Array of Values 
-                 * to be used by iterativeFitStage..lsf */
-                double* values = anc_rec->extractAncillary(t); // `new` memory allocated here
-                result[t].anc_values.push_back(values);
 
-                /* Prepopulate Ancillary Field Structure
-                 * `value` is populated below in iterativeFitStage..lsf
-                 * using the value vector above */
-                anc_field_t anc_field;
-                anc_field.anc_type = anc_rec->anc_type;
-                anc_field.field_index = anc_rec->field_index;
-                result[t].anc_fields.push_back(anc_field);
-            }
+            /* Build Array of Values 
+                * to be used by iterativeFitStage..lsf */
+            double* values = anc_rec->extractAncillary(); // `new` memory allocated here
+            result.anc_values.push_back(values);
+
+            /* Prepopulate Ancillary Field Structure
+                * `value` is populated below in iterativeFitStage..lsf
+                * using the value vector above */
+            anc_field_t anc_field;
+            anc_field.anc_type = anc_rec->anc_type;
+            anc_field.field_index = anc_rec->field_index;
+            result.anc_fields.push_back(anc_field);
         }
     }
 
@@ -262,54 +260,44 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
     Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
 
-    /* Initialize Results */
-    int first_photon = 0;
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Elevation Attributes */
+    result.elevation.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
+    result.elevation.segment_id = extent->segment_id;
+    result.elevation.rgt = extent->reference_ground_track;
+    result.elevation.cycle = extent->cycle;
+    result.elevation.x_atc = extent->segment_distance;
+
+    /* Copy In Initial Set of Photons */
+    result.elevation.photon_count = extent->photon_count;
+    if(result.elevation.photon_count > 0)
     {
-        /* Elevation Attributes */
-        result[t].elevation.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
-        result[t].elevation.segment_id = extent->segment_id[t];
-        result[t].elevation.rgt = extent->reference_ground_track_start;
-        result[t].elevation.cycle = extent->cycle_start;
-        result[t].elevation.x_atc = extent->segment_distance[t];
-
-        /* Copy In Initial Set of Photons */
-        result[t].elevation.photon_count = extent->photon_count[t];
-        if(result[t].elevation.photon_count > 0)
+        result.photons = new point_t[result.elevation.photon_count];
+        for(int p = 0; p < result.elevation.photon_count; p++)
         {
-            result[t].photons = new point_t[result[t].elevation.photon_count];
-            for(int p = 0; p < result[t].elevation.photon_count; p++)
-            {
-                result[t].photons[p].p = first_photon + p;  // extent->photons[]
-            }
-            first_photon += result[t].elevation.photon_count;
+            result.photons[p].p = p;  // extent->photons[]
         }
-
-        /* Calcualte Beam Numbers */
-        result[t].elevation.spot = Icesat2Parms::getSpotNumber(sc_orient, track, t);
-        result[t].elevation.gt = Icesat2Parms::getGroundTrack(sc_orient, track, t);
     }
+
+    /* Calcualte Beam Numbers */
+    result.elevation.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->reference_pair_track);
+    result.elevation.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->reference_pair_track);
 
     /* Execute Algorithm Stages */
     if(parms->stages[Icesat2Parms::STAGE_LSF]) iterativeFitStage(extent, result);
 
     /* Post Results */
-    postResult(result);
+    postResult(&result);
 
-    /* Free Memory Allocations */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Delete Ancillary Value Arrays */
+    for(auto& values: result.anc_values)
     {
-        /* Delete Ancillary Value Arrays */
-        for(auto& values: result[t].anc_values)
-        {
-            delete [] values;
-        }
+        delete [] values;
+    }
 
-        /* Delete Photon Aray */
-        if(result[t].photons)
-        {
-            delete [] result[t].photons;
-        }
+    /* Delete Photon Aray */
+    if(result.photons)
+    {
+        delete [] result.photons;
     }
 
     /* Bump Statistics */
@@ -344,219 +332,215 @@ bool Atl06Dispatch::processTermination (void)
  *  Note: Section 5.5 - Signal selection based on ATL03 flags
  *        Procedures 4b and after
  *----------------------------------------------------------------------------*/
-void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* result)
+void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& result)
 {
-    /* Process Tracks */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Check Valid Extent */
+    if(extent->valid && result.elevation.photon_count > 0)
     {
-        /* Check Valid Extent */
-        if(extent->valid[t] && result[t].elevation.photon_count > 0)
-        {
-            result[t].provided = true;
-        }
-        else
-        {
-            // the check for photon count is redundent with the check for
-            // a valid extent, but given that the code below is invalid
-            // if the number of photons is less than or equal to zero,
-            // the check is provided explicitly
-            continue;
-        }
-
-        /* Initial Conditions */
-        bool done = false;
-        bool invalid = false;
-        int iteration = 0;
-
-        /* Initial Per Track Calculations */
-        double pulses_in_extent     = (extent->extent_length[t] * PULSE_REPITITION_FREQUENCY) / extent->spacecraft_velocity[t]; // N_seg_pulses, section 5.4, procedure 1d
-        double background_density   = pulses_in_extent * extent->background_rate[t] / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
-
-        /* Iterate Processing of Photons */
-        while(!done)
-        {
-            int num_photons = result[t].elevation.photon_count;
-
-            /* Calculate Least Squares Fit */
-            lsf_t fit = lsf(extent, result[t], false);
-
-            /* Calculate Residuals */
-            for(int p = 0; p < num_photons; p++)
-            {
-                double x = extent->photons[result[t].photons[p].p].x_atc;
-                double y = extent->photons[result[t].photons[p].p].height;
-                result[t].photons[p].r = y - (fit.height + (x * fit.slope));
-            }
-
-            /* Sort Points by Residuals */
-            quicksort(result[t].photons, 0, num_photons-1);
-
-            /* Calculate Inputs to Robust Dispersion Estimate */
-            double  background_count;       // N_BG
-            double  window_lower_bound;     // zmin
-            double  window_upper_bound;     // zmax;
-            if(iteration == 0)
-            {
-                window_lower_bound  = result[t].photons[0].r; // section 5.5, procedure 4c
-                window_upper_bound  = result[t].photons[num_photons - 1].r; // section 5.5, procedure 4c
-                background_count    = background_density * (window_upper_bound - window_lower_bound); // section 5.5, procedure 4b; pe_select_mod.f90 initial_select()
-            }
-            else
-            {
-                background_count    = background_density * result[t].elevation.window_height; // section 5.7, procedure 2c
-                window_lower_bound  = -(result[t].elevation.window_height / 2.0); // section 5.7, procedure 2c
-                window_upper_bound  = result[t].elevation.window_height / 2.0; // section 5.7, procedure 2c
-            }
-
-            /* Continued Inputs to Robust Dispersion Estimate */
-            double background_rate  = background_count / (window_upper_bound - window_lower_bound); // bckgrd, section 5.9, procedure 1a
-            double signal_count     = num_photons - background_count; // N_sig, section 5.9, procedure 1b
-            double sigma_r          = 0.0; // sigma_r
-
-            /* Calculate Robust Dispersion Estimate */
-            if(signal_count <= 1)
-            {
-                sigma_r = (window_upper_bound - window_lower_bound) / num_photons; // section 5.9, procedure 1c
-            }
-            else
-            {
-                /* Find Smallest Potential Percentiles (0) */
-                int32_t i0 = 0;
-                while(i0 < num_photons)
-                {
-                    double spp = (0.25 * signal_count) + ((result[t].photons[i0].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
-                    if( (((double)i0) + 1.0 - 0.5 + 1.0) < spp )    i0++;   // +1 adjusts for 0 vs 1 based indices, -.5 rounds, +1 looks ahead
-                    else                                            break;
-                }
-
-                /* Find Smallest Potential Percentiles (1) */
-                int32_t i1 = num_photons - 1;
-                while(i1 >= 0)
-                {
-                    double spp = (0.75 * signal_count) + ((result[t].photons[i1].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
-                    if( (((double)i1) + 1.0 - 0.5 - 1.0) > spp )    i1--;   // +1 adjusts for 0 vs 1 based indices, -.5 rounds, +1 looks ahead
-                    else                                            break;
-                }
-
-                /* Check Need to Refind Percentiles */
-                if(i1 < i0)
-                {
-                    /* Find Spread of Central Values (0) */
-                    double spp0 = (num_photons / 2.0) - (signal_count / 4.0); // section 5.9, procedure 5a
-                    i0 = (int32_t)(spp0 + 0.5) - 1;
-
-                    /* Find Spread of Central Values (1) */
-                    double spp1 = (num_photons / 2.0) + (signal_count / 4.0); // section 5.9, procedure 5b
-                    i1 = (int32_t)(spp1 + 0.5);
-                }
-
-                /* Check Validity of Percentiles */
-                if(i0 >= 0 && i1 < num_photons)
-                {
-                    /* Calculate Robust Dispersion Estimate */
-                    sigma_r = (result[t].photons[i1].r - result[t].photons[i0].r) / RDE_SCALE_FACTOR; // section 5.9, procedure 6
-                }
-                else
-                {
-                    mlog(CRITICAL, "Out of bounds condition caught: %d, %d, %d", i0, i1, num_photons);
-                    result[t].elevation.pflags |= PFLAG_OUT_OF_BOUNDS;
-                    invalid = true;
-                }
-            }
-
-            /* Calculate Sigma Expected */
-            double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
-            double se2 = pow(SIGMA_BEAM, 2) * pow(result[t].elevation.dh_fit_dx, 2);
-            double sigma_expected = sqrt(se1 + se2); // sigma_expected, section 5.5, procedure 4d
-
-            /* Calculate Window Height */
-            if(sigma_r > parms->maximum_robust_dispersion) sigma_r = parms->maximum_robust_dispersion;
-            double new_window_height = MAX(MAX(parms->minimum_window, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
-            result[t].elevation.window_height = MAX(new_window_height, 0.75 * result[t].elevation.window_height); // section 5.7, procedure 2e
-            double window_spread = result[t].elevation.window_height / 2.0;
-
-            /* Precalculate Next Iteration's Conditions (section 5.7, procedure 2h) */
-            int32_t next_num_photons = 0;
-            double x_min = DBL_MAX;
-            double x_max = -DBL_MAX;
-            for(int p = 0; p < num_photons; p++)
-            {
-                if(abs(result[t].photons[p].r) < window_spread)
-                {
-                    next_num_photons++;
-                    double x = extent->photons[result[t].photons[p].p].x_atc;
-                    if(x < x_min) x_min = x;
-                    if(x > x_max) x_max = x;
-                }
-            }
-
-            /* Check Photon Count */
-            if(next_num_photons < parms->minimum_photon_count)
-            {
-                result[t].elevation.pflags |= PFLAG_TOO_FEW_PHOTONS;
-                invalid = true;
-                done = true;
-            }
-            /* Check Spread */
-            else if((x_max - x_min) < parms->along_track_spread)
-            {
-                result[t].elevation.pflags |= PFLAG_SPREAD_TOO_SHORT;
-                invalid = true;
-                done = true;
-            }
-            /* Check Change in Number of Photons */
-            else if(next_num_photons == num_photons)
-            {
-                done = true;
-            }
-            /* Check Iterations */
-            else if(++iteration >= parms->max_iterations)
-            {
-                result[t].elevation.pflags |= PFLAG_MAX_ITERATIONS_REACHED;
-                done = true;
-            }
-            /* Filtered Out Photons in Results and Iterate Again (section 5.5, procedure 4f) */
-            else
-            {
-                int32_t ph_in = 0;
-                for(int p = 0; p < num_photons; p++)
-                {
-                    if(abs(result[t].photons[p].r) < window_spread)
-                    {
-                        result[t].photons[ph_in++] = result[t].photons[p];
-                    }
-                }
-                result[t].elevation.photon_count = ph_in;
-            }
-        }
-
-        /*
-         *  Note: Section 3.6 - Signal, Noise, and Error Estimates
-         *        Section 5.7, procedure 5
-         */
-
-        /* Sum Deltas in Photon Heights */
-        double delta_sum = 0.0;
-        for(int p = 0; p < result[t].elevation.photon_count; p++)
-        {
-            delta_sum += (result[t].photons[p].r * result[t].photons[p].r);
-        }
-
-        /* Calculate RMS and Scale h_sigma */
-        if(!invalid && result[t].elevation.photon_count > 0)
-        {
-            result[t].elevation.rms_misfit = sqrt(delta_sum / (double)result[t].elevation.photon_count);
-            result[t].elevation.h_sigma = result[t].elevation.rms_misfit * result[t].elevation.h_sigma;
-        }
-        else
-        {
-            result[t].elevation.rms_misfit = 0.0;
-            result[t].elevation.h_sigma = 0.0;
-        }
-
-        /* Calculate Latitude, Longitude, and GPS Time using Least Squares Fit */
-        lsf(extent, result[t], true);
+        result.provided = true;
     }
+    else
+    {
+        // the check for photon count is redundent with the check for
+        // a valid extent, but given that the code below is invalid
+        // if the number of photons is less than or equal to zero,
+        // the check is provided explicitly
+        return;
+    }
+
+    /* Initial Conditions */
+    bool done = false;
+    bool invalid = false;
+    int iteration = 0;
+
+    /* Initial Per Track Calculations */
+    double pulses_in_extent     = (extent->extent_length * PULSE_REPITITION_FREQUENCY) / extent->spacecraft_velocity; // N_seg_pulses, section 5.4, procedure 1d
+    double background_density   = pulses_in_extent * extent->background_rate / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
+
+    /* Iterate Processing of Photons */
+    while(!done)
+    {
+        int num_photons = result.elevation.photon_count;
+
+        /* Calculate Least Squares Fit */
+        lsf_t fit = lsf(extent, result, false);
+
+        /* Calculate Residuals */
+        for(int p = 0; p < num_photons; p++)
+        {
+            double x = extent->photons[result.photons[p].p].x_atc;
+            double y = extent->photons[result.photons[p].p].height;
+            result.photons[p].r = y - (fit.height + (x * fit.slope));
+        }
+
+        /* Sort Points by Residuals */
+        quicksort(result.photons, 0, num_photons-1);
+
+        /* Calculate Inputs to Robust Dispersion Estimate */
+        double  background_count;       // N_BG
+        double  window_lower_bound;     // zmin
+        double  window_upper_bound;     // zmax;
+        if(iteration == 0)
+        {
+            window_lower_bound  = result.photons[0].r; // section 5.5, procedure 4c
+            window_upper_bound  = result.photons[num_photons - 1].r; // section 5.5, procedure 4c
+            background_count    = background_density * (window_upper_bound - window_lower_bound); // section 5.5, procedure 4b; pe_select_mod.f90 initial_select()
+        }
+        else
+        {
+            background_count    = background_density * result.elevation.window_height; // section 5.7, procedure 2c
+            window_lower_bound  = -(result.elevation.window_height / 2.0); // section 5.7, procedure 2c
+            window_upper_bound  = result.elevation.window_height / 2.0; // section 5.7, procedure 2c
+        }
+
+        /* Continued Inputs to Robust Dispersion Estimate */
+        double background_rate  = background_count / (window_upper_bound - window_lower_bound); // bckgrd, section 5.9, procedure 1a
+        double signal_count     = num_photons - background_count; // N_sig, section 5.9, procedure 1b
+        double sigma_r          = 0.0; // sigma_r
+
+        /* Calculate Robust Dispersion Estimate */
+        if(signal_count <= 1)
+        {
+            sigma_r = (window_upper_bound - window_lower_bound) / num_photons; // section 5.9, procedure 1c
+        }
+        else
+        {
+            /* Find Smallest Potential Percentiles (0) */
+            int32_t i0 = 0;
+            while(i0 < num_photons)
+            {
+                double spp = (0.25 * signal_count) + ((result.photons[i0].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
+                if( (((double)i0) + 1.0 - 0.5 + 1.0) < spp )    i0++;   // +1 adjusts for 0 vs 1 based indices, -.5 rounds, +1 looks ahead
+                else                                            break;
+            }
+
+            /* Find Smallest Potential Percentiles (1) */
+            int32_t i1 = num_photons - 1;
+            while(i1 >= 0)
+            {
+                double spp = (0.75 * signal_count) + ((result.photons[i1].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
+                if( (((double)i1) + 1.0 - 0.5 - 1.0) > spp )    i1--;   // +1 adjusts for 0 vs 1 based indices, -.5 rounds, +1 looks ahead
+                else                                            break;
+            }
+
+            /* Check Need to Refind Percentiles */
+            if(i1 < i0)
+            {
+                /* Find Spread of Central Values (0) */
+                double spp0 = (num_photons / 2.0) - (signal_count / 4.0); // section 5.9, procedure 5a
+                i0 = (int32_t)(spp0 + 0.5) - 1;
+
+                /* Find Spread of Central Values (1) */
+                double spp1 = (num_photons / 2.0) + (signal_count / 4.0); // section 5.9, procedure 5b
+                i1 = (int32_t)(spp1 + 0.5);
+            }
+
+            /* Check Validity of Percentiles */
+            if(i0 >= 0 && i1 < num_photons)
+            {
+                /* Calculate Robust Dispersion Estimate */
+                sigma_r = (result.photons[i1].r - result.photons[i0].r) / RDE_SCALE_FACTOR; // section 5.9, procedure 6
+            }
+            else
+            {
+                mlog(CRITICAL, "Out of bounds condition caught: %d, %d, %d", i0, i1, num_photons);
+                result.elevation.pflags |= PFLAG_OUT_OF_BOUNDS;
+                invalid = true;
+            }
+        }
+
+        /* Calculate Sigma Expected */
+        double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
+        double se2 = pow(SIGMA_BEAM, 2) * pow(result.elevation.dh_fit_dx, 2);
+        double sigma_expected = sqrt(se1 + se2); // sigma_expected, section 5.5, procedure 4d
+
+        /* Calculate Window Height */
+        if(sigma_r > parms->maximum_robust_dispersion) sigma_r = parms->maximum_robust_dispersion;
+        double new_window_height = MAX(MAX(parms->minimum_window, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
+        result.elevation.window_height = MAX(new_window_height, 0.75 * result.elevation.window_height); // section 5.7, procedure 2e
+        double window_spread = result.elevation.window_height / 2.0;
+
+        /* Precalculate Next Iteration's Conditions (section 5.7, procedure 2h) */
+        int32_t next_num_photons = 0;
+        double x_min = DBL_MAX;
+        double x_max = -DBL_MAX;
+        for(int p = 0; p < num_photons; p++)
+        {
+            if(abs(result.photons[p].r) < window_spread)
+            {
+                next_num_photons++;
+                double x = extent->photons[result.photons[p].p].x_atc;
+                if(x < x_min) x_min = x;
+                if(x > x_max) x_max = x;
+            }
+        }
+
+        /* Check Photon Count */
+        if(next_num_photons < parms->minimum_photon_count)
+        {
+            result.elevation.pflags |= PFLAG_TOO_FEW_PHOTONS;
+            invalid = true;
+            done = true;
+        }
+        /* Check Spread */
+        else if((x_max - x_min) < parms->along_track_spread)
+        {
+            result.elevation.pflags |= PFLAG_SPREAD_TOO_SHORT;
+            invalid = true;
+            done = true;
+        }
+        /* Check Change in Number of Photons */
+        else if(next_num_photons == num_photons)
+        {
+            done = true;
+        }
+        /* Check Iterations */
+        else if(++iteration >= parms->max_iterations)
+        {
+            result.elevation.pflags |= PFLAG_MAX_ITERATIONS_REACHED;
+            done = true;
+        }
+        /* Filtered Out Photons in Results and Iterate Again (section 5.5, procedure 4f) */
+        else
+        {
+            int32_t ph_in = 0;
+            for(int p = 0; p < num_photons; p++)
+            {
+                if(abs(result.photons[p].r) < window_spread)
+                {
+                    result.photons[ph_in++] = result.photons[p];
+                }
+            }
+            result.elevation.photon_count = ph_in;
+        }
+    }
+
+    /*
+        *  Note: Section 3.6 - Signal, Noise, and Error Estimates
+        *        Section 5.7, procedure 5
+        */
+
+    /* Sum Deltas in Photon Heights */
+    double delta_sum = 0.0;
+    for(int p = 0; p < result.elevation.photon_count; p++)
+    {
+        delta_sum += (result.photons[p].r * result.photons[p].r);
+    }
+
+    /* Calculate RMS and Scale h_sigma */
+    if(!invalid && result.elevation.photon_count > 0)
+    {
+        result.elevation.rms_misfit = sqrt(delta_sum / (double)result.elevation.photon_count);
+        result.elevation.h_sigma = result.elevation.rms_misfit * result.elevation.h_sigma;
+    }
+    else
+    {
+        result.elevation.rms_misfit = 0.0;
+        result.elevation.h_sigma = 0.0;
+    }
+
+    /* Calculate Latitude, Longitude, and GPS Time using Least Squares Fit */
+    lsf(extent, result, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -564,99 +548,96 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t* 
  *----------------------------------------------------------------------------*/
 void Atl06Dispatch::postResult (result_t* result)
 {
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Copy Elevation from Results into Buffer that's Posted */
+    postingMutex.lock();
     {
-        /* Copy Elevation from Results into Buffer that's Posted */
-        postingMutex.lock();
+        /* Populate Elevation & Ancillary Fields */
+        if(result && result->provided)
         {
-            /* Populate Elevation & Ancillary Fields */
-            if(result && result[t].provided)
+            /* Elevation */
+            elevationRecordData->elevation[elevationIndex++] = result->elevation;
+
+            /* Ancillary */
+            int num_anc_fields = result->anc_fields.size();
+            if(num_anc_fields > 0)
             {
-                /* Elevation */
-                elevationRecordData->elevation[elevationIndex++] = result[t].elevation;
-
-                /* Ancillary */
-                int num_anc_fields = result[t].anc_fields.size();
-                if(num_anc_fields > 0)
+                int anc_rec_size = offsetof(anc_t, fields) + (sizeof(anc_field_t) * num_anc_fields);
+                ancillaryRecords[ancillaryIndex] = new RecordObject(ancRecType, anc_rec_size);
+                ancillaryTotalSize += ancillaryRecords[ancillaryIndex]->getAllocatedMemory();
+                anc_t* anc_rec = (anc_t*)ancillaryRecords[ancillaryIndex]->getRecordData();
+                anc_rec->extent_id = result->elevation.extent_id;
+                for(int f = 0; f < num_anc_fields; f++)
                 {
-                    int anc_rec_size = offsetof(anc_t, fields) + (sizeof(anc_field_t) * num_anc_fields);
-                    ancillaryRecords[ancillaryIndex] = new RecordObject(ancRecType, anc_rec_size);
-                    ancillaryTotalSize += ancillaryRecords[ancillaryIndex]->getAllocatedMemory();
-                    anc_t* anc_rec = (anc_t*)ancillaryRecords[ancillaryIndex]->getRecordData();
-                    anc_rec->extent_id = result[t].elevation.extent_id;
-                    for(int f = 0; f < num_anc_fields; f++)
-                    {
-                        anc_rec->fields[f] = result[t].anc_fields[f];
-                    }
-                    ancillaryIndex++;
+                    anc_rec->fields[f] = result->anc_fields[f];
                 }
-            }
-            else
-            {
-                stats.filtered_cnt++;
-            }
-
-            /* Check If ATL06 Record Should Be Posted*/
-            if((!result && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
-            {
-                int elevation_rec_size = elevationIndex * sizeof(elevation_t);
-
-                if(ancillaryIndex == 0)
-                {
-                    /* Serialize Elevation Batch Record */
-                    unsigned char* buffer = NULL;
-                    int bufsize = elevationRecord.serialize(&buffer, RecordObject::REFERENCE, elevation_rec_size);
-
-                    /* Post Record */
-                    if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
-                    {
-                        stats.post_success_cnt += elevationIndex;
-                    }
-                    else
-                    {
-                        stats.post_dropped_cnt += elevationIndex;
-                    }
-                }
-                else // send container record
-                {
-                    /* Get Size of Elevation Batch Record */
-                    unsigned char* er_buffer = NULL;
-                    int er_bufsize = elevationRecord.serialize(&er_buffer, RecordObject::REFERENCE, elevation_rec_size);
-                    ancillaryTotalSize += er_bufsize;
-
-                    /* Build Container Record */
-                    int num_recs = ancillaryIndex + 1;
-                    ContainerRecord container(num_recs, ancillaryTotalSize);
-                    container.addRecord(elevationRecord, elevation_rec_size);
-                    for(int i = 0; i < ancillaryIndex; i++)
-                    {
-                        container.addRecord(*ancillaryRecords[i]);
-                        delete ancillaryRecords[i];
-                    }
-
-                    /* Serialize Elevation Batch Record */
-                    unsigned char* buffer = NULL;
-                    int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
-                    
-                    /* Post Record */
-                    if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
-                    {
-                        stats.post_success_cnt += elevationIndex + ancillaryIndex;
-                    }
-                    else
-                    {
-                        stats.post_dropped_cnt += elevationIndex + ancillaryIndex;
-                    }
-                }
-
-                /* Reset Indices */
-                elevationIndex = 0;
-                ancillaryIndex = 0;
-                ancillaryTotalSize = 0;
+                ancillaryIndex++;
             }
         }
-        postingMutex.unlock();
+        else
+        {
+            stats.filtered_cnt++;
+        }
+
+        /* Check If ATL06 Record Should Be Posted*/
+        if((!result && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
+        {
+            int elevation_rec_size = elevationIndex * sizeof(elevation_t);
+
+            if(ancillaryIndex == 0)
+            {
+                /* Serialize Elevation Batch Record */
+                unsigned char* buffer = NULL;
+                int bufsize = elevationRecord.serialize(&buffer, RecordObject::REFERENCE, elevation_rec_size);
+
+                /* Post Record */
+                if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
+                {
+                    stats.post_success_cnt += elevationIndex;
+                }
+                else
+                {
+                    stats.post_dropped_cnt += elevationIndex;
+                }
+            }
+            else // send container record
+            {
+                /* Get Size of Elevation Batch Record */
+                unsigned char* er_buffer = NULL;
+                int er_bufsize = elevationRecord.serialize(&er_buffer, RecordObject::REFERENCE, elevation_rec_size);
+                ancillaryTotalSize += er_bufsize;
+
+                /* Build Container Record */
+                int num_recs = ancillaryIndex + 1;
+                ContainerRecord container(num_recs, ancillaryTotalSize);
+                container.addRecord(elevationRecord, elevation_rec_size);
+                for(int i = 0; i < ancillaryIndex; i++)
+                {
+                    container.addRecord(*ancillaryRecords[i]);
+                    delete ancillaryRecords[i];
+                }
+
+                /* Serialize Elevation Batch Record */
+                unsigned char* buffer = NULL;
+                int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
+                
+                /* Post Record */
+                if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
+                {
+                    stats.post_success_cnt += elevationIndex + ancillaryIndex;
+                }
+                else
+                {
+                    stats.post_dropped_cnt += elevationIndex + ancillaryIndex;
+                }
+            }
+
+            /* Reset Indices */
+            elevationIndex = 0;
+            ancillaryIndex = 0;
+            ancillaryTotalSize = 0;
+        }
     }
+    postingMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------

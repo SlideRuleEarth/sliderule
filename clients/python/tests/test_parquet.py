@@ -70,8 +70,8 @@ class TestParquet:
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
         os.remove("testfile3.parquet")
         assert len(gdf) == 265
-        assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.350047232')
-        assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582526976')
+        assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.350047744')
+        assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582527744')
 
     def test_atl03_index(self, domain, asset, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
