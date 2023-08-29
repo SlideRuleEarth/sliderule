@@ -113,13 +113,13 @@ class Atl06Dispatch: public DispatchObject
             int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;
             double              longitude;
-            double              x_atc;                  // distance from the equator
             double              h_mean;                 // meters from ellipsoid
-            double              h_sigma;
-            float               dh_fit_dx;
-            float               y_atc;
+            float               dh_fit_dx;              // along track slope
+            float               x_atc;                  // distance from the equator
+            float               y_atc;                  // distance from reference track
             float               window_height;
             float               rms_misfit;
+            float               h_sigma;
         } elevation_t;
 
         /* ATL06 Record */

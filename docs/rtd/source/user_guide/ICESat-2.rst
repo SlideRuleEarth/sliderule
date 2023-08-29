@@ -283,7 +283,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
 - ``"latitude"``: latitude (-90.0 to 90.0)
 - ``"longitude"``: longitude (-180.0 to 180.0)
-- ``"distance"``: along track distance of the photon in meters (with respect to the center of the segment)
+- ``"x_atc"``: along track distance of the photon in meters (with respect to the center of the segment)
 - ``"across"``: across track distance of the photon in meters
 - ``"height"``: height of the photon in meters
 - ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
@@ -309,7 +309,7 @@ The elevation GeoDataFrame has the following columns:
 - ``"cycle"``: cycle
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
-- ``"distance"``: along track distance from the equator in meters
+- ``"x_atc"``: along track distance from the equator in meters
 - ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
 - ``"lat"``: latitude (-90.0 to 90.0)
 - ``"lon"``: longitude (-180.0 to 180.0)
@@ -341,7 +341,7 @@ The vegetation GeoDataFrame has the following columns:
 - ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
 - ``"lat"``: latitude (-90.0 to 90.0)
 - ``"lon"``: longitude (-180.0 to 180.0)
-- ``"distance"``: along track distance from the equator in meters
+- ``"x_atc"``: along track distance from the equator in meters
 - ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
 - ``"h_te_median"``: median terrain elevation in meters (absolute heights)
 - ``"h_max_canopy"``: maximum relief height for canopy photons

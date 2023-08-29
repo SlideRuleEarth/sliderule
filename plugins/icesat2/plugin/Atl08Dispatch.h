@@ -100,7 +100,7 @@ class Atl08Dispatch: public DispatchObject
             int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
-            double              distance;               // distance from the equator
+            float               x_atc;                  // distance from the equator
             float               solar_elevation;        // atl03 solar elevation
             float               h_te_median;            // median terrain height for ground photons
             float               h_max_canopy;           // maximum relief height for canopy photons

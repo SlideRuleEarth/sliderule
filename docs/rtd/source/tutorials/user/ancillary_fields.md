@@ -122,7 +122,7 @@ When this completes (~45 seconds), the _gdf_ variable should now contain all of 
 __Step 5__: Display a summary of the results.
 ```python
 >>> print(gdf)
-                               segment_dist  cycle  segment_id  sc_orient  rgt  track    delta_time  quality_ph  ...   distance       height  ref_azimuth  ref_elev  ph_id_channel  pair                     geometry  spot
+                               segment_dist  cycle  segment_id  sc_orient  rgt  track    delta_time  quality_ph  ...   x_atc          height  ref_azimuth  ref_elev  ph_id_channel  pair                     geometry  spot
 time                                                                                                             ...
 2018-10-17 22:31:17.349347396  4.326639e+06      1      215745          1  295      3  2.505068e+07           0  ...  -4.955579  1825.912354    -1.608736  1.558924             72     1  POINT (-108.28629 38.88954)     1
 2018-10-17 22:31:17.350147408  4.326659e+06      1      215746          1  295      3  2.505068e+07           0  ... -19.340409  1825.895508    -1.608745  1.558925             67     1  POINT (-108.28629 38.88959)     1

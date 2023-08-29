@@ -17,8 +17,8 @@ local args = {
     result_rec      = "atl06rec",
     result_batch    = "atl06rec.elevation",
     index_field     = "extent_id",
-    lon_field       = "lon",
-    lat_field       = "lat",
+    lon_field       = "longitude",
+    lat_field       = "latitude",
     height_field    = "h_mean"
 }
 

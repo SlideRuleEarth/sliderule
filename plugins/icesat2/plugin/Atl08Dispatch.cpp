@@ -59,9 +59,9 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
     {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
     {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS},
-    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
-    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
-    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
+    {"x_atc",                   RecordObject::DOUBLE,   offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS},
     {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS},
     {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS},
     {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
@@ -267,7 +267,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         result[t].time_ns = 0;
         result[t].latitude = 0.0;
         result[t].longitude = 0.0;
-        result[t].distance = extent->segment_distance[t];
+        result[t].x_atc = extent->segment_distance[t];
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
@@ -293,7 +293,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         result[t].time_ns = (int64_t)((time_ns_min + time_ns_max) / 2.0);
         result[t].latitude = (latitude_min + latitude_max) / 2.0;
         result[t].longitude = (longitude_min + longitude_max) / 2.0;
-        result[t].distance = ((x_atc_min + x_atc_max) / 2.0) + extent->segment_distance[t];
+        result[t].x_atc = ((x_atc_min + x_atc_max) / 2.0) + extent->segment_distance[t];
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEAN)
     {
@@ -301,20 +301,20 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double sum_time_ns = 0.0;
         double sum_latitude = 0.0;
         double sum_longitude = 0.0;
-        double sum_distance = 0.0;
+        double sum_x_atc = 0.0;
         for(uint32_t i = 0; i < num_ph; i++)
         {
             sum_time_ns += ph[i].time_ns;
             sum_latitude += ph[i].latitude;
             sum_longitude += ph[i].longitude;
-            sum_distance += ph[i].x_atc + extent->segment_distance[t];
+            sum_x_atc += ph[i].x_atc + extent->segment_distance[t];
         }
 
         /* Calculate Averages */
         result[t].time_ns = (int64_t)(sum_time_ns / num_ph);
         result[t].latitude = sum_latitude / num_ph;
         result[t].longitude = sum_longitude / num_ph;
-        result[t].distance = sum_distance / num_ph;
+        result[t].x_atc = sum_x_atc / num_ph;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
@@ -324,14 +324,14 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
             result[t].time_ns = ph[center_ph].time_ns;
             result[t].latitude = ph[center_ph].latitude;
             result[t].longitude = ph[center_ph].longitude;
-            result[t].distance = ph[center_ph].x_atc + extent->segment_distance[t];
+            result[t].x_atc = ph[center_ph].x_atc + extent->segment_distance[t];
         }
         else // Even Number of Photons
         {
             result[t].time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
             result[t].latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
             result[t].longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
-            result[t].distance = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance[t];
+            result[t].x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance[t];
         }
     }
 

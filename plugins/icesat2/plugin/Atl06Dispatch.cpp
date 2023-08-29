@@ -93,16 +93,16 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
     {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS},
     {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                1,  NULL, NATIVE_FLAGS},
     {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                  1,  NULL, NATIVE_FLAGS},
-    {"x_atc",                   RecordObject::DOUBLE,   offsetof(elevation_t, x_atc),               1,  NULL, NATIVE_FLAGS},
     {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),             1,  NULL, NATIVE_FLAGS},
     {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
     {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
     {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS},
-    {"h_sigma",                 RecordObject::DOUBLE,   offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS},
     {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),           1,  NULL, NATIVE_FLAGS},
+    {"x_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, x_atc),               1,  NULL, NATIVE_FLAGS},
     {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),               1,  NULL, NATIVE_FLAGS},
     {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, window_height),       1,  NULL, NATIVE_FLAGS},
-    {"rms_misfit",              RecordObject::FLOAT,    offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS}
+    {"rms_misfit",              RecordObject::FLOAT,    offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS},
+    {"h_sigma",                 RecordObject::FLOAT,    offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl06Dispatch::atRecType = "atl06rec";

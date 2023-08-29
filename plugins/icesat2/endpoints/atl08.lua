@@ -17,8 +17,8 @@ local args = {
     result_rec      = "atl08rec",
     result_batch    = "atl08rec.vegetation",
     index_field     = "extent_id",
-    lon_field       = "lon",
-    lat_field       = "lat",
+    lon_field       = "longitude",
+    lat_field       = "latitude",
     height_field    = "h_te_median"
 }
 
