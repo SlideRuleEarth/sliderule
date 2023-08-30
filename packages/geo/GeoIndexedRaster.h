@@ -98,6 +98,8 @@ class GeoIndexedRaster: public RasterObject
         static void     init              (void);
         static void     deinit            (void);
         void            getSamples        (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) final;
+        uint8_t*        getSubset         (double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                                           int& cols, int& rows, GDALDataType& datatype) final;
         virtual        ~GeoIndexedRaster  (void);
 
     protected:

@@ -72,6 +72,12 @@ if __icesat2__ then
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
+-- Run opendata Plugin Self Tests
+if __opendata__ then
+    local opendata_td = td .. "../../plugins/opendata/selftests/"
+    runner.script(opendata_td .. "worldcover_reader.lua")
+end
+
 -- Run PGC Plugin Self Tests
 if __pgc__ then
     local pgc_td = td .. "../../plugins/pgc/selftests/"
@@ -96,12 +102,6 @@ end
 if __usgs3dep__ then
     local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
-end
-
--- Run opendata Plugin Self Tests
-if __opendata__ then
-    local opendata_td = td .. "../../plugins/opendata/selftests/"
-    runner.script(opendata_td .. "worldcover_reader.lua")
 end
 
 

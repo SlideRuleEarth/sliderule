@@ -77,9 +77,10 @@ class MeritRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                MeritRaster     (lua_State *L, GeoParms* _parms);
-        void    getSamples      (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) override;
-
+                 MeritRaster     (lua_State *L, GeoParms* _parms);
+        void     getSamples      (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) override;
+        uint8_t* getSubset       (double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                                  int& cols, int& rows, GDALDataType& datatype) final;
     private:
 
         /*--------------------------------------------------------------------

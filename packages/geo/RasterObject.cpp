@@ -149,6 +149,7 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
+    LuaEngine::setAttrFunc(L, "subset", luaSubset);
 }
 
 /*----------------------------------------------------------------------------
@@ -252,6 +253,59 @@ int RasterObject::luaSamples(lua_State *L)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Failed to read samples: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_ret);
+}
+
+
+/*----------------------------------------------------------------------------
+ * luaSubset - :subset(ulx, uly, lrx, lry) --> in|out
+ *----------------------------------------------------------------------------*/
+int RasterObject::luaSubset(lua_State *L)
+{
+    bool status = false;
+    int num_ret = 1;
+
+    RasterObject *lua_obj = NULL;
+
+    try
+    {
+        /* Get Self */
+        lua_obj = (RasterObject*)getLuaSelf(L, 1);
+
+        /* Get Coordinates */
+        double upleft_x   = getLuaFloat(L, 2);
+        double upleft_y   = getLuaFloat(L, 3);
+        double lowright_x = getLuaFloat(L, 4);
+        double lowright_y = getLuaFloat(L, 5);
+
+        int cols, rows;
+        GDALDataType datatype = GDT_Unknown;
+
+        /* subset raster*/
+        uint8_t* data = lua_obj->getSubset(upleft_x, upleft_y, lowright_x, lowright_y, cols, rows, datatype);
+
+        if(data == NULL)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No data read");
+
+        if(datatype == GDT_Unknown)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type returned");
+
+        /* Set Return Values */
+        lua_pushnumber(L, (uint64_t)data);
+        lua_pushnumber(L, cols);
+        lua_pushnumber(L, rows);
+        lua_pushnumber(L, datatype);
+        num_ret += 4;
+
+        /* Set Return Status */
+        status = true;
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Failed to subset raster: %s", e.what());
     }
 
     /* Return Status */

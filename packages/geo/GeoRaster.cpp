@@ -74,6 +74,34 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
 }
 
 /*----------------------------------------------------------------------------
+ * getSubset
+ *----------------------------------------------------------------------------*/
+uint8_t* GeoRaster::getSubset(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                              int& cols, int& rows, GDALDataType& datatype)
+{
+    uint8_t* ptr = NULL;
+
+    samplingMutex.lock();
+    try
+    {
+        GdalRaster::Point upleft(upleft_x, upleft_y);
+        GdalRaster::Point lowright(lowright_x, lowright_y);
+
+        ptr = raster.subset(upleft, lowright, cols, rows, datatype);
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error subsetting raster: %s", e.what());
+        samplingMutex.unlock();
+        throw;  // rethrow exception
+    }
+    samplingMutex.unlock();
+
+    return ptr;
+}
+
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 GeoRaster::~GeoRaster(void)

@@ -140,23 +140,20 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::samplePOI(const Point& _poi)
+void GdalRaster::samplePOI(const Point& poi)
 {
     try
     {
         if(dset == NULL)
             open();
 
-        Point poi = _poi;
         _sampled = false;
         sample.clear();
 
         double z = poi.z;
         // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
-
-        if(!transf->Transform(1, &poi.x, &poi.y, &poi.z))
+        if(!transf->Transform(1, (double*)&poi.x, (double*)&poi.y, (double*)&poi.z))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi.x, poi.y, poi.z);
-
         // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
         verticalShift = z - poi.z;
 
@@ -185,6 +182,67 @@ void GdalRaster::samplePOI(const Point& _poi)
     }
 }
 
+
+/*----------------------------------------------------------------------------
+ * subset
+ *----------------------------------------------------------------------------*/
+uint8_t* GdalRaster::subset(const Point& upleft, const Point& lowright, int& _cols, int& _rows, GDALDataType& datatype)
+{
+    if(dset == NULL)
+        open();
+
+    datatype = band->GetRasterDataType();
+
+    if(datatype == GDT_Unknown) return NULL;
+
+    if(!transf->Transform(1, (double*)&upleft.x, (double*)&upleft.y, (double*)&upleft.z))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", upleft.x, upleft.y, upleft.z);
+
+    if(!transf->Transform(1, (double*)&lowright.x, (double*)&lowright.y, (double*)&lowright.z))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", lowright.x, lowright.y, lowright.z);
+
+    /*
+     * Make sure AOI is within raster
+     */
+    bool subsetWindowOK = false;
+    if(upleft.x <= bbox.lon_max &&
+       upleft.y <= bbox.lat_max &&
+       lowright.x >= bbox.lon_min &&
+       lowright.y >= bbox.lat_min)
+    {
+        subsetWindowOK = true;
+    }
+
+    if(!subsetWindowOK)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "subset window out of bounds of raster");
+
+    const int upleft_col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * upleft.x + invGeoTrnasform[2] * upleft.y));
+    const int upleft_row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * upleft.y + invGeoTrnasform[5] * upleft.y));
+
+    const int lowright_col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * lowright.x + invGeoTrnasform[2] * lowright.y));
+    const int lowright_row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * lowright.y + invGeoTrnasform[5] * lowright.y));
+
+    _cols = lowright_col - upleft_col;
+    _rows = lowright_row - upleft_row;
+
+    int typeSize = GDALGetDataTypeSizeBytes(datatype);
+    int size = _cols * _rows * typeSize;
+    uint8_t* data = new uint8_t[size];
+
+    mlog(DEBUG, "reading %d bytes (%.1fMB), x,y: (%d, %d), xsize: %d, ysize: %d, datatype size %d bytes",
+         size, (float)size/(1024*1024), upleft_col, upleft_row, _cols, _rows, typeSize);
+
+    int cnt = 2;
+    CPLErr err = CE_None;
+    do
+    {
+        err = band->RasterIO(GF_Read, upleft_col, upleft_row, _cols, _rows, data, _cols, _rows, datatype, 0, 0, NULL);
+    } while (err != CE_None && cnt--);
+
+    if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+
+    return data;
+}
 
 /*----------------------------------------------------------------------------
  * setCRSfromWkt

@@ -123,6 +123,8 @@ class GdalRaster
         virtual           ~GdalRaster     (void);
         void               open           (void);
         void               samplePOI      (const Point& poi);
+        uint8_t*           subset         (const Point& upleft, const Point& lowright,
+                                           int& _cols, int& _rows, GDALDataType& datatype);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         bool               sampled        (void) { return _sampled; }

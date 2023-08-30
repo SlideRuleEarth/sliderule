@@ -108,6 +108,15 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
     samplingMutex.unlock();
 }
 
+/*----------------------------------------------------------------------------
+ * getSubset
+ *----------------------------------------------------------------------------*/
+uint8_t* GeoIndexedRaster::getSubset(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                                     int& _cols, int& _rows, GDALDataType& datatype)
+{
+    std::ignore = upleft_x = upleft_y = lowright_x = lowright_y = _cols = _rows = datatype;
+    return NULL;
+}
 
 /*----------------------------------------------------------------------------
  * Destructor
