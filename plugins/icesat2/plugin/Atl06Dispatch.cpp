@@ -256,10 +256,6 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         }
     }
 
-    /* Get S/C Orientation and Pair Track */
-    Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
-    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
-
     /* Elevation Attributes */
     result.elevation.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
     result.elevation.segment_id = extent->segment_id;
@@ -279,8 +275,8 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Calcualte Beam Numbers */
-    result.elevation.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->reference_pair_track);
-    result.elevation.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->reference_pair_track);
+    result.elevation.spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)extent->spacecraft_orientation, (Icesat2Parms::track_t)extent->track, extent->pair);
+    result.elevation.gt = Icesat2Parms::getGroundTrack((Icesat2Parms::sc_orient_t)extent->spacecraft_orientation, (Icesat2Parms::track_t)extent->track, extent->pair);
 
     /* Execute Algorithm Stages */
     if(parms->stages[Icesat2Parms::STAGE_LSF]) iterativeFitStage(extent, result);

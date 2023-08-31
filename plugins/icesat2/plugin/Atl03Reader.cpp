@@ -64,17 +64,17 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
 
 const char* Atl03Reader::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
-    {"track",           RecordObject::UINT8,    offsetof(extent_t, reference_pair_track),   1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS},
+    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS},
     {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS},
     {"cycle",           RecordObject::UINT16,   offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
     {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id),             1,  NULL, NATIVE_FLAGS},
-    {"count",           RecordObject::UINT32,   offsetof(extent_t, photon_count),           1,  NULL, NATIVE_FLAGS},
     {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance),       1,  NULL, NATIVE_FLAGS}, // distance from equator
     {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
-    {"data",            RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS} // variable length
+    {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* Atl03Reader::ancRecType = "atl03anc"; // ancillary atl03 record
@@ -234,6 +234,9 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     assert(outq_name);
     assert(_parms);
 
+    /* Initialize Thread Count */
+    threadCount = 0;
+
     /* Save Info */
     asset = _asset;
     resource = StringLib::duplicate(_resource);
@@ -272,32 +275,27 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 
-        /* Read ATL03 Track Data */
-        if(parms->track == Icesat2Parms::ALL_TRACKS)
+        /* Create Readers */
+        for(int t = 0; t < Icesat2Parms::NUM_TRACKS; t++)
         {
-            threadCount = Icesat2Parms::NUM_TRACKS;
-
-            /* Create Readers */
-            for(int t = 0; t < Icesat2Parms::NUM_TRACKS; t++)
+            for(int p = 0; p < Icesat2Parms::NUM_PAIR_TRACKS; p++)
             {
-                info_t* info = new info_t;
-                info->reader = this;
-                info->track = t + 1;
-                readerPid[t] = new Thread(subsettingThread, info);
+                if(parms->track == Icesat2Parms::ALL_TRACKS || t == parms->track)
+                {
+                    info_t* info = new info_t;
+                    info->reader = this;
+                    info->track = t + 1;
+                    info->pair = p;
+                    StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
+                    readerPid[threadCount++] = new Thread(subsettingThread, info);
+                }
             }
         }
-        else if(parms->track >= 1 && parms->track <= 3)
+
+        /* Check if Readers Created */
+        if(threadCount == 0)
         {
-            /* Execute Reader */
-            threadCount = 1;
-            info_t* info = new info_t;
-            info->reader = this;
-            info->track = parms->track;
-            subsettingThread(info);
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid track specified <%d>, must be 1 to 3, or 0 for all", parms->track);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
         }
     }
     catch(const RunTimeException& e)
@@ -322,9 +320,9 @@ Atl03Reader::~Atl03Reader (void)
 {
     active = false;
 
-    for(int t = 0; t < Icesat2Parms::NUM_TRACKS; t++)
+    for(int pid = 0; pid < threadCount; pid++)
     {
-        if(readerPid[t]) delete readerPid[t];
+        delete readerPid[pid];
     }
 
     delete outQ;
@@ -341,34 +339,50 @@ Atl03Reader::~Atl03Reader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Region::Region (info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, info->track, "geolocation/reference_photon_lat", &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, info->track, "geolocation/reference_photon_lon", &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_ph_cnt",       &info->reader->context),
-    inclusion_mask {NULL, NULL},
-    inclusion_ptr  {NULL, NULL}
+    segment_lat    (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/reference_photon_lat").str(), &info->reader->context),
+    segment_lon    (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/reference_photon_lon").str(), &info->reader->context),
+    segment_ph_cnt (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").str(), &info->reader->context),
+    inclusion_mask {NULL},
+    inclusion_ptr  {NULL}
 {
+    /* Process Area of Interest */
+    projected_poly = NULL;
+    projection = MathLib::PLATE_CARREE;
+    points_in_polygon = info->reader->parms->polygon.length();
+    if(points_in_polygon > 0)
+    {
+        /* Determine Best Projection To Use */
+        if(info->reader->parms->polygon[0].lat > 70.0) projection = MathLib::NORTH_POLAR;
+        else if(info->reader->parms->polygon[0].lat < -70.0) projection = MathLib::SOUTH_POLAR;
+
+        /* Project Polygon */
+        List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
+        projected_poly = new MathLib::point_t [points_in_polygon];
+        for(int i = 0; i < points_in_polygon; i++)
+        {
+            projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
+        }
+    }
+
     /* Join Reads */
     segment_lat.join(info->reader->read_timeout_ms, true);
     segment_lon.join(info->reader->read_timeout_ms, true);
     segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
     /* Initialize Region */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-    {
-        first_segment[t] = 0;
-        num_segments[t] = H5Coro::ALL_ROWS;
-        first_photon[t] = 0;
-        num_photons[t] = H5Coro::ALL_ROWS;
-    }
+    first_segment = 0;
+    num_segments = H5Coro::ALL_ROWS;
+    first_photon = 0;
+    num_photons = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
     if(info->reader->parms->raster != NULL)
     {
         rasterregion(info);
     }
-    else if(info->reader->parms->polygon.length() > 0)
+    else if(points_in_polygon > 0)
     {
-        polyregion(info);
+        polyregion();
     }
     else
     {
@@ -376,7 +390,7 @@ Atl03Reader::Region::Region (info_t* info):
     }
 
     /* Check If Anything to Process */
-    if(num_photons[Icesat2Parms::RPT_L] <= 0 || num_photons[Icesat2Parms::RPT_R] <= 0)
+    if(num_photons <= 0)
     {
         cleanup();
         throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
@@ -401,100 +415,77 @@ Atl03Reader::Region::~Region (void)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::Region::cleanup (void)
 {
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-    {
-        if(inclusion_mask[t]) delete [] inclusion_mask[t];
-    }
+    if(projected_poly) delete [] projected_poly;
+    if(inclusion_mask) delete [] inclusion_mask;
 }
 
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Region::polyregion (info_t* info)
+void Atl03Reader::Region::polyregion (void)
 {
-    int points_in_polygon = info->reader->parms->polygon.length();
-
-    /* Determine Best Projection To Use */
-    MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(segment_lat[Icesat2Parms::RPT_L][0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(segment_lat[Icesat2Parms::RPT_L][0] < -70.0) projection = MathLib::SOUTH_POLAR;
-
-    /* Project Polygon */
-    List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
-    MathLib::point_t* projected_poly = new MathLib::point_t [points_in_polygon];
-    for(int i = 0; i < points_in_polygon; i++)
-    {
-        projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
-    }
-
     /* Find First Segment In Polygon */
-    bool first_segment_found[Icesat2Parms::NUM_PAIR_TRACKS] = {false, false};
-    bool last_segment_found[Icesat2Parms::NUM_PAIR_TRACKS] = {false, false};
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    bool first_segment_found = false;
+    bool last_segment_found = false;
+    int segment = 0;
+    while(segment < segment_ph_cnt.size)
     {
-        int segment = 0;
-        while(segment < segment_ph_cnt[t].size)
+        bool inclusion = false;
+
+        /* Project Segment Coordinate */
+        MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
+        MathLib::point_t segment_point = MathLib::coord2point(segment_coord, projection);
+
+        /* Test Inclusion */
+        if(MathLib::inpoly(projected_poly, points_in_polygon, segment_point))
         {
-            bool inclusion = false;
-
-            /* Project Segment Coordinate */
-            MathLib::coord_t segment_coord = {segment_lon[t][segment], segment_lat[t][segment]};
-            MathLib::point_t segment_point = MathLib::coord2point(segment_coord, projection);
-
-            /* Test Inclusion */
-            if(MathLib::inpoly(projected_poly, points_in_polygon, segment_point))
-            {
-                inclusion = true;
-            }
-
-            /* Check First Segment */
-            if(!first_segment_found[t])
-            {
-                /* If Coordinate Is In Polygon */
-                if(inclusion && segment_ph_cnt[t][segment] != 0)
-                {
-                    /* Set First Segment */
-                    first_segment_found[t] = true;
-                    first_segment[t] = segment;
-
-                    /* Include Photons From First Segment */
-                    num_photons[t] = segment_ph_cnt[t][segment];
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    first_photon[t] += segment_ph_cnt[t][segment];
-                }
-            }
-            else if(!last_segment_found[t])
-            {
-                /* If Coordinate Is NOT In Polygon */
-                if(!inclusion && segment_ph_cnt[t][segment] != 0)
-                {
-                    /* Set Last Segment */
-                    last_segment_found[t] = true;
-                    break; // full extent found!
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    num_photons[t] += segment_ph_cnt[t][segment];
-                }
-            }
-
-            /* Bump Segment */
-            segment++;
+            inclusion = true;
         }
 
-        /* Set Number of Segments */
-        if(first_segment_found[t])
+        /* Check First Segment */
+        if(!first_segment_found)
         {
-            num_segments[t] = segment - first_segment[t];
+            /* If Coordinate Is In Polygon */
+            if(inclusion && segment_ph_cnt[segment] != 0)
+            {
+                /* Set First Segment */
+                first_segment_found = true;
+                first_segment = segment;
+
+                /* Include Photons From First Segment */
+                num_photons = segment_ph_cnt[segment];
+            }
+            else
+            {
+                /* Update Photon Index */
+                first_photon += segment_ph_cnt[segment];
+            }
         }
+        else if(!last_segment_found)
+        {
+            /* If Coordinate Is NOT In Polygon */
+            if(!inclusion && segment_ph_cnt[segment] != 0)
+            {
+                /* Set Last Segment */
+                last_segment_found = true;
+                break; // full extent found!
+            }
+            else
+            {
+                /* Update Photon Index */
+                num_photons += segment_ph_cnt[segment];
+            }
+        }
+
+        /* Bump Segment */
+        segment++;
     }
 
-    /* Delete Projected Polygon */
-    delete [] projected_poly;
+    /* Set Number of Segments */
+    if(first_segment_found)
+    {
+        num_segments = segment - first_segment;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -503,82 +494,80 @@ void Atl03Reader::Region::polyregion (info_t* info)
 void Atl03Reader::Region::rasterregion (info_t* info)
 {
     /* Find First Segment In Polygon */
-    bool first_segment_found[Icesat2Parms::NUM_PAIR_TRACKS] = {false, false};
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    bool first_segment_found = false;
+
+    /* Check Size */
+    if(segment_ph_cnt.size <= 0)
     {
-        /* Check Size */
-        if(segment_ph_cnt[t].size <= 0)
-        {
-            continue;
-        }
+        return;
+    }
 
-        /* Allocate Inclusion Mask */
-        inclusion_mask[t] = new bool [segment_ph_cnt[t].size];
-        inclusion_ptr[t] = inclusion_mask[t];
+    /* Allocate Inclusion Mask */
+    inclusion_mask = new bool [segment_ph_cnt.size];
+    inclusion_ptr = inclusion_mask;
 
-        /* Loop Throuh Segments */
-        long curr_num_photons = 0;
-        long last_segment = 0;
-        int segment = 0;
-        while(segment < segment_ph_cnt[t].size)
+    /* Loop Throuh Segments */
+    long curr_num_photons = 0;
+    long last_segment = 0;
+    int segment = 0;
+    while(segment < segment_ph_cnt.size)
+    {
+        if(segment_ph_cnt[segment] != 0)
         {
-            if(segment_ph_cnt[t][segment] != 0)
+            /* Check Inclusion */
+            bool inclusion = info->reader->parms->raster->includes(segment_lon[segment], segment_lat[segment]);
+            inclusion_mask[segment] = inclusion;
+
+            /* Check For First Segment */
+            if(!first_segment_found)
             {
-                /* Check Inclusion */
-                bool inclusion = info->reader->parms->raster->includes(segment_lon[t][segment], segment_lat[t][segment]);
-                inclusion_mask[t][segment] = inclusion;
-
-                /* Check For First Segment */
-                if(!first_segment_found[t])
+                /* If Coordinate Is In Raster */
+                if(inclusion)
                 {
-                    /* If Coordinate Is In Raster */
-                    if(inclusion)
-                    {
-                        first_segment_found[t] = true;
+                    first_segment_found = true;
 
-                        /* Set First Segment */
-                        first_segment[t] = segment;
-                        last_segment = segment;
+                    /* Set First Segment */
+                    first_segment = segment;
+                    last_segment = segment;
 
-                        /* Include Photons From First Segment */
-                        curr_num_photons = segment_ph_cnt[t][segment];
-                        num_photons[t] = curr_num_photons;
-                    }
-                    else
-                    {
-                        /* Update Photon Index */
-                        first_photon[t] += segment_ph_cnt[t][segment];
-                    }
+                    /* Include Photons From First Segment */
+                    curr_num_photons = segment_ph_cnt[segment];
+                    num_photons = curr_num_photons;
                 }
                 else
                 {
-                    /* Update Photon Count and Segment */
-                    curr_num_photons += segment_ph_cnt[t][segment];
-
-                    /* If Coordinate Is In Raster */
-                    if(inclusion)
-                    {
-                        /* Update Number of Photons to Current Count */
-                        num_photons[t] = curr_num_photons;
-
-                        /* Update Number of Segments to Current Segment Count */
-                        last_segment = segment;
-                    }
+                    /* Update Photon Index */
+                    first_photon += segment_ph_cnt[segment];
                 }
             }
+            else
+            {
+                /* Update Photon Count and Segment */
+                curr_num_photons += segment_ph_cnt[segment];
 
-            /* Bump Segment */
-            segment++;
+                /* If Coordinate Is In Raster */
+                if(inclusion)
+                {
+                    /* Update Number of Photons to Current Count */
+                    num_photons = curr_num_photons;
+
+                    /* Update Number of Segments to Current Segment Count */
+                    last_segment = segment;
+                }
+            }
         }
 
-        /* Set Number of Segments */
-        if(first_segment_found[t])
-        {
-            num_segments[t] = last_segment - first_segment[t] + 1;
+        /* Bump Segment */
+        segment++;
+    }
 
-            /* Trim Inclusion Mask */
-            inclusion_ptr[t] = &inclusion_mask[t][first_segment[t]];
-        }
+    /* Set Number of Segments */
+    if(first_segment_found)
+    {
+        num_segments = last_segment - first_segment + 1;
+
+        /* Trim Inclusion Mask */
+        inclusion_ptr = &inclusion_mask[first_segment];
     }
 }
 
@@ -586,22 +575,22 @@ void Atl03Reader::Region::rasterregion (info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
-    sc_orient           (info->reader->asset, info->reader->resource,              "/orbit_info/sc_orient",       &info->reader->context),
-    velocity_sc         (info->reader->asset, info->reader->resource, info->track, "geolocation/velocity_sc",     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->reader->asset, info->reader->resource, info->track, "geolocation/delta_time",      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id          (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_id",      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, info->track, "geolocation/segment_dist_x",  &info->reader->context, 0, region.first_segment, region.num_segments),
-    solar_elevation     (info->reader->asset, info->reader->resource, info->track, "geolocation/solar_elevation", &info->reader->context, 0, region.first_segment, region.num_segments),
-    dist_ph_along       (info->reader->asset, info->reader->resource, info->track, "heights/dist_ph_along",       &info->reader->context, 0, region.first_photon,  region.num_photons),
-    dist_ph_across      (info->reader->asset, info->reader->resource, info->track, "heights/dist_ph_across",      &info->reader->context, 0, region.first_photon,  region.num_photons),
-    h_ph                (info->reader->asset, info->reader->resource, info->track, "heights/h_ph",                &info->reader->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->reader->asset, info->reader->resource, info->track, "heights/signal_conf_ph",      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
-    quality_ph          (info->reader->asset, info->reader->resource, info->track, "heights/quality_ph",          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lat_ph              (info->reader->asset, info->reader->resource, info->track, "heights/lat_ph",              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lon_ph              (info->reader->asset, info->reader->resource, info->track, "heights/lon_ph",              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    delta_time          (info->reader->asset, info->reader->resource, info->track, "heights/delta_time",          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/delta_time",     &info->reader->context),
-    bckgrd_rate         (info->reader->asset, info->reader->resource, info->track, "bckgrd_atlas/bckgrd_rate",    &info->reader->context),
+    sc_orient           (info->reader->asset, info->reader->resource,                                   "/orbit_info/sc_orient",              &info->reader->context),
+    velocity_sc         (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/velocity_sc").str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/delta_time").str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_id          (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/segment_id").str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/segment_dist_x").str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
+    solar_elevation     (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/solar_elevation").str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    dist_ph_along       (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/dist_ph_along").str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
+    dist_ph_across      (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/dist_ph_across").str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
+    h_ph                (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/h_ph").str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/signal_conf_ph").str(),      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
+    quality_ph          (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/quality_ph").str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
+    lat_ph              (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/lat_ph").str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
+    lon_ph              (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/lon_ph").str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
+    delta_time          (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/delta_time").str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").str(),     &info->reader->context),
+    bckgrd_rate         (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").str(),    &info->reader->context),
     anc_geo_data        (Icesat2Parms::EXPECTED_NUM_FIELDS),
     anc_ph_data         (Icesat2Parms::EXPECTED_NUM_FIELDS)
 {
@@ -623,7 +612,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
                 group_name = "geophys_corr";
             }
             SafeString dataset_name("%s/%s", group_name, field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.str(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, dataset_name.str()).str(), &info->reader->context, 0, region.first_segment, region.num_segments);
             anc_geo_data.add(field_name, array);
         }
     }
@@ -635,7 +624,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
         {
             const char* field_name = (*photon_fields)[i].str();
             SafeString dataset_name("heights/%s", field_name);
-            GTDArray* array = new GTDArray(info->reader->asset, info->reader->resource, info->track, dataset_name.str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
+            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, dataset_name.str()).str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
             anc_ph_data.add(field_name, array);
         }
     }
@@ -661,7 +650,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     /* Join Ancillary Geolocation Reads */
     if(geo_fields)
     {
-        GTDArray* array = NULL;
+        H5DArray* array = NULL;
         const char* dataset_name = anc_geo_data.first(&array);
         while(dataset_name != NULL)
         {
@@ -673,7 +662,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     /* Join Ancillary Photon Reads */
     if(photon_fields)
     {
-        GTDArray* array = NULL;
+        H5DArray* array = NULL;
         const char* dataset_name = anc_ph_data.first(&array);
         while(dataset_name != NULL)
         {
@@ -696,17 +685,17 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
 Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     enabled             (info->reader->parms->stages[Icesat2Parms::STAGE_ATL08]),
     phoreal             (info->reader->parms->stages[Icesat2Parms::STAGE_PHOREAL]),
-    gt                  {NULL, NULL},
-    relief              {NULL, NULL},
-    landcover           {NULL, NULL},
-    snowcover           {NULL, NULL},
-    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_segment_id",       &info->reader->context08),
-    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_indx",     &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/classed_pc_flag",     &info->reader->context08),
-    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "signal_photons/ph_h",                &info->reader->context08),
-    segment_id_beg      (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "land_segments/segment_id_beg",       &info->reader->context08),
-    segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "land_segments/segment_landcover",    &info->reader->context08),
-    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, info->track, "land_segments/segment_snowcover",    &info->reader->context08)
+    classification      {NULL},
+    relief              {NULL},
+    landcover           {NULL},
+    snowcover           {NULL},
+    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/ph_segment_id").str(),       &info->reader->context08),
+    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/classed_pc_indx").str(),     &info->reader->context08),
+    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/classed_pc_flag").str(),     &info->reader->context08),
+    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/ph_h").str(),                &info->reader->context08),
+    segment_id_beg      (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "land_segments/segment_id_beg").str(),       &info->reader->context08),
+    segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "land_segments/segment_landcover").str(),    &info->reader->context08),
+    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "land_segments/segment_snowcover").str(),    &info->reader->context08)
 {
 }
 
@@ -715,13 +704,10 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::~Atl08Class (void)
 {
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-    {
-        if(gt[t]) delete [] gt[t];
-        if(relief[t]) delete [] relief[t];
-        if(landcover[t]) delete [] landcover[t];
-        if(snowcover[t]) delete [] snowcover[t];
-    }
+    if(classification) delete [] classification;
+    if(relief) delete [] relief;
+    if(landcover) delete [] landcover;
+    if(snowcover) delete [] snowcover;
 }
 
 /*----------------------------------------------------------------------------
@@ -747,120 +733,113 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
         segment_snowcover.join(info->reader->read_timeout_ms, true);
     }
 
-    /* Rename Segment Photon Counts (to easily identify with ATL03) */
-    GTArray<int32_t>* atl03_segment_ph_cnt = &region.segment_ph_cnt;
+    /* Allocate ATL08 Classification Array */
+    int num_photons = atl03.dist_ph_along.size;
+    classification = new uint8_t [num_photons];
 
-    /* Classify Photons */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Allocate PhoREAL Arrays */
+    if(phoreal)
     {
-        /* Allocate ATL08 Classification Array */
-        int num_photons = atl03.dist_ph_along[t].size;
-        gt[t] = new uint8_t [num_photons];
+        relief = new float [num_photons];
+        landcover = new uint8_t [num_photons];
+        snowcover = new uint8_t [num_photons];
+    }
 
-        /* Allocate PhoREAL Arrays */
+    /* Populate ATL08 Classifications */
+    int32_t atl03_photon = 0;
+    int32_t atl08_photon = 0;
+    int32_t atl08_segment_index = 0;
+    for(int atl03_segment_index = 0; atl03_segment_index < atl03.segment_id.size; atl03_segment_index++)
+    {
+        int32_t atl03_segment = atl03.segment_id[atl03_segment_index];
+
+        /* Get Land and Snow Flags */
+        uint8_t landcover_flag = INVALID_FLAG;
+        uint8_t snowcover_flag = INVALID_FLAG;
         if(phoreal)
         {
-            relief[t] = new float [num_photons];
-            landcover[t] = new uint8_t [num_photons];
-            snowcover[t] = new uint8_t [num_photons];
+            while( (atl08_segment_index < segment_id_beg.size) &&
+                    ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
+            {
+                atl08_segment_index++;
+            }
+
+            if( (segment_id_beg[atl08_segment_index] <= atl03_segment) &&
+                ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) > atl03_segment) )
+            {
+                landcover_flag = (uint8_t)segment_landcover[atl08_segment_index];
+                snowcover_flag = (uint8_t)segment_snowcover[atl08_segment_index];
+            }
         }
 
-        /* Populate ATL08 Classifications */
-        int32_t atl03_photon = 0;
-        int32_t atl08_photon = 0;
-        int32_t atl08_segment_index = 0;
-        for(int atl03_segment_index = 0; atl03_segment_index < atl03.segment_id[t].size; atl03_segment_index++)
+        /* Get Per Photon Values */
+        int32_t atl03_segment_count = region.segment_ph_cnt[atl03_segment_index];
+        for(int atl03_count = 1; atl03_count <= atl03_segment_count; atl03_count++)
         {
-            int32_t atl03_segment = atl03.segment_id[t][atl03_segment_index];
-
-            /* Get Land and Snow Flags */
-            uint8_t landcover_flag = INVALID_FLAG;
-            uint8_t snowcover_flag = INVALID_FLAG;
-            if(phoreal)
+            /* Go To Segment */
+            while( (atl08_photon < atl08_segment_id.size) && // atl08 photon is valid
+                    (atl08_segment_id[atl08_photon] < atl03_segment) )
             {
-                while( (atl08_segment_index < segment_id_beg[t].size) &&
-                       ((segment_id_beg[t][atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
-                {
-                    atl08_segment_index++;
-                }
-
-                if( (segment_id_beg[t][atl08_segment_index] <= atl03_segment) &&
-                    ((segment_id_beg[t][atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) > atl03_segment) )
-                {
-                    landcover_flag = (uint8_t)segment_landcover[t][atl08_segment_index];
-                    snowcover_flag = (uint8_t)segment_snowcover[t][atl08_segment_index];
-                }
+                atl08_photon++;
             }
 
-            /* Get Per Photon Values */
-            int32_t atl03_segment_count = atl03_segment_ph_cnt->gt[t][atl03_segment_index];
-            for(int atl03_count = 1; atl03_count <= atl03_segment_count; atl03_count++)
+            while( (atl08_photon < atl08_segment_id.size) && // atl08 photon is valid
+                    (atl08_segment_id[atl08_photon] == atl03_segment) &&
+                    (atl08_pc_indx[atl08_photon] < atl03_count))
             {
-                /* Go To Segment */
-                while( (atl08_photon < atl08_segment_id[t].size) && // atl08 photon is valid
-                       (atl08_segment_id[t][atl08_photon] < atl03_segment) )
-                {
-                    atl08_photon++;
-                }
+                atl08_photon++;
+            }
 
-                while( (atl08_photon < atl08_segment_id[t].size) && // atl08 photon is valid
-                       (atl08_segment_id[t][atl08_photon] == atl03_segment) &&
-                       (atl08_pc_indx[t][atl08_photon] < atl03_count))
-                {
-                    atl08_photon++;
-                }
+            /* Check Match */
+            if( (atl08_photon < atl08_segment_id.size) &&
+                (atl08_segment_id[atl08_photon] == atl03_segment) &&
+                (atl08_pc_indx[atl08_photon] == atl03_count) )
+            {
+                /* Assign Classification */
+                classification[atl03_photon] = (uint8_t)atl08_pc_flag[atl08_photon];
 
-                /* Check Match */
-                if( (atl08_photon < atl08_segment_id[t].size) &&
-                    (atl08_segment_id[t][atl08_photon] == atl03_segment) &&
-                    (atl08_pc_indx[t][atl08_photon] == atl03_count) )
-                {
-                    /* Assign Classification */
-                    gt[t][atl03_photon] = (uint8_t)atl08_pc_flag[t][atl08_photon];
-
-                    /* Populate ATL08 Relief */
-                    if(phoreal)
-                    {
-                        relief[t][atl03_photon] = atl08_ph_h[t][atl08_photon];
-
-                        /* Run ABoVE Classifier (if specified) */
-                        if(info->reader->parms->phoreal.above_classifier && (gt[t][atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
-                        {
-                            uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, t);
-                            if( (atl03.solar_elevation[t][atl03_segment] <= 5.0) &&
-                                ((spot == 1) || (spot == 3) || (spot == 5)) &&
-                                (atl03.signal_conf_ph[t][atl03_photon] == Icesat2Parms::CNF_SURFACE_HIGH) &&
-                                ((relief[t][atl03_photon] >= 0.0) && (relief[t][atl03_photon] < 35.0)) )
-                                /* TODO: check for valid ground photons in ATL08 segment */
-                            {
-                                /* Reassign Classification */
-                                gt[t][atl03_photon] = Icesat2Parms::ATL08_TOP_OF_CANOPY;
-                            }
-                        }
-                    }
-
-                    /* Go To Next ATL08 Photon */
-                    atl08_photon++;
-                }
-                else
-                {
-                    /* Unclassified */
-                    gt[t][atl03_photon] = Icesat2Parms::ATL08_UNCLASSIFIED;
-
-                    /* Set ATL08 Relief to Zero */
-                    if(phoreal) relief[t][atl03_photon] = 0.0;
-                }
-
-                /* Populate ATL08 Flags */
+                /* Populate ATL08 Relief */
                 if(phoreal)
                 {
-                    landcover[t][atl03_photon] = landcover_flag;
-                    snowcover[t][atl03_photon] = snowcover_flag;
+                    relief[atl03_photon] = atl08_ph_h[atl08_photon];
+
+                    /* Run ABoVE Classifier (if specified) */
+                    if(info->reader->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
+                    {
+                        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
+                        if( (atl03.solar_elevation[atl03_segment] <= 5.0) &&
+                            ((spot == 1) || (spot == 3) || (spot == 5)) &&
+                            (atl03.signal_conf_ph[atl03_photon] == Icesat2Parms::CNF_SURFACE_HIGH) &&
+                            ((relief[atl03_photon] >= 0.0) && (relief[atl03_photon] < 35.0)) )
+                            /* TODO: check for valid ground photons in ATL08 segment */
+                        {
+                            /* Reassign Classification */
+                            classification[atl03_photon] = Icesat2Parms::ATL08_TOP_OF_CANOPY;
+                        }
+                    }
                 }
 
-                /* Go To Next ATL03 Photon */
-                atl03_photon++;
+                /* Go To Next ATL08 Photon */
+                atl08_photon++;
             }
+            else
+            {
+                /* Unclassified */
+                classification[atl03_photon] = Icesat2Parms::ATL08_UNCLASSIFIED;
+
+                /* Set ATL08 Relief to Zero */
+                if(phoreal) relief[atl03_photon] = 0.0;
+            }
+
+            /* Populate ATL08 Flags */
+            if(phoreal)
+            {
+                landcover[atl03_photon] = landcover_flag;
+                snowcover[atl03_photon] = snowcover_flag;
+            }
+
+            /* Go To Next ATL03 Photon */
+            atl03_photon++;
         }
     }
 }
@@ -868,16 +847,16 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
 /*----------------------------------------------------------------------------
  * Atl08Class::operator[]
  *----------------------------------------------------------------------------*/
-uint8_t* Atl03Reader::Atl08Class::operator[] (int t)
+uint8_t Atl03Reader::Atl08Class::operator[] (int index)
 {
-    return gt[t];
+    return classification[index];
 }
 
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl03):
-    gt {NULL, NULL}
+    score {NULL}
 {
     /* Do Nothing If Not Enabled */
     if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC])
@@ -905,10 +884,7 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::~YapcScore (void)
 {
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-    {
-        if(gt[t]) delete [] gt[t];
-    }
+    if(score) delete [] score;
 }
 
 /*----------------------------------------------------------------------------
@@ -929,157 +905,155 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
      *
      *   CANNOT THROW BELOW THIS POINT
      */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+
+    /* Allocate ATL08 Classification Array */
+    int32_t num_photons = atl03.dist_ph_along.size;
+    score = new uint8_t [num_photons];
+    memset(score, 0, num_photons);
+
+    /* Initialize Indices */
+    int32_t ph_b0 = 0; // buffer start
+    int32_t ph_b1 = 0; // buffer end
+    int32_t ph_c0 = 0; // center start
+    int32_t ph_c1 = 0; // center end
+
+    /* Loop Through Each ATL03 Segment */
+    int32_t num_segments = atl03.segment_id.size;
+    for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
-        /* Allocate ATL08 Classification Array */
-        int32_t num_photons = atl03.dist_ph_along[t].size;
-        gt[t] = new uint8_t [num_photons];
-        memset(gt[t], 0, num_photons);
+        /* Determine Indices */
+        ph_b0 += segment_index > 1 ? region.segment_ph_cnt[segment_index - 2] : 0; // Center - 2
+        ph_c0 += segment_index > 0 ? region.segment_ph_cnt[segment_index - 1] : 0; // Center - 1
+        ph_c1 += region.segment_ph_cnt[segment_index]; // Center
+        ph_b1 += segment_index < (num_segments - 1) ? region.segment_ph_cnt[segment_index + 1] : 0; // Center + 1
 
-        /* Initialize Indices */
-        int32_t ph_b0 = 0; // buffer start
-        int32_t ph_b1 = 0; // buffer end
-        int32_t ph_c0 = 0; // center start
-        int32_t ph_c1 = 0; // center end
+        /* Calculate N and KNN */
+        int32_t N = region.segment_ph_cnt[segment_index];
+        int knn = (settings->knn != 0) ? settings->knn : MAX(1, (sqrt((double)N) + 0.5) / 2);
+        knn = MIN(knn, MAX_KNN); // truncate if too large
 
-        /* Loop Through Each ATL03 Segment */
-        int32_t num_segments = atl03.segment_id[t].size;
-        for(int segment_index = 0; segment_index < num_segments; segment_index++)
+        /* Check Valid Extent (note check against knn)*/
+        if((N <= knn) || (N < info->reader->parms->minimum_photon_count)) continue;
+
+        /* Calculate Distance and Height Spread */
+        double min_h = atl03.h_ph[0];
+        double max_h = min_h;
+        double min_x = atl03.dist_ph_along[0];
+        double max_x = min_x;
+        for(int n = 1; n < N; n++)
         {
-            /* Determine Indices */
-            ph_b0 += segment_index > 1 ? region.segment_ph_cnt[t][segment_index - 2] : 0; // Center - 2
-            ph_c0 += segment_index > 0 ? region.segment_ph_cnt[t][segment_index - 1] : 0; // Center - 1
-            ph_c1 += region.segment_ph_cnt[t][segment_index]; // Center
-            ph_b1 += segment_index < (num_segments - 1) ? region.segment_ph_cnt[t][segment_index + 1] : 0; // Center + 1
+            double h = atl03.h_ph[n];
+            double x = atl03.dist_ph_along[n];
+            if(h < min_h) min_h = h;
+            if(h > max_h) max_h = h;
+            if(x < min_x) min_x = x;
+            if(x > max_x) max_x = x;
+        }
+        double hspread = max_h - min_h;
+        double xspread = max_x - min_x;
 
-            /* Calculate N and KNN */
-            int32_t N = region.segment_ph_cnt[t][segment_index];
-            int knn = (settings->knn != 0) ? settings->knn : MAX(1, (sqrt((double)N) + 0.5) / 2);
-            knn = MIN(knn, MAX_KNN); // truncate if too large
+        /* Check Window */
+        if(hspread <= 0.0 || hspread > MAXIMUM_HSPREAD || xspread <= 0.0)
+        {
+            mlog(ERROR, "Unable to perform YAPC selection due to invalid photon spread: %lf, %lf\n", hspread, xspread);
+            continue;
+        }
 
-            /* Check Valid Extent (note check against knn)*/
-            if((N <= knn) || (N < info->reader->parms->minimum_photon_count)) continue;
+        /* Bin Photons to Calculate Height Span*/
+        int num_bins = (int)(hspread / HSPREAD_BINSIZE) + 1;
+        int8_t* bins = new int8_t [num_bins];
+        memset(bins, 0, num_bins);
+        for(int n = 0; n < N; n++)
+        {
+            unsigned int bin = (unsigned int)((atl03.h_ph[n] - min_h) / HSPREAD_BINSIZE);
+            bins[bin] = 1; // mark that photon present
+        }
 
-            /* Calculate Distance and Height Spread */
-            double min_h = atl03.h_ph[t][0];
-            double max_h = min_h;
-            double min_x = atl03.dist_ph_along[t][0];
-            double max_x = min_x;
-            for(int n = 1; n < N; n++)
+        /* Determine Number of Bins with Photons to Calculate Height Span
+        * (and remove potential gaps in telemetry bands) */
+        int nonzero_bins = 0;
+        for(int b = 0; b < num_bins; b++) nonzero_bins += bins[b];
+        delete [] bins;
+
+        /* Calculate Height Span */
+        double h_span = (nonzero_bins * HSPREAD_BINSIZE) / (double)N * (double)knn;
+
+        /* Calculate Window Parameters */
+        double half_win_x = settings->win_x / 2.0;
+        double half_win_h = (settings->win_h != 0.0) ? settings->win_h / 2.0 : h_span / 2.0;
+
+        /* Calculate YAPC Score for all Photons in Center Segment */
+        for(int y = ph_c0; y < ph_c1; y++)
+        {
+            double smallest_nearest_neighbor = DBL_MAX;
+            int smallest_nearest_neighbor_index = 0;
+            int num_nearest_neighbors = 0;
+
+            /* For All Neighbors */
+            for(int x = ph_b0; x < ph_b1; x++)
             {
-                double h = atl03.h_ph[t][n];
-                double x = atl03.dist_ph_along[t][n];
-                if(h < min_h) min_h = h;
-                if(h > max_h) max_h = h;
-                if(x < min_x) min_x = x;
-                if(x > max_x) max_x = x;
-            }
-            double hspread = max_h - min_h;
-            double xspread = max_x - min_x;
+                /* Check for Identity */
+                if(y == x) continue;
 
-            /* Check Window */
-            if(hspread <= 0.0 || hspread > MAXIMUM_HSPREAD || xspread <= 0.0)
-            {
-                mlog(ERROR, "Unable to perform YAPC selection due to invalid photon spread: %lf, %lf\n", hspread, xspread);
-                continue;
-            }
+                /* Check Window */
+                double delta_x = abs(atl03.dist_ph_along[x] - atl03.dist_ph_along[y]);
+                if(delta_x > half_win_x) continue;
 
-            /* Bin Photons to Calculate Height Span*/
-            int num_bins = (int)(hspread / HSPREAD_BINSIZE) + 1;
-            int8_t* bins = new int8_t [num_bins];
-            memset(bins, 0, num_bins);
-            for(int n = 0; n < N; n++)
-            {
-                unsigned int bin = (unsigned int)((atl03.h_ph[t][n] - min_h) / HSPREAD_BINSIZE);
-                bins[bin] = 1; // mark that photon present
-            }
+                /*  Calculate Weighted Distance */
+                double delta_h = abs(atl03.h_ph[x] - atl03.h_ph[y]);
+                double proximity = half_win_h - delta_h;
 
-            /* Determine Number of Bins with Photons to Calculate Height Span
-            * (and remove potential gaps in telemetry bands) */
-            int nonzero_bins = 0;
-            for(int b = 0; b < num_bins; b++) nonzero_bins += bins[b];
-            delete [] bins;
-
-            /* Calculate Height Span */
-            double h_span = (nonzero_bins * HSPREAD_BINSIZE) / (double)N * (double)knn;
-
-            /* Calculate Window Parameters */
-            double half_win_x = settings->win_x / 2.0;
-            double half_win_h = (settings->win_h != 0.0) ? settings->win_h / 2.0 : h_span / 2.0;
-
-            /* Calculate YAPC Score for all Photons in Center Segment */
-            for(int y = ph_c0; y < ph_c1; y++)
-            {
-                double smallest_nearest_neighbor = DBL_MAX;
-                int smallest_nearest_neighbor_index = 0;
-                int num_nearest_neighbors = 0;
-
-                /* For All Neighbors */
-                for(int x = ph_b0; x < ph_b1; x++)
+                /* Add to Nearest Neighbor */
+                if(num_nearest_neighbors < knn)
                 {
-                    /* Check for Identity */
-                    if(y == x) continue;
-
-                    /* Check Window */
-                    double delta_x = abs(atl03.dist_ph_along[t][x] - atl03.dist_ph_along[t][y]);
-                    if(delta_x > half_win_x) continue;
-
-                    /*  Calculate Weighted Distance */
-                    double delta_h = abs(atl03.h_ph[t][x] - atl03.h_ph[t][y]);
-                    double proximity = half_win_h - delta_h;
-
-                    /* Add to Nearest Neighbor */
-                    if(num_nearest_neighbors < knn)
+                    /* Maintain Smallest Nearest Neighbor */
+                    if(proximity < smallest_nearest_neighbor)
                     {
-                        /* Maintain Smallest Nearest Neighbor */
-                        if(proximity < smallest_nearest_neighbor)
-                        {
-                            smallest_nearest_neighbor = proximity;
-                            smallest_nearest_neighbor_index = num_nearest_neighbors;
-                        }
-
-                        /* Automatically Add Nearest Neighbor (filling up array) */
-                        nearest_neighbors[num_nearest_neighbors] = proximity;
-                        num_nearest_neighbors++;
+                        smallest_nearest_neighbor = proximity;
+                        smallest_nearest_neighbor_index = num_nearest_neighbors;
                     }
-                    else if(proximity > smallest_nearest_neighbor)
-                    {
-                        /* Add New Nearest Neighbor (replace current largest) */
-                        nearest_neighbors[smallest_nearest_neighbor_index] = proximity;
-                        smallest_nearest_neighbor = proximity; // temporarily set
 
-                        /* Recalculate Largest Nearest Neighbor */
-                        for(int k = 0; k < knn; k++)
+                    /* Automatically Add Nearest Neighbor (filling up array) */
+                    nearest_neighbors[num_nearest_neighbors] = proximity;
+                    num_nearest_neighbors++;
+                }
+                else if(proximity > smallest_nearest_neighbor)
+                {
+                    /* Add New Nearest Neighbor (replace current largest) */
+                    nearest_neighbors[smallest_nearest_neighbor_index] = proximity;
+                    smallest_nearest_neighbor = proximity; // temporarily set
+
+                    /* Recalculate Largest Nearest Neighbor */
+                    for(int k = 0; k < knn; k++)
+                    {
+                        if(nearest_neighbors[k] < smallest_nearest_neighbor)
                         {
-                            if(nearest_neighbors[k] < smallest_nearest_neighbor)
-                            {
-                                smallest_nearest_neighbor = nearest_neighbors[k];
-                                smallest_nearest_neighbor_index = k;
-                            }
+                            smallest_nearest_neighbor = nearest_neighbors[k];
+                            smallest_nearest_neighbor_index = k;
                         }
                     }
                 }
-
-                /* Fill In Rest of Nearest Neighbors (if not already full) */
-                for(int k = num_nearest_neighbors; k < knn; k++)
-                {
-                    nearest_neighbors[k] = 0.0;
-                }
-
-                /* Calculate Inverse Sum of Distances from Nearest Neighbors */
-                double nearest_neighbor_sum = 0.0;
-                for(int k = 0; k < knn; k++)
-                {
-                    if(nearest_neighbors[k] > 0.0)
-                    {
-                        nearest_neighbor_sum += nearest_neighbors[k];
-                    }
-                }
-                nearest_neighbor_sum /= (double)knn;
-
-                /* Calculate YAPC Score of Photon */
-                gt[t][y] = (uint8_t)((nearest_neighbor_sum / half_win_h) * 0xFF);
             }
+
+            /* Fill In Rest of Nearest Neighbors (if not already full) */
+            for(int k = num_nearest_neighbors; k < knn; k++)
+            {
+                nearest_neighbors[k] = 0.0;
+            }
+
+            /* Calculate Inverse Sum of Distances from Nearest Neighbors */
+            double nearest_neighbor_sum = 0.0;
+            for(int k = 0; k < knn; k++)
+            {
+                if(nearest_neighbors[k] > 0.0)
+                {
+                    nearest_neighbor_sum += nearest_neighbors[k];
+                }
+            }
+            nearest_neighbor_sum /= (double)knn;
+
+            /* Calculate YAPC Score of Photon */
+            score[y] = (uint8_t)((nearest_neighbor_sum / half_win_h) * 0xFF);
         }
     }
 }
@@ -1098,131 +1072,128 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
      *
      *   CANNOT THROW BELOW THIS POINT
      */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+
+    /* Allocate Photon Arrays */
+    int32_t num_segments = atl03.segment_id.size;
+    int32_t num_photons = atl03.dist_ph_along.size;
+    score = new uint8_t [num_photons]; // class member freed in deconstructor
+    double* ph_dist = new double[num_photons]; // local array freed below
+
+    /* Populate Distance Array */
+    int32_t ph_index = 0;
+    for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
-        int32_t num_segments = atl03.segment_id[t].size;
-        int32_t num_photons = atl03.dist_ph_along[t].size;
-
-        /* Allocate Photon Arrays */
-        gt[t] = new uint8_t [num_photons]; // class member freed in deconstructor
-        double* ph_dist = new double[num_photons]; // local array freed below
-
-        /* Populate Distance Array */
-        int32_t ph_index = 0;
-        for(int segment_index = 0; segment_index < num_segments; segment_index++)
+        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[segment_index]; ph_in_seg_index++)
         {
-            for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[t][segment_index]; ph_in_seg_index++)
-            {
-                ph_dist[ph_index] = atl03.segment_dist_x[t][segment_index] + atl03.dist_ph_along[t][ph_index];
-                ph_index++;
-            }
+            ph_dist[ph_index] = atl03.segment_dist_x[segment_index] + atl03.dist_ph_along[ph_index];
+            ph_index++;
         }
-
-        /* Traverse Each Segment */
-        ph_index = 0;
-        for(int segment_index = 0; segment_index < num_segments; segment_index++)
-        {
-            /* Initialize Segment Parameters */
-            int32_t N = region.segment_ph_cnt[t][segment_index];
-            double* ph_weights = new double[N]; // local array freed below
-            int max_knn = settings->min_knn;
-            int32_t start_ph_index = ph_index;
-
-            /* Traverse Each Photon in Segment*/
-            for(int32_t ph_in_seg_index = 0; ph_in_seg_index < N; ph_in_seg_index++)
-            {
-                List<double> proximities;
-
-                /* Check Nearest Neighbors to Left */
-                int32_t neighbor_index = ph_index - 1;
-                while(neighbor_index >= 0)
-                {
-                    /* Check Inside Horizontal Window */
-                    double x_dist = ph_dist[ph_index] - ph_dist[neighbor_index];
-                    if(x_dist <= hWX)
-                    {
-                        /* Check Inside Vertical Window */
-                        double proximity = abs(atl03.h_ph[t][ph_index] - atl03.h_ph[t][neighbor_index]);
-                        if(proximity <= hWZ)
-                        {
-                            proximities.add(proximity);
-                        }
-                    }
-
-                    /* Check for Stopping Condition: 1m Buffer Added to X Window */
-                    if(x_dist >= (hWX + 1.0)) break;
-
-                    /* Goto Next Neighor */
-                    neighbor_index--;
-                }
-
-                /* Check Nearest Neighbors to Right */
-                neighbor_index = ph_index + 1;
-                while(neighbor_index < num_photons)
-                {
-                    /* Check Inside Horizontal Window */
-                    double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index];
-                    if(x_dist <= hWX)
-                    {
-                        /* Check Inside Vertical Window */
-                        double proximity = abs(atl03.h_ph[t][ph_index] - atl03.h_ph[t][neighbor_index]);
-                        if(proximity <= hWZ) // inside of height window
-                        {
-                            proximities.add(proximity);
-                        }
-                    }
-
-                    /* Check for Stopping Condition: 1m Buffer Added to X Window */
-                    if(x_dist >= (hWX + 1.0)) break;
-
-                    /* Goto Next Neighor */
-                    neighbor_index++;
-                }
-
-                /* Sort Proximities */
-                proximities.sort();
-
-                /* Calculate knn */
-                double n = sqrt(proximities.length());
-                int knn = MAX(n, settings->min_knn);
-                if(knn > max_knn) max_knn = knn;
-
-                /* Calculate Sum of Weights*/
-                int num_nearest_neighbors = MIN(knn, proximities.length());
-                double weight_sum = 0.0;
-                for(int i = 0; i < num_nearest_neighbors; i++)
-                {
-                    weight_sum += hWZ - proximities[i];
-                }
-                ph_weights[ph_in_seg_index] = weight_sum;
-
-                /* Go To Next Photon */
-                ph_index++;
-            }
-
-            /* Normalize Weights */
-            for(int32_t ph_in_seg_index = 0; ph_in_seg_index < N; ph_in_seg_index++)
-            {
-                double Wt = ph_weights[ph_in_seg_index] / (hWZ * max_knn);
-                gt[t][start_ph_index] = (uint8_t)(MIN(Wt * 255, 255));
-                start_ph_index++;
-            }
-
-            /* Free Photon Weights Array */
-            delete [] ph_weights;
-        }
-
-        /* Free Photon Distance Array */
-        delete [] ph_dist;
     }
+
+    /* Traverse Each Segment */
+    ph_index = 0;
+    for(int segment_index = 0; segment_index < num_segments; segment_index++)
+    {
+        /* Initialize Segment Parameters */
+        int32_t N = region.segment_ph_cnt[segment_index];
+        double* ph_weights = new double[N]; // local array freed below
+        int max_knn = settings->min_knn;
+        int32_t start_ph_index = ph_index;
+
+        /* Traverse Each Photon in Segment*/
+        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < N; ph_in_seg_index++)
+        {
+            List<double> proximities;
+
+            /* Check Nearest Neighbors to Left */
+            int32_t neighbor_index = ph_index - 1;
+            while(neighbor_index >= 0)
+            {
+                /* Check Inside Horizontal Window */
+                double x_dist = ph_dist[ph_index] - ph_dist[neighbor_index];
+                if(x_dist <= hWX)
+                {
+                    /* Check Inside Vertical Window */
+                    double proximity = abs(atl03.h_ph[ph_index] - atl03.h_ph[neighbor_index]);
+                    if(proximity <= hWZ)
+                    {
+                        proximities.add(proximity);
+                    }
+                }
+
+                /* Check for Stopping Condition: 1m Buffer Added to X Window */
+                if(x_dist >= (hWX + 1.0)) break;
+
+                /* Goto Next Neighor */
+                neighbor_index--;
+            }
+
+            /* Check Nearest Neighbors to Right */
+            neighbor_index = ph_index + 1;
+            while(neighbor_index < num_photons)
+            {
+                /* Check Inside Horizontal Window */
+                double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index];
+                if(x_dist <= hWX)
+                {
+                    /* Check Inside Vertical Window */
+                    double proximity = abs(atl03.h_ph[ph_index] - atl03.h_ph[neighbor_index]);
+                    if(proximity <= hWZ) // inside of height window
+                    {
+                        proximities.add(proximity);
+                    }
+                }
+
+                /* Check for Stopping Condition: 1m Buffer Added to X Window */
+                if(x_dist >= (hWX + 1.0)) break;
+
+                /* Goto Next Neighor */
+                neighbor_index++;
+            }
+
+            /* Sort Proximities */
+            proximities.sort();
+
+            /* Calculate knn */
+            double n = sqrt(proximities.length());
+            int knn = MAX(n, settings->min_knn);
+            if(knn > max_knn) max_knn = knn;
+
+            /* Calculate Sum of Weights*/
+            int num_nearest_neighbors = MIN(knn, proximities.length());
+            double weight_sum = 0.0;
+            for(int i = 0; i < num_nearest_neighbors; i++)
+            {
+                weight_sum += hWZ - proximities[i];
+            }
+            ph_weights[ph_in_seg_index] = weight_sum;
+
+            /* Go To Next Photon */
+            ph_index++;
+        }
+
+        /* Normalize Weights */
+        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < N; ph_in_seg_index++)
+        {
+            double Wt = ph_weights[ph_in_seg_index] / (hWZ * max_knn);
+            score[start_ph_index] = (uint8_t)(MIN(Wt * 255, 255));
+            start_ph_index++;
+        }
+
+        /* Free Photon Weights Array */
+        delete [] ph_weights;
+    }
+
+    /* Free Photon Distance Array */
+    delete [] ph_dist;
 }
 
 /*----------------------------------------------------------------------------
  * YapcScore::operator[]
  *----------------------------------------------------------------------------*/
-uint8_t* Atl03Reader::YapcScore::operator[] (int t)
+uint8_t Atl03Reader::YapcScore::operator[] (int index)
 {
-    return gt[t];
+    return score[index];
 }
 
 /*----------------------------------------------------------------------------
@@ -1230,29 +1201,17 @@ uint8_t* Atl03Reader::YapcScore::operator[] (int t)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
 {
-    gt[Icesat2Parms::RPT_L].ph_in              = 0;
-    gt[Icesat2Parms::RPT_L].seg_in             = 0;
-    gt[Icesat2Parms::RPT_L].seg_ph             = 0;
-    gt[Icesat2Parms::RPT_L].start_segment      = 0;
-    gt[Icesat2Parms::RPT_L].start_distance     = atl03.segment_dist_x[Icesat2Parms::RPT_L][0];
-    gt[Icesat2Parms::RPT_L].seg_distance       = 0.0;
-    gt[Icesat2Parms::RPT_L].start_seg_portion  = 0.0;
-    gt[Icesat2Parms::RPT_L].track_complete     = false;
-    gt[Icesat2Parms::RPT_L].bckgrd_in          = 0;
-    gt[Icesat2Parms::RPT_L].extent_segment     = 0;
-    gt[Icesat2Parms::RPT_L].extent_valid       = true;
-
-    gt[Icesat2Parms::RPT_R].ph_in             = 0;
-    gt[Icesat2Parms::RPT_R].seg_in            = 0;
-    gt[Icesat2Parms::RPT_R].seg_ph            = 0;
-    gt[Icesat2Parms::RPT_R].start_segment     = 0;
-    gt[Icesat2Parms::RPT_R].start_distance    = atl03.segment_dist_x[Icesat2Parms::RPT_R][0];
-    gt[Icesat2Parms::RPT_R].seg_distance      = 0.0;
-    gt[Icesat2Parms::RPT_R].start_seg_portion = 0.0;
-    gt[Icesat2Parms::RPT_R].track_complete    = false;
-    gt[Icesat2Parms::RPT_R].bckgrd_in         = 0;
-    gt[Icesat2Parms::RPT_R].extent_segment    = 0;
-    gt[Icesat2Parms::RPT_R].extent_valid      = true;
+    ph_in              = 0;
+    seg_in             = 0;
+    seg_ph             = 0;
+    start_segment      = 0;
+    start_distance     = atl03.segment_dist_x[0];
+    seg_distance       = 0.0;
+    start_seg_portion  = 0.0;
+    track_complete     = false;
+    bckgrd_in          = 0;
+    extent_segment     = 0;
+    extent_valid       = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -1260,14 +1219,6 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::~TrackState (void)
 {
-}
-
-/*----------------------------------------------------------------------------
- * TrackState::operator[]
- *----------------------------------------------------------------------------*/
-Atl03Reader::TrackState::track_state_t& Atl03Reader::TrackState::operator[](int t)
-{
-    return gt[t];
 }
 
 /*----------------------------------------------------------------------------
@@ -1281,8 +1232,8 @@ void* Atl03Reader::subsettingThread (void* parm)
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     uint32_t extent_counter = 0;
-    List<int32_t>* segment_indices[Icesat2Parms::NUM_PAIR_TRACKS] = {NULL, NULL};    // used for ancillary data
-    List<int32_t>* photon_indices[Icesat2Parms::NUM_PAIR_TRACKS] = {NULL, NULL};     // used for ancillary data
+    List<int32_t>* segment_indices = NULL;    // used for ancillary data
+    List<int32_t>* photon_indices = NULL;     // used for ancillary data
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -1309,312 +1260,301 @@ void* Atl03Reader::subsettingThread (void* parm)
         TrackState state(atl03);
 
         /* Increment Read Statistics */
-        local_stats.segments_read = (region.segment_ph_cnt[Icesat2Parms::RPT_L].size + region.segment_ph_cnt[Icesat2Parms::RPT_R].size);
+        local_stats.segments_read = region.segment_ph_cnt.size;
 
         /* Calculate Length of Extent in Meters (used for distance) */
         state.extent_length = parms->extent_length;
         if(parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
 
         /* Traverse All Photons In Dataset */
-        while( reader->active && (!state[Icesat2Parms::RPT_L].track_complete || !state[Icesat2Parms::RPT_R].track_complete) )
+        while(reader->active && !state.track_complete)
         {
-            /* Process Photons for Extent from each Track */
-            for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+            /* Setup Variables for Extent */
+            int32_t current_photon = state.ph_in;
+            int32_t current_segment = state.seg_in;
+            int32_t current_count = state.seg_ph; // number of photons in current segment already accounted for
+            bool extent_complete = false;
+            bool step_complete = false;
+
+            /* Set Extent State */
+            state.start_seg_portion = atl03.dist_ph_along[current_photon] / ATL03_SEGMENT_LENGTH;
+            state.extent_segment = state.seg_in;
+            state.extent_valid = true;
+            state.extent_photons.clear();
+
+            /* Ancillary Extent Fields */
+            if(parms->atl03_geo_fields)
             {
-                /* Skip Completed Tracks */
-                if(state[t].track_complete)
+                if(segment_indices) segment_indices->clear();
+                else                segment_indices = new List<int32_t>;
+            }
+
+            /* Ancillary Photon Fields */
+            if(parms->atl03_ph_fields)
+            {
+                if(photon_indices) photon_indices->clear();
+                else               photon_indices = new List<int32_t>;
+            }
+
+            /* Traverse Photons Until Desired Along Track Distance Reached */
+            while(!extent_complete || !step_complete)
+            {
+                /* Go to Photon's Segment */
+                current_count++;
+                while((current_segment < region.segment_ph_cnt.size) &&
+                        (current_count > region.segment_ph_cnt[current_segment]))
                 {
-                    state[t].extent_valid = false;
-                    continue;
+                    current_count = 1; // reset photons in segment
+                    current_segment++; // go to next segment
                 }
 
-                /* Setup Variables for Extent */
-                int32_t current_photon = state[t].ph_in;
-                int32_t current_segment = state[t].seg_in;
-                int32_t current_count = state[t].seg_ph; // number of photons in current segment already accounted for
-                bool extent_complete = false;
-                bool step_complete = false;
-
-                /* Set Extent State */
-                state[t].start_seg_portion = atl03.dist_ph_along[t][current_photon] / ATL03_SEGMENT_LENGTH;
-                state[t].extent_segment = state[t].seg_in;
-                state[t].extent_valid = true;
-                state[t].extent_photons.clear();
-
-                /* Ancillary Extent Fields */
-                if(parms->atl03_geo_fields)
+                /* Check Current Segment */
+                if(current_segment >= atl03.segment_dist_x.size)
                 {
-                    if(segment_indices[t]) segment_indices[t]->clear();
-                    else                   segment_indices[t] = new List<int32_t>;
+                    mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                    state.track_complete = true;
+                    break;
                 }
 
-                /* Ancillary Photon Fields */
-                if(parms->atl03_ph_fields)
+                /* Update Along Track Distance and Progress */
+                double delta_distance = atl03.segment_dist_x[current_segment] - state.start_distance;
+                double x_atc = delta_distance + atl03.dist_ph_along[current_photon];
+                int32_t along_track_segments = current_segment - state.extent_segment;
+
+                /* Set Next Extent's First Photon */
+                if((!step_complete) &&
+                    ((!parms->dist_in_seg && x_atc >= parms->extent_step) ||
+                    (parms->dist_in_seg && along_track_segments >= (int32_t)parms->extent_step)))
                 {
-                    if(photon_indices[t]) photon_indices[t]->clear();
-                    else                  photon_indices[t] = new List<int32_t>;
+                    state.ph_in = current_photon;
+                    state.seg_in = current_segment;
+                    state.seg_ph = current_count - 1;
+                    step_complete = true;
                 }
 
-                /* Traverse Photons Until Desired Along Track Distance Reached */
-                while(!extent_complete || !step_complete)
+                /* Check if Photon within Extent's Length */
+                if((!parms->dist_in_seg && x_atc < parms->extent_length) ||
+                    (parms->dist_in_seg && along_track_segments < parms->extent_length))
                 {
-                    /* Go to Photon's Segment */
-                    current_count++;
-                    while((current_segment < region.segment_ph_cnt[t].size) &&
-                          (current_count > region.segment_ph_cnt[t][current_segment]))
+                    do
                     {
-                        current_count = 1; // reset photons in segment
-                        current_segment++; // go to next segment
-                    }
-
-                    /* Check Current Segment */
-                    if(current_segment >= atl03.segment_dist_x[t].size)
-                    {
-                        mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x[t].size, region.num_segments[t]);
-                        state[t].track_complete = true;
-                        break;
-                    }
-
-                    /* Update Along Track Distance and Progress */
-                    double delta_distance = atl03.segment_dist_x[t][current_segment] - state[t].start_distance;
-                    double x_atc = delta_distance + atl03.dist_ph_along[t][current_photon];
-                    int32_t along_track_segments = current_segment - state[t].extent_segment;
-
-                    /* Set Next Extent's First Photon */
-                    if((!step_complete) &&
-                       ((!parms->dist_in_seg && x_atc >= parms->extent_step) ||
-                        (parms->dist_in_seg && along_track_segments >= (int32_t)parms->extent_step)))
-                    {
-                        state[t].ph_in = current_photon;
-                        state[t].seg_in = current_segment;
-                        state[t].seg_ph = current_count - 1;
-                        step_complete = true;
-                    }
-
-                    /* Check if Photon within Extent's Length */
-                    if((!parms->dist_in_seg && x_atc < parms->extent_length) ||
-                       (parms->dist_in_seg && along_track_segments < parms->extent_length))
-                    {
-                        do
+                        /* Check and Set Signal Confidence Level */
+                        int8_t atl03_cnf = atl03.signal_conf_ph[current_photon];
+                        if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
                         {
-                            /* Check and Set Signal Confidence Level */
-                            int8_t atl03_cnf = atl03.signal_conf_ph[t][current_photon];
-                            if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
-                            {
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
-                            }
-                            else if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
-                            {
-                                break;
-                            }
-
-                            /* Check and Set ATL03 Photon Quality Level */
-                            int8_t quality_ph = atl03.quality_ph[t][current_photon];
-                            if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
-                            {
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
-                            }
-                            else if(!parms->quality_ph[quality_ph])
-                            {
-                                break;
-                            }
-
-                            /* Check and Set ATL08 Classification */
-                            Icesat2Parms::atl08_classification_t atl08_class = Icesat2Parms::ATL08_UNCLASSIFIED;
-                            if(atl08[t])
-                            {
-                                atl08_class = (Icesat2Parms::atl08_classification_t)atl08[t][current_photon];
-                                if(atl08_class < 0 || atl08_class >= Icesat2Parms::NUM_ATL08_CLASSES)
-                                {
-                                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
-                                }
-                                else if(!parms->atl08_class[atl08_class])
-                                {
-                                    break;
-                                }
-                            }
-
-                            /* Check and Set YAPC Score */
-                            uint8_t yapc_score = 0;
-                            if(yapc[t])
-                            {
-                                yapc_score = yapc[t][current_photon];
-                                if(yapc_score < parms->yapc.score)
-                                {
-                                    break;
-                                }
-                            }
-
-                            /* Check Region */
-                            if(region.inclusion_ptr[t])
-                            {
-                                if(!region.inclusion_ptr[t][current_segment])
-                                {
-                                    break;
-                                }
-                            }
-
-                            /* Set PhoREAL Fields */
-                            float relief = 0.0;
-                            uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
-                            uint8_t snowcover_flag = Atl08Class::INVALID_FLAG;
-                            if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
-                            {
-                                /* Set Relief */
-                                if(!parms->phoreal.use_abs_h)
-                                {
-                                    relief = atl08.relief[t][current_photon];
-                                }
-                                else
-                                {
-                                    relief = atl03.h_ph[t][current_photon];
-                                }
-
-                                /* Set Flags */
-                                landcover_flag = atl08.landcover[t][current_photon];
-                                snowcover_flag = atl08.snowcover[t][current_photon];
-                            }
-
-                            /* Add Photon to Extent */
-                            photon_t ph = {
-                                .time_ns = parms->deltatime2timestamp(atl03.delta_time[t][current_photon]),
-                                .latitude = atl03.lat_ph[t][current_photon],
-                                .longitude = atl03.lon_ph[t][current_photon],
-                                .x_atc = (float)(x_atc - (state.extent_length / 2.0)),
-                                .y_atc = atl03.dist_ph_across[t][current_photon],
-                                .height = atl03.h_ph[t][current_photon],
-                                .relief = relief,
-                                .landcover = landcover_flag,
-                                .snowcover = snowcover_flag,
-                                .atl08_class = (uint8_t)atl08_class,
-                                .atl03_cnf = (int8_t)atl03_cnf,
-                                .quality_ph = (int8_t)quality_ph,
-                                .yapc_score = yapc_score
-                            };
-                            state[t].extent_photons.add(ph);
-
-                            /* Index Photon for Ancillary Fields */
-                            if(segment_indices[t])
-                            {
-                                segment_indices[t]->add(current_segment);
-                            }
-                            /* Index Photon for Ancillary Fields */
-
-                            if(photon_indices[t])
-                            {
-                                photon_indices[t]->add(current_photon);
-                            }
-                        } while(false);
-                    }
-                    else
-                    {
-                        extent_complete = true;
-                    }
-
-                    /* Go to Next Photon */
-                    current_photon++;
-
-                    /* Check Current Photon */
-                    if(current_photon >= atl03.dist_ph_along[t].size)
-                    {
-                        state[t].track_complete = true;
-                        break;
-                    }
-                }
-
-                /* Save Off Segment Distance to Include in Extent Record */
-                state[t].seg_distance = state[t].start_distance + (state.extent_length / 2.0);
-
-                /* Add Step to Start Distance */
-                if(!parms->dist_in_seg)
-                {
-                    state[t].start_distance += parms->extent_step; // step start distance
-
-                    /* Apply Segment Distance Correction and Update Start Segment */
-                    while( ((state[t].start_segment + 1) < atl03.segment_dist_x[t].size) &&
-                            (state[t].start_distance >= atl03.segment_dist_x[t][state[t].start_segment + 1]) )
-                    {
-                        state[t].start_distance += atl03.segment_dist_x[t][state[t].start_segment + 1] - atl03.segment_dist_x[t][state[t].start_segment];
-                        state[t].start_distance -= ATL03_SEGMENT_LENGTH;
-                        state[t].start_segment++;
-                    }
-                }
-                else // distance in segments
-                {
-                    int32_t next_segment = state[t].extent_segment + (int32_t)parms->extent_step;
-                    if(next_segment < atl03.segment_dist_x[t].size)
-                    {
-                        state[t].start_distance = atl03.segment_dist_x[t][next_segment]; // set start distance to next extent's segment distance
-                    }
-                }
-
-                /* Check Photon Count */
-                if(state[t].extent_photons.length() < parms->minimum_photon_count)
-                {
-                    state[t].extent_valid = false;
-                }
-
-                /* Check Along Track Spread */
-                if(state[t].extent_photons.length() > 1)
-                {
-                    int32_t last = state[t].extent_photons.length() - 1;
-                    double along_track_spread = state[t].extent_photons[last].x_atc - state[t].extent_photons[0].x_atc;
-                    if(along_track_spread < parms->along_track_spread)
-                    {
-                        state[t].extent_valid = false;
-                    }
-                }
-
-                /* Create Extent Record */
-                if(state[t].extent_valid || parms->pass_invalid)
-                {
-                    /* Generate Extent ID */
-                    uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
-                                         ((uint64_t)reader->start_cycle << 36) |
-                                         ((uint64_t)reader->start_region << 32) |
-                                         ((uint64_t)info->track << 30) |
-                                         (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
-                                         Icesat2Parms::EXTENT_ID_PHOTONS |
-                                         t; // track
-
-                    /* Build Extent and Ancillary Records */
-                    vector<RecordObject*> rec_list;
-                    int rec_total_size = 0;
-                    reader->generateExtentRecord(extent_id, t, info->track, state, atl03, rec_list, rec_total_size);
-                    reader->generateAncillaryRecords(extent_id, t, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                    reader->generateAncillaryRecords(extent_id, t, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
-
-                    /* Send Records */
-                    if(rec_list.size() == 1)
-                    {
-                        reader->postRecord(*(rec_list[0]), local_stats);
-                    }
-                    else if(rec_list.size() > 1)
-                    {
-                        /* Send Container Record */
-                        ContainerRecord container(rec_list.size(), rec_total_size);
-                        for(size_t i = 0; i < rec_list.size(); i++)
-                        {
-                            container.addRecord(*(rec_list[i]));
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
                         }
-                        reader->postRecord(container, local_stats);
-                    }
+                        else if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
+                        {
+                            break;
+                        }
 
-                    /* Clean Up Records */
-                    for(auto& rec: rec_list)
-                    {
-                        delete rec;
-                    }
+                        /* Check and Set ATL03 Photon Quality Level */
+                        int8_t quality_ph = atl03.quality_ph[current_photon];
+                        if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
+                        {
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
+                        }
+                        else if(!parms->quality_ph[quality_ph])
+                        {
+                            break;
+                        }
+
+                        /* Check and Set ATL08 Classification */
+                        Icesat2Parms::atl08_classification_t atl08_class = Icesat2Parms::ATL08_UNCLASSIFIED;
+                        if(atl08.classification)
+                        {
+                            atl08_class = (Icesat2Parms::atl08_classification_t)atl08[current_photon];
+                            if(atl08_class < 0 || atl08_class >= Icesat2Parms::NUM_ATL08_CLASSES)
+                            {
+                                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
+                            }
+                            else if(!parms->atl08_class[atl08_class])
+                            {
+                                break;
+                            }
+                        }
+
+                        /* Check and Set YAPC Score */
+                        uint8_t yapc_score = 0;
+                        if(yapc.score)
+                        {
+                            yapc_score = yapc[current_photon];
+                            if(yapc_score < parms->yapc.score)
+                            {
+                                break;
+                            }
+                        }
+
+                        /* Check Region */
+                        if(region.inclusion_ptr)
+                        {
+                            if(!region.inclusion_ptr[current_segment])
+                            {
+                                break;
+                            }
+                        }
+
+                        /* Set PhoREAL Fields */
+                        float relief = 0.0;
+                        uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
+                        uint8_t snowcover_flag = Atl08Class::INVALID_FLAG;
+                        if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+                        {
+                            /* Set Relief */
+                            if(!parms->phoreal.use_abs_h)
+                            {
+                                relief = atl08.relief[current_photon];
+                            }
+                            else
+                            {
+                                relief = atl03.h_ph[current_photon];
+                            }
+
+                            /* Set Flags */
+                            landcover_flag = atl08.landcover[current_photon];
+                            snowcover_flag = atl08.snowcover[current_photon];
+                        }
+
+                        /* Add Photon to Extent */
+                        photon_t ph = {
+                            .time_ns = parms->deltatime2timestamp(atl03.delta_time[current_photon]),
+                            .latitude = atl03.lat_ph[current_photon],
+                            .longitude = atl03.lon_ph[current_photon],
+                            .x_atc = (float)(x_atc - (state.extent_length / 2.0)),
+                            .y_atc = atl03.dist_ph_across[current_photon],
+                            .height = atl03.h_ph[current_photon],
+                            .relief = relief,
+                            .landcover = landcover_flag,
+                            .snowcover = snowcover_flag,
+                            .atl08_class = (uint8_t)atl08_class,
+                            .atl03_cnf = (int8_t)atl03_cnf,
+                            .quality_ph = (int8_t)quality_ph,
+                            .yapc_score = yapc_score
+                        };
+                        state.extent_photons.add(ph);
+
+                        /* Index Photon for Ancillary Fields */
+                        if(segment_indices)
+                        {
+                            segment_indices->add(current_segment);
+                        }
+                        /* Index Photon for Ancillary Fields */
+
+                        if(photon_indices)
+                        {
+                            photon_indices->add(current_photon);
+                        }
+                    } while(false);
                 }
-                else // neither pair in extent valid
+                else
                 {
-                    local_stats.extents_filtered++;
+                    extent_complete = true;
+                }
+
+                /* Go to Next Photon */
+                current_photon++;
+
+                /* Check Current Photon */
+                if(current_photon >= atl03.dist_ph_along.size)
+                {
+                    state.track_complete = true;
+                    break;
                 }
             }
 
-            /* Bump Extent Counter */
-            extent_counter++;
+            /* Save Off Segment Distance to Include in Extent Record */
+            state.seg_distance = state.start_distance + (state.extent_length / 2.0);
+
+            /* Add Step to Start Distance */
+            if(!parms->dist_in_seg)
+            {
+                state.start_distance += parms->extent_step; // step start distance
+
+                /* Apply Segment Distance Correction and Update Start Segment */
+                while( ((state.start_segment + 1) < atl03.segment_dist_x.size) &&
+                        (state.start_distance >= atl03.segment_dist_x[state.start_segment + 1]) )
+                {
+                    state.start_distance += atl03.segment_dist_x[state.start_segment + 1] - atl03.segment_dist_x[state.start_segment];
+                    state.start_distance -= ATL03_SEGMENT_LENGTH;
+                    state.start_segment++;
+                }
+            }
+            else // distance in segments
+            {
+                int32_t next_segment = state.extent_segment + (int32_t)parms->extent_step;
+                if(next_segment < atl03.segment_dist_x.size)
+                {
+                    state.start_distance = atl03.segment_dist_x[next_segment]; // set start distance to next extent's segment distance
+                }
+            }
+
+            /* Check Photon Count */
+            if(state.extent_photons.length() < parms->minimum_photon_count)
+            {
+                state.extent_valid = false;
+            }
+
+            /* Check Along Track Spread */
+            if(state.extent_photons.length() > 1)
+            {
+                int32_t last = state.extent_photons.length() - 1;
+                double along_track_spread = state.extent_photons[last].x_atc - state.extent_photons[0].x_atc;
+                if(along_track_spread < parms->along_track_spread)
+                {
+                    state.extent_valid = false;
+                }
+            }
+
+            /* Create Extent Record */
+            if(state.extent_valid || parms->pass_invalid)
+            {
+                /* Generate Extent ID */
+                uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
+                                        ((uint64_t)reader->start_cycle << 36) |
+                                        ((uint64_t)reader->start_region << 32) |
+                                        ((uint64_t)info->track << 30) |
+                                        (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
+                                        Icesat2Parms::EXTENT_ID_PHOTONS |
+                                        info->pair;
+
+                /* Build Extent and Ancillary Records */
+                vector<RecordObject*> rec_list;
+                int rec_total_size = 0;
+                reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
+                reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+
+                /* Send Records */
+                if(rec_list.size() == 1)
+                {
+                    reader->postRecord(*(rec_list[0]), local_stats);
+                }
+                else if(rec_list.size() > 1)
+                {
+                    /* Send Container Record */
+                    ContainerRecord container(rec_list.size(), rec_total_size);
+                    for(size_t i = 0; i < rec_list.size(); i++)
+                    {
+                        container.addRecord(*(rec_list[i]));
+                    }
+                    reader->postRecord(container, local_stats);
+                }
+
+                /* Clean Up Records */
+                for(auto& rec: rec_list)
+                {
+                    delete rec;
+                }
+            }
+            else // neither pair in extent valid
+            {
+                local_stats.extents_filtered++;
+            }
         }
+
+        /* Bump Extent Counter */
+        extent_counter++;
     }
     catch(const RunTimeException& e)
     {
@@ -1646,11 +1586,8 @@ void* Atl03Reader::subsettingThread (void* parm)
     reader->threadMut.unlock();
 
     /* Clean Up Indices */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
-    {
-        if(segment_indices[t]) delete segment_indices[t];
-        if(photon_indices[t]) delete photon_indices[t];
-    }
+    if(segment_indices) delete segment_indices;
+    if(photon_indices) delete photon_indices;
 
     /* Clean Up Info */
     delete info;
@@ -1665,21 +1602,21 @@ void* Atl03Reader::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& atl03)
+double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
 {
-    double background_rate = atl03.bckgrd_rate[t][atl03.bckgrd_rate[t].size - 1];
-    while(state[t].bckgrd_in < atl03.bckgrd_rate[t].size)
+    double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
+    while(state.bckgrd_in < atl03.bckgrd_rate.size)
     {
-        double curr_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in];
-        double segment_time = atl03.segment_delta_time[t][state[t].extent_segment];
+        double curr_bckgrd_time = atl03.bckgrd_delta_time[state.bckgrd_in];
+        double segment_time = atl03.segment_delta_time[state.extent_segment];
         if(curr_bckgrd_time >= segment_time)
         {
             /* Interpolate Background Rate */
-            if(state[t].bckgrd_in > 0)
+            if(state.bckgrd_in > 0)
             {
-                double prev_bckgrd_time = atl03.bckgrd_delta_time[t][state[t].bckgrd_in - 1];
-                double prev_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in - 1];
-                double curr_bckgrd_rate = atl03.bckgrd_rate[t][state[t].bckgrd_in];
+                double prev_bckgrd_time = atl03.bckgrd_delta_time[state.bckgrd_in - 1];
+                double prev_bckgrd_rate = atl03.bckgrd_rate[state.bckgrd_in - 1];
+                double curr_bckgrd_rate = atl03.bckgrd_rate[state.bckgrd_in];
 
                 double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
                 double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
@@ -1690,14 +1627,14 @@ double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& at
             else
             {
                 /* Use First Background Rate (no interpolation) */
-                background_rate = atl03.bckgrd_rate[t][0];
+                background_rate = atl03.bckgrd_rate[0];
             }
             break;
         }
         else
         {
             /* Go To Next Background Rate */
-            state[t].bckgrd_in++;
+            state.bckgrd_in++;
         }
     }
     return background_rate;
@@ -1706,13 +1643,13 @@ double Atl03Reader::calculateBackground (int t, TrackState& state, Atl03Data& at
 /*----------------------------------------------------------------------------
  * calculateSegmentId
  *----------------------------------------------------------------------------*/
-uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& atl03)
+uint32_t Atl03Reader::calculateSegmentId (TrackState& state, Atl03Data& atl03)
 {
     /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
-    double atl06_segment_id = (double)atl03.segment_id[t][state[t].extent_segment]; // start with first segment in extent
+    double atl06_segment_id = (double)atl03.segment_id[state.extent_segment]; // start with first segment in extent
     if(!parms->dist_in_seg)
     {
-        atl06_segment_id += state[t].start_seg_portion; // add portion of first segment that first photon is included
+        atl06_segment_id += state.start_seg_portion; // add portion of first segment that first photon is included
         atl06_segment_id += (int)((parms->extent_length / ATL03_SEGMENT_LENGTH) / 2.0); // add half the length of the extent
     }
     else // dist_in_seg is true
@@ -1727,40 +1664,41 @@ uint32_t Atl03Reader::calculateSegmentId (int t, TrackState& state, Atl03Data& a
 /*----------------------------------------------------------------------------
  * generateExtentRecord
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateExtentRecord (uint64_t extent_id, int t, uint8_t track, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
 {
     /* Calculate Extent Record Size */
-    int num_photons = state[t].extent_photons.length();
+    int num_photons = state.extent_photons.length();
     int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
     /* Allocate and Initialize Extent Record */
-    RecordObject* record = new RecordObject(exRecType, extent_bytes);
-    extent_t* extent = (extent_t*)record->getRecordData();
-    extent->valid                   = state[t].extent_valid;
+    RecordObject* record            = new RecordObject(exRecType, extent_bytes);
+    extent_t* extent                = (extent_t*)record->getRecordData();
+    extent->valid                   = state.extent_valid;
     extent->extent_id               = extent_id;
-    extent->reference_pair_track    = track;
+    extent->track                   = info->track;
+    extent->pair                    = info->pair;
     extent->spacecraft_orientation  = atl03.sc_orient[0];
     extent->reference_ground_track  = start_rgt;
     extent->cycle                   = start_cycle;
-    extent->segment_id              = calculateSegmentId(t, state, atl03);
-    extent->segment_distance        = state[t].seg_distance;
+    extent->segment_id              = calculateSegmentId(state, atl03);
+    extent->segment_distance        = state.seg_distance;
     extent->extent_length           = state.extent_length;
-    extent->background_rate         = calculateBackground(t, state, atl03);
-    extent->solar_elevation         = atl03.solar_elevation[t][state[t].extent_segment];
-    extent->photon_count            = state[t].extent_photons.length();
+    extent->background_rate         = calculateBackground(state, atl03);
+    extent->solar_elevation         = atl03.solar_elevation[state.extent_segment];
+    extent->photon_count            = state.extent_photons.length();
 
     /* Calculate Spacecraft Velocity */
-    int32_t sc_v_offset = state[t].extent_segment * 3;
-    double sc_v1 = atl03.velocity_sc[t][sc_v_offset + 0];
-    double sc_v2 = atl03.velocity_sc[t][sc_v_offset + 1];
-    double sc_v3 = atl03.velocity_sc[t][sc_v_offset + 2];
+    int32_t sc_v_offset = state.extent_segment * 3;
+    double sc_v1 = atl03.velocity_sc[sc_v_offset + 0];
+    double sc_v2 = atl03.velocity_sc[sc_v_offset + 1];
+    double sc_v3 = atl03.velocity_sc[sc_v_offset + 2];
     double spacecraft_velocity = sqrt((sc_v1*sc_v1) + (sc_v2*sc_v2) + (sc_v3*sc_v3));
     extent->spacecraft_velocity  = (float)spacecraft_velocity;
 
     /* Populate Photons */
-    for(int32_t p = 0; p < state[t].extent_photons.length(); p++)
+    for(int32_t p = 0; p < state.extent_photons.length(); p++)
     {
-        extent->photons[p] = state[t].extent_photons[p];
+        extent->photons[p] = state.extent_photons[p];
     }
 
     /* Add Extent Record */
@@ -1771,26 +1709,18 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, int t, uint8_t track
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (
-    uint64_t extent_id,
-    int t,
-    Icesat2Parms::string_list_t* field_list, 
-    MgDictionary<GTDArray*>& field_dict, 
-    anc_type_t type,
-    List<int32_t>** indices,
-    vector<RecordObject*>& rec_list, 
-    int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<H5DArray*>& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list)
     {
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            GTDArray* array = field_dict[(*field_list)[i].str()];
+            H5DArray* array = field_dict[(*field_list)[i].str()];
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_t, data) +
-                                (array->gt[t].elementSize() * indices[t]->length());
+                                (array->elementSize() * indices->length());
             RecordObject* record = new RecordObject(ancRecType, record_size);
             anc_t* data = (anc_t*)record->getRecordData();
 
@@ -1798,14 +1728,14 @@ void Atl03Reader::generateAncillaryRecords (
             data->extent_id = extent_id;
             data->anc_type = type;
             data->field_index = i;
-            data->data_type = array->gt[t].elementType();
-            data->num_elements = indices[t]->length();
+            data->data_type = array->elementType();
+            data->num_elements = indices->length();
 
             /* Populate Ancillary Data */
             uint64_t bytes_written = 0;
-            for(int p = 0; p < indices[t]->length(); p++)
+            for(int p = 0; p < indices->length(); p++)
             {
-                bytes_written += array->gt[t].serialize(&data->data[bytes_written], indices[t]->get(p), 1);
+                bytes_written += array->serialize(&data->data[bytes_written], indices->get(p), 1);
             }
 
             /* Add Ancillary Record */

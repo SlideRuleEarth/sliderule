@@ -552,8 +552,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     extent_id = rsp['extent_id']
                     if 'atl03rec' in rsp['__rectype']:
                         photon_records += rsp,
-                        num_photons += len(rsp['data'])
-                        if sample_photon_record == None and len(rsp['data']) > 0:
+                        num_photons += len(rsp['photons'])
+                        if sample_photon_record == None and len(rsp['photons']) > 0:
                             sample_photon_record = rsp
                     elif 'atl03anc' == rsp['__rectype']:
                         # Get Field Name and Type
@@ -574,9 +574,9 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     # Initialize Columns
                     for field in sample_photon_record.keys():
                         fielddef = sliderule.get_definition("atl03rec", field)
-                        if len(fielddef) > 0:
+                        if len(fielddef) > 0 and field != "photons":
                             columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                    for field in sample_photon_record["data"][0].keys():
+                    for field in sample_photon_record["photons"][0].keys():
                         fielddef = sliderule.get_definition("atl03rec.photons", field)
                         if len(fielddef) > 0:
                             columns[field] = numpy.empty(num_photons, fielddef["nptype"])
@@ -586,38 +586,23 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     ph_cnt = 0
                     for record in photon_records:
                         ph_index = 0
-                        pair = 0
-                        left_cnt = record["count"][0]
                         extent_id = record['extent_id']
-                        # Get Photon Fields to Add to Extent
-                        photon_field_dictionary = {}
-                        if extent_id in photon_dictionary:
-                            photon_field_dictionary = photon_dictionary[extent_id]
                         # For Each Photon in Extent
-                        for photon in record["data"]:
-                            if ph_index >= left_cnt:
-                                pair = 1
+                        for photon in record["photons"]:
                             # Add per Extent Fields
                             for field in record.keys():
                                 if field in columns:
-                                    if field == "count":
-                                        columns[field][ph_cnt] = pair # count gets changed to pair id
-                                    elif type(record[field]) is tuple:
-                                        columns[field][ph_cnt] = record[field][pair]
-                                    else:
-                                        columns[field][ph_cnt] = record[field]
+                                    columns[field][ph_cnt] = record[field]
                             # Add per Photon Fields
                             for field in photon.keys():
                                 if field in columns:
                                     columns[field][ph_cnt] = photon[field]
                             # Add Ancillary Extent Fields
-                            for field in photon_field_dictionary:
-                                columns[field][ph_cnt] = photon_field_dictionary[field][ph_index]
+                            for field_array in photon_dictionary[extent_id].values():
+                                columns[field][ph_cnt] = field_array[ph_index]
                             # Goto Next Photon
                             ph_cnt += 1
                             ph_index += 1
-                    # Rename Count Column to Pair Column
-                    columns["pair"] = columns.pop("count")
 
                     # Delete Extent ID Column
                     if "extent_id" in columns and not keep_id:

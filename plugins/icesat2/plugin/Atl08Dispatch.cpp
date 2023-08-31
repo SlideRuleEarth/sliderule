@@ -238,15 +238,15 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
 {
     /* Get Orbit Info */
     Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
-    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
+    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
 
     /* Extent Attributes */
     result.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
     result.segment_id = extent->segment_id;
     result.rgt = extent->reference_ground_track;
     result.cycle = extent->cycle;
-    result.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->reference_pair_track);
-    result.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->reference_pair_track);
+    result.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->pair);
+    result.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->pair);
     result.photon_count = extent->photon_count;
     result.solar_elevation = extent->solar_elevation;
 

@@ -43,7 +43,6 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 
-#include "GTArray.h"
 #include "Atl03Reader.h"
 #include "Icesat2Parms.h"
 
