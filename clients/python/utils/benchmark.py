@@ -6,6 +6,7 @@ import logging
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""Subset granules""")
+parser.add_argument('--benchmarks',     '-b',   nargs='+', type=str,    default=[])
 parser.add_argument('--granule03',      '-p',   type=str,               default="ATL03_20181017222812_02950102_005_01.h5")
 parser.add_argument('--granule06',      '-c',   type=str,               default="ATL06_20181017222812_02950102_005_01.h5")
 parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/grandmesa.geojson")
@@ -40,25 +41,45 @@ sliderule.init(args.domain, verbose=args.verbose, organization=args.organization
 region = sliderule.toregion(args.aoi)
 
 # Display Results
-def display_results(gdf):
-    print(f'Output: {len(gdf)} x {len(gdf.keys())}')
-    print("SlideRule Timing Profiles")
+def display_results(name, gdf):
+    print(f'{name}: {len(gdf)} x {len(gdf.keys())}')
+    print("    SlideRule Timing Profiles")
     for key in sliderule.profiles:
-        print("{:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
-    print("ICESat2 Timing Profiles")
+        print("        {:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
+    print("    ICESat2 Timing Profiles")
     for key in icesat2.profiles:
-        print("{:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
+        print("        {:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
 
 # Benchmark ATL06 Ancillary
-def benchmark_atl06_ancillary():
+def atl06_ancillary():
     parms = {
         "poly":             region["poly"],
         "srt":              icesat2.SRT_LAND,
         "atl03_geo_fields": ["solar_elevation"]
     }
-    gdf = icesat2.atl06p(parms, args.asset, resources=[args.granule03])
-    display_results(gdf)
+    return icesat2.atl06p(parms, args.asset, resources=[args.granule03])
+
+# Benchmark ATL03 Ancillary
+def atl03_ancillary():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "atl03_ph_fields":  ["ph_id_count"]
+    }
+    return icesat2.atl06p(parms, args.asset, resources=[args.granule03])
 
 # Main
 if __name__ == '__main__':
-    benchmark_atl06_ancillary()
+    # define benchmarks
+    benchmarks = {
+        "atl06anc": atl06_ancillary,
+        "atl03anc": atl03_ancillary
+    }
+    # build list of benchmarks to run
+    benchmarks_to_run = args.benchmarks
+    if len(benchmarks_to_run) == 0:
+        benchmarks_to_run = benchmarks.keys()
+    # run benchmarks
+    for benchmark in benchmarks_to_run:
+        gdf = benchmarks[benchmark]()
+        display_results(benchmark, gdf)
