@@ -1551,10 +1551,10 @@ void* Atl03Reader::subsettingThread (void* parm)
             {
                 local_stats.extents_filtered++;
             }
-        }
 
-        /* Bump Extent Counter */
-        extent_counter++;
+            /* Bump Extent Counter */
+            extent_counter++;
+        }
     }
     catch(const RunTimeException& e)
     {
