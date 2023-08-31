@@ -94,7 +94,7 @@ void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool Usgs3dep1meterDemRaster::findRasters(GdalRaster::Point& p)
+bool Usgs3dep1meterDemRaster::findRasters(const GdalRaster::Point& p)
 {
     try
     {

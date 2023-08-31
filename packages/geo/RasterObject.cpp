@@ -280,28 +280,53 @@ int RasterObject::luaSubset(lua_State *L)
         double upleft_y   = getLuaFloat(L, 3);
         double lowright_x = getLuaFloat(L, 4);
         double lowright_y = getLuaFloat(L, 5);
+        const char* closest_time_str = getLuaString(L, 6, true, NULL);
 
-        int cols, rows;
-        GDALDataType datatype = GDT_Unknown;
+        /* Get gps closest time (overrides params provided closest time) */
+        int64_t gps = 0;
+        if(closest_time_str != NULL)
+        {
+            gps = TimeLib::str2gpstime(closest_time_str);
+        }
 
-        /* subset raster*/
-        uint8_t* data = lua_obj->getSubset(upleft_x, upleft_y, lowright_x, lowright_y, cols, rows, datatype);
+        /* Get subset */
+        std::vector<RasterSubset> slist;
+        lua_obj->getSubsets(upleft_x, upleft_y, lowright_x, lowright_y, gps, slist, NULL);
 
-        if(data == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No data read");
+        if(slist.size() > 0)
+        {
+            /* Create return table */
+            lua_createtable(L, slist.size(), 0);
 
-        if(datatype == GDT_Unknown)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type returned");
+            for(uint32_t i = 0; i < slist.size(); i++)
+            {
+                const RasterSubset& subset = slist[i];
+                const char* fileName = "";
 
-        /* Set Return Values */
-        lua_pushnumber(L, (uint64_t)data);
-        lua_pushnumber(L, cols);
-        lua_pushnumber(L, rows);
-        lua_pushnumber(L, datatype);
-        num_ret += 4;
+                /* Find fileName from fileId */
+                Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
+                for(int j = 0; j < iterator.length; j++)
+                {
+                    if(iterator[j].value == subset.fileId)
+                    {
+                        fileName = iterator[j].key;
+                        break;
+                    }
+                }
 
-        /* Set Return Status */
-        status = true;
+                lua_createtable(L, 0, 2);
+                LuaEngine::setAttrStr(L, "file", fileName);
+                LuaEngine::setAttrInt(L, "fileid", subset.fileId);
+                LuaEngine::setAttrNum(L, "time", subset.time);
+                LuaEngine::setAttrInt(L, "data", (uint64_t)subset.data);
+                LuaEngine::setAttrInt(L, "cols", subset.cols);
+                LuaEngine::setAttrInt(L, "rows", subset.rows);
+                LuaEngine::setAttrNum(L, "datatype", subset.datatype);
+                lua_rawseti(L, -2, i+1);
+            }
+            num_ret++;
+            status = true;
+        } else mlog(DEBUG, "No subsets read");
     }
     catch (const RunTimeException &e)
     {

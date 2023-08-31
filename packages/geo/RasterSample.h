@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include <gdal.h>
 
 /******************************************************************************
  * RASTER SAMPLE CLASS
@@ -70,11 +71,37 @@ public:
        bzero(&stats, sizeof(stats));
    }
 
-   RasterSample (double _value=0, double _time=0, double _fileId=0, double _flags=0) :
-    value (_value),
-    time  (_time),
+   RasterSample(double _value = 0, double _time = 0, double _fileId = 0, double _flags = 0):
+    value(_value),
+    time(_time),
     fileId(_fileId),
-    flags (_flags) {}
+    flags(_flags) {}
+};
+
+class RasterSubset
+{
+public:
+    uint8_t*     data;
+    uint32_t     cols;
+    uint32_t     rows;
+    GDALDataType datatype;
+    double       time;   // gps seconds
+    uint64_t     fileId;
+
+   void clear (void)
+   {
+       data   = NULL;
+       cols   = 0;
+       rows   = 0;
+       datatype = GDT_Unknown;
+       time   = 0;
+       fileId = 0;
+   }
+
+   RasterSubset(uint8_t* _data = NULL, double _time = 0, double _fileId = 0):
+    data(_data),
+    time(_time),
+    fileId(_fileId) {}
 };
 
 #endif  /* __raster_sample__ */

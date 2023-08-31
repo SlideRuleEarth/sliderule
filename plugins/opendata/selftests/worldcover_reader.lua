@@ -47,21 +47,39 @@ for i, v in ipairs(tbl) do
 end
 runner.check(sampleCnt == #expResults)
 
+
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter subset AOI\n-------------------------------------------------"))
+
+expResults = {{0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt', 7344, 4464, 1}}
+
 starttime = time.latch();
-local data, cols, rows, datatype, status = dem:subset(-108.3412, 39.1956, -107.7292, 38.8236)
+tbl, status = dem:subset(-108.3412, 39.1956, -107.7292, 38.8236)
 stoptime = time.latch();
 print(string.format("subset time: %f", stoptime - starttime))
-local bytes = cols*rows*1
-local mbytes = bytes / (1024*1024)
-print(string.format("subset dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", data, bytes, mbytes, cols, rows, datatype))
-
 runner.check(status == true)
-runner.check(data ~= nil)
-runner.check(cols == 7344)
-runner.check(rows == 4464)
-runner.check(datatype == 1)  -- GDT_Byte
 
+local subsetCnt = 0
+for i, v in ipairs(tbl) do
+    local data = v["data"]
+    local fname = v["file"]
+    local time = v["time"]
+    local cols = v["cols"]
+    local rows = v["rows"]
+    local datatype = v["datatype"]
+
+    local bytes = cols*rows*1
+    local mbytes = bytes / (1024*1024)
+    print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
+    subsetCnt = subsetCnt + 1
+
+    runner.check(data ~= nil)
+    runner.check(time == expResults[i][2])
+    runner.check(fname == expResults[i][3])
+    runner.check(cols == expResults[i][4])
+    runner.check(rows == expResults[i][5])
+    runner.check(datatype == expResults[i][6])  -- GDT_Byte
+end
+runner.check(subsetCnt == 1)
 
 -- Report Results --
 

@@ -78,6 +78,8 @@ class GeoIndexedRaster: public RasterObject
         typedef struct {
             GeoIndexedRaster* obj;
             GdalRaster::Point poi;
+            GdalRaster::Point aoi_upleft;
+            GdalRaster::Point aoi_lowright;
             Thread*     thread;
             GdalRaster* raster;
             Cond*       sync;
@@ -98,8 +100,8 @@ class GeoIndexedRaster: public RasterObject
         static void     init              (void);
         static void     deinit            (void);
         void            getSamples        (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) final;
-        uint8_t*        getSubset         (double upleft_x, double upleft_y, double lowright_x, double lowright_y,
-                                           int& cols, int& rows, GDALDataType& datatype) final;
+        void            getSubsets        (double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                                           int64_t gps, std::vector<RasterSubset>& slist, void* param=NULL) final;
         virtual        ~GeoIndexedRaster  (void);
 
     protected:
@@ -110,13 +112,18 @@ class GeoIndexedRaster: public RasterObject
 
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
         virtual void    getGroupSamples       (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags);
+        virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset>& slist);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         void            openGeoIndex          (double lon = 0, double lat = 0);
+        void            openGeoIndexForAOI    (const GdalRaster::Point& upleft, const GdalRaster::Point& lowright);
         virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
-        virtual bool    findRasters           (GdalRaster::Point& poi) = 0;
-        void            sampleRasters         (GdalRaster::Point& poi);
+        virtual bool    findRasters           (const GdalRaster::Point& poi) = 0;
+        virtual bool    findRastersForAOI     (const GdalRaster::Point& upleft, const GdalRaster::Point& lowright);
+        void            sampleRasters         (const GdalRaster::Point& poi);
+        void            subsetRasters         (const GdalRaster::Point& upleft, const GdalRaster::Point& lowright);
         int             sample                (double lon, double lat, double height, int64_t gps);
+        int             subset                (const GdalRaster::Point& upleft, const GdalRaster::Point& lowright, int64_t gps);
 
         /* Inline for performance */
         bool withinExtent(GdalRaster::Point& poi)

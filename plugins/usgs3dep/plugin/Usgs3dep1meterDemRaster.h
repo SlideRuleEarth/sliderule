@@ -73,7 +73,7 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
                ~Usgs3dep1meterDemRaster (void);
 
         void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
-        bool    findRasters      (GdalRaster::Point &p) final;
+        bool    findRasters      (const GdalRaster::Point &p) final;
 
         static OGRErr overrideTargetCRS(OGRSpatialReference& target);
 

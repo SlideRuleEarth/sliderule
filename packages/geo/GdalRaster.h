@@ -123,10 +123,10 @@ class GdalRaster
         virtual           ~GdalRaster     (void);
         void               open           (void);
         void               samplePOI      (const Point& poi);
-        uint8_t*           subset         (const Point& upleft, const Point& lowright,
-                                           int& _cols, int& _rows, GDALDataType& datatype);
+        void               subsetAOI      (const Point& upleft, const Point& lowright);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
+        RasterSubset&      getSubset      (void) { return subset; }
         bool               sampled        (void) { return _sampled; }
         int                getRows        (void) { return rows; }
         int                getCols        (void) { return cols; }
@@ -158,6 +158,9 @@ class GdalRaster
         /* Last sample information */
         RasterSample   sample;
         double         verticalShift;  /* Calculated for last POI transformed to target CRS */
+
+        /* Last subset information */
+        RasterSubset   subset;
 
         OGRCoordinateTransformation* transf;
         OGRSpatialReference sourceCRS;

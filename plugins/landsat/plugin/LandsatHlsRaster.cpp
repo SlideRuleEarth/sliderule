@@ -166,7 +166,7 @@ void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool LandsatHlsRaster::findRasters(GdalRaster::Point& p)
+bool LandsatHlsRaster::findRasters(const GdalRaster::Point& p)
 {
     try
     {

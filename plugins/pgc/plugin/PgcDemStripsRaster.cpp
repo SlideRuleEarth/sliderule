@@ -110,7 +110,7 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::findRasters(GdalRaster::Point& p)
+bool PgcDemStripsRaster::findRasters(const GdalRaster::Point& p)
 {
     /*
      * Find rasters and their dates.

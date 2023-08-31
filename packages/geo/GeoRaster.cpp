@@ -76,10 +76,11 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-uint8_t* GeoRaster::getSubset(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
-                              int& cols, int& rows, GDALDataType& datatype)
+void GeoRaster::getSubsets(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                           int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
-    uint8_t* ptr = NULL;
+    std::ignore = gps;
+    std::ignore = param;
 
     samplingMutex.lock();
     try
@@ -87,7 +88,13 @@ uint8_t* GeoRaster::getSubset(double upleft_x, double upleft_y, double lowright_
         GdalRaster::Point upleft(upleft_x, upleft_y);
         GdalRaster::Point lowright(lowright_x, lowright_y);
 
-        ptr = raster.subset(upleft, lowright, cols, rows, datatype);
+        raster.subsetAOI(upleft, lowright);
+        if(raster.sampled())
+        {
+            RasterSubset& subset = raster.getSubset();
+            subset.fileId = fileId;
+            slist.push_back(subset);
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -96,8 +103,6 @@ uint8_t* GeoRaster::getSubset(double upleft_x, double upleft_y, double lowright_
         throw;  // rethrow exception
     }
     samplingMutex.unlock();
-
-    return ptr;
 }
 
 

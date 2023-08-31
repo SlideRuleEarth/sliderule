@@ -111,11 +111,38 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-uint8_t* GeoIndexedRaster::getSubset(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
-                                     int& _cols, int& _rows, GDALDataType& datatype)
+void GeoIndexedRaster::getSubsets(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
+                                  int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
-    std::ignore = upleft_x = upleft_y = lowright_x = lowright_y = _cols = _rows = datatype;
-    return NULL;
+    std::ignore = param;
+
+    samplingMutex.lock();
+    try
+    {
+        GdalRaster::Point upleft(upleft_x, upleft_y);
+        GdalRaster::Point lowright(lowright_x, lowright_y);
+
+        /* Get samples, if none found, return */
+        if(subset(upleft, lowright, gps) == 0)
+        {
+            samplingMutex.unlock();
+            return;
+        }
+
+        Ordering<rasters_group_t*>::Iterator iter(groupList);
+        for(int i = 0; i < iter.length; i++)
+        {
+            const rasters_group_t* rgroup = iter[i].value;
+            getGroupSubsets(rgroup, slist);
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error subsetting raster: %s", e.what());
+        samplingMutex.unlock();
+        throw;   // rethrow exception
+    }
+    samplingMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -182,7 +209,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
 {
     for(const auto& rinfo: rgroup->infovect)
     {
@@ -204,6 +231,33 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, std::vect
         }
     }
 }
+
+
+/*----------------------------------------------------------------------------
+ * getGroupSamples
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vector<RasterSubset>& slist)
+{
+    for(const auto& rinfo: rgroup->infovect)
+    {
+        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) == 0)
+        {
+            const char* key = rinfo.fileName.c_str();
+            cacheitem_t* item;
+            if(cache.find(key, &item))
+            {
+                if(item->enabled && item->raster->sampled())
+                {
+                    /* Update dictionary of used raster files */
+                    RasterSubset& sset = item->raster->getSubset();
+                    sset.fileId = fileDictAdd(item->raster->getFileName());
+                    slist.push_back(sset);
+                }
+            }
+        }
+    }
+}
+
 
 /*----------------------------------------------------------------------------
  * getGroupFlags
@@ -333,9 +387,28 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
+ * openGeoIndexForAOI
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::openGeoIndexForAOI(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright)
+{
+    std::ignore = upleft;
+    std::ignore = lowright;
+}
+
+/*----------------------------------------------------------------------------
+ * openGeoIndexForAOI
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::findRastersForAOI(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright)
+{
+    std::ignore = upleft;
+    std::ignore = lowright;
+    return false;
+}
+
+/*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::sampleRasters(GdalRaster::Point& poi)
+void GeoIndexedRaster::sampleRasters(const GdalRaster::Point& poi)
 {
     /* Create additional reader threads if needed */
     createThreads();
@@ -355,6 +428,53 @@ void GeoIndexedRaster::sampleRasters(GdalRaster::Point& poi)
             {
                 reader->raster = item->raster;
                 reader->poi = poi;
+                reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+                signaledReaders++;
+            }
+            reader->sync->unlock();
+        }
+        key = cache.next(&item);
+    }
+
+    /* Wait for readers to finish sampling */
+    for(int j = 0; j < signaledReaders; j++)
+    {
+        reader_t* reader = readers[j];
+        reader->sync->lock();
+        {
+            while(reader->raster != NULL)
+                reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
+        }
+        reader->sync->unlock();
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * subsetRasters
+ *----------------------------------------------------------------------------*/
+void  GeoIndexedRaster::subsetRasters(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright)
+{
+    /* Create additional reader threads if needed */
+    createThreads();
+
+    /* For each raster which is marked to be sampled, give it to the reader thread */
+    int signaledReaders = 0;
+    int i = 0;
+    cacheitem_t* item;
+
+    const char* key = cache.first(&item);
+    while(key != NULL)
+    {
+        if(item->enabled)
+        {
+            reader_t* reader = readers[i++];
+            reader->sync->lock();
+            {
+                reader->raster = item->raster;
+                reader->poi.clear();
+                reader->aoi_upleft   = upleft;
+                reader->aoi_lowright = lowright;
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
@@ -405,6 +525,30 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
     {
         updateCache();
         sampleRasters(poi);
+    }
+
+    return sampledRastersCnt;
+}
+
+/*----------------------------------------------------------------------------
+ * subset
+ *----------------------------------------------------------------------------*/
+int GeoIndexedRaster::subset(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright, int64_t gps)
+{
+    invalidateCache();
+    emptyGroupsList();
+
+    /* Clear atomic counter - incremented later by reader threads on sucessful sample */
+    sampledRastersCnt.store(0);
+
+    /* Initial call, open index file if not already opened */
+    if(featuresList.isempty())
+        openGeoIndexForAOI(upleft, lowright);
+
+    if(findRastersForAOI(upleft, lowright) && filterRasters(gps))
+    {
+        updateCache();
+        subsetRasters(upleft, lowright);
     }
 
     return sampledRastersCnt;
