@@ -3,6 +3,7 @@ import sliderule
 from sliderule import earthdata, h5, icesat2, gedi
 import argparse
 import logging
+import time
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""Subset granules""")
@@ -41,14 +42,14 @@ sliderule.init(args.domain, verbose=args.verbose, organization=args.organization
 region = sliderule.toregion(args.aoi)
 
 # Display Results
-def display_results(name, gdf):
-    print(f'{name}: {len(gdf)} x {len(gdf.keys())}')
-    print("    SlideRule Timing Profiles")
+def display_results(name, gdf, duration):
+    print(f'{name}')
+    print("\t{:20} {} elements".format("output:", f'{len(gdf)} x {len(gdf.keys())}'))
+    print("\t{:20} {} secs".format("total:", f'{duration:.6f}'))
     for key in sliderule.profiles:
-        print("        {:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
-    print("    ICESat2 Timing Profiles")
+        print("\t{:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
     for key in icesat2.profiles:
-        print("        {:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
+        print("\t{:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
 
 # Benchmark ATL06 Ancillary
 def atl06_ancillary():
@@ -81,5 +82,6 @@ if __name__ == '__main__':
         benchmarks_to_run = benchmarks.keys()
     # run benchmarks
     for benchmark in benchmarks_to_run:
+        tstart = time.perf_counter()
         gdf = benchmarks[benchmark]()
-        display_results(benchmark, gdf)
+        display_results(benchmark, gdf, time.perf_counter() - tstart)
