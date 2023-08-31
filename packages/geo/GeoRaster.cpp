@@ -76,8 +76,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSubsets(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
-                           int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -85,10 +84,11 @@ void GeoRaster::getSubsets(double upleft_x, double upleft_y, double lowright_x, 
     samplingMutex.lock();
     try
     {
-        GdalRaster::Point upleft(upleft_x, upleft_y);
-        GdalRaster::Point lowright(lowright_x, lowright_y);
+        GdalRaster::Point lowleft(lon_min, lat_min);
+        GdalRaster::Point upright(lon_max, lat_max);
 
-        raster.subsetAOI(upleft, lowright);
+        /* Get samples, if none found, return */
+        raster.subsetAOI(lowleft, upright);
         if(raster.sampled())
         {
             RasterSubset& subset = raster.getSubset();

@@ -53,7 +53,7 @@ print(string.format("\n-------------------------------------------------\nesa wo
 expResults = {{0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt', 7344, 4464, 1}}
 
 starttime = time.latch();
-tbl, status = dem:subset(-108.3412, 39.1956, -107.7292, 38.8236)
+tbl, status = dem:subset(-108.3412, 38.8236, -107.7292, 39.1956)
 stoptime = time.latch();
 print(string.format("subset time: %f", stoptime - starttime))
 runner.check(status == true)

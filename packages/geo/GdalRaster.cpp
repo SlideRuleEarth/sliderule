@@ -108,7 +108,7 @@ void GdalRaster::open(void)
     double geoTransform[6];
     CPLErr err = dset->GetGeoTransform(geoTransform);
     CHECK_GDALERR(err);
-    if(!GDALInvGeoTransform(geoTransform, invGeoTrnasform))
+    if(!GDALInvGeoTransform(geoTransform, invGeoTrans))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
     }
@@ -187,8 +187,17 @@ void GdalRaster::samplePOI(const Point& poi)
 /*----------------------------------------------------------------------------
  * subsetAOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::subsetAOI(const Point& upleft, const Point& lowright)
+void GdalRaster::subsetAOI(const Point& lowleft, const Point& upright)
 {
+    /*
+     * Notes on extent format:
+     * gdalwarp uses '-te xmin ymin xmax ymax'
+     * gdalbuildvrt uses '-te xmin ymin xmax ymax'
+     * gdal_translate uses '-projwin ulx uly lrx lry' or '-projwin xmin ymax xmax ymin'
+     *
+     * This function uses 'xmin ymin xmax ymax' for extent
+     */
+
     try
     {
         if(dset == NULL)
@@ -201,39 +210,53 @@ void GdalRaster::subsetAOI(const Point& upleft, const Point& lowright)
         if(subset.datatype == GDT_Unknown)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type");
 
-        if(!transf->Transform(1, (double*)&upleft.x, (double*)&upleft.y, (double*)&upleft.z))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", upleft.x, upleft.y, upleft.z);
+        mlog(DEBUG, "Before transform lowleft  (%.4lf, %.4lf)", lowleft.x, lowleft.y);
+        mlog(DEBUG, "Before transform upright  (%.4lf, %.4lf)", upright.x, upright.y);
 
-        if(!transf->Transform(1, (double*)&lowright.x, (double*)&lowright.y, (double*)&lowright.z))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", lowright.x, lowright.y, lowright.z);
+        /* Transform AOI's extent to raster coords */
+        if(!transf->Transform(1, (double*)&lowleft.x, (double*)&lowleft.y, (double*)&lowleft.z))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", lowleft.x, lowleft.y, lowleft.z);
+
+        if(!transf->Transform(1, (double*)&upright.x, (double*)&upright.y, (double*)&upright.z))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", upright.x, upright.y, upright.z);
+
+        mlog(DEBUG, "After  transform upleft   (%.4lf, %.4lf)", upright.x, upright.y);
+        mlog(DEBUG, "After  transform lowright (%.4lf, %.4lf)", upright.x, upright.y);
 
         /*
-         * Attempt to subset raster only if it contains the area of interest.
+         * Attempt to subset raster only if it contains the AOI in projected coords.
          */
-        if((upleft.x   <= bbox.lon_max) && (upleft.y   <= bbox.lat_max) &&
-           (lowright.x >= bbox.lon_min) && (lowright.y >= bbox.lat_min))
+        if((lowleft.x >= bbox.lon_min) && (lowleft.y >= bbox.lat_min) &&
+           (upright.x <= bbox.lon_max) && (upright.y <= bbox.lat_max))
         {
-            const int upleft_col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * upleft.x + invGeoTrnasform[2] * upleft.y));
-            const int upleft_row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * upleft.y + invGeoTrnasform[5] * upleft.y));
+            /* Get AOI's extent pixel coords */
+            const int llx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * lowleft.x + invGeoTrans[2] * lowleft.y));
+            const int lly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * lowleft.y + invGeoTrans[5] * lowleft.y));
 
-            const int lowright_col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * lowright.x + invGeoTrnasform[2] * lowright.y));
-            const int lowright_row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * lowright.y + invGeoTrnasform[5] * lowright.y));
+            const int urx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * upright.x + invGeoTrans[2] * upright.y));
+            const int ury = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * upright.y + invGeoTrans[5] * upright.y));
 
-            subset.cols = lowright_col - upleft_col;
-            subset.rows = lowright_row - upleft_row;
+            /* AOI's upper left is always at (minx, maxy) calculated from extent converted into pixel coords */
+            const int maxx = std::max(llx, urx);
+            const int minx = std::min(llx, urx);
 
-            int typeSize = GDALGetDataTypeSizeBytes(subset.datatype);
-            int size     = subset.cols * subset.rows * typeSize;
+            const int maxy = std::max(lly, ury);
+            const int miny = std::min(lly, ury);
+
+            subset.cols = maxx - minx;
+            subset.rows = maxy - miny;
+
+            int64_t size  = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
             subset.data  = new uint8_t[size];
 
-            mlog(DEBUG, "reading %d bytes (%.1fMB), x,y: (%d, %d), xsize: %d, ysize: %d, datatype size %d bytes",
-                 size, (float)size / (1024 * 1024), upleft_col, upleft_row, subset.cols, subset.rows, typeSize);
+            mlog(DEBUG, "reading %ld bytes (%.1fMB), minx: %d, maxy: %d, xsize: %d, ysize: %d, datatype %s",
+                 size, (float)size / (1024 * 1024), minx, maxy, subset.cols, subset.rows, GDALGetDataTypeName(subset.datatype));
 
             int cnt    = 2;
             CPLErr err = CE_None;
             do
             {
-                err = band->RasterIO(GF_Read, upleft_col, upleft_row, subset.cols, subset.rows, subset.data, subset.cols, subset.rows, subset.datatype, 0, 0, NULL);
+                err = band->RasterIO(GF_Read, minx, maxy, subset.cols, subset.rows, subset.data, subset.cols, subset.rows, subset.datatype, 0, 0, NULL);
             } while(err != CE_None && cnt--);
 
             if(err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
@@ -316,8 +339,8 @@ void GdalRaster::readPixel(const Point& poi)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi.x + invGeoTrans[2] * poi.y));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi.y + invGeoTrans[5] * poi.y));
 
         // mlog(DEBUG, "%dP, %dL\n", col, row);
 
@@ -449,8 +472,8 @@ void GdalRaster::resamplePixel(const Point& poi)
 {
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi.x + invGeoTrans[2] * poi.y));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi.y + invGeoTrans[5] * poi.y));
 
         int windowSize, offset;
 
@@ -520,8 +543,8 @@ void GdalRaster::computeZonalStats(const Point& poi)
 
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi.x + invGeoTrans[2] * poi.y));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi.y + invGeoTrans[5] * poi.y));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 

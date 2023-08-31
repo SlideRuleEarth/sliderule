@@ -111,19 +111,18 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSubsets(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
-                                  int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
     std::ignore = param;
 
     samplingMutex.lock();
     try
     {
-        GdalRaster::Point upleft(upleft_x, upleft_y);
-        GdalRaster::Point lowright(lowright_x, lowright_y);
+        GdalRaster::Point lowleft(lon_min, lat_min);
+        GdalRaster::Point upright(lon_max, lat_max);
 
         /* Get samples, if none found, return */
-        if(subset(upleft, lowright, gps) == 0)
+        if(subset(lowleft, upright, gps) == 0)
         {
             samplingMutex.unlock();
             return;

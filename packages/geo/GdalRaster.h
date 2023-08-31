@@ -123,7 +123,7 @@ class GdalRaster
         virtual           ~GdalRaster     (void);
         void               open           (void);
         void               samplePOI      (const Point& poi);
-        void               subsetAOI      (const Point& upleft, const Point& lowright);
+        void               subsetAOI      (const Point& lowleft, const Point& upright);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         RasterSubset&      getSubset      (void) { return subset; }
@@ -176,7 +176,7 @@ class GdalRaster
         double          cellSize;
         bbox_t          bbox;
         uint32_t        radiusInPixels;
-        double          invGeoTrnasform[6];
+        double          invGeoTrans[6];
 
         /*--------------------------------------------------------------------
         * Methods

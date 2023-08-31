@@ -275,11 +275,11 @@ int RasterObject::luaSubset(lua_State *L)
         /* Get Self */
         lua_obj = (RasterObject*)getLuaSelf(L, 1);
 
-        /* Get Coordinates */
-        double upleft_x   = getLuaFloat(L, 2);
-        double upleft_y   = getLuaFloat(L, 3);
-        double lowright_x = getLuaFloat(L, 4);
-        double lowright_y = getLuaFloat(L, 5);
+        /* Get extent */
+        double lon_min = getLuaFloat(L, 2);
+        double lat_min = getLuaFloat(L, 3);
+        double lon_max = getLuaFloat(L, 4);
+        double lat_max = getLuaFloat(L, 5);
         const char* closest_time_str = getLuaString(L, 6, true, NULL);
 
         /* Get gps closest time (overrides params provided closest time) */
@@ -291,7 +291,7 @@ int RasterObject::luaSubset(lua_State *L)
 
         /* Get subset */
         std::vector<RasterSubset> slist;
-        lua_obj->getSubsets(upleft_x, upleft_y, lowright_x, lowright_y, gps, slist, NULL);
+        lua_obj->getSubsets(lon_min, lat_min, lon_max, lat_max, gps, slist, NULL);
 
         if(slist.size() > 0)
         {

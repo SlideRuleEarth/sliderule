@@ -206,10 +206,9 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSubsets(double upleft_x, double upleft_y, double lowright_x, double lowright_y,
-                             int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void MeritRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
-    std::ignore = upleft_x = upleft_y = lowright_x = lowright_y = gps;
+    std::ignore = lon_min = lon_max = lat_max = lat_min = gps;
     std::ignore = slist;
     std::ignore = param;
 }
