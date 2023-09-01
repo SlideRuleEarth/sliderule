@@ -56,6 +56,7 @@ runner.check(status == true)
 runner.check(tbl ~= nil)
 print(string.format("POI sample time: %.2f", stoptime - starttime))
 
+-- AOI extent
 local llx = -108.3412
 local lly =   38.8236
 local urx = -107.7292
@@ -77,7 +78,7 @@ for i, v in ipairs(tbl) do
     local bytes = cols*rows* GDT_datasize[datatype]
     local mbytes = bytes / (1024*1024)
     -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-    print(string.format("subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
 end
 
 
@@ -95,6 +96,7 @@ runner.check(status == true)
 runner.check(tbl ~= nil)
 print(string.format("POI sample time: %.2f", stoptime - starttime))
 
+-- AOI extent
 llx =  149.81
 lly =   69.81
 urx =  150.00
@@ -115,7 +117,7 @@ for i, v in ipairs(tbl) do
     local bytes = cols*rows* GDT_datasize[datatype]
     local mbytes = bytes / (1024*1024)
     -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-    print(string.format("subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
 end
 
 demType = "rema-mosaic"
@@ -131,6 +133,7 @@ runner.check(status == true)
 runner.check(tbl ~= nil)
 print(string.format("POI sample time: %.2f", stoptime - starttime))
 
+-- AOI extent
 llx =  149.80
 lly =  -70.00
 urx =  150.01
@@ -151,7 +154,7 @@ for i, v in ipairs(tbl) do
     local bytes = cols*rows* GDT_datasize[datatype]
     local mbytes = bytes / (1024*1024)
     -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-    print(string.format("subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
 end
 
 os.exit()

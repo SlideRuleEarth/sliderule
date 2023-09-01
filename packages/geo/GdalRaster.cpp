@@ -206,8 +206,8 @@ void GdalRaster::subsetAOI(const Point& lowleft, const Point& upright)
         _sampled = false;
         subset.clear();
 
-        subset.datatype = band->GetRasterDataType();
-        if(subset.datatype == GDT_Unknown)
+        GDALDataType dtype = band->GetRasterDataType();
+        if(dtype == GDT_Unknown)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type");
 
         mlog(DEBUG, "Before transform lowleft  (%.4lf, %.4lf)", lowleft.x, lowleft.y);
@@ -224,45 +224,80 @@ void GdalRaster::subsetAOI(const Point& lowleft, const Point& upright)
         mlog(DEBUG, "After  transform lowright (%.4lf, %.4lf)", upright.x, upright.y);
 
         /*
-         * Attempt to subset raster only if it contains the AOI in projected coords.
+         * After projecting to raster coords the lowerleft and upright extent points may no longer be in the same relation.
+         * Taking it under consideration calculate upper left point in raster coords for Pixel(0,0)
+         * and low right for calculating size of subset window in pixels.
          */
-        if((lowleft.x >= bbox.lon_min) && (lowleft.y >= bbox.lat_min) &&
-           (upright.x <= bbox.lon_max) && (upright.y <= bbox.lat_max))
+        double maxx = std::max(lowleft.x, upright.x);
+        double minx = std::min(lowleft.x, upright.x);
+
+        double maxy = std::max(lowleft.y, upright.y);
+        double miny = std::min(lowleft.y, upright.y);
+
+        /*
+         * Make sure the AOI fits in the raster's bbox, if it does not clip it (for now)
+         */
+        if(maxx > bbox.lon_max)
         {
-            /* Get AOI's extent pixel coords */
-            const int llx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * lowleft.x + invGeoTrans[2] * lowleft.y));
-            const int lly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * lowleft.y + invGeoTrans[5] * lowleft.y));
-
-            const int urx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * upright.x + invGeoTrans[2] * upright.y));
-            const int ury = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * upright.y + invGeoTrans[5] * upright.y));
-
-            /* AOI's upper left is always at (minx, maxy) calculated from extent converted into pixel coords */
-            const int maxx = std::max(llx, urx);
-            const int minx = std::min(llx, urx);
-
-            const int maxy = std::max(lly, ury);
-            const int miny = std::min(lly, ury);
-
-            subset.cols = maxx - minx;
-            subset.rows = maxy - miny;
-
-            int64_t size  = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
-            subset.data  = new uint8_t[size];
-
-            mlog(DEBUG, "reading %ld bytes (%.1fMB), minx: %d, maxy: %d, xsize: %d, ysize: %d, datatype %s",
-                 size, (float)size / (1024 * 1024), minx, maxy, subset.cols, subset.rows, GDALGetDataTypeName(subset.datatype));
-
-            int cnt    = 2;
-            CPLErr err = CE_None;
-            do
-            {
-                err = band->RasterIO(GF_Read, minx, maxy, subset.cols, subset.rows, subset.data, subset.cols, subset.rows, subset.datatype, 0, 0, NULL);
-            } while(err != CE_None && cnt--);
-
-            if(err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
-            _sampled = true;
-            subset.time = gpsTime;
+            mlog(INFO, "Clipping maxx %.4lf to raster's max_lon %.4lf", maxx, bbox.lon_max);
+            maxx = bbox.lon_max;
         }
+
+        if(maxy > bbox.lat_max)
+        {
+            mlog(INFO, "Clipping maxy %.4lf to raster's max_lat %.4lf", maxy, bbox.lat_max);
+            maxy = bbox.lat_max;
+        }
+
+        if(minx < bbox.lon_min)
+        {
+            mlog(INFO, "Clipping minx %.4lf to raster's min_lon %.4lf", minx, bbox.lon_min);
+            minx = bbox.lon_min;
+        }
+
+        if(miny < bbox.lat_min)
+        {
+            mlog(INFO, "Clipping miny %.4lf to raster's min_lat %.4lf", miny, bbox.lat_min);
+            miny = bbox.lat_min;
+        }
+
+        /* Projected clipped points for AOI  */
+        Point upleft(minx, maxy);
+        Point lowright(maxx, miny);
+
+        /* Get AOI window to read in pixel coords */
+        const int ulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * upleft.x + invGeoTrans[2] * upleft.y));
+        const int uly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * upleft.y + invGeoTrans[5] * upleft.y));
+
+        const int lrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * lowright.x + invGeoTrans[2] * lowright.y));
+        const int lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * lowright.y + invGeoTrans[5] * lowright.y));
+
+        int cols2read = lrx - ulx;
+        int rows2read = lry - uly;
+
+        int64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
+        uint8_t* data = new uint8_t[size];
+
+        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %d, rows2read: %d, datatype %s",
+             size, (float)size / (1024 * 1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
+
+        int cnt    = 2;
+        CPLErr err = CE_None;
+        do
+        {
+            err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, data, cols2read, rows2read, dtype, 0, 0, NULL);
+        } while(err != CE_None && cnt--);
+
+        if(err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+
+        _sampled    = true;
+
+        /* Update subset info returned to caller */
+        subset.data     = data;
+        subset.datatype = dtype;
+        subset.cols     = cols2read;
+        subset.rows     = rows2read;
+        subset.time     = gpsTime;
     }
     catch (const RunTimeException &e)
     {
