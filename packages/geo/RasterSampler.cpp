@@ -162,35 +162,55 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
     assert(lon_key);
     assert(lat_key);
 
+    /* Initialize Class Data */
     raster = _raster;
     rasterKey = StringLib::duplicate(raster_key);
-
     outQ = new Publisher(outq_name);
 
-    recordSizeBytes = RecordObject::getRecordDataSize(rec_type);
+    /* Determine Record Batch Size */
+    batchRecordSizeBytes = 0;
+    const char* batch_rec_type = NULL;
+    Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
+    Dictionary<RecordObject::field_t>::Iterator field_iter(*fields);
+    for(int i = 0; i < field_iter.length; i++)
+    {
+        if(field_iter[i].value.flags & RecordObject::BATCH)
+        {
+            batch_rec_type = field_iter[i].key;
+            batchRecordSizeBytes = RecordObject::getRecordDataSize(batch_rec_type);
+            break;
+        }
+    }
+
+    /* Determine Record Size */
+    recordSizeBytes = RecordObject::getRecordDataSize(rec_type) + batchRecordSizeBytes;
     if(recordSizeBytes <= 0)
     {
         mlog(CRITICAL, "Failed to get size of extent for record type: %s", rec_type);
     }
 
+    /* Get Index Field (e.g. Extent Id) */
     indexField = RecordObject::getDefinedField(rec_type, index_key);
     if(indexField.type == RecordObject::INVALID_FIELD)
     {
         mlog(CRITICAL, "Failed to get field %s from record type: %s", index_key, rec_type);
     }
 
+    /* Get Longitude Field */
     lonField = RecordObject::getDefinedField(rec_type, lon_key);
     if(lonField.type == RecordObject::INVALID_FIELD)
     {
         mlog(CRITICAL, "Failed to get field %s from record type: %s", lon_key, rec_type);
     }
 
+    /* Get Latitude Field */
     latField = RecordObject::getDefinedField(rec_type, lat_key);
     if(latField.type == RecordObject::INVALID_FIELD)
     {
         mlog(CRITICAL, "Failed to get field %s from record type: %s", lat_key, rec_type);
     }
 
+    /* Get Time Field */
     timeField.type = RecordObject::INVALID_FIELD;
     if(time_key)
     {
@@ -201,6 +221,7 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
         }
     }
 
+    /* Get Height Field */
     heightField.type = RecordObject::INVALID_FIELD;
     if(height_key)
     {
@@ -239,12 +260,17 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
     /* Determine Number of Rows in Record */
     int record_size_bytes = record->getAllocatedDataSize();
-    int num_extents = record_size_bytes / recordSizeBytes;
-    int left_over = record_size_bytes % recordSizeBytes;
-    if(left_over > 0)
+    int batch_size_bytes = record_size_bytes - (recordSizeBytes - batchRecordSizeBytes);
+    int num_batches = 1;
+    if(batch_size_bytes > 0)
     {
-        mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, recordSizeBytes);
-        return false;
+        num_batches = batch_size_bytes / batchRecordSizeBytes;
+        int left_over = batch_size_bytes % batchRecordSizeBytes;
+        if(left_over > 0)
+        {
+            mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), batch_size_bytes, batchRecordSizeBytes);
+            return false;
+        }
     }
 
     /* Initialize Local Fields */
@@ -255,26 +281,26 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
     RecordObject::field_t height_field = heightField;
 
     /* Loop Through Each Record in Batch */
-    for(int extent = 0; extent < num_extents; extent++)
+    for(int batch = 0; batch < num_batches; batch++)
     {
-        /* Get Extent Id */
+        /* Get Index (e.g. Extent Id) */
         uint64_t index = (uint64_t)record->getValueInteger(index_field);
-        index_field.offset += (recordSizeBytes * 8);
+        index_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Longitude */
         double lon_val = record->getValueReal(lon_field);
-        lon_field.offset += (recordSizeBytes * 8);
+        lon_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Latitude */
         double lat_val = record->getValueReal(lat_field);
-        lat_field.offset += (recordSizeBytes * 8);
+        lat_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Time */
         long gps = 0;
         if(time_field.type != RecordObject::INVALID_FIELD)
         {
             long time_val = record->getValueInteger(time_field);
-            time_field.offset += (recordSizeBytes * 8);
+            time_field.offset += (batchRecordSizeBytes * 8);
             gps = TimeLib::sysex2gpstime(time_val);
         }
 
@@ -283,7 +309,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         if(height_field.type != RecordObject::INVALID_FIELD)
         {
             height_val = record->getValueReal(height_field);
-            height_field.offset += (recordSizeBytes * 8);
+            height_field.offset += (batchRecordSizeBytes * 8);
         }
 
         /* Sample Raster */

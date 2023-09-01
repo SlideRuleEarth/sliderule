@@ -80,7 +80,7 @@ const RecordObject::fieldDef_t SwotL2Reader::scanRecDef[] = {
 const char* SwotL2Reader::geoRecType = "swotl2geo";
 const RecordObject::fieldDef_t SwotL2Reader::geoRecDef[] = {
     {"granule",     RecordObject::STRING,   offsetof(geo_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS},
-    {"scan",        RecordObject::USER,     offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS}
+    {"scan",        RecordObject::USER,     offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 /******************************************************************************

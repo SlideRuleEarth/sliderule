@@ -15,11 +15,10 @@ local args = {
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     source_rec      = "atl03rec",
     result_rec      = "atl06rec",
-    result_batch    = "atl06rec.elevation",
-    index_field     = "extent_id",
-    lon_field       = "longitude",
-    lat_field       = "latitude",
-    height_field    = "h_mean"
+    index_field     = "elevation.extent_id",
+    lon_field       = "elevation.longitude",
+    lat_field       = "elevation.latitude",
+    height_field    = "elevation.h_mean"
 }
 
 local rqst_parms    = icesat2.parms(parms)

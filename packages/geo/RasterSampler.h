@@ -128,6 +128,7 @@ class RasterSampler: public DispatchObject
         const char*             rasterKey;
         Publisher*              outQ;
         int                     recordSizeBytes;
+        int                     batchRecordSizeBytes;
         RecordObject::field_t   indexField;
         RecordObject::field_t   lonField;
         RecordObject::field_t   latField;

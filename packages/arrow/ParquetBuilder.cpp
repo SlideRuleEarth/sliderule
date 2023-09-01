@@ -125,11 +125,11 @@ struct ParquetBuilder::impl
             /* Check for Batch Record Type */
             if((*batch_rec_type == NULL) && (field.flags & RecordObject::BATCH))
             {
-                *batch_rec_type = field_name;
+                *batch_rec_type = field.exttype;
             }
 
             /* Add to Schema */
-            if(field.elements == 1)
+            if(field.elements == 1 || field.type == RecordObject::USER)
             {
                 switch(field.type)
                 {
@@ -413,7 +413,7 @@ struct ParquetBuilder::impl
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <batch_rec_type>, <id>, [<x_key>, <y_key>], [<time_key>])
+ * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <id>, [<x_key>, <y_key>], [<time_key>])
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
@@ -522,7 +522,6 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
     outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
-
 
     /* Create Unique Temporary Filename */
     SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);

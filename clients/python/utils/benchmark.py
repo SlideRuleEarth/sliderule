@@ -4,6 +4,7 @@ from sliderule import earthdata, h5, icesat2, gedi
 import argparse
 import logging
 import time
+import os
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""Subset granules""")
@@ -18,6 +19,7 @@ parser.add_argument('--desired_nodes',  '-n',   type=int,               default=
 parser.add_argument('--time_to_live',   '-l',   type=int,               default=120)
 parser.add_argument('--verbose',        '-v',   action='store_true',    default=False)
 parser.add_argument('--loglvl',         '-j',   type=str,               default="CRITICAL")
+parser.add_argument('--nocleanup',      '-u',   action='store_true',    default=False)
 args,_ = parser.parse_known_args()
 
 # Initialize Organization
@@ -58,7 +60,7 @@ def atl06_ancillary():
         "srt":              icesat2.SRT_LAND,
         "atl03_geo_fields": ["solar_elevation"]
     }
-    return icesat2.atl06p(parms, args.asset, resources=[args.granule03])
+    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
 
 # Benchmark ATL03 Ancillary
 def atl03_ancillary():
@@ -67,14 +69,31 @@ def atl03_ancillary():
         "srt":              icesat2.SRT_LAND,
         "atl03_ph_fields":  ["ph_id_count"]
     }
-    return icesat2.atl06p(parms, args.asset, resources=[args.granule03])
+    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+
+# Benchmark ATL06 Parquet
+def atl06_parquet():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "cnf":              icesat2.CNF_SURFACE_LOW,
+        "ats":              3.0,
+        "cnt":              2,
+        "len":              10.0,
+        "res":              10.0,
+        "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
+    gdf = icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+    if not args.nocleanup:
+        os.remove("testfile.parquet")
+    return gdf
 
 # Main
 if __name__ == '__main__':
     # define benchmarks
     benchmarks = {
-        "atl06anc": atl06_ancillary,
-        "atl03anc": atl03_ancillary
+        "atl06_ancillary":  atl06_ancillary,
+        "atl03_ancillary":  atl03_ancillary,
+        "atl06_parquet":    atl06_parquet,
     }
     # build list of benchmarks to run
     benchmarks_to_run = args.benchmarks
