@@ -107,7 +107,7 @@ const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
 
 const char* Atl06Dispatch::atRecType = "atl06rec";
 const RecordObject::fieldDef_t Atl06Dispatch::atRecDef[] = {
-    {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS}
+    {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl06Dispatch::ancFieldRecType = "atl06anc.field";
@@ -120,7 +120,7 @@ const RecordObject::fieldDef_t Atl06Dispatch::ancFieldRecDef[] = {
 const char* Atl06Dispatch::ancRecType = "atl06anc";
 const RecordObject::fieldDef_t Atl06Dispatch::ancRecDef[] = {
     {"extent_id",               RecordObject::UINT64,   offsetof(anc_t, extent_id),                 1,  NULL, NATIVE_FLAGS},
-    {"fields",                  RecordObject::USER,     offsetof(anc_t, fields),                    0,  ancFieldRecType, NATIVE_FLAGS}
+    {"fields",                  RecordObject::USER,     offsetof(anc_t, fields),                    0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 /* Lua Functions */
@@ -163,14 +163,14 @@ int Atl06Dispatch::luaCreate (lua_State* L)
 void Atl06Dispatch::init (void)
 {
     /*
-     * Note: the size associated with these records includes only one element;
-     * this forces any software accessing more than one element to manage
-     * the size of the record manually.
+     * Note: the size associated with these records includes no elements;
+     * this forces any software accessing an element to manage the size
+     * of the record manually.
      */
     RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),                NULL);
-    RECDEF(atRecType,       atRecDef,       offsetof(atl06_t, elevation[1]),    NULL);
+    RECDEF(atRecType,       atRecDef,       offsetof(atl06_t, elevation),       NULL);
     RECDEF(ancFieldRecType, ancFieldRecDef, sizeof(anc_field_t),                NULL);
-    RECDEF(ancRecType,      ancRecDef,      offsetof(anc_t, fields[1]),         NULL);
+    RECDEF(ancRecType,      ancRecDef,      offsetof(anc_t, fields),            NULL);
 }
 
 /******************************************************************************

@@ -1059,6 +1059,16 @@ int RecordObject::getRecordFields(const char* rec_type, char*** field_names, fie
 }
 
 /*----------------------------------------------------------------------------
+ * getRecordFields
+ *----------------------------------------------------------------------------*/
+Dictionary<RecordObject::field_t>* RecordObject::getRecordFields (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return &def->fields;
+}
+
+/*----------------------------------------------------------------------------
  * parseSerial
  *
  *  Allocates no memory, returns size of type
@@ -1572,7 +1582,6 @@ RecordObject::recordDefErr_t RecordObject::addDefinition(definition_t** rec_def,
         def = getDefinition(rec_type);
         if(def == NULL)
         {
-            assert(data_size > 0);
             def = new definition_t(rec_type, id_field, data_size, max_fields);
             if(!definitions.add(rec_type, def))
             {

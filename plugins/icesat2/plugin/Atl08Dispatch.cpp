@@ -74,7 +74,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
 const RecordObject::fieldDef_t Atl08Dispatch::batchRecDef[] = {
-    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS}
+    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl08Dispatch::waveRecType = "waverec";
@@ -131,13 +131,13 @@ int Atl08Dispatch::luaCreate (lua_State* L)
 void Atl08Dispatch::init (void)
 {
     /*
-     * Note: the size associated with the batch record includes only one set of
-     * vegetation stats; this forces any software accessing more than one set
-     * of stats to manage the size of the record manually.  Same for waveform
+     * Note: the size associated with the batch record includes no
+     * vegetation stats; this forces any software accessing a stats
+     * to manage the size of the record manually.  Same for waveform
      * record - except it allows for a waveform of no bins.
      */
     RECDEF(vegRecType, vegRecDef, sizeof(vegetation_t), NULL);
-    RECDEF(batchRecType, batchRecDef, offsetof(atl08_t, vegetation[1]), NULL);
+    RECDEF(batchRecType, batchRecDef, offsetof(atl08_t, vegetation), NULL);
     RECDEF(waveRecType, waveRecDef, offsetof(waveform_t, waveform), NULL);
 }
 

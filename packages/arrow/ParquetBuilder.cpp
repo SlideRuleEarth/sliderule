@@ -57,315 +57,6 @@ using std::make_shared;
 using std::vector;
 
 /******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
-
-struct ParquetBuilder::impl
-{
-    shared_ptr<arrow::Schema>               schema;
-    unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
-
-    static shared_ptr<arrow::Schema> defineTableSchema (field_list_t& field_list, const char* batch_rec_type, const geo_data_t& geo);
-    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* batch_rec_type, int offset);
-    static void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-    static void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-    static void appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const shared_ptr<arrow::Schema>& _schema, const field_iterator_t* field_iterator, const char* index_key);
-};
-
-/*----------------------------------------------------------------------------
- * defineTableSchema
- *----------------------------------------------------------------------------*/
-shared_ptr<arrow::Schema> ParquetBuilder::impl::defineTableSchema (field_list_t& field_list, const char* batch_rec_type, const geo_data_t& geo)
-{
-    vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, geo, batch_rec_type, 0);
-    if(geo.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
-    return make_shared<arrow::Schema>(schema_vector);
-}
-
-/*----------------------------------------------------------------------------
- * addFieldsToSchema
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::impl::addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, field_list_t& field_list, const geo_data_t& geo, const char* batch_rec_type, int offset)
-{
-    /* Loop Through Fields in Record */
-    char** field_names = NULL;
-    RecordObject::field_t** fields = NULL;
-    int num_fields = RecordObject::getRecordFields(batch_rec_type, &field_names, &fields);
-    for(int i = 0; i < num_fields; i++)
-    {
-        bool add_field_to_list = true;
-
-        /* Check for Geometry Columns */
-        if(geo.as_geo)
-        {
-            if( (geo.lat_field.offset == (fields[i]->offset + offset)) ||
-                (geo.lon_field.offset == (fields[i]->offset + offset)) )
-            {
-                /* skip over source columns for geometry as they will be added
-                 * separately as a part of the dedicated geometry column */
-                continue;
-            }
-        }
-
-        /* Add to Schema */
-        switch(fields[i]->type)
-        {
-            case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_names[i], arrow::int8()));                       break;
-            case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_names[i], arrow::int16()));                      break;
-            case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_names[i], arrow::int32()));                      break;
-            case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_names[i], arrow::int64()));                      break;
-            case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_names[i], arrow::uint8()));                      break;
-            case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint16()));                     break;
-            case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint32()));                     break;
-            case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_names[i], arrow::uint64()));                     break;
-            case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_names[i], arrow::float32()));                    break;
-            case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_names[i], arrow::float64()));                    break;
-            case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_names[i], arrow::timestamp(arrow::TimeUnit::NANO)));    break;
-            case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_names[i], arrow::utf8()));                       break;
-
-            case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, geo, fields[i]->exttype, fields[i]->offset);
-                                        add_field_to_list = false;
-                                        break;
-
-            default:                    add_field_to_list = false;
-                                        break;
-        }
-
-        /* Add to Field List */
-        if(add_field_to_list)
-        {
-            RecordObject::field_t column_field = *fields[i];
-            column_field.offset += offset;
-            field_list.add(column_field);
-        }
-
-        /* Free Allocations */
-        delete [] field_names[i];
-        delete  fields[i];
-    }
-
-    /* Clean Up */
-    if(fields) delete [] fields;
-    if(field_names) delete [] field_names;
-
-    /* Return Success */
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * appendGeoMetaData
- *----------------------------------------------------------------------------*/
-void ParquetBuilder::impl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
-{
-    /* Initialize Meta Data String */
-    SafeString geostr(R"json({
-        "version": "1.0.0-beta.1",
-        "primary_column": "geometry",
-        "columns": {
-            "geometry": {
-                "encoding": "WKB",
-                "geometry_types": ["Point"],
-                "crs": {
-                    "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
-                    "type": "GeographicCRS",
-                    "name": "WGS 84 longitude-latitude",
-                    "datum": {
-                        "type": "GeodeticReferenceFrame",
-                        "name": "World Geodetic System 1984",
-                        "ellipsoid": {
-                            "name": "WGS 84",
-                            "semi_major_axis": 6378137,
-                            "inverse_flattening": 298.257223563
-                        }
-                    },
-                    "coordinate_system": {
-                        "subtype": "ellipsoidal",
-                        "axis": [
-                            {
-                                "name": "Geodetic longitude",
-                                "abbreviation": "Lon",
-                                "direction": "east",
-                                "unit": "degree"
-                            },
-                            {
-                                "name": "Geodetic latitude",
-                                "abbreviation": "Lat",
-                                "direction": "north",
-                                "unit": "degree"
-                            }
-                        ]
-                    },
-                    "id": {
-                        "authority": "OGC",
-                        "code": "CRS84"
-                    }
-                },
-                "edges": "planar",
-                "bbox": [-180.0, -90.0, 180.0, 90.0],
-                "epoch": 2018.0
-            }
-        }
-    })json");
-
-    /* Reformat JSON */
-    const char* oldtxt[2] = { "    ", "\n" };
-    const char* newtxt[2] = { "",     " " };
-    geostr.inreplace(oldtxt, newtxt, 2);
-
-    /* Append Meta String */
-    const char* str = geostr.str();
-    metadata->Append("geo", str);
-}
-
-/*----------------------------------------------------------------------------
- * appendServerMetaData
- *----------------------------------------------------------------------------*/
-void ParquetBuilder::impl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
-{
-    /* Build Launch Time String */
-    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
-    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-
-    /* Build Duration String */
-    int64_t duration = TimeLib::gpstime() - launch_time_gps;
-    SafeString durationstr("%ld", duration);
-
-    /* Build Package String */
-    const char** pkg_list = LuaEngine::getPkgList();
-    SafeString packagestr("[");
-    if(pkg_list)
-    {
-        int index = 0;
-        while(pkg_list[index])
-        {
-            packagestr += pkg_list[index];
-            index++;
-            if(pkg_list[index]) packagestr += ", ";
-        }
-    }
-    packagestr += "]";
-
-    /* Initialize Meta Data String */
-    SafeString metastr(R"json({
-        "server":
-        {
-            "environment":"$1",
-            "version":"$2",
-            "duration":$3,
-            "packages":$4,
-            "commit":"$5",
-            "launch":"$6"
-        }
-    })json");
-
-    /* Fill In Meta Data String */
-    const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
-    const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
-    metastr.inreplace(oldtxt, newtxt, 8);
-
-    /* Append Meta String */
-    const char* str = metastr.str();
-    metadata->Append("sliderule", str);
-}
-
-/*----------------------------------------------------------------------------
- * appendServerMetaData
- *----------------------------------------------------------------------------*/
-void ParquetBuilder::impl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata,
-                                                 const shared_ptr<arrow::Schema>& _schema,
-                                                 const field_iterator_t* field_iterator,
-                                                 const char* index_key)
-{
-    /* Initialize Pandas Meta Data String */
-    SafeString pandasstr(R"json({
-        "index_columns": [$INDEX],
-        "column_indexes": [
-            {
-                "name": null,
-                "field_name": null,
-                "pandas_type": "unicode",
-                "numpy_type": "object",
-                "metadata": {"encoding": "UTF-8"}
-            }
-        ],
-        "columns": [$COLUMNS],
-        "creator": {"library": "pyarrow", "version": "10.0.1"},
-        "pandas_version": "1.5.3"
-    })json");
-
-    /* Build Columns String */
-    SafeString columns;
-    int index = 0;
-    for(const std::string& field_name: _schema->field_names())
-    {
-        /* Initialize Column String */
-        SafeString columnstr(R"json({"name": "$NAME", "field_name": "$NAME", "pandas_type": "$PTYPE", "numpy_type": "$NTYPE", "metadata": null})json");
-        const char* pandas_type = "";
-        const char* numpy_type = "";
-        bool is_last_entry = false;
-
-        if(index < field_iterator->length)
-        {
-            /* Add Column from Field List */
-            RecordObject::field_t field = (*field_iterator)[index++];
-            switch(field.type)
-            {
-                case RecordObject::DOUBLE:  pandas_type = "float64";    numpy_type = "float64";         break;
-                case RecordObject::FLOAT:   pandas_type = "float32";    numpy_type = "float32";         break;
-                case RecordObject::INT8:    pandas_type = "int8";       numpy_type = "int8";            break;
-                case RecordObject::INT16:   pandas_type = "int16";      numpy_type = "int16";           break;
-                case RecordObject::INT32:   pandas_type = "int32";      numpy_type = "int32";           break;
-                case RecordObject::INT64:   pandas_type = "int64";      numpy_type = "int64";           break;
-                case RecordObject::UINT8:   pandas_type = "uint8";      numpy_type = "uint8";           break;
-                case RecordObject::UINT16:  pandas_type = "uint16";     numpy_type = "uint16";          break;
-                case RecordObject::UINT32:  pandas_type = "uint32";     numpy_type = "uint32";          break;
-                case RecordObject::UINT64:  pandas_type = "uint64";     numpy_type = "uint64";          break;
-                case RecordObject::TIME8:   pandas_type = "datetime";   numpy_type = "datetime64[ns]";  break;
-                case RecordObject::STRING:  pandas_type = "bytes";      numpy_type = "object";          break;
-                default:                    pandas_type = "bytes";      numpy_type = "object";          break;
-            }
-        }
-        else if(StringLib::match(field_name.c_str(), "geometry"))
-        {
-            /* Add Column for Geometry */
-            pandas_type = "bytes";
-            numpy_type = "object";
-            is_last_entry = true;
-        }
-
-        /* Fill In Column String */
-        const char* oldtxt[3] = { "$NAME", "$PTYPE", "$NTYPE" };
-        const char* newtxt[3] = { field_name.c_str(), pandas_type, numpy_type };
-        columnstr.inreplace(oldtxt, newtxt, 3);
-
-        /* Add Comma */
-        if(!is_last_entry)
-        {
-            columnstr += ", ";
-        }
-
-        /* Add Column String to Columns */
-        columns += columnstr;
-    }
-
-    /* Build Index String */
-    SafeString indexstr("\"%s\"", index_key ? index_key : "");
-    if(!index_key) indexstr = "";
-
-    /* Fill In Pandas Meta Data String */
-    const char* oldtxt[4] = { "    ", "\n", "$INDEX", "$COLUMNS" };
-    const char* newtxt[4] = { "", " ", indexstr.str(), columns.str() };
-    pandasstr.inreplace(oldtxt, newtxt, 4);
-
-    /* Append Meta String */
-    const char* str = pandasstr.str();
-    metadata->Append("pandas", str);
-}
-
-/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -390,11 +81,339 @@ const RecordObject::fieldDef_t ParquetBuilder::dataRecDef[] = {
 const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
 
 /******************************************************************************
+ * PRIVATE IMPLEMENTATION
+ ******************************************************************************/
+
+struct ParquetBuilder::impl
+{
+    shared_ptr<arrow::Schema>               schema;
+    unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
+
+    /*----------------------------------------------------------------------------
+    * addFieldsToSchema
+    *----------------------------------------------------------------------------*/
+    static bool addFieldsToSchema (vector<shared_ptr<arrow::Field>>& schema_vector, 
+                                   field_list_t& field_list, 
+                                   const char** batch_rec_type, 
+                                   const geo_data_t& geo, 
+                                   const char* rec_type, 
+                                   int offset, 
+                                   int flags)
+    {
+        /* Loop Through Fields in Record */
+        Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
+        Dictionary<RecordObject::field_t>::Iterator field_iter(*fields);
+        for(int i = 0; i < field_iter.length; i++)
+        {
+            Dictionary<RecordObject::field_t>::kv_t kv = field_iter[i];
+            const char* field_name = kv.key;
+            const RecordObject::field_t& field = kv.value;
+            bool add_field_to_list = true;
+
+            /* Check for Geometry Columns */
+            if(geo.as_geo)
+            {
+                if(StringLib::match(field_name, geo.x_key) || 
+                StringLib::match(field_name, geo.y_key))
+                {
+                    /* skip over source columns for geometry as they will be added
+                    * separately as a part of the dedicated geometry column */
+                    continue;
+                }
+            }
+
+            /* Check for Batch Record Type */
+            if((*batch_rec_type == NULL) && (field.flags & RecordObject::BATCH))
+            {
+                *batch_rec_type = field_name;
+            }
+
+            /* Add to Schema */
+            if(field.elements == 1)
+            {
+                switch(field.type)
+                {
+                    case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_name, arrow::int8()));       break;
+                    case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_name, arrow::int16()));      break;
+                    case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_name, arrow::int32()));      break;
+                    case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_name, arrow::int64()));      break;
+                    case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_name, arrow::uint8()));      break;
+                    case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_name, arrow::uint16()));     break;
+                    case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_name, arrow::uint32()));     break;
+                    case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_name, arrow::uint64()));     break;
+                    case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_name, arrow::float32()));    break;
+                    case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_name, arrow::float64()));    break;
+                    case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
+                    case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_name, arrow::utf8()));       break;
+
+                    case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, batch_rec_type, geo, field.exttype, field.offset, field.flags);
+                                                add_field_to_list = false;
+                                                break;
+
+                    default:                    add_field_to_list = false;
+                                                break;
+                }
+            }
+            else // array
+            {
+                switch(field.type)
+                {
+                    case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int8())));      break;
+                    case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int16())));     break;
+                    case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int32())));     break;
+                    case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int64())));     break;
+                    case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint8())));     break;
+                    case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint16())));    break;
+                    case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint32())));    break;
+                    case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint64())));    break;
+                    case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::float32())));   break;
+                    case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::float64())));   break;
+                    case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
+                    case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::utf8())));      break;
+
+                    case RecordObject::USER:    // arrays of user data types (i.e. nested structures) are not supported
+                                                add_field_to_list = false;
+                                                break;
+                                                
+                    default:                    add_field_to_list = false;
+                                                break;
+                }
+            }
+
+            /* Add to Field List */
+            if(add_field_to_list)
+            {
+                RecordObject::field_t column_field = field;
+                column_field.offset += offset;
+                column_field.flags |= flags;
+                field_list.add(column_field);
+            }
+        }
+
+        /* Return Success */
+        return true;
+    }
+    
+    /*----------------------------------------------------------------------------
+    * appendGeoMetaData
+    *----------------------------------------------------------------------------*/
+    static void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+    {
+        /* Initialize Meta Data String */
+        SafeString geostr(R"json({
+            "version": "1.0.0-beta.1",
+            "primary_column": "geometry",
+            "columns": {
+                "geometry": {
+                    "encoding": "WKB",
+                    "geometry_types": ["Point"],
+                    "crs": {
+                        "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
+                        "type": "GeographicCRS",
+                        "name": "WGS 84 longitude-latitude",
+                        "datum": {
+                            "type": "GeodeticReferenceFrame",
+                            "name": "World Geodetic System 1984",
+                            "ellipsoid": {
+                                "name": "WGS 84",
+                                "semi_major_axis": 6378137,
+                                "inverse_flattening": 298.257223563
+                            }
+                        },
+                        "coordinate_system": {
+                            "subtype": "ellipsoidal",
+                            "axis": [
+                                {
+                                    "name": "Geodetic longitude",
+                                    "abbreviation": "Lon",
+                                    "direction": "east",
+                                    "unit": "degree"
+                                },
+                                {
+                                    "name": "Geodetic latitude",
+                                    "abbreviation": "Lat",
+                                    "direction": "north",
+                                    "unit": "degree"
+                                }
+                            ]
+                        },
+                        "id": {
+                            "authority": "OGC",
+                            "code": "CRS84"
+                        }
+                    },
+                    "edges": "planar",
+                    "bbox": [-180.0, -90.0, 180.0, 90.0],
+                    "epoch": 2018.0
+                }
+            }
+        })json");
+
+        /* Reformat JSON */
+        const char* oldtxt[2] = { "    ", "\n" };
+        const char* newtxt[2] = { "",     " " };
+        geostr.inreplace(oldtxt, newtxt, 2);
+
+        /* Append Meta String */
+        const char* str = geostr.str();
+        metadata->Append("geo", str);
+        
+    }
+
+    /*----------------------------------------------------------------------------
+    * appendServerMetaData
+    *----------------------------------------------------------------------------*/
+    static void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+    {
+        /* Build Launch Time String */
+        int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
+        TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+        TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+        SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+
+        /* Build Duration String */
+        int64_t duration = TimeLib::gpstime() - launch_time_gps;
+        SafeString durationstr("%ld", duration);
+
+        /* Build Package String */
+        const char** pkg_list = LuaEngine::getPkgList();
+        SafeString packagestr("[");
+        if(pkg_list)
+        {
+            int index = 0;
+            while(pkg_list[index])
+            {
+                packagestr += pkg_list[index];
+                index++;
+                if(pkg_list[index]) packagestr += ", ";
+            }
+        }
+        packagestr += "]";
+
+        /* Initialize Meta Data String */
+        SafeString metastr(R"json({
+            "server":
+            {
+                "environment":"$1",
+                "version":"$2",
+                "duration":$3,
+                "packages":$4,
+                "commit":"$5",
+                "launch":"$6"
+            }
+        })json");
+
+        /* Fill In Meta Data String */
+        const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
+        const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
+        metastr.inreplace(oldtxt, newtxt, 8);
+
+        /* Append Meta String */
+        const char* str = metastr.str();
+        metadata->Append("sliderule", str);   
+    }
+
+    /*----------------------------------------------------------------------------
+    * appendPandasMetaData
+    *----------------------------------------------------------------------------*/
+    static void appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, 
+                                      const shared_ptr<arrow::Schema>& _schema, 
+                                      const field_iterator_t* field_iterator, 
+                                      const char* index_key)
+    {
+        /* Initialize Pandas Meta Data String */
+        SafeString pandasstr(R"json({
+            "index_columns": [$INDEX],
+            "column_indexes": [
+                {
+                    "name": null,
+                    "field_name": null,
+                    "pandas_type": "unicode",
+                    "numpy_type": "object",
+                    "metadata": {"encoding": "UTF-8"}
+                }
+            ],
+            "columns": [$COLUMNS],
+            "creator": {"library": "pyarrow", "version": "10.0.1"},
+            "pandas_version": "1.5.3"
+        })json");
+
+        /* Build Columns String */
+        SafeString columns;
+        int index = 0;
+        for(const std::string& field_name: _schema->field_names())
+        {
+            /* Initialize Column String */
+            SafeString columnstr(R"json({"name": "$NAME", "field_name": "$NAME", "pandas_type": "$PTYPE", "numpy_type": "$NTYPE", "metadata": null})json");
+            const char* pandas_type = "";
+            const char* numpy_type = "";
+            bool is_last_entry = false;
+
+            if(index < field_iterator->length)
+            {
+                /* Add Column from Field List */
+                RecordObject::field_t field = (*field_iterator)[index++];
+                switch(field.type)
+                {
+                    case RecordObject::DOUBLE:  pandas_type = "float64";    numpy_type = "float64";         break;
+                    case RecordObject::FLOAT:   pandas_type = "float32";    numpy_type = "float32";         break;
+                    case RecordObject::INT8:    pandas_type = "int8";       numpy_type = "int8";            break;
+                    case RecordObject::INT16:   pandas_type = "int16";      numpy_type = "int16";           break;
+                    case RecordObject::INT32:   pandas_type = "int32";      numpy_type = "int32";           break;
+                    case RecordObject::INT64:   pandas_type = "int64";      numpy_type = "int64";           break;
+                    case RecordObject::UINT8:   pandas_type = "uint8";      numpy_type = "uint8";           break;
+                    case RecordObject::UINT16:  pandas_type = "uint16";     numpy_type = "uint16";          break;
+                    case RecordObject::UINT32:  pandas_type = "uint32";     numpy_type = "uint32";          break;
+                    case RecordObject::UINT64:  pandas_type = "uint64";     numpy_type = "uint64";          break;
+                    case RecordObject::TIME8:   pandas_type = "datetime";   numpy_type = "datetime64[ns]";  break;
+                    case RecordObject::STRING:  pandas_type = "bytes";      numpy_type = "object";          break;
+                    default:                    pandas_type = "bytes";      numpy_type = "object";          break;
+                }
+            }
+            else if(StringLib::match(field_name.c_str(), "geometry"))
+            {
+                /* Add Column for Geometry */
+                pandas_type = "bytes";
+                numpy_type = "object";
+                is_last_entry = true;
+            }
+
+            /* Fill In Column String */
+            const char* oldtxt[3] = { "$NAME", "$PTYPE", "$NTYPE" };
+            const char* newtxt[3] = { field_name.c_str(), pandas_type, numpy_type };
+            columnstr.inreplace(oldtxt, newtxt, 3);
+
+            /* Add Comma */
+            if(!is_last_entry)
+            {
+                columnstr += ", ";
+            }
+
+            /* Add Column String to Columns */
+            columns += columnstr;
+        }
+
+        /* Build Index String */
+        SafeString indexstr("\"%s\"", index_key ? index_key : "");
+        if(!index_key) indexstr = "";
+
+        /* Fill In Pandas Meta Data String */
+        const char* oldtxt[4] = { "    ", "\n", "$INDEX", "$COLUMNS" };
+        const char* newtxt[4] = { "", " ", indexstr.str(), columns.str() };
+        pandasstr.inreplace(oldtxt, newtxt, 4);
+
+        /* Append Meta String */
+        const char* str = pandasstr.str();
+        metadata->Append("pandas", str);    
+    }
+};
+
+/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <batch_rec_type>, <id>, [<lon_key>, <lat_key>], [<time_key>])
+ * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <batch_rec_type>, <id>, [<x_key>, <y_key>], [<time_key>])
  *----------------------------------------------------------------------------*/
 int ParquetBuilder::luaCreate (lua_State* L)
 {
@@ -407,34 +426,36 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* outq_name       = getLuaString(L, 2);
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
-        const char* batch_rec_type  = getLuaString(L, 5);
-        const char* id              = getLuaString(L, 6);
-        const char* lon_key         = getLuaString(L, 7, true, NULL);
-        const char* lat_key         = getLuaString(L, 8, true, NULL);
-        const char* index_key       = getLuaString(L, 9, true, NULL);
+        const char* id              = getLuaString(L, 5);
+        const char* x_key           = getLuaString(L, 6, true, NULL);
+        const char* y_key           = getLuaString(L, 7, true, NULL);
+        const char* index_key       = getLuaString(L, 8, true, NULL);
 
         /* Build Geometry Fields */
         geo_data_t geo;
         geo.as_geo = false;
-        if((lat_key != NULL) && (lon_key != NULL))
+        if((x_key != NULL) && (y_key != NULL))
         {
             geo.as_geo = true;
 
-            geo.lon_field = RecordObject::getDefinedField(batch_rec_type, lon_key);
-            if(geo.lon_field.type == RecordObject::INVALID_FIELD)
+            geo.x_field = RecordObject::getDefinedField(rec_type, x_key);
+            if(geo.x_field.type == RecordObject::INVALID_FIELD)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract longitude field [%s] from record type <%s>", lon_key, batch_rec_type);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract x field [%s] from record type <%s>", x_key, rec_type);
             }
 
-            geo.lat_field = RecordObject::getDefinedField(batch_rec_type, lat_key);
-            if(geo.lat_field.type == RecordObject::INVALID_FIELD)
+            geo.y_field = RecordObject::getDefinedField(rec_type, y_key);
+            if(geo.y_field.type == RecordObject::INVALID_FIELD)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract latitude field [%s] from record type <%s>", lat_key, batch_rec_type);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract y field [%s] from record type <%s>", y_key, rec_type);
             }
+
+            geo.x_key = StringLib::duplicate(x_key);
+            geo.y_key = StringLib::duplicate(y_key);
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, _parms, outq_name, inq_name, rec_type, batch_rec_type, id, geo, index_key));
+        return createLuaObject(L, new ParquetBuilder(L, _parms, outq_name, inq_name, rec_type, id, geo, index_key));
     }
     catch(const RunTimeException& e)
     {
@@ -469,44 +490,39 @@ void ParquetBuilder::deinit (void)
  *----------------------------------------------------------------------------*/
 ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* outq_name, const char* inq_name,
-                                const char* rec_type, const char* batch_rec_type,
-                                const char* id, geo_data_t geo, const char* index_key):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+                                const char* rec_type, const char* id, geo_data_t geo, const char* index_key):
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    parms(_parms),
+    recType(StringLib::duplicate(rec_type)),
+    batchRecType(NULL),
+    geoData(geo)
 {
     assert(_parms);
     assert(outq_name);
     assert(inq_name);
     assert(rec_type);
-    assert(batch_rec_type);
     assert(id);
-
-    /* Save Parms */
-    parms = _parms;
 
     /* Allocate Private Implementation */
     pimpl = new ParquetBuilder::impl;
 
-    /* Row Based Parameters */
-    rowSizeBytes = RecordObject::getRecordDataSize(batch_rec_type);
-    maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
+    /* Define Table Schema */    
+    vector<shared_ptr<arrow::Field>> schema_vector;
+    pimpl->addFieldsToSchema(schema_vector, fieldList, &batchRecType, geoData, rec_type, 0, 0);
+    if(geoData.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
+    pimpl->schema = make_shared<arrow::Schema>(schema_vector);
+    fieldIterator = new field_iterator_t(fieldList);
 
-    /* Initialize Record Type */
-    recType = StringLib::duplicate(rec_type);
+    /* Row Based Parameters */
+    batchRowSizeBytes = RecordObject::getRecordDataSize(batchRecType);
+    rowSizeBytes = RecordObject::getRecordDataSize(rec_type) + batchRowSizeBytes;
+    maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
 
     /* Initialize Queues */
     int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
     outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
-    /* Initialize GeoParquet Option */
-    geoData = geo;
-
-    /* Initialize Index Key */
-    indexKey = StringLib::duplicate(index_key);
-
-    /* Define Table Schema */
-    pimpl->schema = pimpl->defineTableSchema(fieldList, batch_rec_type, geoData);
-    fieldIterator = new field_iterator_t(fieldList);
 
     /* Create Unique Temporary Filename */
     SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
@@ -529,7 +545,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
     if(geoData.as_geo) pimpl->appendGeoMetaData(metadata);
     pimpl->appendServerMetaData(metadata);
-    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, indexKey);
+    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key);
     pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Parquet Writer */
@@ -563,12 +579,16 @@ ParquetBuilder::~ParquetBuilder(void)
     delete builderPid;
     parms->releaseLuaObject();
     delete [] fileName;
-    if(indexKey) delete [] indexKey;
     delete [] recType;
     delete outQ;
     delete inQ;
     delete fieldIterator;
     delete pimpl;
+    if(geoData.as_geo)
+    {
+        delete [] geoData.x_key;
+        delete [] geoData.y_key;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -612,11 +632,12 @@ void* ParquetBuilder::builderThread(void* parm)
 
                 /* Determine Rows in Record */
                 int record_size_bytes = record->getAllocatedDataSize();
-                int num_rows = record_size_bytes / builder->rowSizeBytes;
-                int left_over = record_size_bytes % builder->rowSizeBytes;
+                int batch_size_bytes = record_size_bytes - (builder->rowSizeBytes - builder->batchRowSizeBytes);
+                int num_rows =  batch_size_bytes / builder->batchRowSizeBytes;
+                int left_over = batch_size_bytes % builder->batchRowSizeBytes;
                 if(left_over > 0)
                 {
-                    mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), record_size_bytes, builder->rowSizeBytes);
+                    mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), batch_size_bytes, builder->batchRowSizeBytes);
                     delete record; // record is not batched, so must delete here
                     builder->inQ->dereference(ref); // record is not batched, so must dereference here
                     continue;
@@ -724,13 +745,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((double)batch.record->getValueReal(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((double)batch.record->getValueReal(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        double value = (double)batch.record->getValueReal(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -744,13 +776,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((float)batch.record->getValueReal(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((float)batch.record->getValueReal(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        float value = (float)batch.record->getValueReal(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -764,13 +807,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((int8_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int8_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        int8_t value = (int8_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -784,13 +838,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((int16_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int16_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        int16_t value = (int16_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -804,13 +869,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((int32_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int32_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        int32_t value = (int32_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -824,13 +900,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        int64_t value = (int64_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -844,13 +931,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((uint8_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint8_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        uint8_t value = (uint8_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -864,13 +962,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((uint16_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint16_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        uint16_t value = (uint16_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -884,13 +993,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((uint32_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint32_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        uint32_t value = (uint32_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -904,13 +1024,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((uint64_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint64_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        uint64_t value = (uint64_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -924,13 +1055,24 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
                     {
-                        builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
-                        field.offset += rowSizeBytes * 8;
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
                     }
-                    field.offset = starting_offset;
+                    else // non-batch field
+                    {
+                        int64_t value = (int64_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -944,14 +1086,25 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 unsigned long key = recordBatch.first(&batch);
                 while(key != (unsigned long)INVALID_KEY)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch.rows; row++)
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            const char* str = batch.record->getValueText(field);
+                            builder.UnsafeAppend(str, StringLib::size(str));
+                            field.offset += batchRowSizeBytes * 8;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
                     {
                         const char* str = batch.record->getValueText(field);
-                        builder.UnsafeAppend(str, StringLib::size(str));
-                        field.offset += rowSizeBytes * 8;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(str, StringLib::size(str));
+                        }
                     }
-                    field.offset = starting_offset;
                     key = recordBatch.next(&batch);
                 }
                 (void)builder.Finish(&column);
@@ -973,8 +1126,8 @@ void ParquetBuilder::processRecordBatch (int num_rows)
     if(geoData.as_geo)
     {
         uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
-        RecordObject::field_t lon_field = geoData.lon_field;
-        RecordObject::field_t lat_field = geoData.lat_field;
+        RecordObject::field_t x_field = geoData.x_field;
+        RecordObject::field_t y_field = geoData.y_field;
         shared_ptr<arrow::Array> column;
         arrow::BinaryBuilder builder;
         (void)builder.Reserve(num_rows);
@@ -982,8 +1135,8 @@ void ParquetBuilder::processRecordBatch (int num_rows)
         unsigned long key = recordBatch.first(&batch);
         while(key != (unsigned long)INVALID_KEY)
         {
-            int32_t starting_lon_offset = lon_field.offset;
-            int32_t starting_lat_offset = lat_field.offset;
+            int32_t starting_x_offset = x_field.offset;
+            int32_t starting_y_offset = y_field.offset;
             for(int row = 0; row < batch.rows; row++)
             {
                 wkbpoint_t point = {
@@ -993,15 +1146,15 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                     .byteOrder = 1,
                     #endif
                     .wkbType = 1,
-                    .x = batch.record->getValueReal(lon_field),
-                    .y = batch.record->getValueReal(lat_field)
+                    .x = batch.record->getValueReal(x_field),
+                    .y = batch.record->getValueReal(y_field)
                 };
                 (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(wkbpoint_t));
-                lon_field.offset += rowSizeBytes * 8;
-                lat_field.offset += rowSizeBytes * 8;
+                if(x_field.flags & RecordObject::BATCH) x_field.offset += batchRowSizeBytes * 8;
+                if(x_field.flags & RecordObject::BATCH) y_field.offset += batchRowSizeBytes * 8;
             }
-            lon_field.offset = starting_lon_offset;
-            lat_field.offset = starting_lat_offset;
+            x_field.offset = starting_x_offset;
+            y_field.offset = starting_y_offset;
             key = recordBatch.next(&batch);
         }
         (void)builder.Finish(&column);
