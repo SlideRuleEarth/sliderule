@@ -1,3 +1,32 @@
+# Copyright (c) 2021, University of Washington
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the University of Washington nor the names of its
+#    contributors may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+# “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 # Imports
 import sliderule
 from sliderule import earthdata, h5, icesat2, gedi
@@ -53,7 +82,13 @@ def display_results(name, gdf, duration):
     for key in icesat2.profiles:
         print("\t{:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
 
+# ########################################################
+# Benchmarks
+# ########################################################
+
+# ------------------------------------
 # Benchmark ATL06 Ancillary
+# ------------------------------------
 def atl06_ancillary():
     parms = {
         "poly":             region["poly"],
@@ -62,7 +97,9 @@ def atl06_ancillary():
     }
     return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
 
+# ------------------------------------
 # Benchmark ATL03 Ancillary
+# ------------------------------------
 def atl03_ancillary():
     parms = {
         "poly":             region["poly"],
@@ -71,7 +108,9 @@ def atl03_ancillary():
     }
     return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
 
+# ------------------------------------
 # Benchmark ATL06 Parquet
+# ------------------------------------
 def atl06_parquet():
     parms = {
         "poly":             region["poly"],
@@ -87,18 +126,61 @@ def atl06_parquet():
         os.remove("testfile.parquet")
     return gdf
 
+
+# ------------------------------------
+# Benchmark ATL06 Sample Landsat
+# ------------------------------------
+def atl06_sample_landsat():
+    time_start = "2021-01-01T00:00:00Z"
+    time_end = "2021-02-01T23:59:59Z"
+    catalog = earthdata.stac(short_name="HLS", polygon=region['poly'], time_start=time_start, time_end=time_end, as_str=True)
+    parms = { 
+        "poly": region['poly'],
+#        "raster": region['raster'], # TODO: this is very slow!
+        "srt": icesat2.SRT_LAND,
+        "cnf": icesat2.CNF_SURFACE_LOW,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0,
+        "samples": {"ndvi": {"asset": "landsat-hls", "use_poi_time": True, "catalog": catalog, "bands": ["NDVI"]}} }
+    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+
+# ------------------------------------
+# Benchmark ATL03 Rasterized Subset
+# ------------------------------------
+def atl03_rasterized_subset():
+    parms = { 
+        "poly": region['poly'],
+        "raster": region['raster'], # TODO: this is very slow!
+        "srt": icesat2.SRT_LAND,
+        "cnf": icesat2.CNF_SURFACE_LOW,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0 }
+    return icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+
+# ########################################################
 # Main
+# ########################################################
+
 if __name__ == '__main__':
+
     # define benchmarks
     benchmarks = {
-        "atl06_ancillary":  atl06_ancillary,
-        "atl03_ancillary":  atl03_ancillary,
-        "atl06_parquet":    atl06_parquet,
+        "atl06_ancillary":          atl06_ancillary,
+        "atl03_ancillary":          atl03_ancillary,
+        "atl06_parquet":            atl06_parquet,
+        "atl06_sample_landsat":     atl06_sample_landsat,
+        "atl03_rasterized_subset":  atl03_rasterized_subset,
     }
+    
     # build list of benchmarks to run
     benchmarks_to_run = args.benchmarks
     if len(benchmarks_to_run) == 0:
         benchmarks_to_run = benchmarks.keys()
+    
     # run benchmarks
     for benchmark in benchmarks_to_run:
         tstart = time.perf_counter()

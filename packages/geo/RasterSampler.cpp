@@ -169,15 +169,13 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
 
     /* Determine Record Batch Size */
     batchRecordSizeBytes = 0;
-    const char* batch_rec_type = NULL;
     Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
     Dictionary<RecordObject::field_t>::Iterator field_iter(*fields);
     for(int i = 0; i < field_iter.length; i++)
     {
         if(field_iter[i].value.flags & RecordObject::BATCH)
         {
-            batch_rec_type = field_iter[i].key;
-            batchRecordSizeBytes = RecordObject::getRecordDataSize(batch_rec_type);
+            batchRecordSizeBytes = RecordObject::getRecordDataSize(field_iter[i].value.exttype);
             break;
         }
     }
@@ -186,7 +184,7 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
     recordSizeBytes = RecordObject::getRecordDataSize(rec_type) + batchRecordSizeBytes;
     if(recordSizeBytes <= 0)
     {
-        mlog(CRITICAL, "Failed to get size of extent for record type: %s", rec_type);
+        mlog(CRITICAL, "Failed to get size of record: %s", rec_type);
     }
 
     /* Get Index Field (e.g. Extent Id) */

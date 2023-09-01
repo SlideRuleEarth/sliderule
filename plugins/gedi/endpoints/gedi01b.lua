@@ -17,6 +17,7 @@ local args = {
     index_field     = "footprint.shot_number",
     lon_field       = "footprint.longitude",
     lat_field       = "footprint.latitude",
+    time_field      = "footprint.time",
     height_field    = "footprint.elevation_start"
 }
 

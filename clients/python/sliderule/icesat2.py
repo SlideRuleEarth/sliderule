@@ -598,8 +598,9 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                                 if field in columns:
                                     columns[field][ph_cnt] = photon[field]
                             # Add Ancillary Extent Fields
-                            for field_array in photon_dictionary[extent_id].values():
-                                columns[field][ph_cnt] = field_array[ph_index]
+                            if extent_id in photon_dictionary:
+                                for field_array in photon_dictionary[extent_id].values():
+                                    columns[field][ph_cnt] = field_array[ph_index]
                             # Goto Next Photon
                             ph_cnt += 1
                             ph_index += 1

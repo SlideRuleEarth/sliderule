@@ -18,6 +18,7 @@ local args = {
     index_field     = "vegetation.extent_id",
     lon_field       = "vegetation.longitude",
     lat_field       = "vegetation.latitude",
+    time_field      = "vegetation.time",
     height_field    = "vegetation.h_te_median"
 }
 
