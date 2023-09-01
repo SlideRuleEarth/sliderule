@@ -79,8 +79,8 @@ class Dictionary
                 const int           length;
             private:
                 const Dictionary&   source;
-                int                 curr_index; // where in source hashtable
-                int                 curr_count; // how many elements in hashtable to the curr_index
+                int                 table_index; // where in source hashtable
+                int                 curr_index; // how many elements in hashtable to the table_index
         };
 
         /*--------------------------------------------------------------------
@@ -168,7 +168,9 @@ class MgDictionary: public Dictionary<T>
 template <class T>
 Dictionary<T>::Iterator::Iterator(const Dictionary& d):
     length(d.numEntries),
-    source(d)
+    source(d),
+    table_index(-1),
+    curr_index(-1)
 {
 }
 
@@ -188,28 +190,25 @@ typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index)
 {
     if( (index < length) && (index >= 0) )
     {
-        if(index > curr_count) // move forward
+        while(curr_index < index) // move forward
         {
-            while(curr_count < index)
+            table_index++;
+            if(source.hashTable[table_index].chain != EMPTY_ENTRY)
             {
-                if(source.hashTable[curr_index++].chain != EMPTY_ENTRY)
-                {
-                    curr_count++;
-                }
+                curr_index++;
             }
         }
-        else if(index != curr_count) // move backwards
+
+        while(curr_index > index) // move backwards
         {
-            while(curr_count > index)
+            table_index--;
+            if(source.hashTable[table_index].chain != EMPTY_ENTRY)
             {
-                if(source.hashTable[curr_index--].chain != EMPTY_ENTRY)
-                {
-                    curr_count--;
-                }
+                curr_index--;
             }
         }
-        Dictionary<T>::kv_t pair(source.hashTable[curr_index].key, source.hashTable[curr_index].data);
-        return pair;
+
+        return Dictionary<T>::kv_t(source.hashTable[table_index].key, source.hashTable[table_index].data);
     }
     else
     {
