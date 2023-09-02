@@ -84,11 +84,10 @@ void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, doubl
     samplingMutex.lock();
     try
     {
-        GdalRaster::Point lowleft(lon_min, lat_min);
-        GdalRaster::Point upright(lon_max, lat_max);
+        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
 
         /* Get samples, if none found, return */
-        raster.subsetAOI(lowleft, upright);
+        raster.subsetAOI(poly);
         if(raster.sampled())
         {
             RasterSubset& subset = raster.getSubset();

@@ -123,7 +123,7 @@ class GdalRaster
         virtual           ~GdalRaster     (void);
         void               open           (void);
         void               samplePOI      (const Point& poi);
-        void               subsetAOI      (const Point& lowleft, const Point& upright);
+        void               subsetAOI      (OGRPolygon& poly);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         RasterSubset&      getSubset      (void) { return subset; }
@@ -140,6 +140,7 @@ class GdalRaster
         static void        setCRSfromWkt  (OGRSpatialReference& sref, const char* wkt);
         static std::string getUUID        (void);
         static void        initAwsAccess  (GeoParms* _parms);
+        static OGRPolygon  makeRectangle  (double minx, double miny, double maxx, double maxy);
 
     private:
 

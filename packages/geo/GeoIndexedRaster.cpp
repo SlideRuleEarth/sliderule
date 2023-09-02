@@ -118,11 +118,10 @@ void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max
     samplingMutex.lock();
     try
     {
-        GdalRaster::Point lowleft(lon_min, lat_min);
-        GdalRaster::Point upright(lon_max, lat_max);
+        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
 
         /* Get samples, if none found, return */
-        if(subset(lowleft, upright, gps) == 0)
+        if(subset(poly, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -388,20 +387,14 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
 /*----------------------------------------------------------------------------
  * openGeoIndexForAOI
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::openGeoIndexForAOI(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright)
+void GeoIndexedRaster::openGeoIndexForAOI(const OGRPolygon& poly)
 {
-    std::ignore = upleft;
-    std::ignore = lowright;
-}
-
-/*----------------------------------------------------------------------------
- * openGeoIndexForAOI
- *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findRastersForAOI(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright)
-{
-    std::ignore = upleft;
-    std::ignore = lowright;
-    return false;
+    /*
+     * This funtion supports indexed plugins which have index file available
+     * All other plugins must implement this function.
+     */
+    std::ignore = poly;
+    openGeoIndex(0, 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -427,6 +420,7 @@ void GeoIndexedRaster::sampleRasters(const GdalRaster::Point& poi)
             {
                 reader->raster = item->raster;
                 reader->poi = poi;
+                reader->readtype = POI;
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
@@ -452,7 +446,7 @@ void GeoIndexedRaster::sampleRasters(const GdalRaster::Point& poi)
 /*----------------------------------------------------------------------------
  * subsetRasters
  *----------------------------------------------------------------------------*/
-void  GeoIndexedRaster::subsetRasters(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright)
+void  GeoIndexedRaster::subsetRasters(const OGRPolygon& poly)
 {
     /* Create additional reader threads if needed */
     createThreads();
@@ -471,9 +465,8 @@ void  GeoIndexedRaster::subsetRasters(const GdalRaster::Point& upleft, const Gda
             reader->sync->lock();
             {
                 reader->raster = item->raster;
-                reader->poi.clear();
-                reader->aoi_upleft   = upleft;
-                reader->aoi_lowright = lowright;
+                reader->poly = poly;
+                reader->readtype = AOI;
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
@@ -520,7 +513,8 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
             return 0;
     }
 
-    if(findRasters(poi) && filterRasters(gps))
+    OGRPoint ogrpoint(lon, lat, 0);
+    if(findRasters(&ogrpoint) && filterRasters(gps))
     {
         updateCache();
         sampleRasters(poi);
@@ -532,7 +526,7 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
 /*----------------------------------------------------------------------------
  * subset
  *----------------------------------------------------------------------------*/
-int GeoIndexedRaster::subset(const GdalRaster::Point& upleft, const GdalRaster::Point& lowright, int64_t gps)
+int GeoIndexedRaster::subset(const OGRPolygon& poly, int64_t gps)
 {
     invalidateCache();
     emptyGroupsList();
@@ -542,12 +536,12 @@ int GeoIndexedRaster::subset(const GdalRaster::Point& upleft, const GdalRaster::
 
     /* Initial call, open index file if not already opened */
     if(featuresList.isempty())
-        openGeoIndexForAOI(upleft, lowright);
+        openGeoIndexForAOI(poly);
 
-    if(findRastersForAOI(upleft, lowright) && filterRasters(gps))
+    if(findRasters(&poly) && filterRasters(gps))
     {
         updateCache();
-        subsetRasters(upleft, lowright);
+        subsetRasters(poly);
     }
 
     return sampledRastersCnt;
@@ -594,7 +588,6 @@ int GeoIndexedRaster::luaBoundingBox(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
-
 
     try
     {
@@ -669,7 +662,12 @@ void* GeoIndexedRaster::readingThread(void *param)
 
         if(reader->raster != NULL)
         {
-            reader->raster->samplePOI(reader->poi);
+            if(reader->readtype == POI)
+                reader->raster->samplePOI(reader->poi);
+            else if(reader->readtype == AOI)
+                reader->raster->subsetAOI(reader->poly);
+            else return NULL;
+
             if(reader->raster->sampled())
             {
                 reader->obj->sampledRastersCnt.fetch_add(1, std::memory_order_relaxed);

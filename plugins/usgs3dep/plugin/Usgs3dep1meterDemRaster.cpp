@@ -94,19 +94,27 @@ void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool Usgs3dep1meterDemRaster::findRasters(const GdalRaster::Point& p)
+bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
 {
     try
     {
-        OGRPoint point(p.x, p.y, p.z);
+        OGRwkbGeometryType geotype = geo->getGeometryType();
 
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
-            OGRGeometry *geo = feature->GetGeometryRef();
+            OGRGeometry *rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(!geo->Contains(&point)) continue;
+            if(geotype == wkbPoint || geotype == wkbPoint25D)
+            {
+                if(!rgeo->Contains(geo)) continue;
+            }
+            else if(geotype == wkbPolygon)
+            {
+                if(!geo->Intersects(rgeo)) continue;
+            }
+            else return false;
 
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(1);
@@ -129,7 +137,7 @@ bool Usgs3dep1meterDemRaster::findRasters(const GdalRaster::Point& p)
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             groupList.add(groupList.length(), rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), point.getX(), point.getY());
+        mlog(DEBUG, "Found %ld raster groups", groupList.length());
     }
     catch (const RunTimeException &e)
     {

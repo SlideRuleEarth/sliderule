@@ -110,7 +110,7 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::findRasters(const GdalRaster::Point& p)
+bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
 {
     /*
      * Find rasters and their dates.
@@ -127,15 +127,23 @@ bool PgcDemStripsRaster::findRasters(const GdalRaster::Point& p)
     std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
-        OGRPoint point(p.x, p.y, p.z);
+        OGRwkbGeometryType geotype = geo->getGeometryType();
 
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
-            OGRGeometry* geo = feature->GetGeometryRef();
+            OGRGeometry* rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(!geo->Contains(&point)) continue;
+            if(geotype == wkbPoint || geotype == wkbPoint25D)
+            {
+                if(!rgeo->Contains(geo)) continue;
+            }
+            else if(geotype == wkbPolygon)
+            {
+                if(!geo->Intersects(rgeo)) continue;
+            }
+            else return false;
 
             /* geojson index files hosted by PGC only contain listing of dems
              * In order to read quality mask raster for each strip we need to build a path to it.
@@ -190,7 +198,7 @@ bool PgcDemStripsRaster::findRasters(const GdalRaster::Point& p)
                 groupList.add(groupList.length(), rgroup);
             }
         }
-        mlog(DEBUG, "Found %ld raster groups for (%.2lf, %.2lf)", groupList.length(), p.x, p.y);
+        mlog(DEBUG, "Found %ld raster groups", groupList.length());
     }
     catch (const RunTimeException &e)
     {

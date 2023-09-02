@@ -179,7 +179,7 @@ void GdalRaster::samplePOI(const Point& poi)
     catch (const RunTimeException &e)
     {
         _sampled = false;
-        mlog(e.level(), "Error sampling raster: %s", e.what());
+        mlog(e.level(), "Error sampling: %s", e.what());
     }
 }
 
@@ -187,7 +187,7 @@ void GdalRaster::samplePOI(const Point& poi)
 /*----------------------------------------------------------------------------
  * subsetAOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::subsetAOI(const Point& lowleft, const Point& upright)
+void GdalRaster::subsetAOI(OGRPolygon& poly)
 {
     /*
      * Notes on extent format:
@@ -210,87 +210,83 @@ void GdalRaster::subsetAOI(const Point& lowleft, const Point& upright)
         if(dtype == GDT_Unknown)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type");
 
-        mlog(DEBUG, "Before transform lowleft  (%.4lf, %.4lf)", lowleft.x, lowleft.y);
-        mlog(DEBUG, "Before transform upright  (%.4lf, %.4lf)", upright.x, upright.y);
+        OGRErr err = poly.transform(transf);
+        CHECK_GDALERR(err);
 
-        /* Transform AOI's extent to raster coords */
-        if(!transf->Transform(1, (double*)&lowleft.x, (double*)&lowleft.y, (double*)&lowleft.z))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", lowleft.x, lowleft.y, lowleft.z);
+        OGREnvelope env;
+        poly.getEnvelope(&env);
 
-        if(!transf->Transform(1, (double*)&upright.x, (double*)&upright.y, (double*)&upright.z))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", upright.x, upright.y, upright.z);
+        double minx = env.MinX;
+        double miny = env.MinY;
+        double maxx = env.MaxX;
+        double maxy = env.MaxY;
 
-        mlog(DEBUG, "After  transform upleft   (%.4lf, %.4lf)", upright.x, upright.y);
-        mlog(DEBUG, "After  transform lowright (%.4lf, %.4lf)", upright.x, upright.y);
+        mlog(DEBUG, "minx: %.4lf", minx);
+        mlog(DEBUG, "miny: %.4lf", miny);
+        mlog(DEBUG, "maxx: %.4lf", maxx);
+        mlog(DEBUG, "maxy: %.4lf", maxy);
 
-        /*
-         * After projecting to raster coords the lowerleft and upright extent points may no longer be in the same relation.
-         * Taking it under consideration calculate upper left point in raster coords for Pixel(0,0)
-         * and low right for calculating size of subset window in pixels.
-         */
-        double maxx = std::max(lowleft.x, upright.x);
-        double minx = std::min(lowleft.x, upright.x);
+        /* Get AOI window in pixels */
+        int ulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * minx + invGeoTrans[2] * maxy));
+        int uly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * maxy + invGeoTrans[5] * maxy));
 
-        double maxy = std::max(lowleft.y, upright.y);
-        double miny = std::min(lowleft.y, upright.y);
+        int lrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * maxx + invGeoTrans[2] * miny));
+        int lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * miny + invGeoTrans[5] * miny));
 
-        /*
-         * Make sure the AOI fits in the raster's bbox, if it does not clip it (for now)
-         */
-        if(maxx > bbox.lon_max)
+        /* Get raster extent in pixels */
+        const int extulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_min + invGeoTrans[2] * bbox.lat_max));
+        const int extuly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_max + invGeoTrans[5] * bbox.lat_max));
+
+        const int extlrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_max + invGeoTrans[2] * bbox.lat_min));
+        const int extlry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_min + invGeoTrans[5] * bbox.lat_min));
+
+        if(ulx < extulx)
         {
-            mlog(INFO, "Clipping maxx %.4lf to raster's max_lon %.4lf", maxx, bbox.lon_max);
-            maxx = bbox.lon_max;
+            mlog(DEBUG, "Clipping ulx %d to raster's extulx %d", ulx, extulx);
+            ulx = extulx;
         }
-
-        if(maxy > bbox.lat_max)
+        if(uly < extuly)
         {
-            mlog(INFO, "Clipping maxy %.4lf to raster's max_lat %.4lf", maxy, bbox.lat_max);
-            maxy = bbox.lat_max;
+            mlog(DEBUG, "Clipping uly %d to raster's extuly %d", uly, extuly);
+            uly = extuly;
         }
-
-        if(minx < bbox.lon_min)
+        if(lrx > extlrx)
         {
-            mlog(INFO, "Clipping minx %.4lf to raster's min_lon %.4lf", minx, bbox.lon_min);
-            minx = bbox.lon_min;
+            mlog(DEBUG, "Clipping lrx %d to raster's extlrx %d", lrx, extlrx);
+            lrx = extlrx;
         }
-
-        if(miny < bbox.lat_min)
+        if(lry > extlry)
         {
-            mlog(INFO, "Clipping miny %.4lf to raster's min_lat %.4lf", miny, bbox.lat_min);
-            miny = bbox.lat_min;
+            mlog(DEBUG, "Clipping lry %d to raster's extlry %d", lry, extlry);
+            lry = extlry;
         }
-
-        /* Projected clipped points for AOI  */
-        Point upleft(minx, maxy);
-        Point lowright(maxx, miny);
-
-        /* Get AOI window to read in pixel coords */
-        const int ulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * upleft.x + invGeoTrans[2] * upleft.y));
-        const int uly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * upleft.y + invGeoTrans[5] * upleft.y));
-
-        const int lrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * lowright.x + invGeoTrans[2] * lowright.y));
-        const int lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * lowright.y + invGeoTrans[5] * lowright.y));
 
         int cols2read = lrx - ulx;
         int rows2read = lry - uly;
 
-        int64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
-        uint8_t* data = new uint8_t[size];
+        int64_t size  = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
+        if(size < 0)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "negative memory size!");
+
+        if(!subset.memreserve(size))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "mempool depleted, request: %.2f MB", (float)size/(1024*1024));
+
+        std::shared_ptr<uint8_t[]> data(new uint8_t[size]);
 
         mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %d, rows2read: %d, datatype %s",
-             size, (float)size / (1024 * 1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
+             size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
 
-        int cnt    = 2;
-        CPLErr err = CE_None;
+        int cnt = 1;
+        err = CE_None;
         do
         {
-            err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, data, cols2read, rows2read, dtype, 0, 0, NULL);
+            void* p = data.get();
+            err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, p, cols2read, rows2read, dtype, 0, 0, NULL);
         } while(err != CE_None && cnt--);
 
         if(err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
 
-        _sampled    = true;
+        _sampled = true;
 
         /* Update subset info returned to caller */
         subset.data     = data;
@@ -302,7 +298,7 @@ void GdalRaster::subsetAOI(const Point& lowleft, const Point& upright)
     catch (const RunTimeException &e)
     {
         _sampled = false;
-        mlog(e.level(), "Error sampling raster: %s", e.what());
+        mlog(e.level(), "Error subsetting: %s", e.what());
     }
 }
 
@@ -354,6 +350,25 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
         }
 #endif
     }
+}
+
+
+/*----------------------------------------------------------------------------
+ * makeRectangle
+ *----------------------------------------------------------------------------*/
+OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, double maxy)
+{
+    OGRPolygon poly;
+    OGRLinearRing lr;
+
+    /* Clockwise for interior of polygon */
+    lr.addPoint(minx, miny);
+    lr.addPoint(minx, maxy);
+    lr.addPoint(maxx, maxy);
+    lr.addPoint(maxx, miny);
+    lr.addPoint(minx, miny);
+    poly.addRing(&lr);
+    return poly;
 }
 
 
@@ -801,7 +816,7 @@ void GdalRaster::readRasterWithRetry(int col, int row, int colSize, int rowSize,
      * There is no way to detect this condition based on the error code returned.
      * Because of it, always retry failed read.
      */
-    int cnt = 2;
+    int cnt = 1;
     CPLErr err = CE_None;
     do
     {
