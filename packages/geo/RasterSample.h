@@ -82,7 +82,7 @@ public:
 class RasterSubset
 {
 public:
-    std::shared_ptr<uint8_t[]> data;
+    uint8_t*     data;
     uint32_t     cols;
     uint32_t     rows;
     GDALDataType datatype;
@@ -107,8 +107,9 @@ public:
     time(_time),
     fileId(_fileId) {}
 
-   static bool memreserve(int64_t memsize) { return updateMemPool(memsize, RESERVER); }
-   static bool memrelese(int64_t memsize)  { return updateMemPool(memsize, RELEASE); }
+   static uint64_t getmaxMem (void) { return maxsize; }
+   static bool     memreserve(uint64_t memsize) { return updateMemPool(memsize, RESERVER); }
+   static bool     memrelese (uint64_t memsize, uint8_t* dptr)  { return updateMemPool(memsize, RELEASE, dptr); }
 
 private:
     typedef enum
@@ -117,49 +118,43 @@ private:
         RELEASE = 2
     } memrequest_t;
 
-   static bool updateMemPool(int64_t memsize, memrequest_t requestType)
-   {
-       static const float oneMB = 1024 * 1024;
-       static const int64_t oneGB = 0x40000000;
-       static const int64_t maxsize = oneGB*4;
-       static int64_t poolsize = maxsize;
+    static const int64_t oneGB   = 0x40000000;
+    static const int64_t maxsize = oneGB*8;
 
-       bool status = false;
+    static bool updateMemPool(int64_t memsize, memrequest_t requestType, uint8_t* dptr=NULL)
+    {
+        static int64_t poolsize = maxsize;
+        bool status = false;
+        static Mutex mutex;
 
-       if(memsize < 0) return status;   //Caller has a bug in their code
+        mutex.lock();
+        {
+            if(requestType == RESERVER)
+            {
+                int64_t newpoolsize = poolsize - memsize;
+                if(newpoolsize >= 0)
+                {
+                    poolsize = newpoolsize;
+                    status   = true;
+                }
+            }
+            else if(requestType == RELEASE)
+            {
+                poolsize += memsize;
+                if(poolsize > maxsize)
+                {
+                    poolsize = maxsize;
+                }
+                if(dptr) delete [] dptr;
+                status = true;
+            }
+        }
+        mutex.unlock();
 
-       static Mutex mutex;
-       mutex.lock();
-       {
-           if(requestType == RESERVER)
-           {
-               int64_t newpoolsize = poolsize - memsize;
-               if(newpoolsize >= 0)
-               {
-                   poolsize = newpoolsize;
-                   status   = true;
-                   mlog(DEBUG,"***** GET  mempoool available/requested: %.2fMB  %.2fMB ******", poolsize / oneMB, memsize / oneMB);
-               }
-           }
-           else if(requestType == RELEASE)
-           {
-               poolsize += memsize;
-               if(poolsize > maxsize)
-               {
-                   poolsize = maxsize;
-               }
-               status = true;
-               mlog(DEBUG, "***** FREE mempoool available/requested: %.2fMB  %.2fMB ******", poolsize / oneMB, memsize / oneMB);
-           }
-       }
-       mutex.unlock();
+        const float oneMB = 1024 * 1024;
+        printf("%s mempoool %5.0f / %.0f MB    %12.2f MB\n", requestType == RESERVER ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
 
-       if(!status && requestType == RESERVER)
-       {
-            mlog(DEBUG, "mempoool available/requested: %.2fMB < %.2fMB, delta: %.2fMB", poolsize/oneMB, memsize/oneMB, (poolsize-memsize)/oneMB);
-       }
-
-       return status;
+        return status;
    }
 };
 

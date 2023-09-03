@@ -318,20 +318,17 @@ int RasterObject::luaSubset(lua_State *L)
                 LuaEngine::setAttrStr(L, "file", fileName);
                 LuaEngine::setAttrInt(L, "fileid", subset.fileId);
                 LuaEngine::setAttrNum(L, "time", subset.time);
-                LuaEngine::setAttrInt(L, "data", (uint64_t)subset.data.get());
+                LuaEngine::setAttrInt(L, "data", (uint64_t)subset.data);
                 LuaEngine::setAttrInt(L, "cols", subset.cols);
                 LuaEngine::setAttrInt(L, "rows", subset.rows);
                 LuaEngine::setAttrNum(L, "datatype", subset.datatype);
                 lua_rawseti(L, -2, i+1);
 
-#warning HACK HERE - must release memory from LUA
-#if 1
+                /* LUA script should free this memory but for now this will work */
                 {
-                    int64_t size = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
-                    subset.memrelese(size);
+                    uint64_t size = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
+                    subset.memrelese(size, subset.data);
                 }
-#endif
-
             }
             num_ret++;
             status = true;

@@ -106,11 +106,14 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
             OGRGeometry *rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(geotype == wkbPoint || geotype == wkbPoint25D)
+            bool ispoint = geotype == wkbPoint || geotype == wkbPoint25D;
+            bool ispoly  = geotype == wkbPolygon;
+
+            if(ispoint)
             {
                 if(!rgeo->Contains(geo)) continue;
             }
-            else if(geotype == wkbPolygon)
+            else if(ispoly)
             {
                 if(!geo->Intersects(rgeo)) continue;
             }

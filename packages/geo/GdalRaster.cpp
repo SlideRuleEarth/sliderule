@@ -234,9 +234,8 @@ void GdalRaster::subsetAOI(OGRPolygon& poly)
         int lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * miny + invGeoTrans[5] * miny));
 
         /* Get raster extent in pixels */
-        const int extulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_min + invGeoTrans[2] * bbox.lat_max));
-        const int extuly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_max + invGeoTrans[5] * bbox.lat_max));
-
+        const int extulx = 0;
+        const int extuly = 0;
         const int extlrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_max + invGeoTrans[2] * bbox.lat_min));
         const int extlry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_min + invGeoTrans[5] * bbox.lat_min));
 
@@ -261,30 +260,35 @@ void GdalRaster::subsetAOI(OGRPolygon& poly)
             lry = extlry;
         }
 
-        int cols2read = lrx - ulx;
-        int rows2read = lry - uly;
+        uint64_t cols2read = lrx - ulx;
+        uint64_t rows2read = lry - uly;
 
-        int64_t size  = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
-        if(size < 0)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "negative memory size!");
+        uint64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
+        uint64_t maxperThread = subset.getmaxMem() / 2;
+        if(size > maxperThread)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ldMB, max perthread allowed: %ldMB",
+                  size/(1024*1024), maxperThread/(1024*1024));
 
         if(!subset.memreserve(size))
             throw RunTimeException(CRITICAL, RTE_ERROR, "mempool depleted, request: %.2f MB", (float)size/(1024*1024));
 
-        std::shared_ptr<uint8_t[]> data(new uint8_t[size]);
+        uint8_t* data = new uint8_t[size];
 
-        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %d, rows2read: %d, datatype %s",
+        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
              size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
 
         int cnt = 1;
         err = CE_None;
         do
         {
-            void* p = data.get();
-            err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, p, cols2read, rows2read, dtype, 0, 0, NULL);
+            err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, data, cols2read, rows2read, dtype, 0, 0, NULL);
         } while(err != CE_None && cnt--);
 
-        if(err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+        if(err != CE_None)
+        {
+            subset.memrelese(size, data);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+        }
 
         _sampled = true;
 

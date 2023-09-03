@@ -135,11 +135,14 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
             OGRGeometry* rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(geotype == wkbPoint || geotype == wkbPoint25D)
+            bool ispoint = geotype == wkbPoint || geotype == wkbPoint25D;
+            bool ispoly  = geotype == wkbPolygon;
+
+            if(ispoint)
             {
                 if(!rgeo->Contains(geo)) continue;
             }
-            else if(geotype == wkbPolygon)
+            else if(ispoly)
             {
                 if(!geo->Intersects(rgeo)) continue;
             }
@@ -159,24 +162,34 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 fileName = filePath + fileName.substr(pos);
 
                 rasters_group_t* rgroup = new rasters_group_t;
-                rgroup->infovect.reserve(2); /* PGC uses group is 1 data raster + flags raster */
+                rgroup->infovect.reserve(2); /* PGC group is 1 data raster + flags raster */
 
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
                 demRinfo.tag = VALUE_TAG;
                 demRinfo.fileName = fileName;
 
-                const std::string endToken    = "_dem.tif";
-                const std::string newEndToken = "_bitmask.tif";
-                pos = fileName.rfind(endToken);
-                if (pos != std::string::npos)
+                /* bitmask rasters only make sense for poi, don't read them for poly cases */
+                if(ispoint)
                 {
-                    fileName.replace(pos, endToken.length(), newEndToken.c_str());
-                } else fileName.clear();
+                    const std::string endToken    = "_dem.tif";
+                    const std::string newEndToken = "_bitmask.tif";
+                    pos = fileName.rfind(endToken);
+                    if(pos != std::string::npos)
+                    {
+                        fileName.replace(pos, endToken.length(), newEndToken.c_str());
+                    }
+                    else fileName.clear();
 
-                raster_info_t flagsRinfo;
-                flagsRinfo.tag = FLAGS_TAG;
-                flagsRinfo.fileName = fileName;
+                    raster_info_t flagsRinfo;
+                    flagsRinfo.tag = FLAGS_TAG;
+                    flagsRinfo.fileName = fileName;
+
+                    if(flagsRinfo.fileName.length() > 0)
+                    {
+                        rgroup->infovect.push_back(flagsRinfo);
+                    }
+                }
 
                 double gps = 0;
                 for(auto& s: dates)
@@ -190,11 +203,6 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup->gpsTime = static_cast<int64_t>(gps);
                 rgroup->infovect.push_back(demRinfo);
-
-                if(flagsRinfo.fileName.length() > 0)
-                {
-                    rgroup->infovect.push_back(flagsRinfo);
-                }
                 groupList.add(groupList.length(), rgroup);
             }
         }

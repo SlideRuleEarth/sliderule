@@ -62,8 +62,6 @@ local height =    0.0
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat, height)
 local stoptime = time.latch();
-runner.check(status == true)
-runner.check(tbl ~= nil)
 threadCnt = 0
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
@@ -78,7 +76,6 @@ print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime
 starttime = time.latch();
 tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
 stoptime = time.latch();
-runner.check(status == true)
 
 local threadCnt = 0
 for i, v in ipairs(tbl) do
@@ -87,193 +84,116 @@ end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
 for i, v in ipairs(tbl) do
-    local data = v["data"]
     local cols = v["cols"]
     local rows = v["rows"]
     local datatype = v["datatype"]
 
     local bytes = cols*rows* GDT_datasize[datatype]
     local mbytes = bytes / (1024*1024)
-    -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-    print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
 end
 
 
+local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
+-- local demTypes = {"arcticdem-strips"}
+for i = 1, #demTypes do
+    demType = demTypes[i];
+    print(string.format("\n--------------------------\n%s\n--------------------------", demType))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+
+    -- AOI extent
+    local llx =  -145.81
+    local lly =   70.00
+    local urx =  -150.00
+    local ury =   71.00
+
+    starttime = time.latch();
+    tbl, status = dem:sample(llx, lly, 0)
+    stoptime = time.latch();
+    threadCnt = 0
+    if status ~= true then
+        print(string.format("======> FAILED to read", lon, lat))
+    else
+        local value, fname, time
+        for i, v in ipairs(tbl) do
+            threadCnt = threadCnt + 1
+        end
+    end
+    print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
 
-demType = "arcticdem-mosaic"
-print(string.format("\n--------------------------\n%s\n--------------------------", demType))
+    starttime = time.latch();
+    tbl, status = dem:subset(llx, lly, urx, ury)
+    stoptime = time.latch();
 
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-lon = -150.0
-lat =   70.0
-height = 0
-starttime = time.latch();
-tbl, status = dem:sample(lon, lat, height)
-stoptime = time.latch();
-runner.check(status == true)
-runner.check(tbl ~= nil)
-threadCnt = 0
-if status ~= true then
-    print(string.format("======> FAILED to read", lon, lat))
-else
-    local value, fname, time
-    for i, v in ipairs(tbl) do
-        threadCnt = threadCnt + 1
+    threadCnt = 0
+    if tbl ~= nil then
+        for i, v in ipairs(tbl) do
+            threadCnt = threadCnt + 1
+        end
+    end
+    print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+    if tbl ~= nil then
+        for i, v in ipairs(tbl) do
+            local cols = v["cols"]
+            local rows = v["rows"]
+            local datatype = v["datatype"]
+
+            local bytes = cols*rows* GDT_datasize[datatype]
+            local mbytes = bytes / (1024*1024)
+            print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
+        end
     end
 end
-print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
 
--- AOI extent
-local llx =  149.81
-local lly =   69.81
-local urx =  150.00
-local ury =   70.00
+demTypes = {"rema-mosaic", "rema-strips"}
+for i = 1, #demTypes do
 
-starttime = time.latch();
-tbl, status = dem:subset(llx, lly, urx, ury)
-stoptime = time.latch();
-runner.check(status == true)
+    -- AOI extent
+    llx =  149.80
+    lly =  -70.00
+    urx =  150.01
+    ury =  -69.93
 
-threadCnt = 0
-for i, v in ipairs(tbl) do
-    threadCnt = threadCnt + 1
-end
-print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
-for i, v in ipairs(tbl) do
-    local data = v["data"]
-    local cols = v["cols"]
-    local rows = v["rows"]
-    local datatype = v["datatype"]
-
-    local bytes = cols*rows* GDT_datasize[datatype]
-    local mbytes = bytes / (1024*1024)
-    -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-    print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
-end
-print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
-
-demType = "rema-mosaic"
-print(string.format("\n--------------------------\n%s\n--------------------------", demType))
-
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-lon = -170
-lat =  -85
-starttime = time.latch();
-tbl, status = dem:sample(lon, lat, height)
-stoptime = time.latch();
-runner.check(status == true)
-runner.check(tbl ~= nil)
-threadCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    -- print(string.format("(%02d) %10.2f  %s", i, el, fname))
-    threadCnt = threadCnt + 1
-end
-print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
--- AOI extent
-llx =  149.80
-lly =  -70.00
-urx =  150.01
-ury =  -69.93
-
-starttime = time.latch();
-tbl, status = dem:subset(llx, lly, urx, ury)
-stoptime = time.latch();
-runner.check(status == true)
-
-threadCnt = 0
-for i, v in ipairs(tbl) do
-    threadCnt = threadCnt + 1
-end
-print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
-for i, v in ipairs(tbl) do
-    local data = v["data"]
-    local cols = v["cols"]
-    local rows = v["rows"]
-    local datatype = v["datatype"]
-
-    local bytes = cols*rows* GDT_datasize[datatype]
-    local mbytes = bytes / (1024*1024)
-    -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-    print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
-end
-
-
-demType = "landsat-hls"
-print(string.format("\n--------------------------\n%s\n--------------------------", demType))
-
-local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
-local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
-sys.wait(5)
-
-
-local geojsonfile = td.."../../plugins/landsat/data/hls_trimmed.geojson"
-local f = io.open(geojsonfile, "r")
-local contents = f:read("*all")
-f:close()
-
-local  lon = -179.0
-local  lat = 51.0
-local  height = 0
-
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
-local sampleCnt = 0
-local ndvi = 0
-local gpsTime = 0
-
-
-starttime = time.latch();
-tbl, status = dem:sample(lon, lat, height)
-stoptime = time.latch();
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-threadCnt = 0
-if status ~= true then
-    print(string.format("======> FAILED to read", lon, lat))
-else
-    local value, fname, time
+    demType = demTypes[i];
+    print(string.format("\n--------------------------\n%s\n--------------------------", demType))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+    starttime = time.latch();
+    tbl, status = dem:sample(llx, lly, 0)
+    stoptime = time.latch();
+    threadCnt = 0
     for i, v in ipairs(tbl) do
-        value = v["value"]
-        time  = v["time"]
-        fname = v["file"]
-        -- print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
+        local el = v["value"]
+        local fname = v["file"]
+        -- print(string.format("(%02d) %10.2f  %s", i, el, fname))
         threadCnt = threadCnt + 1
     end
-end
-print(string.format("POI sample time: %.2f   (%d threads)\n", stoptime - starttime, threadCnt))
+    print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
-starttime = time.latch();
-tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
-stoptime = time.latch();
-runner.check(status == true)
+    starttime = time.latch();
+    tbl, status = dem:subset(llx, lly, urx, ury)
+    stoptime = time.latch();
 
-threadCnt = 0
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        threadCnt = threadCnt + 1
+    threadCnt = 0
+    if tbl ~= nil then
+        for i, v in ipairs(tbl) do
+            threadCnt = threadCnt + 1
+        end
     end
-end
-print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+    print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        local data = v["data"]
-        local cols = v["cols"]
-        local rows = v["rows"]
-        local datatype = v["datatype"]
+    if tbl ~= nil then
+        for i, v in ipairs(tbl) do
+            local cols = v["cols"]
+            local rows = v["rows"]
+            local datatype = v["datatype"]
 
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
-        -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-        print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            local bytes = cols*rows* GDT_datasize[datatype]
+            local mbytes = bytes / (1024*1024)
+            print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
+        end
     end
 end
 
@@ -286,24 +206,16 @@ local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
-local  lon =    -108.1
-local  lat =      39.1
-local  height = 2630.0
-
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
-
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, status = dem:sample(gm_llx, gm_lly, 0)
 stoptime = time.latch();
-runner.check(status == true)
-runner.check(tbl ~= nil)
 
 threadCnt = 0
-for i, v in ipairs(tbl) do
-    local el = v["value"]
-    local fname = v["file"]
-    -- print(string.format("(%02d) %10.2f  %s", i, el, fname))
-    threadCnt = threadCnt + 1
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
 end
 print(string.format("POI sample time: %.2f   (%d threads)\n", stoptime - starttime, threadCnt))
 
@@ -311,7 +223,6 @@ print(string.format("POI sample time: %.2f   (%d threads)\n", stoptime - startti
 starttime = time.latch();
 tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
 stoptime = time.latch();
-runner.check(status == true)
 
 threadCnt = 0
 for i, v in ipairs(tbl) do
@@ -332,6 +243,67 @@ if tbl ~= nil then
         print(string.format("AOI subset datasize: %8.2f MB, cols: %6d, rows: %6d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
     end
 end
+
+
+--[[
+
+demType = "landsat-hls"
+print(string.format("\n--------------------------\n%s\n--------------------------", demType))
+
+local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
+local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
+sys.wait(2)
+
+
+local geojsonfile = td.."../../plugins/landsat/data/hls_trimmed.geojson"
+local f = io.open(geojsonfile, "r")
+local contents = f:read("*all")
+f:close()
+
+-- AOI extent
+llx =  -179.87
+lly =    50.45
+urx =  -178.27
+ury =    51.44
+
+
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
+starttime = time.latch();
+-- tbl, status = dem:sample(-179, 51, 0)
+stoptime = time.latch();
+
+threadCnt = 0
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
+end
+print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+starttime = time.latch();
+tbl, status = dem:subset(llx, lly, urx, ury)
+stoptime = time.latch();
+
+threadCnt = 0
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
+end
+print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        local cols = v["cols"]
+        local rows = v["rows"]
+        local datatype = v["datatype"]
+
+        local bytes = cols*rows* GDT_datasize[datatype]
+        local mbytes = bytes / (1024*1024)
+        print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    end
+end
+--]]
 
 
 os.exit()

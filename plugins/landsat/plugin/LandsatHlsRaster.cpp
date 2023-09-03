@@ -178,11 +178,14 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
             OGRGeometry *rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(geotype == wkbPoint || geotype == wkbPoint25D)
+            bool ispoint = geotype == wkbPoint || geotype == wkbPoint25D;
+            bool ispoly  = geotype == wkbPolygon;
+
+            if(ispoint)
             {
                 if(!rgeo->Contains(geo)) continue;
             }
-            else if(geotype == wkbPolygon)
+            else if(ispoly)
             {
                 if(!geo->Intersects(rgeo)) continue;
             }
@@ -220,12 +223,15 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                     {
                         /* Use base class generic flags tag */
                         rinfo.tag = FLAGS_TAG;
+
+                        /* Only add flags rasters for points */
+                        if(ispoint) rgroup->infovect.push_back(rinfo);
                     }
                     else
                     {
                         rinfo.tag = bandName;
+                        rgroup->infovect.push_back(rinfo);
                     }
-                    rgroup->infovect.push_back(rinfo);
                 }
                 bandName = bandsDict.next(&val);
             }

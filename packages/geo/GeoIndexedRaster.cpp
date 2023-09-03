@@ -238,19 +238,16 @@ void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vecto
 {
     for(const auto& rinfo: rgroup->infovect)
     {
-        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) == 0)
+        const char* key = rinfo.fileName.c_str();
+        cacheitem_t* item;
+        if(cache.find(key, &item))
         {
-            const char* key = rinfo.fileName.c_str();
-            cacheitem_t* item;
-            if(cache.find(key, &item))
+            if(item->enabled && item->raster->sampled())
             {
-                if(item->enabled && item->raster->sampled())
-                {
-                    /* Update dictionary of used raster files */
-                    RasterSubset& sset = item->raster->getSubset();
-                    sset.fileId = fileDictAdd(item->raster->getFileName());
-                    slist.push_back(sset);
-                }
+                /* Update dictionary of used raster files */
+                RasterSubset& sset = item->raster->getSubset();
+                sset.fileId = fileDictAdd(item->raster->getFileName());
+                slist.push_back(sset);
             }
         }
     }
