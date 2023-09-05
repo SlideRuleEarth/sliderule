@@ -75,20 +75,13 @@ class GeoIndexedRaster: public RasterObject
             int64_t                    gpsTime;
         } rasters_group_t;
 
-        typedef enum {
-            POI = 1,
-            AOI= 2
-        } readtype_t;
-
         typedef struct {
             GeoIndexedRaster* obj;
-            GdalRaster::Point poi;
-            OGRPolygon  poly;
-            readtype_t  readtype;
-            Thread*     thread;
-            GdalRaster* raster;
-            Cond*       sync;
-            bool        run;
+            OGRGeometry* geo;
+            Thread*      thread;
+            GdalRaster*  raster;
+            Cond*        sync;
+            bool         run;
         } reader_t;
 
         typedef struct {
@@ -119,21 +112,18 @@ class GeoIndexedRaster: public RasterObject
         virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset>& slist);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        void            openGeoIndex          (double lon = 0, double lat = 0);
-        void            openGeoIndexForAOI    (const OGRPolygon& poly);
-        virtual void    getIndexFile          (std::string& file, double lon, double lat) = 0;
+        void            openGeoIndex          (const OGRGeometry* geo);
+        virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool    findRasters           (const OGRGeometry* geo) = 0;
-        void            sampleRasters         (const GdalRaster::Point& poi);
-        void            subsetRasters         (const OGRPolygon& poly);
-        int             sample                (double lon, double lat, double height, int64_t gps);
-        int             subset                (const OGRPolygon& poly, int64_t gps);
+        void            sampleRasters         (OGRGeometry* geo);
+        int             sample                (OGRGeometry* geo, int64_t gps);
 
         /* Inline for performance */
-        bool withinExtent(GdalRaster::Point& poi)
+        bool withinExtent(OGRPoint* poi)
         {
             return ((featuresList.length() > 0) &&
-                    (poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
-                    (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max));
+                    (poi->getX() >= bbox.lon_min) && (poi->getX() <= bbox.lon_max) &&
+                    (poi->getY() >= bbox.lat_min) && (poi->getY() <= bbox.lat_max));
         }
 
 

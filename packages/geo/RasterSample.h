@@ -119,7 +119,7 @@ private:
     } memrequest_t;
 
     static const int64_t oneGB   = 0x40000000;
-    static const int64_t maxsize = oneGB*8;
+    static const int64_t maxsize = oneGB*6;
 
     static bool updateMemPool(int64_t memsize, memrequest_t requestType, uint8_t* dptr=NULL)
     {

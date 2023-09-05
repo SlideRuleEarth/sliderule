@@ -154,10 +154,9 @@ LandsatHlsRaster::~LandsatHlsRaster(void)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getIndexFile(std::string& file, double lon, double lat)
+void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    std::ignore = lon;
-    std::ignore = lat;
+    std::ignore = geo;
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
@@ -170,22 +169,17 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
 {
     try
     {
-        OGRwkbGeometryType geotype = geo->getGeometryType();
-
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            bool ispoint = geotype == wkbPoint || geotype == wkbPoint25D;
-            bool ispoly  = geotype == wkbPolygon;
-
-            if(ispoint)
+            if(GdalRaster::ispoint(geo))
             {
                 if(!rgeo->Contains(geo)) continue;
             }
-            else if(ispoly)
+            else if(GdalRaster::ispoly(geo))
             {
                 if(!geo->Intersects(rgeo)) continue;
             }
@@ -225,7 +219,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                         rinfo.tag = FLAGS_TAG;
 
                         /* Only add flags rasters for points */
-                        if(ispoint) rgroup->infovect.push_back(rinfo);
+                        if(GdalRaster::ispoint(geo)) rgroup->infovect.push_back(rinfo);
                     }
                     else
                     {

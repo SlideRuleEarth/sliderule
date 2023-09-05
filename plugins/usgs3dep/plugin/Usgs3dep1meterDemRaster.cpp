@@ -82,10 +82,9 @@ Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void Usgs3dep1meterDemRaster::getIndexFile(std::string& file, double lon, double lat)
+void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    std::ignore = lon;
-    std::ignore = lat;
+    std::ignore = geo;
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
@@ -98,22 +97,17 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
 {
     try
     {
-        OGRwkbGeometryType geotype = geo->getGeometryType();
-
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            bool ispoint = geotype == wkbPoint || geotype == wkbPoint25D;
-            bool ispoly  = geotype == wkbPolygon;
-
-            if(ispoint)
+            if(GdalRaster::ispoint(geo))
             {
                 if(!rgeo->Contains(geo)) continue;
             }
-            else if(ispoly)
+            else if(GdalRaster::ispoly(geo))
             {
                 if(!geo->Intersects(rgeo)) continue;
             }

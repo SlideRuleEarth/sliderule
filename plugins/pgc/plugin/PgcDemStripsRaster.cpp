@@ -66,9 +66,11 @@ PgcDemStripsRaster::~PgcDemStripsRaster(void)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
+void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    /*
+    if(GdalRaster::ispoint(geo))
+    {
+        /*
      * Strip DEM ﬁles are distributed in folders according to the 1° x 1° geocell in which the geometric center resides.
      * Geocell folder naming refers to the southwest degree corner coordinate
      * (e.g., folder n72e129 will contain all ArcticDEM strip ﬁles with centroids within 72° to 73° north latitude, and 129° to 130° east longitude).
@@ -84,26 +86,34 @@ void PgcDemStripsRaster::getIndexFile(std::string& file, double lon, double lat)
      *                 lat 61, lon    5    ->  n61e005
      */
 
-    /* Round to geocell location */
-    int _lon = static_cast<int>(floor(lon));
-    int _lat = static_cast<int>(floor(lat));
+        const OGRPoint* poi = geo->toPoint();
 
-    char lonBuf[32];
-    char latBuf[32];
+        /* Round to geocell location */
+        int lon = static_cast<int>(floor(poi->getX()));
+        int lat = static_cast<int>(floor(poi->getY()));
 
-    sprintf(lonBuf, "%03d", abs(_lon));
-    sprintf(latBuf, "%02d", abs(_lat));
+        char lonBuf[32];
+        char latBuf[32];
 
-    std::string lonStr(lonBuf);
-    std::string latStr(latBuf);
+        sprintf(lonBuf, "%03d", abs(lon));
+        sprintf(latBuf, "%02d", abs(lat));
 
-    file = path2geocells +
-           latStr +
-           ((_lon < 0) ? "w" : "e") +
-           lonStr +
-           ".geojson";
+        std::string lonStr(lonBuf);
+        std::string latStr(latBuf);
 
-    mlog(DEBUG, "Using %s", file.c_str());
+        file = path2geocells +
+               latStr +
+               ((lon < 0) ? "w" : "e") +
+               lonStr +
+               ".geojson";
+
+        mlog(DEBUG, "Using %s", file.c_str());
+    }
+    else if(GdalRaster::ispoly(geo))
+    {
+        const OGRPolygon* poly = geo->toPolygon();
+        //TODO
+    }
 }
 
 
@@ -127,22 +137,17 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
     std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
-        OGRwkbGeometryType geotype = geo->getGeometryType();
-
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry* rgeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            bool ispoint = geotype == wkbPoint || geotype == wkbPoint25D;
-            bool ispoly  = geotype == wkbPolygon;
-
-            if(ispoint)
+            if(GdalRaster::ispoint(geo))
             {
                 if(!rgeo->Contains(geo)) continue;
             }
-            else if(ispoly)
+            else if(GdalRaster::ispoly(geo))
             {
                 if(!geo->Intersects(rgeo)) continue;
             }
@@ -170,7 +175,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 demRinfo.fileName = fileName;
 
                 /* bitmask rasters only make sense for poi, don't read them for poly cases */
-                if(ispoint)
+                if(GdalRaster::ispoint(geo))
                 {
                     const std::string endToken    = "_dem.tif";
                     const std::string newEndToken = "_bitmask.tif";

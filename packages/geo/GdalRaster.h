@@ -92,26 +92,6 @@ class GdalRaster
         *--------------------------------------------------------------------*/
         typedef OGRErr (*overrideCRS_t)(OGRSpatialReference& crs);
 
-        class Point
-        {
-        public:
-            Point(double _x=0, double _y=0, double _z=0):
-              x(_x), y(_y), z(_z) {}
-
-            Point(const Point& p):
-              x(p.x), y(p.y), z(p.z) {}
-
-            Point& operator = (const Point& p)
-              { x=p.x; y=p.y; z=p.z; return *this; }
-
-            void clear(void)
-              { x=0; y=0; z=0; }
-
-            double x;
-            double y;
-            double z;
-        };
-
         /* import bbox_t into this namespace from GeoParms.h */
         using bbox_t=GeoParms::bbox_t;
 
@@ -122,8 +102,8 @@ class GdalRaster
                            GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb);
         virtual           ~GdalRaster     (void);
         void               open           (void);
-        void               samplePOI      (const Point& poi);
-        void               subsetAOI      (OGRPolygon& poly);
+        void               samplePOI      (OGRPoint* poi);
+        void               subsetAOI      (OGRPolygon* poly);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
         RasterSubset&      getSubset      (void) { return subset; }
@@ -141,6 +121,8 @@ class GdalRaster
         static std::string getUUID        (void);
         static void        initAwsAccess  (GeoParms* _parms);
         static OGRPolygon  makeRectangle  (double minx, double miny, double maxx, double maxy);
+        static bool        ispoint        (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPoint25D; }
+        static bool        ispoly         (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPolygon; }
 
     private:
 
@@ -183,9 +165,9 @@ class GdalRaster
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        readPixel           (const Point& poi);
-        void        resamplePixel       (const Point& poi);
-        void        computeZonalStats   (const Point& poi);
+        void        readPixel           (const OGRPoint* poi);
+        void        resamplePixel       (const OGRPoint* poi);
+        void        computeZonalStats   (const OGRPoint* poi);
         inline bool nodataCheck         (void);
         void        createTransform     (void);
         int         radius2pixels       (int _radius);

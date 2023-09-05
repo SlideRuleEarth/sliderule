@@ -145,6 +145,10 @@ for i = 1, #demTypes do
             print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
         end
     end
+
+    if i == 1 then  --Expecting 'throw' for mosaics, let it print correctly
+        sys.wait(1)
+    end
 end
 
 

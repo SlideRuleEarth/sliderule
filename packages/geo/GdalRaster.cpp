@@ -141,7 +141,7 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::samplePOI(const Point& poi)
+void GdalRaster::samplePOI(OGRPoint* poi)
 {
     try
     {
@@ -151,30 +151,23 @@ void GdalRaster::samplePOI(const Point& poi)
         _sampled = false;
         sample.clear();
 
-        double z = poi.z;
-        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
-        if(!transf->Transform(1, (double*)&poi.x, (double*)&poi.y, (double*)&poi.z))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi.x, poi.y, poi.z);
-        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
-        verticalShift = z - poi.z;
+        double z = poi->getZ();
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        if(poi->transform(transf) != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        verticalShift = z - poi->getZ();
 
-        /*
-         * Attempt to read raster only if it contains the point of interest.
-         */
-        if((poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
-           (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max))
-        {
-            if(parms->sampling_algo == GRIORA_NearestNeighbour)
-                readPixel(poi);
-            else
-                resamplePixel(poi);
+        if(parms->sampling_algo == GRIORA_NearestNeighbour)
+            readPixel(poi);
+        else
+            resamplePixel(poi);
 
-            if(parms->zonal_stats)
-                computeZonalStats(poi);
+        if(parms->zonal_stats)
+            computeZonalStats(poi);
 
-            _sampled = true;
-            sample.time = gpsTime;
-        }
+        _sampled = true;
+        sample.time = gpsTime;
     }
     catch (const RunTimeException &e)
     {
@@ -187,7 +180,7 @@ void GdalRaster::samplePOI(const Point& poi)
 /*----------------------------------------------------------------------------
  * subsetAOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::subsetAOI(OGRPolygon& poly)
+void GdalRaster::subsetAOI(OGRPolygon* poly)
 {
     /*
      * Notes on extent format:
@@ -210,11 +203,11 @@ void GdalRaster::subsetAOI(OGRPolygon& poly)
         if(dtype == GDT_Unknown)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type");
 
-        OGRErr err = poly.transform(transf);
+        OGRErr err = poly->transform(transf);
         CHECK_GDALERR(err);
 
         OGREnvelope env;
-        poly.getEnvelope(&env);
+        poly->getEnvelope(&env);
 
         double minx = env.MinX;
         double miny = env.MinY;
@@ -234,10 +227,13 @@ void GdalRaster::subsetAOI(OGRPolygon& poly)
         int lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * miny + invGeoTrans[5] * miny));
 
         /* Get raster extent in pixels */
-        const int extulx = 0;
-        const int extuly = 0;
+        const int extulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_min + invGeoTrans[2] * bbox.lat_max));
+        const int extuly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_max + invGeoTrans[5] * bbox.lat_max));
         const int extlrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_max + invGeoTrans[2] * bbox.lat_min));
         const int extlry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_min + invGeoTrans[5] * bbox.lat_min));
+
+        if(extulx != 0 || extuly != 0)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Pixel (0, 0) geoTransformed as (%d, %d)", extulx, extuly);
 
         if(ulx < extulx)
         {
@@ -388,13 +384,13 @@ OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, doub
 /*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPixel(const Point& poi)
+void GdalRaster::readPixel(const OGRPoint* poi)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi.x + invGeoTrans[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi.y + invGeoTrans[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
 
         // mlog(DEBUG, "%dP, %dL\n", col, row);
 
@@ -522,12 +518,12 @@ void GdalRaster::readPixel(const Point& poi)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::resamplePixel(const Point& poi)
+void GdalRaster::resamplePixel(const OGRPoint* poi)
 {
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi.x + invGeoTrans[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi.y + invGeoTrans[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
 
         int windowSize, offset;
 
@@ -591,14 +587,14 @@ void GdalRaster::resamplePixel(const Point& poi)
 /*----------------------------------------------------------------------------
  * computeZonalStats
  *----------------------------------------------------------------------------*/
-void GdalRaster::computeZonalStats(const Point& poi)
+void GdalRaster::computeZonalStats(const OGRPoint* poi)
 {
     double *samplesArray = NULL;
 
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi.x + invGeoTrans[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi.y + invGeoTrans[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 

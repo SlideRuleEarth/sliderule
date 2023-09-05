@@ -79,8 +79,15 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
     samplingMutex.lock();
     try
     {
+        OGRSpatialReference crs;
+        crs.importFromEPSG(4326);
+        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        OGRPoint poi(lon, lat, height);
+        poi.assignSpatialReference(&crs);
+
         /* Get samples, if none found, return */
-        if(sample(lon, lat, height, gps) == 0)
+        if(sample(&poi, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -118,10 +125,15 @@ void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max
     samplingMutex.lock();
     try
     {
+        OGRSpatialReference crs;
+        crs.importFromEPSG(4326);
+        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
         OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
+        poly.assignSpatialReference(&crs);
 
         /* Get samples, if none found, return */
-        if(subset(poly, gps) == 0)
+        if(sample(&poly, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -320,10 +332,10 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::openGeoIndex(double lon, double lat)
+void GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
 {
     std::string newFile;
-    getIndexFile(newFile, lon, lat);
+    getIndexFile(geo, newFile);
 
     /* Trying to open the same file? */
     if(featuresList.isempty() && newFile == indexFile)
@@ -337,7 +349,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
         /* Open new vector data set*/
         dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (dset == NULL)
-            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newFile.c_str());
+            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file: %s:", newFile.c_str());
 
         indexFile = newFile;
         OGRLayer* layer = dset->GetLayer(0);
@@ -382,22 +394,9 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
 
 
 /*----------------------------------------------------------------------------
- * openGeoIndexForAOI
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::openGeoIndexForAOI(const OGRPolygon& poly)
-{
-    /*
-     * This funtion supports indexed plugins which have index file available
-     * All other plugins must implement this function.
-     */
-    std::ignore = poly;
-    openGeoIndex(0, 0);
-}
-
-/*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::sampleRasters(const GdalRaster::Point& poi)
+void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
 {
     /* Create additional reader threads if needed */
     createThreads();
@@ -416,8 +415,15 @@ void GeoIndexedRaster::sampleRasters(const GdalRaster::Point& poi)
             reader->sync->lock();
             {
                 reader->raster = item->raster;
-                reader->poi = poi;
-                reader->readtype = POI;
+                if(reader->geo) delete reader->geo;
+                reader->geo = NULL;
+
+                if(GdalRaster::ispoint(geo))
+                    reader->geo = new OGRPoint(*geo->toPoint());
+
+                else if(GdalRaster::ispoly(geo))
+                    reader->geo = new OGRPolygon(*geo->toPolygon());
+
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
@@ -439,56 +445,11 @@ void GeoIndexedRaster::sampleRasters(const GdalRaster::Point& poi)
     }
 }
 
-
-/*----------------------------------------------------------------------------
- * subsetRasters
- *----------------------------------------------------------------------------*/
-void  GeoIndexedRaster::subsetRasters(const OGRPolygon& poly)
-{
-    /* Create additional reader threads if needed */
-    createThreads();
-
-    /* For each raster which is marked to be sampled, give it to the reader thread */
-    int signaledReaders = 0;
-    int i = 0;
-    cacheitem_t* item;
-
-    const char* key = cache.first(&item);
-    while(key != NULL)
-    {
-        if(item->enabled)
-        {
-            reader_t* reader = readers[i++];
-            reader->sync->lock();
-            {
-                reader->raster = item->raster;
-                reader->poly = poly;
-                reader->readtype = AOI;
-                reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-                signaledReaders++;
-            }
-            reader->sync->unlock();
-        }
-        key = cache.next(&item);
-    }
-
-    /* Wait for readers to finish sampling */
-    for(int j = 0; j < signaledReaders; j++)
-    {
-        reader_t* reader = readers[j];
-        reader->sync->lock();
-        {
-            while(reader->raster != NULL)
-                reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
-        }
-        reader->sync->unlock();
-    }
-}
 
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
+int GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 {
     invalidateCache();
     emptyGroupsList();
@@ -496,49 +457,32 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
     /* Clear atomic counter - incremented later by reader threads on sucessful sample */
     sampledRastersCnt.store(0);
 
-    /* Initial call, open index file if not already opened */
-    if(featuresList.isempty())
-        openGeoIndex(lon, lat);
-
-    GdalRaster::Point poi(lon, lat, height);
-    if(!withinExtent(poi))
+    if(GdalRaster::ispoint(geo))
     {
-        openGeoIndex(lon, lat);
+        /* Initial call, open index file if not already opened */
+        OGRPoint* poi = geo->toPoint();
+        if(featuresList.isempty())
+            openGeoIndex(geo);
 
-        /* Check against newly opened geoindex */
         if(!withinExtent(poi))
-            return 0;
+        {
+            openGeoIndex(geo);
+
+            /* Check against newly opened geoindex */
+            if(!withinExtent(poi))
+                return 0;
+        }
+    }
+    else
+    {
+        if(featuresList.isempty())
+            openGeoIndex(geo);
     }
 
-    OGRPoint ogrpoint(lon, lat, 0);
-    if(findRasters(&ogrpoint) && filterRasters(gps))
+    if(findRasters(geo) && filterRasters(gps))
     {
         updateCache();
-        sampleRasters(poi);
-    }
-
-    return sampledRastersCnt;
-}
-
-/*----------------------------------------------------------------------------
- * subset
- *----------------------------------------------------------------------------*/
-int GeoIndexedRaster::subset(const OGRPolygon& poly, int64_t gps)
-{
-    invalidateCache();
-    emptyGroupsList();
-
-    /* Clear atomic counter - incremented later by reader threads on sucessful sample */
-    sampledRastersCnt.store(0);
-
-    /* Initial call, open index file if not already opened */
-    if(featuresList.isempty())
-        openGeoIndexForAOI(poly);
-
-    if(findRasters(&poly) && filterRasters(gps))
-    {
-        updateCache();
-        subsetRasters(poly);
+        sampleRasters(geo);
     }
 
     return sampledRastersCnt;
@@ -659,10 +603,10 @@ void* GeoIndexedRaster::readingThread(void *param)
 
         if(reader->raster != NULL)
         {
-            if(reader->readtype == POI)
-                reader->raster->samplePOI(reader->poi);
-            else if(reader->readtype == AOI)
-                reader->raster->subsetAOI(reader->poly);
+            if(GdalRaster::ispoint(reader->geo))
+                reader->raster->samplePOI((OGRPoint*)reader->geo);
+            else if(GdalRaster::ispoly(reader->geo))
+                reader->raster->subsetAOI((OGRPolygon*)reader->geo);
             else return NULL;
 
             if(reader->raster->sampled())
@@ -700,7 +644,7 @@ void GeoIndexedRaster::createThreads(void)
     {
         reader_t* r = new reader_t;
         r->obj    = this;
-        r->poi.clear();
+        r->geo    = NULL;
         r->raster = NULL;
         r->run    = true;
         r->sync   = new Cond(NUM_SYNC_SIGNALS);
