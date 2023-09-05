@@ -621,7 +621,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
         }
         else
         {
-            mlog(WARNING, "Unable to create record object: %s", recclass);
+            if(ref.size > 0) mlog(WARNING, "Unable to create record object: %s", recclass);
             lua_pushnil(L); // for record
         }
     }

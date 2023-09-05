@@ -5,8 +5,8 @@ json = require("json")
 
 -- Setup --
 
- console.monitor:config(core.LOG, core.DEBUG)
- sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 local assets = asset.loaddir()
 local asset_name = "icesat2"
@@ -33,7 +33,7 @@ algo_disp:run()
 reader = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "recq", parms)
 
 while true do
-    rec = resultq:recvrecord(3000)
+    rec = resultq:recvrecord(15000)
     if rec == nil then
         break
     end
