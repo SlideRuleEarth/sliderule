@@ -174,6 +174,9 @@ class GdalRaster
         inline bool containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);
         inline void readRasterWithRetry (int col, int row, int colSize, int rowSize,
                                          void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+
+        void topixel(double minx, double miny, double maxx, double maxy,
+                     int& ulx, int& uly, int& lrx, int& lry);
 };
 
 #endif  /* __gdal_raster__ */

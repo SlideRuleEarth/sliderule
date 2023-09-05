@@ -119,7 +119,7 @@ private:
     } memrequest_t;
 
     static const int64_t oneGB   = 0x40000000;
-    static const int64_t maxsize = oneGB*6;
+    static const int64_t maxsize = oneGB * 6;
 
     static bool updateMemPool(int64_t memsize, memrequest_t requestType, uint8_t* dptr=NULL)
     {
@@ -151,8 +151,10 @@ private:
         }
         mutex.unlock();
 
+#if 0
         const float oneMB = 1024 * 1024;
         printf("%s mempoool %5.0f / %.0f MB    %12.2f MB\n", requestType == RESERVER ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
+#endif
 
         return status;
    }

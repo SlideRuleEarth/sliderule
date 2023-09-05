@@ -52,7 +52,7 @@ local gm_ury =   39.1956
 
 --[[
 --]]
-
+--eric
 local demType = "esa-worldcover-10meter"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
@@ -95,7 +95,6 @@ end
 
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
--- local demTypes = {"arcticdem-strips"}
 for i = 1, #demTypes do
     demType = demTypes[i];
     print(string.format("\n--------------------------\n%s\n--------------------------", demType))
@@ -225,7 +224,8 @@ print(string.format("POI sample time: %.2f   (%d threads)\n", stoptime - startti
 
 
 starttime = time.latch();
-tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
+-- tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
+tbl, status = dem:subset(gm_llx, gm_lly, gm_llx+0.1, gm_lly+0.1)
 stoptime = time.latch();
 
 threadCnt = 0
@@ -248,8 +248,7 @@ if tbl ~= nil then
     end
 end
 
-
---[[
+--eric
 
 demType = "landsat-hls"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
@@ -264,13 +263,14 @@ local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
--- AOI extent
+-- AOI extent (extent of hlt_trimmed.geojson)
 llx =  -179.87
 lly =    50.45
 urx =  -178.27
 ury =    51.44
 
 
+-- dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"B05"}, catalog = contents }))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
 starttime = time.latch();
 -- tbl, status = dem:sample(-179, 51, 0)
@@ -304,9 +304,14 @@ if tbl ~= nil then
 
         local bytes = cols*rows* GDT_datasize[datatype]
         local mbytes = bytes / (1024*1024)
-        print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+
+        -- This results in 59 threads, all the same size, cols, buffs data type. Print only first one
+        if i == 1 then
+            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+        end
     end
 end
+--[[
 --]]
 
 

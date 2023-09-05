@@ -185,6 +185,18 @@ void GdalRaster::samplePOI(OGRPoint* poi)
 
 
 /*----------------------------------------------------------------------------
+ * topixel
+ *----------------------------------------------------------------------------*/
+void GdalRaster::topixel(double minx, double miny, double maxx, double maxy,
+                         int& ulx, int& uly, int& lrx, int& lry)
+{
+    ulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * minx + invGeoTrans[2] * maxy));
+    uly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * maxy + invGeoTrans[5] * maxy));
+    lrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * maxx + invGeoTrans[2] * miny));
+    lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * miny + invGeoTrans[5] * miny));
+}
+
+/*----------------------------------------------------------------------------
  * subsetAOI
  *----------------------------------------------------------------------------*/
 void GdalRaster::subsetAOI(OGRPolygon* poly)
@@ -216,31 +228,32 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
         OGREnvelope env;
         poly->getEnvelope(&env);
 
-        double minx = env.MinX;
-        double miny = env.MinY;
-        double maxx = env.MaxX;
-        double maxy = env.MaxY;
-
-        mlog(DEBUG, "minx: %.4lf", minx);
-        mlog(DEBUG, "miny: %.4lf", miny);
-        mlog(DEBUG, "maxx: %.4lf", maxx);
-        mlog(DEBUG, "maxy: %.4lf", maxy);
-
         /* Get AOI window in pixels */
-        int ulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * minx + invGeoTrans[2] * maxy));
-        int uly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * maxy + invGeoTrans[5] * maxy));
-
-        int lrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * maxx + invGeoTrans[2] * miny));
-        int lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * miny + invGeoTrans[5] * miny));
+        int ulx, uly, lrx, lry;
+        topixel(env.MinX, env.MinY, env.MaxX, env.MaxY, ulx, uly, lrx, lry);
 
         /* Get raster extent in pixels */
-        const int extulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_min + invGeoTrans[2] * bbox.lat_max));
-        const int extuly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_max + invGeoTrans[5] * bbox.lat_max));
-        const int extlrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * bbox.lon_max + invGeoTrans[2] * bbox.lat_min));
-        const int extlry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * bbox.lat_min + invGeoTrans[5] * bbox.lat_min));
+        int extulx, extuly, extlrx, extlry;
+        topixel(bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max, extulx, extuly, extlrx, extlry);
+
+#if 0
+        printf("minx: %18.4lf\n", bbox.lon_min);
+        printf("miny: %18.4lf\n", bbox.lat_min);
+        printf("maxx: %18.4lf\n", bbox.lon_max);
+        printf("maxy: %18.4lf\n", bbox.lat_max);
+        printf("\n");
+        printf("minrx: %d\n", extulx);
+        printf("minry: %d\n", extuly);
+        printf("maxrx: %d\n", extlrx);
+        printf("maxry: %d\n", extlry);
+#endif
 
         if(extulx != 0 || extuly != 0)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Pixel (0, 0) geoTransformed as (%d, %d)", extulx, extuly);
+        {
+            mlog(DEBUG, "Adjusting upleft pixel (%d, %d) to (0, 0)", extulx, extuly);
+            printf("Adjusting upleft pixel (%d, %d) to (0, 0)\n", extulx, extuly);
+            extulx = extuly = 0;
+        }
 
         if(ulx < extulx)
         {
