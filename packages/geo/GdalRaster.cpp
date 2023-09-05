@@ -158,16 +158,23 @@ void GdalRaster::samplePOI(OGRPoint* poi)
         mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         verticalShift = z - poi->getZ();
 
-        if(parms->sampling_algo == GRIORA_NearestNeighbour)
-            readPixel(poi);
-        else
-            resamplePixel(poi);
+        /*
+         * Attempt to read raster only if it contains the point of interest.
+         */
+        if((poi->getX() >= bbox.lon_min) && (poi->getX() <= bbox.lon_max) &&
+           (poi->getY() >= bbox.lat_min) && (poi->getY() <= bbox.lat_max))
+        {
+            if(parms->sampling_algo == GRIORA_NearestNeighbour)
+                readPixel(poi);
+            else
+                resamplePixel(poi);
 
-        if(parms->zonal_stats)
-            computeZonalStats(poi);
+            if(parms->zonal_stats)
+                computeZonalStats(poi);
 
-        _sampled = true;
-        sample.time = gpsTime;
+            _sampled    = true;
+            sample.time = gpsTime;
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -403,7 +410,7 @@ void GdalRaster::readPixel(const OGRPoint* poi)
         int yblk = row / yBlockSize;
 
         GDALRasterBlock *block = NULL;
-        int cnt = 2;
+        int cnt = 1;
         do
         {
             /* Retry read if error */

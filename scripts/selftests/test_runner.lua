@@ -5,8 +5,8 @@ local td = runner.rootdir(arg[0]) -- root directory
 local loglvl = global.eval(arg[1]) or core.INFO
 
 -- Initial Configuration --
-console.monitor:config(core.LOG, loglvl)
-sys.setlvl(core.LOG, loglvl)
+-- console.monitor:config(core.LOG, loglvl)
+-- sys.setlvl(core.LOG, loglvl)
 
 local maxRuns = 1
 for runNum = 1, maxRuns do
