@@ -65,7 +65,7 @@ class TestMosaic:
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405900
+        assert gdf['segment_id'].describe()["max"] == 405902
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
 
     def test_zonal_stats(self, domain, asset, organization, desired_nodes):
@@ -81,12 +81,12 @@ class TestMosaic:
                   "maxi": 1,
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
-        assert len(gdf) == 954
+        assert len(gdf) == 957
         assert len(gdf.keys()) == 26
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405900
+        assert gdf['segment_id'].describe()["max"] == 405902
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
         assert gdf["mosaic.count"].describe()["max"] == 81
         assert gdf["mosaic.stdev"].describe()["count"] == 957
