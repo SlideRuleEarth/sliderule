@@ -549,7 +549,6 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
             if len(rsps) > 0:
                 # Sort Records
                 for rsp in rsps:
-                    extent_id = rsp['extent_id']
                     if 'atl03rec' in rsp['__rectype']:
                         photon_records += rsp,
                         num_photons += len(rsp['photons'])
@@ -564,6 +563,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         if field_name not in photon_field_types:
                             photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
+                        extent_id = rsp['extent_id']
                         if extent_id not in photon_dictionary:
                             photon_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
@@ -585,8 +585,14 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     # Populate Columns
                     ph_cnt = 0
                     for record in photon_records:
+                        # Add Ancillary Extent Fields
                         ph_index = 0
                         extent_id = record['extent_id']
+                        if extent_id in photon_dictionary:
+                            for photon in record["photons"]:
+                                for field_name, field_array in photon_dictionary[extent_id].items():
+                                    columns[field_name][ph_cnt + ph_index] = field_array[ph_index]
+                                ph_index += 1
                         # For Each Photon in Extent
                         for photon in record["photons"]:
                             # Add per Extent Fields
@@ -597,13 +603,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                             for field in photon.keys():
                                 if field in columns:
                                     columns[field][ph_cnt] = photon[field]
-                            # Add Ancillary Extent Fields
-                            if extent_id in photon_dictionary:
-                                for field_array in photon_dictionary[extent_id].values():
-                                    columns[field][ph_cnt] = field_array[ph_index]
                             # Goto Next Photon
                             ph_cnt += 1
-                            ph_index += 1
 
                     # Delete Extent ID Column
                     if "extent_id" in columns and not keep_id:

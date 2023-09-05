@@ -9,4 +9,4 @@ local rqst = json.decode(arg[1])
 local resources = rqst["resources"]
 local parms = rqst["parms"]
 
-proxy.proxy(resources, parms, "atl08", "atl08rec", "longitude", "latitude")
+proxy.proxy(resources, parms, "atl08", "atl08rec", "vegetation.longitude", "vegetation.latitude")

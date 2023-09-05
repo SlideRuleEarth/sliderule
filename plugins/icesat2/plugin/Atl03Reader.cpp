@@ -276,16 +276,16 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         parseResource(resource, start_rgt, start_cycle, start_region);
 
         /* Create Readers */
-        for(int t = 0; t < Icesat2Parms::NUM_TRACKS; t++)
+        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
         {
-            for(int p = 0; p < Icesat2Parms::NUM_PAIR_TRACKS; p++)
+            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
             {
-                if(parms->track == Icesat2Parms::ALL_TRACKS || t == parms->track)
+                if(parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track)
                 {
                     info_t* info = new info_t;
                     info->reader = this;
-                    info->track = t + 1;
-                    info->pair = p;
+                    info->track = track;
+                    info->pair = pair;
                     StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
                     readerPid[threadCount++] = new Thread(subsettingThread, info);
                 }

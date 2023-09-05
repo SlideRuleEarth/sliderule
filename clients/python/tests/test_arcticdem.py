@@ -60,7 +60,7 @@ class TestMosaic:
                   "maxi": 1,
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
         gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
-        assert len(gdf) == 954
+        assert len(gdf) == 957
         assert len(gdf.keys()) == 19
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
@@ -89,7 +89,7 @@ class TestMosaic:
         assert gdf['segment_id'].describe()["max"] == 405900
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
         assert gdf["mosaic.count"].describe()["max"] == 81
-        assert gdf["mosaic.stdev"].describe()["count"] == 954
+        assert gdf["mosaic.stdev"].describe()["count"] == 957
         assert gdf["mosaic.time"][0] == vrtFileTime
 
 @pytest.mark.network

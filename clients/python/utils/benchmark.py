@@ -72,6 +72,10 @@ sliderule.init(args.domain, verbose=args.verbose, organization=args.organization
 # Generate Region Polygon
 region = sliderule.toregion(args.aoi)
 
+# ########################################################
+# Utilities
+# ########################################################
+
 # Display Results
 def display_results(name, gdf, duration):
     print(f'{name}')
@@ -121,11 +125,28 @@ def atl06_parquet():
         "len":              10.0,
         "res":              10.0,
         "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
-    gdf = icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+    gdf = icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
     if not args.nocleanup:
         os.remove("testfile.parquet")
     return gdf
 
+# ------------------------------------
+# Benchmark ATL03 Parquet
+# ------------------------------------
+def atl03_parquet():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "cnf":              icesat2.CNF_SURFACE_LOW,
+        "ats":              3.0,
+        "cnt":              2,
+        "len":              10.0,
+        "res":              10.0,
+        "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
+    gdf = icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+    if not args.nocleanup:
+        os.remove("testfile.parquet")
+    return gdf
 
 # ------------------------------------
 # Benchmark ATL06 Sample Landsat
@@ -136,7 +157,6 @@ def atl06_sample_landsat():
     catalog = earthdata.stac(short_name="HLS", polygon=region['poly'], time_start=time_start, time_end=time_end, as_str=True)
     parms = { 
         "poly": region['poly'],
-#        "raster": region['raster'], # TODO: this is very slow!
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_LOW,
         "ats": 20.0,
@@ -172,6 +192,7 @@ if __name__ == '__main__':
         "atl06_ancillary":          atl06_ancillary,
         "atl03_ancillary":          atl03_ancillary,
         "atl06_parquet":            atl06_parquet,
+        "atl03_parquet":            atl03_parquet,
         "atl06_sample_landsat":     atl06_sample_landsat,
         "atl03_rasterized_subset":  atl03_rasterized_subset,
     }

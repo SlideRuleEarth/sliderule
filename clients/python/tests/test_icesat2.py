@@ -117,11 +117,11 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 243239
-        assert len(gdf[gdf["atl08_class"] == 0]) == 30431
-        assert len(gdf[gdf["atl08_class"] == 1]) == 123065
-        assert len(gdf[gdf["atl08_class"] == 2]) == 54820
-        assert len(gdf[gdf["atl08_class"] == 3]) == 18945
+        assert len(gdf["height"]) == 241127
+        assert len(gdf[gdf["atl08_class"] == 0]) == 30299
+        assert len(gdf[gdf["atl08_class"] == 1]) == 122273
+        assert len(gdf[gdf["atl08_class"] == 2]) == 54292
+        assert len(gdf[gdf["atl08_class"] == 3]) == 18285
         assert len(gdf[gdf["atl08_class"] == 4]) == 15978
 
     def test_gs(self, domain, asset, organization, desired_nodes):
