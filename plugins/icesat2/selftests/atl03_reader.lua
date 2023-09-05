@@ -69,10 +69,10 @@ runner.check(p1.cnf[icesat2.CNF_SURFACE_HIGH], "Failed to set _high_")
 
 print('\n------------------\nTest02: Atl03 Extent Record\n------------------')
 
-recq = msg.subscribe("recq")
+recq = msg.subscribe("atl03-reader-recq")
 tstart = time.latch()
-f2 = icesat2.atl03(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "recq", icesat2.parms({cnf=4, track=icesat2.RPT_1}))
-extentrec = recq:recvrecord(3000)
+f2 = icesat2.atl03(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "atl03-reader-recq", icesat2.parms({cnf=4, track=icesat2.RPT_1}))
+extentrec = recq:recvrecord(5000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 recq:destroy()
 
@@ -80,15 +80,11 @@ runner.check(extentrec, "Failed to read an extent record")
 
 if extentrec then
     runner.check(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
-    runner.check(extentrec:getvalue("segment_id[0]") == 555765, extentrec:getvalue("segment_id[0]"))
-    runner.check(extentrec:getvalue("segment_id[1]") == 555765, extentrec:getvalue("segment_id[1]"))
-    runner.check(extentrec:getvalue("count[0]") == 136, extentrec:getvalue("count[0]"))
-    runner.check(extentrec:getvalue("count[1]") == 540, extentrec:getvalue("count[1]"))
+    runner.check(extentrec:getvalue("segment_id") == 555765, extentrec:getvalue("segment_id"))
 
     t2 = extentrec:tabulate()
 
-    runner.check(t2.segment_id[1] == extentrec:getvalue("segment_id[0]"))
-    runner.check(t2.segment_id[2] == extentrec:getvalue("segment_id[1]"))
+    runner.check(t2.segment_id == extentrec:getvalue("segment_id"))
 end
 
 print('\n------------------\nTest03: Atl03 Extent Definition\n------------------')

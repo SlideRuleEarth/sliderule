@@ -24,13 +24,13 @@ end
 -- Unit Test --
 
 cnt = 0
-resultq = msg.subscribe("resultq")
+resultq = msg.subscribe("atl06-ancillary-resultq")
 parms = icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}})
-algo = icesat2.atl06("resultq", parms)
-algo_disp = core.dispatcher("recq")
+algo = icesat2.atl06("atl06-ancillary-resultq", parms)
+algo_disp = core.dispatcher("atl06-ancillary-recq")
 algo_disp:attach(algo, "atl03rec")
 algo_disp:run()
-reader = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "recq", parms)
+reader = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "atl06-ancillary-recq", parms)
 
 while true do
     rec = resultq:recvrecord(15000)
