@@ -64,58 +64,105 @@ PgcDemStripsRaster::~PgcDemStripsRaster(void)
 }
 
 /*----------------------------------------------------------------------------
+ * openGeoIndex
+ *----------------------------------------------------------------------------*/
+void PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
+{
+    /* For POI call parent class */
+    if(GdalRaster::ispoint(geo))
+        return GeoIndexedRaster::openGeoIndex(geo);
+
+    /*
+     * Create a list of minx, miny  1° x 1° geocell points contained in AOI
+     * For each point get geojson file
+     * Open file, get list of features.
+     */
+    const OGRPolygon* poly = geo->toPolygon();
+    OGREnvelope env;
+    poly->getEnvelope(&env);
+
+    double minx = floor(env.MinX);
+    double miny = floor(env.MinY);
+    double maxx = ceil(env.MaxX);
+    double maxy = ceil(env.MaxY);
+
+    emptyFeaturesList();
+    std::vector<std::string> rasterFiles;
+
+    for(double ix = minx; ix < maxx; ix++ )
+    {
+        for(double iy = miny; iy < maxy; iy++)
+        {
+            std::string newFile;
+            _getIndexFile(ix, iy, newFile);
+
+            GDALDataset* dset = NULL;
+            try
+            {
+                /* Open new vector data set*/
+                dset = (GDALDataset*)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+                if(dset == NULL)
+                {
+                    /* If index file for this ix, iy does not exist, continue */
+                    mlog(DEBUG, "Failed to open geojson index file: %s:", newFile.c_str());
+                    continue;
+                }
+
+                OGRLayer* layer = dset->GetLayer(0);
+                CHECKPTR(layer);
+
+                /*
+                 * Clone all features and store them for performance/speed of feature lookup
+                 */
+                layer->ResetReading();
+                while(OGRFeature* feature = layer->GetNextFeature())
+                {
+                    /*
+                     * Strip rasters can span multiple geocells, check for duplicates.
+                     * Ignore quality mask rasters for now.
+                     * We can read max 200 rasters in parallel. If the AOI returned thousands of rasters,
+                     * it is OK for this check to take performance hit since no rasters will be read anyway.
+                     */
+                    const char* fname = feature->GetFieldAsString("Dem");
+                    if(fname && strlen(fname) > 0)
+                    {
+                        std::string newRaster(fname);
+                        if(isduplicate(rasterFiles, newRaster))
+                        {
+                            OGRFeature::DestroyFeature(feature);
+                            continue;
+                        }
+                        rasterFiles.push_back(newRaster);
+                    }
+
+                    OGRFeature* fp = feature->Clone();
+                    featuresList.add(fp);
+                    OGRFeature::DestroyFeature(feature);
+                }
+
+                GDALClose((GDALDatasetH)dset);
+            }
+            catch(const RunTimeException& e)
+            {
+                if(dset) GDALClose((GDALDatasetH)dset);
+                emptyFeaturesList();
+                throw;
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
 void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
     if(GdalRaster::ispoint(geo))
     {
-        /*
-     * Strip DEM ﬁles are distributed in folders according to the 1° x 1° geocell in which the geometric center resides.
-     * Geocell folder naming refers to the southwest degree corner coordinate
-     * (e.g., folder n72e129 will contain all ArcticDEM strip ﬁles with centroids within 72° to 73° north latitude, and 129° to 130° east longitude).
-     *
-     * https://www.pgc.umn.edu/guides/stereo-derived-elevation-models/pgcs-dem-products-arcticdem-rema-and-earthdem/#section-9
-     *
-     * NOTE: valid latitude strings for Arctic DEMs are 'n59' and up. Nothing below 59. 'n' is always followed by two digits.
-     *       valid latitude strings for REMA are 's54' and down. Nothing above 54. 's' is always followed by two digits.
-     *       valid longitude strings are 'e/w' followed by zero padded 3 digits.
-     *       example:  lat 61, lon -120.3  ->  n61w121
-     *                 lat 61, lon  -50.8  ->  n61w051
-     *                 lat 61, lon   -5    ->  n61w005
-     *                 lat 61, lon    5    ->  n61e005
-     */
-
         const OGRPoint* poi = geo->toPoint();
-
-        /* Round to geocell location */
-        int lon = static_cast<int>(floor(poi->getX()));
-        int lat = static_cast<int>(floor(poi->getY()));
-
-        char lonBuf[32];
-        char latBuf[32];
-
-        sprintf(lonBuf, "%03d", abs(lon));
-        sprintf(latBuf, "%02d", abs(lat));
-
-        std::string lonStr(lonBuf);
-        std::string latStr(latBuf);
-
-        file = path2geocells +
-               latStr +
-               ((lon < 0) ? "w" : "e") +
-               lonStr +
-               ".geojson";
-
-        mlog(DEBUG, "Using %s", file.c_str());
-    }
-    else if(GdalRaster::ispoly(geo))
-    {
-        const OGRPolygon* poly = geo->toPolygon();
-        //TODO
+        return _getIndexFile(poi->getX(), poi->getY(), file);
     }
 }
-
 
 /*----------------------------------------------------------------------------
  * findRasters
@@ -225,3 +272,59 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * _getIndexFile
+ *----------------------------------------------------------------------------*/
+void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file)
+{
+    /*
+     * Strip DEM ﬁles are distributed in folders according to the 1° x 1° geocell in which the geometric center resides.
+     * Geocell folder naming refers to the southwest degree corner coordinate
+     * (e.g., folder n72e129 will contain all ArcticDEM strip ﬁles with centroids within 72° to 73° north latitude, and 129° to 130° east longitude).
+     *
+     * https://www.pgc.umn.edu/guides/stereo-derived-elevation-models/pgcs-dem-products-arcticdem-rema-and-earthdem/#section-9
+     *
+     * NOTE: valid latitude strings for Arctic DEMs are 'n59' and up. Nothing below 59. 'n' is always followed by two digits.
+     *       valid latitude strings for REMA are 's54' and down. Nothing above 54. 's' is always followed by two digits.
+     *       valid longitude strings are 'e/w' followed by zero padded 3 digits.
+     *       example:  lat 61, lon -120.3  ->  n61w121
+     *                 lat 61, lon  -50.8  ->  n61w051
+     *                 lat 61, lon   -5    ->  n61w005
+     *                 lat 61, lon    5    ->  n61e005
+     */
+
+    /* Round to geocell location */
+    int _lon = static_cast<int>(floor(lon));
+    int _lat = static_cast<int>(floor(lat));
+
+    char lonBuf[32];
+    char latBuf[32];
+
+    sprintf(lonBuf, "%03d", abs(_lon));
+    sprintf(latBuf, "%02d", abs(_lat));
+
+    std::string lonStr(lonBuf);
+    std::string latStr(latBuf);
+
+    file = path2geocells +
+           latStr +
+           ((lon < 0) ? "w" : "e") +
+           lonStr +
+           ".geojson";
+
+    mlog(DEBUG, "Using %s", file.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * isduplicate
+ *----------------------------------------------------------------------------*/
+bool PgcDemStripsRaster::isduplicate(std::vector<std::string>& files, std::string& file)
+{
+    for(unsigned i = 0; i < files.size(); i++)
+    {
+        if(files[i] == file)
+        return true;
+    }
+    return false;
+}

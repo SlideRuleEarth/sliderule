@@ -51,7 +51,6 @@ local gm_ury =   39.1956
 
 
 --[[
---]]
 --eric
 local demType = "esa-worldcover-10meter"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
@@ -150,8 +149,10 @@ for i = 1, #demTypes do
     end
 end
 
+--]]
 
-demTypes = {"rema-mosaic", "rema-strips"}
+-- demTypes = {"rema-mosaic", "rema-strips"}
+demTypes = {"rema-strips"}
 for i = 1, #demTypes do
 
     -- AOI extent
@@ -159,6 +160,9 @@ for i = 1, #demTypes do
     lly =  -70.00
     urx =  150.01
     ury =  -69.93
+
+    -- urx =  155.00
+    -- ury =  -60.00
 
     demType = demTypes[i];
     print(string.format("\n--------------------------\n%s\n--------------------------", demType))
@@ -195,12 +199,16 @@ for i = 1, #demTypes do
 
             local bytes = cols*rows* GDT_datasize[datatype]
             local mbytes = bytes / (1024*1024)
-            print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            -- This results in 21 threads, all the same size, cols, buffs data type. Print only first one
+            if i == 1 then
+                print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            end
         end
     end
 end
 
 
+--[[
 demType = "usgs3dep-1meter-dem"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
 
@@ -263,7 +271,7 @@ local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
--- AOI extent (extent of hlt_trimmed.geojson)
+-- AOI extent (extent of hls_trimmed.geojson)
 llx =  -179.87
 lly =    50.45
 urx =  -178.27
@@ -273,7 +281,7 @@ ury =    51.44
 -- dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"B05"}, catalog = contents }))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
 starttime = time.latch();
--- tbl, status = dem:sample(-179, 51, 0)
+tbl, status = dem:sample(-179, 51, 0)
 stoptime = time.latch();
 
 threadCnt = 0
@@ -311,7 +319,6 @@ if tbl ~= nil then
         end
     end
 end
---[[
 --]]
 
 

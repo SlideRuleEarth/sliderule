@@ -112,11 +112,12 @@ class GeoIndexedRaster: public RasterObject
         virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset>& slist);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        void            openGeoIndex          (const OGRGeometry* geo);
+        virtual void    openGeoIndex          (const OGRGeometry* geo);
         virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool    findRasters           (const OGRGeometry* geo) = 0;
         void            sampleRasters         (OGRGeometry* geo);
         int             sample                (OGRGeometry* geo, int64_t gps);
+        void            emptyFeaturesList     (void);
 
         /* Inline for performance */
         bool withinExtent(OGRPoint* poi)
@@ -174,7 +175,6 @@ class GeoIndexedRaster: public RasterObject
         void       updateCache             (void);
         void       invalidateCache         (void);
         bool       filterRasters           (int64_t gps);
-        void       emptyFeaturesList       (void);
         void       emptyGroupsList         (void);
 };
 

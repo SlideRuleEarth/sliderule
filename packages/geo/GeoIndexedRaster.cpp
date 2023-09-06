@@ -460,10 +460,10 @@ int GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
     if(GdalRaster::ispoint(geo))
     {
         /* Initial call, open index file if not already opened */
-        OGRPoint* poi = geo->toPoint();
         if(featuresList.isempty())
             openGeoIndex(geo);
 
+        OGRPoint* poi = geo->toPoint();
         if(!withinExtent(poi))
         {
             openGeoIndex(geo);
@@ -473,11 +473,12 @@ int GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
                 return 0;
         }
     }
-    else
+    else if(GdalRaster::ispoly(geo))
     {
-        if(featuresList.isempty())
-            openGeoIndex(geo);
+        /* Always open/create new file and features list for poly*/
+        openGeoIndex(geo);
     }
+    else return 0;
 
     if(findRasters(geo) && filterRasters(gps))
     {
@@ -486,6 +487,22 @@ int GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
     }
 
     return sampledRastersCnt;
+}
+
+
+/*----------------------------------------------------------------------------
+ * emptyFeaturesList
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::emptyFeaturesList(void)
+{
+    if(featuresList.isempty()) return;
+
+    for(int i = 0; i < featuresList.length(); i++)
+    {
+        OGRFeature* feature = featuresList[i];
+        OGRFeature::DestroyFeature(feature);
+    }
+    featuresList.clear();
 }
 
 /******************************************************************************
@@ -825,21 +842,6 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
     }
 
     return (groupList.length() > 0);
-}
-
-/*----------------------------------------------------------------------------
- * emptyFeaturesList
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::emptyFeaturesList(void)
-{
-    if(featuresList.isempty()) return;
-
-    for(int i = 0; i < featuresList.length(); i++)
-    {
-        OGRFeature* feature = featuresList[i];
-        OGRFeature::DestroyFeature(feature);
-    }
-    featuresList.clear();
 }
 
 /*----------------------------------------------------------------------------
