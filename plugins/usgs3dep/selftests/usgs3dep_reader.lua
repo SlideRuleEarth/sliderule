@@ -11,6 +11,26 @@ local _,td = runner.srcscript()
 -- Setup --
 local assets = asset.loaddir()
 
+local GDT_datasize = {  1,  --GDT_Byte
+                        2,  --GDT_UInt16
+                        2,  --GDT_Int16
+                        4,  --GDT_UInt32
+                        4,  --GDT_Int32
+                        4,  --GDT_Float32
+                        8,  --GDT_Float64
+                        8,  --GDT_CInt16
+                        8,  --GDT_CInt32
+                        10, --GDT_CFloat32
+                        11, --GDT_CFloat64
+                        12, --GDT_UInt64
+                        13, --GDT_Int64
+                        14, --GDT_Int8
+                      }
+
+local GDT_dataname = {"GDT_Byte",   "GDT_UInt16", "GDT_Int16",    "GDT_UInt32",   "GDT_Int32",  "GDT_Float32", "GDT_Float64",
+                      "GDT_CInt16", "GDT_CInt32", "GDT_CFloat32", "GDT_CFloat64", "GDT_UInt64", "GDT_Int64",   "GDT_Int8"}
+
+
 local _,td = runner.srcscript()
 local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")
@@ -37,7 +57,7 @@ local  height = 2630.0
 -- RETURN_VAL = 2654.55810546875 + -16.526 =  2638.03214
 
 
-print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM sample\n-------------------------------------------------"))
 
 
 local expResults = {{2638.032147717071, 1289671725.0, '/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM12_2016/TIFF/USGS_one_meter_x23y434_CO_MesaCo_QL2_UTM12_2016.tif'},
@@ -66,6 +86,44 @@ for i, v in ipairs(tbl) do
     runner.check(fname == expResults[i][3])
 end
 runner.check(sampleCnt == #expResults)
+
+
+print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM subset\n-------------------------------------------------"))
+
+-- AOI extent (extent of grandmesa.geojson)
+local gm_llx = -108.3412
+local gm_lly =   38.8236
+local gm_urx = -107.7292
+local gm_ury =   39.1956
+
+local starttime = time.latch();
+local tbl, status = dem:subset(gm_llx, gm_lly, gm_llx+0.01, gm_lly+0.4)
+local stoptime = time.latch();
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+local threadCnt = 0
+for i, v in ipairs(tbl) do
+    threadCnt = threadCnt + 1
+end
+print(string.format("subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 4)
+
+for i, v in ipairs(tbl) do
+    local cols = v["cols"]
+    local rows = v["rows"]
+    local datatype = v["datatype"]
+
+    local bytes = cols*rows* GDT_datasize[datatype]
+    local mbytes = bytes / (1024*1024)
+    -- This results in 4 threads, all the same size, cols, buffs data type. Print only first one
+    if i == 1 then
+        print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    end
+end
+
+
 
 -- Report Results --
 

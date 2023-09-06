@@ -50,8 +50,6 @@ local gm_urx = -107.7292
 local gm_ury =   39.1956
 
 
---[[
---eric
 local demType = "esa-worldcover-10meter"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
@@ -149,10 +147,8 @@ for i = 1, #demTypes do
     end
 end
 
---]]
 
--- demTypes = {"rema-mosaic", "rema-strips"}
-demTypes = {"rema-strips"}
+demTypes = {"rema-mosaic", "rema-strips"}
 for i = 1, #demTypes do
 
     -- AOI extent
@@ -160,9 +156,6 @@ for i = 1, #demTypes do
     lly =  -70.00
     urx =  150.01
     ury =  -69.93
-
-    -- urx =  155.00
-    -- ury =  -60.00
 
     demType = demTypes[i];
     print(string.format("\n--------------------------\n%s\n--------------------------", demType))
@@ -208,7 +201,6 @@ for i = 1, #demTypes do
 end
 
 
---[[
 demType = "usgs3dep-1meter-dem"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
 
@@ -255,8 +247,6 @@ if tbl ~= nil then
         print(string.format("AOI subset datasize: %8.2f MB, cols: %6d, rows: %6d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
     end
 end
-
---eric
 
 demType = "landsat-hls"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
@@ -319,11 +309,7 @@ if tbl ~= nil then
         end
     end
 end
---]]
-
 
 os.exit()
-
-runner.report()
 
 
