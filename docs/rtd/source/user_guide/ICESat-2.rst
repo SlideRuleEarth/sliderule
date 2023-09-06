@@ -104,12 +104,11 @@ Extents are optionally filtered based on the number of photons in each extent an
 2.4 ATL06-SR algorithm parameters
 ---------------------------------
 
-The ATL06-SR algorithm fits a line segment to the photons in each extent, using an iterative selection refinement to eliminate noise photons not correctly identified by the photon classification.  The results are then checked against three parameters : ''"sigma_r_max"'', which eliminates segments for which the robust dispersion of the residuals is too large, and the ``"ats"`` and ``"cnt"`` parameters described above, which eliminate segments for which the iterative fitting has eliminated too many photons.  The optional ''"compact"'' instructs the algorithm to return a minimal subset of ATL06-SR segment parameters.
+The ATL06-SR algorithm fits a line segment to the photons in each extent, using an iterative selection refinement to eliminate noise photons not correctly identified by the photon classification.  The results are then checked against three parameters : ''"sigma_r_max"'', which eliminates segments for which the robust dispersion of the residuals is too large, and the ``"ats"`` and ``"cnt"`` parameters described above, which eliminate segments for which the iterative fitting has eliminated too many photons.
 
 * ``"maxi"``: maximum iterations, not including initial least-squares-fit selection
 * ``"H_min_win"``: minimum height to which the refined photon-selection window is allowed to shrink, in meters
 * ``"sigma_r_max"``: maximum robust dispersion in meters
-* ``"compact"``: return compact version of results (leaves out most metadata)
 
 2.5 Ancillary field parameters
 ------------------------------
@@ -180,9 +179,6 @@ To obtain fewer false-positive returns, this set of parameters can be modified w
    * - ``"cnt"``
      - Integer
      - 10
-   * - ``"compact"``
-     - Boolean
-     - False
    * - ``"cycle"``
      - Integer - orbit cycle
      -
@@ -287,7 +283,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
 - ``"latitude"``: latitude (-90.0 to 90.0)
 - ``"longitude"``: longitude (-180.0 to 180.0)
-- ``"distance"``: along track distance of the photon in meters (with respect to the center of the segment)
+- ``"x_atc"``: along track distance of the photon in meters (with respect to the center of the segment)
 - ``"across"``: across track distance of the photon in meters
 - ``"height"``: height of the photon in meters
 - ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
@@ -303,8 +299,6 @@ The GeoDataFrame for each photon extent has the following columns:
 
 The primary result returned by SlideRule for ICESat-2 ATL06 processing requests is a set of geolocated elevations corresponding to a geolocated ATL03 along-track segment. The elevations are contained in a GeoDataFrame where each row represents a calculated elevation.
 
-Elements that are present in the **compact** version of the results are noted below.
-
 The elevation GeoDataFrame has the following columns:
 
 - ``"extent_id"``: unique ID associated with custom ATL03 segment (removed from final GeoDataFrame by default)
@@ -315,13 +309,13 @@ The elevation GeoDataFrame has the following columns:
 - ``"cycle"``: cycle
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
-- ``"distance"``: along track distance from the equator in meters
+- ``"x_atc"``: along track distance from the equator in meters
 - ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
-- ``"lat"``: latitude (-90.0 to 90.0) [*in compact*]
-- ``"lon"``: longitude (-180.0 to 180.0) [*in compact*]
-- ``"h_mean"``: elevation in meters from ellipsoid [*in compact*]
+- ``"lat"``: latitude (-90.0 to 90.0)
+- ``"lon"``: longitude (-180.0 to 180.0)
+- ``"h_mean"``: elevation in meters from ellipsoid
 - ``"dh_fit_dx"``: along-track slope
-- ``"atc_y"``: across-track distance
+- ``"y_atc"``: across-track distance
 - ``"w_surface_window_final"``: width of the window used to select the final set of photons used in the calculation
 - ``"rms_misfit"``: measured error in the linear fit of the surface
 - ``"h_sigma"``: error estimate for the least squares fit model
@@ -345,9 +339,9 @@ The vegetation GeoDataFrame has the following columns:
 - ``"landcover"``: flag indicating if segment includes land surfaces
 - ``"snowcover"``: flag indicating if snow is present in the segment
 - ``"time"``: nanoseconds from Unix epoch (January 1, 1970) without leap seconds
-- ``"lat"``: latitude (-90.0 to 90.0) [*in compact*]
-- ``"lon"``: longitude (-180.0 to 180.0) [*in compact*]
-- ``"distance"``: along track distance from the equator in meters
+- ``"lat"``: latitude (-90.0 to 90.0)
+- ``"lon"``: longitude (-180.0 to 180.0)
+- ``"x_atc"``: along track distance from the equator in meters
 - ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
 - ``"h_te_median"``: median terrain elevation in meters (absolute heights)
 - ``"h_max_canopy"``: maximum relief height for canopy photons

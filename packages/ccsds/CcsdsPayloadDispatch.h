@@ -63,7 +63,7 @@ class CcsdsPayloadDispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         static int  luaCreate       (lua_State* L);
-        bool        processRecord   (RecordObject* record, okey_t key);
+        bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records);
 
     private:
 

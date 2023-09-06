@@ -693,7 +693,7 @@ class widgets:
         self.length.value = 20
         # update variable list for ATL03 variables
         variable_list = ['atl03_cnf', 'atl08_class', 'cycle', 'delta_time',
-            'distance', 'height', 'pair', 'quality_ph', 'rgt', 'sc_orient',
+            'x_atc', 'height', 'pair', 'quality_ph', 'rgt', 'sc_orient',
             'segment_dist', 'segment_id', 'track', 'yapc_score']
         self.variable.options = variable_list
         self.variable.value = 'height'
@@ -1206,7 +1206,7 @@ class widgets:
                 if not any(df[column].values):
                     continue
                 # plot reduced data frame
-                l, = ax.plot(df['distance'].values,
+                l, = ax.plot(df['x_atc'].values,
                     df[column].values, marker='.', lw=0, ms=1.5)
                 # create legend element for cycle
                 if (kwargs['legend_label'] == 'date'):

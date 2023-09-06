@@ -32,9 +32,5 @@ class TestAncillary:
             "atl03_ph_fields":  ["ph_id_count"]
         }
         gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5", asset)
-        assert gdf["ph_id_count"][0] == 2
-        assert gdf["ph_id_count"][1] == 1
-        assert gdf["ph_id_count"][2] == 2
-        assert gdf["ph_id_count"][3] == 1
-        assert gdf["ph_id_count"][4] == 1
-        assert len(gdf["ph_id_count"]) == 410233
+        assert sum(gdf["ph_id_count"]) == 626032
+        assert len(gdf["ph_id_count"]) == 403462

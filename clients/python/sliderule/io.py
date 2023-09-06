@@ -147,10 +147,15 @@ def get_attributes(**kwargs):
     attrs['gt']['valid_max'] = 60
     attrs['gt']['coordinates'] = coordinates
     # along-track distance
-    attrs['distance'] = {}
-    attrs['distance']['units'] = "meters"
-    attrs['distance']['long_name'] = "Along track distance from equator"
-    attrs['distance']['coordinates'] = coordinates
+    attrs['x_atc'] = {}
+    attrs['x_atc']['units'] = "meters"
+    attrs['x_atc']['long_name'] = "Along track distance from equator"
+    attrs['x_atc']['coordinates'] = coordinates
+    # across-track distance
+    attrs['y_atc'] = {}
+    attrs['y_atc']['units'] = "meters"
+    attrs['y_atc']['long_name'] = "Across track distance from reference ground track"
+    attrs['y_atc']['coordinates'] = coordinates
     # spot
     attrs['spot'] = {}
     attrs['spot']['long_name'] = "ATLAS spot number"
@@ -173,12 +178,6 @@ def get_attributes(**kwargs):
     attrs['segment_dist']['long_name'] = ("Along track distance "
         "from equator for segment")
     attrs['segment_dist']['coordinates'] = coordinates
-    # distance
-    attrs['distance'] = {}
-    attrs['distance']['units'] = 'meters'
-    attrs['distance']['long_name'] = ("Along track distance "
-        "from segment center")
-    attrs['distance']['coordinates'] = coordinates
     # sc_orient
     attrs['sc_orient'] = {}
     attrs['sc_orient']['long_name'] = "Spacecraft Orientation"

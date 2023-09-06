@@ -128,6 +128,7 @@ class RasterSampler: public DispatchObject
         const char*             rasterKey;
         Publisher*              outQ;
         int                     recordSizeBytes;
+        int                     batchRecordSizeBytes;
         RecordObject::field_t   indexField;
         RecordObject::field_t   lonField;
         RecordObject::field_t   latField;
@@ -144,7 +145,7 @@ class RasterSampler: public DispatchObject
                                                  const char* time_key, const char* height_key);
                         ~RasterSampler          (void);
 
-        bool            processRecord           (RecordObject* record, okey_t key) override;
+        bool            processRecord           (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout          (void) override;
         bool            processTermination      (void) override;
 };

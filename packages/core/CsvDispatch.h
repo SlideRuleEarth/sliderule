@@ -78,7 +78,7 @@ class CsvDispatch: public DispatchObject
                         CsvDispatch     (lua_State* L, const char* outq_name, const char** _columns, int _num_columns);
         virtual         ~CsvDispatch    (void);
 
-        bool            processRecord   (RecordObject* record, okey_t key) override;
+        bool            processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
 };
 
 #endif  /* __csv_dispatch__ */

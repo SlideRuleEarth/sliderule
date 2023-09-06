@@ -139,7 +139,7 @@ def __calcspot(sc_orient, track, pair):
 #
 # Flatten Batches
 #
-def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array):
+def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
 
     # Latch Start Time
     tstart_flatten = time.perf_counter()
@@ -162,18 +162,16 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array)
             if rectype in rsp['__rectype']:
                 records += rsp,
                 num_records += len(rsp[batch_column])
-            elif 'extrec' == rsp['__rectype']:
-                field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                if field_name not in field_dictionary:
-                    field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                # Parse Ancillary Data
-                data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
-                # Add Left Pair Track Entry
-                field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']) | numpy.uint64(0x2),
-                field_dictionary[field_name][field_name] += data[LEFT_PAIR],
-                # Add Right Pair Track Entry
-                field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']) | numpy.uint64(0x3),
-                field_dictionary[field_name][field_name] += data[RIGHT_PAIR],
+            elif 'atl06anc' == rsp['__rectype']:
+                for field_rec in rsp['fields']:
+                    if field_rec['anc_type'] == 0:
+                        field_name = parm['atl03_ph_fields'][field_rec['field_index']]
+                    elif field_rec['anc_type'] == 1:
+                        field_name = parm['atl03_geo_fields'][field_rec['field_index']]
+                    if field_name not in field_dictionary:
+                        field_dictionary[field_name] = {'extent_id': [], field_name: []}
+                    field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']),
+                    field_dictionary[field_name][field_name] += field_rec['value'],
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue
@@ -239,7 +237,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array)
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, lon_key='lon', lat_key='lat')
+    gdf = sliderule.todataframe(columns, height_key=height_key)
 
     # Merge Ancillary Fields
     tstart_merge = time.perf_counter()
@@ -372,7 +370,7 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False):
+def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -401,6 +399,8 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
                         whether to provide all sampled values as numpy arrays even if there is only a single value
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
 
     Returns
     -------
@@ -449,7 +449,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id, as_numpy_array)
+        gdf = __flattenbatches(rsps, 'atl06rec', 'elevation', parm, keep_id, as_numpy_array, height_key)
 
         # Return Response
         profiles[atl06p.__name__] = time.perf_counter() - tstart
@@ -486,7 +486,7 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False):
+def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, height_key=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -512,6 +512,8 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
 
     Returns
     -------
@@ -546,36 +548,26 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
             sample_photon_record = None
             photon_records = []
             num_photons = 0
-            extent_dictionary = {}
-            extent_field_types = {} # ['field_name'] = nptype
             photon_dictionary = {}
             photon_field_types = {} # ['field_name'] = nptype
             if len(rsps) > 0:
                 # Sort Records
                 for rsp in rsps:
-                    extent_id = rsp['extent_id']
                     if 'atl03rec' in rsp['__rectype']:
                         photon_records += rsp,
-                        num_photons += len(rsp['data'])
-                        if sample_photon_record == None and len(rsp['data']) > 0:
+                        num_photons += len(rsp['photons'])
+                        if sample_photon_record == None and len(rsp['photons']) > 0:
                             sample_photon_record = rsp
-                    elif 'extrec' == rsp['__rectype']:
-                        # Get Field Type
-                        field_name = parm['atl03_geo_fields'][rsp['field_index']]
-                        if field_name not in extent_field_types:
-                            extent_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
-                        # Initialize Extent Dictionary Entry
-                        if extent_id not in extent_dictionary:
-                            extent_dictionary[extent_id] = {}
-                        # Save of Values per Extent ID per Field Name
-                        data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
-                        extent_dictionary[extent_id][field_name] = data
-                    elif 'phrec' == rsp['__rectype']:
-                        # Get Field Type
-                        field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                    elif 'atl03anc' == rsp['__rectype']:
+                        # Get Field Name and Type
+                        if rsp['anc_type'] == 0:
+                            field_name = parm['atl03_ph_fields'][rsp['field_index']]
+                        elif rsp['anc_type'] == 1:
+                            field_name = parm['atl03_geo_fields'][rsp['field_index']]
                         if field_name not in photon_field_types:
                             photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry
+                        extent_id = rsp['extent_id']
                         if extent_id not in photon_dictionary:
                             photon_dictionary[extent_id] = {}
                         # Save of Values per Extent ID per Field Name
@@ -586,59 +578,37 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     # Initialize Columns
                     for field in sample_photon_record.keys():
                         fielddef = sliderule.get_definition("atl03rec", field)
-                        if len(fielddef) > 0:
+                        if len(fielddef) > 0 and field != "photons":
                             columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                    for field in sample_photon_record["data"][0].keys():
+                    for field in sample_photon_record["photons"][0].keys():
                         fielddef = sliderule.get_definition("atl03rec.photons", field)
                         if len(fielddef) > 0:
                             columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                    for field in extent_field_types.keys():
-                        columns[field] = numpy.empty(num_photons, extent_field_types[field])
                     for field in photon_field_types.keys():
                         columns[field] = numpy.empty(num_photons, photon_field_types[field])
                     # Populate Columns
                     ph_cnt = 0
                     for record in photon_records:
+                        # Add Ancillary Extent Fields
                         ph_index = 0
-                        pair = 0
-                        left_cnt = record["count"][0]
                         extent_id = record['extent_id']
-                        # Get Extent Fields to Add to Extent
-                        extent_field_dictionary = {}
-                        if extent_id in extent_dictionary:
-                            extent_field_dictionary = extent_dictionary[extent_id]
-                        # Get Photon Fields to Add to Extent
-                        photon_field_dictionary = {}
                         if extent_id in photon_dictionary:
-                            photon_field_dictionary = photon_dictionary[extent_id]
+                            for photon in record["photons"]:
+                                for field_name, field_array in photon_dictionary[extent_id].items():
+                                    columns[field_name][ph_cnt + ph_index] = field_array[ph_index]
+                                ph_index += 1
                         # For Each Photon in Extent
-                        for photon in record["data"]:
-                            if ph_index >= left_cnt:
-                                pair = 1
+                        for photon in record["photons"]:
                             # Add per Extent Fields
                             for field in record.keys():
                                 if field in columns:
-                                    if field == "count":
-                                        columns[field][ph_cnt] = pair # count gets changed to pair id
-                                    elif type(record[field]) is tuple:
-                                        columns[field][ph_cnt] = record[field][pair]
-                                    else:
-                                        columns[field][ph_cnt] = record[field]
+                                    columns[field][ph_cnt] = record[field]
                             # Add per Photon Fields
                             for field in photon.keys():
                                 if field in columns:
                                     columns[field][ph_cnt] = photon[field]
-                            # Add Ancillary Extent Fields
-                            for field in extent_field_dictionary:
-                                columns[field][ph_cnt] = extent_field_dictionary[field][pair]
-                            # Add Ancillary Extent Fields
-                            for field in photon_field_dictionary:
-                                columns[field][ph_cnt] = photon_field_dictionary[field][ph_index]
                             # Goto Next Photon
                             ph_cnt += 1
-                            ph_index += 1
-                    # Rename Count Column to Pair Column
-                    columns["pair"] = columns.pop("count")
 
                     # Delete Extent ID Column
                     if "extent_id" in columns and not keep_id:
@@ -648,7 +618,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
                     profiles["flatten"] = time.perf_counter() - tstart_flatten
 
                     # Create DataFrame
-                    gdf = sliderule.todataframe(columns, lat_key="latitude", lon_key="longitude")
+                    gdf = sliderule.todataframe(columns, height_key=height_key)
 
                     # Calculate Spot Column
                     gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
@@ -694,7 +664,7 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
 #
 #  Parallel ATL08
 #
-def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False):
+def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns geolocated vegatation statistics.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -723,6 +693,8 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
                         whether to provide all sampled values as numpy arrays even if there is only a single value
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
 
     Returns
     -------
@@ -747,7 +719,7 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
-        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id, as_numpy_array)
+        gdf = __flattenbatches(rsps, 'atl08rec', 'vegetation', parm, keep_id, as_numpy_array, height_key)
 
         # Return Response
         profiles[atl08p.__name__] = time.perf_counter() - tstart

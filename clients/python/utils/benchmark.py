@@ -1,0 +1,209 @@
+# Copyright (c) 2021, University of Washington
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the University of Washington nor the names of its
+#    contributors may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+# “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Imports
+import sliderule
+from sliderule import earthdata, h5, icesat2, gedi
+import argparse
+import logging
+import time
+import os
+
+# Command Line Arguments
+parser = argparse.ArgumentParser(description="""Subset granules""")
+parser.add_argument('--benchmarks',     '-b',   nargs='+', type=str,    default=[])
+parser.add_argument('--granule03',      '-p',   type=str,               default="ATL03_20181017222812_02950102_005_01.h5")
+parser.add_argument('--granule06',      '-c',   type=str,               default="ATL06_20181017222812_02950102_005_01.h5")
+parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/grandmesa.geojson")
+parser.add_argument('--asset',          '-t',   type=str,               default="icesat2")
+parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
+parser.add_argument('--organization',   '-o',   type=str,               default="sliderule")
+parser.add_argument('--desired_nodes',  '-n',   type=int,               default=None)
+parser.add_argument('--time_to_live',   '-l',   type=int,               default=120)
+parser.add_argument('--verbose',        '-v',   action='store_true',    default=False)
+parser.add_argument('--loglvl',         '-j',   type=str,               default="CRITICAL")
+parser.add_argument('--nocleanup',      '-u',   action='store_true',    default=False)
+args,_ = parser.parse_known_args()
+
+# Initialize Organization
+if args.organization == "None":
+    args.organization = None
+    args.desired_nodes = None
+    args.time_to_live = None
+
+# Initialize Log Level
+loglevel = logging.CRITICAL
+if args.loglvl == "ERROR":
+    loglevel = logging.ERROR
+elif args.loglvl == "INFO":
+    loglevel = logging.INFO
+elif args.loglvl == "DEBUG":
+    loglevel = logging.DEBUG
+
+# Initialize SlideRule Client
+sliderule.init(args.domain, verbose=args.verbose, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
+
+# Generate Region Polygon
+region = sliderule.toregion(args.aoi)
+
+# ########################################################
+# Utilities
+# ########################################################
+
+# Display Results
+def display_results(name, gdf, duration):
+    print(f'{name}')
+    print("\t{:20} {} elements".format("output:", f'{len(gdf)} x {len(gdf.keys())}'))
+    print("\t{:20} {} secs".format("total:", f'{duration:.6f}'))
+    for key in sliderule.profiles:
+        print("\t{:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
+    for key in icesat2.profiles:
+        print("\t{:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
+
+# ########################################################
+# Benchmarks
+# ########################################################
+
+# ------------------------------------
+# Benchmark ATL06 Ancillary
+# ------------------------------------
+def atl06_ancillary():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "atl03_geo_fields": ["solar_elevation"]
+    }
+    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+
+# ------------------------------------
+# Benchmark ATL03 Ancillary
+# ------------------------------------
+def atl03_ancillary():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "atl03_ph_fields":  ["ph_id_count"]
+    }
+    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+
+# ------------------------------------
+# Benchmark ATL06 Parquet
+# ------------------------------------
+def atl06_parquet():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "cnf":              icesat2.CNF_SURFACE_LOW,
+        "ats":              3.0,
+        "cnt":              2,
+        "len":              10.0,
+        "res":              10.0,
+        "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
+    gdf = icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+    if not args.nocleanup:
+        os.remove("testfile.parquet")
+    return gdf
+
+# ------------------------------------
+# Benchmark ATL03 Parquet
+# ------------------------------------
+def atl03_parquet():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+        "cnf":              icesat2.CNF_SURFACE_LOW,
+        "ats":              3.0,
+        "cnt":              2,
+        "len":              10.0,
+        "res":              10.0,
+        "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
+    gdf = icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+    if not args.nocleanup:
+        os.remove("testfile.parquet")
+    return gdf
+
+# ------------------------------------
+# Benchmark ATL06 Sample Landsat
+# ------------------------------------
+def atl06_sample_landsat():
+    time_start = "2021-01-01T00:00:00Z"
+    time_end = "2021-02-01T23:59:59Z"
+    catalog = earthdata.stac(short_name="HLS", polygon=region['poly'], time_start=time_start, time_end=time_end, as_str=True)
+    parms = { 
+        "poly": region['poly'],
+        "srt": icesat2.SRT_LAND,
+        "cnf": icesat2.CNF_SURFACE_LOW,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0,
+        "samples": {"ndvi": {"asset": "landsat-hls", "use_poi_time": True, "catalog": catalog, "bands": ["NDVI"]}} }
+    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+
+# ------------------------------------
+# Benchmark ATL03 Rasterized Subset
+# ------------------------------------
+def atl03_rasterized_subset():
+    parms = { 
+        "poly": region['poly'],
+        "raster": region['raster'], # TODO: this is very slow!
+        "srt": icesat2.SRT_LAND,
+        "cnf": icesat2.CNF_SURFACE_LOW,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0 }
+    return icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+
+# ########################################################
+# Main
+# ########################################################
+
+if __name__ == '__main__':
+
+    # define benchmarks
+    benchmarks = {
+        "atl06_ancillary":          atl06_ancillary,
+        "atl03_ancillary":          atl03_ancillary,
+        "atl06_parquet":            atl06_parquet,
+        "atl03_parquet":            atl03_parquet,
+        "atl06_sample_landsat":     atl06_sample_landsat,
+        "atl03_rasterized_subset":  atl03_rasterized_subset,
+    }
+    
+    # build list of benchmarks to run
+    benchmarks_to_run = args.benchmarks
+    if len(benchmarks_to_run) == 0:
+        benchmarks_to_run = benchmarks.keys()
+    
+    # run benchmarks
+    for benchmark in benchmarks_to_run:
+        tstart = time.perf_counter()
+        gdf = benchmarks[benchmark]()
+        display_results(benchmark, gdf, time.perf_counter() - tstart)

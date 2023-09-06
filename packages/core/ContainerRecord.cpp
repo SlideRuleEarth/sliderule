@@ -33,74 +33,92 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PublisherDispatch.h"
+#include "ContainerRecord.h"
 #include "core.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* PublisherDispatch::LuaMetaName = "PublisherDispatch";
-const struct luaL_Reg PublisherDispatch::LuaMetaTable[] = {
-    {NULL,          NULL}
+const char* ContainerRecord::entryRecType = "conrec.entry";
+RecordObject::fieldDef_t ContainerRecord::entryRecDef[] =
+{
+    {"size",        UINT32, offsetof(entry_t, rec_size),        1,   NULL, NATIVE_FLAGS},
+    {"offset",      UINT32, offsetof(entry_t, rec_offset),      1,   NULL, NATIVE_FLAGS}
 };
 
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
+const char* ContainerRecord::recType = "conrec";
+RecordObject::fieldDef_t ContainerRecord::recDef[] =
+{
+    {"count",       UINT32, offsetof(rec_t, rec_cnt),           1,   NULL, NATIVE_FLAGS},
+    {"start",       UINT32, offsetof(rec_t, start_of_recs),     1,   NULL, NATIVE_FLAGS},
+    {"records",     USER,   offsetof(rec_t, entries),           0,   entryRecType, NATIVE_FLAGS} // variable length
+};
 
 /*----------------------------------------------------------------------------
- * luaCreate: publish(<outq_name>)
+ * init
  *----------------------------------------------------------------------------*/
-int PublisherDispatch::luaCreate (lua_State* L)
+void ContainerRecord::init (void)
 {
-    try
-    {
-        /* Get Parameters */
-        const char* recq_name = getLuaString(L, 1);
-
-        /* Create Record Monitor */
-        return createLuaObject(L, new PublisherDispatch(L, recq_name));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
-        return returnLuaStatus(L, false);
-    }
+    RECDEF(recType,       recDef,       sizeof(rec_t),      NULL);
+    RECDEF(entryRecType,  entryRecDef,  sizeof(entry_t),    NULL);
 }
 
-/******************************************************************************
- * PRIVATE METHODS
- *******************************************************************************/
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+int ContainerRecord::hdrSize (int cnt)
+{
+    return (sizeof(entry_t) * cnt) + offsetof(rec_t, entries);
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PublisherDispatch::PublisherDispatch(lua_State* L, const char* recq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+ContainerRecord::ContainerRecord(int rec_cnt, int size):
+    RecordObject(recType, size + hdrSize(rec_cnt))
 {
-    assert(recq_name);
-
-    pubQ = new Publisher(recq_name);
+    recsContained = 0;
+    recsOffset = hdrSize(rec_cnt);
+    container = (rec_t*)recordData;
+    container->rec_cnt = rec_cnt;
+    container->start_of_recs = recsOffset;
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-PublisherDispatch::~PublisherDispatch(void)
+ContainerRecord::~ContainerRecord()
 {
-    delete pubQ;
-}
+}    
 
 /*----------------------------------------------------------------------------
- * processRecord
+ * addRecord
  *----------------------------------------------------------------------------*/
-bool PublisherDispatch::processRecord(RecordObject* record, okey_t key, recVec_t* records)
+bool ContainerRecord::addRecord(RecordObject& record, int size)
 {
-    (void)key;
-    (void)records;
-    unsigned char* buffer; // reference to serial buffer
-    int size = record->serialize(&buffer, RecordObject::REFERENCE);
-    if(size > 0)    return (pubQ->postCopy(buffer, size) > 0);
-    else            return false;
+    if(recsContained < container->rec_cnt)
+    {
+        uint8_t* rec_buf = NULL;
+        int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE, size);
+
+        /* populate entry */
+        container->entries[recsContained].rec_offset = recsOffset;
+        container->entries[recsContained].rec_size = rec_bytes;
+
+        /* copy record memory into container */
+        uint8_t* rec_ptr = recordData + recsOffset;
+        memcpy(rec_ptr, rec_buf, rec_bytes);
+        recsOffset += rec_bytes;
+
+        /* bump number of records contained */
+        recsContained++;
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
 }

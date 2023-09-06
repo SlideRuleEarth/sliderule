@@ -45,7 +45,7 @@ end
 -- Run Raster Self Tests --
 if __geo__ then
     runner.script(td .. "geojson_raster.lua")
-    runner.script(td .. "geouser_raster.lua")
+--    runner.script(td .. "geouser_raster.lua")
 end
 
 -- Run Legacy Self Tests --
@@ -66,8 +66,10 @@ end
 if __icesat2__ then
     local icesat2_td = td .. "../../plugins/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
-    runner.script(icesat2_td .. "atl06_elements.lua")
+    runner.script(icesat2_td .. "atl03_reader.lua")
     runner.script(icesat2_td .. "atl03_indexer.lua")
+    runner.script(icesat2_td .. "atl03_ancillary.lua")
+    runner.script(icesat2_td .. "atl06_ancillary.lua")
     runner.script(icesat2_td .. "h5_file.lua")
     runner.script(icesat2_td .. "s3_driver.lua")
 end

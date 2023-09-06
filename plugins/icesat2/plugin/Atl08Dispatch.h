@@ -43,7 +43,6 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 
-#include "GTArray.h"
 #include "Atl03Reader.h"
 #include "Icesat2Parms.h"
 
@@ -100,7 +99,7 @@ class Atl08Dispatch: public DispatchObject
             int64_t             time_ns;                // nanoseconds from GPS epoch
             double              latitude;               // latitude of extent
             double              longitude;              // longitude of extent
-            double              distance;               // distance from the equator
+            float               x_atc;                  // distance from the equator
             float               solar_elevation;        // atl03 solar elevation
             float               h_te_median;            // median terrain height for ground photons
             float               h_max_canopy;           // maximum relief height for canopy photons
@@ -153,13 +152,13 @@ class Atl08Dispatch: public DispatchObject
                         Atl08Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
                         ~Atl08Dispatch                  (void);
 
-        bool            processRecord                   (RecordObject* record, okey_t key) override;
+        bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
-        void            geolocateResult                 (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
-        void            phorealAlgorithm                (Atl03Reader::extent_t* extent, int t, vegetation_t* result);
-        void            postResult                      (int t, vegetation_t* result);
+        void            geolocateResult                 (Atl03Reader::extent_t* extent, vegetation_t& result);
+        void            phorealAlgorithm                (Atl03Reader::extent_t* extent, vegetation_t& result);
+        void            postResult                      (vegetation_t* result);
         static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
         static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
 

@@ -536,12 +536,37 @@ void* RecordDispatcher::dispatcherThread(void* parm)
 /*----------------------------------------------------------------------------
  * dispatchRecord
  *----------------------------------------------------------------------------*/
-void RecordDispatcher::dispatchRecord (RecordObject* record)
+void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::recVec_t* records)
 {
     /* Dispatch Dispatches */
     try
     {
-        dispatch_t& dis = dispatchTable[record->getRecordType()];
+        const char* rec_type = record->getRecordType();
+        if(StringLib::match(rec_type, ContainerRecord::recType))
+        {
+            ContainerRecord::rec_t* container = (ContainerRecord::rec_t*)record->getRecordData();
+            
+            /* Build List of Records */
+            DispatchObject::recVec_t rec_list;
+            rec_list.reserve(container->rec_cnt);
+            for(uint32_t i = 0; i < container->rec_cnt; i++)
+            {
+                uint8_t* buffer = (uint8_t*)container + container->entries[i].rec_offset;
+                int size = container->entries[i].rec_size;
+                RecordObject* subrec = createRecord(buffer, size);
+                rec_list.push_back(subrec);
+            }
+
+            /* Dispatch Each Record */
+            for(auto& rec: rec_list)
+            {
+                dispatchRecord(rec, &rec_list);
+                delete rec;
+            }
+        }
+
+        /* Get Record Type */
+        dispatch_t& dis = dispatchTable[rec_type];
 
         /* Get Key */
         okey_t key = 0;
@@ -566,7 +591,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record)
         /* Process Record */
         for (int i = 0; i < dis.size; i++)
         {
-            dis.list[i]->processRecord(record, key);
+            dis.list[i]->processRecord(record, key, records);
         }
     }
     catch(RunTimeException& e)

@@ -2718,7 +2718,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     for(int f = 0; f < (int)num_filters; f++)
     {
         /* Read Filter ID */
-        filter_t filter             = (filter_t)readField(2, &pos);
+        int filter = (int)readField(2, &pos);
 
         /* Read Filter Name Length */
         uint16_t name_len = 0;
@@ -2753,7 +2753,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Display */
         if(H5_VERBOSE)
         {
-            print2term("Filter Identification Value:                                     %d\n", (int)filter);
+            print2term("Filter Identification Value:                                     %d\n", filter);
             print2term("Flags:                                                           0x%x\n", (int)flags);
             print2term("Number Client Data Values:                                       %d\n", (int)num_parms);
             print2term("Filter Name:                                                     %s\n", filter_name);
@@ -2766,7 +2766,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter specified: %d", (int)filter);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter specified: %d", filter);
         }
 
         /* Client Data (unused) */

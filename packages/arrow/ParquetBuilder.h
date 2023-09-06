@@ -115,8 +115,10 @@ class ParquetBuilder: public LuaObject
 
         typedef struct {
             bool                    as_geo;
-            RecordObject::field_t   lon_field;
-            RecordObject::field_t   lat_field;
+            const char*             x_key;
+            const char*             y_key;
+            RecordObject::field_t   x_field;
+            RecordObject::field_t   y_field;
         } geo_data_t;
 
         typedef struct WKBPoint {
@@ -137,19 +139,20 @@ class ParquetBuilder: public LuaObject
          *--------------------------------------------------------------------*/
 
         Thread*             builderPid;
+        ArrowParms*         parms;
         bool                active;
         Subscriber*         inQ;
         const char*         recType;
+        const char*         batchRecType;
         Ordering<batch_t>   recordBatch;
-        ArrowParms*         parms;
         field_list_t        fieldList;
         field_iterator_t*   fieldIterator;
         Publisher*          outQ;
         int                 rowSizeBytes;
+        int                 batchRowSizeBytes;
         int                 maxRowsInGroup;
         const char*         fileName; // used locally to build file
         geo_data_t          geoData;
-        const char*         indexKey;
 
         struct impl; // arrow implementation
         impl* pimpl; // private arrow data
@@ -160,8 +163,7 @@ class ParquetBuilder: public LuaObject
 
                             ParquetBuilder          (lua_State* L, ArrowParms* parms,
                                                      const char* outq_name, const char* inq_name,
-                                                     const char* rec_type, const char* batch_rec_type,
-                                                     const char* id, geo_data_t geo, const char* index_key);
+                                                     const char* rec_type, const char* id, geo_data_t geo, const char* index_key);
                             ~ParquetBuilder         (void);
 
         static void*        builderThread           (void* parm);

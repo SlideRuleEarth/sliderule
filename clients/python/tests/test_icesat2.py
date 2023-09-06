@@ -117,11 +117,11 @@ class TestAlgorithm:
         assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 243239
-        assert len(gdf[gdf["atl08_class"] == 0]) == 30431
-        assert len(gdf[gdf["atl08_class"] == 1]) == 123065
-        assert len(gdf[gdf["atl08_class"] == 2]) == 54820
-        assert len(gdf[gdf["atl08_class"] == 3]) == 18945
+        assert len(gdf["height"]) == 241127
+        assert len(gdf[gdf["atl08_class"] == 0]) == 30299
+        assert len(gdf[gdf["atl08_class"] == 1]) == 122273
+        assert len(gdf[gdf["atl08_class"] == 2]) == 54292
+        assert len(gdf[gdf["atl08_class"] == 3]) == 18285
         assert len(gdf[gdf["atl08_class"] == 4]) == 15978
 
     def test_gs(self, domain, asset, organization, desired_nodes):
@@ -186,7 +186,7 @@ class TestAlgorithm:
         hivalues = icesat2.h5p(hidatasets, "ATL06_"+resource_prefix, asset)
 
         # Build Results #
-        atl06 = {"h_mean": [], "lat": [], "lon": [], "segment_id": [], "spot": []}
+        atl06 = {"h_mean": [], "latitude": [], "longitude": [], "segment_id": [], "spot": []}
         prefix2spot = { "/gt1l/land_ice_segments/": {0: 1, 1: 6},
                         "/gt1r/land_ice_segments/": {0: 2, 1: 5},
                         "/gt2l/land_ice_segments/": {0: 3, 1: 4},
@@ -196,8 +196,8 @@ class TestAlgorithm:
         for entry in hidatasets:
             if "h_li" in entry["dataset"]:
                 atl06["h_mean"] += hivalues[entry["prefix"]+"h_li"].tolist()
-                atl06["lat"] += geocoords[entry["prefix"]+"latitude"][entry["startrow"]:entry["startrow"]+entry["numrows"]].tolist()
-                atl06["lon"] += geocoords[entry["prefix"]+"longitude"][entry["startrow"]:entry["startrow"]+entry["numrows"]].tolist()
+                atl06["latitude"] += geocoords[entry["prefix"]+"latitude"][entry["startrow"]:entry["startrow"]+entry["numrows"]].tolist()
+                atl06["longitude"] += geocoords[entry["prefix"]+"longitude"][entry["startrow"]:entry["startrow"]+entry["numrows"]].tolist()
                 atl06["segment_id"] += hivalues[entry["prefix"]+"segment_id"].tolist()
                 atl06["spot"] += [prefix2spot[entry["prefix"]][geocoords["/orbit_info/sc_orient"][0]] for i in range(entry["numrows"])]
 
@@ -205,15 +205,15 @@ class TestAlgorithm:
         nsidc = pd.DataFrame(atl06)
 
         # Add Lat and Lon Columns to SlideRule DataFrame
-        sliderule["lon"] = sliderule.geometry.x
-        sliderule["lat"] = sliderule.geometry.y
+        sliderule["longitude"] = sliderule.geometry.x
+        sliderule["latitude"] = sliderule.geometry.y
 
         # Initialize Error Variables #
-        diff_set = ["h_mean", "lat", "lon"]
+        diff_set = ["h_mean", "latitude", "longitude"]
         errors = {}
         total_error = {}
         segments = {}
-        orphans = {"segment_id": [], "h_mean": [], "lat": [], "lon": []}
+        orphans = {"segment_id": [], "h_mean": [], "latitude": [], "longitude": []}
 
         # Create Segment Sets #
         for index, row in nsidc.iterrows():
@@ -259,8 +259,8 @@ class TestAlgorithm:
         assert len(nsidc) == 55691
         assert len(orphans["segment_id"]) == 1671
         assert len(orphans["h_mean"]) == 204
-        assert len(orphans["lat"]) == 204
-        assert len(orphans["lon"]) == 204
+        assert len(orphans["latitude"]) == 204
+        assert len(orphans["longitude"]) == 204
         assert abs(total_error["h_mean"] - 1723.8) < 0.1
-        assert abs(total_error["lat"] - 0.045071) < 0.001
-        assert abs(total_error["lon"] - 0.022374) < 0.001
+        assert abs(total_error["latitude"] - 0.045071) < 0.001
+        assert abs(total_error["longitude"] - 0.022374) < 0.001

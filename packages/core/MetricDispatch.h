@@ -129,7 +129,7 @@ class MetricDispatch: public DispatchObject
         static void freeSerialBuffer    (void* obj, void* parm);
 
         /* Overridden Methods */
-        bool        processRecord       (RecordObject* record, okey_t key);
+        bool        processRecord       (RecordObject* record, okey_t key, recVec_t* records);
 
         /* Lua Methods */
         static int  luaPlaybackSource   (lua_State* L);

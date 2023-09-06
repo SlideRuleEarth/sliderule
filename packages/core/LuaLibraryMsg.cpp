@@ -621,17 +621,17 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
         }
         else
         {
-            mlog(WARNING, "Unable to create record object: %s", recclass);
+            if(ref.size > 0) mlog(WARNING, "Unable to create record object: %s", recclass);
             lua_pushnil(L); // for record
         }
     }
-    else if(status != MsgQ::STATE_TIMEOUT)
+    else
     {
         mlog(CRITICAL, "Failed (%d) to receive record on message queue %s", status, msg_data->sub->getName());
         lua_pushnil(L); // for record
     }
 
-    /* Failed to receive record */
+    /* Status terminator */
     lua_pushboolean(L, terminator);
     return 2;
 }

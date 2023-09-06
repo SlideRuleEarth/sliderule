@@ -14,12 +14,12 @@ local args = {
     default_asset   = "icesat2",
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     source_rec      = "atl03rec",
-    result_rec      = parms["compact"] and "atl06rec-compact" or "atl06rec",
-    result_batch    = parms["compact"] and "atl06rec-compact.elevation" or "atl06rec.elevation",
-    index_field     = "extent_id",
-    lon_field       = "lon",
-    lat_field       = "lat",
-    height_field    = "h_mean"
+    result_rec      = "atl06rec",
+    index_field     = "elevation.extent_id",
+    lon_field       = "elevation.longitude",
+    lat_field       = "elevation.latitude",
+    time_field      = "elevation.time",
+    height_field    = "elevation.h_mean"
 }
 
 local rqst_parms    = icesat2.parms(parms)

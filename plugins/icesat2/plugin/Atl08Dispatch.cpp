@@ -59,9 +59,9 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
     {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
     {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS},
-    {"lat",                     RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
-    {"lon",                     RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
-    {"distance",                RecordObject::DOUBLE,   offsetof(vegetation_t, distance),               1, NULL, NATIVE_FLAGS},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
+    {"x_atc",                   RecordObject::DOUBLE,   offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS},
     {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS},
     {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS},
     {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
@@ -74,7 +74,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
 
 const char* Atl08Dispatch::batchRecType = "atl08rec";
 const RecordObject::fieldDef_t Atl08Dispatch::batchRecDef[] = {
-    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS}
+    {"vegetation",              RecordObject::USER,     offsetof(atl08_t, vegetation),              0,  vegRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl08Dispatch::waveRecType = "waverec";
@@ -131,13 +131,13 @@ int Atl08Dispatch::luaCreate (lua_State* L)
 void Atl08Dispatch::init (void)
 {
     /*
-     * Note: the size associated with the batch record includes only one set of
-     * vegetation stats; this forces any software accessing more than one set
-     * of stats to manage the size of the record manually.  Same for waveform
+     * Note: the size associated with the batch record includes no
+     * vegetation stats; this forces any software accessing a stats
+     * to manage the size of the record manually.  Same for waveform
      * record - except it allows for a waveform of no bins.
      */
     RECDEF(vegRecType, vegRecDef, sizeof(vegetation_t), NULL);
-    RECDEF(batchRecType, batchRecDef, offsetof(atl08_t, vegetation[1]), NULL);
+    RECDEF(batchRecType, batchRecDef, offsetof(atl08_t, vegetation), NULL);
     RECDEF(waveRecType, waveRecDef, offsetof(waveform_t, waveform), NULL);
 }
 
@@ -183,37 +183,30 @@ Atl08Dispatch::~Atl08Dispatch(void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key)
+bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
 
-    vegetation_t result[Icesat2Parms::NUM_PAIR_TRACKS];
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
-    /* Clear Results */
-    memset(result, 0, sizeof(result));
-
-    /* Process Extent */
-    for(int t = 0; t < Icesat2Parms::NUM_PAIR_TRACKS; t++)
+    /* Check Extent */
+    if(extent->photon_count <= 0)
     {
-        /* Check Extent */
-        if(extent->photon_count[t] <= 0)
-        {
-            continue;
-        }
-
-        /* Initialize Results */
-        geolocateResult(extent, t, result);
-
-        /* Execute Algorithm Stages */
-        if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
-        {
-            phorealAlgorithm(extent, t, result);
-        }
-
-        /* Post Results */
-        postResult(t, result);
+        return true;
     }
+
+    /* Initialize Results */
+    vegetation_t result;
+    geolocateResult(extent, result);
+
+    /* Execute Algorithm Stages */
+    if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+    {
+        phorealAlgorithm(extent, result);
+    }
+
+    /* Post Results */
+    postResult(&result);
 
     /* Return Status */
     return true;
@@ -234,40 +227,40 @@ bool Atl08Dispatch::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool Atl08Dispatch::processTermination (void)
 {
-    postResult(-1, NULL);
+    postResult(NULL);
     return true;
 }
 
 /*----------------------------------------------------------------------------
  * geolocateResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, vegetation_t* result)
+void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
     Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
-    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->reference_pair_track;
+    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
 
     /* Extent Attributes */
-    result[t].extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
-    result[t].segment_id = extent->segment_id[t];
-    result[t].rgt = extent->reference_ground_track_start;
-    result[t].cycle = extent->cycle_start;
-    result[t].spot = Icesat2Parms::getSpotNumber(sc_orient, track, t);
-    result[t].gt = Icesat2Parms::getGroundTrack(sc_orient, track, t);
-    result[t].photon_count = extent->photon_count[t];
-    result[t].solar_elevation = extent->solar_elevation[t];
+    result.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
+    result.segment_id = extent->segment_id;
+    result.rgt = extent->reference_ground_track;
+    result.cycle = extent->cycle;
+    result.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->pair);
+    result.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->pair);
+    result.photon_count = extent->photon_count;
+    result.solar_elevation = extent->solar_elevation;
 
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
-    uint32_t num_ph = extent->photon_count[t];
+    Atl03Reader::photon_t* ph = extent->photons;
+    uint32_t num_ph = extent->photon_count;
 
     /* Calculate Geolocation Fields */
     if(num_ph == 0)
     {
-        result[t].time_ns = 0;
-        result[t].latitude = 0.0;
-        result[t].longitude = 0.0;
-        result[t].distance = extent->segment_distance[t];
+        result.time_ns = 0;
+        result.latitude = 0.0;
+        result.longitude = 0.0;
+        result.x_atc = extent->segment_distance;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
@@ -275,25 +268,25 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double time_ns_min = DBL_MAX, time_ns_max = -DBL_MAX;
         double latitude_min = DBL_MAX, latitude_max = -DBL_MAX;
         double longitude_min = DBL_MAX, longitude_max = -DBL_MAX;
-        double distance_min = DBL_MAX, distance_max = -DBL_MAX;
+        double x_atc_min = DBL_MAX, x_atc_max = -DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
             if(ph[i].time_ns    < time_ns_min)      time_ns_min     = ph[i].time_ns;
             if(ph[i].latitude   < latitude_min)     latitude_min    = ph[i].latitude;
             if(ph[i].longitude  < longitude_min)    longitude_min   = ph[i].longitude;
-            if(ph[i].distance   < distance_min)     distance_min    = ph[i].distance;
+            if(ph[i].x_atc      < x_atc_min)        x_atc_min       = ph[i].x_atc;
 
             if(ph[i].time_ns    > time_ns_max)      time_ns_max     = ph[i].time_ns;
             if(ph[i].latitude   > latitude_max)     latitude_max    = ph[i].latitude;
             if(ph[i].longitude  > longitude_max)    longitude_max   = ph[i].longitude;
-            if(ph[i].distance   > distance_max)     distance_max    = ph[i].distance;
+            if(ph[i].x_atc      > x_atc_max)        x_atc_max       = ph[i].x_atc;
         }
 
         /* Calculate Averages */
-        result[t].time_ns = (int64_t)((time_ns_min + time_ns_max) / 2.0);
-        result[t].latitude = (latitude_min + latitude_max) / 2.0;
-        result[t].longitude = (longitude_min + longitude_max) / 2.0;
-        result[t].distance = ((distance_min + distance_max) / 2.0) + extent->segment_distance[t];
+        result.time_ns = (int64_t)((time_ns_min + time_ns_max) / 2.0);
+        result.latitude = (latitude_min + latitude_max) / 2.0;
+        result.longitude = (longitude_min + longitude_max) / 2.0;
+        result.x_atc = ((x_atc_min + x_atc_max) / 2.0) + extent->segment_distance;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEAN)
     {
@@ -301,45 +294,45 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double sum_time_ns = 0.0;
         double sum_latitude = 0.0;
         double sum_longitude = 0.0;
-        double sum_distance = 0.0;
+        double sum_x_atc = 0.0;
         for(uint32_t i = 0; i < num_ph; i++)
         {
             sum_time_ns += ph[i].time_ns;
             sum_latitude += ph[i].latitude;
             sum_longitude += ph[i].longitude;
-            sum_distance += ph[i].distance + extent->segment_distance[t];
+            sum_x_atc += ph[i].x_atc + extent->segment_distance;
         }
 
         /* Calculate Averages */
-        result[t].time_ns = (int64_t)(sum_time_ns / num_ph);
-        result[t].latitude = sum_latitude / num_ph;
-        result[t].longitude = sum_longitude / num_ph;
-        result[t].distance = sum_distance / num_ph;
+        result.time_ns = (int64_t)(sum_time_ns / num_ph);
+        result.latitude = sum_latitude / num_ph;
+        result.longitude = sum_longitude / num_ph;
+        result.x_atc = sum_x_atc / num_ph;
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
         uint32_t center_ph = num_ph / 2;
         if(num_ph % 2 == 1) // Odd Number of Photons
         {
-            result[t].time_ns = ph[center_ph].time_ns;
-            result[t].latitude = ph[center_ph].latitude;
-            result[t].longitude = ph[center_ph].longitude;
-            result[t].distance = ph[center_ph].distance + extent->segment_distance[t];
+            result.time_ns = ph[center_ph].time_ns;
+            result.latitude = ph[center_ph].latitude;
+            result.longitude = ph[center_ph].longitude;
+            result.x_atc = ph[center_ph].x_atc + extent->segment_distance;
         }
         else // Even Number of Photons
         {
-            result[t].time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
-            result[t].latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
-            result[t].longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
-            result[t].distance = ((ph[center_ph].distance + ph[center_ph - 1].distance) / 2) + extent->segment_distance[t];
+            result.time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
+            result.latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
+            result.longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
+            result.x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance;
         }
     }
 
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
     {
-        result[t].landcover = Icesat2Parms::INVALID_FLAG;
-        result[t].snowcover = Icesat2Parms::INVALID_FLAG;
+        result.landcover = Icesat2Parms::INVALID_FLAG;
+        result.snowcover = Icesat2Parms::INVALID_FLAG;
     }
     else
     {
@@ -348,31 +341,31 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, int t, veget
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            double diff = abs(ph[i].time_ns - result[t].time_ns);
+            double diff = abs(ph[i].time_ns - result.time_ns);
             if(diff < diff_min)
             {
                 diff_min = diff;
                 center_ph = i;
             }
         }
-        result[t].landcover = ph[center_ph].landcover;
-        result[t].snowcover = ph[center_ph].snowcover;
+        result.landcover = ph[center_ph].landcover;
+        result.snowcover = ph[center_ph].snowcover;
     }
 }
 
 /*----------------------------------------------------------------------------
  * phorealAlgorithm
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vegetation_t* result)
+void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = (Atl03Reader::photon_t*)((uint8_t*)extent + extent->photon_offset[t]);
-    long num_ph = extent->photon_count[t];
+    Atl03Reader::photon_t* ph = extent->photons;
+    uint32_t num_ph = extent->photon_count;
 
     /* Determine Number of Ground and Vegetation Photons */
     long gnd_cnt = 0;
     long veg_cnt = 0;
-    for(long i = 0; i < num_ph; i++)
+    for(uint32_t i = 0; i < num_ph; i++)
     {
         if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
         {
@@ -383,8 +376,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             veg_cnt++;
         }
     }
-    result[t].ground_photon_count = gnd_cnt;
-    result[t].vegetation_photon_count = veg_cnt;
+    result.ground_photon_count = gnd_cnt;
+    result.vegetation_photon_count = veg_cnt;
 
     /* Create Ground and Vegetation Photon Index Arrays */
     long* gnd_index = new long [gnd_cnt];
@@ -430,30 +423,30 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         max_h = 0.0;
         min_h = 0.0;
     }
-    result[t].h_max_canopy = max_h;
-    result[t].h_min_canopy = min_h;
-    result[t].h_mean_canopy = sum_h / (double)veg_cnt;
+    result.h_max_canopy = max_h;
+    result.h_min_canopy = min_h;
+    result.h_mean_canopy = sum_h / (double)veg_cnt;
 
     /* Calculate Stdev of Heights */
     double std_h = 0.0;
     for(long i = 0; i < veg_cnt; i++)
     {
-        double delta = (ph[veg_index[i]].relief - result[t].h_mean_canopy);
+        double delta = (ph[veg_index[i]].relief - result.h_mean_canopy);
         std_h += delta * delta;
     }
-    result[t].canopy_openness = sqrt(std_h / (double)veg_cnt);
+    result.canopy_openness = sqrt(std_h / (double)veg_cnt);
 
     /* Calculate Number of Bins */
     int num_bins = (int)ceil((max_h - min_h) / parms->phoreal.binsize);
     if(num_bins > MAX_BINS)
     {
         mlog(WARNING, "Maximum number of bins truncated from %d to maximum allowed of %d", num_bins, MAX_BINS);
-        result[t].pflags |= BIN_OVERFLOW_FLAG;
+        result.pflags |= BIN_OVERFLOW_FLAG;
         num_bins = MAX_BINS;
     }
     else if(num_bins <= 0)
     {
-        result[t].pflags |= BIN_UNDERFLOW_FLAG;
+        result.pflags |= BIN_UNDERFLOW_FLAG;
         num_bins = 1;
     }
 
@@ -474,7 +467,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
         int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = (waveform_t*)waverec.getRecordData();
-        data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION | t;
+        data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
         for(int b = 0; b < num_bins; b++)
@@ -508,7 +501,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             h_te_median = ph[gnd_index[i0]].height;
         }
     }
-    result[t].h_te_median = h_te_median;
+    result.h_te_median = h_te_median;
 
     /* Calculate Percentiles */
     {
@@ -520,7 +513,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
                 double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
                 if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
-                    result[t].canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
+                    result.canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
                     break;
                 }
                 b++;
@@ -532,7 +525,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
             double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
             if(percentage >= 98.0 && cbins[b] > 0)
             {
-                result[t].h_canopy = ph[veg_index[cbins[b] - 1]].relief;
+                result.h_canopy = ph[veg_index[cbins[b] - 1]].relief;
                 break;
             }
             b++;
@@ -549,12 +542,12 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, int t, vege
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::postResult (int t, vegetation_t* result)
+void Atl08Dispatch::postResult (vegetation_t* result)
 {
     batchMutex.lock();
     {
         /* Populate Batch Record */
-        if(result) recData->vegetation[batchIndex++] = result[t];
+        if(result) recData->vegetation[batchIndex++] = *result;
 
         /* Check If Batch Record Should Be Posted*/
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)

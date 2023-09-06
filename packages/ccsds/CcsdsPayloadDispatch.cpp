@@ -73,10 +73,11 @@ int CcsdsPayloadDispatch::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key)
+bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
-
+    (void)records;
+    
     try
     {
         CcsdsSpacePacket ccsds_pkt(record->getRecordData(), record->getRecordDataSize());

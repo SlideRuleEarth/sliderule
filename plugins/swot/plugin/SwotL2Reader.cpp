@@ -80,7 +80,7 @@ const RecordObject::fieldDef_t SwotL2Reader::scanRecDef[] = {
 const char* SwotL2Reader::geoRecType = "swotl2geo";
 const RecordObject::fieldDef_t SwotL2Reader::geoRecDef[] = {
     {"granule",     RecordObject::STRING,   offsetof(geo_rec_t, granule),       MAX_GRANULE_NAME_STR,   NULL, NATIVE_FLAGS},
-    {"scan",        RecordObject::USER,     offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS}
+    {"scan",        RecordObject::USER,     offsetof(geo_rec_t, scan),          0,                      scanRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 /******************************************************************************
@@ -132,8 +132,7 @@ void SwotL2Reader::init (void)
 SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
     context{},
-    region(_asset, _resource, _parms, &context),
-    read_timeout_ms(_parms->read_timeout * 1000)
+    region(_asset, _resource, _parms, &context)
 {
     /* Initialize Reader */
     asset       = _asset;
@@ -214,29 +213,28 @@ SwotL2Reader::~SwotL2Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* parms, H5Coro::context_t* context):
-    read_timeout_ms (parms->read_timeout * 1000),
+SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* _parms, H5Coro::context_t* context):
     lat             (asset, resource, "latitude_nadir", context),
     lon             (asset, resource, "longitude_nadir", context),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
     /* Join Reads */
-    lat.join(read_timeout_ms, true);
-    lon.join(read_timeout_ms, true);
+    lat.join(_parms->read_timeout * 1000, true);
+    lon.join(_parms->read_timeout * 1000, true);
 
     /* Initialize Region */
     first_line = 0;
     num_lines = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
-    if(parms->raster != NULL)
+    if(_parms->raster != NULL)
     {
-        rasterregion(parms);
+        rasterregion(_parms);
     }
-    else if(parms->polygon.length() > 0)
+    else if(_parms->polygon.length() > 0)
     {
-        polyregion(parms);
+        polyregion(_parms);
     }
     else
     {
@@ -267,9 +265,9 @@ void SwotL2Reader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::polyregion (SwotParms* parms)
+void SwotL2Reader::Region::polyregion (SwotParms* _parms)
 {
-    int points_in_polygon = parms->polygon.length();
+    int points_in_polygon = _parms->polygon.length();
 
     /* Determine Best Projection To Use */
     MathLib::proj_t projection = MathLib::PLATE_CARREE;
@@ -277,7 +275,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* parms)
     else if(lat[0] < -70.0) projection = MathLib::SOUTH_POLAR;
 
     /* Project Polygon */
-    List<MathLib::coord_t>::Iterator poly_iterator(parms->polygon);
+    List<MathLib::coord_t>::Iterator poly_iterator(_parms->polygon);
     MathLib::point_t* projected_poly = new MathLib::point_t [points_in_polygon];
     for(int i = 0; i < points_in_polygon; i++)
     {
@@ -333,7 +331,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* parms)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::rasterregion (SwotParms* parms)
+void SwotL2Reader::Region::rasterregion (SwotParms* _parms)
 {
     /* Allocate Inclusion Mask */
     if(lat.size <= 0) return;
@@ -347,7 +345,7 @@ void SwotL2Reader::Region::rasterregion (SwotParms* parms)
     while(line < lat.size)
     {
         /* Check Inclusion */
-        bool inclusion = parms->raster->includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
+        bool inclusion = _parms->raster->includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
         inclusion_mask[line] = inclusion;
 
         /* If Coordinate Is In Raster */

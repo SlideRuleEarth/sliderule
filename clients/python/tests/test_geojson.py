@@ -27,4 +27,4 @@ class TestGeoJson:
             gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5", asset)
             assert gdf["rgt"].unique()[0] == 295
             assert gdf["cycle"].unique()[0] == 1
-            assert len(gdf) == 21029
+            assert len(gdf) == 21006

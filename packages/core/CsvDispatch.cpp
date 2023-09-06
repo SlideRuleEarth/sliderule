@@ -146,9 +146,10 @@ CsvDispatch::~CsvDispatch (void)
 /*----------------------------------------------------------------------------
  * processRecord
  *----------------------------------------------------------------------------*/
-bool CsvDispatch::processRecord (RecordObject* record, okey_t key)
+bool CsvDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
+    (void)records;
 
     char valrow[MAX_STR_SIZE];
 

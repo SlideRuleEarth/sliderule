@@ -129,7 +129,7 @@ class TestL4B:
         gdf = icesat2.atl08p(parms, asset=asset, resources=[resource], keep_id=True)
         exp_keys = ['snowcover', 'h_max_canopy', 'canopy_h_metrics', 'solar_elevation',
                     'h_canopy', 'spot', 'segment_id', 'rgt', 'gnd_ph_count', 'h_te_median',
-                    'cycle', 'ph_count', 'h_mean_canopy', 'distance', 'landcover',
+                    'cycle', 'ph_count', 'h_mean_canopy', 'x_atc', 'landcover',
                     'veg_ph_count', 'h_min_canopy', 'canopy_openness', 'gt', 'extent_id',
                     'geometry', 'gedi.flags', 'gedi.time', 'gedi.value', 'gedi.file_id']
         for key in exp_keys:

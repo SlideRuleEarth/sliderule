@@ -107,7 +107,8 @@ class RecordObject
 
         typedef enum {
             BIGENDIAN       = 0x00000001,
-            POINTER         = 0x00000002
+            POINTER         = 0x00000002,
+            BATCH           = 0x00000004
         } fieldFlags_t;
 
         typedef struct {
@@ -236,6 +237,7 @@ class RecordObject
         static int              getRecordDataSize   (const char* rec_type);
         static int              getRecordMaxFields  (const char* rec_type);
         static int              getRecordFields     (const char* rec_type, char*** field_names, field_t*** fields);
+        static Dictionary<field_t>* getRecordFields (const char* rec_type);
         static int              parseSerial         (unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
         static unsigned int     str2flags           (const char* str);
         static const char*      flags2str           (unsigned int flags);

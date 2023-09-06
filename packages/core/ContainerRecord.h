@@ -29,69 +29,53 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __limit_dispatch__
-#define __limit_dispatch__
+#ifndef __container_record__
+#define __container_record__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
-#include "LuaObject.h"
 #include "RecordObject.h"
-#include "DispatchObject.h"
-#include "Dictionary.h"
 #include "OsApi.h"
-#include "EventLib.h"
-#include "LimitRecord.h"
 
 /******************************************************************************
- * LIMIT DISPATCH CLASS
+ * CONTAINER RECORD CLASS
  ******************************************************************************/
 
-class LimitDispatch: public DispatchObject
+class ContainerRecord: public RecordObject
 {
     public:
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+        typedef struct {
+            uint32_t    rec_size;
+            uint32_t    rec_offset;
+        } entry_t;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        typedef struct {
+            uint32_t    rec_cnt;
+            uint32_t    start_of_recs;
+            entry_t     entries[1];
+        } rec_t;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        static const char* entryRecType;
+        static RecordObject::fieldDef_t entryRecDef[];
+        static const char* recType;
+        static RecordObject::fieldDef_t recDef[];
+        
+        static void init (void);
+        static int hdrSize (int cnt);
 
-        static int  luaCreate   (lua_State* L);
+        ContainerRecord(int rec_cnt, int size);
+        ~ContainerRecord(void);
+
+        bool addRecord(RecordObject& record, int size=0);
 
     private:
 
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        LimitRecord::limit_t    limit;
-        event_level_t           logLevel;
-        bool                    inError;
-        Publisher*              limitQ;
-        Publisher*              deepQ;
-        bool                    gmtDisplay;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                    LimitDispatch       (lua_State* L, LimitRecord::limit_t _limit, const char* deepq_name, const char* limitq_name);
-                    ~LimitDispatch      (void);
-
-        /* overridden methods */
-        bool        processRecord       (RecordObject* record, okey_t key, recVec_t* records);
-
-        /* meta functions */
-        static int  luaSetLogLevel      (lua_State* L);
-        static int  luaGMTDisplay       (lua_State* L);
+        rec_t*      container;
+        uint32_t    recsContained;
+        uint32_t    recsOffset;
 };
 
-#endif  /* __limit_dispatch__ */
+#endif  /* __container_record__ */

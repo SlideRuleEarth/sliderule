@@ -291,6 +291,9 @@ cluster-docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
 
+clean: ## remove build artifacts
+	make -C $(SLIDERULE_SOURCE_DIR) clean
+
 distclean: ## fully remove all non-version controlled files and directories
 	make -C $(SLIDERULE_SOURCE_DIR) distclean
 

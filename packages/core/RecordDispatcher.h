@@ -148,9 +148,9 @@ class RecordDispatcher: public LuaObject
          *--------------------------------------------------------------------*/
 
         static void*    dispatcherThread    (void* parm);
-        void            dispatchRecord      (RecordObject* record);
+        void            dispatchRecord      (RecordObject* record, DispatchObject::recVec_t* records=NULL);
 
-        void            startThreads        (void);
+        void            startTdhreads        (void);
         void            stopThreads         (void);
 };
 

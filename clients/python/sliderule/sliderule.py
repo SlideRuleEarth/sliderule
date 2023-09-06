@@ -47,8 +47,13 @@ from sliderule import version
 # GLOBALS
 ###############################################################################
 
-# WGS84 / Mercator, Earth as Geoid, Coordinate system on the surface of a sphere or ellipsoid of reference.
-EPSG_MERCATOR = "EPSG:4326"
+# Coordinate Reference system definition for WGS84 Ellipsoid ensemble
+# Coordinate system on the surface of a sphere or ellipsoid of reference.
+EPSG_WGS84 = "EPSG:4326"
+
+# This is 3D CRS for ITRF2014 realization with 2010.0 epoch: https://epsg.io/7912
+# Note: using GRS80 ellipsoid, negligible difference in inverse flattening from WGS84
+SLIDERULE_EPSG = "EPSG:7912"
 
 PUBLIC_URL = "slideruleearth.io"
 PUBLIC_ORG = "sliderule"
@@ -154,6 +159,25 @@ class TransientError(RuntimeError):
 ###############################################################################
 
 #
+# __StreamSource
+#
+class __StreamSource:
+    def __init__(self, data):
+        self.source = data
+    def __iter__(self):
+        for line in self.source.iter_content(None):
+            yield line
+
+#
+# __BufferSource
+#
+class __BufferSource:
+    def __init__(self, data):
+        self.source = data
+    def __iter__(self):
+        yield self.source
+
+#
 #  __populate
 #
 def __populate(rectype):
@@ -170,7 +194,7 @@ def __parse_json(data):
     data: request response
     """
     lines = []
-    for line in data.iter_content(None):
+    for line in data:
         lines.append(line)
     response = b''.join(lines)
     return json.loads(response)
@@ -283,7 +307,7 @@ def __parse_native(data, callbacks):
 
     duration = 0.0
 
-    for line in data.iter_content(None):
+    for line in data:
 
         # Capture Start Time (for duration)
         tstart = time.perf_counter()
@@ -321,12 +345,18 @@ def __parse_native(data, callbacks):
                     rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
                     rawdata = rawbits[len(rectype) + 1:]
                     rec     = __decode_native(rectype, rawdata)
-                    if callbacks != None and rectype in callbacks:
-                        # Execute Call-Back on Record
-                        callbacks[rectype](rec)
+                    if rectype == "conrec":
+                        # parse records contained in record
+                        buffer = __BufferSource(rawdata[rec["start"]:])
+                        contained_recs = __parse_native(buffer, callbacks)
+                        recs += contained_recs
                     else:
-                        # Append Record
-                        recs.append(rec)
+                        if callbacks != None and rectype in callbacks:
+                            # Execute Call-Back on Record
+                            callbacks[rectype](rec)
+                        else:
+                            # Append Record
+                            recs.append(rec)
                     # Reset Record Parsing
                     rec_rsps.clear()
                     rec_size_index = 0
@@ -509,8 +539,8 @@ def gdf2poly(gdf):
 #
 def emptyframe(**kwargs):
     # set default keyword arguments
-    kwargs['crs'] = EPSG_MERCATOR
-    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], []), crs=kwargs['crs'])
+    kwargs['crs'] = SLIDERULE_EPSG
+    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
 
 #
 # Process Output File
@@ -544,14 +574,14 @@ def getvalues(data, dtype, size):
 #
 #  Dictionary to GeoDataFrame
 #
-def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", **kwargs):
+def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key=None, **kwargs):
 
     # Latch Start Time
     tstart = time.perf_counter()
 
     # Set Default Keyword Arguments
     kwargs['index_key'] = "time"
-    kwargs['crs'] = EPSG_MERCATOR
+    kwargs['crs'] = SLIDERULE_EPSG 
 
     # Check Empty Columns
     if len(columns) <= 0:
@@ -561,7 +591,12 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     columns['time'] = columns[time_key].astype('datetime64[ns]')
 
     # Generate Geometry Column
-    geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    # 3D point geometry
+    # This enables 3D CRS transformations using the to_crs() method
+    if height_key == None:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    else:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
     del columns[lon_key]
     del columns[lat_key]
 
@@ -571,7 +606,7 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     else:
         df = columns
 
-    # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
+    # Build GeoDataFrame (default geometry is crs=SLIDERULE_EPSG)
     gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
 
     # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
@@ -699,13 +734,14 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
                 data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
             data.raise_for_status()
             # Parse Response
+            stream = __StreamSource(data)
             format = data.headers['Content-Type']
             if format == 'text/plain':
-                rsps = __parse_json(data)
+                rsps = __parse_json(stream)
             elif format == 'application/json':
-                rsps = __parse_json(data)
+                rsps = __parse_json(stream)
             elif format == 'application/octet-stream':
-                rsps = __parse_native(data, callbacks)
+                rsps = __parse_native(stream, callbacks)
             else:
                 raise FatalError('unsupported content type: %s' % (format))
             # Success
@@ -1221,7 +1257,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
         # create geodataframe
         p = Polygon([point for point in zip(lons, lats)])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_MERCATOR)
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_WGS84)
 
         # Convert to geojson file
         gdf.to_file(tempfile, driver="GeoJSON")
@@ -1295,6 +1331,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         "raster": {
             "data": datafile, # geojson file
             "length": len(datafile), # geojson file length
-            "cellsize": cellsize  # untis are in crs/projection
+            "cellsize": cellsize  # units are in crs/projection
         }
     }

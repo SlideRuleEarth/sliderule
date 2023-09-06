@@ -45,7 +45,7 @@ local function initialize(resource, parms, algo, args)
             local time_field = settings["use_poi_time"] and (args.time_field or "time") or nil
             local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
             if robj then
-                local sampler = geo.sampler(robj, key, rspq, args.result_batch, args.index_field, args.lon_field, args.lat_field, time_field, args.height_field)
+                local sampler = geo.sampler(robj, key, rspq, args.result_rec, args.index_field, args.lon_field, args.lat_field, time_field, args.height_field)
                 if sampler then
                     sampler_disp:attach(sampler, args.result_rec)
                 else
@@ -68,7 +68,6 @@ local function initialize(resource, parms, algo, args)
         -- Attach Exception and Ancillary Record Forwarding --
         local except_pub = core.publish(rspq)
         algo_disp:attach(except_pub, "exceptrec") -- exception records
-        algo_disp:attach(except_pub, "extrec") -- ancillary records
 
         -- Attach Algorithm --
         algo_disp:attach(algo, args.source_rec)

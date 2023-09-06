@@ -55,7 +55,6 @@ const char* Icesat2Parms::ATL08_CLASS                  = "atl08_class";
 const char* Icesat2Parms::QUALITY                      = "quality_ph";
 const char* Icesat2Parms::TRACK                        = "track";
 const char* Icesat2Parms::STAGES                       = "stages";
-const char* Icesat2Parms::COMPACT                      = "compact";
 const char* Icesat2Parms::ALONG_TRACK_SPREAD           = "ats";
 const char* Icesat2Parms::MIN_PHOTON_COUNT             = "cnt";
 const char* Icesat2Parms::EXTENT_LENGTH                = "len";
@@ -262,7 +261,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     surface_type                (SRT_LAND_ICE),
     pass_invalid                (false),
     dist_in_seg                 (false),
-    compact                     (false),
     atl03_cnf                   { false, false, true, true, true, true, true },
     quality_ph                  { true, false, false, false },
     atl08_class                 { false, false, false, false, false },
@@ -337,12 +335,6 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         lua_getfield(L, index, Icesat2Parms::TRACK);
         track = LuaObject::getLuaInteger(L, -1, true, track, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::TRACK, track);
-        lua_pop(L, 1);
-
-        /* Compact Flag */
-        lua_getfield(L, index, Icesat2Parms::COMPACT);
-        compact = LuaObject::getLuaBoolean(L, -1, true, compact, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %s", Icesat2Parms::COMPACT, compact ? "true" : "false");
         lua_pop(L, 1);
 
         /* Maximum Iterations */

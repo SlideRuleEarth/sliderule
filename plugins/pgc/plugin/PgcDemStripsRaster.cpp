@@ -45,10 +45,8 @@
 PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb):
     GeoIndexedRaster(L, _parms, cb),
     demName(dem_name),
-    path2geocells(_parms->asset->getPath() + std::string(geo_suffix)),
-    groupId(0)
+    path2geocells(_parms->asset->getPath() + std::string(geo_suffix))
 {
-
     std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());

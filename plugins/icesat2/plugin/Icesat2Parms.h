@@ -245,7 +245,6 @@ class Icesat2Parms: public NetsvcParms
         surface_type_t          surface_type;                   // surface reference type (used to select signal confidence column)
         bool                    pass_invalid;                   // post extent even if each pair is invalid
         bool                    dist_in_seg;                    // the extent length and step are expressed in segments, not meters
-        bool                    compact;                        // return compact (only lat,lon,height,time) elevation information
         bool                    atl03_cnf[NUM_SIGNAL_CONF];     // list of desired signal confidences of photons from atl03 classification
         bool                    quality_ph[NUM_PHOTON_QUALITY]; // list of desired photon quality levels from atl03
         bool                    atl08_class[NUM_ATL08_CLASSES]; // list of surface classifications to use (leave empty to skip)

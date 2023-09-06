@@ -75,11 +75,12 @@ class Dictionary
             public:
                                     Iterator    (const Dictionary& d);
                                     ~Iterator   (void);
-                kv_t                operator[]  (int index) const;
+                kv_t                operator[]  (int index);
                 const int           length;
             private:
-                const T**           elements;
-                const char**        keys;
+                const Dictionary&   source;
+                int                 table_index; // where in source hashtable
+                int                 curr_index; // how many elements in hashtable to the table_index
         };
 
         /*--------------------------------------------------------------------
@@ -166,19 +167,11 @@ class MgDictionary: public Dictionary<T>
  *----------------------------------------------------------------------------*/
 template <class T>
 Dictionary<T>::Iterator::Iterator(const Dictionary& d):
-    length(d.numEntries)
+    length(d.numEntries),
+    source(d),
+    table_index(-1),
+    curr_index(-1)
 {
-    elements = new const T* [length];
-    keys = new const char* [length];
-    for(unsigned int i = 0, j = 0; i < d.hashSize; i++)
-    {
-        if(d.hashTable[i].chain != EMPTY_ENTRY)
-        {
-            elements[j] = &d.hashTable[i].data;
-            keys[j] = d.hashTable[i].key;
-            j++;
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -187,20 +180,35 @@ Dictionary<T>::Iterator::Iterator(const Dictionary& d):
 template <class T>
 Dictionary<T>::Iterator::~Iterator(void)
 {
-    delete [] elements;
-    delete [] keys;
 }
 
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
 template <class T>
-typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index) const
+typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index)
 {
     if( (index < length) && (index >= 0) )
     {
-        Dictionary<T>::kv_t pair(keys[index], *elements[index]);
-        return pair;
+        while(curr_index < index) // move forward
+        {
+            table_index++;
+            if(source.hashTable[table_index].chain != EMPTY_ENTRY)
+            {
+                curr_index++;
+            }
+        }
+
+        while(curr_index > index) // move backwards
+        {
+            table_index--;
+            if(source.hashTable[table_index].chain != EMPTY_ENTRY)
+            {
+                curr_index--;
+            }
+        }
+
+        return Dictionary<T>::kv_t(source.hashTable[table_index].key, source.hashTable[table_index].data);
     }
     else
     {
