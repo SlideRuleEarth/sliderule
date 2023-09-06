@@ -164,3 +164,44 @@ def sample(asset, coordinates, parms={}):
     # Build GeoDataFrame
     gdf = sliderule.todataframe(columns)
     return gdf
+
+#
+# Subset
+#
+def subset(asset, coordinates, parms={}):
+    '''
+    Subset a raster dataset at the extent coordinates provided
+
+    Parameters
+    ----------
+    asset:          str
+                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
+    coordinates:    list
+                    list of two extent coordinates as [longitude, latitude]
+    parms:          dict
+                    dictionary of samping parameters
+
+    Returns
+    -------
+    GeoDataFrame
+        geolocated sampled values along with metadata
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> gdf = sliderule.subset("landsat-hls", [[-179.87, 50.45], [-178.27, 51.44]])
+    '''
+    # Massage Arguments
+    if type(coordinates[0]) != list:
+        coorindates = [coorindates]
+
+    # Perform Request
+    rqst = {"subset": {"asset": asset, **parms}, "coordinates": coordinates}
+    rsps = sliderule.source("subset", rqst)
+
+    # Sanity Check Response
+    if len(rsps) <= 0:
+        return sliderule.emptyframe()
+
+    gdf = 0
+    return gdf
