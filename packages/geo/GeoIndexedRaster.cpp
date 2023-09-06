@@ -131,6 +131,7 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 
             delete reader->thread; /* delete thread waits on thread to join */
             delete reader->sync;
+            delete reader;
         }
     }
 

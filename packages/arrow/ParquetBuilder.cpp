@@ -284,11 +284,13 @@ struct ParquetBuilder::impl
             while(pkg_list[index])
             {
                 packagestr += pkg_list[index];
+                if(pkg_list[index + 1]) packagestr += ", ";
+                delete [] pkg_list[index];
                 index++;
-                if(pkg_list[index]) packagestr += ", ";
             }
         }
         packagestr += "]";
+        delete [] pkg_list;
 
         /* Initialize Meta Data String */
         SafeString metastr(R"json({
