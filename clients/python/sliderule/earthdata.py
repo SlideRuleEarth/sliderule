@@ -27,6 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import time
 import itertools
 import copy
 import json
@@ -49,6 +50,9 @@ import sliderule
 # create logger
 logger = logging.getLogger(__name__)
 
+# profiling times for each major function
+profiles = {}
+
 # default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
 max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
@@ -68,6 +72,26 @@ DATASETS = {
     "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": []},
     "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"]},
     "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"]}
+}
+
+# best effort match of sliderule assets to earthdata datasets
+ASSETS_TO_DATASETS = {
+    "gedil4a": "GEDI_L4A_AGB_Density_V2_1_2056",
+    "gedil4b": "GEDI_L4B_Gridded_Biomass_2017",
+    "gedil3-elevation": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-canopy": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-elevation-stddev": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-canopy-stddev": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-counts": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil2a": "GEDI02_A",
+    "gedil1b": "GEDI02_B",
+    "swot-sim-ecco-llc4320": "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
+    "swot-sim-glorys": "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
+    "usgs3dep-1meter-dem": "Digital Elevation Model (DEM) 1 meter",
+    "landsat-hls": "HLS",
+    "icesat2": "ATL03",
+    "atlas-local": "ATL03",
+    "nsidc-s3": "ATL03"
 }
 
 # upper limit on resources returned from CMR query per request
@@ -274,6 +298,8 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
 
     global max_requested_resources
 
+    tstart = time.perf_counter()
+
     # initialize return value
     resources = {} # [<url>] = <polygon>
 
@@ -333,6 +359,8 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
         raise sliderule.FatalError('Exceeded maximum requested resources: {} (current max is {})\nConsider using earthdata.set_max_resources to set a higher limit.'.format(len(url_list), max_requested_resources))
     else:
         logger.info("Identified %d resources to process", len(url_list))
+
+    profiles[__cmr_search.__name__] = time.perf_counter() - tstart
 
     if return_metadata:
         return (url_list,meta_list)
@@ -538,7 +566,6 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
         >>> granules
         ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
     '''
-
     # get provider
     provider = __get_provider(short_name)
 
@@ -640,7 +667,7 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
 #
 #  The National Map
 #
-def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d"), as_str=True):
+def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d"), as_str=True):
     '''
     Query `USGS National Map API <https://tnmaccess.nationalmap.gov/api/v1/products>`_ for a list of data within temporal and spatial parameters.  See https://apps.nationalmap.gov/help/documents/TNMAccessAPIDocumentation/TNMAccessAPIDocumentation.pdf for more details on the API.
 
@@ -745,3 +772,76 @@ def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftim
     else:
         return geojson
 
+
+#
+#  Search
+#
+def search(parm):
+
+    kwargs = {}
+    resources = []
+
+    # Pull Out Polygon
+    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
+        kwargs['polygon'] = parm["clusters"]
+    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
+        kwargs['polygon'] = parm["poly"]
+
+    # Pull Out Time Period
+    if "t0" in parm:
+        kwargs['time_start'] = parm["t0"]
+    if "t1" in parm:
+        kwargs['time_end'] = parm["t1"]
+
+    # Build Name Filter
+    name_filter_enabled = False
+    if "asset" in parm:
+        if parm["asset"] == "icesat2":
+            rgt_filter = '????'
+            if "rgt" in parm and parm["rgt"] != None:
+                rgt_filter = f'{parm["rgt"]}'.zfill(4)
+                name_filter_enabled = True
+            cycle_filter = '??'
+            if "cycle" in parm and parm["cycle"] != None:
+                cycle_filter = f'{parm["cycle"]}'.zfill(2)
+                name_filter_enabled = True
+            region_filter = '??'
+            if "region" in parm and parm["region"] != None:
+                region_filter = f'{parm["region"]}'.zfill(2)
+                name_filter_enabled = True
+            if name_filter_enabled:
+                kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
+
+    # Check Parameters are Valid
+    if (not name_filter_enabled) and ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
+        return resources
+
+    # Get Dataset
+    if "asset" in parm:
+        try:
+            short_name = ASSETS_TO_DATASETS[parm["asset"]]
+        except Exception:
+            logger.error(f'Unrecognized asset: {parm["asset"]}')
+            return resources
+
+        # Get Resources - CMR Request
+        resources = cmr(short_name=short_name, **kwargs)
+
+    # Loop through Rasters to Sample
+    if "samples" in parm:
+        for raster in parm["samples"].keys():
+            sample_parm = parm["samples"][raster]
+            if "catalog" not in sample_parm:
+                try:
+                    dataset_name = ASSETS_TO_DATASETS[sample_parm["asset"]]
+                    dataset = DATASETS[dataset_name]
+                    if dataset["api"] == "stac":
+                        parm["samples"][raster]["catalog"] = stac(short_name=dataset_name, as_str=True, **kwargs)
+                    elif dataset["api"] == "tnm":
+                        parm["samples"][raster]["catalog"] = tnm(short_name=dataset_name, as_str=True, **kwargs)
+                except Exception:
+                    logger.error(f'Unrecognised asset ({sample_parm["asset"]} for {raster}')
+
+    # Return Resources
+    return resources

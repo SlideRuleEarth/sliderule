@@ -47,12 +47,6 @@ logger = logging.getLogger(__name__)
 # profiling times for each major function
 profiles = {}
 
-# default asset
-DEFAULT_ASSET="icesat2"
-
-# default standard data product version
-DEFAULT_ICESAT2_SDP_VERSION='006'
-
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -258,66 +252,6 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
     profiles["flatten"] = time.perf_counter() - tstart_flatten
     return gdf
 
-#
-#  Query Resources from CMR
-#
-def __query_resources(parm, version, **kwargs):
-
-    # Latch Start Time
-    tstart = time.perf_counter()
-
-    # Submission Arguments for CMR
-    kwargs.setdefault('return_metadata', False)
-
-    # Pull Out Polygon
-    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
-        kwargs['polygon'] = parm["clusters"]
-    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
-        kwargs['polygon'] = parm["poly"]
-
-    # Pull Out Time Period
-    if "t0" in parm:
-        kwargs['time_start'] = parm["t0"]
-    if "t1" in parm:
-        kwargs['time_end'] = parm["t1"]
-
-    # Build Filters
-    name_filter_enabled = False
-    rgt_filter = '????'
-    if "rgt" in parm and parm["rgt"] != None:
-        rgt_filter = f'{parm["rgt"]}'.zfill(4)
-        name_filter_enabled = True
-    cycle_filter = '??'
-    if "cycle" in parm and parm["cycle"] != None:
-        cycle_filter = f'{parm["cycle"]}'.zfill(2)
-        name_filter_enabled = True
-    region_filter = '??'
-    if "region" in parm and parm["region"] != None:
-        region_filter = f'{parm["region"]}'.zfill(2)
-        name_filter_enabled = True
-    if name_filter_enabled:
-        kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
-
-    # Check Parameters are Valid
-    if (not name_filter_enabled) and ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
-        return []
-
-    # Make CMR Request
-    if kwargs['return_metadata']:
-        resources,metadata = earthdata.cmr(short_name='ATL03', version=version, **kwargs)
-    else:
-        resources = earthdata.cmr(short_name='ATL03', version=version, **kwargs)
-
-    # Update Profile
-    profiles[__query_resources.__name__] = time.perf_counter() - tstart
-
-    # Return Resources
-    if kwargs['return_metadata']:
-        return (resources,metadata)
-    else:
-        return resources
-
 
 ###############################################################################
 # APIs
@@ -347,7 +281,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
 #
 #  ATL06
 #
-def atl06 (parm, resource, asset=DEFAULT_ASSET):
+def atl06 (parm, resource):
     '''
     Performs ATL06-SR processing on ATL03 data and returns geolocated elevations
 
@@ -365,12 +299,12 @@ def atl06 (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         geolocated elevations (see `Elevations </web/rtd/user_guide/ICESat-2.html#elevations>`_)
     '''
-    return atl06p(parm, asset=asset, resources=[resource])
+    return atl06p(parm, resources=[resource])
 
 #
 #  Parallel ATL06
 #
-def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -438,8 +372,11 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         if resources == None:
             resources = __query_resources(parm, version)
 
+        # Default the Asset
+        if "asset" not in parm:
+            parm["asset"] = "icesat2"
+    
         # Build ATL06 Request
-        parm["asset"] = asset
         rqst = {
             "resources": resources,
             "parms": parm
@@ -463,7 +400,7 @@ def atl06p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
 #
 #  Subsetted ATL03
 #
-def atl03s (parm, resource, asset=DEFAULT_ASSET):
+def atl03s (parm, resource):
     '''
     Subsets ATL03 data given the polygon and time range provided and returns segments of photons
 
@@ -481,12 +418,12 @@ def atl03s (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         ATL03 extents (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
     '''
-    return atl03sp(parm, asset=asset, resources=[resource])
+    return atl03sp(parm, resources=[resource])
 
 #
 #  Parallel Subsetted ATL03
 #
-def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, height_key=None):
+def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.  Unlike the `atl03s <#atl03s>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -527,14 +464,17 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
         if resources == None:
             resources = __query_resources(parm, version)
 
-        # Build ATL03 Subsetting Request
-        parm["asset"] = asset
+        # Default the Asset
+        if "asset" not in parm:
+            parm["asset"] = "icesat2"
+    
+        # Build Request
         rqst = {
             "resources": resources,
             "parms": parm
         }
 
-        # Make API Processing Request
+        # Make Request
         rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
 
         # Check for Output Options
@@ -641,7 +581,7 @@ def atl03sp(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, call
 #
 #  ATL08
 #
-def atl08 (parm, resource, asset=DEFAULT_ASSET):
+def atl08 (parm, resource):
     '''
     Performs ATL08-PhoREAL processing on ATL03 and ATL08 data and returns geolocated elevations
 
@@ -659,12 +599,12 @@ def atl08 (parm, resource, asset=DEFAULT_ASSET):
     GeoDataFrame
         geolocated vegatation statistics
     '''
-    return atl08p(parm, asset=asset, resources=[resource])
+    return atl08p(parm, resources=[resource])
 
 #
 #  Parallel ATL08
 #
-def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs ATL08-PhoREAL processing in parallel on ATL03 and ATL08 data and returns geolocated vegatation statistics.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -708,14 +648,17 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
         if resources == None:
             resources = __query_resources(parm, version)
 
-        # Build ATL06 Request
-        parm["asset"] = asset
+        # Default the Asset
+        if "asset" not in parm:
+            parm["asset"] = "icesat2"
+    
+        # Build Request
         rqst = {
             "resources": resources,
             "parms": parm
         }
 
-        # Make API Processing Request
+        # Make Request
         rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)
 
         # Flatten Responses
@@ -729,63 +672,3 @@ def atl08p(parm, asset=DEFAULT_ASSET, version=DEFAULT_ICESAT2_SDP_VERSION, callb
     except RuntimeError as e:
         logger.critical(e)
         return sliderule.emptyframe()
-
-#
-#  Common Metadata Repository
-#
-def cmr(version=DEFAULT_ICESAT2_SDP_VERSION, short_name='ATL03', **kwargs):
-    '''
-    DEPRECATED - use earthdata.cmr(...) instead
-    '''
-    warnings.warn('icesat2.{} is deprecated, please use earthdata.{} instead'.format(cmr.__name__, cmr.__name__), DeprecationWarning, stacklevel=2)
-    return earthdata.cmr(short_name=short_name, version=version, **kwargs)
-
-#
-#  H5
-#
-def h5 (dataset, resource, asset=DEFAULT_ASSET, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=h5coro.ALL_ROWS):
-    '''
-    DEPRECATED - use h5.h5(...) instead
-    '''
-    warnings.warn('icesat2.{} is deprecated, please use h5.{} instead'.format(h5.__name__, h5.__name__), DeprecationWarning, stacklevel=2)
-    return h5coro.h5(dataset, resource, asset, datatype, col, startrow, numrows)
-
-#
-#  Parallel H5
-#
-def h5p (datasets, resource, asset=DEFAULT_ASSET):
-    '''
-    DEPRECATED - use h5.h5p(...) instead
-    '''
-    warnings.warn('icesat2.{} is deprecated, please use h5.{} instead'.format(h5p.__name__, h5p.__name__), DeprecationWarning, stacklevel=2)
-    return h5coro.h5p(datasets, resource, asset)
-
-#
-# Format Region Specification
-#
-def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
-    '''
-    DEPRECATED - use sliderule.toregion(...) instead
-    '''
-    warnings.warn('icesat2.{} is deprecated, please use sliderule.{} instead'.format(toregion.__name__, toregion.__name__), DeprecationWarning, stacklevel=2)
-    return sliderule.toregion(source, tolerance, cellsize, n_clusters)
-
-#
-# Get Version
-#
-def get_version ():
-    '''
-    DEPRECATED - use sliderule.get_version() instead
-    '''
-    warnings.warn('icesat2.{} is deprecated, please use sliderule.{} instead'.format(get_version.__name__, get_version.__name__), DeprecationWarning, stacklevel=2)
-    return sliderule.get_version()
-
-#
-#  Set Maximum Resources
-#
-def set_max_resources (max_resources):
-    '''
-    DEPRECATED - use cmr.set_max_resources(...) instead
-    '''
-    warnings.warn('icesat2.{} is deprecated, please use cmr.{} instead'.format(set_max_resources.__name__, set_max_resources.__name__), DeprecationWarning, stacklevel=2)
-    return earthdata.set_max_resources(max_resources)
