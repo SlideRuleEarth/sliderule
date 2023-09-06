@@ -186,6 +186,7 @@ Atl08Dispatch::~Atl08Dispatch(void)
 bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)key;
+    (void)records;
 
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
