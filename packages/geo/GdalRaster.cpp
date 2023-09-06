@@ -190,10 +190,10 @@ void GdalRaster::samplePOI(OGRPoint* poi)
 void GdalRaster::topixel(double minx, double miny, double maxx, double maxy,
                          int& ulx, int& uly, int& lrx, int& lry)
 {
-    ulx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * minx + invGeoTrans[2] * maxy));
-    uly = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * maxy + invGeoTrans[5] * maxy));
-    lrx = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * maxx + invGeoTrans[2] * miny));
-    lry = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * miny + invGeoTrans[5] * miny));
+    ulx = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * minx) + (invGeoTrans[2] * maxy))));
+    uly = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * maxy) + (invGeoTrans[5] * maxy))));
+    lrx = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * maxx) + (invGeoTrans[2] * miny))));
+    lry = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * miny) + (invGeoTrans[5] * miny))));
 }
 
 /*----------------------------------------------------------------------------
@@ -249,11 +249,7 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
 #endif
 
         if(extulx != 0 || extuly != 0)
-        {
-            mlog(DEBUG, "Adjusting upleft pixel (%d, %d) to (0, 0)", extulx, extuly);
-            printf("Adjusting upleft pixel (%d, %d) to (0, 0)\n", extulx, extuly);
-            extulx = extuly = 0;
-        }
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Upleft pixel (%d, %d) is not (0, 0)", extulx, extuly);
 
         if(ulx < extulx)
         {
@@ -613,8 +609,8 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi)
 
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * poi->getX()) + (invGeoTrans[2] * poi->getY()))));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * poi->getY()) + (invGeoTrans[5] * poi->getY()))));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
