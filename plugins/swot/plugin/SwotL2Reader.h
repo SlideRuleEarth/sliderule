@@ -130,14 +130,12 @@ class SwotL2Reader: public LuaObject
         /* Region Subclass */
         struct Region
         {
-            Region              (Asset* asset, const char* resource, SwotParms* parms, H5Coro::context_t* context);
+            Region              (Asset* asset, const char* resource, SwotParms* _parms, H5Coro::context_t* context);
             ~Region             (void);
 
             void cleanup        (void);
-            void polyregion     (SwotParms* parms);
-            void rasterregion   (SwotParms* parms);
-
-            const int           read_timeout_ms;
+            void polyregion     (SwotParms* _parms);
+            void rasterregion   (SwotParms* _parms);
 
             H5Array<int32_t>    lat;
             H5Array<int32_t>    lon;
@@ -164,7 +162,6 @@ class SwotL2Reader: public LuaObject
         Asset*                  asset;
         const char*             resource;
         bool                    sendTerminator;
-        const int               read_timeout_ms;
         Publisher*              outQ;
         SwotParms*              parms;
         stats_t                 stats;

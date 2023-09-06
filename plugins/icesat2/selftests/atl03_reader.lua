@@ -72,7 +72,7 @@ print('\n------------------\nTest02: Atl03 Extent Record\n------------------')
 recq = msg.subscribe("atl03-reader-recq")
 tstart = time.latch()
 f2 = icesat2.atl03(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "atl03-reader-recq", icesat2.parms({cnf=4, track=icesat2.RPT_1}))
-extentrec = recq:recvrecord(5000)
+extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 recq:destroy()
 

@@ -89,7 +89,6 @@ class EndpointProxy: public LuaObject
         int                     numResourcesComplete;
         Cond                    completion;
         const char*             endpoint;
-        const char*             asset;
         const char*             parameters;
         int                     timeout;
         Publisher*              outQ;

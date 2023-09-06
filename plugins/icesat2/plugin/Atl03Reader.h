@@ -126,7 +126,7 @@ class Atl03Reader: public LuaObject
         } anc_type_t;
 
         /* Ancillary Record */
-        typedef struct {
+        typedef struct anc {
             uint64_t        extent_id;
             uint32_t        num_elements;
             uint8_t         anc_type; // anc_type_t

@@ -76,8 +76,6 @@ class ContainerRecord: public RecordObject
         rec_t*      container;
         uint32_t    recsContained;
         uint32_t    recsOffset;
-
-    int tmp;
 };
 
 #endif  /* __container_record__ */
