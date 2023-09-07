@@ -4,12 +4,12 @@ import pytest
 from pyproj import Transformer
 from shapely.geometry import Polygon, Point
 import pandas as pd
-from sliderule import icesat2
+from sliderule import icesat2, h5
 import time
 
 @pytest.mark.network
 class TestAlgorithm:
-    def test_atl06(self, domain, asset, organization, desired_nodes):
+    def test_atl06(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
@@ -19,13 +19,13 @@ class TestAlgorithm:
                   "res": 20.0,
                   "maxi": 1 }
         perf_start = time.perf_counter()
-        gdf = icesat2.atl06(parms, resource, asset)
+        gdf = icesat2.atl06(parms, resource)
         assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622419
 
-    def test_atl06p(self, domain, asset, organization, desired_nodes):
+    def test_atl06p(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
@@ -35,13 +35,13 @@ class TestAlgorithm:
                   "res": 20.0,
                   "maxi": 1 }
         perf_start = time.perf_counter()
-        gdf = icesat2.atl06p(parms, asset, resources=[resource])
+        gdf = icesat2.atl06p(parms, resources=[resource])
         assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622419
 
-    def test_atl03s(self, domain, asset, organization, desired_nodes):
+    def test_atl03s(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
@@ -61,13 +61,13 @@ class TestAlgorithm:
                   "res": 20.0,
                   "maxi": 1 }
         perf_start = time.perf_counter()
-        gdf = icesat2.atl03s(parms, resource, asset)
+        gdf = icesat2.atl03s(parms, resource)
         assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488690
 
-    def test_atl03sp(self, domain, asset, organization, desired_nodes):
+    def test_atl03sp(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
@@ -87,13 +87,13 @@ class TestAlgorithm:
                   "res": 20.0,
                   "maxi": 1 }
         perf_start = time.perf_counter()
-        gdf = icesat2.atl03sp(parms, asset, resources=[resource])
+        gdf = icesat2.atl03sp(parms, resources=[resource])
         assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488690
 
-    def test_atl08(self, domain, asset, organization, desired_nodes):
+    def test_atl08(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20181213075606_11560106_005_01.h5"
         track = 1
@@ -113,7 +113,7 @@ class TestAlgorithm:
                   "res": 20.0,
                   "maxi": 1 }
         perf_start = time.perf_counter()
-        gdf = icesat2.atl03s(parms, resource, asset)
+        gdf = icesat2.atl03s(parms, resource)
         assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
@@ -124,7 +124,7 @@ class TestAlgorithm:
         assert len(gdf[gdf["atl08_class"] == 3]) == 18285
         assert len(gdf[gdf["atl08_class"] == 4]) == 15978
 
-    def test_gs(self, domain, asset, organization, desired_nodes):
+    def test_gs(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource_prefix = "20210114170723_03311012_005_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
@@ -142,7 +142,7 @@ class TestAlgorithm:
                   "res": 1.0,
                   "dist_in_seg": True,
                   "maxi": 10 }
-        sliderule = icesat2.atl06(parms, "ATL03_"+resource_prefix, asset)
+        sliderule = icesat2.atl06(parms, "ATL03_"+resource_prefix)
 
         # Project Region to Polygon #
         transformer = Transformer.from_crs(4326, 3857) # GPS to Web Mercator
@@ -159,7 +159,7 @@ class TestAlgorithm:
             prefix = "/gt"+track+"/land_ice_segments/"
             geodatasets.append({"dataset": prefix+"latitude", "startrow": 0, "numrows": -1})
             geodatasets.append({"dataset": prefix+"longitude", "startrow": 0, "numrows": -1})
-        geocoords = icesat2.h5p(geodatasets, "ATL06_"+resource_prefix, asset)
+        geocoords = h5.h5p(geodatasets, "ATL06_"+resource_prefix, "icesat2")
 
         # Build list of the subsetted h_li datasets to read
         hidatasets = []
@@ -183,7 +183,7 @@ class TestAlgorithm:
             hidatasets.append({"dataset": prefix+"segment_id", "startrow": startrow, "numrows": numrows, "prefix": prefix})
 
         # Read h_li from resource
-        hivalues = icesat2.h5p(hidatasets, "ATL06_"+resource_prefix, asset)
+        hivalues = h5.h5p(hidatasets, "ATL06_"+resource_prefix, "icesat2")
 
         # Build Results #
         atl06 = {"h_mean": [], "latitude": [], "longitude": [], "segment_id": [], "spot": []}

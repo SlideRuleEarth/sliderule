@@ -28,14 +28,11 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
-import datetime
 import logging
-import warnings
 import numpy
 import geopandas
 import sliderule
 from sliderule import earthdata
-from sliderule import h5 as h5coro
 
 ###############################################################################
 # GLOBALS
@@ -252,6 +249,24 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
     profiles["flatten"] = time.perf_counter() - tstart_flatten
     return gdf
 
+#
+# Build Request
+#
+def __build_request(parm, resources):
+
+    # Default the Asset
+    if "asset" not in parm:
+        parm["asset"] = "icesat2"
+
+    # Get List of Resources
+    resources = earthdata.search(parm, resources)
+
+    # Build Request
+    return {
+        "resources": resources,
+        "parms": parm
+    }
+
 
 ###############################################################################
 # APIs
@@ -368,19 +383,8 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     try:
         tstart = time.perf_counter()
 
-        # Get List of Resources from CMR (if not supplied)
-        if resources == None:
-            resources = __query_resources(parm, version)
-
-        # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = "icesat2"
-    
-        # Build ATL06 Request
-        rqst = {
-            "resources": resources,
-            "parms": parm
-        }
+        # Build Request
+        rqst = __build_request(parm, resources)
 
         # Make API Processing Request
         rsps = sliderule.source("atl06p", rqst, stream=True, callbacks=callbacks)
@@ -460,19 +464,8 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     try:
         tstart = time.perf_counter()
 
-        # Get List of Resources from CMR (if not specified)
-        if resources == None:
-            resources = __query_resources(parm, version)
-
-        # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = "icesat2"
-    
         # Build Request
-        rqst = {
-            "resources": resources,
-            "parms": parm
-        }
+        rqst = __build_request(parm, resources)
 
         # Make Request
         rsps = sliderule.source("atl03sp", rqst, stream=True, callbacks=callbacks)
@@ -644,19 +637,8 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     try:
         tstart = time.perf_counter()
 
-        # Get List of Resources from CMR (if not supplied)
-        if resources == None:
-            resources = __query_resources(parm, version)
-
-        # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = "icesat2"
-    
         # Build Request
-        rqst = {
-            "resources": resources,
-            "parms": parm
-        }
+        rqst = __build_request(parm, resources)
 
         # Make Request
         rsps = sliderule.source("atl08p", rqst, stream=True, callbacks=callbacks)

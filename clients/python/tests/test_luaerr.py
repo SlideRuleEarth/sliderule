@@ -41,12 +41,12 @@ class TestAtl06:
         assert(len(rsps) == 0)
         assert("invalid asset specified: {}".format(invalid_asset) == GLOBAL_message)
 
-    def test_timeout(self, domain, asset, organization, desired_nodes):
+    def test_timeout(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20220208000041_07291401_005_01.h5"
         rqst = {
             "resource": resource,
-            "parms": {"asset" : asset, "track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}, "timeout": 1},
+            "parms": {"track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}, "timeout": 1},
         }
         rsps = sliderule.source("atl06", rqst, stream=True, callbacks=GLOBAL_callbacks)
         assert(len(rsps) == 0)

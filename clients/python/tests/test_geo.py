@@ -9,10 +9,10 @@ sliderule.set_rqst_timeout((1, 60))
 
 @pytest.mark.network
 class TestGeo:
-    def test_geospatial1(self, domain, asset, organization, desired_nodes):
+    def test_geospatial1(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 40.0,
             "lon": 60.0,
@@ -54,10 +54,10 @@ class TestGeo:
         assert d["lat"] == 40.0 and d["lon"] == 60.0
         assert d["x"] == 0.466307658155 and d["y"] == 0.80766855588292
 
-    def test_geospatial2(self, domain, asset, organization, desired_nodes):
+    def test_geospatial2(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 30.0,
             "lon": 100.0,
@@ -67,10 +67,10 @@ class TestGeo:
         d = sliderule.source("geo", test)
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0
 
-    def test_geospatial3(self, domain, asset, organization, desired_nodes):
+    def test_geospatial3(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 30.0,
             "lon": 100.0,
@@ -80,10 +80,10 @@ class TestGeo:
         d = sliderule.source("geo", test)
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0
 
-    def test_geospatial4(self, domain, asset, organization, desired_nodes):
+    def test_geospatial4(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 30.0,
             "lon": 100.0,

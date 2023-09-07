@@ -10,7 +10,7 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestGeoJson:
-    def test_atl03(self, domain, asset, organization, desired_nodes):
+    def test_atl03(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         for testfile in ["data/grandmesa.geojson", "data/grandmesa.shp"]:
             region = sliderule.toregion(os.path.join(TESTDIR, testfile))
@@ -24,7 +24,7 @@ class TestGeoJson:
                 "len": 40.0,
                 "res": 20.0,
             }
-            gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5", asset)
+            gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5")
             assert gdf["rgt"].unique()[0] == 295
             assert gdf["cycle"].unique()[0] == 1
             assert len(gdf) == 21006

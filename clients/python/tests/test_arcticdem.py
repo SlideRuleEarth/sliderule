@@ -47,7 +47,7 @@ class TestMosaic:
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
 
-    def test_nearestneighbour(self, domain, asset, organization, desired_nodes):
+    def test_nearestneighbour(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
@@ -59,7 +59,7 @@ class TestMosaic:
                   "res": 20.0,
                   "maxi": 1,
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
-        gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
+        gdf = icesat2.atl06p(parms, resources=[resource])
         assert len(gdf) == 957
         assert len(gdf.keys()) == 19
         assert gdf["rgt"][0] == 1160
@@ -68,7 +68,7 @@ class TestMosaic:
         assert gdf['segment_id'].describe()["max"] == 405902
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
 
-    def test_zonal_stats(self, domain, asset, organization, desired_nodes):
+    def test_zonal_stats(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
@@ -80,7 +80,7 @@ class TestMosaic:
                   "res": 20.0,
                   "maxi": 1,
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
-        gdf = icesat2.atl06p(parms, asset=asset, resources=[resource])
+        gdf = icesat2.atl06p(parms, resources=[resource])
         assert len(gdf) == 957
         assert len(gdf.keys()) == 26
         assert gdf["rgt"][0] == 1160
@@ -112,7 +112,7 @@ class TestStrips:
                   "time_start":'2020-01-01',
                   "time_end":'2021-01-01',
                   "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
-        gdf = icesat2.atl06p(parms, asset="icesat2", resources=['ATL03_20191108234307_06580503_005_01.h5'])
+        gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_005_01.h5'])
         assert len(gdf.attrs['file_directory']) == 16
         for file_id in range(16):
             assert file_id in gdf.attrs['file_directory'].keys()

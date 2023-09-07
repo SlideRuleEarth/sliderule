@@ -11,7 +11,7 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestAncillary:
-    def test_geo(self, domain, asset, organization, desired_nodes):
+    def test_geo(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -19,11 +19,11 @@ class TestAncillary:
             "srt":              icesat2.SRT_LAND,
             "atl03_geo_fields": ["solar_elevation"]
         }
-        gdf = icesat2.atl06p(parms, asset, resources=["ATL03_20181017222812_02950102_005_01.h5"])
+        gdf = icesat2.atl06p(parms, resources=["ATL03_20181017222812_02950102_005_01.h5"])
         assert len(gdf["solar_elevation"]) == 1180
         assert gdf['solar_elevation'].describe()["min"] - 20.803468704223633 < 0.0000001
 
-    def test_ph(self, domain, asset, organization, desired_nodes):
+    def test_ph(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -31,6 +31,6 @@ class TestAncillary:
             "srt":              icesat2.SRT_LAND,
             "atl03_ph_fields":  ["ph_id_count"]
         }
-        gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5", asset)
+        gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5")
         assert sum(gdf["ph_id_count"]) == 626032
         assert len(gdf["ph_id_count"]) == 403462

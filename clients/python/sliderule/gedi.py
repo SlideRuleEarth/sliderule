@@ -159,15 +159,14 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_ar
         if "asset" not in parm:
             parm["asset"] = asset
 
+        # Get List of Resources from CMR (if not supplied)
+        resources = earthdata.search(parm, resources)
+
         # Build GEDI Request
         rqst = {
             "resources": resources,
             "parms": parm
         }
-
-        # Get List of Resources from CMR (if not supplied)
-        if resources == None:
-            resources = earthdata.search(parm)
 
         # Make API Processing Request
         rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)

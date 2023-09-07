@@ -133,15 +133,14 @@ def swotl2p(parm, callbacks={}, resources=None):
         if "asset" not in parm:
             parm["asset"] = "swot-sim-ecco-llc4320"
 
+        # Get List of Resources from CMR (if not supplied)
+        resources = earthdata.search(parm, resources)
+
         # Build GEDI Request
         rqst = {
             "resources": resources,
             "parms": parm
         }
-
-        # Get List of Resources from CMR (if not supplied)
-        if resources == None:
-            resources = earthdata.search(parm)
 
         # Make API Processing Request
         rsps = sliderule.source('swotl2p', rqst, stream=True, callbacks=callbacks)

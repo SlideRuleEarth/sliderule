@@ -776,22 +776,26 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
 #
 #  Search
 #
-def search(parm):
+def search(parm, resources=None):
 
-    kwargs = {}
-    resources = []
+    # Initialize Resources
+    if resources == None:
+        resources = []
+
+    # Initialize CMR Keyword Arguments
+    cmr_kwargs = {}
 
     # Pull Out Polygon
     if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
-        kwargs['polygon'] = parm["clusters"]
+        cmr_kwargs['polygon'] = parm["clusters"]
     elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
-        kwargs['polygon'] = parm["poly"]
+        cmr_kwargs['polygon'] = parm["poly"]
 
     # Pull Out Time Period
     if "t0" in parm:
-        kwargs['time_start'] = parm["t0"]
+        cmr_kwargs['time_start'] = parm["t0"]
     if "t1" in parm:
-        kwargs['time_end'] = parm["t1"]
+        cmr_kwargs['time_end'] = parm["t1"]
 
     # Build Name Filter
     name_filter_enabled = False
@@ -810,38 +814,41 @@ def search(parm):
                 region_filter = f'{parm["region"]}'.zfill(2)
                 name_filter_enabled = True
             if name_filter_enabled:
-                kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
+                cmr_kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
 
-    # Check Parameters are Valid
-    if (not name_filter_enabled) and ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
-        return resources
-
-    # Get Dataset
-    if "asset" in parm:
-        try:
-            short_name = ASSETS_TO_DATASETS[parm["asset"]]
-        except Exception:
+    # Get Resources (CMR)
+    if len(resources) == 0 and "asset" in parm:
+        if (not name_filter_enabled) and ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+            logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
+            return resources
+        elif parm["asset"] not in ASSETS_TO_DATASETS:
             logger.error(f'Unrecognized asset: {parm["asset"]}')
             return resources
+        else:
+            short_name = ASSETS_TO_DATASETS[parm["asset"]]
+            resources = cmr(short_name=short_name, **cmr_kwargs)
 
-        # Get Resources - CMR Request
-        resources = cmr(short_name=short_name, **kwargs)
-
-    # Loop through Rasters to Sample
+    # Get Raster Catalogs (STAC, TNM)
     if "samples" in parm:
         for raster in parm["samples"].keys():
             sample_parm = parm["samples"][raster]
             if "catalog" not in sample_parm:
                 try:
+                    samples_kwargs = {"polygon": cmr_kwargs['polygon']}
                     dataset_name = ASSETS_TO_DATASETS[sample_parm["asset"]]
                     dataset = DATASETS[dataset_name]
+                    # Pull Out Time Period
+                    if "t0" in sample_parm:
+                        samples_kwargs['time_start'] = sample_parm["t0"]
+                    if "t1" in sample_parm:
+                        samples_kwargs['time_end'] = sample_parm["t1"]
+                    # Make GeoJSON Query
                     if dataset["api"] == "stac":
-                        parm["samples"][raster]["catalog"] = stac(short_name=dataset_name, as_str=True, **kwargs)
+                        parm["samples"][raster]["catalog"] = stac(short_name=dataset_name, as_str=True, **samples_kwargs)
                     elif dataset["api"] == "tnm":
-                        parm["samples"][raster]["catalog"] = tnm(short_name=dataset_name, as_str=True, **kwargs)
+                        parm["samples"][raster]["catalog"] = tnm(short_name=dataset_name, as_str=True, **samples_kwargs)
                 except Exception:
-                    logger.error(f'Unrecognised asset ({sample_parm["asset"]} for {raster}')
+                    pass # best effort; many raster datasets don't need a catalog
 
     # Return Resources
     return resources

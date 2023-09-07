@@ -2,7 +2,6 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption("--domain", action="store", default="slideruleearth.io")
-    parser.addoption("--asset", action="store", default="icesat2")
     parser.addoption("--organization", action="store", default="sliderule")
     parser.addoption("--desired_nodes", action="store", default=None)
 
