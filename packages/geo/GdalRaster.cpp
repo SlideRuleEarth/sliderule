@@ -771,9 +771,9 @@ void GdalRaster::createTransform(void)
     }
 
     /* Limit to area of interest if AOI was set */
-    bbox_t* aoi = &parms->aoi_bbox;
-    bbox_t empty = {0, 0, 0, 0};
-    if(memcmp(aoi, &empty, sizeof(bbox_t)))
+    bbox_t* aoi  = &parms->aoi_bbox;
+    bool useaoi  = (aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max) ? false : true;
+    if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set AOI");

@@ -84,6 +84,7 @@ int RasterObject::luaCreate( lua_State* L )
     {
         /* Get Parameters */
         _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
+        if(_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create GeoParms object");
 
         /* Get Factory */
         factory_t _create = NULL;

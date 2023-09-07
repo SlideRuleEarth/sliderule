@@ -177,6 +177,10 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 
             delete reader->thread; /* delete thread waits on thread to join */
             delete reader->sync;
+
+            /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
+            if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
+            delete reader;
         }
     }
 
@@ -205,7 +209,8 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
     RasterObject (L, _parms),
     cache        (MAX_READER_THREADS),
-    crscb        (cb)
+    crscb        (cb),
+    bbox         {0, 0, 0, 0}
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -415,15 +420,8 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
             reader->sync->lock();
             {
                 reader->raster = item->raster;
-                if(reader->geo) delete reader->geo;
-                reader->geo = NULL;
-
-                if(GdalRaster::ispoint(geo))
-                    reader->geo = new OGRPoint(*geo->toPoint());
-
-                else if(GdalRaster::ispoly(geo))
-                    reader->geo = new OGRPolygon(*geo->toPolygon());
-
+                if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
+                reader->geo = geo->clone();
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
