@@ -4,10 +4,10 @@ local td = runner.rootdir(arg[0])
 local base64 = require("base64")
 
 -- Setup --
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
 
-local raster = td.."/arcticdem_mini.tif"
+local raster = td.."/geouser_test_raster.tif"
 
 -- Unit Test --
 
@@ -30,27 +30,29 @@ runner.check(robj ~= nil)
 
 
 print('\n------------------\nTest01: sample\n------------------')
-local lon = 100
-local lat =  70
+local lon = 149.00001
+local lat =  69.00001
 local height = 0
 local tbl, status = robj:sample(lon, lat, height)
 runner.check(status == true)
 runner.check(tbl ~= nil)
 
 local el, file
-for j, v in ipairs(tbl) do
-    s = v["value"]
-    fname = v["file"]
+if tbl ~= nil then
+    for j, v in ipairs(tbl) do
+        s = v["value"]
+        fname = v["file"]
+    end
+    print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
+    runner.check(math.abs(10 - s) < 0.01)
 end
-print(string.format("sample at lon: %.2f, lat: %.2f is %.2f, %s", lon, lat, s, fname))
-runner.check(math.abs(474.16 - s) < 0.01)
 
 
 print('\n------------------\nTest02: dim\n------------------')
 local rows, cols  = robj:dim()
 print(string.format("dimensions: rows: %d, cols: %d", rows, cols))
-runner.check(rows == 1)
-runner.check(cols == 1)
+runner.check(rows == 12)
+runner.check(cols == 12012)
 
 
 print('\n------------------\nTest03: bbox\n------------------')
@@ -64,7 +66,7 @@ runner.check(lon_max ~= 0)
 print('\n------------------\nTest04: cellsize\n------------------')
 local cellsize = robj:cell()
 print(string.format("cellsize: %f", cellsize))
-runner.check(cellsize == 2)
+runner.check(math.abs(0.000083 - cellsize) < 0.000001)
 
 -- Clean Up --
 

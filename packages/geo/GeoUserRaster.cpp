@@ -102,10 +102,12 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
 
     /* Convert raster from Base64 to Binary */
     std::string tiff = MathLib::b64decode(raster, rasterlength);
+    rasterlength = tiff.length();
 
     const uint32_t maxSize = 64*1024*1024;
     if(rasterlength > maxSize)
         throw RunTimeException(CRITICAL, RTE_ERROR, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
+
 
     /* Create GeoUserRaster */
     return new GeoUserRaster(L, _parms, tiff.c_str(), tiff.size(), gps, iselevation);
@@ -130,18 +132,28 @@ GeoUserRaster::~GeoUserRaster(void)
 GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double gps, bool iselevation):
     GeoRaster(L, _parms, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation )
 {
-    rasterFileName = getFileName();
-
-    if (file == NULL)
+    if(file == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
 
-    if (filelength <= 0)
+    if(filelength <= 0)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
-    /* Load user raster to vsimem */
-    VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), (GByte*)file, (vsi_l_offset)filelength, FALSE);
-    CHECKPTR(fp);
-    VSIFCloseL(fp);
+    try
+    {
+        rasterFileName = getFileName();
 
-    openRaster();
+        /* Make a copy of the raster data and pass the ownership to the VSIFile */
+        GByte* data = (GByte*)malloc(filelength);
+        memcpy(data, file, filelength);
+
+        /* Load user raster to vsimem */
+        bool takeOwnership = true;
+        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, (vsi_l_offset)filelength, takeOwnership);
+        CHECKPTR(fp);
+        VSIFCloseL(fp);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
+    }
 }

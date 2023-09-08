@@ -95,7 +95,7 @@ void GdalRaster::open(void)
         return;
     }
 
-    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
     if(dset == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
 
@@ -405,8 +405,8 @@ void GdalRaster::readPixel(const OGRPoint* poi)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * poi->getX()) + (invGeoTrans[2] * poi->getY()))));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * poi->getY()) + (invGeoTrans[5] * poi->getY()))));
 
         // mlog(DEBUG, "%dP, %dL\n", col, row);
 
@@ -538,8 +538,8 @@ void GdalRaster::resamplePixel(const OGRPoint* poi)
 {
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * poi->getX()) + (invGeoTrans[2] * poi->getY()))));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * poi->getY()) + (invGeoTrans[5] * poi->getY()))));
 
         int windowSize, offset;
 
