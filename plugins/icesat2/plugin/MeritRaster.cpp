@@ -202,3 +202,14 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
         mlog(ERROR, "Failed to sample dataset: %s", dataset.str());
     }
 }
+
+/*----------------------------------------------------------------------------
+ * getSubset
+ *----------------------------------------------------------------------------*/
+void MeritRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+{
+    std::ignore = lon_min = lon_max = lat_max = lat_min = gps;
+    std::ignore = slist;
+    std::ignore = param;
+}
+

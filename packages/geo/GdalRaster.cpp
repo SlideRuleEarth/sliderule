@@ -60,6 +60,7 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
   _sampled    (false),
    gpsTime    (_gpsTime),
    sample     (),
+   subset     (),
    transf     (NULL),
    overrideCRS(cb),
    fileName   (_fileName),
@@ -107,7 +108,7 @@ void GdalRaster::open(void)
     double geoTransform[6];
     CPLErr err = dset->GetGeoTransform(geoTransform);
     CHECK_GDALERR(err);
-    if(!GDALInvGeoTransform(geoTransform, invGeoTrnasform))
+    if(!GDALInvGeoTransform(geoTransform, invGeoTrans))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
     }
@@ -140,31 +141,28 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-void GdalRaster::samplePOI(const Point& _poi)
+void GdalRaster::samplePOI(OGRPoint* poi)
 {
     try
     {
         if(dset == NULL)
             open();
 
-        Point poi = _poi;
         _sampled = false;
         sample.clear();
 
-        double z = poi.z;
-        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
-
-        if(!transf->Transform(1, &poi.x, &poi.y, &poi.z))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi.x, poi.y, poi.z);
-
-        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi.x, poi.y, poi.z);
-        verticalShift = z - poi.z;
+        double z = poi->getZ();
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        if(poi->transform(transf) != OGRERR_NONE)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        verticalShift = z - poi->getZ();
 
         /*
          * Attempt to read raster only if it contains the point of interest.
          */
-        if((poi.x >= bbox.lon_min) && (poi.x <= bbox.lon_max) &&
-           (poi.y >= bbox.lat_min) && (poi.y <= bbox.lat_max))
+        if((poi->getX() >= bbox.lon_min) && (poi->getX() <= bbox.lon_max) &&
+           (poi->getY() >= bbox.lat_min) && (poi->getY() <= bbox.lat_max))
         {
             if(parms->sampling_algo == GRIORA_NearestNeighbour)
                 readPixel(poi);
@@ -174,17 +172,151 @@ void GdalRaster::samplePOI(const Point& _poi)
             if(parms->zonal_stats)
                 computeZonalStats(poi);
 
-            _sampled = true;
+            _sampled    = true;
             sample.time = gpsTime;
         }
     }
     catch (const RunTimeException &e)
     {
         _sampled = false;
-        mlog(e.level(), "Error sampling raster: %s", e.what());
+        mlog(e.level(), "Error sampling: %s", e.what());
     }
 }
 
+
+/*----------------------------------------------------------------------------
+ * topixel
+ *----------------------------------------------------------------------------*/
+void GdalRaster::topixel(double minx, double miny, double maxx, double maxy,
+                         int& ulx, int& uly, int& lrx, int& lry)
+{
+    ulx = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * minx) + (invGeoTrans[2] * maxy))));
+    uly = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * maxy) + (invGeoTrans[5] * maxy))));
+    lrx = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * maxx) + (invGeoTrans[2] * miny))));
+    lry = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * miny) + (invGeoTrans[5] * miny))));
+}
+
+/*----------------------------------------------------------------------------
+ * subsetAOI
+ *----------------------------------------------------------------------------*/
+void GdalRaster::subsetAOI(OGRPolygon* poly)
+{
+    /*
+     * Notes on extent format:
+     * gdalwarp uses '-te xmin ymin xmax ymax'
+     * gdalbuildvrt uses '-te xmin ymin xmax ymax'
+     * gdal_translate uses '-projwin ulx uly lrx lry' or '-projwin xmin ymax xmax ymin'
+     *
+     * This function uses 'xmin ymin xmax ymax' for extent
+     */
+
+    try
+    {
+        if(dset == NULL)
+            open();
+
+        _sampled = false;
+        subset.clear();
+
+        GDALDataType dtype = band->GetRasterDataType();
+        if(dtype == GDT_Unknown)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown data type");
+
+        OGRErr err = poly->transform(transf);
+        CHECK_GDALERR(err);
+
+        OGREnvelope env;
+        poly->getEnvelope(&env);
+
+        /* Get AOI window in pixels */
+        int ulx, uly, lrx, lry;
+        topixel(env.MinX, env.MinY, env.MaxX, env.MaxY, ulx, uly, lrx, lry);
+
+        /* Get raster extent in pixels */
+        int extulx, extuly, extlrx, extlry;
+        topixel(bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max, extulx, extuly, extlrx, extlry);
+
+#if 0
+        printf("minx: %18.4lf\n", bbox.lon_min);
+        printf("miny: %18.4lf\n", bbox.lat_min);
+        printf("maxx: %18.4lf\n", bbox.lon_max);
+        printf("maxy: %18.4lf\n", bbox.lat_max);
+        printf("\n");
+        printf("minrx: %d\n", extulx);
+        printf("minry: %d\n", extuly);
+        printf("maxrx: %d\n", extlrx);
+        printf("maxry: %d\n", extlry);
+#endif
+
+        if(extulx != 0 || extuly != 0)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Upleft pixel (%d, %d) is not (0, 0)", extulx, extuly);
+
+        if(ulx < extulx)
+        {
+            mlog(DEBUG, "Clipping ulx %d to raster's extulx %d", ulx, extulx);
+            ulx = extulx;
+        }
+        if(uly < extuly)
+        {
+            mlog(DEBUG, "Clipping uly %d to raster's extuly %d", uly, extuly);
+            uly = extuly;
+        }
+        if(lrx > extlrx)
+        {
+            mlog(DEBUG, "Clipping lrx %d to raster's extlrx %d", lrx, extlrx);
+            lrx = extlrx;
+        }
+        if(lry > extlry)
+        {
+            mlog(DEBUG, "Clipping lry %d to raster's extlry %d", lry, extlry);
+            lry = extlry;
+        }
+
+        uint64_t cols2read = lrx - ulx;
+        uint64_t rows2read = lry - uly;
+
+        uint64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
+        uint64_t maxperThread = subset.getmaxMem() / 2;
+        if(size > maxperThread)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ldMB, max perthread allowed: %ldMB",
+                  size/(1024*1024), maxperThread/(1024*1024));
+
+        if(!subset.memreserve(size))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "mempool depleted, request: %.2f MB", (float)size/(1024*1024));
+
+        uint8_t* data = new uint8_t[size];
+
+        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
+             size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
+
+        int cnt = 1;
+        err = CE_None;
+        do
+        {
+            err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, data, cols2read, rows2read, dtype, 0, 0, NULL);
+        } while(err != CE_None && cnt--);
+
+        if(err != CE_None)
+        {
+            subset.memrelese(size, data);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+        }
+
+        _sampled = true;
+
+        /* Update subset info returned to caller */
+        subset.data     = data;
+        subset.datatype = dtype;
+        subset.cols     = cols2read;
+        subset.rows     = rows2read;
+        subset.time     = gpsTime;
+    }
+    catch (const RunTimeException &e)
+    {
+        _sampled = false;
+        mlog(e.level(), "Error subsetting: %s", e.what());
+    }
+}
 
 /*----------------------------------------------------------------------------
  * setCRSfromWkt
@@ -237,6 +369,25 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
 }
 
 
+/*----------------------------------------------------------------------------
+ * makeRectangle
+ *----------------------------------------------------------------------------*/
+OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, double maxy)
+{
+    OGRPolygon poly;
+    OGRLinearRing lr;
+
+    /* Clockwise for interior of polygon */
+    lr.addPoint(minx, miny);
+    lr.addPoint(minx, maxy);
+    lr.addPoint(maxx, maxy);
+    lr.addPoint(maxx, miny);
+    lr.addPoint(minx, miny);
+    poly.addRing(&lr);
+    return poly;
+}
+
+
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -249,13 +400,13 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
 /*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPixel(const Point& poi)
+void GdalRaster::readPixel(const OGRPoint* poi)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
 
         // mlog(DEBUG, "%dP, %dL\n", col, row);
 
@@ -268,7 +419,7 @@ void GdalRaster::readPixel(const Point& poi)
         int yblk = row / yBlockSize;
 
         GDALRasterBlock *block = NULL;
-        int cnt = 2;
+        int cnt = 1;
         do
         {
             /* Retry read if error */
@@ -383,12 +534,12 @@ void GdalRaster::readPixel(const Point& poi)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::resamplePixel(const Point& poi)
+void GdalRaster::resamplePixel(const OGRPoint* poi)
 {
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
 
         int windowSize, offset;
 
@@ -452,14 +603,14 @@ void GdalRaster::resamplePixel(const Point& poi)
 /*----------------------------------------------------------------------------
  * computeZonalStats
  *----------------------------------------------------------------------------*/
-void GdalRaster::computeZonalStats(const Point& poi)
+void GdalRaster::computeZonalStats(const OGRPoint* poi)
 {
     double *samplesArray = NULL;
 
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrnasform[0] + invGeoTrnasform[1] * poi.x + invGeoTrnasform[2] * poi.y));
-        const int row = static_cast<int>(floor(invGeoTrnasform[3] + invGeoTrnasform[4] * poi.y + invGeoTrnasform[5] * poi.y));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * poi->getX()) + (invGeoTrans[2] * poi->getY()))));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * poi->getY()) + (invGeoTrans[5] * poi->getY()))));
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
 
@@ -620,9 +771,9 @@ void GdalRaster::createTransform(void)
     }
 
     /* Limit to area of interest if AOI was set */
-    bbox_t* aoi = &parms->aoi_bbox;
-    bbox_t empty = {0, 0, 0, 0};
-    if(memcmp(aoi, &empty, sizeof(bbox_t)))
+    bbox_t* aoi  = &parms->aoi_bbox;
+    bool useaoi  = (aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max) ? false : true;
+    if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set AOI");
@@ -681,7 +832,7 @@ void GdalRaster::readRasterWithRetry(int col, int row, int colSize, int rowSize,
      * There is no way to detect this condition based on the error code returned.
      * Because of it, always retry failed read.
      */
-    int cnt = 2;
+    int cnt = 1;
     CPLErr err = CE_None;
     do
     {

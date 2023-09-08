@@ -11,6 +11,27 @@ local _,td = runner.srcscript()
 -- Setup --
 local assets = asset.loaddir()
 
+local GDT_datasize = {  1,  --GDT_Byte
+                        2,  --GDT_UInt16
+                        2,  --GDT_Int16
+                        4,  --GDT_UInt32
+                        4,  --GDT_Int32
+                        4,  --GDT_Float32
+                        8,  --GDT_Float64
+                        8,  --GDT_CInt16
+                        8,  --GDT_CInt32
+                        10, --GDT_CFloat32
+                        11, --GDT_CFloat64
+                        12, --GDT_UInt64
+                        13, --GDT_Int64
+                        14, --GDT_Int8
+                      }
+
+local GDT_dataname = {"GDT_Byte",   "GDT_UInt16", "GDT_Int16",    "GDT_UInt32",   "GDT_Int32",  "GDT_Float32", "GDT_Float64",
+                      "GDT_CInt16", "GDT_CInt32", "GDT_CFloat32", "GDT_CFloat64", "GDT_UInt64", "GDT_Int64",   "GDT_Int8"}
+
+
+
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 sys.wait(5)
@@ -50,16 +71,16 @@ local tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname, time
+    local value, fname, _time
     for i, v in ipairs(tbl) do
         value = v["value"]
-        time  = v["time"]
+        _time  = v["time"]
         fname = v["file"]
-        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
+        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
         sampleCnt = sampleCnt + 1
 
         runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(time == expResults[i][2])
+        runner.check(_time == expResults[i][2])
         runner.check(fname == expResults[i][3])
     end
 end
@@ -105,16 +126,16 @@ tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname, time
+    local value, fname, _time
     for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
-        time  = v["time"]
+        _time  = v["time"]
 
         sampleCnt = sampleCnt + 1
-        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
+        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
         runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(time == expResults[i][2])
+        runner.check(_time == expResults[i][2])
         runner.check(fname == expResults[i][3])
 
     end
@@ -138,16 +159,16 @@ tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname, time
+    local value, fname, _time
     for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
-        time  = v["time"]
+        _time  = v["time"]
 
         sampleCnt = sampleCnt + 1
-        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, time, fname))
+        print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
         runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(time == expResults[i][2])
+        runner.check(_time == expResults[i][2])
         runner.check(fname == expResults[i][3])
     end
 end
@@ -224,17 +245,17 @@ tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
-    local value, fname, time, flags
+    local value, fname, _time, flags
     for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
-        time  = v["time"]
+        _time  = v["time"]
         flags = v["flags"]
         sampleCnt = sampleCnt + 1
 
-        print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, time, flags, fname))
+        print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, _time, flags, fname))
         runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(time == expResults[i][2])
+        runner.check(_time == expResults[i][2])
         runner.check(flags == expResults[i][3])
         runner.check(fname == expResults[i][4])
     end
@@ -265,7 +286,7 @@ expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020
               {  224.0, 1295737338.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021026T225819.v2.0/HLS.S30.T01UCS.2021026T225819.v2.0.Fmask.tif'}}
 
 
-print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and Fmask raster)\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nLandsat Sample test (BO3 and Fmask raster)\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"Fmask","B03"}, catalog = contents }))
 fmaskCnt  = 0
 sampleCnt = 0
@@ -278,13 +299,13 @@ else
     for i, v in ipairs(tbl) do
         value = v["value"]
         fname = v["file"]
-        time  = v["time"]
+        _time  = v["time"]
         flags = v["flags"]
         sampleCnt = sampleCnt + 1
 
-        print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, time, flags, fname))
+        print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, _time, flags, fname))
         runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(time == expResults[i][2])
+        runner.check(_time == expResults[i][2])
         runner.check(flags == expResults[i][3])
         runner.check(fname == expResults[i][4])
     end
@@ -292,15 +313,14 @@ end
 runner.check(sampleCnt == #expResults)
 dem = nil
 
-
-print(string.format("\n-------------------------------------------------\nMany Rasters (189) Test\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nLandsat Many Rasters test (180)\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0,
                             bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
                                      "B01", "B02", "B03", "B04", "B05", "B06",
                                      "B07", "B08", "B09", "B10", "B11", "B12", "B8A", },
                             catalog = contents }))
 
-                            sampleCnt = 0
+sampleCnt = 0
 tbl, status = dem:sample(lon, lat, height)
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
@@ -313,8 +333,7 @@ else
         -- print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
     end
 end
-
-runner.check(sampleCnt == 189)
+runner.check(sampleCnt == 180)
 
 -- Grand Mesa test has 26183 samples/ndvi Results
 -- Limit the number of samples for selftest.
@@ -385,6 +404,57 @@ for i=1, maxSamples do
     sampleCnt = sampleCnt + 1
 end
 runner.check(sampleCnt == maxSamples)
+dem = nil
+
+
+print(string.format("\n-------------------------------------------------\nLandsat Subset test\n-------------------------------------------------"))
+
+local geojsonfile = td.."../data/hls_trimmed.geojson"
+local f = io.open(geojsonfile, "r")
+local contents = f:read("*all")
+f:close()
+
+-- AOI extent (extent of hls_trimmed.geojson)
+llx =  -179.87
+lly =    50.45
+urx =  -178.27
+ury =    51.44
+
+
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
+local starttime = time.latch();
+local tbl, status = dem:subset(llx, lly, urx, ury)
+local stoptime = time.latch();
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+local threadCnt = 0
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
+end
+print(string.format("subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+runner.check(threadCnt == 59)
+
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        local cols = v["cols"]
+        local rows = v["rows"]
+        local datatype = v["datatype"]
+
+        local bytes = cols*rows* GDT_datasize[datatype]
+        local mbytes = bytes / (1024*1024)
+
+        if i == 1 then
+            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+        end
+    end
+end
+
+
 
 -- Report Results --
 

@@ -83,8 +83,8 @@ class LandsatHlsRaster: public GeoIndexedRaster
                 LandsatHlsRaster (lua_State* L, GeoParms* _parms);
        virtual ~LandsatHlsRaster (void);
 
-        void    getIndexFile     (std::string& file, double lon=0, double lat=0 ) final;
-        bool    findRasters      (GdalRaster::Point &p) final;
+        void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
+        bool    findRasters      (const OGRGeometry* geo);
         void    getGroupSamples  (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags) final;
 
         /*--------------------------------------------------------------------

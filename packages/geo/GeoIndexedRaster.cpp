@@ -79,8 +79,15 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
     samplingMutex.lock();
     try
     {
+        OGRSpatialReference crs;
+        crs.importFromEPSG(4326);
+        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        OGRPoint poi(lon, lat, height);
+        poi.assignSpatialReference(&crs);
+
         /* Get samples, if none found, return */
-        if(sample(lon, lat, height, gps) == 0)
+        if(sample(&poi, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -108,6 +115,45 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
     samplingMutex.unlock();
 }
 
+/*----------------------------------------------------------------------------
+ * getSubset
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+{
+    std::ignore = param;
+
+    samplingMutex.lock();
+    try
+    {
+        OGRSpatialReference crs;
+        crs.importFromEPSG(4326);
+        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
+        poly.assignSpatialReference(&crs);
+
+        /* Get samples, if none found, return */
+        if(sample(&poly, gps) == 0)
+        {
+            samplingMutex.unlock();
+            return;
+        }
+
+        Ordering<rasters_group_t*>::Iterator iter(groupList);
+        for(int i = 0; i < iter.length; i++)
+        {
+            const rasters_group_t* rgroup = iter[i].value;
+            getGroupSubsets(rgroup, slist);
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error subsetting raster: %s", e.what());
+        samplingMutex.unlock();
+        throw;   // rethrow exception
+    }
+    samplingMutex.unlock();
+}
 
 /*----------------------------------------------------------------------------
  * Destructor
@@ -131,19 +177,11 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 
             delete reader->thread; /* delete thread waits on thread to join */
             delete reader->sync;
+
+            /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
+            if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
             delete reader;
         }
-    }
-
-    /* Close all rasters */
-    cacheitem_t* item;
-    const char* key  = cache.first(&item);
-    while (key != NULL)
-    {
-        cache.remove(key);
-        delete item->raster;
-        delete item;
-        key = cache.next(&item);
     }
 
     emptyGroupsList();
@@ -160,7 +198,8 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
     RasterObject (L, _parms),
     cache        (MAX_READER_THREADS),
-    crscb        (cb)
+    crscb        (cb),
+    bbox         {0, 0, 0, 0}
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -174,7 +213,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
 {
     for(const auto& rinfo: rgroup->infovect)
     {
@@ -196,6 +235,30 @@ void GeoIndexedRaster::getGroupSamples (const rasters_group_t* rgroup, std::vect
         }
     }
 }
+
+
+/*----------------------------------------------------------------------------
+ * getGroupSamples
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vector<RasterSubset>& slist)
+{
+    for(const auto& rinfo: rgroup->infovect)
+    {
+        const char* key = rinfo.fileName.c_str();
+        cacheitem_t* item;
+        if(cache.find(key, &item))
+        {
+            if(item->enabled && item->raster->sampled())
+            {
+                /* Update dictionary of used raster files */
+                RasterSubset& sset = item->raster->getSubset();
+                sset.fileId = fileDictAdd(item->raster->getFileName());
+                slist.push_back(sset);
+            }
+        }
+    }
+}
+
 
 /*----------------------------------------------------------------------------
  * getGroupFlags
@@ -263,10 +326,10 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::openGeoIndex(double lon, double lat)
+void GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
 {
     std::string newFile;
-    getIndexFile(newFile, lon, lat);
+    getIndexFile(geo, newFile);
 
     /* Trying to open the same file? */
     if(featuresList.isempty() && newFile == indexFile)
@@ -280,7 +343,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
         /* Open new vector data set*/
         dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (dset == NULL)
-            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file (%.2lf, %.2lf), file: %s:", lon, lat, newFile.c_str());
+            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file: %s:", newFile.c_str());
 
         indexFile = newFile;
         OGRLayer* layer = dset->GetLayer(0);
@@ -327,7 +390,7 @@ void GeoIndexedRaster::openGeoIndex(double lon, double lat)
 /*----------------------------------------------------------------------------
  * sampleRasters
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::sampleRasters(GdalRaster::Point& poi)
+void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
 {
     /* Create additional reader threads if needed */
     createThreads();
@@ -346,7 +409,8 @@ void GeoIndexedRaster::sampleRasters(GdalRaster::Point& poi)
             reader->sync->lock();
             {
                 reader->raster = item->raster;
-                reader->poi = poi;
+                if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
+                reader->geo = geo->clone();
                 reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
                 signaledReaders++;
             }
@@ -368,10 +432,11 @@ void GeoIndexedRaster::sampleRasters(GdalRaster::Point& poi)
     }
 }
 
+
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
+int GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 {
     invalidateCache();
     emptyGroupsList();
@@ -379,27 +444,52 @@ int GeoIndexedRaster::sample(double lon, double lat, double height, int64_t gps)
     /* Clear atomic counter - incremented later by reader threads on sucessful sample */
     sampledRastersCnt.store(0);
 
-    /* Initial call, open index file if not already opened */
-    if(featuresList.isempty())
-        openGeoIndex(lon, lat);
-
-    GdalRaster::Point poi(lon, lat, height);
-    if(!withinExtent(poi))
+    if(GdalRaster::ispoint(geo))
     {
-        openGeoIndex(lon, lat);
+        /* Initial call, open index file if not already opened */
+        if(featuresList.isempty())
+            openGeoIndex(geo);
 
-        /* Check against newly opened geoindex */
+        OGRPoint* poi = geo->toPoint();
         if(!withinExtent(poi))
-            return 0;
-    }
+        {
+            openGeoIndex(geo);
 
-    if(findRasters(poi) && filterRasters(gps))
+            /* Check against newly opened geoindex */
+            if(!withinExtent(poi))
+                return 0;
+        }
+    }
+    else if(GdalRaster::ispoly(geo))
+    {
+        /* Always open/create new file and features list for poly*/
+        openGeoIndex(geo);
+    }
+    else return 0;
+
+    if(findRasters(geo) && filterRasters(gps))
     {
         updateCache();
-        sampleRasters(poi);
+        sampleRasters(geo);
     }
 
     return sampledRastersCnt;
+}
+
+
+/*----------------------------------------------------------------------------
+ * emptyFeaturesList
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::emptyFeaturesList(void)
+{
+    if(featuresList.isempty()) return;
+
+    for(int i = 0; i < featuresList.length(); i++)
+    {
+        OGRFeature* feature = featuresList[i];
+        OGRFeature::DestroyFeature(feature);
+    }
+    featuresList.clear();
 }
 
 /******************************************************************************
@@ -443,7 +533,6 @@ int GeoIndexedRaster::luaBoundingBox(lua_State *L)
 {
     bool status = false;
     int num_ret = 1;
-
 
     try
     {
@@ -518,7 +607,12 @@ void* GeoIndexedRaster::readingThread(void *param)
 
         if(reader->raster != NULL)
         {
-            reader->raster->samplePOI(reader->poi);
+            if(GdalRaster::ispoint(reader->geo))
+                reader->raster->samplePOI((OGRPoint*)reader->geo);
+            else if(GdalRaster::ispoly(reader->geo))
+                reader->raster->subsetAOI((OGRPolygon*)reader->geo);
+            else return NULL;
+
             if(reader->raster->sampled())
             {
                 reader->obj->sampledRastersCnt.fetch_add(1, std::memory_order_relaxed);
@@ -554,7 +648,7 @@ void GeoIndexedRaster::createThreads(void)
     {
         reader_t* r = new reader_t;
         r->obj    = this;
-        r->poi.clear();
+        r->geo    = NULL;
         r->raster = NULL;
         r->run    = true;
         r->sync   = new Cond(NUM_SYNC_SIGNALS);
@@ -586,7 +680,7 @@ void GeoIndexedRaster::updateCache(void)
                 parms->aoi_bbox = bbox;
 
                 /* Create new cache item with raster */
-                item = new cacheitem_t();
+                item = new cacheitem_t;
                 item->raster = new GdalRaster(parms, rinfo.fileName,
                                               static_cast<double>(rgroup->gpsTime / 1000),
                                               rinfo.dataIsElevation, crscb);
@@ -604,9 +698,9 @@ void GeoIndexedRaster::updateCache(void)
 
     /*
      * Maintain cache from getting too big.
-     * Remove all cache items not needed for this sample run.
+     * Find all cache items not needed for this sample run.
      */
-    if(cache.length() > 0)
+    std::vector<const char*> keys_to_remove;
     {
         cacheitem_t* item;
         const char* key = cache.first(&item);
@@ -614,12 +708,16 @@ void GeoIndexedRaster::updateCache(void)
         {
             if(!item->enabled)
             {
-                cache.remove(key);
-                delete item->raster;
-                delete item;
+                keys_to_remove.push_back(key);
             }
             key = cache.next(&item);
         }
+    }
+
+    /* Remove cache items found above */
+    for(const char* key: keys_to_remove)
+    {
+        cache.remove(key);
     }
 
     /* Check for max limit of concurent reading raster threads */
@@ -735,21 +833,6 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
     }
 
     return (groupList.length() > 0);
-}
-
-/*----------------------------------------------------------------------------
- * emptyFeaturesList
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::emptyFeaturesList(void)
-{
-    if(featuresList.isempty()) return;
-
-    for(int i = 0; i < featuresList.length(); i++)
-    {
-        OGRFeature* feature = featuresList[i];
-        OGRFeature::DestroyFeature(feature);
-    }
-    featuresList.clear();
 }
 
 /*----------------------------------------------------------------------------

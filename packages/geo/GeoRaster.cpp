@@ -54,9 +54,14 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
     samplingMutex.lock();
     try
     {
-        GdalRaster::Point poi(lon, lat, height);
-        raster.samplePOI(poi);
+        OGRSpatialReference crs;
+        crs.importFromEPSG(4326);
+        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
+        OGRPoint poi(lon, lat, height);
+        poi.assignSpatialReference(&crs);
+
+        raster.samplePOI(&poi);
         if(raster.sampled())
         {
             RasterSample& sample = raster.getSample();
@@ -72,6 +77,43 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
     }
     samplingMutex.unlock();
 }
+
+/*----------------------------------------------------------------------------
+ * getSubset
+ *----------------------------------------------------------------------------*/
+void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+{
+    std::ignore = gps;
+    std::ignore = param;
+
+    samplingMutex.lock();
+    try
+    {
+        OGRSpatialReference crs;
+        crs.importFromEPSG(4326);
+        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
+        poly.assignSpatialReference(&crs);
+
+        /* Get samples, if none found, return */
+        raster.subsetAOI(&poly);
+        if(raster.sampled())
+        {
+            RasterSubset& subset = raster.getSubset();
+            subset.fileId = fileId;
+            slist.push_back(subset);
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error subsetting raster: %s", e.what());
+        samplingMutex.unlock();
+        throw;  // rethrow exception
+    }
+    samplingMutex.unlock();
+}
+
 
 /*----------------------------------------------------------------------------
  * Destructor

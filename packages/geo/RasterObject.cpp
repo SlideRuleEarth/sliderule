@@ -84,6 +84,7 @@ int RasterObject::luaCreate( lua_State* L )
     {
         /* Get Parameters */
         _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
+        if(_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create GeoParms object");
 
         /* Get Factory */
         factory_t _create = NULL;
@@ -149,6 +150,7 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
+    LuaEngine::setAttrFunc(L, "subset", luaSubset);
 }
 
 /*----------------------------------------------------------------------------
@@ -252,6 +254,90 @@ int RasterObject::luaSamples(lua_State *L)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Failed to read samples: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_ret);
+}
+
+
+/*----------------------------------------------------------------------------
+ * luaSubset - :subset(ulx, uly, lrx, lry) --> in|out
+ *----------------------------------------------------------------------------*/
+int RasterObject::luaSubset(lua_State *L)
+{
+    bool status = false;
+    int num_ret = 1;
+
+    RasterObject *lua_obj = NULL;
+
+    try
+    {
+        /* Get Self */
+        lua_obj = (RasterObject*)getLuaSelf(L, 1);
+
+        /* Get extent */
+        double lon_min = getLuaFloat(L, 2);
+        double lat_min = getLuaFloat(L, 3);
+        double lon_max = getLuaFloat(L, 4);
+        double lat_max = getLuaFloat(L, 5);
+        const char* closest_time_str = getLuaString(L, 6, true, NULL);
+
+        /* Get gps closest time (overrides params provided closest time) */
+        int64_t gps = 0;
+        if(closest_time_str != NULL)
+        {
+            gps = TimeLib::str2gpstime(closest_time_str);
+        }
+
+        /* Get subset */
+        std::vector<RasterSubset> slist;
+        lua_obj->getSubsets(lon_min, lat_min, lon_max, lat_max, gps, slist, NULL);
+
+        if(slist.size() > 0)
+        {
+            /* Create return table */
+            lua_createtable(L, slist.size(), 0);
+
+            for(uint32_t i = 0; i < slist.size(); i++)
+            {
+                const RasterSubset& subset = slist[i];
+                const char* fileName = "";
+
+                /* Find fileName from fileId */
+                Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
+                for(int j = 0; j < iterator.length; j++)
+                {
+                    if(iterator[j].value == subset.fileId)
+                    {
+                        fileName = iterator[j].key;
+                        break;
+                    }
+                }
+
+                lua_createtable(L, 0, 2);
+                LuaEngine::setAttrStr(L, "file", fileName);
+                LuaEngine::setAttrInt(L, "fileid", subset.fileId);
+                LuaEngine::setAttrNum(L, "time", subset.time);
+                LuaEngine::setAttrInt(L, "data", (uint64_t)subset.data);
+                LuaEngine::setAttrInt(L, "cols", subset.cols);
+                LuaEngine::setAttrInt(L, "rows", subset.rows);
+                LuaEngine::setAttrNum(L, "datatype", subset.datatype);
+                lua_rawseti(L, -2, i+1);
+
+                /* LUA script should free this memory but for now this will work */
+                {
+                    uint64_t size = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
+                    subset.memrelese(size, subset.data);
+                }
+            }
+            num_ret++;
+            status = true;
+        } else mlog(DEBUG, "No subsets read");
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Failed to subset raster: %s", e.what());
     }
 
     /* Return Status */

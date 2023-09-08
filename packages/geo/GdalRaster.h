@@ -92,26 +92,6 @@ class GdalRaster
         *--------------------------------------------------------------------*/
         typedef OGRErr (*overrideCRS_t)(OGRSpatialReference& crs);
 
-        class Point
-        {
-        public:
-            Point(double _x=0, double _y=0, double _z=0):
-              x(_x), y(_y), z(_z) {}
-
-            Point(const Point& p):
-              x(p.x), y(p.y), z(p.z) {}
-
-            Point& operator = (const Point& p)
-              { x=p.x; y=p.y; z=p.z; return *this; }
-
-            void clear(void)
-              { x=0; y=0; z=0; }
-
-            double x;
-            double y;
-            double z;
-        };
-
         /* import bbox_t into this namespace from GeoParms.h */
         using bbox_t=GeoParms::bbox_t;
 
@@ -122,9 +102,11 @@ class GdalRaster
                            GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb);
         virtual           ~GdalRaster     (void);
         void               open           (void);
-        void               samplePOI      (const Point& poi);
+        void               samplePOI      (OGRPoint* poi);
+        void               subsetAOI      (OGRPolygon* poly);
         const std::string& getFileName    (void) { return fileName;}
         RasterSample&      getSample      (void) { return sample; }
+        RasterSubset&      getSubset      (void) { return subset; }
         bool               sampled        (void) { return _sampled; }
         int                getRows        (void) { return rows; }
         int                getCols        (void) { return cols; }
@@ -138,6 +120,9 @@ class GdalRaster
         static void        setCRSfromWkt  (OGRSpatialReference& sref, const char* wkt);
         static std::string getUUID        (void);
         static void        initAwsAccess  (GeoParms* _parms);
+        static OGRPolygon  makeRectangle  (double minx, double miny, double maxx, double maxy);
+        static bool        ispoint        (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPoint25D; }
+        static bool        ispoly         (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPolygon; }
 
     private:
 
@@ -157,6 +142,9 @@ class GdalRaster
         RasterSample   sample;
         double         verticalShift;  /* Calculated for last POI transformed to target CRS */
 
+        /* Last subset information */
+        RasterSubset   subset;
+
         OGRCoordinateTransformation* transf;
         OGRSpatialReference sourceCRS;
         OGRSpatialReference targetCRS;
@@ -171,21 +159,24 @@ class GdalRaster
         double          cellSize;
         bbox_t          bbox;
         uint32_t        radiusInPixels;
-        double          invGeoTrnasform[6];
+        double          invGeoTrans[6];
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        readPixel           (const Point& poi);
-        void        resamplePixel       (const Point& poi);
-        void        computeZonalStats   (const Point& poi);
+        void        readPixel           (const OGRPoint* poi);
+        void        resamplePixel       (const OGRPoint* poi);
+        void        computeZonalStats   (const OGRPoint* poi);
         inline bool nodataCheck         (void);
         void        createTransform     (void);
         int         radius2pixels       (int _radius);
         inline bool containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);
         inline void readRasterWithRetry (int col, int row, int colSize, int rowSize,
                                          void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+
+        void topixel(double minx, double miny, double maxx, double maxy,
+                     int& ulx, int& uly, int& lrx, int& lry);
 };
 
 #endif  /* __gdal_raster__ */

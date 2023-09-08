@@ -67,12 +67,13 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init            (void);
-        static void     deinit          (void);
-        static int      luaCreate       (lua_State* L);
-        static bool     registerRaster  (const char* _name, factory_t create);
-        virtual void    getSamples      (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) = 0;
-        virtual         ~RasterObject   (void);
+        static void      init            (void);
+        static void      deinit          (void);
+        static int       luaCreate       (lua_State* L);
+        static bool      registerRaster  (const char* _name, factory_t create);
+        virtual void     getSamples      (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) = 0;
+        virtual void     getSubsets      (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param=NULL) = 0;
+        virtual         ~RasterObject    (void);
 
         inline bool hasZonalStats (void)
         {
@@ -93,6 +94,7 @@ class RasterObject: public LuaObject
                     RasterObject    (lua_State* L, GeoParms* _parms);
         uint64_t    fileDictAdd     (const std::string& fileName);
         static int  luaSamples      (lua_State* L);
+        static int  luaSubset       (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

@@ -37,6 +37,8 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "EventLib.h"
+#include <gdal.h>
 
 /******************************************************************************
  * RASTER SAMPLE CLASS
@@ -70,11 +72,92 @@ public:
        bzero(&stats, sizeof(stats));
    }
 
-   RasterSample (double _value=0, double _time=0, double _fileId=0, double _flags=0) :
-    value (_value),
-    time  (_time),
+   RasterSample(double _value = 0, double _time = 0, double _fileId = 0, double _flags = 0):
+    value(_value),
+    time(_time),
     fileId(_fileId),
-    flags (_flags) {}
+    flags(_flags) {}
+};
+
+class RasterSubset
+{
+public:
+    uint8_t*     data;
+    uint32_t     cols;
+    uint32_t     rows;
+    GDALDataType datatype;
+    double       time;   // gps seconds
+    uint64_t     fileId;
+
+    void clear(void)
+    {
+        data     = NULL;
+        cols     = 0;
+        rows     = 0;
+        datatype = GDT_Unknown;
+        time     = 0;
+        fileId   = 0;
+   }
+
+   RasterSubset(uint8_t* _data = NULL, double _time = 0, double _fileId = 0):
+    data(_data),
+    cols(0),
+    rows(0),
+    datatype(GDT_Unknown),
+    time(_time),
+    fileId(_fileId) {}
+
+   static uint64_t getmaxMem (void) { return maxsize; }
+   static bool     memreserve(uint64_t memsize) { return updateMemPool(memsize, RESERVER); }
+   static bool     memrelese (uint64_t memsize, uint8_t* dptr)  { return updateMemPool(memsize, RELEASE, dptr); }
+
+private:
+    typedef enum
+    {
+        RESERVER = 1,
+        RELEASE = 2
+    } memrequest_t;
+
+    static const int64_t oneGB   = 0x40000000;
+    static const int64_t maxsize = oneGB * 6;
+
+    static bool updateMemPool(int64_t memsize, memrequest_t requestType, uint8_t* dptr=NULL)
+    {
+        static int64_t poolsize = maxsize;
+        bool status = false;
+        static Mutex mutex;
+
+        mutex.lock();
+        {
+            if(requestType == RESERVER)
+            {
+                int64_t newpoolsize = poolsize - memsize;
+                if(newpoolsize >= 0)
+                {
+                    poolsize = newpoolsize;
+                    status   = true;
+                }
+            }
+            else if(requestType == RELEASE)
+            {
+                poolsize += memsize;
+                if(poolsize > maxsize)
+                {
+                    poolsize = maxsize;
+                }
+                if(dptr) delete [] dptr;
+                status = true;
+            }
+        }
+        mutex.unlock();
+
+#if 0
+        const float oneMB = 1024 * 1024;
+        printf("%s mempoool %5.0f / %.0f MB    %12.2f MB\n", requestType == RESERVER ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
+#endif
+
+        return status;
+   }
 };
 
 #endif  /* __raster_sample__ */

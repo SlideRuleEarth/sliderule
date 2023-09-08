@@ -5,8 +5,8 @@ local td = runner.rootdir(arg[0]) -- root directory
 local loglvl = global.eval(arg[1]) or core.INFO
 
 -- Initial Configuration --
-console.monitor:config(core.LOG, loglvl)
-sys.setlvl(core.LOG, loglvl)
+-- console.monitor:config(core.LOG, loglvl)
+-- sys.setlvl(core.LOG, loglvl)
 
 local maxRuns = 1
 for runNum = 1, maxRuns do
@@ -74,6 +74,12 @@ if __icesat2__ then
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
+-- Run opendata Plugin Self Tests
+if __opendata__ then
+    local opendata_td = td .. "../../plugins/opendata/selftests/"
+    runner.script(opendata_td .. "worldcover_reader.lua")
+end
+
 -- Run PGC Plugin Self Tests
 if __pgc__ then
     local pgc_td = td .. "../../plugins/pgc/selftests/"
@@ -85,6 +91,7 @@ if __pgc__ then
     runner.script(pgc_td .. "aoi_bbox_test.lua")
     runner.script(pgc_td .. "proj_pipeline_test.lua")
     runner.script(pgc_td .. "remadem_reader.lua")
+    runner.script(pgc_td .. "subset_test.lua")
 end
 
 -- Run Landsat Plugin Self Tests
@@ -98,12 +105,6 @@ end
 if __usgs3dep__ then
     local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
-end
-
--- Run opendata Plugin Self Tests
-if __opendata__ then
-    local opendata_td = td .. "../../plugins/opendata/selftests/"
-    runner.script(opendata_td .. "worldcover_reader.lua")
 end
 
 

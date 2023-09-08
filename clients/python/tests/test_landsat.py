@@ -21,6 +21,19 @@ class TestHLS:
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
         rsps = sliderule.source("samples", rqst)
+
+    def test_subset(self, domain, organization, desired_nodes):
+        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        time_start = "2021-01-01T00:00:00Z"
+        time_end = "2021-02-01T23:59:59Z"
+        polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
+                    {"lon": -179.0000000001, "lat": 51.0000000001},
+                    {"lon": -179.0000000001, "lat": 49.0000000001},
+                    {"lon": -177.0000000001, "lat": 49.0000000001},
+                    {"lon": -177.0000000001, "lat": 51.0000000001} ]
+        catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
+        rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
+        rsps = sliderule.source("samples", rqst)
         assert len(rsps) > 0
 
     def test_ndvi(self, domain, organization, desired_nodes):
