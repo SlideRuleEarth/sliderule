@@ -87,7 +87,6 @@ void PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
     double maxy = ceil(env.MaxY);
 
     emptyFeaturesList();
-    std::vector<std::string> rasterFiles;
 
     for(double ix = minx; ix < maxx; ix++ )
     {
@@ -117,24 +116,6 @@ void PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
                 layer->ResetReading();
                 while(OGRFeature* feature = layer->GetNextFeature())
                 {
-                    /*
-                     * Strip rasters can span multiple geocells, check for duplicates.
-                     * Ignore quality mask rasters for now.
-                     * We can read max 200 rasters in parallel. If the AOI returned thousands of rasters,
-                     * it is OK for this check to take performance hit since no rasters will be read anyway.
-                     */
-                    const char* fname = feature->GetFieldAsString("Dem");
-                    if(fname && strlen(fname) > 0)
-                    {
-                        std::string newRaster(fname);
-                        if(isduplicate(rasterFiles, newRaster))
-                        {
-                            OGRFeature::DestroyFeature(feature);
-                            continue;
-                        }
-                        rasterFiles.push_back(newRaster);
-                    }
-
                     OGRFeature* fp = feature->Clone();
                     featuresList.add(fp);
                     OGRFeature::DestroyFeature(feature);
@@ -315,15 +296,3 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
     mlog(DEBUG, "Using %s", file.c_str());
 }
 
-/*----------------------------------------------------------------------------
- * isduplicate
- *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::isduplicate(std::vector<std::string>& files, std::string& file)
-{
-    for(unsigned i = 0; i < files.size(); i++)
-    {
-        if(files[i] == file)
-        return true;
-    }
-    return false;
-}

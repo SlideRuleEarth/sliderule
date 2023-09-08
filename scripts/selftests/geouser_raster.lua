@@ -4,8 +4,8 @@ local td = runner.rootdir(arg[0])
 local base64 = require("base64")
 
 -- Setup --
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 local raster = td.."/geouser_test_raster.tif"
 

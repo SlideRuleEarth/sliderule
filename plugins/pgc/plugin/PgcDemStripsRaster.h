@@ -58,7 +58,6 @@ class PgcDemStripsRaster: public GeoIndexedRaster
 
     private:
         void    _getIndexFile       (double lon, double lat, std::string& file);
-        bool     isduplicate        (std::vector<std::string>& files, std::string& file);
 
         /*--------------------------------------------------------------------
          * Data
