@@ -172,16 +172,16 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
-            OGRGeometry *rgeo = feature->GetGeometryRef();
+            OGRGeometry *rastergeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
             if(GdalRaster::ispoint(geo))
             {
-                if(!rgeo->Contains(geo)) continue;
+                if(!rastergeo->Contains(geo)) continue;
             }
             else if(GdalRaster::ispoly(geo))
             {
-                if(!geo->Intersects(rgeo)) continue;
+                if(!geo->Intersects(rastergeo)) continue;
             }
             else return false;
 
@@ -217,9 +217,8 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                     {
                         /* Use base class generic flags tag */
                         rinfo.tag = FLAGS_TAG;
-
-                        /* Only add flags rasters for points */
-                        if(GdalRaster::ispoint(geo)) rgroup->infovect.push_back(rinfo);
+                        if(parms->flags_file)
+                            rgroup->infovect.push_back(rinfo);
                     }
                     else
                     {

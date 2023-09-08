@@ -286,7 +286,7 @@ expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020
               {  224.0, 1295737338.0, 0xe0, '/vsis3/lp-prod-protected/HLSS30.020/HLS.S30.T01UCS.2021026T225819.v2.0/HLS.S30.T01UCS.2021026T225819.v2.0.Fmask.tif'}}
 
 
-print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and Fmask raster)\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nLandsat Sample test (BO3 and Fmask raster)\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"Fmask","B03"}, catalog = contents }))
 fmaskCnt  = 0
 sampleCnt = 0
@@ -313,7 +313,7 @@ end
 runner.check(sampleCnt == #expResults)
 dem = nil
 
-print(string.format("\n-------------------------------------------------\nMany Rasters (189) Test\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nLandsat Many Rasters test (180)\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0,
                             bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
                                      "B01", "B02", "B03", "B04", "B05", "B06",
@@ -333,7 +333,7 @@ else
         -- print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
     end
 end
-runner.check(sampleCnt == 189)
+runner.check(sampleCnt == 180)
 
 -- Grand Mesa test has 26183 samples/ndvi Results
 -- Limit the number of samples for selftest.
@@ -407,7 +407,7 @@ runner.check(sampleCnt == maxSamples)
 dem = nil
 
 
-print(string.format("\n-------------------------------------------------\nLandsat subset test\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nLandsat Subset test\n-------------------------------------------------"))
 
 local geojsonfile = td.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")

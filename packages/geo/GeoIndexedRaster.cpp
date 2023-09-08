@@ -185,14 +185,20 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
     }
 
     /* Close all rasters */
-    cacheitem_t* item;
-    const char* key  = cache.first(&item);
-    while (key != NULL)
+    while(cache.length() > 0)
     {
-        cache.remove(key);
-        delete item->raster;
-        delete item;
-        key = cache.next(&item);
+        cacheitem_t* item;
+        const char* key = cache.first(&item);
+        while(key != NULL)
+        {
+            cache.remove(key);
+            delete item->raster;
+            delete item;
+            key = cache.next(&item);
+        }
+
+        //TODO: fix this. Cache should be zero after purging but it is not.
+        mlog(DEBUG, "Cache size after purging it %u", cache.length());
     }
 
     emptyGroupsList();
@@ -691,7 +697,7 @@ void GeoIndexedRaster::updateCache(void)
                 parms->aoi_bbox = bbox;
 
                 /* Create new cache item with raster */
-                item = new cacheitem_t();
+                item = new cacheitem_t;
                 item->raster = new GdalRaster(parms, rinfo.fileName,
                                               static_cast<double>(rgroup->gpsTime / 1000),
                                               rinfo.dataIsElevation, crscb);

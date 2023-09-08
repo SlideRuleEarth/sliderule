@@ -187,16 +187,16 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
-            OGRGeometry* rgeo = feature->GetGeometryRef();
+            OGRGeometry* rastergeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
             if(GdalRaster::ispoint(geo))
             {
-                if(!rgeo->Contains(geo)) continue;
+                if(!rastergeo->Contains(geo)) continue;
             }
             else if(GdalRaster::ispoly(geo))
             {
-                if(!geo->Intersects(rgeo)) continue;
+                if(!geo->Intersects(rastergeo)) continue;
             }
             else return false;
 
@@ -214,15 +214,14 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 fileName = filePath + fileName.substr(pos);
 
                 rasters_group_t* rgroup = new rasters_group_t;
-                rgroup->infovect.reserve(2); /* PGC group is 1 data raster + flags raster */
 
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
                 demRinfo.tag = VALUE_TAG;
                 demRinfo.fileName = fileName;
 
-                /* bitmask rasters only make sense for poi, don't read them for poly cases */
-                if(GdalRaster::ispoint(geo))
+                /* bitmask raster, ie flags_file */
+                if(parms->flags_file)
                 {
                     const std::string endToken    = "_dem.tif";
                     const std::string newEndToken = "_bitmask.tif";
