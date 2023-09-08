@@ -113,8 +113,7 @@ struct ParquetBuilder::impl
             /* Check for Geometry Columns */
             if(geo.as_geo)
             {
-                if(StringLib::match(field_name, geo.x_key) || 
-                StringLib::match(field_name, geo.y_key))
+                if(field.offset == geo.x_field.offset || field.offset == geo.y_field.offset) 
                 {
                     /* skip over source columns for geometry as they will be added
                     * separately as a part of the dedicated geometry column */
@@ -321,7 +320,8 @@ struct ParquetBuilder::impl
     static void appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, 
                                       const shared_ptr<arrow::Schema>& _schema, 
                                       const field_iterator_t* field_iterator, 
-                                      const char* index_key)
+                                      const char* index_key,
+                                      bool as_geo)
     {
         /* Initialize Pandas Meta Data String */
         SafeString pandasstr(R"json({
@@ -371,15 +371,21 @@ struct ParquetBuilder::impl
                     case RecordObject::STRING:  pandas_type = "bytes";      numpy_type = "object";          break;
                     default:                    pandas_type = "bytes";      numpy_type = "object";          break;
                 }
+
+                /* Mark Last Column */
+                if(!as_geo && (index == field_iterator->length))
+                {
+                    is_last_entry = true;
+                }
             }
-            else if(StringLib::match(field_name.c_str(), "geometry"))
+            else if(as_geo && StringLib::match(field_name.c_str(), "geometry"))
             {
                 /* Add Column for Geometry */
                 pandas_type = "bytes";
                 numpy_type = "object";
                 is_last_entry = true;
             }
-
+            
             /* Fill In Column String */
             const char* oldtxt[3] = { "$NAME", "$PTYPE", "$NTYPE" };
             const char* newtxt[3] = { field_name.c_str(), pandas_type, numpy_type };
@@ -390,7 +396,7 @@ struct ParquetBuilder::impl
             {
                 columnstr += ", ";
             }
-
+printf("C: [%d %d %d] %s => %s\n", index, field_iterator->length, is_last_entry, field_name.c_str(), columnstr.str());
             /* Add Column String to Columns */
             columns += columnstr;
         }
@@ -435,11 +441,9 @@ int ParquetBuilder::luaCreate (lua_State* L)
 
         /* Build Geometry Fields */
         geo_data_t geo;
-        geo.as_geo = false;
-        if((x_key != NULL) && (y_key != NULL))
+        geo.as_geo = _parms->as_geo;
+        if(geo.as_geo && (x_key != NULL) && (y_key != NULL))
         {
-            geo.as_geo = true;
-
             geo.x_field = RecordObject::getDefinedField(rec_type, x_key);
             if(geo.x_field.type == RecordObject::INVALID_FIELD)
             {
@@ -454,6 +458,11 @@ int ParquetBuilder::luaCreate (lua_State* L)
 
             geo.x_key = StringLib::duplicate(x_key);
             geo.y_key = StringLib::duplicate(y_key);
+        }
+        else
+        {
+            /* Unable to Create GeoParquet */
+            geo.as_geo = false;
         }
 
         /* Create Dispatch */
@@ -546,7 +555,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
     if(geoData.as_geo) pimpl->appendGeoMetaData(metadata);
     pimpl->appendServerMetaData(metadata);
-    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key);
+    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key, geoData.as_geo);
     pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Parquet Writer */

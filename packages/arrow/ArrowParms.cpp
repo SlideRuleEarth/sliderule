@@ -45,6 +45,7 @@ const char* ArrowParms::SELF                = "output";
 const char* ArrowParms::PATH                = "path";
 const char* ArrowParms::FORMAT              = "format";
 const char* ArrowParms::OPEN_ON_COMPLETE    = "open_on_complete";
+const char* ArrowParms::AS_GEO              = "as_geo";
 const char* ArrowParms::ASSET               = "asset";
 const char* ArrowParms::REGION              = "region";
 const char* ArrowParms::CREDENTIALS         = "credentials";
@@ -95,6 +96,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
     path                (NULL),
     format              (NATIVE),
     open_on_complete    (false),
+    as_geo              (true),
     asset_name          (NULL),
     region              (NULL)
 {
@@ -122,6 +124,12 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             lua_getfield(L, index, OPEN_ON_COMPLETE);
             open_on_complete = LuaObject::getLuaBoolean(L, -1, true, open_on_complete, &field_provided);
             if(field_provided) mlog(DEBUG, "Setting %s to %d", OPEN_ON_COMPLETE, (int)open_on_complete);
+            lua_pop(L, 1);
+
+            /* As Geo */
+            lua_getfield(L, index, AS_GEO);
+            as_geo = LuaObject::getLuaBoolean(L, -1, true, as_geo, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", AS_GEO, (int)as_geo);
             lua_pop(L, 1);
 
             /* Asset */

@@ -79,6 +79,7 @@ class ArrowParms: public LuaObject
         static const char* PATH;
         static const char* FORMAT;
         static const char* OPEN_ON_COMPLETE;
+        static const char* AS_GEO;
         static const char* ASSET;
         static const char* REGION;
         static const char* CREDENTIALS;
@@ -94,6 +95,7 @@ class ArrowParms: public LuaObject
         const char*     path;                           // file system path to the file (includes filename)
         format_t        format;                         // format of the file
         bool            open_on_complete;               // flag to client to open file on completion
+        bool            as_geo;                         // whether to create a standard geo-based formatted file
         const char*     asset_name;
         const char*     region;
 

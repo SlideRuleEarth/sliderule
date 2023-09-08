@@ -27,7 +27,28 @@ class TestParquet:
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile1.parquet")
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 18
+        assert len(gdf.keys()) == 16
+        assert gdf["rgt"][0] == 1160
+        assert gdf["cycle"][0] == 2
+        assert gdf['segment_id'].describe()["min"] == 405231
+        assert gdf['segment_id'].describe()["max"] == 405902
+
+    def test_atl06_non_geo(self, domain, organization, desired_nodes):
+        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        parms = { "poly": region['poly'],
+                  "cnf": "atl03_high",
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1,
+                  "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True, "as_geo": False } }
+        gdf = icesat2.atl06p(parms, resources=[resource])
+        os.remove("testfile5.parquet")
+        assert len(gdf) == 957
+        assert len(gdf.keys()) == 17
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231

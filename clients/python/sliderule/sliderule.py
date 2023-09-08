@@ -546,12 +546,17 @@ def emptyframe(**kwargs):
 # Process Output File
 #
 def procoutputfile(parm):
-    if "open_on_complete" in parm["output"] and parm["output"]["open_on_complete"]:
-        # Return GeoParquet File as GeoDataFrame
-        return geopandas.read_parquet(parm["output"]["path"])
+    output = parm["output"]
+    if "open_on_complete" in output and output["open_on_complete"]:
+        if "as_geo" in output and not output["as_geo"]:
+            # Return Parquet File as DataFrame
+            return geopandas.pd.read_parquet(output["path"])
+        else:
+            # Return GeoParquet File as GeoDataFrame
+            return geopandas.read_parquet(output["path"])
     else:
         # Return Parquet Filename
-        return parm["output"]["path"]
+        return output["path"]
 
 #
 #  Get Values from Raw Buffer
