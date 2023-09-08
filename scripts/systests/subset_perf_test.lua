@@ -253,7 +253,7 @@ print(string.format("\n--------------------------\n%s\n-------------------------
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
-sys.wait(2)
+sys.wait(5)
 
 
 local geojsonfile = td.."../../plugins/landsat/data/hls_trimmed.geojson"

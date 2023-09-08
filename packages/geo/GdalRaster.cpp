@@ -278,16 +278,15 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
         uint64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
         uint64_t maxperThread = subset.getmaxMem() / 2;
         if(size > maxperThread)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ldMB, max perthread allowed: %ldMB",
+            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ldMB, max per thread allowed: %ldMB",
                   size/(1024*1024), maxperThread/(1024*1024));
 
-        if(!subset.memreserve(size))
+        uint8_t* data = subset.memget(size);
+        if(data == NULL)
             throw RunTimeException(CRITICAL, RTE_ERROR, "mempool depleted, request: %.2f MB", (float)size/(1024*1024));
 
-        uint8_t* data = new uint8_t[size];
-
-        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
-             size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
+        // mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
+        //      size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
 
         int cnt = 1;
         err = CE_None;
@@ -298,7 +297,7 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
 
         if(err != CE_None)
         {
-            subset.memrelese(size, data);
+            subset.memfree(data, size);
             throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
         }
 

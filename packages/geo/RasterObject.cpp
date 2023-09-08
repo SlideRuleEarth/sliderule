@@ -328,7 +328,7 @@ int RasterObject::luaSubset(lua_State *L)
                 /* LUA script should free this memory but for now this will work */
                 {
                     uint64_t size = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
-                    subset.memrelese(size, subset.data);
+                    subset.memfree(subset.data, size);
                 }
             }
             num_ret++;
