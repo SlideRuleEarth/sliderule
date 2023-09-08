@@ -84,10 +84,11 @@ class GeoIndexedRaster: public RasterObject
             bool         run;
         } reader_t;
 
-        typedef struct {
+        typedef struct cacheitem {
             bool        enabled;
             double      useTime;
             GdalRaster* raster;
+            ~cacheitem(void) {delete raster;}
         } cacheitem_t;
 
 
@@ -134,7 +135,7 @@ class GeoIndexedRaster: public RasterObject
 
         Mutex                       samplingMutex;
         Ordering<rasters_group_t*>  groupList;
-        Dictionary<cacheitem_t*>    cache;
+        MgDictionary<cacheitem_t*>  cache;
         List<OGRFeature*>           featuresList;
         bool                        forceNotElevation;
 

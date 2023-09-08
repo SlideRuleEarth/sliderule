@@ -184,23 +184,6 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
         }
     }
 
-    /* Close all rasters */
-    while(cache.length() > 0)
-    {
-        cacheitem_t* item;
-        const char* key = cache.first(&item);
-        while(key != NULL)
-        {
-            cache.remove(key);
-            delete item->raster;
-            delete item;
-            key = cache.next(&item);
-        }
-
-        //TODO: fix this. Cache should be zero after purging but it is not.
-        mlog(DEBUG, "Cache size after purging it %u", cache.length());
-    }
-
     emptyGroupsList();
     emptyFeaturesList();
 }
@@ -715,9 +698,9 @@ void GeoIndexedRaster::updateCache(void)
 
     /*
      * Maintain cache from getting too big.
-     * Remove all cache items not needed for this sample run.
+     * Find all cache items not needed for this sample run.
      */
-    if(cache.length() > 0)
+    std::vector<const char*> keys_to_remove;
     {
         cacheitem_t* item;
         const char* key = cache.first(&item);
@@ -725,12 +708,16 @@ void GeoIndexedRaster::updateCache(void)
         {
             if(!item->enabled)
             {
-                cache.remove(key);
-                delete item->raster;
-                delete item;
+                keys_to_remove.push_back(key);
             }
             key = cache.next(&item);
         }
+    }
+
+    /* Remove cache items found above */
+    for(const char* key: keys_to_remove)
+    {
+        cache.remove(key);
     }
 
     /* Check for max limit of concurent reading raster threads */
