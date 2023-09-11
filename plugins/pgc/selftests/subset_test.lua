@@ -75,6 +75,10 @@ for i = 1, #demTypes do
         if i == 1 then
             print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
         end
+
+        runner.check(cols > 0)
+        runner.check(rows > 0)
+        runner.check(datatype > 0)
     end
 end
 

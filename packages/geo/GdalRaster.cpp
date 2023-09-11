@@ -527,6 +527,7 @@ void GdalRaster::readPixel(const OGRPoint* poi)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error reading from raster: %s", e.what());
+        throw;
     }
 }
 
@@ -596,6 +597,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error resampling pixel: %s", e.what());
+        throw;
     }
 }
 
@@ -712,6 +714,8 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error computing zonal stats: %s", e.what());
+        if(samplesArray) delete[] samplesArray;
+        throw;
     }
 
     if(samplesArray) delete[] samplesArray;

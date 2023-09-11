@@ -109,6 +109,8 @@ for i = 1, #demTypes do
                         expElevation = expResultsStrips[j]
                     end
                     runner.check(math.abs(el - expElevation) < sigma)
+                else
+                    runner.check(el > 10)  --All others
                 end
             end
         end
