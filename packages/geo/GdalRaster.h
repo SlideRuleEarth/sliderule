@@ -39,6 +39,7 @@
 #include "GeoParms.h"
 #include "RasterSample.h"
 #include <ogrsf_frmts.h>
+#include <thread>
 
 /******************************************************************************
  * Typedef and macros used by GDAL class
@@ -177,6 +178,8 @@ class GdalRaster
 
         void topixel(double minx, double miny, double maxx, double maxy,
                      int& ulx, int& uly, int& lrx, int& lry);
+
+        bool s3sleep(void) {std::this_thread::sleep_for(std::chrono::milliseconds(50)); return true; }
 };
 
 #endif  /* __gdal_raster__ */
