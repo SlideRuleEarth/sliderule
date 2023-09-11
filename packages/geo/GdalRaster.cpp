@@ -293,7 +293,7 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
         do
         {
             err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, data, cols2read, rows2read, dtype, 0, 0, NULL);
-        } while(err != CE_None && cnt--);
+        } while(err != CE_None && cnt-- && s3sleep());
 
         if(err != CE_None)
         {
