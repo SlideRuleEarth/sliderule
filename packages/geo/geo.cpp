@@ -122,6 +122,13 @@ void test_projlib(void)
 static void configGDAL(void)
 {
     /*
+     * Very verbose GDAL and CURL tracing, works with release build (-03)
+     */
+#if 0
+    CPLSetConfigOption("CPL_DEBUG", "ON");
+#endif
+
+    /*
      * When reading datasets with necessary external sidecar files, it's imperative to set FALSE.
      * For example, the landsat-pds bucket on AWS S3 contains GeoTIFF images where overviews are in external .ovr files.
      * If set to EMPTY_DIR, GDAL won't find the .ovr files.
@@ -151,9 +158,9 @@ static void configGDAL(void)
      * The size of the above VSI cache in bytes per-file handle.
      * If you open a VRT with 10 files and your VSI_CACHE_SIZE is 10 bytes, the total cache memory usage would be 100 bytes.
      * The cache is RAM based and the content of the cache is discarded when the file handle is closed.
-     * Recommended: 5000000 (5Mb per file handle)
+     * Recommended: 5000000 (5Mb per file handle), defaults to 25MB per file, we use default
      */
-    CPLSetConfigOption("VSI_CACHE_SIZE", "5000000");
+    CPLSetConfigOption("VSI_CACHE_SIZE", "25000000");
 
     /*
      * GDAL Block Cache type: ARRAY or HASHSET. See:
@@ -162,9 +169,26 @@ static void configGDAL(void)
     CPLSetConfigOption("GDAL_BAND_BLOCK_CACHE", "HASHSET");
 
     /*
-     * Tells GDAL to merge consecutive range GET requests.
+     * GDAL_HTTP_MULTIRANGE=[SINGLE_GET/SERIAL/YES]: Defaults to YES.
+     * Controls how ReadMultiRange() requests emitted by the GeoTIFF driver are satisfied.
+     * SINGLE_GET means that several ranges will be expressed in the Range header of a single GET requests,
+     * which is not supported by a majority of servers (including AWS S3 or Google GCS).
+     * SERIAL means that each range will be requested sequentially.
+     * YES means that each range will be requested in parallel, using HTTP/2 multiplexing or several HTTP connections.
+     *
+     * NOTE: if set to YES, multirange reads cause errors when multiple reader threads read their data sets.
+     *       Perfromed tests with 200 reader threads each reading 16MB and on average 14 to 16 readers failed.
+     *       setting it to SERIAL fixed the problem.
      */
-    CPLSetConfigOption("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES", "YES");
+    CPLSetConfigOption("GDAL_HTTP_MULTIRANGE", "SERIAL");
+
+    /*
+     * Tells GDAL to merge consecutive range GET requests.
+     * GDAL_HTTP_MERGE_CONSECUTIVE_RANGES=[YES/NO]: Defaults to NO.
+     * Only applies when GDAL_HTTP_MULTIRANGE is YES.
+     * Defines if ranges of a single ReadMultiRange() request that are consecutive should be merged into a single request.
+     */
+    CPLSetConfigOption("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES", "NO");
 
     /*
      * When set to YES, this attempts to download multiple range requests in parallel, reusing the same TCP connection.

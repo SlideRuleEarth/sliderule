@@ -272,13 +272,13 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
             lry = extlry;
         }
 
-        uint64_t cols2read = lrx - ulx;
-        uint64_t rows2read = lry - uly;
+        int cols2read = lrx - ulx;
+        int rows2read = lry - uly;
 
         uint64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
         uint64_t maxperThread = subset.getmaxMem() / 2;
         if(size > maxperThread)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ldMB, max per thread allowed: %ldMB",
+            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ld MB, max per thread allowed: %ld MB",
                   size/(1024*1024), maxperThread/(1024*1024));
 
         uint8_t* data = subset.memget(size);

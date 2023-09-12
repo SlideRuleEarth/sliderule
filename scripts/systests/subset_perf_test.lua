@@ -310,6 +310,8 @@ if tbl ~= nil then
     end
 end
 
-os.exit()
+local errors = runner.report()
 
+-- Cleanup and Exit --
+sys.quit( errors )
 

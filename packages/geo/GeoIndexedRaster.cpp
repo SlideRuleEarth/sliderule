@@ -737,7 +737,7 @@ void GeoIndexedRaster::updateCache(void)
     if(cache.length() > MAX_READER_THREADS)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR,
-                               "Too many rasters to read: %d, max allowed: %d, limit your AOI or termporal range or use filters\n",
+                               "Too many rasters to read: %d, max allowed: %d, limit your AOI or termporal range or use filters",
                                cache.length(), MAX_READER_THREADS);
     }
 }
