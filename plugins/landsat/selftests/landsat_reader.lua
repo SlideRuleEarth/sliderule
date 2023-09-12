@@ -363,7 +363,7 @@ if tbl ~= nil then
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
--- runner.check(threadCnt == 59)
+runner.check(threadCnt == 167)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
