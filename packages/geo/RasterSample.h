@@ -95,6 +95,7 @@ public:
         data     = NULL;
         cols     = 0;
         rows     = 0;
+        size     = 0;
         datatype = GDT_Unknown;
         time     = 0;
         fileId   = 0;

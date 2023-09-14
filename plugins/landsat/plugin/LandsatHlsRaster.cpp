@@ -175,15 +175,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
             OGRGeometry *rastergeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(GdalRaster::ispoint(geo))
-            {
-                if(!rastergeo->Contains(geo)) continue;
-            }
-            else if(GdalRaster::ispoly(geo))
-            {
-                if(!geo->Intersects(rastergeo)) continue;
-            }
-            else return false;
+            if (!rastergeo->Intersects(geo)) continue;
 
             /* Set raster group time and group id */
             rasters_group_t* rgroup = new rasters_group_t;

@@ -46,7 +46,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
+void GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -54,14 +54,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
     samplingMutex.lock();
     try
     {
-        OGRSpatialReference crs;
-        crs.importFromEPSG(4326);
-        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        OGRPoint poi(lon, lat, height);
-        poi.assignSpatialReference(&crs);
-
-        raster.samplePOI(&poi);
+        raster.samplePOI(geo->toPoint());
         if(raster.sampled())
         {
             RasterSample& sample = raster.getSample();
@@ -81,7 +74,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -89,15 +82,8 @@ void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, doubl
     samplingMutex.lock();
     try
     {
-        OGRSpatialReference crs;
-        crs.importFromEPSG(4326);
-        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-        poly.assignSpatialReference(&crs);
-
         /* Get samples, if none found, return */
-        raster.subsetAOI(&poly);
+        raster.subsetAOI(geo->toPolygon());
         if(raster.sampled())
         {
             RasterSubset& subset = raster.getSubset();

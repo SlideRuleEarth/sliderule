@@ -312,10 +312,11 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
         /* Sample Raster */
         std::vector<RasterSample> slist;
+        OGRPoint poi(lon_val, lat_val, height_val);
         int num_samples = 0;
         try
         {
-            raster->getSamples(lon_val, lat_val, height_val, gps, slist);
+            raster->getSamples(&poi, gps, slist);
             num_samples = slist.size();
         }
         catch(const RunTimeException& e)

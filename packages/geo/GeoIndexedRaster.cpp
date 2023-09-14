@@ -72,22 +72,15 @@ void GeoIndexedRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
+void GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample>& slist, void* param)
 {
     std::ignore = param;
 
     samplingMutex.lock();
     try
     {
-        OGRSpatialReference crs;
-        crs.importFromEPSG(4326);
-        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        OGRPoint poi(lon, lat, height);
-        poi.assignSpatialReference(&crs);
-
         /* Get samples, if none found, return */
-        if(sample(&poi, gps) == 0)
+        if(sample(geo, gps) == 0)
         {
             samplingMutex.unlock();
             return;
@@ -118,22 +111,15 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset>& slist, void* param)
 {
     std::ignore = param;
 
     samplingMutex.lock();
     try
     {
-        OGRSpatialReference crs;
-        crs.importFromEPSG(4326);
-        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-        poly.assignSpatialReference(&crs);
-
         /* Get samples, if none found, return */
-        if(sample(&poly, gps) == 0)
+        if(sample(geo, gps) == 0)
         {
             samplingMutex.unlock();
             return;

@@ -369,10 +369,10 @@ if tbl ~= nil then
     for i, v in ipairs(tbl) do
         local cols = v["cols"]
         local rows = v["rows"]
+        local size = v["size"]
         local datatype = v["datatype"]
 
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
+        local mbytes = size / (1024*1024)
 
         if i == 1 then
             print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
@@ -380,7 +380,11 @@ if tbl ~= nil then
 
         runner.check(cols > 0)
         runner.check(rows > 0)
+        runner.check(size > 0)
         runner.check(datatype > 0)
+
+        local bytes = cols*rows* GDT_datasize[datatype]
+        runner.check(bytes == size)
     end
 end
 

@@ -100,18 +100,10 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
         for(int i = 0; i < featuresList.length(); i++)
         {
             OGRFeature* feature = featuresList[i];
-            OGRGeometry *rgeo = feature->GetGeometryRef();
+            OGRGeometry *rastergeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(GdalRaster::ispoint(geo))
-            {
-                if(!rgeo->Contains(geo)) continue;
-            }
-            else if(GdalRaster::ispoly(geo))
-            {
-                if(!geo->Intersects(rgeo)) continue;
-            }
-            else return false;
+            if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(1);

@@ -40,6 +40,7 @@
 #include "LuaObject.h"
 #include "GeoParms.h"
 #include "RasterSample.h"
+#include <ogr_geometry.h>
 
 /******************************************************************************
  * RASTER OBJECT CLASS
@@ -71,8 +72,8 @@ class RasterObject: public LuaObject
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_t create);
-        virtual void     getSamples      (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) = 0;
-        virtual void     getSubsets      (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param=NULL) = 0;
+        virtual void     getSamples      (OGRGeometry* geo, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) = 0;
+        virtual void     getSubsets      (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset>& slist, void* param=NULL) = 0;
         virtual         ~RasterObject    (void);
 
         inline bool hasZonalStats (void)
