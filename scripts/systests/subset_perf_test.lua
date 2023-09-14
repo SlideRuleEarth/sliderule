@@ -58,6 +58,10 @@ local lat =      39.1
 local height =    0.0
 local starttime = time.latch();
 local tbl, status = dem:sample(lon, lat, height)
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
 local stoptime = time.latch();
 threadCnt = 0
 if status ~= true then
@@ -69,16 +73,21 @@ else
     end
 end
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 1)
 
 starttime = time.latch();
 tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
 stoptime = time.latch();
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
 
 local threadCnt = 0
 for i, v in ipairs(tbl) do
     threadCnt = threadCnt + 1
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 1)
 
 for i, v in ipairs(tbl) do
     local cols = v["cols"]
@@ -106,6 +115,10 @@ for i = 1, #demTypes do
     starttime = time.latch();
     tbl, status = dem:sample(llx, lly, 0)
     stoptime = time.latch();
+
+    runner.check(status == true)
+    runner.check(tbl ~= nil)
+
     threadCnt = 0
     if status ~= true then
         print(string.format("======> FAILED to read", lon, lat))
@@ -116,7 +129,7 @@ for i = 1, #demTypes do
         end
     end
     print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
+    runner.check(threadCnt == 1)
 
     starttime = time.latch();
     tbl, status = dem:subset(llx, lly, urx, ury)
@@ -129,6 +142,8 @@ for i = 1, #demTypes do
         end
     end
     print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+    runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
 
     if tbl ~= nil then
         for i, v in ipairs(tbl) do
@@ -163,6 +178,11 @@ for i = 1, #demTypes do
     starttime = time.latch();
     tbl, status = dem:sample(llx, lly, 0)
     stoptime = time.latch();
+
+    -- For mosaics this is too much memory
+    runner.check(status == true)
+    runner.check(tbl ~= nil)
+
     threadCnt = 0
     for i, v in ipairs(tbl) do
         local el = v["value"]
@@ -172,9 +192,18 @@ for i = 1, #demTypes do
     end
     print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
+    if demType == "rema-mosaic" then
+        runner.check(threadCnt == 1)
+    else
+        runner.check(threadCnt == 10)
+    end
+
     starttime = time.latch();
     tbl, status = dem:subset(llx, lly, urx, ury)
     stoptime = time.latch();
+
+    runner.check(status == true)
+    runner.check(tbl ~= nil)
 
     threadCnt = 0
     if tbl ~= nil then
@@ -183,6 +212,13 @@ for i = 1, #demTypes do
         end
     end
     print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+    if demType == "rema-mosaic" then
+        runner.check(threadCnt == 1)
+    else
+        runner.check(threadCnt == 21)
+    end
+
 
     if tbl ~= nil then
         for i, v in ipairs(tbl) do
@@ -214,13 +250,17 @@ starttime = time.latch();
 local tbl, status = dem:sample(gm_llx, gm_lly, 0)
 stoptime = time.latch();
 
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
 threadCnt = 0
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
         threadCnt = threadCnt + 1
     end
 end
-print(string.format("POI sample time: %.2f   (%d threads)\n", stoptime - starttime, threadCnt))
+print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 1)
 
 
 starttime = time.latch();
@@ -228,11 +268,15 @@ starttime = time.latch();
 tbl, status = dem:subset(gm_llx, gm_lly, gm_llx+0.1, gm_lly+0.1)
 stoptime = time.latch();
 
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
 threadCnt = 0
 for i, v in ipairs(tbl) do
     threadCnt = threadCnt + 1
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 2)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
@@ -253,7 +297,7 @@ print(string.format("\n--------------------------\n%s\n-------------------------
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
-sys.wait(2)
+sys.wait(5)
 
 
 local geojsonfile = td.."../../plugins/landsat/data/hls_trimmed.geojson"
@@ -274,6 +318,9 @@ starttime = time.latch();
 tbl, status = dem:sample(-179, 51, 0)
 stoptime = time.latch();
 
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
 threadCnt = 0
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
@@ -281,10 +328,14 @@ if tbl ~= nil then
     end
 end
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 9)
 
 starttime = time.latch();
 tbl, status = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
 
 threadCnt = 0
 if tbl ~= nil then
@@ -293,6 +344,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 59)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
@@ -310,6 +362,8 @@ if tbl ~= nil then
     end
 end
 
-os.exit()
+local errors = runner.report()
 
+-- Cleanup and Exit --
+sys.quit( errors )
 

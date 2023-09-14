@@ -42,7 +42,6 @@
  ******************************************************************************/
 
 const char* GeoJsonRaster::FILEDATA_KEY   = "data";
-const char* GeoJsonRaster::FILELENGTH_KEY = "length";
 const char* GeoJsonRaster::CELLSIZE_KEY   = "cellsize";
 
 /******************************************************************************
@@ -77,12 +76,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 {
     /* Get geojson file */
     lua_getfield(L, index, FILEDATA_KEY);
-    const char* file = getLuaString(L, -1);
-    lua_pop(L, 1);
-
-    /* Get geojson file Length */
-    lua_getfield(L, index, FILELENGTH_KEY);
-    size_t filelength = (size_t)getLuaInteger(L, -1);
+    const char* geojstr = getLuaString(L, -1);
     lua_pop(L, 1);
 
     /* Get cellsize */
@@ -97,7 +91,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
     lua_pop(L, 1);
 
     /* Create GeoJsonRaster */
-    return new GeoJsonRaster(L, _parms, file, filelength, _cellsize);
+    return new GeoJsonRaster(L, _parms, geojstr, _cellsize);
 }
 
 
@@ -138,25 +132,12 @@ GeoJsonRaster::~GeoJsonRaster(void)
  * PROTECTED METHODS
  ******************************************************************************/
 
-/* Utilitiy function to check constructor's params */
-static void validatedParams(const char *file, long filelength, double _cellsize)
-{
-    if (file == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
-
-    if (filelength <= 0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
-
-    if (_cellsize <= 0.0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", _cellsize);
-}
-
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double _cellsize):
-    GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/ )
+GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double _cellsize):
+ GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/)
 {
     bool rasterCreated = false;
     GDALDataset* rasterDset = NULL;
@@ -164,12 +145,17 @@ GeoJsonRaster::GeoJsonRaster(lua_State *L, GeoParms* _parms, const char *file, l
     const std::string jsonFile = "/vsimem/" + GdalRaster::getUUID() + ".geojson";
     rasterFileName = getFileName();
 
-    validatedParams(file, filelength, _cellsize);
+    if (geojstr == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
+
+    if (_cellsize <= 0.0)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", _cellsize);
 
     try
     {
-        /* Create raster from json file */
-        VSILFILE *fp = VSIFileFromMemBuffer(jsonFile.c_str(), (GByte *)file, (vsi_l_offset)filelength, FALSE);
+        /* Create raster from geojson file */
+        vsi_l_offset len = strlen(geojstr);
+        VSILFILE* fp = VSIFileFromMemBuffer(jsonFile.c_str(), (GByte*)geojstr, len, FALSE);
         CHECKPTR(fp);
         VSIFCloseL(fp);
 

@@ -55,7 +55,6 @@ class GeoJsonRaster: public GeoRaster
         static const int   RASTER_PIXEL_ON = 1;
 
         static const char* FILEDATA_KEY;
-        static const char* FILELENGTH_KEY;
         static const char* BBOX_KEY;
         static const char* CELLSIZE_KEY;
 
@@ -75,7 +74,7 @@ class GeoJsonRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* image, long imagelength, double _cellsize);
+        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double _cellsize);
 
     private:
 

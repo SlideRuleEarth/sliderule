@@ -313,7 +313,8 @@ end
 runner.check(sampleCnt == #expResults)
 dem = nil
 
-print(string.format("\n-------------------------------------------------\nLandsat Many Rasters test (180)\n-------------------------------------------------"))
+
+print(string.format("\n-------------------------------------------------\nLandsat POI Sample many rasters test\n-------------------------------------------------"))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0,
                             bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
                                      "B01", "B02", "B03", "B04", "B05", "B06",
@@ -321,7 +322,9 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
                             catalog = contents }))
 
 sampleCnt = 0
+local starttime = time.latch();
 tbl, status = dem:sample(lon, lat, height)
+local stoptime = time.latch();
 if status ~= true then
     print(string.format("======> FAILED to read", lon, lat))
 else
@@ -334,6 +337,54 @@ else
     end
 end
 runner.check(sampleCnt == 180)
+print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, sampleCnt))
+
+print(string.format("\n-------------------------------------------------\nLandsat AOI Subset test\n-------------------------------------------------"))
+
+-- AOI extent (extent of hls_trimmed.geojson)
+llx =  -179.87
+lly =    50.45
+urx =  -178.27
+ury =    51.44
+
+
+local starttime = time.latch();
+local tbl, status = dem:subset(llx, lly, urx, ury)
+local stoptime = time.latch();
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+local threadCnt = 0
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
+end
+print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+runner.check(threadCnt == 167)
+
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        local cols = v["cols"]
+        local rows = v["rows"]
+        local datatype = v["datatype"]
+
+        local bytes = cols*rows* GDT_datasize[datatype]
+        local mbytes = bytes / (1024*1024)
+
+        if i == 1 then
+            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+        end
+
+        runner.check(cols > 0)
+        runner.check(rows > 0)
+        runner.check(datatype > 0)
+    end
+end
+
+
 
 -- Grand Mesa test has 26183 samples/ndvi Results
 -- Limit the number of samples for selftest.
@@ -384,6 +435,7 @@ print(string.format("\n-------------------------------------------------\nLandsa
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents }))
 sampleCnt = 0
 
+local starttime = time.latch();
 for i=1, maxSamples do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
@@ -403,56 +455,11 @@ for i=1, maxSamples do
     end
     sampleCnt = sampleCnt + 1
 end
+local stoptime = time.latch();
+print(string.format("POI sample %d points time: %.2f   (%d threads)", sampleCnt, stoptime - starttime, threadCnt))
 runner.check(sampleCnt == maxSamples)
 dem = nil
 
-
-print(string.format("\n-------------------------------------------------\nLandsat Subset test\n-------------------------------------------------"))
-
-local geojsonfile = td.."../data/hls_trimmed.geojson"
-local f = io.open(geojsonfile, "r")
-local contents = f:read("*all")
-f:close()
-
--- AOI extent (extent of hls_trimmed.geojson)
-llx =  -179.87
-lly =    50.45
-urx =  -178.27
-ury =    51.44
-
-
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
-local starttime = time.latch();
-local tbl, status = dem:subset(llx, lly, urx, ury)
-local stoptime = time.latch();
-
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-local threadCnt = 0
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        threadCnt = threadCnt + 1
-    end
-end
-print(string.format("subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
-runner.check(threadCnt == 59)
-
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
-        local datatype = v["datatype"]
-
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
-
-        if i == 1 then
-            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
-        end
-    end
-end
 
 
 

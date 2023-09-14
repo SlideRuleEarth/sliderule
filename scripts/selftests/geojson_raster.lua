@@ -20,9 +20,8 @@ else
     runner.check(false, "failed to open geojson file")
 end
 
-local len = string.len(vectorfile)
 local cellsize = 0.01
-local params = {data = vectorfile, length = len, cellsize = cellsize}
+local params = {data = vectorfile, cellsize = cellsize}
 
 local robj = geo.geojson(params)
 runner.check(robj ~= nil)

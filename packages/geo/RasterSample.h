@@ -108,37 +108,37 @@ public:
     fileId(_fileId) {}
 
    static uint64_t getmaxMem (void) { return maxsize; }
-   static bool     memreserve(uint64_t memsize) { return updateMemPool(memsize, RESERVER); }
-   static bool     memrelese (uint64_t memsize, uint8_t* dptr)  { return updateMemPool(memsize, RELEASE, dptr); }
+   static uint8_t* memget    (uint64_t memsize) { return updateMemPool(GET, memsize); }
+   static void     memfree   (uint8_t* dptr, uint64_t memsize) { updateMemPool(FREE, memsize, dptr); }
 
 private:
     typedef enum
     {
-        RESERVER = 1,
-        RELEASE = 2
+        GET = 1,
+        FREE = 2
     } memrequest_t;
 
     static const int64_t oneGB   = 0x40000000;
     static const int64_t maxsize = oneGB * 6;
 
-    static bool updateMemPool(int64_t memsize, memrequest_t requestType, uint8_t* dptr=NULL)
+    static uint8_t* updateMemPool(memrequest_t requestType, int64_t memsize, uint8_t* dptr=NULL)
     {
         static int64_t poolsize = maxsize;
-        bool status = false;
         static Mutex mutex;
+        uint8_t* _dptr = NULL;
 
         mutex.lock();
         {
-            if(requestType == RESERVER)
+            if(requestType == GET)
             {
                 int64_t newpoolsize = poolsize - memsize;
                 if(newpoolsize >= 0)
                 {
                     poolsize = newpoolsize;
-                    status   = true;
+                    _dptr = new uint8_t[memsize];
                 }
             }
-            else if(requestType == RELEASE)
+            else if(requestType == FREE)
             {
                 poolsize += memsize;
                 if(poolsize > maxsize)
@@ -146,17 +146,15 @@ private:
                     poolsize = maxsize;
                 }
                 if(dptr) delete [] dptr;
-                status = true;
             }
         }
         mutex.unlock();
 
-#if 0
         const float oneMB = 1024 * 1024;
-        printf("%s mempoool %5.0f / %.0f MB    %12.2f MB\n", requestType == RESERVER ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
-#endif
+        mlog(DEBUG, "%s mempoool %5.0f / %.0f MB    %12.2f MB", requestType == GET ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
+        // printf("%s mempoool %5.0f / %.0f MB    %12.2f MB\n", requestType == GET ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
 
-        return status;
+        return _dptr;
    }
 };
 

@@ -95,7 +95,7 @@ void GdalRaster::open(void)
         return;
     }
 
-    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY | GDAL_OF_VERBOSE_ERROR, NULL, NULL, NULL);
+    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
     if(dset == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
 
@@ -272,33 +272,32 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
             lry = extlry;
         }
 
-        uint64_t cols2read = lrx - ulx;
-        uint64_t rows2read = lry - uly;
+        int64_t cols2read = lrx - ulx;
+        int64_t rows2read = lry - uly;
 
-        uint64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
-        uint64_t maxperThread = subset.getmaxMem() / 2;
+        int64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
+        int64_t maxperThread = subset.getmaxMem() / 2;
         if(size > maxperThread)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ldMB, max perthread allowed: %ldMB",
+            throw RunTimeException(CRITICAL, RTE_ERROR, "subset thread requested too much memory: %ld MB, max per thread allowed: %ld MB",
                   size/(1024*1024), maxperThread/(1024*1024));
 
-        if(!subset.memreserve(size))
+        uint8_t* data = subset.memget(size);
+        if(data == NULL)
             throw RunTimeException(CRITICAL, RTE_ERROR, "mempool depleted, request: %.2f MB", (float)size/(1024*1024));
 
-        uint8_t* data = new uint8_t[size];
-
-        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
-             size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
+        // mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
+        //      size, (float)size/(1024*1024), ulx, uly, cols2read, rows2read, GDALGetDataTypeName(dtype));
 
         int cnt = 1;
         err = CE_None;
         do
         {
             err = band->RasterIO(GF_Read, ulx, uly, cols2read, rows2read, data, cols2read, rows2read, dtype, 0, 0, NULL);
-        } while(err != CE_None && cnt--);
+        } while(err != CE_None && cnt-- && s3sleep());
 
         if(err != CE_None)
         {
-            subset.memrelese(size, data);
+            subset.memfree(data, size);
             throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
         }
 
@@ -405,8 +404,8 @@ void GdalRaster::readPixel(const OGRPoint* poi)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * poi->getX()) + (invGeoTrans[2] * poi->getY()))));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * poi->getY()) + (invGeoTrans[5] * poi->getY()))));
 
         // mlog(DEBUG, "%dP, %dL\n", col, row);
 
@@ -424,7 +423,7 @@ void GdalRaster::readPixel(const OGRPoint* poi)
         {
             /* Retry read if error */
             block = band->GetLockedBlockRef(xblk, yblk, false);
-        } while (block == NULL && cnt--);
+        } while(block == NULL && cnt-- && s3sleep());
         CHECKPTR(block);
 
         /* Get data block pointer, no memory copied but block is locked */
@@ -528,6 +527,7 @@ void GdalRaster::readPixel(const OGRPoint* poi)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error reading from raster: %s", e.what());
+        throw;
     }
 }
 
@@ -538,8 +538,8 @@ void GdalRaster::resamplePixel(const OGRPoint* poi)
 {
     try
     {
-        const int col = static_cast<int>(floor(invGeoTrans[0] + invGeoTrans[1] * poi->getX() + invGeoTrans[2] * poi->getY()));
-        const int row = static_cast<int>(floor(invGeoTrans[3] + invGeoTrans[4] * poi->getY() + invGeoTrans[5] * poi->getY()));
+        const int col = static_cast<int>(floor(invGeoTrans[0] + ((invGeoTrans[1] * poi->getX()) + (invGeoTrans[2] * poi->getY()))));
+        const int row = static_cast<int>(floor(invGeoTrans[3] + ((invGeoTrans[4] * poi->getY()) + (invGeoTrans[5] * poi->getY()))));
 
         int windowSize, offset;
 
@@ -597,6 +597,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi)
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error resampling pixel: %s", e.what());
+        throw;
     }
 }
 
@@ -713,6 +714,8 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error computing zonal stats: %s", e.what());
+        if(samplesArray) delete[] samplesArray;
+        throw;
     }
 
     if(samplesArray) delete[] samplesArray;
@@ -837,7 +840,7 @@ void GdalRaster::readRasterWithRetry(int col, int row, int colSize, int rowSize,
     do
     {
         err = band->RasterIO(GF_Read, col, row, colSize, rowSize, data, dataColSize, dataRowSize, GDT_Float64, 0, 0, args);
-    } while (err != CE_None && cnt--);
+    } while(err != CE_None && cnt-- && s3sleep());
 
     if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
 }

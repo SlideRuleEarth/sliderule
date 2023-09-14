@@ -107,6 +107,8 @@ for i = 1, #demTypes do
                     expected_max = expected_value + 0.0000001
                     expected_min = expected_value - 0.0000001
                     runner.check(el <= expected_max and el >= expected_min)
+                else
+                    runner.check(el > 300)  --All others
                 end
             end
         end
@@ -159,6 +161,8 @@ for i = 1, #demTypes do
                         expElevation = expResultsStrips[j]
                     end
                     runner.check(math.abs(el - expElevation) < sigma)
+                else
+                    runner.check(el > 1340)  --All others must at least be 1340
                 end
             end
         end
