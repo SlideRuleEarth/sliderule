@@ -65,7 +65,7 @@ class LuaEndpoint: public EndpointObject
         static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
         static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
 
-        static const int MAX_SOURCED_RESPONSE_SIZE = 1048576; // 1M
+        static const int MAX_SOURCED_RESPONSE_SIZE = 0x8000000; // 128M
         static const int MAX_RESPONSE_TIME_MS = 5000;
         static const int INITIAL_NUM_ENDPOINTS = 32;
         static const int MAX_EXCEPTION_TEXT_SIZE = 256;

@@ -85,6 +85,7 @@ public:
     uint8_t*     data;
     uint32_t     cols;
     uint32_t     rows;
+    uint32_t     size;
     GDALDataType datatype;
     double       time;   // gps seconds
     uint64_t     fileId;
@@ -103,6 +104,7 @@ public:
     data(_data),
     cols(0),
     rows(0),
+    size(0),
     datatype(GDT_Unknown),
     time(_time),
     fileId(_fileId) {}

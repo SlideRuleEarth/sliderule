@@ -1,7 +1,7 @@
 --
 -- ENDPOINT:    /source/samples
 --
--- PURPOSE:     return a sample from the ArcticDEM given a lat and lon
+-- PURPOSE:     return a sample from a rastar dataset given a lat and lon
 --
 -- INPUT:       rqst
 --              {

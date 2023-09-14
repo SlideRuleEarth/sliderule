@@ -306,6 +306,7 @@ void GdalRaster::subsetAOI(OGRPolygon* poly)
         /* Update subset info returned to caller */
         subset.data     = data;
         subset.datatype = dtype;
+        subset.size     = size;
         subset.cols     = cols2read;
         subset.rows     = rows2read;
         subset.time     = gpsTime;

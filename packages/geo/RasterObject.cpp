@@ -262,7 +262,7 @@ int RasterObject::luaSamples(lua_State *L)
 
 
 /*----------------------------------------------------------------------------
- * luaSubset - :subset(ulx, uly, lrx, lry) --> in|out
+ * luaSubset - :subset(lon_min, lat_min, lon_max, lat_max) --> in|out
  *----------------------------------------------------------------------------*/
 int RasterObject::luaSubset(lua_State *L)
 {
@@ -314,27 +314,33 @@ int RasterObject::luaSubset(lua_State *L)
                         break;
                     }
                 }
-
+                
+                /* Populate Return Results */
                 lua_createtable(L, 0, 2);
                 LuaEngine::setAttrStr(L, "file", fileName);
                 LuaEngine::setAttrInt(L, "fileid", subset.fileId);
                 LuaEngine::setAttrNum(L, "time", subset.time);
-                LuaEngine::setAttrInt(L, "data", (uint64_t)subset.data);
+                if(subset.size < 0x1000000) // 16MB
+                {
+                    std::string data_b64_str = MathLib::b64encode(subset.data, subset.size);
+                    LuaEngine::setAttrStr(L, "data", data_b64_str.c_str(), data_b64_str.size());
+                }
+                else
+                {
+                    LuaEngine::setAttrStr(L, "data", "", 0);
+                }
                 LuaEngine::setAttrInt(L, "cols", subset.cols);
                 LuaEngine::setAttrInt(L, "rows", subset.rows);
                 LuaEngine::setAttrNum(L, "datatype", subset.datatype);
                 lua_rawseti(L, -2, i+1);
 
-                /* LUA script should free this memory but for now this will work */
-                {
-                    uint64_t size = subset.cols * subset.rows * GDALGetDataTypeSizeBytes(subset.datatype);
-                    subset.memfree(subset.data, size);
-                }
+                /* Free Subset Data */
+                RasterSubset::memfree(subset.data, subset.size);
             }
             num_ret++;
             status = true;
         } else mlog(DEBUG, "No subsets read");
-    }
+   }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Failed to subset raster: %s", e.what());
