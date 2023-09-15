@@ -50,6 +50,7 @@ const struct luaL_Reg LuaLibraryMsg::msgLibsF [] = {
     {"subscribe",     LuaLibraryMsg::lmsg_subscribe},
     {"create",        LuaLibraryMsg::lmsg_create},
     {"definition",    LuaLibraryMsg::lmsg_definition},
+    {"datatype",      LuaLibraryMsg::lmsg_datatype},
     {NULL, NULL}
 };
 
@@ -343,6 +344,25 @@ int LuaLibraryMsg::lmsg_definition(lua_State* L)
 
     /* Return Table */
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_datatype - str = msg.datatype(<field type>)
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_datatype(lua_State* L)
+{
+    /* Get Record Type */
+    if(lua_isnumber(L, 1))
+    {
+        long datatype = lua_tointeger(L, 1);
+        const char* datatypestr = RecordObject::ft2str((RecordObject::fieldType_t)datatype);
+        lua_pushstring(L, datatypestr);
+        return 1;
+    }
+    else
+    {
+        return luaL_error(L, "invalid data type specified");
+    }
 }
 
 /*----------------------------------------------------------------------------

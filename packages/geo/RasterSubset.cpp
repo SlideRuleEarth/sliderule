@@ -29,61 +29,78 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geo_raster__
-#define __geo_raster__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GdalRaster.h"
-#include "RasterObject.h"
+#include "OsApi.h"
+#include "RasterSubset.h"
 
 /******************************************************************************
- * GEO RASTER CLASS
+ * STATIC DATA
  ******************************************************************************/
 
-class GeoRaster: public RasterObject
+uint64_t RasterSubset::poolsize = RasterSubset::MAX_SIZE;
+Mutex RasterSubset::mutex;
+
+/******************************************************************************
+ * PUBLIC METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype, double _time, double _fileId):
+    data(NULL),
+    size(0),
+    cols(_cols),
+    rows(_rows),
+    datatype(_datatype),
+    time(_time),
+    fileId(_fileId)
 {
-    public:
+    /* Calculate Size of Buffer */
+    if(datatype >= 0 && datatype <= RecordObject::INVALID_FIELD)
+    {
+        size = cols * rows * RecordObject::FIELD_TYPE_BYTES[datatype];
+    }
+    else
+    {
+        size = 0;
+    }
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    /* Check for Available Memory */
+    bool allocate = false;
+    mutex.lock();
+    {
+        if(size > 0 && size < poolsize)
+        {
+            poolsize -= size;
+            allocate = true;
+        }
+    }
+    mutex.unlock();
 
-        virtual ~GeoRaster  (void);
-        void     getSamples (double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
-        void     getSubsets (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
+    /* Check Ability to Allocate */
+    if(!allocate)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "RasterSubset requested invalid memory size: %ldMB (max per thread allowed: %ldMB)",
+                                size / (1024*1024), MAX_SIZE / (1024*1024));
+    }
 
-    protected:
+    /* Allocate Buffer */
+    data = new uint8_t [size];
+}
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-         GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
-
-         const std::string getFileName(void)
-         {
-             return raster.getFileName();
-         }
-
-    private:
-
-        /*--------------------------------------------------------------------
-        * Data
-        *--------------------------------------------------------------------*/
-
-        Mutex      samplingMutex;
-        GdalRaster raster;
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        static int luaDimensions(lua_State* L);
-        static int luaBoundingBox(lua_State* L);
-        static int luaCellSize(lua_State* L);
-};
-
-#endif  /* __geo_raster__ */
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+RasterSubset::~RasterSubset( void )
+{
+    mutex.lock();
+    {
+        poolsize += size;
+    }
+    mutex.unlock();
+    delete [] data;
+}

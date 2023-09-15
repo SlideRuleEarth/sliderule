@@ -38,6 +38,7 @@
 
 #include "GeoParms.h"
 #include "RasterSample.h"
+#include "RasterSubset.h"
 #include <ogrsf_frmts.h>
 #include <thread>
 
@@ -100,15 +101,12 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool _dataIsElevation, overrideCRS_t cb);
+                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb);
         virtual           ~GdalRaster     (void);
         void               open           (void);
-        void               samplePOI      (OGRPoint* poi);
-        void               subsetAOI      (OGRPolygon* poly);
+        RasterSample*      samplePOI      (OGRPoint* poi);
+        RasterSubset*      subsetAOI      (OGRPolygon* poly);
         const std::string& getFileName    (void) { return fileName;}
-        RasterSample&      getSample      (void) { return sample; }
-        RasterSubset&      getSubset      (void) { return subset; }
-        bool               sampled        (void) { return _sampled; }
         int                getRows        (void) { return rows; }
         int                getCols        (void) { return cols; }
         const bbox_t&      getBbox        (void) { return bbox; }
@@ -128,23 +126,12 @@ class GdalRaster
     private:
 
         /*--------------------------------------------------------------------
-        * Constants
-        *--------------------------------------------------------------------*/
-
-        /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
         GeoParms*      parms;
-        bool          _sampled;
         double         gpsTime;  /* Time the raster data was collected and/or generated */
-
-        /* Last sample information */
-        RasterSample   sample;
-        double         verticalShift;  /* Calculated for last POI transformed to target CRS */
-
-        /* Last subset information */
-        RasterSubset   subset;
+        uint64_t       fileId; /* unique identifier of raster file used for downstream processing */
 
         OGRCoordinateTransformation* transf;
         OGRSpatialReference sourceCRS;
@@ -166,10 +153,10 @@ class GdalRaster
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        readPixel           (const OGRPoint* poi);
-        void        resamplePixel       (const OGRPoint* poi);
-        void        computeZonalStats   (const OGRPoint* poi);
-        inline bool nodataCheck         (void);
+        void        readPixel           (const OGRPoint* poi, RasterSample* sample);
+        void        resamplePixel       (const OGRPoint* poi, RasterSample* sample);
+        void        computeZonalStats   (const OGRPoint* poi, RasterSample* sample);
+        inline bool nodataCheck         (RasterSample* sample);
         void        createTransform     (void);
         int         radius2pixels       (int _radius);
         inline bool containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);

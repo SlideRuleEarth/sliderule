@@ -29,61 +29,40 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geo_raster__
-#define __geo_raster__
+#ifndef __raster_subset__
+#define __raster_subset__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GdalRaster.h"
-#include "RasterObject.h"
+#include "OsApi.h"
+#include "RecordObject.h"
 
 /******************************************************************************
- * GEO RASTER CLASS
+ * RASTER SUBSET CLASS
  ******************************************************************************/
 
-class GeoRaster: public RasterObject
+class RasterSubset
 {
     public:
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        uint8_t*                    data;
+        uint64_t                    size;
+        uint32_t                    cols;
+        uint32_t                    rows;
+        RecordObject::fieldType_t   datatype;
+        double                      time; // gps seconds
+        uint64_t                    fileId;
 
-        virtual ~GeoRaster  (void);
-        void     getSamples (double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
-        void     getSubsets (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
+        static const uint64_t       oneGB    = 0x40000000;
+        static const uint64_t       MAX_SIZE = oneGB * 6;
 
-    protected:
+        static uint64_t             poolsize;
+        static Mutex                mutex;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-         GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
-
-         const std::string getFileName(void)
-         {
-             return raster.getFileName();
-         }
-
-    private:
-
-        /*--------------------------------------------------------------------
-        * Data
-        *--------------------------------------------------------------------*/
-
-        Mutex      samplingMutex;
-        GdalRaster raster;
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        static int luaDimensions(lua_State* L);
-        static int luaBoundingBox(lua_State* L);
-        static int luaCellSize(lua_State* L);
+        RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype, double _time, double _fileId);
+        ~RasterSubset(void);
 };
 
-#endif  /* __geo_raster__ */
+#endif /* __raster_subset__ */

@@ -246,7 +246,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags)
+void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags)
 {
     /* Which group is it? Landsat8 or Sentinel2 */
     bool isL8 = false;
@@ -273,12 +273,10 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vect
         cacheitem_t* item;
         if(cache.find(key, &item))
         {
-            if(item->enabled && item->raster->sampled())
+            RasterSample* sample = item->sample;
+            if(sample)
             {
-                /* Update dictionary of used raster files */
-                RasterSample& sample  = item->raster->getSample();
-                sample.fileId = fileDictAdd(item->raster->getFileName());
-                sample.flags  = flags;
+                sample->flags  = flags;
 
                 /* Is this band's sample to be returned to the user? */
                 bool returnBandSample = false;
@@ -286,65 +284,58 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vect
                 if(bandsDict.find(bandName, &returnBandSample))
                 {
                     if(returnBandSample)
+                    {
                         slist.push_back(sample);
+                        item->sample = NULL;
+                    }
                 }
 
                 /* green and red bands are the same for L8 and S2 */
-                if(rinfo.tag == "B03") green = sample.value;
-                if(rinfo.tag == "B04") red = sample.value;
+                if(rinfo.tag == "B03") green = sample->value;
+                if(rinfo.tag == "B04") red = sample->value;
 
                 if(isL8)
                 {
-                    if(rinfo.tag == "B05") nir08 = sample.value;
-                    if(rinfo.tag == "B06") swir16 = sample.value;
+                    if(rinfo.tag == "B05") nir08 = sample->value;
+                    if(rinfo.tag == "B06") swir16 = sample->value;
                 }
                 else /* Must be Sentinel2 */
                 {
-                    if(rinfo.tag == "B8A") nir08 = sample.value;
-                    if(rinfo.tag == "B11") swir16 = sample.value;
+                    if(rinfo.tag == "B8A") nir08 = sample->value;
+                    if(rinfo.tag == "B11") swir16 = sample->value;
                 }
             }
         }
     }
 
-    RasterSample sample;
     double groupTime = rgroup->gpsTime / 1000;
     std::string groupName = rgroup->id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)
     {
-        sample.clear();
+        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDSI\"}"));
         if((green != invalid) && (swir16 != invalid))
-            sample.value = (green - swir16) / (green + swir16);
-        else sample.value = invalid;
-
-        sample.time   = groupTime;
-        sample.fileId = fileDictAdd(groupName + "NDSI\"}");
+            sample->value = (green - swir16) / (green + swir16);
+        else sample->value = invalid;
         slist.push_back(sample);
     }
 
     if(ndvi)
     {
-        sample.clear();
+        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDVI\"}"));
         if((red != invalid) && (nir08 != invalid))
-            sample.value = (nir08 - red) / (nir08 + red);
-        else sample.value = invalid;
-
-        sample.time   = groupTime;
-        sample.fileId = fileDictAdd(groupName + "NDVI\"}");
+            sample->value = (nir08 - red) / (nir08 + red);
+        else sample->value = invalid;
         slist.push_back(sample);
     }
 
     if(ndwi)
     {
-        sample.clear();
+        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDWI\"}"));
         if((nir08 != invalid) && (swir16 != invalid))
-            sample.value = (nir08 - swir16) / (nir08 + swir16);
-        else sample.value = invalid;
-
-        sample.time   = groupTime;
-        sample.fileId = fileDictAdd(groupName + "NDWI\"}");
+            sample->value = (nir08 - swir16) / (nir08 + swir16);
+        else sample->value = invalid;
         slist.push_back(sample);
     }
 }

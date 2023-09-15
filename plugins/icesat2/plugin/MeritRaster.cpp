@@ -112,7 +112,7 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
+void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     (void)param;
     (void)gps;
@@ -192,7 +192,8 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
         }
 
         /* Build Sample */
-        RasterSample sample(value, ((double)gpsTime / (double)1000.0));
+        RasterSample* sample = new RasterSample(((double)gpsTime / (double)1000.0), 0);
+        sample->value = value;
 
         /* Return Sample */
         slist.push_back(sample);
@@ -206,7 +207,7 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void MeritRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
     std::ignore = lon_min = lon_max = lat_max = lat_min = gps;
     std::ignore = slist;

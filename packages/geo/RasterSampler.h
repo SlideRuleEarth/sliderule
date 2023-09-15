@@ -88,6 +88,14 @@ class RasterSampler: public DispatchObject
             uint32_t            flags;
         } sample_t;
 
+        /* Sample */
+        typedef struct {
+            double                  time;
+            uint64_t                file_id;
+            uint32_t                flags;
+            RasterSample::zonal_t   stats;
+        } zonal_t;
+
         /* Extent Sample Record */
         typedef struct {
             uint64_t            index;
@@ -101,7 +109,7 @@ class RasterSampler: public DispatchObject
             uint64_t            index;
             char                raster_key[RASTER_KEY_MAX_LEN];
             uint32_t            num_samples;
-            RasterSample        samples[];
+            zonal_t             samples[];
         } zs_geo_t;
 
         /* File Directory Entry Record */

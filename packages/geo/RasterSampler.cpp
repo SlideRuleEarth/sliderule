@@ -48,41 +48,40 @@ const struct luaL_Reg RasterSampler::LuaMetaTable[] = {
 
 const char* RasterSampler::rsSampleRecType = "rsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::rsSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),      1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),       1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT64,   offsetof(sample_t, file_id),    1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),      1,  NULL, NATIVE_FLAGS}
+    {"value",           RecordObject::DOUBLE,   offsetof(sample_t, value),          1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(sample_t, time),           1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT64,   offsetof(sample_t, file_id),        1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(sample_t, flags),          1,  NULL, NATIVE_FLAGS}
 };
 
 const char* RasterSampler::rsGeoRecType = "rsrec";
 const RecordObject::fieldDef_t RasterSampler::rsGeoRecDef[] = {
-    {"index",           RecordObject::UINT64,   offsetof(rs_geo_t, index),           1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(rs_geo_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(rs_geo_t, num_samples),     1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(rs_geo_t, samples),         0,  rsSampleRecType, NATIVE_FLAGS} // variable length
+    {"index",           RecordObject::UINT64,   offsetof(rs_geo_t, index),          1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(rs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(rs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(rs_geo_t, samples),        0,  rsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* RasterSampler::zsSampleRecType = "zsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
-    {"value",           RecordObject::DOUBLE,   offsetof(RasterSample, value),        1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::DOUBLE,   offsetof(RasterSample, time),         1,  NULL, NATIVE_FLAGS},
-    {"file_id",         RecordObject::UINT64,   offsetof(RasterSample, fileId),       1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT32,   offsetof(RasterSample, flags),        1,  NULL, NATIVE_FLAGS},
-    {"count",           RecordObject::UINT32,   offsetof(RasterSample, stats.count),  1,  NULL, NATIVE_FLAGS},
-    {"min",             RecordObject::DOUBLE,   offsetof(RasterSample, stats.min),    1,  NULL, NATIVE_FLAGS},
-    {"max",             RecordObject::DOUBLE,   offsetof(RasterSample, stats.max),    1,  NULL, NATIVE_FLAGS},
-    {"mean",            RecordObject::DOUBLE,   offsetof(RasterSample, stats.mean),   1,  NULL, NATIVE_FLAGS},
-    {"median",          RecordObject::DOUBLE,   offsetof(RasterSample, stats.median), 1,  NULL, NATIVE_FLAGS},
-    {"stdev",           RecordObject::DOUBLE,   offsetof(RasterSample, stats.stdev),  1,  NULL, NATIVE_FLAGS},
-    {"mad",             RecordObject::DOUBLE,   offsetof(RasterSample, stats.mad),    1,  NULL, NATIVE_FLAGS}
+    {"time",            RecordObject::DOUBLE,   offsetof(zonal_t, time),            1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT64,   offsetof(zonal_t, file_id),         1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(zonal_t, flags),           1,  NULL, NATIVE_FLAGS},
+    {"count",           RecordObject::UINT32,   offsetof(zonal_t, stats.count),     1,  NULL, NATIVE_FLAGS},
+    {"min",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.min),       1,  NULL, NATIVE_FLAGS},
+    {"max",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.max),       1,  NULL, NATIVE_FLAGS},
+    {"mean",            RecordObject::DOUBLE,   offsetof(zonal_t, stats.mean),      1,  NULL, NATIVE_FLAGS},
+    {"median",          RecordObject::DOUBLE,   offsetof(zonal_t, stats.median),    1,  NULL, NATIVE_FLAGS},
+    {"stdev",           RecordObject::DOUBLE,   offsetof(zonal_t, stats.stdev),     1,  NULL, NATIVE_FLAGS},
+    {"mad",             RecordObject::DOUBLE,   offsetof(zonal_t, stats.mad),       1,  NULL, NATIVE_FLAGS}
 };
 
 const char* RasterSampler::zsGeoRecType = "zsrec";
 const RecordObject::fieldDef_t RasterSampler::zsGeoRecDef[] = {
-    {"index",           RecordObject::UINT64,   offsetof(zs_geo_t, index),           1,  NULL, NATIVE_FLAGS},
-    {"key",             RecordObject::STRING,   offsetof(zs_geo_t, raster_key),      RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
-    {"num_samples",     RecordObject::UINT32,   offsetof(zs_geo_t, num_samples),     1,  NULL, NATIVE_FLAGS},
-    {"samples",         RecordObject::USER,     offsetof(zs_geo_t, samples),         0,  zsSampleRecType, NATIVE_FLAGS} // variable length
+    {"index",           RecordObject::UINT64,   offsetof(zs_geo_t, index),          1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(zs_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(zs_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(zs_geo_t, samples),        0,  zsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
 const char* RasterSampler::fileIdRecType = "fileidrec";
@@ -311,19 +310,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         }
 
         /* Sample Raster */
-        std::vector<RasterSample> slist;
-        int num_samples = 0;
-        try
-        {
-            raster->getSamples(lon_val, lat_val, height_val, gps, slist);
-            num_samples = slist.size();
-        }
-        catch(const RunTimeException& e)
-        {
-            LuaEndpoint::generateExceptionStatus(RTE_ERROR, e.level(), outQ, NULL,
-                                                "Exception caught when sampling %s at %.3lf,%.3lf,%3lf: %s",
-                                                rasterKey, lon_val, lat_val, height_val, e.what());
-        }
+        std::vector<RasterSample*> slist;
+        raster->getSamples(lon_val, lat_val, height_val, gps, slist);
+        int num_samples = slist.size();
 
         if(raster->hasZonalStats())
         {
@@ -336,7 +325,11 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             data->num_samples = num_samples;
             for(int i = 0; i < num_samples; i++)
             {
-                data->samples[i] = slist[i];
+                data->samples[i].time       = slist[i]->time;
+                data->samples[i].file_id    = slist[i]->fileId;
+                data->samples[i].flags      = slist[i]->flags;
+                data->samples[i].stats      = slist[i]->stats;
+                delete slist[i]; // free sample
             }
             if(!stats_rec.post(outQ))
             {
@@ -354,10 +347,11 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             data->num_samples = num_samples;
             for(int i = 0; i < num_samples; i++)
             {
-                data->samples[i].value = slist[i].value;
-                data->samples[i].time = slist[i].time;
-                data->samples[i].file_id = slist[i].fileId;
-                data->samples[i].flags = slist[i].flags;
+                data->samples[i].value      = slist[i]->value;
+                data->samples[i].time       = slist[i]->time;
+                data->samples[i].file_id    = slist[i]->fileId;
+                data->samples[i].flags      = slist[i]->flags;
+                delete slist[i]; // free sample
             }
             if(!sample_rec.post(outQ))
             {

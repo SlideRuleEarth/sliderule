@@ -9,26 +9,6 @@ json = require("json")
 
 local assets = asset.loaddir()
 
-local GDT_datasize = {  1,  --GDT_Byte
-                        2,  --GDT_UInt16
-                        2,  --GDT_Int16
-                        4,  --GDT_UInt32
-                        4,  --GDT_Int32
-                        4,  --GDT_Float32
-                        8,  --GDT_Float64
-                        8,  --GDT_CInt16
-                        8,  --GDT_CInt32
-                        10, --GDT_CFloat32
-                        11, --GDT_CFloat64
-                        12, --GDT_UInt64
-                        13, --GDT_Int64
-                        14, --GDT_Int8
-                      }
-
-local GDT_dataname = {"GDT_Byte",   "GDT_UInt16", "GDT_Int16",    "GDT_UInt32",   "GDT_Int32",  "GDT_Float32", "GDT_Float64",
-                      "GDT_CInt16", "GDT_CInt32", "GDT_CFloat32", "GDT_CFloat64", "GDT_UInt64", "GDT_Int64",   "GDT_Int8"}
-
-
 -- Unit Test --
 
 
@@ -67,13 +47,13 @@ for i = 1, #demTypes do
     for i, v in ipairs(tbl) do
         local cols = v["cols"]
         local rows = v["rows"]
+        local size = v["size"]
         local datatype = v["datatype"]
 
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
+        local mbytes = size / (1024*1024)
         -- This results in 12 threads, all the same size, cols, buffs data type. Print only first one
         if i == 1 then
-            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
         end
 
         runner.check(cols > 0)

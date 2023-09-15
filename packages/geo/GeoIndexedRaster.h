@@ -75,21 +75,22 @@ class GeoIndexedRaster: public RasterObject
             int64_t                    gpsTime;
         } rasters_group_t;
 
+        typedef struct cacheitem {
+            bool            enabled;
+            RasterSample*   sample;
+            RasterSubset*   subset;
+            GdalRaster*     raster;
+            ~cacheitem(void) {delete raster;}
+        } cacheitem_t;
+
         typedef struct {
             GeoIndexedRaster* obj;
             OGRGeometry* geo;
             Thread*      thread;
-            GdalRaster*  raster;
+            cacheitem_t* entry;
             Cond*        sync;
             bool         run;
         } reader_t;
-
-        typedef struct cacheitem {
-            bool        enabled;
-            double      useTime;
-            GdalRaster* raster;
-            ~cacheitem(void) {delete raster;}
-        } cacheitem_t;
 
 
         /*--------------------------------------------------------------------
@@ -98,8 +99,8 @@ class GeoIndexedRaster: public RasterObject
 
         static void     init              (void);
         static void     deinit            (void);
-        void            getSamples        (double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param=NULL) final;
-        void            getSubsets        (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param=NULL) final;
+        void            getSamples        (double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
+        void            getSubsets        (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
         virtual        ~GeoIndexedRaster  (void);
 
     protected:
@@ -109,15 +110,15 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
-        virtual void    getGroupSamples       (const rasters_group_t* rgroup, std::vector<RasterSample>& slist, uint32_t flags);
-        virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset>& slist);
+        virtual void    getGroupSamples       (const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags);
+        virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset*>& slist);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         virtual void    openGeoIndex          (const OGRGeometry* geo);
         virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool    findRasters           (const OGRGeometry* geo) = 0;
         void            sampleRasters         (OGRGeometry* geo);
-        int             sample                (OGRGeometry* geo, int64_t gps);
+        void            sample                (OGRGeometry* geo, int64_t gps);
         void            emptyFeaturesList     (void);
 
         /* Inline for performance */
@@ -133,11 +134,10 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Mutex                       samplingMutex;
-        Ordering<rasters_group_t*>  groupList;
-        MgDictionary<cacheitem_t*>  cache;
-        List<OGRFeature*>           featuresList;
-        bool                        forceNotElevation;
+        Mutex                           samplingMutex;
+        MgOrdering<rasters_group_t*>    groupList;
+        MgDictionary<cacheitem_t*>      cache;
+        List<OGRFeature*>               featuresList;
 
     private:
 
@@ -160,7 +160,6 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
-        std::atomic_int           sampledRastersCnt;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -174,9 +173,7 @@ class GeoIndexedRaster: public RasterObject
 
         void       createThreads           (void);
         void       updateCache             (void);
-        void       invalidateCache         (void);
         bool       filterRasters           (int64_t gps);
-        void       emptyGroupsList         (void);
 };
 
 

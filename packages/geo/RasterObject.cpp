@@ -198,7 +198,7 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Get samples */
-        std::vector<RasterSample> slist;
+        std::vector<RasterSample*> slist;
         lua_obj->getSamples(lon, lat, height, gps, slist, NULL);
 
         if(slist.size() > 0)
@@ -208,14 +208,14 @@ int RasterObject::luaSamples(lua_State *L)
 
             for(uint32_t i = 0; i < slist.size(); i++)
             {
-                const RasterSample& sample = slist[i];
+                const RasterSample* sample = slist[i];
                 const char* fileName = "";
 
                 /* Find fileName from fileId */
                 Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
                 for(int j = 0; j < iterator.length; j++)
                 {
-                    if(iterator[j].value == sample.fileId)
+                    if(iterator[j].value == sample->fileId)
                     {
                         fileName = iterator[j].key;
                         break;
@@ -228,24 +228,26 @@ int RasterObject::luaSamples(lua_State *L)
 
                 if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
                 {
-                    LuaEngine::setAttrNum(L, "mad", sample.stats.mad);
-                    LuaEngine::setAttrNum(L, "stdev", sample.stats.stdev);
-                    LuaEngine::setAttrNum(L, "median", sample.stats.median);
-                    LuaEngine::setAttrNum(L, "mean", sample.stats.mean);
-                    LuaEngine::setAttrNum(L, "max", sample.stats.max);
-                    LuaEngine::setAttrNum(L, "min", sample.stats.min);
-                    LuaEngine::setAttrNum(L, "count", sample.stats.count);
+                    LuaEngine::setAttrNum(L, "mad", sample->stats.mad);
+                    LuaEngine::setAttrNum(L, "stdev", sample->stats.stdev);
+                    LuaEngine::setAttrNum(L, "median", sample->stats.median);
+                    LuaEngine::setAttrNum(L, "mean", sample->stats.mean);
+                    LuaEngine::setAttrNum(L, "max", sample->stats.max);
+                    LuaEngine::setAttrNum(L, "min", sample->stats.min);
+                    LuaEngine::setAttrNum(L, "count", sample->stats.count);
                 }
 
                 if(lua_obj->parms->flags_file) /* Include flags */
                 {
-                    LuaEngine::setAttrNum(L, "flags", sample.flags);
+                    LuaEngine::setAttrNum(L, "flags", sample->flags);
                 }
 
-                LuaEngine::setAttrInt(L, "fileid", sample.fileId);
-                LuaEngine::setAttrNum(L, "time", sample.time);
-                LuaEngine::setAttrNum(L, "value", sample.value);
+                LuaEngine::setAttrInt(L, "fileid", sample->fileId);
+                LuaEngine::setAttrNum(L, "time", sample->time);
+                LuaEngine::setAttrNum(L, "value", sample->value);
                 lua_rawseti(L, -2, i+1);
+
+                delete sample; // free RasterSample
             }
             num_ret++;
             status = true;
@@ -291,7 +293,7 @@ int RasterObject::luaSubset(lua_State *L)
         }
 
         /* Get subset */
-        std::vector<RasterSubset> slist;
+        std::vector<RasterSubset*> slist;
         lua_obj->getSubsets(lon_min, lat_min, lon_max, lat_max, gps, slist, NULL);
 
         if(slist.size() > 0)
@@ -301,14 +303,14 @@ int RasterObject::luaSubset(lua_State *L)
 
             for(uint32_t i = 0; i < slist.size(); i++)
             {
-                const RasterSubset& subset = slist[i];
+                const RasterSubset* subset = slist[i];
                 const char* fileName = "";
 
                 /* Find fileName from fileId */
                 Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
                 for(int j = 0; j < iterator.length; j++)
                 {
-                    if(iterator[j].value == subset.fileId)
+                    if(iterator[j].value == subset->fileId)
                     {
                         fileName = iterator[j].key;
                         break;
@@ -318,29 +320,29 @@ int RasterObject::luaSubset(lua_State *L)
                 /* Populate Return Results */
                 lua_createtable(L, 0, 2);
                 LuaEngine::setAttrStr(L, "file", fileName);
-                LuaEngine::setAttrInt(L, "fileid", subset.fileId);
-                LuaEngine::setAttrNum(L, "time", subset.time);
-                if(subset.size < 0x1000000) // 16MB
+                LuaEngine::setAttrInt(L, "fileid", subset->fileId);
+                LuaEngine::setAttrNum(L, "time", subset->time);
+                if(subset->size < 0x1000000) // 16MB
                 {
-                    std::string data_b64_str = MathLib::b64encode(subset.data, subset.size);
+                    std::string data_b64_str = MathLib::b64encode(subset->data, subset->size);
                     LuaEngine::setAttrStr(L, "data", data_b64_str.c_str(), data_b64_str.size());
                 }
                 else
                 {
                     LuaEngine::setAttrStr(L, "data", "", 0);
                 }
-                LuaEngine::setAttrInt(L, "cols", subset.cols);
-                LuaEngine::setAttrInt(L, "rows", subset.rows);
-                LuaEngine::setAttrNum(L, "datatype", subset.datatype);
+                LuaEngine::setAttrInt(L, "cols", subset->cols);
+                LuaEngine::setAttrInt(L, "rows", subset->rows);
+                LuaEngine::setAttrInt(L, "size", subset->size);
+                LuaEngine::setAttrNum(L, "datatype", subset->datatype);
                 lua_rawseti(L, -2, i+1);
 
-                /* Free Subset Data */
-                RasterSubset::memfree(subset.data, subset.size);
+                delete subset; // free RasterSubset
             }
             num_ret++;
             status = true;
         } else mlog(DEBUG, "No subsets read");
-   }
+    }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Failed to subset raster: %s", e.what());

@@ -10,39 +10,6 @@ local td = runner.rootdir(arg[0])
 
 local assets = asset.loaddir()
 
-local GDT_datasize = {  1,  --GDT_Byte
-                        2,  --GDT_UInt16
-                        2,  --GDT_Int16
-                        4,  --GDT_UInt32
-                        4,  --GDT_Int32
-                        4,  --GDT_Float32
-                        8,  --GDT_Float64
-                        8,  --GDT_CInt16
-                        8,  --GDT_CInt32
-                        10, --GDT_CFloat32
-                        11, --GDT_CFloat64
-                        12, --GDT_UInt64
-                        13, --GDT_Int64
-                        14, --GDT_Int8
-                      }
-
-local GDT_dataname = {  "GDT_Byte",
-                        "GDT_UInt16",
-                        "GDT_Int16",
-                        "GDT_UInt32",
-                        "GDT_Int32",
-                        "GDT_Float32",
-                        "GDT_Float64",
-                        "GDT_CInt16",
-                        "GDT_CInt32",
-                        "GDT_CFloat32",
-                        "GDT_CFloat64",
-                        "GDT_UInt64",
-                        "GDT_Int64",
-                        "GDT_Int8",
-                      }
-
-
 -- AOI extent (extent of grandmesa.geojson)
 local gm_llx = -108.3412
 local gm_lly =   38.8236
@@ -92,11 +59,11 @@ runner.check(threadCnt == 1)
 for i, v in ipairs(tbl) do
     local cols = v["cols"]
     local rows = v["rows"]
+    local size = v["size"]
     local datatype = v["datatype"]
 
-    local bytes = cols*rows* GDT_datasize[datatype]
-    local mbytes = bytes / (1024*1024)
-    print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
+    local mbytes = size / (1024*1024)
+    print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
 end
 
 
@@ -149,11 +116,11 @@ for i = 1, #demTypes do
         for i, v in ipairs(tbl) do
             local cols = v["cols"]
             local rows = v["rows"]
+            local size = v["size"]
             local datatype = v["datatype"]
 
-            local bytes = cols*rows* GDT_datasize[datatype]
-            local mbytes = bytes / (1024*1024)
-            print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            local mbytes = size / (1024*1024)
+            print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
         end
     end
 
@@ -224,13 +191,13 @@ for i = 1, #demTypes do
         for i, v in ipairs(tbl) do
             local cols = v["cols"]
             local rows = v["rows"]
+            local size = v["size"]
             local datatype = v["datatype"]
 
-            local bytes = cols*rows* GDT_datasize[datatype]
-            local mbytes = bytes / (1024*1024)
+            local mbytes = size / (1024*1024)
             -- This results in 21 threads, all the same size, cols, buffs data type. Print only first one
             if i == 1 then
-                print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+                print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
             end
         end
     end
@@ -280,15 +247,14 @@ runner.check(threadCnt == 2)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
-        local data = v["data"]
         local cols = v["cols"]
         local rows = v["rows"]
+        local size = v["size"]
         local datatype = v["datatype"]
 
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
+        local mbytes = size / (1024*1024)
         -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-        print(string.format("AOI subset datasize: %8.2f MB, cols: %6d, rows: %6d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+        print(string.format("AOI subset datasize: %8.2f MB, cols: %6d, rows: %6d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
     end
 end
 
@@ -350,14 +316,14 @@ if tbl ~= nil then
     for i, v in ipairs(tbl) do
         local cols = v["cols"]
         local rows = v["rows"]
+        local size = v["size"]
         local datatype = v["datatype"]
 
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
+        local mbytes = size / (1024*1024)
 
         -- This results in 59 threads, all the same size, cols, buffs data type. Print only first one
         if i == 1 then
-            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
         end
     end
 end

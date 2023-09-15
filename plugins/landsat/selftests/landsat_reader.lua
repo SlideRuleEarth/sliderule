@@ -11,27 +11,6 @@ local _,td = runner.srcscript()
 -- Setup --
 local assets = asset.loaddir()
 
-local GDT_datasize = {  1,  --GDT_Byte
-                        2,  --GDT_UInt16
-                        2,  --GDT_Int16
-                        4,  --GDT_UInt32
-                        4,  --GDT_Int32
-                        4,  --GDT_Float32
-                        8,  --GDT_Float64
-                        8,  --GDT_CInt16
-                        8,  --GDT_CInt32
-                        10, --GDT_CFloat32
-                        11, --GDT_CFloat64
-                        12, --GDT_UInt64
-                        13, --GDT_Int64
-                        14, --GDT_Int8
-                      }
-
-local GDT_dataname = {"GDT_Byte",   "GDT_UInt16", "GDT_Int16",    "GDT_UInt32",   "GDT_Int32",  "GDT_Float32", "GDT_Float64",
-                      "GDT_CInt16", "GDT_CInt32", "GDT_CFloat32", "GDT_CFloat64", "GDT_UInt64", "GDT_Int64",   "GDT_Int8"}
-
-
-
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
 sys.wait(5)
@@ -369,13 +348,13 @@ if tbl ~= nil then
     for i, v in ipairs(tbl) do
         local cols = v["cols"]
         local rows = v["rows"]
+        local size = v["size"]
         local datatype = v["datatype"]
 
-        local bytes = cols*rows* GDT_datasize[datatype]
-        local mbytes = bytes / (1024*1024)
+        local mbytes = size / (1024*1024)
 
         if i == 1 then
-            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, GDT_dataname[datatype]))
+            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
         end
 
         runner.check(cols > 0)

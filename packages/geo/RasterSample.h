@@ -37,8 +37,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "EventLib.h"
-#include <gdal.h>
 
 /******************************************************************************
  * RASTER SAMPLE CLASS
@@ -49,10 +47,11 @@ class RasterSample
 public:
     double value;
     double time;   // gps seconds
+    double verticalShift;
     uint64_t fileId;
     uint32_t flags;
 
-    struct
+    struct zonal_t
     {
         uint32_t count;
         double min;
@@ -63,101 +62,21 @@ public:
         double mad;
     } stats;
 
-   void clear (void)
-   {
-       value  = 0;
-       time   = 0;
-       fileId = 0;
-       flags  = 0;
-       bzero(&stats, sizeof(stats));
-   }
-
-   RasterSample(double _value = 0, double _time = 0, double _fileId = 0, double _flags = 0):
-    value(_value),
+   RasterSample(double _time, double _fileId, double _verticalShift = 0.0):
+    value(0),
     time(_time),
+    verticalShift(_verticalShift),
     fileId(_fileId),
-    flags(_flags) {}
-};
-
-class RasterSubset
-{
-public:
-    uint8_t*     data;
-    uint32_t     cols;
-    uint32_t     rows;
-    uint32_t     size;
-    GDALDataType datatype;
-    double       time;   // gps seconds
-    uint64_t     fileId;
-
-    void clear(void)
+    flags(0),
+    stats{.count = 0, 
+          .min = 0.0,
+          .max = 0.0,
+          .mean = 0.0,
+          .median = 0.0,
+          .stdev = 0.0,
+          .mad = 0.0}
     {
-        data     = NULL;
-        cols     = 0;
-        rows     = 0;
-        datatype = GDT_Unknown;
-        time     = 0;
-        fileId   = 0;
-   }
-
-   RasterSubset(uint8_t* _data = NULL, double _time = 0, double _fileId = 0):
-    data(_data),
-    cols(0),
-    rows(0),
-    size(0),
-    datatype(GDT_Unknown),
-    time(_time),
-    fileId(_fileId) {}
-
-   static uint64_t getmaxMem (void) { return maxsize; }
-   static uint8_t* memget    (uint64_t memsize) { return updateMemPool(GET, memsize); }
-   static void     memfree   (uint8_t* dptr, uint64_t memsize) { updateMemPool(FREE, memsize, dptr); }
-
-private:
-    typedef enum
-    {
-        GET = 1,
-        FREE = 2
-    } memrequest_t;
-
-    static const int64_t oneGB   = 0x40000000;
-    static const int64_t maxsize = oneGB * 6;
-
-    static uint8_t* updateMemPool(memrequest_t requestType, int64_t memsize, uint8_t* dptr=NULL)
-    {
-        static int64_t poolsize = maxsize;
-        static Mutex mutex;
-        uint8_t* _dptr = NULL;
-
-        mutex.lock();
-        {
-            if(requestType == GET)
-            {
-                int64_t newpoolsize = poolsize - memsize;
-                if(newpoolsize >= 0)
-                {
-                    poolsize = newpoolsize;
-                    _dptr = new uint8_t[memsize];
-                }
-            }
-            else if(requestType == FREE)
-            {
-                poolsize += memsize;
-                if(poolsize > maxsize)
-                {
-                    poolsize = maxsize;
-                }
-                if(dptr) delete [] dptr;
-            }
-        }
-        mutex.unlock();
-
-        const float oneMB = 1024 * 1024;
-        mlog(DEBUG, "%s mempoool %5.0f / %.0f MB    %12.2f MB", requestType == GET ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
-        // printf("%s mempoool %5.0f / %.0f MB    %12.2f MB\n", requestType == GET ? "-" : "+", poolsize/oneMB, maxsize/oneMB, memsize/oneMB);
-
-        return _dptr;
-   }
+    }
 };
 
 #endif  /* __raster_sample__ */

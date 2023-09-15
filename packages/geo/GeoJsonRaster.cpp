@@ -100,24 +100,15 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    std::vector<RasterSample> slist;
-    int sampleCnt = 0;
+    std::vector<RasterSample*> slist;
 
-    try
-    {
-        getSamples(lon, lat, height, 0, slist);
-        sampleCnt = slist.size();
-    }
-    catch(const RunTimeException& e)
-    {
-        /* Not likely to happen, GeoJsonRaster class creates it's own raster in vsimemory */
-        mlog(e.level(), "%s", e.what());
-    }
+    getSamples(lon, lat, height, 0, slist);
+    int sampleCnt = slist.size();
 
     if( sampleCnt == 0 ) return false;
     if( sampleCnt > 1  ) mlog(ERROR, "Multiple samples returned for lon: %.2lf, lat: %.2lf, using first sample", lon, lat);
 
-    return (static_cast<int>(slist[0].value) == RASTER_PIXEL_ON);
+    return (static_cast<int>(slist[0]->value) == RASTER_PIXEL_ON);
 }
 
 /*----------------------------------------------------------------------------

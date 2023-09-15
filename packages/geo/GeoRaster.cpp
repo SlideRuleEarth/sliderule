@@ -36,44 +36,33 @@
 #include "GeoRaster.h"
 
 /******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample>& slist, void* param)
+void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
 
+    OGRSpatialReference crs;
+    crs.importFromEPSG(4326);
+    crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+    OGRPoint poi(lon, lat, height);
+    poi.assignSpatialReference(&crs);
+
     samplingMutex.lock();
     try
     {
-        OGRSpatialReference crs;
-        crs.importFromEPSG(4326);
-        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        OGRPoint poi(lon, lat, height);
-        poi.assignSpatialReference(&crs);
-
-        raster.samplePOI(&poi);
-        if(raster.sampled())
-        {
-            RasterSample& sample = raster.getSample();
-            sample.fileId = fileId;
-            slist.push_back(sample);
-        }
+        RasterSample* sample = raster.samplePOI(&poi);
+        if(sample) slist.push_back(sample);
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
-        samplingMutex.unlock();
-        throw;  // rethrow exception
     }
     samplingMutex.unlock();
 }
@@ -81,35 +70,28 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset>& slist, void* param)
+void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
 
+    OGRSpatialReference crs;
+    crs.importFromEPSG(4326);
+    crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+    OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
+    poly.assignSpatialReference(&crs);
+
     samplingMutex.lock();
     try
     {
-        OGRSpatialReference crs;
-        crs.importFromEPSG(4326);
-        crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
-        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-        poly.assignSpatialReference(&crs);
-
         /* Get samples, if none found, return */
-        raster.subsetAOI(&poly);
-        if(raster.sampled())
-        {
-            RasterSubset& subset = raster.getSubset();
-            subset.fileId = fileId;
-            slist.push_back(subset);
-        }
+        RasterSubset* subset = raster.subsetAOI(&poly);
+        if(subset) slist.push_back(subset);
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error subsetting raster: %s", e.what());
-        samplingMutex.unlock();
-        throw;  // rethrow exception
     }
     samplingMutex.unlock();
 }
@@ -132,8 +114,7 @@ GeoRaster::~GeoRaster(void)
  *----------------------------------------------------------------------------*/
 GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb):
     RasterObject(L, _parms),
-    raster(_parms, _fileName, _gpsTime, dataIsElevation, cb),
-    fileId(fileDictAdd(_fileName))
+    raster(_parms, _fileName, _gpsTime, fileDictAdd(_fileName), dataIsElevation, cb)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);

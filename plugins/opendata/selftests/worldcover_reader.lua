@@ -69,7 +69,7 @@ for i, v in ipairs(tbl) do
 
     local bytes = cols*rows*1
     local mbytes = bytes / (1024*1024)
-    print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
+    print(string.format("(%02d) size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, bytes, mbytes, cols, rows, datatype))
     subsetCnt = subsetCnt + 1
 
     runner.check(data ~= nil)

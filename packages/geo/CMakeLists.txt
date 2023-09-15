@@ -27,6 +27,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.cpp
     )
 
@@ -47,6 +48,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSample.h
+            ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.h
         DESTINATION
             ${INCDIR}
