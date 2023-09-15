@@ -36,6 +36,7 @@
 #include "OsApi.h"
 #include "core.h"
 #include "RasterObject.h"
+#include "GdalRaster.h"
 #include "Ordering.h"
 #include "List.h"
 
@@ -199,7 +200,8 @@ int RasterObject::luaSamples(lua_State *L)
 
         /* Get samples */
         std::vector<RasterSample*> slist;
-        lua_obj->getSamples(lon, lat, height, gps, slist, NULL);
+        OGRPoint poi(lon, lat, height);
+        lua_obj->getSamples(&poi, gps, slist, NULL);
 
         if(slist.size() > 0)
         {
@@ -294,7 +296,8 @@ int RasterObject::luaSubset(lua_State *L)
 
         /* Get subset */
         std::vector<RasterSubset*> slist;
-        lua_obj->getSubsets(lon_min, lat_min, lon_max, lat_max, gps, slist, NULL);
+        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
+        lua_obj->getSubsets(&poly, gps, slist, NULL);
 
         if(slist.size() > 0)
         {
@@ -316,7 +319,7 @@ int RasterObject::luaSubset(lua_State *L)
                         break;
                     }
                 }
-                
+
                 /* Populate Return Results */
                 lua_createtable(L, 0, 2);
                 LuaEngine::setAttrStr(L, "file", fileName);

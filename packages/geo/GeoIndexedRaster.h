@@ -99,8 +99,8 @@ class GeoIndexedRaster: public RasterObject
 
         static void     init              (void);
         static void     deinit            (void);
-        void            getSamples        (double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
-        void            getSubsets        (double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
+        void            getSamples        (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
+        void            getSubsets        (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
         virtual        ~GeoIndexedRaster  (void);
 
     protected:

@@ -44,21 +44,24 @@ for i = 1, #demTypes do
         runner.check(threadCnt == 12)
     end
 
-    for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
-        local size = v["size"]
-        local datatype = v["datatype"]
+    if tbl ~= nil then
+        for i, v in ipairs(tbl) do
+            local cols = v["cols"]
+            local rows = v["rows"]
+            local size = v["size"]
+            local datatype = v["datatype"]
 
-        local mbytes = size / (1024*1024)
-        -- This results in 12 threads, all the same size, cols, buffs data type. Print only first one
-        if i == 1 then
-            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
+            local mbytes = size / (1024*1024)
+
+            if i == 1 then
+                print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
+            end
+
+            runner.check(cols > 0)
+            runner.check(rows > 0)
+            runner.check(size > 0)
+            runner.check(datatype > 0)
         end
-
-        runner.check(cols > 0)
-        runner.check(rows > 0)
-        runner.check(datatype > 0)
     end
 end
 

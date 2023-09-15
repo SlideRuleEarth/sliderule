@@ -169,15 +169,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
             OGRGeometry* rastergeo = feature->GetGeometryRef();
             CHECKPTR(geo);
 
-            if(GdalRaster::ispoint(geo))
-            {
-                if(!rastergeo->Contains(geo)) continue;
-            }
-            else if(GdalRaster::ispoly(geo))
-            {
-                if(!geo->Intersects(rastergeo)) continue;
-            }
-            else return false;
+            if (!rastergeo->Intersects(geo)) continue;
 
             /* geojson index files hosted by PGC only contain listing of dems
              * In order to read quality mask raster for each strip we need to build a path to it.

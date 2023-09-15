@@ -42,7 +42,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+void GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -51,13 +51,10 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
     crs.importFromEPSG(4326);
     crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-    OGRPoint poi(lon, lat, height);
-    poi.assignSpatialReference(&crs);
-
     samplingMutex.lock();
     try
     {
-        RasterSample* sample = raster.samplePOI(&poi);
+        RasterSample* sample = raster.samplePOI(geo->toPoint());
         if(sample) slist.push_back(sample);
     }
     catch (const RunTimeException &e)
@@ -70,7 +67,7 @@ void GeoRaster::getSamples(double lon, double lat, double height, int64_t gps, s
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+void GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -79,14 +76,11 @@ void GeoRaster::getSubsets(double lon_min, double lat_min, double lon_max, doubl
     crs.importFromEPSG(4326);
     crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-    OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-    poly.assignSpatialReference(&crs);
-
     samplingMutex.lock();
     try
     {
         /* Get samples, if none found, return */
-        RasterSubset* subset = raster.subsetAOI(&poly);
+        RasterSubset* subset = raster.subsetAOI(geo->toPolygon());
         if(subset) slist.push_back(subset);
     }
     catch (const RunTimeException &e)

@@ -311,7 +311,8 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
         /* Sample Raster */
         std::vector<RasterSample*> slist;
-        raster->getSamples(lon_val, lat_val, height_val, gps, slist);
+        OGRPoint poi(lon_val, lat_val, height_val);
+        raster->getSamples(&poi, gps, slist);
         int num_samples = slist.size();
 
         if(raster->hasZonalStats())

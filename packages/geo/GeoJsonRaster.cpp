@@ -102,7 +102,8 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
     std::vector<RasterSample*> slist;
 
-    getSamples(lon, lat, height, 0, slist);
+    OGRPoint poi(lon, lat, height);
+    getSamples(&poi, 0, slist);
     int sampleCnt = slist.size();
 
     if( sampleCnt == 0 ) return false;

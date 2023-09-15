@@ -72,7 +72,7 @@ void GeoIndexedRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+void GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     std::ignore = param;
 
@@ -80,14 +80,11 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
     crs.importFromEPSG(4326);
     crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-    OGRPoint poi(lon, lat, height);
-    poi.assignSpatialReference(&crs);
-
     samplingMutex.lock();
     try
     {
         /* Sample Rasters */
-        sample(&poi, gps);
+        sample(geo, gps);
 
         /* Populate Return Vector of Samples (slist) */
         Ordering<rasters_group_t*>::Iterator iter(groupList);
@@ -131,7 +128,7 @@ void GeoIndexedRaster::getSamples(double lon, double lat, double height, int64_t
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+void GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
     std::ignore = param;
 
@@ -139,14 +136,11 @@ void GeoIndexedRaster::getSubsets(double lon_min, double lat_min, double lon_max
     crs.importFromEPSG(4326);
     crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-    OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-    poly.assignSpatialReference(&crs);
-
     samplingMutex.lock();
     try
     {
         /* Sample Subsets */
-        sample(&poly, gps);
+        sample(geo, gps);
 
         /* Populate Return Vector of Subsets (slist) */
         Ordering<rasters_group_t*>::Iterator iter(groupList);

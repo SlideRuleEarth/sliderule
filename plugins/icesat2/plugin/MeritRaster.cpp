@@ -112,25 +112,26 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+void MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     (void)param;
     (void)gps;
-    (void)height;
+
+    OGRPoint* poi = geo->toPoint();
 
     /* Determine Upper Left Coordinates */
-    int left_lon = ((int)floor(lon / 5.0)) * 5;
-    int upper_lat = ((int)ceil(lat / 5.0)) * 5;
+    int left_lon = ((int)floor(poi->getX() / 5.0)) * 5;
+    int upper_lat = ((int)ceil(poi->getY() / 5.0)) * 5;
 
     /* Calculate Pixel Location */
-    int x_offset = (int)(((double)lon - left_lon) / X_SCALE);
-    int y_offset = (int)(((double)lat - upper_lat) / Y_SCALE);
+    int x_offset = (int)(((double)poi->getX() - left_lon) / X_SCALE);
+    int y_offset = (int)(((double)poi->getY() - upper_lat) / Y_SCALE);
 
     /* Check Pixel Location */
     if( x_offset < 0 || x_offset >= X_MAX ||
         y_offset < 0 || y_offset >= Y_MAX )
     {
-        mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", lon, lat, x_offset, y_offset);
+        mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", poi->getX(), poi->getY(), x_offset, y_offset);
         return;
     }
 
@@ -207,9 +208,10 @@ void MeritRaster::getSamples (double lon, double lat, double height, int64_t gps
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void MeritRaster::getSubsets(double lon_min, double lat_min, double lon_max, double lat_max, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+void MeritRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
-    std::ignore = lon_min = lon_max = lat_max = lat_min = gps;
+    std::ignore = geo;
+    std::ignore = gps;
     std::ignore = slist;
     std::ignore = param;
 }

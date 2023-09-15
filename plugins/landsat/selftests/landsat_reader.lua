@@ -359,6 +359,7 @@ if tbl ~= nil then
 
         runner.check(cols > 0)
         runner.check(rows > 0)
+        runner.check(size > 0)
         runner.check(datatype > 0)
     end
 end

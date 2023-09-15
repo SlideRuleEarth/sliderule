@@ -22,7 +22,7 @@ class TestHLS:
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
         rsps = sliderule.source("samples", rqst)
 
-    def test_subset(self, domain, organization, desired_nodes):
+    def test_subset1(self, domain, organization, desired_nodes):
         sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"
@@ -38,6 +38,26 @@ class TestHLS:
         assert len(rsps['subsets'][0][0]['data']) > 0
         assert rsps['subsets'][0][0]['rows'] == 1192
         assert rsps['subsets'][0][0]['cols'] == 2504
+
+    def test_subset167(self, domain, organization, desired_nodes):
+        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+        time_start = "2021-01-01T00:00:00Z"
+        time_end = "2021-02-01T23:59:59Z"
+        polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
+                    {"lon": -179.0000000001, "lat": 51.0000000001},
+                    {"lon": -179.0000000001, "lat": 49.0000000001},
+                    {"lon": -177.0000000001, "lat": 49.0000000001},
+                    {"lon": -177.0000000001, "lat": 51.0000000001} ]
+        catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
+        rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI","B01", "B02", "B03", "B04", "B05", "B06","B07", "B08", "B09", "B10", "B11", "B12", "B8A"]}, "extents": [[-179.87, 50.45, -178.27, 51.44]]}
+        rsps = sliderule.source("subsets", rqst)
+        subsets = rsps['subsets'][0]
+        assert len(subsets) == 167
+
+        for subset in subsets:
+            assert subset['rows'] > 0
+            assert subset['cols'] > 0
+            assert subset['size'] > 0
 
     def test_ndvi(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
