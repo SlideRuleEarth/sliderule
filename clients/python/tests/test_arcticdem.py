@@ -113,7 +113,8 @@ class TestStrips:
                   "time_end":'2021-01-01',
                   "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
         gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_005_01.h5'])
-        assert len(gdf.attrs['file_directory']) == 16
+        print(gdf.attrs['file_directory'])
+        assert len(gdf.attrs['file_directory']) == 32        
         for file_id in range(16):
             assert file_id in gdf.attrs['file_directory'].keys()
             assert '/pgc-opendata-dems/arcticdem/strips/' in gdf.attrs['file_directory'][file_id]

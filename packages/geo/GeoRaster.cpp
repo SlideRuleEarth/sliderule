@@ -47,10 +47,6 @@ void GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSamp
     std::ignore = gps;
     std::ignore = param;
 
-    OGRSpatialReference crs;
-    crs.importFromEPSG(4326);
-    crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
-
     samplingMutex.lock();
     try
     {
@@ -71,10 +67,6 @@ void GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubs
 {
     std::ignore = gps;
     std::ignore = param;
-
-    OGRSpatialReference crs;
-    crs.importFromEPSG(4326);
-    crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
     samplingMutex.lock();
     try

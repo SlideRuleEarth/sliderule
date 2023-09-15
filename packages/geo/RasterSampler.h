@@ -82,14 +82,15 @@ class RasterSampler: public DispatchObject
 
         /* Sample */
         typedef struct {
-            double              value;
-            double              time;
-            uint64_t            file_id;
-            uint32_t            flags;
+            double                  value;
+            double                  time;
+            uint64_t                file_id;
+            uint32_t                flags;
         } sample_t;
 
         /* Sample */
         typedef struct {
+            double                  value;
             double                  time;
             uint64_t                file_id;
             uint32_t                flags;
@@ -98,24 +99,24 @@ class RasterSampler: public DispatchObject
 
         /* Extent Sample Record */
         typedef struct {
-            uint64_t            index;
-            char                raster_key[RASTER_KEY_MAX_LEN];
-            uint32_t            num_samples;
-            sample_t            samples[];
+            uint64_t                index;
+            char                    raster_key[RASTER_KEY_MAX_LEN];
+            uint32_t                num_samples;
+            sample_t                samples[];
         } rs_geo_t;
 
         /* Zonal Statistics Record */
         typedef struct {
-            uint64_t            index;
-            char                raster_key[RASTER_KEY_MAX_LEN];
-            uint32_t            num_samples;
-            zonal_t             samples[];
+            uint64_t                index;
+            char                    raster_key[RASTER_KEY_MAX_LEN];
+            uint32_t                num_samples;
+            zonal_t                 samples[];
         } zs_geo_t;
 
         /* File Directory Entry Record */
         typedef struct {
-            uint64_t            file_id;
-            char                file_name[];
+            uint64_t                file_id;
+            char                    file_name[];
         } file_directory_entry_t;
 
         /*--------------------------------------------------------------------

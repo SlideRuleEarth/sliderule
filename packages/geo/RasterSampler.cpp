@@ -64,6 +64,7 @@ const RecordObject::fieldDef_t RasterSampler::rsGeoRecDef[] = {
 
 const char* RasterSampler::zsSampleRecType = "zsrec.sample";
 const RecordObject::fieldDef_t RasterSampler::zsSampleRecDef[] = {
+    {"value",           RecordObject::DOUBLE,   offsetof(zonal_t, value),           1,  NULL, NATIVE_FLAGS},
     {"time",            RecordObject::DOUBLE,   offsetof(zonal_t, time),            1,  NULL, NATIVE_FLAGS},
     {"file_id",         RecordObject::UINT64,   offsetof(zonal_t, file_id),         1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT32,   offsetof(zonal_t, flags),           1,  NULL, NATIVE_FLAGS},
@@ -326,6 +327,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             data->num_samples = num_samples;
             for(int i = 0; i < num_samples; i++)
             {
+                data->samples[i].value      = slist[i]->value;
                 data->samples[i].time       = slist[i]->time;
                 data->samples[i].file_id    = slist[i]->fileId;
                 data->samples[i].flags      = slist[i]->flags;
