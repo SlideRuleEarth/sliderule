@@ -29,7 +29,10 @@
 
 import logging
 import numpy
+import base64
 import sliderule
+import geopandas
+from shapely.geometry import Polygon
 
 ###############################################################################
 # GLOBALS
@@ -70,7 +73,7 @@ def sample(asset, coordinates, parms={}):
     coordinates:    list
                     list of coordinates as [longitude, latitude]
     parms:          dict
-                    dictionary of samping parameters
+                    dictionary of sampling parameters
 
     Returns
     -------
@@ -99,8 +102,6 @@ def sample(asset, coordinates, parms={}):
     for input_coord_response in rsps["samples"]:
         for raster_sample in input_coord_response:
             num_records += 1
-
-    # Get Types
 
     # Build Initial Columns
     value_nptype = sliderule.get_definition("rsrec.sample", "value")['nptype']
@@ -168,7 +169,7 @@ def sample(asset, coordinates, parms={}):
 #
 # Subset
 #
-def subset(asset, coordinates, parms={}):
+def subset(asset, extents, parms={}):
     '''
     Subset a raster dataset at the extent coordinates provided
 
@@ -176,32 +177,68 @@ def subset(asset, coordinates, parms={}):
     ----------
     asset:          str
                     data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
-    coordinates:    list
-                    list of two extent coordinates as [longitude, latitude]
+    extents:        list
+                    list of extent coordinates as [minimum longitude, minimum latitude, maximum longitude, maximum latitude]
     parms:          dict
-                    dictionary of samping parameters
+                    dictionary of sampling parameters
 
     Returns
     -------
-    GeoDataFrame
-        geolocated sampled values along with metadata
+    list
+        list of 2D numpy arrays containing the values of the subsetted raster
 
     Examples
     --------
         >>> import sliderule
-        >>> gdf = sliderule.subset("landsat-hls", [[-179.87, 50.45], [-178.27, 51.44]])
+        >>> gdf = sliderule.subset("landsat-hls", [[-179.87, 50.45, -178.77, 50.75]], {"bands": ["B02"]})
     '''
     # Massage Arguments
-    if type(coordinates[0]) != list:
+    if type(extents[0]) != list:
         coorindates = [coorindates]
 
     # Perform Request
-    rqst = {"subset": {"asset": asset, **parms}, "coordinates": coordinates}
-    rsps = sliderule.source("subset", rqst)
+    rqst = {"samples": {"asset": asset, **parms}, "extents": extents}
+    rsps = sliderule.source("subsets", rqst)
 
-    # Sanity Check Response
-    if len(rsps) <= 0:
-        return sliderule.emptyframe()
+    # Count Size of Response
+    subset_cnt = 0
+    for subsets in rsps['subsets']:
+        subset_cnt += len(subsets)
 
-    gdf = 0
+    # Initialize Geometry and Columns
+    geometry = numpy.empty(subset_cnt, dtype=object)
+    columns = {
+        "data": numpy.empty(subset_cnt, dtype=object),
+        "rows": numpy.empty(subset_cnt, dtype=numpy.uint64),
+        "cols": numpy.empty(subset_cnt, dtype=numpy.uint64),
+        "time": numpy.empty(subset_cnt, dtype='datetime64[ns]'),
+        "file": []
+    }
+
+    # Build Geometry and Columns
+    row_index = 0
+    extent_index = 0
+    for subsets in rsps['subsets']:
+        extent = extents[extent_index]
+        polygon = Polygon([(extent[0], extent[1]), (extent[0], extent[3]), (extent[2], extent[3]), (extent[2], extent[1])])
+        for subset in subsets:
+            # Add Geometry
+            geometry[row_index] = polygon
+            # Add Row Elements
+            columns["rows"][row_index] = numpy.uint64(subset["rows"])
+            columns["cols"][row_index] = numpy.uint64(subset["cols"])
+            columns["time"][row_index] = numpy.datetime64(subset["time"], 'ns')
+            columns["file"].append(subset["file"])
+            data = sliderule.getvalues(base64.b64decode(subset["data"]), subset["datatype"], subset["size"])
+            data.shape = (subset["rows"], subset["cols"])
+            columns["data"][row_index] = data
+            # Goto Next Row
+            row_index += 1
+        # Goto Next Extent
+        extent_index += 1
+
+    # Build and Return GeoDataFrame
+    df = geopandas.pd.DataFrame(columns)
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=sliderule.SLIDERULE_EPSG)
+    gdf.set_index("time", inplace=True)
     return gdf
