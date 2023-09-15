@@ -50,7 +50,7 @@ runner.check(sampleCnt == #expResults)
 
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter subset AOI\n-------------------------------------------------"))
 
-expResults = {{0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt', 7344, 4464, 1}}
+expResults = {{0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt', 7344, 4464, 4}}
 
 starttime = time.latch();
 tbl, status = dem:subset(-108.3412, 38.8236, -107.7292, 39.1956)
@@ -77,7 +77,7 @@ for i, v in ipairs(tbl) do
     runner.check(fname == expResults[i][3])
     runner.check(cols == expResults[i][4])
     runner.check(rows == expResults[i][5])
-    runner.check(datatype == expResults[i][6])  -- GDT_Byte
+    runner.check(datatype == expResults[i][6])  -- UINT8
 end
 runner.check(subsetCnt == 1)
 
