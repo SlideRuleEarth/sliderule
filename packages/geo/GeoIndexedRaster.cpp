@@ -435,8 +435,6 @@ void GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 {
     groupList.clear();
 
-    // TODO(JP): can we replace the code below with just
-    // if(!extentpoly->Intersects(geo)) openGeoIndex(geo);
     if(GdalRaster::ispoint(geo))
     {
         /* Initial call, open index file if not already opened */
