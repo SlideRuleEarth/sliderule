@@ -381,7 +381,12 @@ void LuaEngine::abortHook (lua_State *L, lua_Debug *ar)
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
     LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
     if(!li) luaL_error(L, "Unable to access Lua engine - aborting!");
-    if(!li->engineActive) luaL_error(L, "Lua engine no longer active - exiting script!");
+    if(!li->engineActive)
+    {
+        char error_msg[512];
+        StringLib::format(error_msg, 256, "Lua engine no longer active - exiting script <%s>", li->dInfo != NULL ? li->dInfo->script : li->pInfo->argv[0]);
+        luaL_error(L, error_msg);
+    }
 }
 
 /*----------------------------------------------------------------------------
