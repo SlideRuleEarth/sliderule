@@ -72,17 +72,15 @@ void GeoIndexedRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+uint32_t GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     std::ignore = param;
-
-    OGRSpatialReference crs;
-    crs.importFromEPSG(4326);
-    crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
     samplingMutex.lock();
     try
     {
+        ssError = SS_NO_ERRORS;
+
         /* Sample Rasters */
         sample(geo, gps);
 
@@ -123,22 +121,22 @@ void GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<Ras
         key = cache.next(&item);
     }
     samplingMutex.unlock();
+
+    return ssError;
 }
 
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
     std::ignore = param;
-
-    OGRSpatialReference crs;
-    crs.importFromEPSG(4326);
-    crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
     samplingMutex.lock();
     try
     {
+        ssError = SS_NO_ERRORS;
+
         /* Sample Subsets */
         sample(geo, gps);
 
@@ -155,6 +153,8 @@ void GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Ras
         mlog(e.level(), "Error subsetting raster: %s", e.what());
     }
     samplingMutex.unlock();
+
+    return ssError;
 }
 
 /*----------------------------------------------------------------------------
@@ -199,7 +199,8 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     RasterObject (L, _parms),
     cache        (MAX_READER_THREADS),
     crscb        (cb),
-    bbox         {0, 0, 0, 0}
+    bbox         {0, 0, 0, 0},
+    ssError      (SS_NO_ERRORS)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -230,6 +231,9 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vecto
                     slist.push_back(sample);
                     item->sample = NULL;
                 }
+
+                /* Get rasters sampling/subset error status */
+                ssError |= item->raster->getSSerror();
             }
         }
     }
@@ -237,7 +241,7 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vecto
 
 
 /*----------------------------------------------------------------------------
- * getGroupSamples
+ * getGroupSubsets
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vector<RasterSubset*>& slist)
 {
@@ -253,6 +257,9 @@ void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vecto
                 slist.push_back(subset);
                 item->subset = NULL;
             }
+
+            /* Get rasters sampling/subset error status */
+            ssError |= item->raster->getSSerror();
         }
     }
 }
@@ -448,12 +455,15 @@ void GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 
             /* Check against newly opened geoindex */
             if(!withinExtent(poi))
+            {
+                ssError |= SS_POI_OUT_OF_BOUNDS_ERROR;
                 return;
+            }
         }
     }
     else if(GdalRaster::ispoly(geo))
     {
-        /* Always open/create new file and features list for poly*/
+        /* Always open/create new file and features list for poly */
         openGeoIndex(geo);
     }
     else return;
@@ -704,6 +714,7 @@ void GeoIndexedRaster::updateCache(void)
     /* Check for max limit of concurent reading raster threads */
     if(cache.length() > MAX_READER_THREADS)
     {
+        ssError |= SS_THREADS_LIMIT_ERROR;
         throw RunTimeException(CRITICAL, RTE_ERROR,
                                "Too many rasters to read: %d, max allowed: %d, limit your AOI or termporal range or use filters",
                                cache.length(), MAX_READER_THREADS);

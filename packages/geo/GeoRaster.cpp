@@ -42,7 +42,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+uint32_t GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -58,12 +58,14 @@ void GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSamp
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
     samplingMutex.unlock();
+
+    return raster.getSSerror();
 }
 
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-void GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -80,6 +82,8 @@ void GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubs
         mlog(e.level(), "Error subsetting raster: %s", e.what());
     }
     samplingMutex.unlock();
+
+    return raster.getSSerror();
 }
 
 

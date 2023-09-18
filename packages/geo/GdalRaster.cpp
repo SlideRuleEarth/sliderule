@@ -69,7 +69,8 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    cols       (0),
    cellSize   (0),
    bbox       (),
-   radiusInPixels(0)
+   radiusInPixels(0),
+   ssError    (SS_NO_ERRORS)
 {
 }
 
@@ -143,16 +144,19 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
 {
     RasterSample* sample = NULL;
 
+    /* Clear sample/subset error status */
+    ssError = SS_NO_ERRORS;
+
     try
     {
         if(dset == NULL)
             open();
 
         double z = poi->getZ();
-//        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        //mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-//        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        //mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -169,6 +173,10 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
 
             if(parms->zonal_stats)
                 computeZonalStats(poi, sample);
+        }
+        else
+        {
+            ssError |= SS_POI_OUT_OF_BOUNDS_ERROR;
         }
     }
     catch (const RunTimeException &e)
@@ -213,6 +221,9 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
 
     RasterSubset* subset = NULL;
 
+    /* Clear sample/subset error status */
+    ssError = SS_NO_ERRORS;
+
     try
     {
         if(dset == NULL)
@@ -232,20 +243,11 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         int extulx, extuly, extlrx, extlry;
         topixel(bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max, extulx, extuly, extlrx, extlry);
 
-#if 0
-        printf("minx: %18.4lf\n", bbox.lon_min);
-        printf("miny: %18.4lf\n", bbox.lat_min);
-        printf("maxx: %18.4lf\n", bbox.lon_max);
-        printf("maxy: %18.4lf\n", bbox.lat_max);
-        printf("\n");
-        printf("minrx: %d\n", extulx);
-        printf("minry: %d\n", extuly);
-        printf("maxrx: %d\n", extlrx);
-        printf("maxry: %d\n", extlry);
-#endif
-
         if(extulx != 0 || extuly != 0)
+        {
+            ssError |= SS_AOI_OUT_OF_BOUNDS_ERROR;
             throw RunTimeException(CRITICAL, RTE_ERROR, "Upleft pixel (%d, %d) is not (0, 0)", extulx, extuly);
+        }
 
         if(ulx < extulx)
         {
@@ -288,8 +290,14 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         }
 
         subset = new RasterSubset(cols2read, rows2read, datatype, gpsTime, fileId);
-        mlog(DEBUG, "reading %ld bytes (%.1fMB), data: %p (%0lx), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
-                subset->size, (float)subset->size/(1024*1024), subset->data, (uint64_t)subset->data, ulx, uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
+        if(subset->data == NULL)
+        {
+            ssError |= SS_MEMPOOL_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterSubset requested invalid memory size");
+        }
+
+        // mlog(DEBUG, "reading %ld bytes (%.1fMB), data: %p (%0lx), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
+        //         subset->size, (float)subset->size/(1024*1024), subset->data, (uint64_t)subset->data, ulx, uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
 
         int cnt = 1;
         err = CE_None;
@@ -300,6 +308,7 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
 
         if(err != CE_None)
         {
+            ssError |= SS_AOI_FAILED_TO_READ_ERROR;
             throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
         }
     }
@@ -525,6 +534,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
     }
     catch (const RunTimeException &e)
     {
+        ssError |= SS_POI_FAILED_TO_READ_ERROR;
         mlog(e.level(), "Error reading from raster: %s", e.what());
         throw;
     }

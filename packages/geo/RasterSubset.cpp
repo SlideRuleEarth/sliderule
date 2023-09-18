@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "EventLib.h"
 #include "RasterSubset.h"
 
 /******************************************************************************
@@ -84,8 +85,9 @@ RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldTy
     /* Check Ability to Allocate */
     if(!allocate)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "RasterSubset requested invalid memory size: %ldMB (max per thread allowed: %ldMB)",
-                                size / (1024*1024), MAX_SIZE / (1024*1024));
+        mlog(CRITICAL, "RasterSubset requested invalid memory size: %ldMB (max per thread allowed: %ldMB)",
+                       size / (1024*1024), MAX_SIZE / (1024*1024));
+        return;
     }
 
     /* Allocate Buffer */
@@ -102,5 +104,5 @@ RasterSubset::~RasterSubset( void )
         poolsize += size;
     }
     mutex.unlock();
-    delete [] data;
+    if(data) delete [] data;
 }

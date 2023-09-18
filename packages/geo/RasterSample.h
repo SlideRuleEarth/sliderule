@@ -68,7 +68,7 @@ public:
     verticalShift(_verticalShift),
     fileId(_fileId),
     flags(0),
-    stats{.count = 0, 
+    stats{.count = 0,
           .min = 0.0,
           .max = 0.0,
           .mean = 0.0,

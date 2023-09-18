@@ -111,6 +111,7 @@ class GdalRaster
         int                getCols        (void) { return cols; }
         const bbox_t&      getBbox        (void) { return bbox; }
         double             getCellSize    (void) { return cellSize; }
+        uint32_t           getSSerror     (void) { return ssError; }
 
         /*--------------------------------------------------------------------
          * Static Methods
@@ -148,6 +149,7 @@ class GdalRaster
         bbox_t          bbox;
         uint32_t        radiusInPixels;
         double          invGeoTrans[6];
+        uint32_t        ssError;
 
         /*--------------------------------------------------------------------
         * Methods

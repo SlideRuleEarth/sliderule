@@ -179,6 +179,7 @@ int RasterObject::luaSamples(lua_State *L)
     int num_ret = 1;
 
     RasterObject *lua_obj = NULL;
+    std::vector<RasterSample*> slist;
 
     try
     {
@@ -199,9 +200,14 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Get samples */
-        std::vector<RasterSample*> slist;
         OGRPoint poi(lon, lat, height);
-        lua_obj->getSamples(&poi, gps, slist, NULL);
+        uint32_t err = lua_obj->getSamples(&poi, gps, slist, NULL);
+
+        if(err & SS_THREADS_LIMIT_ERROR)
+        {
+            //TBD throw meaningful exception, return empty table?
+            mlog(CRITICAL, "ssError: %u", err);
+        }
 
         if(slist.size() > 0)
         {
@@ -248,8 +254,6 @@ int RasterObject::luaSamples(lua_State *L)
                 LuaEngine::setAttrNum(L, "time", sample->time);
                 LuaEngine::setAttrNum(L, "value", sample->value);
                 lua_rawseti(L, -2, i+1);
-
-                delete sample; // free RasterSample
             }
             num_ret++;
             status = true;
@@ -259,6 +263,10 @@ int RasterObject::luaSamples(lua_State *L)
     {
         mlog(e.level(), "Failed to read samples: %s", e.what());
     }
+
+    /* Free samples */
+    for (const RasterSample* sample : slist)
+        if (sample) delete sample;
 
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);
@@ -274,6 +282,7 @@ int RasterObject::luaSubset(lua_State *L)
     int num_ret = 1;
 
     RasterObject *lua_obj = NULL;
+    std::vector<RasterSubset*> slist;
 
     try
     {
@@ -295,9 +304,20 @@ int RasterObject::luaSubset(lua_State *L)
         }
 
         /* Get subset */
-        std::vector<RasterSubset*> slist;
         OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-        lua_obj->getSubsets(&poly, gps, slist, NULL);
+        uint32_t err = lua_obj->getSubsets(&poly, gps, slist, NULL);
+
+        if (err & SS_THREADS_LIMIT_ERROR)
+        {
+            //TBD throw meaningful exception, return empty table?
+            mlog(CRITICAL, "ssError: %u", err);
+        }
+
+        if (err & SS_MEMPOOL_ERROR)
+        {
+            //TBD throw meaningful exception, return empty table?
+            mlog(CRITICAL, "ssError: %u", err);
+        }
 
         if(slist.size() > 0)
         {
@@ -339,8 +359,6 @@ int RasterObject::luaSubset(lua_State *L)
                 LuaEngine::setAttrInt(L, "size", subset->size);
                 LuaEngine::setAttrNum(L, "datatype", subset->datatype);
                 lua_rawseti(L, -2, i+1);
-
-                delete subset; // free RasterSubset
             }
             num_ret++;
             status = true;
@@ -348,8 +366,14 @@ int RasterObject::luaSubset(lua_State *L)
     }
     catch (const RunTimeException &e)
     {
+        //TODO: should we free subsets from list here? Memleak if exception thrown?
+
         mlog(e.level(), "Failed to subset raster: %s", e.what());
     }
+
+    /* Free subsets */
+    for (const RasterSubset* subset : slist)
+        if (subset) delete subset;
 
     /* Return Status */
     return returnLuaStatus(L, status, num_ret);

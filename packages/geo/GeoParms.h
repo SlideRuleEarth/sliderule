@@ -51,6 +51,16 @@
 #include "Asset.h"
 #include "TimeLib.h"
 
+/* Error codes for raster Sampling and Subsetting (SS) */
+#define SS_NO_ERRORS                0
+#define SS_THREADS_LIMIT_ERROR      (1 << 0)
+#define SS_MEMPOOL_ERROR            (1 << 1)
+#define SS_POI_OUT_OF_BOUNDS_ERROR  (1 << 2)
+#define SS_POI_FAILED_TO_READ_ERROR (1 << 3)
+#define SS_AOI_OUT_OF_BOUNDS_ERROR  (1 << 4)
+#define SS_AOI_FAILED_TO_READ_ERROR (1 << 5)
+
+
 /******************************************************************************
  * GEO PARAMETERS CLASS
  ******************************************************************************/
