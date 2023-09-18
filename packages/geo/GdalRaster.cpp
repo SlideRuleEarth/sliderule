@@ -288,8 +288,8 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         }
 
         subset = new RasterSubset(cols2read, rows2read, datatype, gpsTime, fileId);
-        mlog(DEBUG, "reading %ld bytes (%.1fMB), ulx: %d, uly: %d, cols2read: %d, rows2read: %d, datatype %s",
-                subset->size, (float)subset->size/(1024*1024), ulx, uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
+        mlog(DEBUG, "reading %ld bytes (%.1fMB), data: %p (%0lx), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
+                subset->size, (float)subset->size/(1024*1024), subset->data, (uint64_t)subset->data, ulx, uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
 
         int cnt = 1;
         err = CE_None;

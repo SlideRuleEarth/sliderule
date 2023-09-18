@@ -49,8 +49,8 @@ class RasterSubset
 
         uint8_t*                    data;
         uint64_t                    size;
-        uint32_t                    cols;
-        uint32_t                    rows;
+        uint64_t                    cols;
+        uint64_t                    rows;
         RecordObject::fieldType_t   datatype;
         double                      time; // gps seconds
         uint64_t                    fileId;

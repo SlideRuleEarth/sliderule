@@ -262,8 +262,11 @@ demType = "landsat-hls"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
-local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("LpdaacAuthScript")
-sys.wait(5)
+local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))
+while not aws.csget("lpdaac-cloud") do
+    print("Waiting to authenticate to LPDAAC...")
+    sys.wait(1)
+end
 
 
 local geojsonfile = td.."../../plugins/landsat/data/hls_trimmed.geojson"
