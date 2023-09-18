@@ -1,7 +1,7 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-json = require("json")
+-- local console = require("console")
+local asset = require("asset")
+local json = require("json")
 
 -- Setup --
 
@@ -23,20 +23,24 @@ end
 
 -- Unit Test --
 
-cnt = 0
-recq = msg.subscribe("atl03-ancillary-recq")
-f = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "atl03-ancillary-recq", icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}))
+local cnt = 0
+local recq = msg.subscribe("atl03-ancillary-recq")
+local f = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "atl03-ancillary-recq", icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}))
 while true do
-    rec = recq:recvrecord(15000)
+    local rec = recq:recvrecord(15000)
     if rec == nil then
         break
     end
     cnt = cnt + 1
     runner.check(rec:getvalue("count") == 2, rec:getvalue("count"))
 end
-recq:destroy()
 
 runner.check(cnt >= 16697, "failed to read sufficient number of contaner records")
+
+-- Clean Up --
+
+recq:destroy()
+f:destroy()
 
 -- Report Results --
 

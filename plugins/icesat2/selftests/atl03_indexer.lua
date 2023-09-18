@@ -1,8 +1,8 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
+-- local console = require("console")
+local asset = require("asset")
+local csv = require("csv")
+local json = require("json")
 
 -- Setup --
 
@@ -90,6 +90,10 @@ end
 
 indexrecq:destroy()
 os.remove(index_filename)
+writer:destroy()
+csvdispatch:destroy()
+dispatcher:destroy()
+indexer:destroy()
 
 -- Report Results --
 

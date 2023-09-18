@@ -1,7 +1,7 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-json = require("json")
+-- local console = require("console")
+local asset = require("asset")
+local json = require("json")
 
 -- Setup --
 
@@ -23,17 +23,17 @@ end
 
 -- Unit Test --
 
-cnt = 0
-resultq = msg.subscribe("atl06-ancillary-resultq")
-parms = icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}})
-algo = icesat2.atl06("atl06-ancillary-resultq", parms)
-algo_disp = core.dispatcher("atl06-ancillary-recq")
+local cnt = 0
+local resultq = msg.subscribe("atl06-ancillary-resultq")
+local parms = icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}})
+local algo = icesat2.atl06("atl06-ancillary-resultq", parms)
+local algo_disp = core.dispatcher("atl06-ancillary-recq")
 algo_disp:attach(algo, "atl03rec")
 algo_disp:run()
-reader = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "atl06-ancillary-recq", parms)
+local reader = icesat2.atl03(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "atl06-ancillary-recq", parms)
 
 while true do
-    rec = resultq:recvrecord(15000)
+    local rec = resultq:recvrecord(15000)
     if rec == nil then
         break
     end
@@ -44,9 +44,15 @@ while true do
         runner.check(rec:getvalue("count") == 245, string.format('Expected different number of records in container: %d', rec:getvalue("count")))    
     end
 end
-resultq:destroy()
 
 runner.check(cnt >= 85, "failed to read sufficient number of contaner records")    
+
+-- Clean Up --
+
+resultq:destroy()
+algo:destroy()
+algo_disp:destroy()
+reader:destroy()
 
 -- Report Results --
 
