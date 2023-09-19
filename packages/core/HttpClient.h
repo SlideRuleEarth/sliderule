@@ -125,8 +125,8 @@ class HttpClient: public LuaObject
         TcpSocket*                      sock;
         char*                           ipAddr;
         int                             port;
-        char                            rqstBuf[MAX_RQST_BUF_LEN];
-        char                            rspsBuf[MAX_RSPS_BUF_LEN];
+        char*                           rqstBuf;
+        char*                           rspsBuf;
 
         /*--------------------------------------------------------------------
          * Methods

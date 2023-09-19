@@ -1520,25 +1520,33 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                 /* Build Extent and Ancillary Records */
                 vector<RecordObject*> rec_list;
-                int rec_total_size = 0;
-                reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
-                reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                try
+                {
+                    int rec_total_size = 0;
+                    reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
+                    reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
 
-                /* Send Records */
-                if(rec_list.size() == 1)
-                {
-                    reader->postRecord(*(rec_list[0]), local_stats);
-                }
-                else if(rec_list.size() > 1)
-                {
-                    /* Send Container Record */
-                    ContainerRecord container(rec_list.size(), rec_total_size);
-                    for(size_t i = 0; i < rec_list.size(); i++)
+                    /* Send Records */
+                    if(rec_list.size() == 1)
                     {
-                        container.addRecord(*(rec_list[i]));
+                        reader->postRecord(*(rec_list[0]), local_stats);
                     }
-                    reader->postRecord(container, local_stats);
+                    else if(rec_list.size() > 1)
+                    {
+                        /* Send Container Record */
+                        ContainerRecord container(rec_list.size(), rec_total_size);
+                        for(size_t i = 0; i < rec_list.size(); i++)
+                        {
+                            container.addRecord(*(rec_list[i]));
+                        }
+                        reader->postRecord(container, local_stats);
+                    }
+                }
+                catch(const RunTimeException& e)
+                {
+                    mlog(e.level(), "Error posting results for resource %s track %d: %s", info->reader->resource, info->track, e.what());
+                    LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), info->reader->resource);
                 }
 
                 /* Clean Up Records */
@@ -1711,7 +1719,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
  *----------------------------------------------------------------------------*/
 void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<H5DArray*>& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
-    if(field_list)
+    if(field_list && indices->length() > 0)
     {
         for(int i = 0; i < field_list->length(); i++)
         {

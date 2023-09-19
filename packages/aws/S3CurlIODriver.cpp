@@ -455,8 +455,8 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                     {
                         /* Request Failed */
                         StringLib::printify((char*)info.buffer, info.index);
-                        mlog(INFO, "%s", info.buffer);
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                        mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
+                        mlog(CRITICAL, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
                     }
 
                     /* Get Request Completed */
@@ -465,7 +465,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                 else if(info.index > 0)
                 {
                     mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
-                    rqst_complete = true;
+                    break; // re-initialize headers with new range and try again
                 }
                 else if(res == CURLE_OPERATION_TIMEDOUT)
                 {
@@ -577,7 +577,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
             else if(rsps_set.length() > 0)
             {
                 mlog(CRITICAL, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
-                rqst_complete = true;
+                rsps_set.clear(); // try again
             }
             else if(res == CURLE_OPERATION_TIMEDOUT)
             {
@@ -668,7 +668,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
                 else if(data.size > 0)
                 {
                     mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, data.size, key_ptr);
-                    rqst_complete = true;
+                    rqst_complete = true; // fail outright, no retry
                 }
                 else if(res == CURLE_OPERATION_TIMEDOUT)
                 {

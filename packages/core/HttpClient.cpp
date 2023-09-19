@@ -95,6 +95,8 @@ HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
     sock = initializeSocket(ipAddr, port);
     requestPub = new Publisher(NULL);
     requestPid = NULL;
+    rqstBuf = new char [MAX_RQST_BUF_LEN];
+    rspsBuf = new char [MAX_RSPS_BUF_LEN];
 }
 
 /*----------------------------------------------------------------------------
@@ -144,6 +146,10 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     // Create Request Queue and Thread
     requestPub = new Publisher(NULL);
     requestPid = NULL;
+
+    // Allocate Buffers
+    rqstBuf = new char [MAX_RQST_BUF_LEN];
+    rspsBuf = new char [MAX_RSPS_BUF_LEN];
 }
 
 /*----------------------------------------------------------------------------
@@ -156,6 +162,8 @@ HttpClient::~HttpClient(void)
     if(requestPub) delete requestPub;
     if(ipAddr) delete [] ipAddr;
     if(sock) delete sock;
+    delete [] rqstBuf;
+    delete [] rspsBuf;
 }
 
 /*----------------------------------------------------------------------------

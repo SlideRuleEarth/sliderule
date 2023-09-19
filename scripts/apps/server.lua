@@ -70,7 +70,7 @@ sys.setstddepth(msgq_depth)
 
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally
-local monitor = core.monitor(core.LOG, event_level, event_format):name("EventMonitor") -- monitor only logs
+local monitor = core.monitor(core.LOG, core.DEBUG, event_format):name("EventMonitor") -- monitor only logs
 monitor:tail(1024)
 
 local dispatcher = core.dispatcher(core.EVENTQ):name("EventDispatcher")

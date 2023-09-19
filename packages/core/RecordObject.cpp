@@ -215,7 +215,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid memory allocation in record creation");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid memory allocation in record creation for <%s>: %d + %d + %d < %d", rec_type, allocated_memory, (int)sizeof(rec_hdr_t), recordDefinition->type_size, recordDefinition->record_size);
         }
 
         /* Allocate Record Memory */
