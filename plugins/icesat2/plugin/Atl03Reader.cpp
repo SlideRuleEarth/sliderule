@@ -364,42 +364,50 @@ Atl03Reader::Region::Region (info_t* info):
         }
     }
 
-    /* Join Reads */
-    segment_lat.join(info->reader->read_timeout_ms, true);
-    segment_lon.join(info->reader->read_timeout_ms, true);
-    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
-
-    /* Initialize Region */
-    first_segment = 0;
-    num_segments = H5Coro::ALL_ROWS;
-    first_photon = 0;
-    num_photons = H5Coro::ALL_ROWS;
-
-    /* Determine Spatial Extent */
-    if(info->reader->parms->raster != NULL)
+    try
     {
-        rasterregion(info);
-    }
-    else if(points_in_polygon > 0)
-    {
-        polyregion();
-    }
-    else
-    {
-        return; // early exit since no subsetting required
-    }
+        /* Join Reads */
+        segment_lat.join(info->reader->read_timeout_ms, true);
+        segment_lon.join(info->reader->read_timeout_ms, true);
+        segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
-    /* Check If Anything to Process */
-    if(num_photons <= 0)
+        /* Initialize Region */
+        first_segment = 0;
+        num_segments = H5Coro::ALL_ROWS;
+        first_photon = 0;
+        num_photons = H5Coro::ALL_ROWS;
+
+        /* Determine Spatial Extent */
+        if(info->reader->parms->raster != NULL)
+        {
+            rasterregion(info);
+        }
+        else if(points_in_polygon > 0)
+        {
+            polyregion();
+        }
+        else
+        {
+            return; // early exit since no subsetting required
+        }
+
+        /* Check If Anything to Process */
+        if(num_photons <= 0)
+        {
+            throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+        }
+
+        /* Trim Geospatial Extent Datasets Read from HDF5 File */
+        segment_lat.trim(first_segment);
+        segment_lon.trim(first_segment);
+        segment_ph_cnt.trim(first_segment);
+    }
+    catch(const RunTimeException& e)
     {
         cleanup();
-        throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+        throw;
     }
 
-    /* Trim Geospatial Extent Datasets Read from HDF5 File */
-    segment_lat.trim(first_segment);
-    segment_lon.trim(first_segment);
-    segment_ph_cnt.trim(first_segment);
 }
 
 /*----------------------------------------------------------------------------
@@ -415,8 +423,17 @@ Atl03Reader::Region::~Region (void)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::Region::cleanup (void)
 {
-    if(projected_poly) delete [] projected_poly;
-    if(inclusion_mask) delete [] inclusion_mask;
+    if(projected_poly)
+    {
+        delete [] projected_poly;
+        projected_poly = NULL;
+    }
+    
+    if(inclusion_mask)
+    {
+        delete [] inclusion_mask;
+        inclusion_mask = NULL;
+    }
 }
 
 /*----------------------------------------------------------------------------
