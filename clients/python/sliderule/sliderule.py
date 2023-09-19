@@ -634,18 +634,18 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 #
 #  Initialize
 #
-def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organization=service_org, desired_nodes=None, time_to_live=60, bypass_dns=False, plugins=[]):
+def init (url=PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=0, desired_nodes=None, time_to_live=60, bypass_dns=False, plugins=[]):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
 
     Parameters
     ----------
-        url :           str
+        url:            str
                         the IP address or hostname of the SlideRule service (slidereearth.io by default)
-        verbose :       bool
+        verbose:        bool
                         whether or not user level log messages received from SlideRule generate a Python log message
-        loglevel :      int
+        loglevel:       int
                         minimum severity of log message to output
         organization:   str
                         SlideRule provisioning system organization the user belongs to (see sliderule.authenticate for details)
@@ -668,6 +668,8 @@ def init (url=service_url, verbose=False, loglevel=logging.CRITICAL, organizatio
     logging.basicConfig(level=loglevel)
     set_verbose(verbose)
     set_url(url) # configure domain
+    if organization == 0:
+        organization = PUBLIC_ORG
     authenticate(organization) # configure credentials (if any) for organization
     scaleout(desired_nodes, time_to_live, bypass_dns) # set cluster to desired number of nodes (if permitted based on credentials)
     check_version(plugins=plugins) # verify compatibility between client and server versions
@@ -1059,7 +1061,8 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
             login_status = True
         except:
-            logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
+            if ps_organization != PUBLIC_ORG:
+                logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
 
     # return login status
     return login_status
