@@ -474,6 +474,14 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 do activity = poll(polllist, num_sockets, 100); // 10Hz
                 while(activity == -1 && (errno == EINTR || errno == EAGAIN));
 
+                /* Check Activity */
+                if(activity < 0)
+                {
+                    char errmsg[256];
+                    snprintf(errmsg, 256, "Poll error (%d)... exiting server", errno);
+                    throw std::runtime_error(errmsg);
+                }
+
                 /* Handle Existing Connections  */
                 int i = 1; // skip listener socket
                 while(i < num_sockets)
