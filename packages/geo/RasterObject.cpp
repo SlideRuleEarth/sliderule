@@ -37,6 +37,7 @@
 #include "core.h"
 #include "RasterObject.h"
 #include "GdalRaster.h"
+#include "GeoIndexedRaster.h"
 #include "Ordering.h"
 #include "List.h"
 
@@ -200,16 +201,17 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Get samples */
+        bool listvalid = true;
         OGRPoint poi(lon, lat, height);
         uint32_t err = lua_obj->getSamples(&poi, gps, slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
-            //TBD throw meaningful exception, return empty table?
-            mlog(CRITICAL, "ssError: %u", err);
+            listvalid = false;
+            mlog(CRITICAL, "Too many rasters to sample, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
         }
 
-        if(slist.size() > 0)
+        if(listvalid && slist.size() > 0)
         {
             /* Create return table */
             lua_createtable(L, slist.size(), 0);
@@ -232,7 +234,6 @@ int RasterObject::luaSamples(lua_State *L)
 
                 lua_createtable(L, 0, 2);
                 LuaEngine::setAttrStr(L, "file", fileName);
-
 
                 if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
                 {
@@ -304,22 +305,23 @@ int RasterObject::luaSubset(lua_State *L)
         }
 
         /* Get subset */
+        bool listvalid = true;
         OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
         uint32_t err = lua_obj->getSubsets(&poly, gps, slist, NULL);
 
         if (err & SS_THREADS_LIMIT_ERROR)
         {
-            //TBD throw meaningful exception, return empty table?
-            mlog(CRITICAL, "ssError: %u", err);
+            listvalid = false;
+            mlog(CRITICAL, "Too many rasters to subset, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
         }
 
         if (err & SS_MEMPOOL_ERROR)
         {
-            //TBD throw meaningful exception, return empty table?
-            mlog(CRITICAL, "ssError: %u", err);
+            listvalid = false;
+            mlog(CRITICAL, "Some rasters could not be subset, requested memory size > max allowed: %ld MB", RasterSubset::MAX_SIZE / (1024*1024));
         }
 
-        if(slist.size() > 0)
+        if(listvalid && slist.size() > 0)
         {
             /* Create return table */
             lua_createtable(L, slist.size(), 0);
@@ -366,8 +368,6 @@ int RasterObject::luaSubset(lua_State *L)
     }
     catch (const RunTimeException &e)
     {
-        //TODO: should we free subsets from list here? Memleak if exception thrown?
-
         mlog(e.level(), "Failed to subset raster: %s", e.what());
     }
 

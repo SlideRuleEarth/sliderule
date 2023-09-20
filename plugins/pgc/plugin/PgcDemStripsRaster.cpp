@@ -64,7 +64,7 @@ PgcDemStripsRaster::~PgcDemStripsRaster(void)
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-void PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
+bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
 {
     /* For POI call parent class */
     if(GdalRaster::ispoint(geo))
@@ -125,10 +125,12 @@ void PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
             {
                 if(dset) GDALClose((GDALDatasetH)dset);
                 emptyFeaturesList();
-                throw;
+                ssError |= SS_INDEX_FILE_ERROR;
+                return false;
             }
         }
     }
+    return true;
 }
 
 /*----------------------------------------------------------------------------

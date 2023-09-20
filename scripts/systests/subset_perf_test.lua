@@ -10,124 +10,127 @@ local td = runner.rootdir(arg[0])
 
 local assets = asset.loaddir()
 
--- AOI extent (extent of grandmesa.geojson)
-local gm_llx = -108.3412
-local gm_lly =   38.8236
-local gm_urx = -107.7292
-local gm_ury =   39.1956
+
+local demType = "arcticdem-strips"
+print(string.format("\n------------------------------\n%s Threads Error\n------------------------------", demType))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+
+-- AOI extent
+local llx =  -150.0
+local lly =   70.0
+local urx =  -145.0
+local ury =   85.0
 
 
-local demType = "esa-worldcover-10meter"
-print(string.format("\n--------------------------\n%s\n--------------------------", demType))
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-local lon =    -108.1
-local lat =      39.1
-local height =    0.0
-local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+starttime = time.latch();
+tbl, status = dem:subset(llx, lly, urx, ury)
+stoptime = time.latch();
 
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-local stoptime = time.latch();
 threadCnt = 0
-if status ~= true then
-    print(string.format("======> FAILED to read", lon, lat))
-else
-    local value, fname, time
+if tbl ~= nil then
     for i, v in ipairs(tbl) do
         threadCnt = threadCnt + 1
     end
 end
-print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 1)
+print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
+
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        local cols = v["cols"]
+        local rows = v["rows"]
+        local size = v["size"]
+        local datatype = v["datatype"]
+
+        local mbytes = size / (1024*1024)
+        print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
+    end
+end
+
+--Expecting 'mempool throw' for strips, let it print correctly
+sys.wait(1)
+
+
+local demType = "arcticdem-strips"
+print(string.format("\n------------------------------\n%s Memory Error\n------------------------------", demType))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+
+-- AOI extent
+local llx =  -148.50
+local lly =   70.50
+local urx =  -148.90
+local ury =   70.90
+
 
 starttime = time.latch();
-tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
+tbl, status = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
 
-runner.check(status == true)
-runner.check(tbl ~= nil)
-
-local threadCnt = 0
-for i, v in ipairs(tbl) do
-    threadCnt = threadCnt + 1
+threadCnt = 0
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 1)
 
-for i, v in ipairs(tbl) do
-    local cols = v["cols"]
-    local rows = v["rows"]
-    local size = v["size"]
-    local datatype = v["datatype"]
+runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
 
-    local mbytes = size / (1024*1024)
-    print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
-end
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        local cols = v["cols"]
+        local rows = v["rows"]
+        local size = v["size"]
+        local datatype = v["datatype"]
 
-
-local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
-for i = 1, #demTypes do
-    demType = demTypes[i];
-    print(string.format("\n--------------------------\n%s\n--------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
-
-    -- AOI extent
-    local llx =  -145.81
-    local lly =   70.00
-    local urx =  -150.00
-    local ury =   71.00
-
-    starttime = time.latch();
-    tbl, status = dem:sample(llx, lly, 0)
-    stoptime = time.latch();
-
-    runner.check(status == true)
-    runner.check(tbl ~= nil)
-
-    threadCnt = 0
-    if status ~= true then
-        print(string.format("======> FAILED to read", lon, lat))
-    else
-        local value, fname, time
-        for i, v in ipairs(tbl) do
-            threadCnt = threadCnt + 1
-        end
-    end
-    print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-    runner.check(threadCnt == 1)
-
-    starttime = time.latch();
-    tbl, status = dem:subset(llx, lly, urx, ury)
-    stoptime = time.latch();
-
-    threadCnt = 0
-    if tbl ~= nil then
-        for i, v in ipairs(tbl) do
-            threadCnt = threadCnt + 1
-        end
-    end
-    print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
-    runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
-
-    if tbl ~= nil then
-        for i, v in ipairs(tbl) do
-            local cols = v["cols"]
-            local rows = v["rows"]
-            local size = v["size"]
-            local datatype = v["datatype"]
-
-            local mbytes = size / (1024*1024)
-            print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
-        end
-    end
-
-    if i == 1 then  --Expecting 'throw' for mosaics, let it print correctly
-        sys.wait(1)
+        local mbytes = size / (1024*1024)
+        print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
     end
 end
+
+--Expecting 'mempool throw' for strips, let it print correctly
+sys.wait(1)
+
+
+local demType = "arcticdem-mosaic"
+print(string.format("\n------------------------------\n%s Memory Error\n------------------------------", demType))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+
+-- AOI extent
+local llx =  -145.81
+local lly =   70.00
+local urx =  -150.00
+local ury =   71.00
+
+starttime = time.latch();
+tbl, status = dem:subset(llx, lly, urx, ury)
+stoptime = time.latch();
+
+threadCnt = 0
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
+end
+print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+
+runner.check(threadCnt == 0) --Error should happen, asking for too much memory
+
+if tbl ~= nil then
+    for i, v in ipairs(tbl) do
+        local cols = v["cols"]
+        local rows = v["rows"]
+        local size = v["size"]
+        local datatype = v["datatype"]
+
+        local mbytes = size / (1024*1024)
+        print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
+    end
+end
+
+--Expecting 'throw' for mosaics, let it print correctly
+sys.wait(1)
 
 
 demTypes = {"rema-mosaic", "rema-strips"}
@@ -211,6 +214,12 @@ local geojsonfile = td.."../../plugins/usgs3dep/data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
+
+-- AOI extent (extent of grandmesa.geojson)
+local gm_llx = -108.3412
+local gm_lly =   38.8236
+local gm_urx = -107.7292
+local gm_ury =   39.1956
 
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 starttime = time.latch();
@@ -330,6 +339,56 @@ if tbl ~= nil then
         end
     end
 end
+
+local demType = "esa-worldcover-10meter"
+print(string.format("\n--------------------------\n%s\n--------------------------", demType))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+local lon =    -108.1
+local lat =      39.1
+local height =    0.0
+local starttime = time.latch();
+local tbl, status = dem:sample(lon, lat, height)
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+local stoptime = time.latch();
+threadCnt = 0
+if status ~= true then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname, time
+    for i, v in ipairs(tbl) do
+        threadCnt = threadCnt + 1
+    end
+end
+print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 1)
+
+starttime = time.latch();
+tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
+stoptime = time.latch();
+
+runner.check(status == true)
+runner.check(tbl ~= nil)
+
+local threadCnt = 0
+for i, v in ipairs(tbl) do
+    threadCnt = threadCnt + 1
+end
+print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
+runner.check(threadCnt == 1)
+
+for i, v in ipairs(tbl) do
+    local cols = v["cols"]
+    local rows = v["rows"]
+    local size = v["size"]
+    local datatype = v["datatype"]
+
+    local mbytes = size / (1024*1024)
+    print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
+end
+
 
 local errors = runner.report()
 

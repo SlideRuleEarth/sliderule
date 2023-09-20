@@ -74,7 +74,7 @@ RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldTy
     bool allocate = false;
     mutex.lock();
     {
-        if(size > 0 && size < poolsize)
+        if(size > 0 && size <= poolsize)
         {
             poolsize -= size;
             allocate = true;
@@ -82,16 +82,12 @@ RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldTy
     }
     mutex.unlock();
 
-    /* Check Ability to Allocate */
-    if(!allocate)
+    if(allocate)
     {
-        mlog(CRITICAL, "RasterSubset requested invalid memory size: %ldMB (max per thread allowed: %ldMB)",
-                       size / (1024*1024), MAX_SIZE / (1024*1024));
-        return;
+        /* Allocate Buffer */
+        data = new uint8_t[size];
     }
-
-    /* Allocate Buffer */
-    data = new uint8_t [size];
+    else size = 0;
 }
 
 /*----------------------------------------------------------------------------
