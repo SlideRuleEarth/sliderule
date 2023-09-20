@@ -176,7 +176,7 @@ uint64_t RasterObject::fileDictAdd(const std::string& fileName)
  *----------------------------------------------------------------------------*/
 int RasterObject::luaSamples(lua_State *L)
 {
-    bool status = false;
+    uint32_t err = SS_NO_ERRORS;
     int num_ret = 1;
 
     RasterObject *lua_obj = NULL;
@@ -203,7 +203,7 @@ int RasterObject::luaSamples(lua_State *L)
         /* Get samples */
         bool listvalid = true;
         OGRPoint poi(lon, lat, height);
-        uint32_t err = lua_obj->getSamples(&poi, gps, slist, NULL);
+        err = lua_obj->getSamples(&poi, gps, slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
@@ -211,11 +211,13 @@ int RasterObject::luaSamples(lua_State *L)
             mlog(CRITICAL, "Too many rasters to sample, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
         }
 
+        /* Create return table */
+        lua_createtable(L, slist.size(), 0);
+        num_ret++;
+
+        /* Populate samples */
         if(listvalid && slist.size() > 0)
         {
-            /* Create return table */
-            lua_createtable(L, slist.size(), 0);
-
             for(uint32_t i = 0; i < slist.size(); i++)
             {
                 const RasterSample* sample = slist[i];
@@ -232,7 +234,7 @@ int RasterObject::luaSamples(lua_State *L)
                     }
                 }
 
-                lua_createtable(L, 0, 2);
+                lua_createtable(L, 0, 4);
                 LuaEngine::setAttrStr(L, "file", fileName);
 
                 if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
@@ -256,8 +258,6 @@ int RasterObject::luaSamples(lua_State *L)
                 LuaEngine::setAttrNum(L, "value", sample->value);
                 lua_rawseti(L, -2, i+1);
             }
-            num_ret++;
-            status = true;
         } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);
     }
     catch (const RunTimeException &e)
@@ -269,8 +269,9 @@ int RasterObject::luaSamples(lua_State *L)
     for (const RasterSample* sample : slist)
         if (sample) delete sample;
 
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
+    /* Return Errors and Table of Samples */
+    lua_pushinteger(L, err);
+    return num_ret;
 }
 
 
@@ -279,7 +280,7 @@ int RasterObject::luaSamples(lua_State *L)
  *----------------------------------------------------------------------------*/
 int RasterObject::luaSubset(lua_State *L)
 {
-    bool status = false;
+    uint32_t err = SS_NO_ERRORS;
     int num_ret = 1;
 
     RasterObject *lua_obj = NULL;
@@ -307,7 +308,7 @@ int RasterObject::luaSubset(lua_State *L)
         /* Get subset */
         bool listvalid = true;
         OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-        uint32_t err = lua_obj->getSubsets(&poly, gps, slist, NULL);
+        err = lua_obj->getSubsets(&poly, gps, slist, NULL);
 
         if (err & SS_THREADS_LIMIT_ERROR)
         {
@@ -321,11 +322,13 @@ int RasterObject::luaSubset(lua_State *L)
             mlog(CRITICAL, "Some rasters could not be subset, requested memory size > max allowed: %ld MB", RasterSubset::MAX_SIZE / (1024*1024));
         }
 
+        /* Create return table */
+        lua_createtable(L, slist.size(), 0);
+        num_ret++;
+
+        /* Populate subsets */
         if(listvalid && slist.size() > 0)
         {
-            /* Create return table */
-            lua_createtable(L, slist.size(), 0);
-
             for(uint32_t i = 0; i < slist.size(); i++)
             {
                 const RasterSubset* subset = slist[i];
@@ -343,7 +346,7 @@ int RasterObject::luaSubset(lua_State *L)
                 }
 
                 /* Populate Return Results */
-                lua_createtable(L, 0, 2);
+                lua_createtable(L, 0, 8);
                 LuaEngine::setAttrStr(L, "file", fileName);
                 LuaEngine::setAttrInt(L, "fileid", subset->fileId);
                 LuaEngine::setAttrNum(L, "time", subset->time);
@@ -362,8 +365,6 @@ int RasterObject::luaSubset(lua_State *L)
                 LuaEngine::setAttrNum(L, "datatype", subset->datatype);
                 lua_rawseti(L, -2, i+1);
             }
-            num_ret++;
-            status = true;
         } else mlog(DEBUG, "No subsets read");
     }
     catch (const RunTimeException &e)
@@ -375,6 +376,7 @@ int RasterObject::luaSubset(lua_State *L)
     for (const RasterSubset* subset : slist)
         if (subset) delete subset;
 
-    /* Return Status */
-    return returnLuaStatus(L, status, num_ret);
+    /* Return Errors and Table of Samples */
+    lua_pushinteger(L, err);
+    return num_ret;
 }

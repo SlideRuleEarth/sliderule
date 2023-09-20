@@ -26,18 +26,18 @@ local dem = geo.raster(geo.parms(rqst[geo.PARMS]))
 
 -- Build Table --
 local subsets = {}
+local errors = {}
 if dem then
     for _, position in ipairs(extents) do
         local xmin = position[1]
         local ymin = position[2]
         local xmax = position[3]
         local ymax = position[4]
-        local subset, status = dem:subset(xmin, ymin, xmax, ymax)
-        if status then
-            table.insert(subsets, subset)
-        end
+        local subset, error = dem:subset(xmin, ymin, xmax, ymax)
+        table.insert(subsets, subset)
+        table.insert(errors, error)
     end
 end
 
 -- Return Response
-return json.encode({subsets=subsets})
+return json.encode({subsets=subsets, errors=errors})

@@ -26,17 +26,17 @@ local dem = geo.raster(geo.parms(rqst[geo.PARMS]))
 
 -- Build Table --
 local samples = {}
+local errors = {}
 if dem then
     for _, position in ipairs(coord) do
         local lon = position[1]
         local lat = position[2]
         local height = position[3] -- optional
-        local sample, status = dem:sample(lon, lat, height)
-        if status then
-            table.insert(samples, sample)
-        end
+        local sample, error = dem:sample(lon, lat, height)
+        table.insert(samples, sample)
+        table.insert(samples, error)
     end
 end
 
 -- Return Response
-return json.encode({samples=samples})
+return json.encode({samples=samples, errors=errors})

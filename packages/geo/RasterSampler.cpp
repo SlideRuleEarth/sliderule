@@ -36,6 +36,7 @@
 #include "core.h"
 #include "geo.h"
 #include "RasterSampler.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -313,8 +314,16 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         /* Sample Raster */
         std::vector<RasterSample*> slist;
         OGRPoint poi(lon_val, lat_val, height_val);
-        raster->getSamples(&poi, gps, slist);
+        uint32_t err = raster->getSamples(&poi, gps, slist);
         int num_samples = slist.size();
+
+        /* Generate Error Messages */
+        if(err & SS_THREADS_LIMIT_ERROR)
+        {
+            LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL,
+                                                "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
+                                                rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
+        }
 
         if(raster->hasZonalStats())
         {
