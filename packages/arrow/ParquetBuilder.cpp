@@ -396,7 +396,7 @@ struct ParquetBuilder::impl
             {
                 columnstr += ", ";
             }
-printf("C: [%d %d %d] %s => %s\n", index, field_iterator->length, is_last_entry, field_name.c_str(), columnstr.str());
+
             /* Add Column String to Columns */
             columns += columnstr;
         }
