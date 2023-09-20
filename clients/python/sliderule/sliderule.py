@@ -634,7 +634,7 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 #
 #  Initialize
 #
-def init (url=PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=0, desired_nodes=None, time_to_live=60, bypass_dns=False, plugins=[]):
+def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, desired_nodes=None, time_to_live=60, bypass_dns=False, plugins=[]):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -663,10 +663,8 @@ def init (url=PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization
         >>> import sliderule
         >>> sliderule.init()
     '''
-    if verbose and loglevel == logging.CRITICAL:
-        loglevel = logging.INFO
-    logging.basicConfig(level=loglevel)
     set_verbose(verbose)
+    logger.setLevel(loglevel)
     set_url(url) # configure domain
     if organization == 0:
         organization = PUBLIC_ORG
