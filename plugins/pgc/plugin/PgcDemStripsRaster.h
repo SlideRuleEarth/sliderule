@@ -52,7 +52,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
 
                  PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb);
         virtual ~PgcDemStripsRaster (void);
-        void     openGeoIndex       (const OGRGeometry* geo) final;
+        bool     openGeoIndex       (const OGRGeometry* geo) final;
         void     getIndexFile       (const OGRGeometry* geo, std::string& file) final;
         bool     findRasters        (const OGRGeometry* geo) final;
 

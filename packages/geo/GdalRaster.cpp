@@ -290,27 +290,34 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         }
 
         subset = new RasterSubset(cols2read, rows2read, datatype, gpsTime, fileId);
-        if(subset->data == NULL)
+        if(subset->data)
+        {
+            int cnt = 1;
+            err = CE_None;
+            do
+            {
+                err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, NULL);
+            }
+            while(err != CE_None && cnt--);
+
+            if(err != CE_None)
+            {
+                ssError |= SS_AOI_FAILED_TO_READ_ERROR;
+                throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+            }
+        }
+        else
         {
             ssError |= SS_MEMPOOL_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterSubset requested invalid memory size");
+            uint64_t size = cols2read * rows2read * GDALGetDataTypeSizeBytes(dtype);
+            mlog(ERROR, "RasterSubset requested memory: %lu MB, available: %lu MB, max: %lu MB", size / (1024*1024),
+                RasterSubset::poolsize / (1024*1024),
+                RasterSubset::MAX_SIZE / (1024*1024));
         }
 
         // mlog(DEBUG, "reading %ld bytes (%.1fMB), data: %p (%0lx), ulx: %d, uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
         //         subset->size, (float)subset->size/(1024*1024), subset->data, (uint64_t)subset->data, ulx, uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
 
-        int cnt = 1;
-        err = CE_None;
-        do
-        {
-            err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, NULL);
-        } while(err != CE_None && cnt--);
-
-        if(err != CE_None)
-        {
-            ssError |= SS_AOI_FAILED_TO_READ_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
-        }
     }
     catch (const RunTimeException &e)
     {

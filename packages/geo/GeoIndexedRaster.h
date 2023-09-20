@@ -114,11 +114,11 @@ class GeoIndexedRaster: public RasterObject
         virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset*>& slist);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         double          getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        virtual void    openGeoIndex          (const OGRGeometry* geo);
+        virtual bool    openGeoIndex          (const OGRGeometry* geo);
         virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool    findRasters           (const OGRGeometry* geo) = 0;
         void            sampleRasters         (OGRGeometry* geo);
-        void            sample                (OGRGeometry* geo, int64_t gps);
+        bool            sample                (OGRGeometry* geo, int64_t gps);
         void            emptyFeaturesList     (void);
 
         /* Inline for performance */
@@ -138,6 +138,7 @@ class GeoIndexedRaster: public RasterObject
         MgOrdering<rasters_group_t*>    groupList;
         MgDictionary<cacheitem_t*>      cache;
         List<OGRFeature*>               featuresList;
+        uint32_t                        ssError;
 
     private:
 
@@ -160,7 +161,6 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
-        uint32_t                  ssError;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -173,7 +173,7 @@ class GeoIndexedRaster: public RasterObject
         static void* readingThread (void *param);
 
         void       createThreads           (void);
-        void       updateCache             (void);
+        bool       updateCache             (void);
         bool       filterRasters           (int64_t gps);
 };
 
