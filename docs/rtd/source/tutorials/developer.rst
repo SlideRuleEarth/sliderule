@@ -11,3 +11,4 @@ Developer
    developer/pub_to_pypi.md
    developer/ubuntu_arm_setup.md
    developer/certbot_instructions.md
+   developer/backdoor_access.md
