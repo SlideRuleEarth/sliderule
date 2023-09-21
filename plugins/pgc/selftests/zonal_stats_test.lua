@@ -22,8 +22,8 @@ local samplingRadius = 30
 
 print(string.format("\n--------------------------------\nTest: %s Zonal Stats, sampling radius %d meters\n--------------------------------", demType, samplingRadius))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local expElevation = 19.890625000000
@@ -64,8 +64,8 @@ dem=nil
 samplingRadius = 10
 print(string.format("\n--------------------------------\nTest: %s Zonal Stats, sampling radius %d meters\n--------------------------------", demType, samplingRadius))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 expElevation = 19.890625000000

@@ -23,8 +23,8 @@ for radius = 50, 100, 50
 do
     for i = 1, 8 do
         local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlgs[i], radius=radius, zonal_stats=true}))
-        local tbl, status = dem:sample(lon, lat, height)
-        if status ~= true then
+        local tbl, err = dem:sample(lon, lat, height)
+        if err ~= 0 then
             print(string.format("======> FAILED to read",lon, lat))
         else
             local el, cnt, min, max, mean, median, stdev, mad, file
@@ -56,8 +56,8 @@ print(string.format("\n-------------------------------------------------\nTest %
 for radius = 50, 100, 50
 do
     local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlg, radius=radius, zonal_stats=true}))
-    local tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    local tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         print(string.format("======> FAILED to read",lon, lat))
     else
         local el, cnt, min, max, mean, median, stdev, mad, file

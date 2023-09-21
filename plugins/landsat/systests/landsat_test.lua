@@ -36,8 +36,8 @@ local demType = "landsat-hls"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"B03", "NDVI"}, catalog = contents }))
 
 for i = 1, 1, 1 do
-    local tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    local tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         print(string.format("======> FAILED to read", lon, lat))
     else
         local el, fname

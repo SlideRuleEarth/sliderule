@@ -22,11 +22,11 @@ local _lat = lat
 print(string.format("\n------------------------------------\nStrips reading one point\n------------------------------------"))
 local dem = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-if status ~= true then
+if err ~= 0 then
     failedSamples = failedSamples + 1
     print(string.format("Point (%7.2f, %.2f) ======> FAILED to read",lon, lat))
 else
@@ -47,8 +47,8 @@ starttime = time.latch();
 intervaltime = starttime
 for i = 1, maxPoints
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %6d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     end
@@ -78,9 +78,9 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:sample(lon, lat, height)
+    tbl, err = dem:sample(lon, lat, height)
     sampledStripsCnt = 0
-    if status ~= true then
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %3d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     else
@@ -126,9 +126,9 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:sample(lon, lat, height)
+    tbl, err = dem:sample(lon, lat, height)
     sampledStripsCnt = 0
-    if status ~= true then
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %3d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     else

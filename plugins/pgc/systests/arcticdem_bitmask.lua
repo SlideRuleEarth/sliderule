@@ -38,8 +38,8 @@ for d = 1, 2 do
 
     for i = 1, maxPoints
     do
-        local tbl, status = dem:sample(lon, lat, height)
-        if status ~= true then
+        local tbl, err = dem:sample(lon, lat, height)
+        if err ~= 0 then
             failedSamples = failedSamples + 1
             if verboseErrors then
                 print(string.format("(POINT: %4d)  (%.2f, %.2f) ======> FAILED",i, lon, lat))

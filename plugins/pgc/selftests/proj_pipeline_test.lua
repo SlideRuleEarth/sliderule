@@ -39,8 +39,8 @@ for i = 1, #demTypes do
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
         lat = lats[j]
-        tbl, status = dem:sample(lon, lat, height)
-        if status ~= true then
+        tbl, err = dem:sample(lon, lat, height)
+        if err ~= 0 then
             print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
         else
             local el, fname

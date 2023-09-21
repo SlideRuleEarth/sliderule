@@ -36,8 +36,8 @@ local expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/stri
 
 print(string.format("\n--------------------------------\nTest: %s No Filter\n--------------------------------", demType))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -69,8 +69,8 @@ expResults = {{773.03906250, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s, t1=%s\n--------------------------------", demType, t0str, t1str))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, t0=t0str, t1=t1str}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -100,8 +100,8 @@ expResults = {{ 80.65625000, 0x0, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s
 t0str = "2021:2:3:1:0:0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t0=%s\n--------------------------------", demType, t0str))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, t0=t0str}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -137,8 +137,8 @@ expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s
 t1str = "2021:2:3:1:0:0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: t1=%s\n--------------------------------", demType, t1str))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, t1=t1str}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -165,8 +165,8 @@ expResults = {{49.92187500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s0
 local tstr = "2021:2:4:23:3:0"
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, closest_time=tstr}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -192,8 +192,8 @@ expResults = {{80.22656250, 0x0, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s0
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override closest_time: %s with %s\n--------------------------------", demType, tstr, tstrOverride))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, closest_time=tstr}))
-tbl, status = dem:sample(lon, lat, height, tstrOverride)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height, tstrOverride)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0

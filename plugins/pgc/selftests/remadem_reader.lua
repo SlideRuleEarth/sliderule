@@ -24,8 +24,8 @@ for i = 1, #demTypes do
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
-    local tbl, status = dem:sample(lon, lat, height)
-    runner.check(status == true)
+    local tbl, err = dem:sample(lon, lat, height)
+    runner.check(err == 0)
     runner.check(tbl ~= nil)
 
     local sampleCnt = 0
@@ -86,8 +86,8 @@ for i = 1, #demTypes do
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
         lat = lats[j]
-        tbl, status = dem:sample(lon, lat, height)
-        if status ~= true then
+        tbl, err = dem:sample(lon, lat, height)
+        if err ~= 0 then
             print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
         else
             local el, fname
@@ -143,8 +143,8 @@ for i = 1, #demTypes do
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
         lat = lats[j]
-        tbl, status = dem:sample(lon, lat, height)
-        if status ~= true then
+        tbl, err = dem:sample(lon, lat, height)
+        if err ~= 0 then
             print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",j, lon, lat))
         else
             local el, fname

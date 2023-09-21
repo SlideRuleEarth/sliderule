@@ -23,11 +23,11 @@ local _lat = lat
 print('\n------------------\nTest: AWS mosaic\n------------')
 local dem = geo.raster(geo.parms({asset="rema-mosaic", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-if status ~= true then
+if err ~= 0 then
     failedSamples = failedSamples + 1
     print(string.format("Point: (%.3f, %.3f) ======> FAILED to read",lon, lat))
 else
@@ -54,8 +54,8 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     end
@@ -80,8 +80,8 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     end
@@ -119,8 +119,8 @@ intervaltime = starttime
 
 for i = 1, max_cnt
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read",i, lon, lat))
     else

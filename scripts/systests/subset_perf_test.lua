@@ -23,7 +23,7 @@ local ury =   85.0
 
 
 starttime = time.latch();
-tbl, status = dem:subset(llx, lly, urx, ury)
+tbl, err = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
 
 threadCnt = 0
@@ -64,7 +64,7 @@ local ury =   70.90
 
 
 starttime = time.latch();
-tbl, status = dem:subset(llx, lly, urx, ury)
+tbl, err = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
 
 threadCnt = 0
@@ -104,7 +104,7 @@ local urx =  -150.00
 local ury =   71.00
 
 starttime = time.latch();
-tbl, status = dem:subset(llx, lly, urx, ury)
+tbl, err = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
 
 threadCnt = 0
@@ -146,11 +146,11 @@ for i = 1, #demTypes do
     print(string.format("\n--------------------------\n%s\n--------------------------", demType))
     dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
     starttime = time.latch();
-    tbl, status = dem:sample(llx, lly, 0)
+    tbl, err = dem:sample(llx, lly, 0)
     stoptime = time.latch();
 
     -- For mosaics this is too much memory
-    runner.check(status == true)
+    runner.check(err == 0)
     runner.check(tbl ~= nil)
 
     threadCnt = 0
@@ -169,10 +169,10 @@ for i = 1, #demTypes do
     end
 
     starttime = time.latch();
-    tbl, status = dem:subset(llx, lly, urx, ury)
+    tbl, err = dem:subset(llx, lly, urx, ury)
     stoptime = time.latch();
 
-    runner.check(status == true)
+    runner.check(err == 0)
     runner.check(tbl ~= nil)
 
     threadCnt = 0
@@ -223,10 +223,10 @@ local gm_ury =   39.1956
 
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 starttime = time.latch();
-local tbl, status = dem:sample(gm_llx, gm_lly, 0)
+local tbl, err = dem:sample(gm_llx, gm_lly, 0)
 stoptime = time.latch();
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 threadCnt = 0
@@ -240,11 +240,11 @@ runner.check(threadCnt == 1)
 
 
 starttime = time.latch();
--- tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
-tbl, status = dem:subset(gm_llx, gm_lly, gm_llx+0.1, gm_lly+0.1)
+-- tbl, err = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
+tbl, err = dem:subset(gm_llx, gm_lly, gm_llx+0.1, gm_lly+0.1)
 stoptime = time.latch();
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 threadCnt = 0
@@ -293,10 +293,10 @@ ury =    51.44
 -- dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"B05"}, catalog = contents }))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
 starttime = time.latch();
-tbl, status = dem:sample(-179, 51, 0)
+tbl, err = dem:sample(-179, 51, 0)
 stoptime = time.latch();
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 threadCnt = 0
@@ -309,10 +309,10 @@ print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime
 runner.check(threadCnt == 9)
 
 starttime = time.latch();
-tbl, status = dem:subset(llx, lly, urx, ury)
+tbl, err = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 threadCnt = 0
@@ -347,14 +347,14 @@ local lon =    -108.1
 local lat =      39.1
 local height =    0.0
 local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local stoptime = time.latch();
 threadCnt = 0
-if status ~= true then
+if err ~= 0 then
     print(string.format("======> FAILED to read", lon, lat))
 else
     local value, fname, time
@@ -366,10 +366,10 @@ print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime
 runner.check(threadCnt == 1)
 
 starttime = time.latch();
-tbl, status = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
+tbl, err = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
 stoptime = time.latch();
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local threadCnt = 0

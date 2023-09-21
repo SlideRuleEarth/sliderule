@@ -31,8 +31,8 @@ print('\n------------------\nTest01: sample\n------------------')
 local lon = -108
 local lat =   39
 local height = 0
-local tbl, status = robj:sample(lon, lat, height)
-runner.check(status == true)
+local tbl, err = robj:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local el, file
@@ -68,8 +68,8 @@ runner.check(_cellsize == cellsize)
 print('\n------------------\nTest05: edge of bbox\n------------------')
 lon = -108.34
 lat =   38.90
-tbl, status = robj:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = robj:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 for j, v in ipairs(tbl) do
     s = v["value"]
@@ -83,9 +83,9 @@ runner.check(tostring(s) == "nan")
 print('\n------------------\nTest06: outside bbox\n------------------')
 lon = -100
 lat =   40
-tbl, status = robj:sample(lon, lat, height)
-runner.check(status == nil)
-runner.check(tbl == nil)
+tbl, err = robj:sample(lon, lat, height)
+runner.check(err ~= 0)
+runner.check(#tbl == 0)
 
 
 -- Clean Up --

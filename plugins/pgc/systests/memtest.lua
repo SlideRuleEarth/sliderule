@@ -18,9 +18,9 @@ local height = 0
 print('Memory test')
 
 local dem = geo.raster("arcticdem-mosaic", "NearestNeighbour", 0)
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 
-if status ~= true then
+if err ~= 0 then
     failedSamples = failedSamples + 1
     print(string.format("Point (%.3f, %.3f) ======> FAILED to read",lon, lat))
 else
@@ -32,9 +32,9 @@ else
 end
 
 local dem = geo.raster("arcticdem-strips", "NearestNeighbour", 0)
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 
-if status ~= true then
+if err ~= 0 then
     failedSamples = failedSamples + 1
     print(string.format("Point (%.3f, %.3f) ======> FAILED to read",lon, lat))
 else

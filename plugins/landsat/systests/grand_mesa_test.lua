@@ -72,8 +72,8 @@ for i=1,#arr do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  height = 0
-    local  tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    local  tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         print(string.format("======> FAILED to read", lon, lat, height))
     else
         local ndvi, fname

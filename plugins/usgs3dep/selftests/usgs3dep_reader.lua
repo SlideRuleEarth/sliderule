@@ -47,8 +47,8 @@ local expResults = {{2638.032147717071, 1289671725.0, '/vsis3/prd-tnm/StagedProd
 
 local demType = "usgs3dep-1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
-local tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+local tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local sampleCnt = 0
@@ -77,10 +77,10 @@ local gm_urx = -107.7292
 local gm_ury =   39.1956
 
 local starttime = time.latch();
-local tbl, status = dem:subset(gm_llx, gm_lly, gm_llx+0.01, gm_lly+0.4)
+local tbl, err = dem:subset(gm_llx, gm_lly, gm_llx+0.01, gm_lly+0.4)
 local stoptime = time.latch();
 
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local threadCnt = 0

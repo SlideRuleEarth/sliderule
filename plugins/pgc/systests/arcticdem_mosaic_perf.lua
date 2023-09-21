@@ -23,11 +23,11 @@ local _lat = lat
 print(string.format("\n------------------------------------\nMosaics reading one point\n------------------------------------"))
 local dem = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-if status ~= true then
+if err ~= 0 then
     failedSamples = failedSamples + 1
     print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
 else
@@ -48,8 +48,8 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
     end
@@ -72,8 +72,8 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     end
@@ -98,8 +98,8 @@ intervaltime = starttime
 
 for i = 1, maxPoints
 do
-    tbl, status = dem:sample(lon, lat, height)
-    if status ~= true then
+    tbl, err = dem:sample(lon, lat, height)
+    if err ~= 0 then
         failedSamples = failedSamples + 1
         print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
     else

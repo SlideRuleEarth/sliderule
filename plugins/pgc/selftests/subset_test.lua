@@ -26,10 +26,10 @@ for i = 1, #demTypes do
     print(string.format("\n--------------------------------\nTest: %s AOI subset\n--------------------------------", demType))
 
     local starttime = time.latch();
-    local tbl, status = dem:subset(llx, lly, urx, ury)
+    local tbl, err = dem:subset(llx, lly, urx, ury)
     local stoptime = time.latch();
 
-    runner.check(status == true)
+    runner.check(err == 0)
     runner.check(tbl ~= nil)
 
     local threadCnt = 0

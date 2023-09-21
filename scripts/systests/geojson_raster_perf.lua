@@ -64,8 +64,8 @@ for loopCnt=1, maxLoopCnt do
         local  lon = arr[i][1]
         local  lat = arr[i][2]
         local  height = 0
-        local  tbl, status = robj:sample(lon, lat, height)
-        if status ~= true then
+        local  tbl, err = robj:sample(lon, lat, height)
+        if err ~= 0 then
             print(string.format("======> FAILED to read", lon, lat, height))
         else
             for j, v in ipairs(tbl) do

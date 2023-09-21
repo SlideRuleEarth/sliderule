@@ -25,9 +25,9 @@ local expResults = {{10.0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_
 local demType = "esa-worldcover-10meter"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 local starttime = time.latch();
-local tbl, status = dem:sample(lon, lat, height)
+local tbl, err = dem:sample(lon, lat, height)
 local stoptime = time.latch();
-runner.check(status == true)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 print(string.format("sample time: %f", stoptime - starttime))
 
@@ -45,7 +45,7 @@ for i, v in ipairs(tbl) do
     runner.check(time == expResults[i][2])
     runner.check(fname == expResults[i][3])
 end
-runner.check(sampleCnt == #expResults)
+runner.check(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
 
 
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter subset AOI\n-------------------------------------------------"))
@@ -53,10 +53,10 @@ print(string.format("\n-------------------------------------------------\nesa wo
 expResults = {{0, 1309046418000, '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt', 7344, 4464, 32783616,  4}}
 
 starttime = time.latch();
-tbl, status = dem:subset(-108.3412, 38.8236, -107.7292, 39.1956)
+tbl, err = dem:subset(-108.3412, 38.8236, -107.7292, 39.1956)
 stoptime = time.latch();
 print(string.format("subset time: %f", stoptime - starttime))
-runner.check(status == true)
+runner.check(err == 0)
 
 local subsetCnt = 0
 for i, v in ipairs(tbl) do
@@ -78,7 +78,7 @@ for i, v in ipairs(tbl) do
     runner.check(size == expResults[i][6])
     runner.check(datatype == expResults[i][7])  -- UINT8
 end
-runner.check(subsetCnt == 1)
+runner.check(subsetCnt == 1, string.format("Received unexpected number of subsets: %d", subsetCnt))
 
 -- Report Results --
 

@@ -38,8 +38,8 @@ local expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/stri
 local url = "vsis3"
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -64,8 +64,8 @@ expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s
 
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, substr=url}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0
@@ -94,8 +94,8 @@ expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s
 url = "WV01"
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, substr=url}))
-tbl, status = dem:sample(lon, lat, height)
-runner.check(status == true)
+tbl, err = dem:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 sampleCnt = 0

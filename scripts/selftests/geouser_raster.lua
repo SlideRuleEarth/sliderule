@@ -33,8 +33,8 @@ print('\n------------------\nTest01: sample\n------------------')
 local lon = 149.00001
 local lat =  69.00001
 local height = 0
-local tbl, status = robj:sample(lon, lat, height)
-runner.check(status == true)
+local tbl, err = robj:sample(lon, lat, height)
+runner.check(err == 0)
 runner.check(tbl ~= nil)
 
 local el, file
