@@ -34,7 +34,7 @@ if dem then
         local height = position[3] -- optional
         local sample, error = dem:sample(lon, lat, height)
         table.insert(samples, sample)
-        table.insert(samples, error)
+        table.insert(errors, error)
     end
 end
 
