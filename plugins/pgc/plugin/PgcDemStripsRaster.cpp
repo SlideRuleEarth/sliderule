@@ -84,6 +84,9 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
     double maxx = ceil(env.MaxX);
     double maxy = ceil(env.MaxY);
 
+    /* Create poly geometry for all index files */
+    geoIndexPoly = GdalRaster::makeRectangle(minx, miny, maxx, maxy);
+
     emptyFeaturesList();
 
     for(double ix = minx; ix < maxx; ix++ )
@@ -123,13 +126,20 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
             }
             catch(const RunTimeException& e)
             {
+                /* If geocell does not have a geojson index file, ignore it and don't count it as error */
                 if(dset) GDALClose((GDALDatasetH)dset);
-                emptyFeaturesList();
-                ssError |= SS_INDEX_FILE_ERROR;
-                return false;
             }
         }
     }
+
+    if(featuresList.isempty())
+    {
+        /* All geocells were 'empty' */
+        geoIndexPoly.empty();
+        ssError |= SS_INDEX_FILE_ERROR;
+        return false;
+    }
+
     return true;
 }
 

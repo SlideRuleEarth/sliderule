@@ -211,6 +211,9 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 
     /* Establish Credentials */
     GdalRaster::initAwsAccess(_parms);
+
+    /* Mark index file bbox/extent poly as empty */
+    geoIndexPoly.empty();
 }
 
 /*----------------------------------------------------------------------------
@@ -339,13 +342,14 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
     getIndexFile(geo, newFile);
 
     /* Trying to open the same file? */
-    if(featuresList.isempty() && newFile == indexFile)
+    if(!featuresList.isempty() && newFile == indexFile)
         return true;
 
     GDALDataset* dset = NULL;
     try
     {
         emptyFeaturesList();
+        geoIndexPoly.empty();
 
         /* Open new vector data set*/
         dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
@@ -370,7 +374,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         cols = dset->GetRasterXSize();
         rows = dset->GetRasterYSize();
 
-
+        /* OGREnvelope is not treated as first classs geometry in OGR, must create a polygon geometry from it */
         OGREnvelope env;
         OGRErr err = layer->GetExtent(&env);
         if(err == OGRERR_NONE )
@@ -379,7 +383,10 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
             bbox.lat_min = env.MinY;
             bbox.lon_max = env.MaxX;
             bbox.lat_max = env.MaxY;
-            mlog(DEBUG, "Layer extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+
+            /* Create poly geometry for index file bbox/envelope */
+            geoIndexPoly = GdalRaster::makeRectangle(bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+            mlog(DEBUG, "index file extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
         }
 
         GDALClose((GDALDatasetH)dset);
@@ -449,34 +456,12 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 
     groupList.clear();
 
-    if(GdalRaster::ispoint(geo))
+    /* geo index polygon (file bbox/extent) is created when index file is opened */
+    if(geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo))
     {
-        /* Initial call, open index file if not already opened */
-        if(featuresList.isempty() && !openGeoIndex(geo))
-            return status;
-
-        /* Make sure POI is within indexFile, if it is not, open new indexFile for this POI */
-        OGRPoint* poi = geo->toPoint();
-        if(!withinExtent(poi))
-        {
-            if(!openGeoIndex(geo))
-                return status;
-
-            /* Check against newly opened geoindex */
-            if(!withinExtent(poi))
-            {
-                ssError |= SS_POI_OUT_OF_BOUNDS_ERROR;
-                return status;
-            }
-        }
-    }
-    else if(GdalRaster::ispoly(geo))
-    {
-        /* Always open/create new indexFile for poly */
         if(!openGeoIndex(geo))
             return status;
     }
-    else return status;
 
     if(findRasters(geo) && filterRasters(gps) && updateCache())
     {

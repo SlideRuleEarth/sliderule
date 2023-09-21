@@ -138,6 +138,7 @@ class GeoIndexedRaster: public RasterObject
         MgOrdering<rasters_group_t*>    groupList;
         MgDictionary<cacheitem_t*>      cache;
         List<OGRFeature*>               featuresList;
+        OGRPolygon                      geoIndexPoly;
         uint32_t                        ssError;
 
     private:
