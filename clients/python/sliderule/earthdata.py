@@ -396,8 +396,10 @@ def __build_geojson(rsps):
         del geojson["features"][i]["stac_extensions"]
         del geojson["features"][i]["collection"]
         del geojson["features"][i]["bbox"]
-        del geojson["features"][i]["assets"]["browse"]
-        del geojson["features"][i]["assets"]["metadata"]
+        if "browse" in geojson["features"][i]["assets"]:
+            del geojson["features"][i]["assets"]["browse"]
+        if "metadata" in geojson["features"][i]["assets"]:
+            del geojson["features"][i]["assets"]["metadata"]
         propertiesDict = geojson["features"][i]["properties"]
         assetsDict = geojson["features"][i]["assets"]
         for val in assetsDict:
