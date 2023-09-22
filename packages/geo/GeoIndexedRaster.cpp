@@ -312,25 +312,32 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
         return 0;
     }
 
-    int year, month, day, hour, minute, second, timeZone;
-    year = month = day = hour = minute = second = timeZone = 0;
-    if(feature->GetFieldAsDateTime(i, &year, &month, &day, &hour, &minute, &second, &timeZone))
-    {
-        /* Time Zone flag: 100 is GMT, 1 is localtime, 0 unknown */
-        if(timeZone == 100)
-        {
-            gmtDate.year        = year;
-            gmtDate.doy         = TimeLib::dayofyear(year, month, day);
-            gmtDate.hour        = hour;
-            gmtDate.minute      = minute;
-            gmtDate.second      = second;
-            gmtDate.millisecond = 0;
-        }
-        else mlog(ERROR, "Unsuported time zone in raster date (TMZ is not GMT)");
-    }
+    double gpstime = 0, seconds;
+    int year, month, day, hour, minute;
 
-    // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, second);
-    return static_cast<double>(TimeLib::gmt2gpstime(gmtDate));
+    /*
+     * Raster's datetime in geojson index file should be properly formated GMT date time string in ISO8601 format.
+     * Make best effort to convert it to gps time.
+     */
+    if(const char* iso8601date = feature->GetFieldAsISO8601DateTime(i, NULL))
+    {
+        if (sscanf(iso8601date, "%04d-%02d-%02dT%02d:%02d:%lfZ",
+            &year, &month, &day, &hour, &minute, &seconds) == 6)
+        {
+            gmtDate.year = year;
+            gmtDate.doy = TimeLib::dayofyear(year, month, day);
+            gmtDate.hour = hour;
+            gmtDate.minute = minute;
+            gmtDate.second = seconds;
+            gmtDate.millisecond = 0;
+            gpstime = TimeLib::gmt2gpstime(gmtDate);
+            mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, (int)seconds);
+        }
+        else mlog(DEBUG, "Unable to parse ISO8601 UTC date string [%s]", iso8601date);
+    }
+    else mlog(DEBUG, "Date field is invalid");
+
+    return gpstime;
 }
 
 /*----------------------------------------------------------------------------
