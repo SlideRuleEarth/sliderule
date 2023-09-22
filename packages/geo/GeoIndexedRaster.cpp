@@ -331,7 +331,7 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
             gmtDate.second = seconds;
             gmtDate.millisecond = 0;
             gpstime = TimeLib::gmt2gpstime(gmtDate);
-            mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, (int)seconds);
+            // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, (int)seconds);
         }
         else mlog(DEBUG, "Unable to parse ISO8601 UTC date string [%s]", iso8601date);
     }
