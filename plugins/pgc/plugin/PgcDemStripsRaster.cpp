@@ -122,6 +122,7 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
                     OGRFeature::DestroyFeature(feature);
                 }
 
+                mlog(DEBUG, "Loaded %d index file features/rasters from: %s", featuresList.length(), newFile.c_str());
                 GDALClose((GDALDatasetH)dset);
             }
             catch(const RunTimeException& e)

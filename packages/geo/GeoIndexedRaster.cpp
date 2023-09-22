@@ -390,7 +390,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded index file features from: %s", newFile.c_str());
+        mlog(DEBUG, "Loaded %d index file features/rasters from: %s", featuresList.length(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -456,8 +456,9 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 
     groupList.clear();
 
-    /* geo index polygon (file bbox/extent) is created when index file is opened */
-    if(geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo))
+    /* For AOI always open new index file, for POI it depends... */
+    bool openNewFile = GdalRaster::ispoly(geo) ? true : geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
+    if(openNewFile)
     {
         if(!openGeoIndex(geo))
             return status;

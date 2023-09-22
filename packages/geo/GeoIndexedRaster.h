@@ -121,15 +121,6 @@ class GeoIndexedRaster: public RasterObject
         bool            sample                (OGRGeometry* geo, int64_t gps);
         void            emptyFeaturesList     (void);
 
-        /* Inline for performance */
-        bool withinExtent(OGRPoint* poi)
-        {
-            return ((featuresList.length() > 0) &&
-                    (poi->getX() >= bbox.lon_min) && (poi->getX() <= bbox.lon_max) &&
-                    (poi->getY() >= bbox.lat_min) && (poi->getY() <= bbox.lat_max));
-        }
-
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

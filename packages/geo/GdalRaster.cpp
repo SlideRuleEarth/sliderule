@@ -119,6 +119,8 @@ void GdalRaster::open(void)
     bbox.lat_max = geoTransform[3];
     bbox.lat_min = geoTransform[3] + rows * geoTransform[5];
 
+    // mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+
     cellSize       = geoTransform[1];
     radiusInPixels = radius2pixels(parms->sampling_radius);
 
