@@ -5,7 +5,7 @@ author_profile: true
 permalink: /contact/
 ---
 
-There are multiple ways to get in contact with us, all of which are done through GitHub: **(1)** opening an issue, **(2)** opening a pull request, **(3)** posting a discussion message.
+There are multiple ways to get in contact with us: **(1)** opening an issue, **(2)** opening a pull request, **(3)** posting a discussion message, and **(4)** emailing support@mail.slideruleearth.io.
 
 
 ## Method 1: Opening an Issue
@@ -37,3 +37,14 @@ Posting a discussion message is great for:
 * ideas you want to share and get people thinking about
 
 Please use this link to start a discussion: [sliderule post](https://github.com/ICESat2-SlideRule/sliderule/discussions).
+
+
+## Method 4: Eamiling us Directly
+
+Eamiling us directly is great for:
+* organizational questions (who we are and future collaboration opportunities)
+* sensitive questions that should not be posted publicly
+* if you are just confused and need a real person to help address an issue directly
+
+Please email us at support@mail.slideruleearth.io
+
