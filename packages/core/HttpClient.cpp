@@ -262,7 +262,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
                 memcpy(rqstBuf, rqst_hdr.str(), hdr_len);
-                memcpy(&rqstBuf[hdr_len], data, content_length);
+                if(data) memcpy(&rqstBuf[hdr_len], data, content_length);
             }
             else
             {
@@ -755,6 +755,8 @@ void* HttpClient::requestThread(void* parm)
         }
     }
 
+    delete request_sub;
+    
     return NULL;
 }
 

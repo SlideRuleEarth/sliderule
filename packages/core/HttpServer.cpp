@@ -685,7 +685,9 @@ int HttpServer::onConnect(int fd)
     if(!connections.add(fd, connection, false))
     {
         mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->id);
-        status = INVALID_RC; // will disconnect and free connection
+        deinitConnection(connection);
+        delete connection;
+        status = INVALID_RC;
     }
 
     return status;
