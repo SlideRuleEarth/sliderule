@@ -15,7 +15,7 @@ The SlideRule project consists of mulitple resources available to the public:
 - **Documentation Website**:  This is what you are reading right now, and is located at https://slideruleearth.io/web/rtd/index.html.  The documentation is provided via the Read-The-Docs framework and includes information on how to install and use SlideRule.
 - **Web Interface**: The current web interface for sliderule is a demo built using Voila and a Jupyter Notebook; it can be reached at https://demo.slideruleearth.io. We are currently working on proper web interface for sliderule which will supercede the demo.
 - **Python Client**: The primary method of interacting with SlideRule is via the Python client, installable via conda or pip (both under the name sliderule).  
-- **Node.js Client (beta)**: In support of the future web client, a Node.js client has been written for sliderule.  It is installable via npm under the name sliderule.
+- **Node.js Client (beta)**: In support of the future web client, a Node.js client has been written for sliderule.  It is installable via npm under the name @sliderule/sliderule.
 - **Github Repositories**: All code for SlideRule is open source and openly developed at https://github.com/ICESat2-SlideRule/sliderule.  Anyone can download/fork/browse the code, open issues, and post discussions.
 - **Provisioning System**: Behind the scense, all assets in AWS needed to run a SlideRule cluster is deployed and cost-monitored by the SlideRule Provisioning System.  The provisioning system can be used to run private clusters as well.  Please `contact us </web/contact/>`_ if you are interested in a private cluster. 
 
