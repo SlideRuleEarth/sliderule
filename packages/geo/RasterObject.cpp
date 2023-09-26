@@ -363,6 +363,11 @@ int RasterObject::luaSubset(lua_State *L)
                 LuaEngine::setAttrInt(L, "rows", subset->rows);
                 LuaEngine::setAttrInt(L, "size", subset->size);
                 LuaEngine::setAttrNum(L, "datatype", subset->datatype);
+                LuaEngine::setAttrNum(L, "minx", subset->minx);
+                LuaEngine::setAttrNum(L, "miny", subset->miny);
+                LuaEngine::setAttrNum(L, "maxx", subset->maxx);
+                LuaEngine::setAttrNum(L, "maxy", subset->maxy);
+                LuaEngine::setAttrNum(L, "cellsize", subset->cellsize);
                 lua_rawseti(L, -2, i+1);
             }
         } else mlog(DEBUG, "No subsets read");

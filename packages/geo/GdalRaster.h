@@ -107,8 +107,8 @@ class GdalRaster
         RasterSample*      samplePOI      (OGRPoint* poi);
         RasterSubset*      subsetAOI      (OGRPolygon* poly);
         const std::string& getFileName    (void) { return fileName;}
-        int                getRows        (void) { return rows; }
-        int                getCols        (void) { return cols; }
+        int                getRows        (void) { return ysize; }
+        int                getCols        (void) { return xsize; }
         const bbox_t&      getBbox        (void) { return bbox; }
         double             getCellSize    (void) { return cellSize; }
         uint32_t           getSSerror     (void) { return ssError; }
@@ -132,9 +132,10 @@ class GdalRaster
 
         GeoParms*      parms;
         double         gpsTime;  /* Time the raster data was collected and/or generated */
-        uint64_t       fileId; /* unique identifier of raster file used for downstream processing */
+        uint64_t       fileId;   /* unique identifier of raster file used for downstream processing */
 
         OGRCoordinateTransformation* transf;
+        OGRCoordinateTransformation* reversedtransf;
         OGRSpatialReference sourceCRS;
         OGRSpatialReference targetCRS;
         overrideCRS_t       overrideCRS;
@@ -143,12 +144,13 @@ class GdalRaster
         GDALDataset    *dset;
         GDALRasterBand* band;
         bool            dataIsElevation;
-        uint32_t        rows;
-        uint32_t        cols;
+        uint32_t        xsize;
+        uint32_t        ysize;
         double          cellSize;
         bbox_t          bbox;
         uint32_t        radiusInPixels;
-        double          invGeoTrans[6];
+        double          geoTransform[6];
+        double          invGeoTransform[6];
         uint32_t        ssError;
 
         /*--------------------------------------------------------------------
@@ -161,12 +163,12 @@ class GdalRaster
         inline bool nodataCheck         (RasterSample* sample);
         void        createTransform     (void);
         int         radius2pixels       (int _radius);
-        inline bool containsWindow      (int col, int row, int maxCol, int maxRow, int windowSize);
-        inline void readRasterWithRetry (int col, int row, int colSize, int rowSize,
-                                         void* data, int dataColSize, int dataRowSize, GDALRasterIOExtraArg *args);
+        inline bool containsWindow      (int x, int y, int maxx, int maxy, int windowSize);
+        inline void readRasterWithRetry (int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
 
-        void topixel(double minx, double miny, double maxx, double maxy,
-                     int& ulx, int& uly, int& lrx, int& lry);
+        void        map2pixel           (double mapx, double mapy, int& x, int& y);
+        void        map2pixel           (const OGRPoint* poi, int& x, int& y) { map2pixel(poi->getX(), poi->getY(), x, y); }
+        void        pixel2map           (int x, int y, double& mapx, double& mapy);
 
         bool s3sleep(void) {std::this_thread::sleep_for(std::chrono::milliseconds(50)); return true; }
 };
