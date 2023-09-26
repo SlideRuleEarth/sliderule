@@ -20,19 +20,19 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release \
 RUN make -j8
 RUN make install
 
+# build and install gedi plugin into staging
+RUN mkdir -p /build/gedi
+WORKDIR /build/gedi
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+          /sliderule/plugins/gedi
+RUN make -j8
+RUN make install
+
 # build and install icesat2 plugin into staging
 RUN mkdir -p /build/icesat2
 WORKDIR /build/icesat2
 RUN cmake -DCMAKE_BUILD_TYPE=Release \
           /sliderule/plugins/icesat2
-RUN make -j8
-RUN make install
-
-# build and install pgc plugin into staging
-RUN mkdir -p /build/pgc
-WORKDIR /build/pgc
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/pgc
 RUN make -j8
 RUN make install
 
@@ -44,19 +44,19 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release \
 RUN make -j8
 RUN make install
 
-# build and install gedi plugin into staging
-RUN mkdir -p /build/gedi
-WORKDIR /build/gedi
+# build and install opendata plugin into staging
+RUN mkdir -p /build/opendata
+WORKDIR /build/opendata
 RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/gedi
+          /sliderule/plugins/opendata
 RUN make -j8
 RUN make install
 
-# build and install usgs3dep plugin into staging
-RUN mkdir -p /build/usgs3dep
-WORKDIR /build/usgs3dep
+# build and install pgc plugin into staging
+RUN mkdir -p /build/pgc
+WORKDIR /build/pgc
 RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/usgs3dep
+          /sliderule/plugins/pgc
 RUN make -j8
 RUN make install
 
@@ -65,6 +65,14 @@ RUN mkdir -p /build/swot
 WORKDIR /build/swot
 RUN cmake -DCMAKE_BUILD_TYPE=Release \
           /sliderule/plugins/swot
+RUN make -j8
+RUN make install
+
+# build and install usgs3dep plugin into staging
+RUN mkdir -p /build/usgs3dep
+WORKDIR /build/usgs3dep
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+          /sliderule/plugins/usgs3dep
 RUN make -j8
 RUN make install
 

@@ -103,9 +103,9 @@ author:
     - label: "Email"
       icon: "fas fa-fw fa-envelope-square"
       # url: "mailto:your.name@email.com"
-    - label: "Website"
-      icon: "fas fa-fw fa-link"
-      # url: "https://your-website.com"
+    - label: "Documentation"
+      icon: "fas fa-fw fa-book"
+      url: "https://slideruleearth.io/web/rtd/"
     - label: "Source Code"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/ICESat2-SlideRule/sliderule"
@@ -115,6 +115,9 @@ author:
     - label: "conda-forge"
       icon: "fab fa-fw fa-python"
       url: "https://anaconda.org/conda-forge/sliderule"
+    - label: "node.js"
+      icon: "fab fa-fw fa-npm"
+      url: "https://www.npmjs.com/package/@sliderule/sliderule"
 
 # Site Footer
 footer:
@@ -128,7 +131,9 @@ footer:
     - label: "conda-forge"
       icon: "fab fa-fw fa-python"
       url: "https://anaconda.org/conda-forge/sliderule"
-
+    - label: "node.js"
+      icon: "fab fa-fw fa-npm"
+      url: "https://www.npmjs.com/package/@sliderule/sliderule"
 
 # Collections
 collections:

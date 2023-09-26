@@ -41,7 +41,6 @@ parser.add_argument('--benchmarks',     '-b',   nargs='+', type=str,    default=
 parser.add_argument('--granule03',      '-p',   type=str,               default="ATL03_20181017222812_02950102_005_01.h5")
 parser.add_argument('--granule06',      '-c',   type=str,               default="ATL06_20181017222812_02950102_005_01.h5")
 parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/grandmesa.geojson")
-parser.add_argument('--asset',          '-t',   type=str,               default="icesat2")
 parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   '-o',   type=str,               default="sliderule")
 parser.add_argument('--desired_nodes',  '-n',   type=int,               default=None)
@@ -65,6 +64,7 @@ elif args.loglvl == "INFO":
     loglevel = logging.INFO
 elif args.loglvl == "DEBUG":
     loglevel = logging.DEBUG
+logging.basicConfig(level=loglevel)
 
 # Initialize SlideRule Client
 sliderule.init(args.domain, verbose=args.verbose, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
@@ -91,6 +91,16 @@ def display_results(name, gdf, duration):
 # ########################################################
 
 # ------------------------------------
+# Benchmark ATL06 AIO
+# ------------------------------------
+def atl06_aoi():
+    parms = {
+        "poly":             region["poly"],
+        "srt":              icesat2.SRT_LAND,
+    }
+    return icesat2.atl06p(parms)
+
+# ------------------------------------
 # Benchmark ATL06 Ancillary
 # ------------------------------------
 def atl06_ancillary():
@@ -99,7 +109,7 @@ def atl06_ancillary():
         "srt":              icesat2.SRT_LAND,
         "atl03_geo_fields": ["solar_elevation"]
     }
-    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+    return icesat2.atl06p(parms, resources=[args.granule03])
 
 # ------------------------------------
 # Benchmark ATL03 Ancillary
@@ -110,7 +120,7 @@ def atl03_ancillary():
         "srt":              icesat2.SRT_LAND,
         "atl03_ph_fields":  ["ph_id_count"]
     }
-    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+    return icesat2.atl06p(parms, resources=[args.granule03])
 
 # ------------------------------------
 # Benchmark ATL06 Parquet
@@ -125,7 +135,7 @@ def atl06_parquet():
         "len":              10.0,
         "res":              10.0,
         "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
-    gdf = icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+    gdf = icesat2.atl06p(parms, resources=[args.granule03])
     if not args.nocleanup:
         os.remove("testfile.parquet")
     return gdf
@@ -143,7 +153,7 @@ def atl03_parquet():
         "len":              10.0,
         "res":              10.0,
         "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
-    gdf = icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+    gdf = icesat2.atl03sp(parms, resources=[args.granule03])
     if not args.nocleanup:
         os.remove("testfile.parquet")
     return gdf
@@ -164,7 +174,7 @@ def atl06_sample_landsat():
         "len": 40.0,
         "res": 20.0,
         "samples": {"ndvi": {"asset": "landsat-hls", "use_poi_time": True, "catalog": catalog, "bands": ["NDVI"]}} }
-    return icesat2.atl06p(parms, asset=args.asset, resources=[args.granule03])
+    return icesat2.atl06p(parms, resources=[args.granule03])
 
 # ------------------------------------
 # Benchmark ATL03 Rasterized Subset
@@ -179,7 +189,21 @@ def atl03_rasterized_subset():
         "cnt": 10,
         "len": 40.0,
         "res": 20.0 }
-    return icesat2.atl03sp(parms, asset=args.asset, resources=[args.granule03])
+    return icesat2.atl03sp(parms, resources=[args.granule03])
+
+# ------------------------------------
+# Benchmark ATL03 Polgon Subset
+# ------------------------------------
+def atl03_polygon_subset():
+    parms = { 
+        "poly": region['poly'],
+        "srt": icesat2.SRT_LAND,
+        "cnf": icesat2.CNF_SURFACE_LOW,
+        "ats": 20.0,
+        "cnt": 10,
+        "len": 40.0,
+        "res": 20.0 }
+    return icesat2.atl03sp(parms, resources=[args.granule03])
 
 # ########################################################
 # Main
@@ -189,12 +213,14 @@ if __name__ == '__main__':
 
     # define benchmarks
     benchmarks = {
+        "atl06_aoi":                atl06_aoi,
         "atl06_ancillary":          atl06_ancillary,
         "atl03_ancillary":          atl03_ancillary,
         "atl06_parquet":            atl06_parquet,
         "atl03_parquet":            atl03_parquet,
         "atl06_sample_landsat":     atl06_sample_landsat,
         "atl03_rasterized_subset":  atl03_rasterized_subset,
+        "atl03_polygon_subset":     atl03_polygon_subset,
     }
     
     # build list of benchmarks to run

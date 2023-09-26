@@ -147,7 +147,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
                 mlog(CRITICAL, "Missing information from locked response; %d members != %d transactions", num_members, num_transactions);
             }
 
-            if(verbose)
+            if(verbose && nodes)
             {
                 for(int i = 0; i < nodes->length(); i++)
                 {

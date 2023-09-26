@@ -603,6 +603,7 @@ int ClusterSocket::onConnect(int fd)
         if(!read_connections.add(fd, connection, false))
         {
             mlog(CRITICAL, "Cluster socket failed to register file descriptor for read connection due to duplicate entry");
+            delete connection;
             status = -1;
         }
     }
@@ -625,8 +626,9 @@ int ClusterSocket::onConnect(int fd)
         /* Add to Write Connections */
         if(!write_connections.add(fd, connection, false))
         {
-            mlog(CRITICAL, "Cluster socket failed to register file descriptor for read connection due to duplicate entry");
+            mlog(CRITICAL, "Cluster socket failed to register file descriptor for write connection due to duplicate entry");
             if(role == WRITER && protocol == BUS && connection->subconnq) delete connection->subconnq;
+            delete connection;
             status = -1;
         }
     }
