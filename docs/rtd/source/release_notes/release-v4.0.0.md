@@ -78,7 +78,11 @@ parms = { "poly": region['poly'],
 
 ## Issues Resolved
 
-* [#283](https://github.com/ICESat2-SlideRule/sliderule/issues/283) - feature request: report y_atc in ATL06-SR
+* [#182](https://github.com/ICESat2-SlideRule/sliderule/issues/182) - Across track slope not calculated for ATL06
+
+* [#202](https://github.com/ICESat2-SlideRule/sliderule/issues/202) - Feature request: export x_atc and y_atc
+
+* [#226](https://github.com/ICESat2-SlideRule/sliderule/issues/226) - Migrate ps-web documentation to provisioning system
 
 * [#233](https://github.com/ICESat2-SlideRule/sliderule/issues/233) - Create performance PyTests
 
@@ -90,13 +94,21 @@ parms = { "poly": region['poly'],
 
 * [#268](https://github.com/ICESat2-SlideRule/sliderule/issues/268) - Mismatch in pyH5Coro declarations
 
+* [#270](https://github.com/ICESat2-SlideRule/sliderule/issues/270) - Using H5Coro in stand alone mode
+
 * [#280](https://github.com/ICESat2-SlideRule/sliderule/issues/280) - Make default number of ATL06 iterations 6
+
+* [#283](https://github.com/ICESat2-SlideRule/sliderule/issues/283) - feature request: report y_atc in ATL06-SR
 
 * [#284](https://github.com/ICESat2-SlideRule/sliderule/issues/284) - Feature idea : extract arbitrary fields from ATL03 to ATL06-SR
 
 * [#293](https://github.com/ICESat2-SlideRule/sliderule/issues/293) - Add ESA WorldCover plugin
 
+* [#295](https://github.com/ICESat2-SlideRule/sliderule/issues/295) - Reqests to TNM for 3DEP 1m is timing out
+
 * [#299](https://github.com/ICESat2-SlideRule/sliderule/issues/299) - Errors reading ArcticDEM mosaic
+
+* [#300](https://github.com/ICESat2-SlideRule/sliderule/issues/300) - Put querying the catalog for raster datasets inside the API functions in the client
 
 * [#309](https://github.com/ICESat2-SlideRule/sliderule/issues/309) - GeoUserRaster causes use after free
 
