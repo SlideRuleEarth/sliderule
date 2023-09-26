@@ -6,20 +6,22 @@ Version description of the v4.0.0 release of ICESat-2 SlideRule.  This document 
 
 ## Breaking Changes
 
-This version contains a number of backward-incompatible changes, specifically to the names of the fields being returned by the `atl03s` and `atl06` APIs.  These changes were made to standardize the downstream processing of the photon and elevation data, and also to bring the names of the fields being returned by SlideRule closer to the ICESat-2 Standard Data Products.
+This version contains a number of backward-incompatible changes, specifically to the names of the fields being returned by the `atl03s` and `atl06` APIs, and the Python client function APIs.  These changes were made to standardize the downstream processing of the photon and elevation data, and also to bring the names of the fields being returned by SlideRule closer to the ICESat-2 Standard Data Products.
 
-For `atl03s` and `atl03sp` APIs:
+1. For `atl03s` and `atl03sp` APIs:
 * `distance` is now `x_atc`
 * Across track distance is now `y_atc`
 
-For `atl06` and `atl06p` APIs:
+2. For `atl06` and `atl06p` APIs:
 * `distance` is now `x_atc`
 * Across track distance is now `y_atc`
 * `dh_fit_dy` has been removed
 * `lon` is now `longitude`
 * `lat` is now `latitude`
 
-The compact ATL06 record `atl06rec-compact` has been removed entirely and is no longer supported.
+3. The compact ATL06 record `atl06rec-compact` has been removed entirely and is no longer supported.
+
+4. The `asset` parameter has been removed from the Python client functions and is now managed internally by the client.  Users can still override the asset by supplying an `asset` key in the request parameters; but going forward users should not generally need to worry about which assets the servers are using.
 
 ## Major Changes
 
