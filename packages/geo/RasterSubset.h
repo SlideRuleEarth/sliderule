@@ -52,7 +52,12 @@ class RasterSubset
         uint64_t                    cols;
         uint64_t                    rows;
         RecordObject::fieldType_t   datatype;
-        double                      time; // gps seconds
+        double                      minx;  // Extent for subset data
+        double                      miny;
+        double                      maxx;
+        double                      maxy;
+        double                      cellsize;
+        double                      time;     // gps seconds
         uint64_t                    fileId;
 
         static const uint64_t       oneGB    = 0x40000000;
@@ -61,7 +66,9 @@ class RasterSubset
         static uint64_t             poolsize;
         static Mutex                mutex;
 
-        RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype, double _time, double _fileId);
+        RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
+                     double _minx, double _miny, double _maxx, double _maxy, double _cellsize,
+                     double _time, double _fileId);
         ~RasterSubset(void);
 };
 
