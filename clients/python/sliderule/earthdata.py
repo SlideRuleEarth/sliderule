@@ -192,7 +192,7 @@ def __cmr_granule_metadata(search_results):
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
-        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=sliderule.EPSG_MERCATOR)
+        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=sliderule.SLIDERULE_EPSG)
         # append to combined GeoDataFrame and catch warnings
         granule_metadata = geopandas.pd.concat([granule_metadata, gdf])
     # return granule metadata
