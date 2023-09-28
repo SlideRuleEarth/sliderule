@@ -177,6 +177,65 @@ def atl06_sample_landsat():
     return icesat2.atl06p(parms, resources=[args.granule03])
 
 # ------------------------------------
+# Benchmark ATL06 Sample (Zonal) ArcticDEM
+# ------------------------------------
+def atl06_sample_zonal_arcticdem():
+    parms = { 
+        "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
+        "cnf": "atl03_high",
+        "ats": 5.0,
+        "cnt": 5,
+        "len": 20.0,
+        "res": 10.0,
+        "maxi": 1,
+        "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
+    return icesat2.atl06p(parms, resources=["ATL03_20190314093716_11600203_005_01.h5"])
+
+# ------------------------------------
+# Benchmark ATL06 Sample (Nearest Neighbor) ArcticDEM
+# ------------------------------------
+def atl06_sample_nn_arcticdem():
+    parms = { 
+        "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
+        "cnf": "atl03_high",
+        "ats": 5.0,
+        "cnt": 5,
+        "len": 20.0,
+        "res": 10.0,
+        "maxi": 1,
+        "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
+    return icesat2.atl06p(parms, resources=["ATL03_20190314093716_11600203_005_01.h5"])
+
+# ------------------------------------
+# Benchmark ATL06 Multi-Sample (Nearest Neighbor) ArcticDEM
+# ------------------------------------
+def atl06_msample_nn_arcticdem():
+    parms = { 
+        "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
+        "cnf": "atl03_high",
+        "ats": 5.0,
+        "cnt": 5,
+        "len": 20.0,
+        "res": 10.0,
+        "maxi": 1,
+        "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
+    return icesat2.atl06p(parms)
+
+# ------------------------------------
+# Benchmark ATL06 No Sampling ArcticDEM
+# ------------------------------------
+def atl06_no_sample_arcticdem():
+    parms = { 
+        "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
+        "cnf": "atl03_high",
+        "ats": 5.0,
+        "cnt": 5,
+        "len": 20.0,
+        "res": 10.0,
+        "maxi": 1 }
+    return icesat2.atl06p(parms)
+
+# ------------------------------------
 # Benchmark ATL03 Rasterized Subset
 # ------------------------------------
 def atl03_rasterized_subset():
@@ -213,14 +272,18 @@ if __name__ == '__main__':
 
     # define benchmarks
     benchmarks = {
-        "atl06_aoi":                atl06_aoi,
-        "atl06_ancillary":          atl06_ancillary,
-        "atl03_ancillary":          atl03_ancillary,
-        "atl06_parquet":            atl06_parquet,
-        "atl03_parquet":            atl03_parquet,
-        "atl06_sample_landsat":     atl06_sample_landsat,
-        "atl03_rasterized_subset":  atl03_rasterized_subset,
-        "atl03_polygon_subset":     atl03_polygon_subset,
+        "atl06_aoi":                    atl06_aoi,
+        "atl06_ancillary":              atl06_ancillary,
+        "atl03_ancillary":              atl03_ancillary,
+        "atl06_parquet":                atl06_parquet,
+        "atl03_parquet":                atl03_parquet,
+        "atl06_sample_landsat":         atl06_sample_landsat,
+        "atl06_sample_zonal_arcticdem": atl06_sample_zonal_arcticdem,
+        "atl06_sample_nn_arcticdem":    atl06_sample_nn_arcticdem,
+        "atl06_msample_nn_arcticdem":   atl06_msample_nn_arcticdem,
+        "atl06_no_sample_arcticdem":    atl06_no_sample_arcticdem,
+        "atl03_rasterized_subset":      atl03_rasterized_subset,
+        "atl03_polygon_subset":         atl03_polygon_subset,
     }
     
     # build list of benchmarks to run

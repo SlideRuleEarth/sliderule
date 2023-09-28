@@ -174,7 +174,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
 
     /* Initialize Nodes Array */
     nodes = new OrchestratorLib::Node* [numResources];
-    memset(nodes, 0, sizeof(OrchestratorLib::Node*)); // set all to NULL
+    memset(nodes, 0, sizeof(OrchestratorLib::Node*) * numResources); // set all to NULL
 
     /* Start Collator Thread */
     collatorPid = new Thread(collatorThread, this);
