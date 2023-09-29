@@ -2,10 +2,10 @@ name: Build and Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+#  push:
+#    branches: [ main ]
+#  pull_request:
+#    branches: [ main ]
 
 jobs:
   build:
@@ -17,14 +17,6 @@ jobs:
       contents: read
     
     steps:
-#    - name: Install Dependencies
-#      run: |
-#        sudo apt-get update -y
-#        sudo apt-get install -y curl unzip
-#        curl -O https://awscli.amazonaws.com/awscli-exe-linux-$(arch).zip
-#        unzip ./awscli-exe-linux-$(arch).zip
-#        sudo ./aws/install
-
     - name: Checkout SlideRule Repository
       uses: actions/checkout@v3
 
