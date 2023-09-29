@@ -60,7 +60,6 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    gpsTime    (_gpsTime),
    fileId     (_fileId),
    transf     (NULL),
-   reversedtransf (NULL),
    overrideCRS(cb),
    fileName   (_fileName),
    dset       (NULL),
@@ -82,7 +81,6 @@ GdalRaster::~GdalRaster(void)
 {
     if(dset) GDALClose((GDALDatasetH)dset);
     if(transf) OGRCoordinateTransformation::DestroyCT(transf);
-    if(reversedtransf) OGRCoordinateTransformation::DestroyCT(reversedtransf);
 }
 
 /*----------------------------------------------------------------------------
@@ -207,9 +205,22 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
      * gdalbuildvrt uses '-te xmin ymin xmax ymax'
      * gdal_translate uses '-projwin ulx uly lrx lry' or '-projwin xmin ymax xmax ymin'
      *
-     * This function uses 'xmin ymin xmax ymax' for 'geographic' extent
-     *                    'ulx uly lrx lry' for 'pixel' extent
+     * This function uses 'xmin ymin xmax ymax' for geo and map extent
+     *                    'ulx uly lrx lry' for pixel extent
      */
+
+    bool trace = false;
+
+    /* For debug tracing serialize all subset threads or debug messages will make no sense */
+#define SUBSET_DEBUG_TRACE 0
+
+#if SUBSET_DEBUG_TRACE
+    static Mutex mutex;
+    mutex.lock();
+    trace = true;
+    #warning Runing with serialized subsetAOI (very slow!!!)
+    mlog(CRITICAL, "Runing with serialized subsetAOI (very slow!!!)");
+#endif
 
     RasterSubset* subset = NULL;
 
@@ -221,57 +232,93 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         if(dset == NULL)
             open();
 
-        OGRErr err = poly->transform(transf);
-        CHECK_GDALERR(err);
-
         OGREnvelope env;
         poly->getEnvelope(&env);
+        if(trace) mlog(DEBUG, "geo aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", env.MinX, env.MinY, env.MaxX, env.MaxY);
+
+        /* Project AOI to map/raster coordinates */
+        if(!transf->Transform(1, &env.MinX, &env.MinY))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", env.MinX, env.MinY);
+        if(!transf->Transform(1, &env.MaxX, &env.MaxY))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", env.MaxX, env.MaxY);
+
+        double aoi_minx = std::min(env.MinX, env.MaxX);
+        double aoi_maxx = std::max(env.MinX, env.MaxX);
+        double aoi_miny = std::min(env.MinY, env.MaxY);
+        double aoi_maxy = std::max(env.MinY, env.MaxY);
+        if(trace) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
+
+        double raster_minx = bbox.lon_min;
+        double raster_miny = bbox.lat_min;
+        double raster_maxx = bbox.lon_max;
+        double raster_maxy = bbox.lat_max;
+        if(trace) mlog(DEBUG, "map raster:  (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", raster_minx, raster_miny, raster_maxx, raster_maxy);
 
         /*
-         * Going from map extent lower left, upper right corners to pixel extent upper left, lower right corners
+         * Check for AOI to be outside of raster bounds (no intersect at all)
+         * It is possible that after projecting into map coordinates the AOI is no longer intersecting the raster.
+         * This is not an error.
          */
+        if(aoi_maxx < raster_minx)
+            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_max < raster_minx");
 
-        /* Get AOI pixel coordinates min/max */
-        int aoi_minx, aoi_miny, aoi_maxx, aoi_maxy;
-        map2pixel(env.MinX, env.MaxY, aoi_minx, aoi_miny);
-        map2pixel(env.MaxX, env.MinY, aoi_maxx, aoi_maxy);
+        if(aoi_minx > raster_maxx)
+            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_minx > raster_maxx");
 
-        /* Get raster pixel coordinates min/max */
-        int raster_minx, raster_miny, raster_maxx, raster_maxy;
-        map2pixel(bbox.lon_min, bbox.lat_max, raster_minx, raster_miny);
-        map2pixel(bbox.lon_max, bbox.lat_min, raster_maxx, raster_maxy);
+        if(aoi_maxy < raster_miny)
+            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_maxy < raster_miny");
 
-        /* Sanity check, raster upper left corner must be (0, 0) in pixel coordinates */
-        if(raster_minx != 0 || raster_miny != 0)
-        {
-            ssError |= SS_AOI_OUT_OF_BOUNDS_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Upleft pixel (%d, %d) is not (0, 0)", raster_minx, raster_miny);
-        }
+        if(aoi_miny > raster_maxy)
+            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_miny  > raster_maxy");
 
-        /* If AOI is not fully contained in raster, adjust it */
+        /* Adjust AOI to the raster */
         if(aoi_minx < raster_minx)
         {
-            mlog(DEBUG, "Clipping aoi_minx %d to raster_minx %d", aoi_minx, raster_minx);
+            if(trace) mlog(DEBUG, "Clipped aoi_minx %.04lf to raster_minx %.04lf", aoi_minx, raster_minx);
             aoi_minx = raster_minx;
         }
         if(aoi_miny < raster_miny)
         {
-            mlog(DEBUG, "Clipping aoi_miny %d to raster_miny %d", aoi_miny, raster_miny);
+            if(trace) mlog(DEBUG, "Clipped aoi_miny %.04lf to raster_miny %.04lf", aoi_miny, raster_miny);
             aoi_miny = raster_miny;
         }
         if(aoi_maxx > raster_maxx)
         {
-            mlog(DEBUG, "Clipping aoi_maxx %d to raster_maxx %d", aoi_maxx, raster_maxx);
+            if(trace) mlog(DEBUG, "Clipped aoi_maxx %.04lf to raster_maxx %.04lf", aoi_maxx, raster_maxx);
             aoi_maxx = raster_maxx;
         }
         if(aoi_maxy > raster_maxy)
         {
-            mlog(DEBUG, "Clipping aoi_maxy %d to raster_maxy %d", aoi_maxy, raster_maxy);
+            if(trace) mlog(DEBUG, "Clipped aoi_maxy %.04lf to raster_maxy %.04lf", aoi_maxy, raster_maxy);
             aoi_maxy = raster_maxy;
         }
 
-        int64_t cols2read = aoi_maxx - aoi_minx;
-        int64_t rows2read = aoi_maxy - aoi_miny;
+        if(trace) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
+
+        /* Get AOI pixel corners: upper left, lower right */
+        int ulx, uly, lrx, lry;
+        map2pixel(aoi_minx, aoi_maxy, ulx, uly);
+        map2pixel(aoi_maxx, aoi_miny, lrx, lry);
+        if(trace) mlog(DEBUG, "pixel aoi:   (%13d, %13d) (%13d, %13d)", ulx, uly, lrx, lry);
+
+        int64_t cols2read = lrx - ulx;
+        int64_t rows2read = lry - uly;
+
+        /* Sanity check for GCC optimizer 'bug'. Raster's top left corner pixel must be (0, 0) */
+        int raster_ulx, raster_uly;
+        map2pixel(raster_minx, raster_maxy, raster_ulx, raster_uly);
+        if(raster_ulx != 0 || raster_uly != 0)
+        {
+            ssError |= SS_AOI_OUT_OF_BOUNDS_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Raster's upleft pixel (%d, %d) is not (0, 0)", raster_ulx, raster_uly);
+        }
+
+        /* Sanity check for AOI top left corner pixel, must be < raster */
+        if(ulx < raster_ulx || uly < raster_uly)
+        {
+            ssError |= SS_AOI_OUT_OF_BOUNDS_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "AOI upleft pixel (%d, %d) < raster upleft pixel (%d, %d)", ulx, uly, raster_ulx, raster_uly);
+        }
 
         GDALDataType dtype = band->GetRasterDataType();
         RecordObject::fieldType_t datatype = RecordObject::INVALID_FIELD;
@@ -289,43 +336,18 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
             default:            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported GDT Datatype: %d", dtype);
         }
 
-        /*
-         * Going back from pixel extent upper left, lower right corners to map extent lower left, upper right corners
-         */
+        char* wkt;
+        targetCRS.exportToWkt(&wkt);
+        subset = new RasterSubset(cols2read, rows2read, datatype, aoi_minx, aoi_maxy, cellSize, wkt, gpsTime, fileId);
+        CPLFree(wkt);
 
-        double map_minx, map_miny;
-        pixel2map(aoi_minx, aoi_maxy, map_minx, map_miny);
-
-        double map_maxx, map_maxy;
-        pixel2map(aoi_maxx, aoi_maxy, map_maxx, map_maxy);
-
-        /* Project map CRS back to sliderule/geo CRS */
-        if(!reversedtransf->Transform(1, &map_minx, &map_miny))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", map_minx, map_miny);
-
-        if(!reversedtransf->Transform(1, &map_maxx, &map_maxy))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", map_maxx, map_maxy);
-
-        /*
-         * After projecting min/max probably have changed, find true min/max for AOI's extent.
-         * This extent is returned to the user with subset data to help identify
-         * subsets for which AOI had to be clipped to fit rasters.
-         */
-        double geo_minx = map_minx < map_maxx ? map_minx : map_maxx;
-        double geo_miny = map_miny < map_maxy ? map_miny : map_maxy;
-        double geo_maxx = map_minx > map_maxx ? map_minx : map_maxx;
-        double geo_maxy = map_miny > map_maxy ? map_miny : map_maxy;
-
-        // printf("-- AOI/Poly min: (%.02lf, %.02lf), max:(%.02lf, %.02lf)\n", geo_minx, geo_miny, geo_maxx, geo_maxy);
-
-        subset = new RasterSubset(cols2read, rows2read, datatype, geo_minx, geo_miny, geo_maxx, geo_maxy, cellSize, gpsTime, fileId);
         if(subset->data)
         {
             int cnt = 1;
-            err = CE_None;
+            OGRErr err = CE_None;
             do
             {
-                err = band->RasterIO(GF_Read, aoi_minx, aoi_miny, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, NULL);
+                err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, NULL);
             }
             while(err != CE_None && cnt--);
 
@@ -334,6 +356,9 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
                 ssError |= SS_AOI_FAILED_TO_READ_ERROR;
                 throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
             }
+
+            if(trace) mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, map_ulx: %.2lf, map_uly: %.2lf, cols2read: %ld, rows2read: %ld, datatype %s\n",
+                          subset->size, (float)subset->size/(1024*1024), ulx, uly, subset->map_ulx, subset->map_uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
         }
         else
         {
@@ -343,10 +368,6 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
                 RasterSubset::poolsize / (1024*1024),
                 RasterSubset::MAX_SIZE / (1024*1024));
         }
-
-        // mlog(DEBUG, "reading %ld bytes (%.1fMB), data: %p (%0lx), aoi_minx: %d, aoi_miny: %d, cols2read: %ld, rows2read: %ld, datatype %s",
-        //         subset->size, (float)subset->size/(1024*1024), subset->data, (uint64_t)subset->data, aoi_minx, aoi_miny, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
-
     }
     catch (const RunTimeException &e)
     {
@@ -357,6 +378,10 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         }
         mlog(e.level(), "Error subsetting: %s", e.what());
     }
+
+#if SUBSET_DEBUG_TRACE
+    mutex.unlock();
+#endif
 
     return subset;
 }
@@ -419,8 +444,6 @@ OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, doub
 {
     OGRPolygon poly;
     OGRLinearRing lr;
-
-    // printf("++ AOI/Poly min: (%.02lf, %.02lf), max:(%.02lf, %.02lf)\n", minx, miny, maxx, maxy);
 
     /* Clockwise for interior of polygon */
     lr.addPoint(minx, miny);
@@ -817,8 +840,8 @@ void GdalRaster::createTransform(void)
     {
         /* User specified proj pipeline */
         if(!options.SetCoordinateOperation(parms->proj_pipeline, false))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set user PROJ pipeline");
-        mlog(DEBUG, "Set PROJ pipeline: %s", parms->proj_pipeline);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set user projlib pipeline");
+        mlog(DEBUG, "Set projlib  pipeline: %s", parms->proj_pipeline);
     }
 
     /* Limit to area of interest if AOI was set */
@@ -829,7 +852,7 @@ void GdalRaster::createTransform(void)
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set AOI");
 
-        mlog(DEBUG, "Limited AOI to: lon/lat Min (%.2lf, %.2lf), lon/lat Max (%.2lf, %.2lf)",
+        mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)",
              aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
     }
 
@@ -840,10 +863,6 @@ void GdalRaster::createTransform(void)
     transf = OGRCreateCoordinateTransformation(&sourceCRS, &targetCRS, options);
     if(transf == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
-
-    reversedtransf = OGRCreateCoordinateTransformation(&targetCRS, &sourceCRS, options);
-    if(reversedtransf == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create reversed coordinates transform");
 }
 
 /*----------------------------------------------------------------------------
@@ -903,6 +922,7 @@ void GdalRaster::readRasterWithRetry(int x, int y, int _xsize, int _ysize, void 
  *----------------------------------------------------------------------------*/
 void GdalRaster::map2pixel(double mapx, double mapy, int& x, int& y)
 {
+    /* The extra () are needed to keep GCC from optimizing the code and generating wrong results */
     x = floor(invGeoTransform[0] + ((invGeoTransform[1] * mapx) + (invGeoTransform[2] * mapy)));
     y = floor(invGeoTransform[3] + ((invGeoTransform[4] * mapx) + (invGeoTransform[5] * mapy)));
 }

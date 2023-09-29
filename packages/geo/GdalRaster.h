@@ -135,7 +135,6 @@ class GdalRaster
         uint64_t       fileId;   /* unique identifier of raster file used for downstream processing */
 
         OGRCoordinateTransformation* transf;
-        OGRCoordinateTransformation* reversedtransf;
         OGRSpatialReference sourceCRS;
         OGRSpatialReference targetCRS;
         overrideCRS_t       overrideCRS;

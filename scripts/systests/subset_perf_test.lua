@@ -10,6 +10,13 @@ local td = runner.rootdir(arg[0])
 
 local assets = asset.loaddir()
 
+-- AOI extent (extent of grandmesa.geojson)
+local gm_llx = -108.3412
+local gm_lly =   38.8236
+local gm_urx = -107.7292
+local gm_ury =   39.1956
+
+local sigma = 1.0e-9
 
 local demType = "arcticdem-strips"
 print(string.format("\n------------------------------\n%s Threads Error\n------------------------------", demType))
@@ -33,20 +40,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
 runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
-
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
-        local size = v["size"]
-        local datatype = v["datatype"]
-
-        local mbytes = size / (1024*1024)
-        print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
-    end
-end
 
 --Expecting 'mempool throw' for strips, let it print correctly
 sys.wait(1)
@@ -74,20 +68,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
 runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
-
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
-        local size = v["size"]
-        local datatype = v["datatype"]
-
-        local mbytes = size / (1024*1024)
-        print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
-    end
-end
 
 --Expecting 'mempool throw' for strips, let it print correctly
 sys.wait(1)
@@ -114,22 +95,9 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-
 runner.check(threadCnt == 0) --Error should happen, asking for too much memory
 
-if tbl ~= nil then
-    for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
-        local size = v["size"]
-        local datatype = v["datatype"]
-
-        local mbytes = size / (1024*1024)
-        print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
-    end
-end
-
---Expecting 'throw' for mosaics, let it print correctly
+--Expecting 'throw' let it print correctly
 sys.wait(1)
 
 
@@ -186,7 +154,7 @@ for i = 1, #demTypes do
     if demType == "rema-mosaic" then
         runner.check(threadCnt == 1)
     else
-        runner.check(threadCnt == 21)
+        runner.check(threadCnt == 20)
     end
 
 
@@ -196,12 +164,24 @@ for i = 1, #demTypes do
             local rows = v["rows"]
             local size = v["size"]
             local datatype = v["datatype"]
+            local ulx = v["ulx"]
+            local uly = v["uly"]
+            local cellsize = v["cellsize"]
+            local wkt = v["wkt"]
 
             local mbytes = size / (1024*1024)
-            -- This results in 21 threads, all the same size, cols, buffs data type. Print only first one
-            if i == 1 then
-                print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
-            end
+
+            -- This results in 20 threads, all the same size, cols, buffs data type. Print only first one
+            print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.2f, uly: %.2f, cellsize: %.1f",
+                    mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
+
+            runner.check(cols > 0)
+            runner.check(rows > 0)
+            runner.check(ulx > 0)
+            runner.check(uly < 0)  -- REMA has it flipped
+            runner.check(msg.datatype(datatype) == "FLOAT")
+            runner.check(cellsize == 2.0)
+            runner.check(wkt ~= "")
         end
     end
 end
@@ -214,12 +194,6 @@ local geojsonfile = td.."../../plugins/usgs3dep/data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
-
--- AOI extent (extent of grandmesa.geojson)
-local gm_llx = -108.3412
-local gm_lly =   38.8236
-local gm_urx = -107.7292
-local gm_ury =   39.1956
 
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
 starttime = time.latch();
@@ -260,10 +234,23 @@ if tbl ~= nil then
         local rows = v["rows"]
         local size = v["size"]
         local datatype = v["datatype"]
+        local ulx = v["ulx"]
+        local uly = v["uly"]
+        local cellsize = v["cellsize"]
+        local wkt = v["wkt"]
 
         local mbytes = size / (1024*1024)
-        -- print(string.format("(%02d) dataPtr: 0x%x, size: %d (%.2fMB), cols: %d, rows: %d, datatype: %d", i, data, bytes, mbytes, cols, rows, datatype))
-        print(string.format("AOI subset datasize: %8.2f MB, cols: %6d, rows: %6d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
+
+        print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.2f, uly: %.2f, cellsize: %.1f",
+                mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
+
+        runner.check(cols > 0)
+        runner.check(rows > 0)
+        runner.check(ulx > 0)
+        runner.check(uly > 0)
+        runner.check(msg.datatype(datatype) == "FLOAT")
+        runner.check(cellsize == 1.0)
+        runner.check(wkt ~= "")
     end
 end
 
@@ -330,13 +317,26 @@ if tbl ~= nil then
         local rows = v["rows"]
         local size = v["size"]
         local datatype = v["datatype"]
+        local ulx = v["ulx"]
+        local uly = v["uly"]
+        local cellsize = v["cellsize"]
+        local wkt = v["wkt"]
 
         local mbytes = size / (1024*1024)
 
         -- This results in 59 threads, all the same size, cols, buffs data type. Print only first one
         if i == 1 then
-            print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
+            print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.9f, uly: %.9f, cellsize: %.1f",
+                    mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
         end
+
+        runner.check(cols == 3660)
+        runner.check(rows == 3564)
+        runner.check(math.abs(ulx - 300000.0) < sigma)
+        runner.check(math.abs(uly - 5699521.415844312) < sigma)
+        runner.check(msg.datatype(datatype) == "INT16" or msg.datatype(datatype) == "UINT16")
+        runner.check(cellsize == 30.0)
+        runner.check(wkt ~= "")
     end
 end
 
@@ -384,9 +384,23 @@ for i, v in ipairs(tbl) do
     local rows = v["rows"]
     local size = v["size"]
     local datatype = v["datatype"]
+    local ulx = v["ulx"]
+    local uly = v["uly"]
+    local cellsize = v["cellsize"]
+    local wkt = v["wkt"]
 
     local mbytes = size / (1024*1024)
-    print(string.format("AOI size: %6.1f MB   cols: %6d   rows: %6d   %s", mbytes, cols, rows, msg.datatype(datatype)))
+
+    print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.2f, uly: %.2f, cellsize: %.9f",
+            mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
+
+    runner.check(cols == 7344)
+    runner.check(rows == 4464)
+    runner.check(math.abs(ulx - -108.34120000) < sigma)
+    runner.check(math.abs(uly - 39.19560000) < sigma)
+    runner.check(msg.datatype(datatype) == "UINT8")
+    runner.check(math.abs(cellsize - 0.000083333) < sigma)
+    runner.check(wkt ~= "")
 end
 
 

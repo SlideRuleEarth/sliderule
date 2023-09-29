@@ -52,11 +52,10 @@ class RasterSubset
         uint64_t                    cols;
         uint64_t                    rows;
         RecordObject::fieldType_t   datatype;
-        double                      minx;  // Extent for subset data
-        double                      miny;
-        double                      maxx;
-        double                      maxy;
+        double                      map_ulx;
+        double                      map_uly;
         double                      cellsize;
+        std::string                 wkt;
         double                      time;     // gps seconds
         uint64_t                    fileId;
 
@@ -67,7 +66,7 @@ class RasterSubset
         static Mutex                mutex;
 
         RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                     double _minx, double _miny, double _maxx, double _maxy, double _cellsize,
+                     double ulx, double uly, double _cellsize, const char* _wkt,
                      double _time, double _fileId);
         ~RasterSubset(void);
 };
