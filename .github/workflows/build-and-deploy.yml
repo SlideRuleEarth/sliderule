@@ -31,17 +31,17 @@ jobs:
 
     - name: Upload Terraform
       run: |
-       cd targets/slidruleearth-aws
+       cd targets/slideruleearth-aws
        make cluster-upload-terraform
 
     - name: Build Containers
       run: |
-       cd targets/slidruleearth-aws
+       cd targets/slideruleearth-aws
        make BUILDX=buildx DOCKER_PLATFORM=linux/arm64 cluster-docker
 
     - name: Push containers
       run: |
-       cd targets/slidruleearth-aws
+       cd targets/slideruleearth-aws
        make cluster-docker-push
 
 #    - name: Build AMI
