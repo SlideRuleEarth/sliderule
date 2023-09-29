@@ -11,7 +11,11 @@ jobs:
   build:
     name: SlideRule Build and Deploy
     runs-on: ubuntu-latest
-
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
+    
     steps:
 #    - name: Install Dependencies
 #      run: |
