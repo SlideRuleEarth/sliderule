@@ -1,6 +1,11 @@
 name: Python Tests
 
 on:
+  workflow_run:
+    workflows: ["Build and Deploy"]
+    branches: [main]
+    types: 
+      - completed
   push:
     branches: main
   pull_request:

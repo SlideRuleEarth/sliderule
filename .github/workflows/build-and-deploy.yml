@@ -40,7 +40,7 @@ jobs:
     - name: Build Containers
       run: |
        cd targets/slidruleearth-aws
-       make cluster-docker
+       make BUILDX=buildx DOCKER_PLATFORM=linux/arm64 cluster-docker
 
     - name: Push containers
       run: |
