@@ -169,7 +169,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/Dockerfile.$(shell arch) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
+	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
 
@@ -187,7 +187,7 @@ github-buildenv-docker: ## build sliderule build environment docker image for gi
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(GHCR)/sliderule-buildenv:latest .
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(GHCR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
 	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 
@@ -199,7 +199,7 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image for
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest .
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
@@ -209,7 +209,7 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
-	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest .
+	cd $(SERVER_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
 
@@ -220,7 +220,7 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(SLIDERULE_SOURCE_DIR)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/ilb:latest .
+	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
 
@@ -238,7 +238,7 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cp docker/monitor/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(shell arch) $(MONITOR_STAGE_DIR)/Dockerfile
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/monitor:latest .
+	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
 
