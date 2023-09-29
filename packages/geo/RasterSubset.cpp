@@ -52,18 +52,17 @@ Mutex RasterSubset::mutex;
  * Constructor
  *----------------------------------------------------------------------------*/
 RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                           double _minx, double _miny, double _maxx, double _maxy, double _cellsize,
+                           double ulx, double uly, double _cellsize, const char* _wkt,
                            double _time, double _fileId):
     data(NULL),
     size(0),
     cols(_cols),
     rows(_rows),
     datatype(_datatype),
-    minx(_minx),
-    miny(_miny),
-    maxx(_maxx),
-    maxy(_maxy),
+    map_ulx(ulx),
+    map_uly(uly),
     cellsize(_cellsize),
+    wkt(_wkt),
     time(_time),
     fileId(_fileId)
 {
