@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y curl unzip
-        curl -O https://awscli.amazonaws.com/awscli-exe-linux-$(arch).zip
-        unzip ./awscli-exe-linux-$(arch).zip
-        sudo ./aws/install
+#    - name: Install Dependencies
+#      run: |
+#        sudo apt-get update -y
+#        sudo apt-get install -y curl unzip
+#        curl -O https://awscli.amazonaws.com/awscli-exe-linux-$(arch).zip
+#        unzip ./awscli-exe-linux-$(arch).zip
+#        sudo ./aws/install
 
     - name: Checkout SlideRule Repository
       uses: actions/checkout@v3
