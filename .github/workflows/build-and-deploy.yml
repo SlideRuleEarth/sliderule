@@ -36,6 +36,7 @@ jobs:
 
     - name: Build Containers
       run: |
+       docker pull 742127912612.dkr.ecr.us-west-2.amazonaws.com/sliderule-buildenv:latest
        cd targets/slideruleearth-aws
        make BUILDX=buildx DOCKER_PLATFORM="--platform linux/arm64" cluster-docker
 
