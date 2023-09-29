@@ -14,7 +14,7 @@ class TestProvisioning:
         sliderule.set_url(domain)
         status = sliderule.authenticate(organization)
         assert status
-        result = sliderule.update_available_servers(7,20)
+        result = sliderule.update_available_servers(2,20)
         assert len(result) == 2
         assert type(result[0]) == int
         assert type(result[1]) == int

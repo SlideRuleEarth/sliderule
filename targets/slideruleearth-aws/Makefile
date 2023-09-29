@@ -25,7 +25,7 @@
 #     4. Login to GitHub
 #        $ gh auth login
 #     5. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make cluster-release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
 #
 
 ROOT = $(shell pwd)/../..
@@ -59,7 +59,8 @@ MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/icesat2-sliderule
 DOCKEROPTS ?=
-ARCH ?= arm
+BUILDX ?= # buildx
+DOCKER_PLATFORM ?= # linux/arm64
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 CLANG_VER = "-12"
@@ -165,7 +166,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
-	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
+	cp docker/static-website/Dockerfile.$(shell arch) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
 	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
@@ -182,7 +183,7 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-sliderule-buildenv-docker: ## build sliderule build environment docker image
+github-buildenv-docker: ## build sliderule build environment docker image for github actions
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
@@ -190,9 +191,17 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 
-sliderule-buildenv-docker-push: ## push sliderule build environment docker image (must be x86 arch)
+github-buildenv-docker-push: ## push sliderule build environment docker image (must be x86 arch) to github container registry
 	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
+
+sliderule-buildenv-docker: ## build sliderule build environment docker image for github actions
+	-rm -Rf $(BUILDENV_STAGE_DIR)
+	mkdir -p $(BUILDENV_STAGE_DIR)
+	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
+	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest .
+	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
+	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
@@ -200,29 +209,9 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
-	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(GHCR) -t $(ECR)/sliderule:latest .
+	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
-
-sliderule-full-docker: sliderule-buildenv-docker sliderule-docker ## build sliderule docker container from scratch; needs VERSION
-
-monitor-docker: ## build monitor docker image; needs VERSION
-	-rm -Rf $(MONITOR_STAGE_DIR)
-	mkdir -p $(MONITOR_STAGE_DIR)
-	cp docker/monitor/* $(MONITOR_STAGE_DIR)
-	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
-	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/monitor:latest .
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
-
-proxy-docker: # make the reverse proxy docker image; needs VERSION
-	-rm -Rf $(PROXY_STAGE_DIR)
-	mkdir -p $(PROXY_STAGE_DIR)
-	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/proxy:latest .
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(MAJOR_VERSION)
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -235,25 +224,39 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
 
+proxy-docker: # make the reverse proxy docker image; needs VERSION
+	-rm -Rf $(PROXY_STAGE_DIR)
+	mkdir -p $(PROXY_STAGE_DIR)
+	cp docker/proxy/* $(PROXY_STAGE_DIR)
+	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
+	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(MAJOR_VERSION)
+
+monitor-docker: ## build monitor docker image; needs VERSION
+	-rm -Rf $(MONITOR_STAGE_DIR)
+	mkdir -p $(MONITOR_STAGE_DIR)
+	cp docker/monitor/* $(MONITOR_STAGE_DIR)
+	cp docker/monitor/Dockerfile.$(shell arch) $(MONITOR_STAGE_DIR)/Dockerfile
+	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
+	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/monitor:latest .
+	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
+	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
+
 cluster-docker: ## build all cluster docker images
-	make sliderule-buildenv-docker
 	make sliderule-docker
+	make ilb-docker
 	make proxy-docker
 	make monitor-docker
-	make ilb-docker
-	make static-website-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
+	docker push $(ECR)/ilb:$(VERSION)
+	docker push $(ECR)/ilb:$(MAJOR_VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
 	docker push $(ECR)/proxy:$(MAJOR_VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
 	docker push $(ECR)/monitor:$(MAJOR_VERSION)
-	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/ilb:$(MAJOR_VERSION)
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/static-website:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
@@ -267,7 +270,7 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
 
-cluster-tag: ## create version tag in this repository and release it on GitHub
+tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
 	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
@@ -279,14 +282,20 @@ cluster-tag: ## create version tag in this repository and release it on GitHub
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/release_notes/release_notes.html"
 	make -C $(ROOT)/clients/nodejs publish
 
-cluster-release: ## release a version of the cluster; needs VERSION
-	make cluster-tag
+release: ## release a version of sliderule; needs VERSION
+	make tag
 	make cluster-docker
 	make cluster-docker-push
+	make sliderule-buildenv-docker
+	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
+	make static-website-docker
+	docker push $(ECR)/static-website:$(VERSION)
+	docker push $(ECR)/static-website:$(MAJOR_VERSION)
 	make cluster-build-packer
 	make cluster-upload-terraform
 
-cluster-docker-clean: ## clean out old version of docker images; needs VERSION
+docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
