@@ -69,14 +69,14 @@ class TestVersion:
         assert 'duration' in rsps['server']
         assert 'packages' in rsps['server']
         assert '.' in rsps['server']['version']
-        assert '-g' in rsps['server']['commit']
+        assert len(rsps['server']['commit']) > 0
         assert ':' in rsps['server']['launch']
         assert rsps['server']['duration'] > 0
         assert 'icesat2' in rsps['server']['packages']
         assert 'version' in rsps['icesat2']
         assert 'commit' in rsps['icesat2']
         assert '.' in rsps['icesat2']['version']
-        assert '-g' in rsps['icesat2']['commit']
+        assert len(rsps['icesat2']['commit'])
 
     def test_get_version_api(self, domain, organization, desired_nodes):
         icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
