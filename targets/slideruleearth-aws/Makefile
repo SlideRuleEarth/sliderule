@@ -61,6 +61,7 @@ GHCR := ghcr.io/icesat2-sliderule
 DOCKEROPTS ?=
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # linux/arm64
+ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 CLANG_VER = "-12"
@@ -166,7 +167,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
-	cp docker/static-website/Dockerfile.$(shell arch) $(STATIC_WEB_STAGE_DIR)/Dockerfile
+	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
 	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
@@ -236,7 +237,7 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
 	mkdir -p $(MONITOR_STAGE_DIR)
 	cp docker/monitor/* $(MONITOR_STAGE_DIR)
-	cp docker/monitor/Dockerfile.$(shell arch) $(MONITOR_STAGE_DIR)/Dockerfile
+	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
