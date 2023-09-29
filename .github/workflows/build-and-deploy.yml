@@ -32,7 +32,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-AssumeRoleWithAction
-        aws-region: aws-region-1
+        aws-region: us-east-1
 
     - name: Set Up Docker Buildx
       uses: docker/setup-buildx-action@v3    
