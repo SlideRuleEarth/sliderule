@@ -1,6 +1,6 @@
 # sliderule
 [![DOI](https://zenodo.org/badge/261318746.svg)](https://zenodo.org/badge/latestdoi/261318746)
-[![Python Tests](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/pytest.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/pytest.yml)
+[![Python Tests](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/pytest.yml/badge.svg?event=workflow_run)](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/pytest.yml)
 [![Self Tests](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/self_test.yml/badge.svg)](https://github.com/ICESat2-SlideRule/sliderule/actions/workflows/self_test.yml)
 
 A cloud-native framework for on-demand science data processing.
