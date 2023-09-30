@@ -174,6 +174,9 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
 
+static-website-run: ## locally run the static website; needs VERSION
+	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website

@@ -4,20 +4,28 @@ SlideRule
 
 **Process Earth science datasets in the cloud through REST API calls to SlideRule web services.**
 
-SlideRule is a web service for on-demand science data processing, which provides researchers and other Earth science data systems low-latency access to customized data products using processing parameters supplied at the time of the request. SlideRule runs in AWS us-west-2 and has access to ICESat-2, GEDI, Landsat, and ArcticDEM datasets stored in S3.
+SlideRule is a web service for on-demand science data processing, which provides researchers and other Earth science data systems low-latency access to customized data products using processing parameters supplied at the time of the request. SlideRule runs in AWS us-west-2 and has access to ICESat-2, GEDI, Landsat, ArcticDEM, REMA, and other datasets stored in S3 (see `Assets <user_guide/SlideRule.html#assets>`_ for a full list).
 
+"Using SlideRule" typically means running a Python script you've developed to analyze Earth science data, and in that script calling functions in the **sliderule** Python package to make processing requests to SlideRule web services to perform some of the data intensive parts of your analysis.  Most of the documentation and examples we provide are focused on this use-case.  We do provide other means of interacting with SlideRule (most notably the current demo and future web client), but those features are still under development and documentation for them is sparse.
 
 What It Is
 ----------
 
 The SlideRule project consists of mulitple resources available to the public:
+
 - **Public Cluster**: The public cluster is the heart of the sliderule system, and can be reached at https://sliderule.slideruleearth.io.  It consists of a bunch of servers in AWS that provide the web services to process science data.  When someone "makes a request to SlideRule", they are, in affect, sending an HTTP request to the public cluster to process data and return the results.
+
 - **Documentation Website**:  This is what you are reading right now, and is located at https://slideruleearth.io/web/rtd/index.html.  The documentation is provided via the Read-The-Docs framework and includes information on how to install and use SlideRule.
+
 - **Web Interface**: The current web interface for sliderule is a demo built using Voila and a Jupyter Notebook; it can be reached at https://demo.slideruleearth.io. We are currently working on proper web interface for sliderule which will supercede the demo.
+
 - **Python Client**: The primary method of interacting with SlideRule is via the Python client, installable via conda or pip (both under the name sliderule).  
+
 - **Node.js Client (beta)**: In support of the future web client, a Node.js client has been written for sliderule.  It is installable via npm under the name @sliderule/sliderule.
+
 - **Github Repositories**: All code for SlideRule is open source and openly developed at https://github.com/ICESat2-SlideRule/sliderule.  Anyone can download/fork/browse the code, open issues, and post discussions.
-- **Provisioning System**: Behind the scense, all assets in AWS needed to run a SlideRule cluster is deployed and cost-monitored by the SlideRule Provisioning System.  The provisioning system can be used to run private clusters as well.  Please `contact us </web/contact/>`_ if you are interested in a private cluster. 
+
+- **Provisioning System**: Behind the scense, all assets in AWS needed to run a SlideRule cluster are deployed and cost-monitored by the SlideRule Provisioning System.  The provisioning system can be used to run private clusters as well.  Please `contact us </web/contact/>`_ if you are interested in a private cluster. 
 
 
 Where To Begin
@@ -85,7 +93,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    :maxdepth: 1
    :caption: Getting Started
 
-   getting_started/index.rst
+   index.rst
    getting_started/Install.rst
    getting_started/Getting-Started.rst
    getting_started/Examples.rst

@@ -8,20 +8,20 @@ Version description of the v4.0.0 release of ICESat-2 SlideRule.  This document 
 
 This version contains a number of backward-incompatible changes, specifically to the names of the fields being returned by the `atl03s` and `atl06` APIs, and the Python client function APIs.  These changes were made to standardize the downstream processing of the photon and elevation data, and also to bring the names of the fields being returned by SlideRule closer to the ICESat-2 Standard Data Products.
 
-1. For `atl03s` and `atl03sp` APIs:
-* `distance` is now `x_atc`
-* Across track distance is now `y_atc`
+* For `atl03s` and `atl03sp` APIs:
+  * `distance` is now `x_atc`
+  * Across track distance is now `y_atc`
 
-2. For `atl06` and `atl06p` APIs:
-* `distance` is now `x_atc`
-* Across track distance is now `y_atc`
-* `dh_fit_dy` has been removed
-* `lon` is now `longitude`
-* `lat` is now `latitude`
+* For `atl06` and `atl06p` APIs:
+  * `distance` is now `x_atc`
+  * Across track distance is now `y_atc`
+  * `dh_fit_dy` has been removed
+  * `lon` is now `longitude`
+  * `lat` is now `latitude`
 
-3. The compact ATL06 record `atl06rec-compact` has been removed entirely and is no longer supported.
+* The compact ATL06 record `atl06rec-compact` has been removed entirely and is no longer supported.
 
-4. The `asset` parameter has been removed from the Python client functions and is now managed internally by the client.  Users can still override the asset by supplying an `asset` key in the request parameters; but going forward users should not generally need to worry about which assets the servers are using.
+* The `asset` parameter has been removed from the Python client functions and is now managed internally by the client.  Users can still override the asset by supplying an `asset` key in the request parameters; but going forward users should not generally need to worry about which assets the servers are using.
 
 ## Major Changes
 
@@ -62,7 +62,7 @@ parms = { "poly": region['poly'],
 
 * Overhaul of how ancillary fields are handled by the server-side code.  A new system-wide record object type has been added called a "container record".  A container record holds inside of it other records that are grouped and processed together.  Ancillary data associated with an ATL03 extent or ATL06 elevation is now placed in a container record along with the corresponding ATL03 or ATL06 record.
 
-* Parquet file generation has been optimized and the gzip compression has been replaced with snappy compression.
+* Parquet file generation has been optimized and the gzip compression has been replaced with snappy compression.  Also the ability to generate a non-geo parquet file has been fixed, where the latitude and longitude are present as normal columns and there is no geometry column.
 
 * Default ICESat-2 products used now set to version 006.
 
@@ -77,6 +77,8 @@ parms = { "poly": region['poly'],
 * The Python bindings for H5Coro are superceded by the new pure Python implementation effort: [h5coro](https://github.com/ICESat2-SlideRule/h5coro)
 
 * Major rewrite of GDAL raster sampling code: new class structure has GdalRaster as a stand-alone class, with RasterObject parenting a GeoRaster and a GeoIndexedRaster for mosaic and strip datasets respectively.
+
+* The `latest` tagged docker images for the sliderule compute node, the intelligent load balancer, the proxy, and the monitor, are now all built automatically on every push to `main` by a "Build and Deploy" GitHub Action workflow.  The new images are used when the automated Pytests are kicked off for the `developers` cluster.
 
 ## Issues Resolved
 

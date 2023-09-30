@@ -16,3 +16,8 @@ sample
 .. autofunction:: sliderule.raster.sample
 
 """"""""""""""""
+
+subset
+------
+.. autofunction:: sliderule.raster.subset
+
