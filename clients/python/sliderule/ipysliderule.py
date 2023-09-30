@@ -612,7 +612,7 @@ class widgets:
                 self.savelabel
             ])
         else:
-            self.filesaver = copy.copy(self.savelabel)
+            self.filesaver = self.savelabel
 
         # button and label for input file selection
         self.loadbutton = ipywidgets.Button(
@@ -632,7 +632,7 @@ class widgets:
                 self.loadlabel
             ])
         else:
-            self.fileloader = copy.copy(self.loadlabel)
+            self.fileloader = self.loadlabel
 
     # function for setting photon classifications
     def set_classification(self, sender):
@@ -2076,7 +2076,7 @@ class leaflet:
         if self.colorbar is not None:
             self.map.remove(self.colorbar)
         # colormap for colorbar
-        cmap = copy.copy(cm.get_cmap(kwargs['cmap']))
+        cmap = cm.get_cmap(kwargs['cmap'])
         # create matplotlib colorbar
         _, ax = plt.subplots(figsize=(kwargs['width'], kwargs['height']))
         cbar = matplotlib.colorbar.ColorbarBase(ax, cmap=cmap,
