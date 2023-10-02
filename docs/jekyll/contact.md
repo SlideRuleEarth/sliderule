@@ -5,10 +5,26 @@ author_profile: true
 permalink: /contact/
 ---
 
-There are multiple ways to get in contact with us: **(1)** opening an issue, **(2)** opening a pull request, **(3)** posting a discussion message, and **(4)** emailing support@mail.slideruleearth.io.
+
+To get in contact with us, you can:
+1. join our [listserv](http://mailman11.u.washington.edu/mailman/listinfo/sliderule)
+2. open an [issue](https://github.com/ICESat2-SlideRule/sliderule/issues)
+3. open a [pull request](https://github.com/ICESat2-SlideRule/sliderule/pulls)
+4. post a [discussion message](https://github.com/ICESat2-SlideRule/sliderule/discussions)
+5. email support@mail.slideruleearth.io.
 
 
-## Method 1: Opening an Issue
+## Method 1: Joining our Listserv
+
+The listserv is great for:
+* receiving the latest news and updates from the SlideRule team
+* learning about new features and known issues
+
+Please use this link to join the listserv: [listserv](http://mailman11.u.washington.edu/mailman/listinfo/sliderule).
+
+Once joined, you will receive emails from and can send emails to: ***sliderule@u.washington.edu***
+
+## Method 2: Opening an Issue
 
 Opening an issue is great for:
 * problems you encounter while using SlideRule
@@ -18,7 +34,7 @@ Opening an issue is great for:
 Please use this link to sumit an issue: [sliderule issue](https://github.com/ICESat2-SlideRule/sliderule/issues).
 
 
-## Method 2: Opening a Pull Request
+## Method 3: Opening a Pull Request
 
 Opening an pull request is great for:
 * bug fixes you have already made to the existing code base
@@ -29,7 +45,7 @@ Before opening a pull request, please read our [Contributing](/rtd/user_guide/Co
 Please use this link to sumit a PR: [sliderule PR](https://github.com/ICESat2-SlideRule/sliderule/pulls).
 
 
-## Method 3: Posting a Discussion Message
+## Method 4: Posting a Discussion Message
 
 Posting a discussion message is great for:
 * help to install, run, and/or interface with SlideRule
@@ -39,12 +55,12 @@ Posting a discussion message is great for:
 Please use this link to start a discussion: [sliderule post](https://github.com/ICESat2-SlideRule/sliderule/discussions).
 
 
-## Method 4: Eamiling us Directly
+## Method 5: Eamiling us Directly
 
 Eamiling us directly is great for:
 * organizational questions (who we are and future collaboration opportunities)
 * sensitive questions that should not be posted publicly
-* if you are just confused and need a real person to help address an issue directly
+* if you just need a real person to help address an issue
 
-Please email us at support@mail.slideruleearth.io
+Please email us at ***support@mail.slideruleearth.io***
 

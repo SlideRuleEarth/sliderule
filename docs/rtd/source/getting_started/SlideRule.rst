@@ -25,7 +25,7 @@ Where To Begin
     :img-top-cls: pl-2 pr-2 pt-2 pb-2
 
     ---
-    :img-top: assets/voila_demo.png
+    :img-top: ../assets/voila_demo.png
 
     **SlideRule Demo**
     ^^^^^^^^^^^^^^^^^^
@@ -37,27 +37,27 @@ Where To Begin
         :classes: stretched-link btn-outline-primary btn-block
 
     ---
-    :img-top: assets/examples.png
+    :img-top: ../assets/examples.png
 
     **Examples**
     ^^^^^^^^^^^^
 
     Jump right in and learn from examples.
 
-    .. link-button:: getting_started/Examples
+    .. link-button:: ./Examples
         :type: ref
         :text: Examples
         :classes: stretched-link btn-outline-primary btn-block
 
     ---
-    :img-top: assets/getting_started.png
+    :img-top: ../assets/getting_started.png
 
     **Getting Started**
     ^^^^^^^^^^^^^^^^^^^
 
     Walkthrough what SlideRule can do.
 
-    .. link-button:: getting_started/Install
+    .. link-button:: ./Install
         :type: ref
         :text: Getting Started
         :classes: stretched-link btn-outline-primary btn-block
@@ -73,63 +73,3 @@ Project Information
 -------------------
 
 The SlideRule project is funded by NASA's ICESat-2 program and is led by the University of Washington in collaboration with NASA Goddard Space Flight Center.  The first public release of SlideRule ocurred in April 2021.  Since then we've continued to add new services, new algorithms, and new datasets, while also making improvements to our processing architecture.  Looking to the future, we hope to make SlideRule an indespensible component in the analysis of a broad array of Earth Science datasets that help us better understand the planet we call home.
-
-
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Getting Started
-
-   getting_started/SlideRule.rst
-   getting_started/Install.rst
-   getting_started/Getting-Started.rst
-   getting_started/Examples.rst
-   getting_started/Project-Map.rst
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Users Guide
-
-   user_guide/Background.rst
-   user_guide/SlideRule.rst
-   user_guide/ICESat-2.rst
-   user_guide/GEDI.rst
-   user_guide/prov-sys.rst
-   user_guide/H5Coro.md
-   user_guide/GeoParquet.md
-   user_guide/GeoRaster.md
-   user_guide/Private-Clusters.md
-   user_guide/Under-the-Hood.rst
-   user_guide/NASA-Earthdata.rst
-   user_guide/Contributing.rst
-   user_guide/License.rst
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: API Reference
-
-   api_reference/sliderule.rst
-   api_reference/icesat2.rst
-   api_reference/gedi.rst
-   api_reference/earthdata.rst
-   api_reference/h5.rst
-   api_reference/raster.rst
-   api_reference/ipxapi.rst
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Tutorials
-
-   tutorials/user.rst
-   tutorials/developer.rst
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Release Notes
-
-   release_notes/release_notes.rst

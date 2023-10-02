@@ -24,7 +24,16 @@ copyright = f"2020\u2013{year}, University of Washington"
 author = 'The SlideRule Developers'
 
 # The full version, including alpha/beta/rc tags
-release = '0.3.0'
+with open('../../sliderule/clients/python/version.txt') as fh:
+    release = fh.read().strip()
+    version = release[1:]
+
+rst_prolog = """
+.. |LatestRelease| replace:: {releasestr}, http://slideruleearth.io/web/rtd/release_notes/release_notes.html
+""".format(
+releasestr = release,
+)
+
 
 
 # -- General configuration ---------------------------------------------------
