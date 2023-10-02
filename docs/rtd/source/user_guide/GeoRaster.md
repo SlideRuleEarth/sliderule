@@ -33,7 +33,8 @@ The following datasets are currently provided in SlideRule's Asset Directory (wi
 |swot-sim-ecco-llc4320| *| Simulated SWOT Data|
 |swot-sim-glorys| *| Simulated SWOT Data|
 |usgs3dep-1meter-dem| *| USGS 3DEP 1m Digital Elevation Model|
-|landsat-hls| *| Harminized LandSat Sentinal-2|
+|esa-worldcover-10meter| *| Worldwide land cover mapping|
+|landsat-hls| *| Harmonized LandSat Sentinal-2|
 |arcticdem-mosaic| *| PGC Arctic Digital Elevation Model Mosaic|
 |arcticdem-strips| *| PGC Arctic Digital Elevation Model Strips|
 |rema-mosaic| *| PGC Reference Elevation Model of Antarctica Mosaic|

@@ -7,7 +7,7 @@ permalink: /contact/
 
 
 To get in contact with us, you can:
-1. join our [listserv](http://mailman11.u.washington.edu/mailman/listinfo/sliderule)
+1. join our [email listserv](http://mailman11.u.washington.edu/mailman/listinfo/sliderule)
 2. open an [issue](https://github.com/ICESat2-SlideRule/sliderule/issues)
 3. open a [pull request](https://github.com/ICESat2-SlideRule/sliderule/pulls)
 4. post a [discussion message](https://github.com/ICESat2-SlideRule/sliderule/discussions)
@@ -55,9 +55,9 @@ Posting a discussion message is great for:
 Please use this link to start a discussion: [sliderule post](https://github.com/ICESat2-SlideRule/sliderule/discussions).
 
 
-## Method 5: Eamiling us Directly
+## Method 5: Emailing us Directly
 
-Eamiling us directly is great for:
+Emailing us directly is great for:
 * organizational questions (who we are and future collaboration opportunities)
 * sensitive questions that should not be posted publicly
 * if you just need a real person to help address an issue
