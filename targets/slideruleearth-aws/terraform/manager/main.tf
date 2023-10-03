@@ -87,7 +87,7 @@ locals {
     DOMAINS    = local.certbot_domains
     DNS_PLUGIN = var.certbot_dns_plugin
     S3_BUCKET  = var.upload_s3.bucket
-    S3_KEY     = var.upload_s3.key
+    S3_PREFIX  = var.upload_s3.prefix
     S3_REGION  = var.upload_s3.region    
   }, var.lambda_custom_environment)
 }

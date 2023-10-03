@@ -21,12 +21,12 @@ variable "upload_s3" {
   description = "The S3 bucket to upload certificates."
   type = object({
     bucket = string,
-    key = string,
+    prefix = string,
     region = string,
   })
   default = {
     bucket = "sliderule"
-    key = "config/tmp.pem"
+    prefix = "config"
     region  = "us-west-2"
   }  
 }
@@ -54,7 +54,7 @@ variable "lambda_description" {
 variable "lambda_filename" {
   description = "The Filename of the runtime for lambda function."
   type        = string
-  default     = "${path.module}/python/manager.zip"
+  default     = "${path.module}/python/certbot/certbot-2.6.0.zip"
 }
 
 variable "lambda_runtime" {
