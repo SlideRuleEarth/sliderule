@@ -41,7 +41,7 @@ Points read:	1000000	16998.240999877
 1000000	points read time: 169940.77899982 msecs  
   
   
-In the second aproach the vrtdataset and vrtband are used ONLY to find the name of the raster containing POI.  
+In the second approach the vrtdataset and vrtband are used ONLY to find the name of the raster containing POI.  
 The code is very similar to how gdallocationinfo tool is implemented using xml parsing in GDAL.  
 The raster tif file is than opened and this raster's dataset and band are used to do a read using col, row calculated for that
 raster. This method is much more efficient. It only took 665 msecs to do one million reads.  

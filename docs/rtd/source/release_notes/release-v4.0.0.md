@@ -68,7 +68,7 @@ parms = { "poly": region['poly'],
 
 * The ATL03 subsetting code now operates on one spot per thread (it used to be one pair track per thread).  This change is made in conjunction with a change in the base AWS instance type to an instance that has 8 cores.  The additional subsetting threads will therefore be able to utilize the greater number of cores when subsetting and speed up processing requests when only one subsetting operation on a given node is being processed.
 
-* When making raster sample requests, the user no longer needs to perform a separate earthdata.* call to generate a catalog for the 3DEP and Landsat raster datasets, but the client is not smart enouh to know to generate the catalog on its own if the user does not supply it.
+* When making raster sample requests, the user no longer needs to perform a separate earthdata.* call to generate a catalog for the 3DEP and Landsat raster datasets, but the client is not smart enough to know to generate the catalog on its own if the user does not supply it.
 
 ## Development Updates
 
