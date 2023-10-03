@@ -99,7 +99,7 @@ class CheckableComboBox(QComboBox):
         self.updateText()
 
     def timerEvent(self, event):
-        # After timeout, kill timer, and reenable click on line edit
+        # After timeout, kill timer, and re-enable click on line edit
         self.killTimer(event.timerId())
         self.closeOnLineEditClick = False
 

@@ -32,7 +32,7 @@ The SlideRule **website** can be built and hosted locally for development purpos
     $ gem install jekyll bundler
     ```
 
-    Then go into the `jekyll` directory and install all depedencies.
+    Then go into the `jekyll` directory and install all dependencies.
 
     ```bash
     $ bundle install
@@ -58,7 +58,7 @@ The SlideRule **website** can be built and hosted locally for development purpos
     ```
 
     Note: docutils version 0.17.x breaks certain formatting in Sphinx (e.g. lists).  Therefore it is recommended that docutils version 0.16 be installed.
-2. chruby using [Homebrew](https://brew.sh/) (install if neccessary)
+2. chruby using [Homebrew](https://brew.sh/) (install if necessary)
 
     ```bash
     $ brew install chruby ruby-install
@@ -83,7 +83,7 @@ The SlideRule **website** can be built and hosted locally for development purpos
     $ gem install jekyll
     ```
 
-    Then go into the `jekyll` directory and install all depedencies.
+    Then go into the `jekyll` directory and install all dependencies.
 
     ```bash
     $ bundle install

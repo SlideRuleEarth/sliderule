@@ -72,7 +72,7 @@ SlideRule is openly developed on GitHub at https://github.com/ICESat2-SlideRule.
 Project Information
 -------------------
 
-The SlideRule project is funded by NASA's ICESat-2 program and is led by the University of Washington in collaboration with NASA Goddard Space Flight Center.  The first public release of SlideRule ocurred in April 2021.  Since then we've continued to add new services, new algorithms, and new datasets, while also making improvements to our processing architecture.  Looking to the future, we hope to make SlideRule an indespensible component in the analysis of a broad array of Earth Science datasets that help us better understand the planet we call home.
+The SlideRule project is funded by NASA's ICESat-2 program and is led by the University of Washington in collaboration with NASA Goddard Space Flight Center.  The first public release of SlideRule occurred in April 2021.  Since then we've continued to add new services, new algorithms, and new datasets, while also making improvements to our processing architecture.  Looking to the future, we hope to make SlideRule an indispensable component in the analysis of a broad array of Earth Science datasets that help us better understand the planet we call home.
 
 
 
@@ -96,7 +96,6 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    user_guide/SlideRule.rst
    user_guide/ICESat-2.rst
    user_guide/GEDI.rst
-   user_guide/prov-sys.rst
    user_guide/H5Coro.md
    user_guide/GeoParquet.md
    user_guide/GeoRaster.md

@@ -10,7 +10,7 @@ Version description of the v1.4.2 release of ICESat-2 SlideRule.
 
 - Updated YAPC algorithm to Jeff's latest specification (05-04-22).  The new algorithm is the default version that runs.  If the previous algorithm is desired, there is a `version` parameter which is a part of the `yapc` parameter block that can be set to "1", and the original algorithm will execute.  Note: the new algorithm runs about three times faster than the original one.
 
-- Updated internal threading hueristic in the Python client:
+- Updated internal threading heuristic in the Python client:
   * client will attempt to throttle the number of concurrent requests to any given processing node
   * the ***max_workers*** parameter in the `atl06p` and `atl03sp` APIs has been removed;  if the calling application must change the number pending requests per node, then there is a new API `sliderule.set_max_pending` that can be called.
 

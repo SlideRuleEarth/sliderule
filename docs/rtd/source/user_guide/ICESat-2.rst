@@ -135,9 +135,9 @@ The PhoREAL vegetation algorithm, developed at the University of Texas at Austin
 To enable PhoREAL functionality, the ``"phoreal"`` parameter must be populated in the request dictionary.
 
 * ``"phoreal"``: dictionary of rasters to sample
-    - ``"binsize"``: size of the veritical photon bin in meters
+    - ``"binsize"``: size of the vertical photon bin in meters
     - ``"geoloc"``: algorithm to use to calculate the geolocation (latitude, longitude, along-track distance, and time) of each custom length PhoREAL segment; "mean" - takes the average value across all photons in the segment; "median" - takes the median value across all photons in the segment; "center" - takes the halfway value calculated by the average of the first and last photon in the segment
-    - ``"use_abs_h"``: boolean whether the absoluate photon heights are used instead of the normalized heights
+    - ``"use_abs_h"``: boolean whether the absolute photon heights are used instead of the normalized heights
     - ``"send_waveform"``: boolean whether to send to the client the photon height histograms in addition to the vegetation statistics
     - ``"above_classifier"``: boolean whether to use the ABoVE photon classifier when determining top of canopy photons
 
@@ -269,7 +269,7 @@ Most of the time, the photon extents are kept internal to SlideRule and not retu
 Even though this offloads processing on the server, the API calls can take longer since more data needs to be returned to the user, which can bottleneck over the network.
 
 Photon extents are returned as GeoDataFrames where each row is a photon.  Each extent represents the data that the ATL06 algorithm uses to generate a single ATL06 elevation.
-When the step size is shorter than the length of the extent, the extents returned overlap eachother which means that each photon is being returned multiple times and will be duplicated in the resulting GeoDataFrame.
+When the step size is shorter than the length of the extent, the extents returned overlap each other which means that each photon is being returned multiple times and will be duplicated in the resulting GeoDataFrame.
 
 The GeoDataFrame for each photon extent has the following columns:
 

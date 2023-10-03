@@ -18,14 +18,14 @@ Using SlideRule means issuing HTTP requests to SlideRule's endpoints to perform 
 #. Determining *which data* is available in that area of interest
 #. Describing *what processing* you want to perform
 #. Issuing the processing *request*
-#. Parsing the *response* data into a useable data structure
+#. Parsing the *response* data into a usable data structure
 
 The SlideRule Python Client helps make the above steps a lot easier by providing a user-friendly interface for accomplishing typical workflows.
 
-#. The Python client supports an *area of interest* being defined in mulitple ways - as a dictionary of latitude and longitudes, a list of coordinates, a GeoJSON file, a Shapefile, or a GeoDataFrame - and then representing the area of interest in standard formats accepted by SlideRule and other NASA web services.
+#. The Python client supports an *area of interest* being defined in multiple ways - as a dictionary of latitude and longitudes, a list of coordinates, a GeoJSON file, a Shapefile, or a GeoDataFrame - and then representing the area of interest in standard formats accepted by SlideRule and other NASA web services.
 #. The Python client queries NASA's Common Metadata Repository (CMR) system automatically for the user and populates the requests to SlideRule with the available science data pertinent to the user's request.
 #. The Python client allows users to define their processing parameters as Python dictionaries, and make requests to SlideRule using Python functions.
-#. The Python client handles the HTTPS connection to the SlideRule servers as well as any necessary authentation requests to the SlideRule Provisioning System when private clusters are being used.
+#. The Python client handles the HTTPS connection to the SlideRule servers as well as any necessary authentication requests to the SlideRule Provisioning System when private clusters are being used.
 #. The Python client parses the response data from SlideRule and presents a standard GeoDataFrame result back to the user.
 
 3. De-serialization
@@ -197,7 +197,7 @@ To request raster sampling, the ``"samples"`` parameter must be populated as a d
         - ``"algorithm"``: algorithm to use to sample the raster; the available algorithms for sampling rasters are: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss
         - ``"radius"``: the size of the kernel in meters when sampling a raster; the size of the region in meters for zonal statistics
         - ``"zonal_stats"``: boolean whether to calculate and return zonal statistics for the region around the location being sampled
-        - ``"with_flags"``: boolean whether to include auxillary information about the sampled pixel in the form of a 32-bit flag
+        - ``"with_flags"``: boolean whether to include auxiliary information about the sampled pixel in the form of a 32-bit flag
         - ``"t0"``: start time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
         - ``"t1"``: stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
         - ``"substr"``: substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)
@@ -216,7 +216,7 @@ To request raster sampling, the ``"samples"`` parameter must be populated as a d
         }
     }
 
-The output returned in the DataFrame can take two differnt forms depending on the nature of the data requested.
+The output returned in the DataFrame can take two different forms depending on the nature of the data requested.
 
 (1) If the raster being sampled includes on a single value for each latitude and longitude, then the data returned will be of the form {key}.value, {key}.time, {key}.file_id, {key}.{zonal stat} where the zonal stats are only present if requested.
 
@@ -226,7 +226,7 @@ The output returned in the DataFrame can take two differnt forms depending on th
 5.6 Output parameters
 ------------------------
 
-By default, SlideRule returns all results in a native (i.e. custom to SlideRule) format that is streamed back to the client and used by the client to construct a GeoDataFrame that is returned to the user. Using the parameters below, SlideRule can build the entire DataFrame of the results on the servers, in one of a few different formats (currently, only GeoParquet `GeoParquet <./GeoParquet.html>`_ is supported), and return the results as a file that is streamed back to the client and reconstructed by the client.  To control thie behavior, the ``"output"`` parameter is used.
+By default, SlideRule returns all results in a native (i.e. custom to SlideRule) format that is streamed back to the client and used by the client to construct a GeoDataFrame that is returned to the user. Using the parameters below, SlideRule can build the entire DataFrame of the results on the servers, in one of a few different formats (currently, only GeoParquet `GeoParquet <./GeoParquet.html>`_ is supported), and return the results as a file that is streamed back to the client and reconstructed by the client.  To control this behavior, the ``"output"`` parameter is used.
 
 Optionally, SlideRule supports writing the output to an S3 bucket instead of streaming the output back to the client.  In order to enable this behavior, the ``"output.path"`` field must start with "s3://" followed by the bucket name and object key.  For example, if you wanted the result to be written to a file named "grandmesa.parquet" in your S3 bucket "mybucket", in the subfolder "maps", then the output.path would be "s3://mybucket/maps/grandmesa.parquet".  When writing to S3, it is required by the user to supply the necessary credentials.  This can be done in one of two ways: (1) the user specifies an "asset" supported by SlideRule for which SlideRule already maintains credentials; (2) the user specifies their own set of temporary aws credentials.
 
@@ -473,7 +473,7 @@ geo
          - polar y coordinate to project onto a spherical coordinate system
          - *optional*
        * - **span**
-         - a box defined by a lower left latitude/longitude pair, and an upper right lattitude/longitude pair
+         - a box defined by a lower left latitude/longitude pair, and an upper right latitude/longitude pair
          - *optional*
        * - **span1**
          - a span used for intersection with the span2

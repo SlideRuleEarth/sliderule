@@ -251,7 +251,7 @@ def atl03_rasterized_subset():
     return icesat2.atl03sp(parms, resources=[args.granule03])
 
 # ------------------------------------
-# Benchmark ATL03 Polgon Subset
+# Benchmark ATL03 Polygon Subset
 # ------------------------------------
 def atl03_polygon_subset():
     parms = { 

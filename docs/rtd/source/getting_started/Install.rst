@@ -25,7 +25,7 @@ To install and setup JupyterLab to run the provided example notebooks, you must 
     conda install -c conda-forge jupyterlab
 
 Then make sure the conda environment with the `sliderule python` client installed in it is available to use as one of the Python kernels.
-To gaurantee that JuypterLab is using the correct Python kernel, you can start JupyterLab from the conda environment with `sliderule python` installed.
+To guarantee that JuypterLab is using the correct Python kernel, you can start JupyterLab from the conda environment with `sliderule python` installed.
 
 .. code-block:: bash
 

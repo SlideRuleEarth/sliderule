@@ -370,7 +370,7 @@ CHBIAS:     {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f} {:6.3f}
 
     @pyqtSlot()
     def on_click_peak_align(self):
-        integration, okPressed = QInputDialog.getInt(self, "Histgram Integration Period","Major Frames:", self.histIntegration, 0, 500, 1)
+        integration, okPressed = QInputDialog.getInt(self, "Histogram Integration Period","Major Frames:", self.histIntegration, 0, 500, 1)
         if okPressed:
             self.histIntegration = integration
             self.integrateLabel.setText("{}".format(self.histIntegration))

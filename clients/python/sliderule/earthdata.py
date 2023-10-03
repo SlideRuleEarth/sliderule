@@ -701,7 +701,7 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
         >>> geojson
         {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'id': '5eaa4a0582cefae35a21ee8c', 'geometry': {'type': 'Polygon'...
     '''
-    # Flatten polygon (the list must be formated as 'x y, x y, x y, x y, x y', the documentation is incorrect)
+    # Flatten polygon (the list must be formatted as 'x y, x y, x y, x y, x y', the documentation is incorrect)
     coord_list = []
     for coord in polygon:
         coord_list.append('{} {}'.format(coord["lon"], coord["lat"]))

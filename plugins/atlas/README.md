@@ -121,7 +121,7 @@ An example could be
    additional threads is often fine even when the results need to be ordered.
 
 6. The key is used to create the index for each record.  A typical index is the creation time
-   provided in the secondary header of the CCSDS telemetry packet.  The following options are availble
+   provided in the secondary header of the CCSDS telemetry packet.  The following options are available
    for creating the index:
    * RECEIPT_KEY - increments by one for every record in the dispatched stream
    * INCREMENTING_KEY - increments by one for every metric created (no gaps in index value)

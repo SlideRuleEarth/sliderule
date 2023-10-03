@@ -12,7 +12,7 @@ The ___sliderule___ PyPI package is located at https://pypi.org/project/sliderul
 
 ### 1. Clear Out Existing Outputs
 
-Run the `./clean.sh` script in the base directory of the ___sliderule-python___ repository to remove all existing outputs.  Later steps may inadvertantly use them.
+Run the `./clean.sh` script in the base directory of the ___sliderule-python___ repository to remove all existing outputs.  Later steps may inadvertently use them.
 
 ### 2. Build Binary Distribution
 

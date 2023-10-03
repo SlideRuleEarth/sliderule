@@ -93,7 +93,7 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 
 ##### MsgQ
 
-`MsgQ::MsgQ (const char* name, MsgQ::free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Base constructor for message queues.  Except in rare cases when the characteristics of a message queue need to be established before any subsribers or publishers are created, this constructor should not be directly called.  Instead the Subscriber or Publisher constructors should be called which will in turn call this constructor with the appropriate settings.
+`MsgQ::MsgQ (const char* name, MsgQ::free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Base constructor for message queues.  Except in rare cases when the characteristics of a message queue need to be established before any subscribers or publishers are created, this constructor should not be directly called.  Instead the Subscriber or Publisher constructors should be called which will in turn call this constructor with the appropriate settings.
 
 * **name** - the name of the message queue, null if a private queue
 * **free_func** - the function used to free queued objects after they have been fully dereferenced
@@ -105,7 +105,7 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 * **existing_q** - an existing message queue
 * **free_func** - the function used to free queued objects after they have been fully dereferenced
 
-`MsgQ::~MsgQ (void)` : Base destructor for all message queues.  Handles freeing resources associated with message queue once all subsribers and publishers have detached.
+`MsgQ::~MsgQ (void)` : Base destructor for all message queues.  Handles freeing resources associated with message queue once all subscribers and publishers have detached.
 
 ##### Static Routines
 
@@ -159,7 +159,7 @@ When a subscriber moves its pointer up the chain, it _dereferences_ the link it 
 
 * **data** - a pointer to the data being queued
 * **size** - the size of the data being queued, used in the post only to check against the maximum allowed data size.   The size is later used in receive calls:  returned in the receive by reference, or used in the receive by copy to copy the data contents out.
-* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the opperation will block forever until the operation succeeds.
+* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the operation will block forever until the operation succeeds.
 
 _Returns_ - the function will return the state of the message queue at the time of the post operation's attempt.  See the STATE_* definitions above for details.  If the operation succeeded, STATE_OKAY will be returned.  Otherwise, one of the error codes will be returned indicating why the operation failed.  This is different than the postCopy which returns the number of bytes copied on success.  Given that the data is a pointer, there is no concept of bytes being queued, only that the post succeeded or failed for a given reason.
 
@@ -169,21 +169,21 @@ _Returns_ - the function will return the state of the message queue at the time 
 
 * **data** - a pointer to the data being queued
 * **size** - the size of the data being queued, used to copy the data into the queue and to check against the maximum allowed data size.
-* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the opperation will block forever until the operation succeeds.
+* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the operation will block forever until the operation succeeds.
 
 _Returns_ - the function will return the size of the data queued on success, or an error code on failure.  See the STATE_* definitions above for details.
 
-`int Publisher::postCopy (const void* header_data, int header_size, const void* payload_data, int payload_size, int timeout=IO_CHECK)` :  This function behaves exactly like the above postCopy function except that it takes two sets of pointers and sizes to the data instead of one.  The purpose of this function is to support the often employed paradigm where messages are encapsulated inside of a highler level protocol before being queued.  For instance, if an image is being transfered over a SpaceWire network using RMAP (remote memory access protocol),  the image data would need to be broken up into smaller chucks, have an RMAP header prepended to it, and then sent.  Prepending the header requires that a new contiguous memory block be obtained of sufficient size to contain both the RMAP header and the image payload.  Providing this API allows the allocation of that contiquous memory block and the subsequent copying of the data to only occur once - when the data is enqueued.  Note that the data size check is performed against the sum total of the header and payload sizes.
+`int Publisher::postCopy (const void* header_data, int header_size, const void* payload_data, int payload_size, int timeout=IO_CHECK)` :  This function behaves exactly like the above postCopy function except that it takes two sets of pointers and sizes to the data instead of one.  The purpose of this function is to support the often employed paradigm where messages are encapsulated inside of a highler level protocol before being queued.  For instance, if an image is being transferred over a SpaceWire network using RMAP (remote memory access protocol),  the image data would need to be broken up into smaller chucks, have an RMAP header prepended to it, and then sent.  Prepending the header requires that a new contiguous memory block be obtained of sufficient size to contain both the RMAP header and the image payload.  Providing this API allows the allocation of that contiquous memory block and the subsequent copying of the data to only occur once - when the data is enqueued.  Note that the data size check is performed against the sum total of the header and payload sizes.
 
 * **header_data** - a pointer to the header of the message being queued
 * **header_size** - the size of the header
 * **payload_data** - a pointer to the payload of the message being queued
 * **payload_size** - the size of the payload
-* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the opperation will block forever until the operation succeeds.
+* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the operation will block forever until the operation succeeds.
 
 _Returns_ - the function will return the size of the total amount data queued on success, or an error code on failure.  See the STATE_* definitions above for details.
 
-`int Publisher::postString (const char* format_string, ...)` : Creates a formated ASCII string of data as specified by the format_string.  Underneath, this function calls one of the above postCopy functions, and is provided here as a wrapper function because of how often such functionality is needed when working with text based messaging.  The ASCII string that is ultimately enqueued is always null terminated, and the size of the object recorded in the message queue includes the null termination.
+`int Publisher::postString (const char* format_string, ...)` : Creates a formatted ASCII string of data as specified by the format_string.  Underneath, this function calls one of the above postCopy functions, and is provided here as a wrapper function because of how often such functionality is needed when working with text based messaging.  The ASCII string that is ultimately enqueued is always null terminated, and the size of the object recorded in the message queue includes the null termination.
 
 * **format_string** - a string format specification analogous to the c printf specification.
 
@@ -191,7 +191,7 @@ _Returns_ - the function will return the size of the string (including null term
 
 ##### Subscriber
 
-`Subscriber::Subscriber (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Constructor for the Subscriber class.  This will create a subscribing attachment to the specified message queue.  If the queue does not exist, it will create the queue with the parameters specified.  If the queue does exist, the parameters specified will be ignored and the attachment will proceed.  Only data that is posted AFTER a subsriber has attached will be made available to that subscriber.  In other words, any data that currently exists on the message queue when a subsriber attaches will not be visible or ever returned to the subsriber.
+`Subscriber::Subscriber (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY)` : Constructor for the Subscriber class.  This will create a subscribing attachment to the specified message queue.  If the queue does not exist, it will create the queue with the parameters specified.  If the queue does exist, the parameters specified will be ignored and the attachment will proceed.  Only data that is posted AFTER a subscriber has attached will be made available to that subscriber.  In other words, any data that currently exists on the message queue when a subscriber attaches will not be visible or ever returned to the subscriber.
 
 * **name** - the name of the message queue
 * **type** - the type of subscription, see SUBSCRIBER_OF_CONFIDENCE and SUBSCRIBER_OF_OPPORTUNITY definitions above.
@@ -203,14 +203,14 @@ _Returns_ - the function will return the size of the string (including null term
 * **existing_q** - an existing message queue
 * **type** - the type of subscription, see SUBSCRIBER_OF_CONFIDENCE and SUBSCRIBER_OF_OPPORTUNITY definitions above.
 
-`Subscriber::~Subscriber (void)` :  Destructor for the Subscriber class.  Detaches the subscriber from the message queue, dereferences all queued objects remaining on the message queue for this subsriber only, frees resources associated with the subscriber, and then calls the MsgQ destructor.
+`Subscriber::~Subscriber (void)` :  Destructor for the Subscriber class.  Detaches the subscriber from the message queue, dereferences all queued objects remaining on the message queue for this subscriber only, frees resources associated with the subscriber, and then calls the MsgQ destructor.
 
 ##### Receive Reference
 
 `int Subscriber::receiveRef (msgRef_t& ref, int timeout)` :  Receives a reference to the oldest subscribed-to object on the message queue that has yet to be received by the subscriber (i.e. the next object on the queue).  No data is copied, instead only the data pointer and data size is placed in the returned reference structure. If this function is called, a subsequent call to _dereference_ must be made once the data is no longer needed.
 
 * **ref** - a reference to a msgRef_t structure.  The contents of the structure are populated by the function.  See its definition above in the [Types](#types) section. On both success and error the structure is populated, but only on success can the contents of the structure be trusted.
-* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the opperation will block forever until the operation succeeds.
+* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the operation will block forever until the operation succeeds.
 
 _Returns_ - the function will return the state of the message queue at the time of the receive operation's attempt.  See the STATE_* definitions above for details.  If the operation succeeded, STATE_OKAY will be returned.  Otherwise, one of the error codes will be returned indicated why the operation failed.  This is different than the receiveCopy which returns the number of bytes copied on success.  Given that the data is a reference, there is no concept of bytes being dequeued, only that the receive succeeded or failed for a given reason.
 
@@ -231,7 +231,7 @@ _Returns_ - true on success, false on failure.  Currently, there is no condition
 
 * **data** - a pointer to a buffer that the dequeued data will be copied into
 * **size** - the size of the data buffer, and therefore the maximum size allowed for the dequeued data dequeued.
-* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the opperation will block forever until the operation succeeds.
+* **timeout** - the minimal amount of time, specified in milliseconds, to block the operation in order to wait for it to succeed.  If IO_CHECK is supplied, then the operation will be non-blocking and immediately return.  If IO_PEND is supplied, then the operation will block forever until the operation succeeds.
 
 _Returns_ - the function will return the size of the data object dequeued and copied into the buffer on success, or an error code on failure.  See the STATE_* definitions above for details.
 
