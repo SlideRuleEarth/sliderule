@@ -8,8 +8,7 @@ ATL06_FILE1 = "ATL06_20181019065445_03150111_005_01.h5"
 
 @pytest.mark.network
 class TestApi:
-    def test_happy_case(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_happy_case(self, init):
         datasets = [
             {"dataset": "/gt1l/land_ice_segments/h_li", "numrows": 5},
             {"dataset": "/gt1r/land_ice_segments/h_li", "numrows": 5},
@@ -18,6 +17,7 @@ class TestApi:
             {"dataset": "/gt3l/land_ice_segments/h_li", "numrows": 5},
             {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5} ]
         rsps = h5.h5p(datasets, ATL06_FILE1, "icesat2")
+        assert init
         expected = {'/gt1l/land_ice_segments/h_li': [45.95665, 45.999374, 46.017857, 46.015575, 46.067562],
                     '/gt1r/land_ice_segments/h_li': [45.980865, 46.02602, 46.02262, 46.03137, 46.073578],
                     '/gt2l/land_ice_segments/h_li': [45.611526, 45.588196, 45.53242, 45.48105, 45.443752],
@@ -28,20 +28,20 @@ class TestApi:
             for index in range(len(expected[dataset])):
                 assert round(rsps[dataset][index]) == round(expected[dataset][index])
 
-    def test_invalid_file(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_invalid_file(self, init):
         datasets = [ {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5} ]
         rsps = h5.h5p(datasets, "invalid_file.h5", "icesat2")
+        assert init
         assert len(rsps) == 0
 
-    def test_invalid_asset(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_invalid_asset(self, init):
         datasets = [ {"dataset": "/gt3r/land_ice_segments/h_li", "numrows": 5} ]
         rsps = h5.h5p(datasets, ATL06_FILE1, "invalid-asset")
+        assert init
         assert len(rsps) == 0
 
-    def test_invalid_dataset(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_invalid_dataset(self, init):
         datasets = [ {"dataset": "/gt3r/invalid", "numrows": 5} ]
         rsps = h5.h5p(datasets, ATL06_FILE1, "icesat2")
+        assert init
         assert len(rsps) == 0

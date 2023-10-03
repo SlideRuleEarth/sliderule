@@ -9,8 +9,7 @@ import time
 
 @pytest.mark.network
 class TestAlgorithm:
-    def test_atl06(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_atl06(self, init):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -20,13 +19,13 @@ class TestAlgorithm:
                   "maxi": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl06(parms, resource)
+        assert init
         assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622419
 
-    def test_atl06p(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_atl06p(self, init):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -36,13 +35,13 @@ class TestAlgorithm:
                   "maxi": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
         assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622419
 
-    def test_atl03s(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_atl03s(self, init):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -62,13 +61,13 @@ class TestAlgorithm:
                   "maxi": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl03s(parms, resource)
+        assert init
         assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488690
 
-    def test_atl03sp(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_atl03sp(self, init):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -88,13 +87,13 @@ class TestAlgorithm:
                   "maxi": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl03sp(parms, resources=[resource])
+        assert init
         assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488690
 
-    def test_atl08(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_atl08(self, init):
         resource = "ATL03_20181213075606_11560106_005_01.h5"
         track = 1
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
@@ -114,6 +113,7 @@ class TestAlgorithm:
                   "maxi": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl03s(parms, resource)
+        assert init
         assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
@@ -124,8 +124,7 @@ class TestAlgorithm:
         assert len(gdf[gdf["atl08_class"] == 3]) == 18285
         assert len(gdf[gdf["atl08_class"] == 4]) == 15978
 
-    def test_gs(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gs(self, init):
         resource_prefix = "20210114170723_03311012_005_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},
@@ -253,6 +252,7 @@ class TestAlgorithm:
                         total_error[element] += abs(error)
 
         # Asserts
+        assert init
         assert min(sliderule["rgt"]) == 331
         assert min(sliderule["cycle"]) == 10
         assert len(sliderule) == 55367
