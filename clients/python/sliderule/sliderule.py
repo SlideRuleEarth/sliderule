@@ -931,7 +931,8 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
     try:
         rsps = source("status", parm={"service":"sliderule"}, path="/discovery", silence=True)
         available_servers = rsps["nodes"]
-    except FatalError:
+    except FatalError as e:
+        logger.debug("Failed to retrieve number of nodes registered: {}".format(e))
         available_servers = 0
 
     return available_servers, requested_nodes
