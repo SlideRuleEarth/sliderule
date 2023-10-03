@@ -29,7 +29,7 @@ This version contains a number of backward-incompatible changes, specifically to
 
 * Added new `opendata` plugin that supports sampling the ESA World Cover 10m dataset.
 
-* The Python client supports returning a GeoDataFrame with 3D point geometry.  The user must supply a "height" column name in the API call in order to receive back a GeoDataFrame with the 3D point gemetry; note there is a performance impact when selected. (See [#272](https://github.com/ICESat2-SlideRule/sliderule/pull/272)).
+* The Python client supports returning a GeoDataFrame with 3D point geometry.  The user must supply a "height" column name in the API call in order to receive back a GeoDataFrame with the 3D point geometry; note there is a performance impact when selected. (See [#272](https://github.com/ICESat2-SlideRule/sliderule/pull/272)).
 
 * User's can supply their own PROJ pipeline in raster sampling requests. To use this feature, add a "proj_pipeline" string to your request dictionary:
 ```Python
@@ -74,7 +74,7 @@ parms = { "poly": region['poly'],
 
 * SlideRule Python bindings (srpy) have been updated to support building them inside a conda managed OS package environment.
 
-* The Python bindings for H5Coro are superceded by the new pure Python implementation effort: [h5coro](https://github.com/ICESat2-SlideRule/h5coro)
+* The Python bindings for H5Coro are superseded by the new pure Python implementation effort: [h5coro](https://github.com/ICESat2-SlideRule/h5coro)
 
 * Major rewrite of GDAL raster sampling code: new class structure has GdalRaster as a stand-alone class, with RasterObject parenting a GeoRaster and a GeoIndexedRaster for mosaic and strip datasets respectively.
 
@@ -108,7 +108,7 @@ parms = { "poly": region['poly'],
 
 * [#293](https://github.com/ICESat2-SlideRule/sliderule/issues/293) - Add ESA WorldCover plugin
 
-* [#295](https://github.com/ICESat2-SlideRule/sliderule/issues/295) - Reqests to TNM for 3DEP 1m is timing out
+* [#295](https://github.com/ICESat2-SlideRule/sliderule/issues/295) - Requests to TNM for 3DEP 1m is timing out
 
 * [#299](https://github.com/ICESat2-SlideRule/sliderule/issues/299) - Errors reading ArcticDEM mosaic
 

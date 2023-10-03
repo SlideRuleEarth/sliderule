@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 #
 #  ICEPYX ATL06
 #
-def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
+def atl06p(ipx_region, parm):
     """
     Performs ATL06-SR processing in parallel on ATL03 data and returns geolocated elevations.  The list of granules to be processed is identified by the ipx_region object.
 
@@ -56,8 +56,6 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
                     icepyx region object defining the query of granules to be processed
         parm:       dict
                     parameters used to configure ATL06-SR algorithm processing (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
-        asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -65,7 +63,6 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         geolocated elevations (see `Elevations <../user_guide/ICESat-2.html#elevations>`_)
     """
     try:
-        version = ipx_region.product_version
         resources = ipx_region.avail_granules(ids=True)[0]
     except:
         logger.critical("must supply an icepyx query as region")
@@ -74,12 +71,12 @@ def atl06p(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     if ipx_region.extent_type in ('bbox','polygon'):
         parm.update({'poly': to_region(ipx_region)})
 
-    return icesat2.atl06p(parm, asset, version=version, resources=resources)
+    return icesat2.atl06p(parm, resources=resources)
 
 #
 #  ICEPYX ATL03
 #
-def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
+def atl03sp(ipx_region, parm):
     """
     Performs ATL03 subsetting in parallel on ATL03 data and returns photon segment data.
 
@@ -89,10 +86,8 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     ----------
         ipx_region: Query
                     icepyx region object defining the query of granules to be processed
-        parms:      dict
+        parm:       dict
                     parameters used to configure ATL03 subsetting (see `Parameters <../user_guide/ICESat-2.html#parameters>`_)
-        asset:      str
-                    data source asset (see `Assets <../user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -100,7 +95,6 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
         ATL03 segments (see `Photon Segments <../user_guide/ICESat-2.html#segmented-photon-data>`_)
     """
     try:
-        version = ipx_region.product_version
         resources = ipx_region.avail_granules(ids=True)[0]
     except:
         logger.critical("must supply an icepyx query as region")
@@ -109,7 +103,7 @@ def atl03sp(ipx_region, parm, asset=icesat2.DEFAULT_ASSET):
     if ipx_region.extent_type in ('bbox','polygon'):
         parm.update({'poly': to_region(ipx_region)})
 
-    return icesat2.atl03sp(parm, asset, version=version, resources=resources)
+    return icesat2.atl03sp(parm, resources=resources)
 
 def to_region(ipx_region):
     """
@@ -123,7 +117,7 @@ def to_region(ipx_region):
     Returns
     -------
     list
-        polygon definining region of interest (can be passed into `icesat2` api functions)
+        polygon defining region of interest (can be passed into `icesat2` api functions)
 
     """
     if (ipx_region.extent_type == 'bbox'):

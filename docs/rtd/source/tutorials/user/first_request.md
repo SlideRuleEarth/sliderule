@@ -4,7 +4,7 @@
 
 ## Overview
 
-This tutorial walks you through the steps necessary to make your first request to SlideRule. By the end of this tutorial you will have used SlideRule to caclulate and plot elevations over Grand Mesa, Colorado, using ICESat-2 photon cloud data.
+This tutorial walks you through the steps necessary to make your first request to SlideRule. By the end of this tutorial you will have used SlideRule to calculate and plot elevations over Grand Mesa, Colorado, using ICESat-2 photon cloud data.
 
 **Prerequisites**: This walk-through assumes you are comfortable using `git` and the `conda` Python packaging system. See the [installation](../../getting_started/Install.html) instructions in the reference documentation for details on other methods of installation.
 

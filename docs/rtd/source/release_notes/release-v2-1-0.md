@@ -26,7 +26,7 @@ Version description of the v2.1.0 release of ICESat-2 SlideRule.
 
 - Raster sampling now supports including additional flags with each sample via the `with_flags` option
 
-- Streamlined private cluster setup in the Python client; added `sliderule.scaleout` and udpated behavior of `sliderule.init` function to transparently handle starting and scaling a cluster if desired; [#126](https://github.com/ICESat2-SlideRule/sliderule-python/issues/126)
+- Streamlined private cluster setup in the Python client; added `sliderule.scaleout` and updated behavior of `sliderule.init` function to transparently handle starting and scaling a cluster if desired; [#126](https://github.com/ICESat2-SlideRule/sliderule-python/issues/126)
 
 - Python client supports TIME8 fields from SlideRule
 
@@ -54,7 +54,7 @@ Version description of the v2.1.0 release of ICESat-2 SlideRule.
 
 ## Known Issues
 
-- PhoREAL processing includes some known bugs - the median ground height uses the relative heights instead of absolute heights, and the canopy openess calculation is incorrect
+- PhoREAL processing includes some known bugs - the median ground height uses the relative heights instead of absolute heights, and the canopy openness calculation is incorrect
 
 ## Getting This Release
 

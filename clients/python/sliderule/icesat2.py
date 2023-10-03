@@ -306,8 +306,6 @@ def atl06 (parm, resource):
                 parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtds/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
-    asset:      str
-                data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -336,10 +334,6 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     ----------
         parms:          dict
                         parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
-        asset:          str
-                        data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
-        version:        str
-                        the version of the ATL03 data to use for processing
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -414,8 +408,6 @@ def atl03s (parm, resource):
                     parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         resource:   str
                     ATL03 HDF5 filename
-        asset:      str
-                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -443,10 +435,6 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     ----------
         parms:          dict
                         parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
-        asset:          str
-                        data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
-        version:        str
-                        the version of the ATL03 data to return
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
@@ -584,8 +572,6 @@ def atl08 (parm, resource):
                 parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtds/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
-    asset:      str
-                data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
 
     Returns
     -------
@@ -614,10 +600,6 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     ----------
         parms:          dict
                         parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
-        asset:          str
-                        data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
-        version:        str
-                        the version of the ATL03 data to use for processing
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list

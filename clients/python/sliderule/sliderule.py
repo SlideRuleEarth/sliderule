@@ -233,7 +233,7 @@ def __decode_native(rectype, rawdata):
         if "PTR" in flags:
             continue
 
-        # get endianess
+        # get endianness
         if "LE" in flags:
             endian = '<'
         else:

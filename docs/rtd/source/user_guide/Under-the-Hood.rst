@@ -117,7 +117,7 @@ How Does SlideRule Work?
 
     Figure 2: SlideRule's Processing Workflow
 
-The University of Washington’s deployment of SlideRule runs in AWS us-west-2 and consists of a set of public and prviate EC2 instances that have access to NASA’s Cumulus datasets in S3, and NASA’s CMR system.  A user Python script can be running anywhere as long as it has access to the internet.  When using SlideRule’s Python client, a processing request from a user script has three primary stages:
+The University of Washington’s deployment of SlideRule runs in AWS us-west-2 and consists of a set of public and private EC2 instances that have access to NASA’s Cumulus datasets in S3, and NASA’s CMR system.  A user Python script can be running anywhere as long as it has access to the internet.  When using SlideRule’s Python client, a processing request from a user script has three primary stages:
 
 :1. Authentication: If accessing the public SlideRule service, authentication is unnecessary.  But, if accessing a private cluster, the user authenticate themselves to the provisioning system which associates a profile with them that identifies what they can and cannot do.
 

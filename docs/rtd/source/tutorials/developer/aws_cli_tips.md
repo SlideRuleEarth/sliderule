@@ -16,7 +16,7 @@ When running from EC2, the credentials are automatically provided as a part of y
 When running from a local machine, there are a few steps you need to take before you can access your S3 bucket.
 
 ### Create an Access Key
-1. Go to te **IAM** service on the AWS console (Integrated Access Management)
+1. Go to the **IAM** service on the AWS console (Integrated Access Management)
 2. Navigate to **Access Management --> Users** (using the navigation bar on the left)
 3. Select the **Security credentials** tab
 4. Click on the **Create access key** button
@@ -47,7 +47,7 @@ When running from a local machine, there are a few steps you need to take before
     }
 }
 ```
-4. Using the values provided, export those credentials to your local shell environemnt:
+4. Using the values provided, export those credentials to your local shell environment:
 ```bash
 $ export AWS_ACCESS_KEY_ID=<access-key-id>
 $ export AWS_SECRET_ACCESS_KEY=<secret-access-key>

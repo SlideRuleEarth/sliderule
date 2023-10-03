@@ -33,7 +33,7 @@ Version description of the v3.0.2 release of ICESat-2 SlideRule.
 
 ## Issues Resolved
 
-- PhoREAL processing bug fixes: the median ground height now uses the absolute heights, and the canopy openess calculation is now correctly implements the standard deviation
+- PhoREAL processing bug fixes: the median ground height now uses the absolute heights, and the canopy openness calculation is now correctly implements the standard deviation
 
 ## Known Issues
 

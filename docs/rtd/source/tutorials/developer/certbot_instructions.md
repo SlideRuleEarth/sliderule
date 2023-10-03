@@ -2,7 +2,7 @@
 
 2023-01-18
 
-These instructions detail the steps neccessary to create the **pem** file needed by HAProxy to perform SSL termination - which means clients can access our web services via **https** instead of **http**.  We will first request a certificate from Let's Encrypt for our domain, and then we will format that certificate into a format recognizable by HAProxy.  Lastly, we will configure HAProxy to use the certificate to terminate SSL (i.e. support https on the frontend and pass along http to the backend).
+These instructions detail the steps necessary to create the **pem** file needed by HAProxy to perform SSL termination - which means clients can access our web services via **https** instead of **http**.  We will first request a certificate from Let's Encrypt for our domain, and then we will format that certificate into a format recognizable by HAProxy.  Lastly, we will configure HAProxy to use the certificate to terminate SSL (i.e. support https on the frontend and pass along http to the backend).
 
 ## Setup workstation with proper credentials
 

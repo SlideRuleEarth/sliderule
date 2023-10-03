@@ -23,7 +23,7 @@ Version description of the v1.0.6 release of ICESat-2 SlideRule
 
 ## Known Issues
 
-1. Consul-Exit is not working and therefore a node does not dissappear from the service group when it goes down.
+1. Consul-Exit is not working and therefore a node does not disappear from the service group when it goes down.
 
 ## Getting this release
 

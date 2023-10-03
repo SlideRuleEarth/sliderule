@@ -6,7 +6,7 @@
 
 Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It has strong support in Python/DataFrames and is a popular data format for big data analytics.  See https://parquet.apache.org/ for more details.
 
-GeoParquet is a meta data and file organization covention overlayed on top of the Parquet format that provides a standard way of storing geospatial information inside Parquet files.  It has growing support in geospatial analysis tools, including Python/GeoDataFrames.  See https://geoparquet.org/ for more details.
+GeoParquet is a meta data and file organization convention overlaid on top of the Parquet format that provides a standard way of storing geospatial information inside Parquet files.  It has growing support in geospatial analysis tools, including Python/GeoDataFrames.  See https://geoparquet.org/ for more details.
 
 ## Overview
 

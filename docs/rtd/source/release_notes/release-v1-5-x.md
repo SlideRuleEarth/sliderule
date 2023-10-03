@@ -26,7 +26,7 @@ The SlideRule system underwent a gradual architectural shift from a single publi
 
 - Networking issues on one of the deployments [#6](https://github.com/ICESat2-SlideRule/sliderule-build-and-deploy/issues/6)
 
-- Node restarted for no discernable reason [#8](https://github.com/ICESat2-SlideRule/sliderule-build-and-deploy/issues/8)
+- Node restarted for no discernible reason [#8](https://github.com/ICESat2-SlideRule/sliderule-build-and-deploy/issues/8)
 
 - Application Load Balancer adds two seconds of latency [#2](https://github.com/ICESat2-SlideRule/sliderule-build-and-deploy/issues/2)
 
