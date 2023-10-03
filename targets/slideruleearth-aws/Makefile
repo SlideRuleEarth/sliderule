@@ -158,6 +158,16 @@ perfstest: ## run strips performance test on the server code
 perfsubsetest: ## run subset performance test
 	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
+manager-deploy: ## deploy manager using terraform; needs VERSION, DOMAIN
+	cd terraform/manager && terraform init
+	cd terraform/manager && terraform workspace select $(DOMAIN)-manager || terraform workspace new $(DOMAIN)-manager
+	cd terraform/manager && terraform apply
+
+manager-destroy: ## destroy manager using terraform; needs DOMAIN
+	cd terraform/manager && terraform init
+	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
+	cd terraform/manager && terraform destroy
+
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
