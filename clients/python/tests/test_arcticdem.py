@@ -18,37 +18,36 @@ vrtFileTime  = 1358108640000.0
 
 @pytest.mark.network
 class TestMosaic:
-    def test_vrt(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_vrt(self, init):
         rqst = {"samples": {"asset": "arcticdem-mosaic"}, "coordinates": [[vrtLon,vrtLat]]}
         rsps = sliderule.source("samples", rqst)
+        assert init
         assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
 
-    def test_vrt_with_aoi(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_vrt_with_aoi(self, init):
         bbox = [-179, 50, -177, 52]
         rqst = {"samples": {"asset": "arcticdem-mosaic", "aoi_bbox" : bbox}, "coordinates": [[vrtLon,vrtLat]]}
         rsps = sliderule.source("samples", rqst)
+        assert init
         assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
-    def test_vrt_with_proj_pipeline(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_vrt_with_proj_pipeline(self, init):
         # Output from:     projinfo -s EPSG:4326 -t EPSG:3413 -o proj
         pipeline = "+proj=pipeline +step +proj=axisswap +order=2,1 +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +x_0=0 +y_0=0 +ellps=WGS84"
         rqst = {"samples": {"asset": "arcticdem-mosaic", "proj_pipeline" : pipeline}, "coordinates": [[vrtLon,vrtLat]]}
         rsps = sliderule.source("samples", rqst)
+        assert init
         assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
 
-    def test_nearestneighbour(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_nearestneighbour(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
@@ -60,6 +59,7 @@ class TestMosaic:
                   "maxi": 1,
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
         assert len(gdf) == 957
         assert len(gdf.keys()) == 19
         assert gdf["rgt"][0] == 1160
@@ -68,8 +68,7 @@ class TestMosaic:
         assert gdf['segment_id'].describe()["max"] == 405902
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
 
-    def test_zonal_stats(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_zonal_stats(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
@@ -81,6 +80,7 @@ class TestMosaic:
                   "maxi": 1,
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
         assert len(gdf) == 957
         assert len(gdf.keys()) == 26
         assert gdf["rgt"][0] == 1160
@@ -94,8 +94,7 @@ class TestMosaic:
 
 @pytest.mark.network
 class TestStrips:
-    def test_indexed_raster(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_indexed_raster(self, init):
         region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
                                 {'lon': -46.34013213284274, 'lat': 65.49860245693627},
                                 {'lon': -46.35015561146599, 'lat': 65.67523503534576},
@@ -113,7 +112,7 @@ class TestStrips:
                   "time_end":'2021-01-01',
                   "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
         gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_005_01.h5'])
-        print(gdf.attrs['file_directory'])
+        assert init
         assert len(gdf.attrs['file_directory']) == 32        
         for file_id in range(16):
             assert file_id in gdf.attrs['file_directory'].keys()

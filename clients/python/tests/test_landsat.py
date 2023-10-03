@@ -9,8 +9,7 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestHLS:
-    def test_samples(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_samples(self, init):
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"
         polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
@@ -21,9 +20,10 @@ class TestHLS:
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
         rsps = sliderule.source("samples", rqst)
+        assert init
+        assert len(rsps) > 0
 
-    def test_subset1(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_subset1(self, init):
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"
         polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
@@ -34,6 +34,7 @@ class TestHLS:
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "extents": [[-179.87, 50.45, -178.77, 50.75]]}
         rsps = sliderule.source("subsets", rqst)
+        assert init
         assert len(rsps) > 0
         assert len(rsps['subsets'][0][0]['data']) > 0
         assert rsps['subsets'][0][0]['rows'] == 1030
@@ -46,8 +47,7 @@ class TestHLS:
         assert rsps['subsets'][0][0]['wkt'] != ""
 
 
-    def test_subset167(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_subset167(self, init):
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"
         polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
@@ -59,6 +59,7 @@ class TestHLS:
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI","B01", "B02", "B03", "B04", "B05", "B06","B07", "B08", "B09", "B10", "B11", "B12", "B8A"]}, "extents": [[-179.87, 50.45, -178.27, 51.44]]}
         rsps = sliderule.source("subsets", rqst)
         subsets = rsps['subsets'][0]
+        assert init
         assert len(subsets) == 167
 
         for subset in subsets:
@@ -74,8 +75,7 @@ class TestHLS:
             assert subset['wkt'] != ""
 
 
-    def test_ndvi(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_ndvi(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         parms = { "poly": region['poly'],
@@ -88,5 +88,6 @@ class TestHLS:
                   "maxi": 1,
                   "samples": {"ndvi": {"asset": "landsat-hls", "t0": "2021-01-01T00:00:00Z", "t1": "2021-02-01T23:59:59Z", "bands": ["NDVI"]}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
         assert len(gdf) > 0
         assert len(gdf["ndvi.value"]) > 0

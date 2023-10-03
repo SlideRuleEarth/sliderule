@@ -9,8 +9,7 @@ TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
 class TestL1B:
-    def test_gedi(self, domain, organization, desired_nodes):
-        gedi.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gedi(self, init):
         resource = "GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -20,6 +19,7 @@ class TestL1B:
             "beam": 0
         }
         gdf = gedi.gedi01bp(parms, resources=[resource])
+        assert init
         assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["mean"] == 0.0
         assert gdf.describe()["tx_size"]["mean"] == 128.0
@@ -36,8 +36,7 @@ class TestL1B:
 
 @pytest.mark.network
 class TestL2A:
-    def test_gedi(self, domain, organization, desired_nodes):
-        gedi.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gedi(self, init):
         resource = "GEDI02_A_2022288203631_O21758_03_T00021_02_003_02_V002.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -47,6 +46,7 @@ class TestL2A:
             "beam": 0
         }
         gdf = gedi.gedi02ap(parms, resources=[resource])
+        assert init
         assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["max"] == 130.0
         assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
@@ -62,8 +62,7 @@ class TestL2A:
 
 @pytest.mark.network
 class TestL3:
-    def test_gedi(self, domain, organization, desired_nodes):
-        gedi.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gedi(self, init):
         resource = "ATL03_20220105023009_02111406_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -78,6 +77,7 @@ class TestL3:
             "samples": {"gedi": {"asset": "gedil3-elevation"}}
         }
         gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
         assert gdf.describe()["gedi.time"]["std"] == 0.0
         assert abs(gdf.describe()["gedi.value"]["mean"] - 3142.8526604140434) < 0.001
         assert gdf.describe()["gedi.file_id"]["max"] == 0.0
@@ -85,8 +85,7 @@ class TestL3:
 
 @pytest.mark.network
 class TestL4A:
-    def test_gedi(self, domain, organization, desired_nodes):
-        gedi.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gedi(self, init):
         resource = "GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -96,6 +95,7 @@ class TestL4A:
             "beam": 0
         }
         gdf = gedi.gedi04ap(parms, resources=[resource])
+        assert init
         assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["max"] == 134.0
         assert abs(gdf.describe()["elevation"]["min"] - 1499.137329) < 0.001
@@ -111,8 +111,7 @@ class TestL4A:
 
 @pytest.mark.network
 class TestL4B:
-    def test_gedi(self, domain, organization, desired_nodes):
-        gedi.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gedi(self, init):
         resource = "ATL03_20220105023009_02111406_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -127,6 +126,7 @@ class TestL4B:
             "samples": {"gedi": {"asset": "gedil4b"}}
         }
         gdf = icesat2.atl08p(parms, resources=[resource], keep_id=True)
+        assert init
         exp_keys = ['snowcover', 'h_max_canopy', 'canopy_h_metrics', 'solar_elevation',
                     'h_canopy', 'spot', 'segment_id', 'rgt', 'gnd_ph_count', 'h_te_median',
                     'cycle', 'ph_count', 'h_mean_canopy', 'x_atc', 'landcover',

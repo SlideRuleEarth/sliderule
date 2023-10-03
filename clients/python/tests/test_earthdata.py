@@ -27,21 +27,21 @@ sliderule.set_rqst_timeout((1, 60))
 #
 @pytest.mark.network
 class TestCMR:
-    def test_grandmesa_time_range(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_grandmesa_time_range(self, init):
         granules = earthdata.cmr(short_name='ATL03', polygon=grandmesa, time_start='2018-10-01', time_end='2018-12-01')
+        assert init
         assert isinstance(granules, list)
         assert 'ATL03_20181017222812_02950102_006_02.h5' in granules
 
-    def test_collection(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_collection(self, init):
         entries = cmr_collection_query('NSIDC_ECS', 'ATL03')
+        assert init
         assert isinstance(entries, list)
         assert entries[0]['short_name'] == 'ATL03'
 
-    def test_max_version(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_max_version(self, init):
         max_version = cmr_max_version('NSIDC_ECS', 'ATL03')
+        assert init
         assert isinstance(max_version, str)
         assert int(max_version) >= 6
 
@@ -50,21 +50,18 @@ class TestCMR:
 #
 @pytest.mark.network
 class TestSTAC:
-    def test_asdict(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 99
 
-    def test_asstr(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_asstr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         response = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=True)
         catalog = json.loads(response)
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 99
 
-    def test_bad_short_name(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_bad_short_name(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         with pytest.raises(sliderule.FatalError):
             earthdata.stac(short_name="DOES_NOT_EXIST", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z")
@@ -74,21 +71,18 @@ class TestSTAC:
 #
 @pytest.mark.network
 class TestTNM:
-    def test_asdict(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region["poly"], as_str=False)
         assert 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m' in geojson["features"][0]['properties']['url']
 
-    def test_asstr(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_asstr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         response = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region["poly"], as_str=True)
         geojson = json.loads(response)
         assert 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m' in geojson["features"][0]['properties']['url']
 
-    def test_bad_short_name(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_bad_short_name(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         geojson = earthdata.tnm(short_name='DOES_NOT_EXIST', polygon=region["poly"], as_str=False)
         assert len(geojson['features']) == 0

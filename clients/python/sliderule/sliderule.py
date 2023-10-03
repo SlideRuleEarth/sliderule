@@ -658,6 +658,11 @@ def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, 
         plugins:        list
                         names of the plugins that need to be available on the server
 
+    Returns
+    -------
+    bool
+        Status of version check
+
     Examples
     --------
         >>> import sliderule
@@ -670,7 +675,7 @@ def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, 
         organization = PUBLIC_ORG
     authenticate(organization) # configure credentials (if any) for organization
     scaleout(desired_nodes, time_to_live, bypass_dns) # set cluster to desired number of nodes (if permitted based on credentials)
-    check_version(plugins=plugins) # verify compatibility between client and server versions
+    return check_version(plugins=plugins) # verify compatibility between client and server versions
 
 #
 #  source

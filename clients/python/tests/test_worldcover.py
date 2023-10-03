@@ -2,9 +2,7 @@
 
 import pytest
 from pathlib import Path
-import os.path
 import sliderule
-from sliderule import icesat2
 
 TESTDIR = Path(__file__).parent
 
@@ -19,10 +17,10 @@ vrtFileTime  = 1309046418000
 
 @pytest.mark.network
 class TestMosaic:
-    def test_vrt(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_vrt(self, init):
         rqst = {"samples": {"asset": "esa-worldcover-10meter"}, "coordinates": [[vrtLon,vrtLat]]}
         rsps = sliderule.source("samples", rqst)
+        assert init
         assert abs(rsps["samples"][0][0]["value"] - vrtValue) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
