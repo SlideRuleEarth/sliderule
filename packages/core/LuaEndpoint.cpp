@@ -42,7 +42,6 @@
 
 const char* LuaEndpoint::LuaMetaName = "LuaEndpoint";
 const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
-    {"metric",      luaMetric},
     {"auth",        luaAuth},
     {NULL,          NULL}
 };
@@ -62,9 +61,7 @@ SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
 const char* LuaEndpoint::LUA_REQUEST_ID = "rqstid";
 const char* LuaEndpoint::UNREGISTERED_ENDPOINT = "untracked";
-const char* LuaEndpoint::HITS_METRIC = "hits";
 
-int32_t LuaEndpoint::totalMetricId = EventLib::INVALID_METRIC;
 
 /******************************************************************************
  * AUTHENTICATOR SUBCLASS
@@ -100,20 +97,10 @@ LuaEndpoint::Authenticator::~Authenticator(void)
  *----------------------------------------------------------------------------*/
 bool LuaEndpoint::init (void)
 {
-    bool status = true;
-
-    /* Register Metric */
-    totalMetricId = EventLib::registerMetric(LuaEndpoint::LuaMetaName, EventLib::COUNTER, "%s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
-    if(totalMetricId == EventLib::INVALID_METRIC)
-    {
-        mlog(ERROR, "Registry failed for %s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
-        status = false;
-    }
-
     /* Register Record Definition */
     RECDEF(EndpointExceptionRecType, EndpointExceptionRecDef, sizeof(response_exception_t), "code");
 
-    return status;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -377,79 +364,6 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
 
     /* Clean Up */
     if(engine) delete engine;
-}
-
-/*----------------------------------------------------------------------------
- * getMetricId
- *----------------------------------------------------------------------------*/
-int32_t LuaEndpoint::getMetricId (const char* endpoint)
-{
-    int32_t metric_id = EventLib::INVALID_METRIC;
-
-    try
-    {
-        metric_id = metricIds[endpoint];
-    }
-    catch (const RunTimeException& e1)
-    {
-        (void)e1;
-
-        try
-        {
-            metric_id = metricIds[UNREGISTERED_ENDPOINT];
-        }
-        catch(const RunTimeException& e2)
-        {
-            (void)e2;
-        }
-    }
-
-    return metric_id;
-}
-
-/*----------------------------------------------------------------------------
- * luaMetric - :metric(<endpoint name>)
- *
- * Note: NOT thread safe, must be called prior to attaching endpoint to server
- *----------------------------------------------------------------------------*/
-int LuaEndpoint::luaMetric (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
-
-        /* Get Endpoint Name */
-        const char* endpoint_name = getLuaString(L, 2);
-
-        /* Get Object Name */
-        const char* obj_name = lua_obj->getName();
-
-        /* Register Metrics */
-        int32_t id = EventLib::registerMetric(obj_name, EventLib::COUNTER, "%s.%s", endpoint_name, HITS_METRIC);
-        if(id == EventLib::INVALID_METRIC)
-        {
-            throw RunTimeException(ERROR, RTE_ERROR, "Registry failed for %s.%s", obj_name, endpoint_name);
-        }
-
-        /* Add to Metric Ids */
-        if(!lua_obj->metricIds.add(endpoint_name, id, true))
-        {
-            throw RunTimeException(ERROR, RTE_ERROR, "Could not associate metric id to endpoint");
-        }
-
-        /* Set return Status */
-        status = true;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating metric: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------

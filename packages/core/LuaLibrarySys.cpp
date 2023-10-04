@@ -228,47 +228,11 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_metric - .metric(<category>) --> table of metric values
+ * lsys_metric - .metric(<...)
  *----------------------------------------------------------------------------*/
-static void populate_metric_table (const EventLib::metric_t& metric, int32_t index, void* parm)
-{
-    (void)index;
-
-    lua_State* L = (lua_State*)parm;
-    SafeString metric_full_name("%s.%s", metric.category, metric.name);
-
-    lua_pushstring(L, metric_full_name.str());
-    lua_newtable(L);
-    {
-        lua_pushstring(L, "value");
-        lua_pushnumber(L, metric.value);
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "type");
-        lua_pushstring(L, EventLib::subtype2str(metric.subtype));
-        lua_settable(L, -3);
-    }
-    lua_settable(L, -3);
-}
-
 int LuaLibrarySys::lsys_metric (lua_State* L)
 {
-    /* Get Category Parameter */
-    const char* category = NULL;
-    if(lua_isstring(L, 1)) // query category
-    {
-        category = lua_tostring(L, 1);
-    }
-    else if(!lua_isnil(L, 1) && lua_gettop(L) > 0)
-    {
-        mlog(CRITICAL, "Invalid parameter supplied to metric, must be nil or string (i.e. metric(\"mycategory\"))");
-        return 0;
-    }
-
-    /* Populate Metric Table */
-    lua_newtable(L);
-    EventLib::iterateMetric(category, populate_metric_table, L);
-    return 1;
+    //TODO: need to create a metric like the log function
 }
 
 /*----------------------------------------------------------------------------

@@ -42,13 +42,10 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* HttpServer::DURATION_METRIC = "duration";
-
 const char* HttpServer::OBJECT_TYPE = "HttpServer";
 const char* HttpServer::LuaMetaName = "HttpServer";
 const struct luaL_Reg HttpServer::LuaMetaTable[] = {
     {"attach",      luaAttach},
-    {"metric",      luaMetric},
     {"untilup",     luaUntilUp},
     {NULL,          NULL}
 };
@@ -704,13 +701,6 @@ int HttpServer::onDisconnect(int fd)
 
     connection_t* connection = connections[fd];
 
-    /* Update Metrics */
-    if(metricId != EventLib::INVALID_METRIC)
-    {
-        double duration = TimeLib::latchtime() - connection->start_time;
-        EventLib::incrementMetric(metricId, duration);
-    }
-
     /* Remove Connection */
     if(connections.remove(fd))
     {
@@ -749,42 +739,6 @@ int HttpServer::luaAttach (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error attaching handler: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * luaMetric - :metric(<endpoint name>)
- *
- * Note: NOT thread safe, must be called before first request
- *----------------------------------------------------------------------------*/
-int HttpServer::luaMetric (lua_State* L)
-{
-    bool status = false;
-
-    try
-    {
-        /* Get Self */
-        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
-
-        /* Get Object Name */
-        const char* obj_name = lua_obj->getName();
-
-        /* Register Metrics */
-        lua_obj->metricId = EventLib::registerMetric(obj_name, EventLib::COUNTER, "%s", DURATION_METRIC);
-        if(lua_obj->metricId == EventLib::INVALID_METRIC)
-        {
-            throw RunTimeException(ERROR, RTE_ERROR, "Registry failed for %s.%s", obj_name, DURATION_METRIC);
-        }
-
-        /* Set return Status */
-        status = true;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating metric: %s", e.what());
     }
 
     /* Return Status */

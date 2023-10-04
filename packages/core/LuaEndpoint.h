@@ -72,7 +72,6 @@ class LuaEndpoint: public EndpointObject
         static const char* LUA_RESPONSE_QUEUE;
         static const char* LUA_REQUEST_ID;
         static const char* UNREGISTERED_ENDPOINT;
-        static const char* HITS_METRIC;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -132,17 +131,12 @@ class LuaEndpoint: public EndpointObject
         void                normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id);
         void                streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id);
 
-        int32_t             getMetricId     (const char* endpoint);
-
-        static int          luaMetric       (lua_State* L);
         static int          luaAuth         (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static int32_t      totalMetricId;
-        Dictionary<int32_t> metricIds;
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
         event_level_t       logLevel;

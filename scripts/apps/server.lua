@@ -107,13 +107,6 @@ end
 
 -- Configure Application Endpoints --
 local source_endpoint = core.endpoint(normal_mem_thresh, stream_mem_thresh):name("SourceEndpoint")
-for _,script in ipairs(available_scripts()) do
-    local s = script:find(".lua")
-    if s then
-        local metric_name = script:sub(0,s-1)
-        source_endpoint:metric(metric_name)
-    end
-end
 
 -- Configure Provisioning System Authentication --
 netsvc.psurl(ps_url)
@@ -125,7 +118,6 @@ end
 
 -- Run Application HTTP Server --
 local app_server = core.httpd(app_port):name("AppServer")
-app_server:metric() -- register server metrics
 app_server:attach(source_endpoint, "/source")
 
 --------------------------------------------------
