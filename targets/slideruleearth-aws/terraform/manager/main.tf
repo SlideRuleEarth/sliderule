@@ -21,6 +21,7 @@
 resource "aws_lambda_function" "certbot" {
   function_name    = local.lambda_name
   role             = aws_iam_role.lambda.arn
+  architectures    = var.lambda_architectures
   runtime          = var.lambda_runtime
   memory_size      = var.lambda_memory_size
   timeout          = var.lambda_timeout

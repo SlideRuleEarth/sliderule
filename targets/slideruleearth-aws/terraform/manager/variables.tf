@@ -32,6 +32,12 @@ variable "certbot_dns_plugin" {
   default     = "dns-route53"
 }
 
+variable "lambda_architectures" {
+  description = "The architecture that the lambda runs on (arm64 or x86_64)."
+  type        = list(string)
+  default     = ["arm64"]
+}
+
 variable "lambda_runtime" {
   description = "Name of the runtime for lambda function."
   type        = string
