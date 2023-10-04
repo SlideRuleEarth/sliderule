@@ -22,6 +22,9 @@ def rm_tmp_dir():
 
 def obtain_certs(emails, domains, dns_plugin):
     certbot_args = [
+        # Remove comment to use AMCE v2 staging environment (for testing)
+#        '--test-cert',
+
         # Override directory paths so script doesn't have to be run as root
         '--config-dir', CERTBOT_DIR,
         '--work-dir', CERTBOT_DIR,
@@ -60,15 +63,21 @@ def obtain_certs(emails, domains, dns_plugin):
 # │       ├── chain.pem
 # │       ├── fullchain.pem
 # │       └── privkey.pem
-def upload_certs(domains, s3_bucket, s3_prefix, s3_region):
+def upload_certs(s3_bucket, s3_prefix, s3_region):
     client = boto3.client('s3', s3_region)
-    for domain in domains:
-        cert_path = os.path.join(CERTBOT_DIR, 'live', domain)
-        # needs to change: cat fullchain.pem privkey.pem | tee domain.pem
-        local_path = os.path.join(cert_path, "cert.pem")
-        remote_path = f'{s3_prefix}/{domain}.pem'
-        print(f'Uploading: {local_path} => s3://{s3_bucket}/{s3_prefix}/{domain}.pem')
-        client.upload_file(local_path, s3_bucket, remote_path)
+    for _d, domains, _f in os.walk(os.path.join(CERTBOT_DIR, 'live')):
+        for domain in domains:
+            fullchain_path = os.path.join(CERTBOT_DIR, 'live', domain, "fullchain.pem")
+            privkey_path = os.path.join(CERTBOT_DIR, 'live', domain, "privkey.pem")
+            domain_path = os.path.join(CERTBOT_DIR, 'live', domain, f'{domain}.pem')
+            with open(domain_path, 'w') as domain_file:
+                with open(fullchain_path) as fullchain_file:
+                    domain_file.write(fullchain_file.read())
+                with open(privkey_path) as privkey_file:
+                    domain_file.write(privkey_file.read())
+            remote_path = f'{s3_prefix}/{domain}.pem'
+            print(f'Uploading: {domain_path} => s3://{s3_bucket}/{remote_path}')
+            client.upload_file(domain_path, s3_bucket, remote_path)
 
 
 def guarded_handler(event, context):
@@ -81,7 +90,7 @@ def guarded_handler(event, context):
     s3_region = os.getenv('S3_REGION')  # The AWS region of the S3 bucket
 
     obtain_certs(emails, domains, dns_plugin)
-    upload_certs(domains, s3_bucket, s3_prefix, s3_region)
+    upload_certs(s3_bucket, s3_prefix, s3_region)
 
     return 'Certificates obtained and uploaded successfully.'
 

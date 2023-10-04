@@ -19,7 +19,7 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_lambda_function" "certbot" {
-  function_name    = var.lambda_name
+  function_name    = local.lambda_name
   role             = aws_iam_role.lambda.arn
   runtime          = var.lambda_runtime
   memory_size      = var.lambda_memory_size
@@ -68,26 +68,23 @@ resource "aws_lambda_permission" "schedule" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 locals {
-  name_prefix = "${var.lambda_name}-"
-
-  aws_region     = data.aws_region.current.name
-  aws_partition  = data.aws_arn.current.partition
-  aws_account_id = data.aws_caller_identity.current.account_id
+  lambda_name = "Certbot_Runner"
+  name_prefix = "${local.lambda_name}-"
 
   certbot_emails  = join(",", var.emails)
   certbot_domains = join(",", var.domains)
 
   lambda_handler  = "main.lambda_handler"
-  lambda_filename = var.lambda_filename
+  lambda_filename = "${path.module}/python/certbot/certbot-2.6.0.zip"
   lambda_hash     = filebase64sha256(local.lambda_filename)
-  lambda_description = var.lambda_description
+  lambda_description = "Run certbot to generate new certificates"
 
-  lambda_environment = merge({
+  lambda_environment = {
     EMAILS     = local.certbot_emails
     DOMAINS    = local.certbot_domains
     DNS_PLUGIN = var.certbot_dns_plugin
     S3_BUCKET  = var.upload_s3.bucket
     S3_PREFIX  = var.upload_s3.prefix
     S3_REGION  = var.upload_s3.region    
-  }, var.lambda_custom_environment)
+  }
 }

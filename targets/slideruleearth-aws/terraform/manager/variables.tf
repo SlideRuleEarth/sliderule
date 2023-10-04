@@ -1,9 +1,3 @@
-variable "lambda_name" {
-  description = "Name of the certbot lambda function. Will also be used as prefix to create AWS resources with unique names."
-  type        = string
-  default     = "Certbot_Runner"
-}
-
 variable "domains" {
   description = "A list of domains to provision certificates. Can contain wildcard domains like *.example.com"
   type        = list(string)
@@ -38,29 +32,10 @@ variable "certbot_dns_plugin" {
   default     = "dns-route53"
 }
 
-variable "lambda_custom_environment" {
-  description = "The custom environment in Lambda."
-  sensitive   = true
-  type        = map(string)
-  default     = {}
-}
-
-variable "lambda_description" {
-  description = "Description for the lambda function."
-  type        = string
-  default     = "Run certbot to generate new certificates"
-}
-
-variable "lambda_filename" {
-  description = "The Filename of the runtime for lambda function."
-  type        = string
-  default     = "${path.module}/python/certbot/certbot-2.6.0.zip"
-}
-
 variable "lambda_runtime" {
   description = "Name of the runtime for lambda function."
   type        = string
-  default     = "python3.8"
+  default     = "python3.11"
 }
 
 variable "lambda_memory_size" {
