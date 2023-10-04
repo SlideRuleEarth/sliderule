@@ -793,11 +793,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
                 double ph_longitude = ph->longitude;
 
                 /* Shift Longitudes */
-                if(shift_lon)
-                {
-                    if(longitude < 0.0) longitude = -longitude;
-                    else longitude = 360.0 - longitude;
-                }
+                if(shift_lon) ph_longitude = fmod((ph_longitude + 360.0), 360.0);
 
                 /* Perform Matrix Operation */
                 double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
@@ -810,11 +806,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             }
 
             /* Check if Longitude Needs to be Shifted Back */
-            if(shift_lon)
-            {
-                if(longitude < 180.0) longitude = -longitude;
-                else longitude = 360.0 - longitude;
-            }
+            if(shift_lon) longitude = fmod((longitude + 180.0), 360.0) - 180.0;
 
             /* Populate Results */
             result.elevation.latitude = latitude;
