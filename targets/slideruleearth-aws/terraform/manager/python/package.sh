@@ -5,7 +5,7 @@ set -e
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly CERTBOT_VERSION=2.6.0
 readonly VENV="certbot/venv"
-readonly PYTHON="python3.11"
+readonly PYTHON="python3.8"
 readonly CERTBOT_ZIP_FILE="certbot-${CERTBOT_VERSION}.zip"
 readonly CERTBOT_SITE_PACKAGES=${VENV}/lib/${PYTHON}/site-packages
 

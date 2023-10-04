@@ -158,6 +158,9 @@ perfstest: ## run strips performance test on the server code
 perfsubsetest: ## run subset performance test
 	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
+manager-package: ## create the lambda python package for the manager
+	cd terraform/manager/python && ./package.sh
+	
 manager-deploy: ## deploy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform init
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager || terraform workspace new $(DOMAIN)-manager
