@@ -56,9 +56,6 @@
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
-#define update_metric(lvl, id, val) {EventLib::updateMetric(id, val); EventLib::generateMetric(id, lvl);}
-#define increment_metric(lvl, id) {EventLib::incrementMetric(id); EventLib::generateMetric(id, lvl);}
-
 /******************************************************************************
  * EVENT LIBRARY CLASS
  ******************************************************************************/

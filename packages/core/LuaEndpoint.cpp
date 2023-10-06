@@ -60,7 +60,6 @@ SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
 const char* LuaEndpoint::LUA_REQUEST_ID = "rqstid";
-const char* LuaEndpoint::UNREGISTERED_ENDPOINT = "untracked";
 
 
 /******************************************************************************
@@ -157,7 +156,6 @@ void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publis
  *----------------------------------------------------------------------------*/
 LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh, event_level_t lvl):
     EndpointObject(L, LuaMetaName, LuaMetaTable),
-    metricIds(INITIAL_NUM_ENDPOINTS),
     normalRequestMemoryThreshold(normal_mem_thresh),
     streamRequestMemoryThreshold(stream_mem_thresh),
     logLevel(lvl),
@@ -189,13 +187,6 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Log Request */
     mlog(lua_endpoint->logLevel, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
-
-    /* Update Metrics */
-    int32_t metric_id = lua_endpoint->getMetricId(request->resource);
-    if(metric_id != EventLib::INVALID_METRIC)
-    {
-        increment_metric(DEBUG, metric_id);
-    }
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);

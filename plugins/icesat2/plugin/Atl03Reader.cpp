@@ -269,9 +269,6 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
-        /* Set Metrics */
-        PluginMetrics::setRegion(parms);
-
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 

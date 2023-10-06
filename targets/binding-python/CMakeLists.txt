@@ -40,7 +40,6 @@ if (pybind11_FOUND)
             ${PROJECT_SOURCE_DIR}/plugins/icesat2/plugin/GTDArray.cpp
             ${PROJECT_SOURCE_DIR}/plugins/icesat2/plugin/Icesat2Parms.cpp
             ${PROJECT_SOURCE_DIR}/plugins/icesat2/plugin/MeritRaster.cpp
-            ${PROJECT_SOURCE_DIR}/plugins/icesat2/plugin/PluginMetrics.cpp
             ${PROJECT_SOURCE_DIR}/plugins/icesat2/plugin/UT_Atl03Reader.cpp
             ${PROJECT_SOURCE_DIR}/plugins/icesat2/plugin/UT_Atl06Dispatch.cpp
     )
