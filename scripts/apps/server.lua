@@ -3,25 +3,6 @@ local asset = require("asset")
 local json = require("json")
 
 --------------------------------------------------
--- Functions
---------------------------------------------------
-
--- Returns All Available Endpoint Scripts --
-local function available_scripts()
-    local i = 0
-    local scripts = {}
-    local pdir = io.popen('ls "' .. __confdir .. '/api"')
-    if pdir ~= nil then
-        for filename in pdir:lines() do
-            i = i + 1
-            scripts[i] = filename
-        end
-        pdir:close()
-    end
-    return scripts
-end
-
---------------------------------------------------
 -- Process Arguments
 --------------------------------------------------
 

@@ -29,74 +29,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __corepkg__
-#define __corepkg__
+#ifndef __publish_monitor__
+#define __publish_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-
-#include "Asset.h"
-#include "AssetIndex.h"
-#include "CaptureDispatch.h"
-#include "ClusterSocket.h"
-#include "ContainerRecord.h"
-#include "CsvDispatch.h"
-#include "DispatchObject.h"
-#include "DeviceIO.h"
-#include "DeviceObject.h"
-#include "DeviceReader.h"
-#include "DeviceWriter.h"
-#include "Dictionary.h"
-#include "EndpointObject.h"
-#include "PointIndex.h"
-#include "File.h"
-#include "FileIODriver.h"
-#include "HttpClient.h"
-#include "HttpServer.h"
-#include "LimitDispatch.h"
-#include "List.h"
-#include "LimitRecord.h"
-#include "EventLib.h"
-#include "LuaEndpoint.h"
-#include "LuaEngine.h"
-#include "LuaLibraryMsg.h"
-#include "LuaLibrarySys.h"
-#include "LuaLibraryTime.h"
-#include "LuaObject.h"
-#include "LuaScript.h"
-#include "MathLib.h"
-#include "MetricDispatch.h"
-#include "MetricRecord.h"
-#include "Monitor.h"
-#include "MsgBridge.h"
-#include "MsgProcessor.h"
 #include "MsgQ.h"
-#include "Ordering.h"
-#include "PublisherDispatch.h"
-#include "PublishMonitor.h"
+#include "Monitor.h"
 #include "RecordObject.h"
-#include "RecordDispatcher.h"
-#include "ReportDispatch.h"
-#include "SpatialIndex.h"
-#include "StringLib.h"
-#include "Table.h"
-#include "TcpSocket.h"
-#include "IntervalIndex.h"
-#include "TimeLib.h"
-#include "Uart.h"
-#include "UdpSocket.h"
+#include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * PUBLISH MONITOR CLASS
  ******************************************************************************/
 
-void    initcore        (void);
-void    deinitcore      (void);
-bool    checkactive     (void);
-void    setinactive     (int errors = 0);
-int     geterrors       (void);
+class PublishMonitor: public Monitor
+{
+    public:
 
-#endif  /* __corepkg__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int luaCreate (lua_State* L);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
+        ~PublishMonitor (void);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        Publisher* outQ;
+};
+
+#endif  /* __publish_monitor__ */
