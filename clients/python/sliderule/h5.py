@@ -119,7 +119,7 @@ def h5p (datasets, resource, asset):
     parallel on the server side, but also shares a file context between the reads so that portions of the file that
     need to be read multiple times do not result in multiple requests to S3.
 
-    For a full discussion of the data type conversion options, see `h5 </web/rtd/api_reference/icesat2.html#h5>`_.
+    For a full discussion of the data type conversion options, see `h5 </web/rtd/api_reference/h5.html#h5>`_.
 
     Parameters
     ----------

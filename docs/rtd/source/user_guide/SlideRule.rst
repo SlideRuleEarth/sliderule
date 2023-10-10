@@ -149,7 +149,7 @@ One of the outputs of the ``sliderule.toregion`` function is a GeoJSON object th
 
 When supplied in the parameters sent in the request, the server side software forgoes using the polygon for subsetting operations, and instead builds a raster of the GeoJSON object using the specified cellsize, and then uses that raster image as a mask to determine which points in the source datasets are included in the region of interest.
 
-For regions of interest that are complex and include many holes where a single track may have multiple intesecting and non-intersecting segments, the rasterized subsetting function is much more performant and the cost of the resolution of the subsetting operation.
+For regions of interest that are complex and include many holes where a single track may have multiple intesecting and non-intersecting segments, the rasterized subsetting function is much more performant at the cost of the resolution of the subsetting operation.
 
 The example code below shows how this option can be enabled and used (note, the ``"poly"`` parameter is still required):
 
@@ -665,7 +665,7 @@ h5p
 
     Reads a list of datasets from an HDF5 file and returns the values of the datasets in a dictionary of lists.
 
-    See `icesat2.h5p </web/rtd/api_reference/icesat2.html#h5p>`_ function for a convient method for accessing HDF5 datasets.
+    See `h5.h5p </web/rtd/api_reference/h5.html#h5p>`_ function for a convient method for accessing HDF5 datasets.
 
 **Request Payload** *(application/json)*
 

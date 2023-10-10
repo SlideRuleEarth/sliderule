@@ -73,17 +73,17 @@ the API references.
 
        * - function
          - description
-       * - `init <../api_reference/icesat2.html#init>`_
-         - Initialize the icesat2 package with the URL to the SlideRule service
+       * - `init <../api_reference/sliderule.html#init>`_
+         - Initialize the client with the URL to the SlideRule service
        * - `atl06p <../api_reference/icesat2.html#atl06p>`_
          - Perform ATL06-SR processing in parallel on ATL03 data and return geolocated elevations
        * - `atl03sp <../api_reference/icesat2.html#atl03sp>`_
          - Subset ATL03 granuels in parallel and return the photon data
-       * - `h5p <../api_reference/icesat2.html#h5p>`_
+       * - `h5p <../api_reference/h5.html#h5p>`_
          - Read a list of datasets in parallel from an HDF5 file and return the values of the datasets
-       * - `toregion <../api_reference/icesat2.html#toregion>`_
+       * - `toregion <../api_reference/sliderule.html#toregion>`_
          - Convert a GeoJSON formatted polygon or shapefile into the format accepted by SlideRule
-       * - `get_version <../api_reference/icesat2.html#get-version>`_
+       * - `get_version <../api_reference/sliderule.html#get-version>`_
          - Get version information for the running servers and client
        * - `icepyx.atl06p <../api_reference/ipxapi.html#atl06p>`_
          - Uses icepyx region to perform ATL06-SR processing in parallel on ATL03 data and return geolocated elevations

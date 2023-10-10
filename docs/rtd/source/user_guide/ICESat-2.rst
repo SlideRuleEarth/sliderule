@@ -20,8 +20,8 @@ The ICESat-2 module provides additional parameters specific to making ICESat-2 p
 
 The photon-input parameters allow the user to select an area, a time range, or a specific ATL03 granule to use for input to the photon-selection algorithm.  If multiple parameters are specified, the result will be those photons that match all of the parameters.
 
-* ``"poly"``: polygon defining region of interest (see `polygons <#id1>`_)
-* ``"raster"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson <#id3>`_)
+* ``"poly"``: polygon defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_)
+* ``"raster"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson </web/rtd/user_guide/SlideRule.html#geojson>`_)
 * ``"track"``: reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0)
 * ``"rgt"``: reference ground track (defaults to all if not specified)
 * ``"cycle"``: counter of 91-day repeat cycles completed by the mission (defaults to all if not specified)
