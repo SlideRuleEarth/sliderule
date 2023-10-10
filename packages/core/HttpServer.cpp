@@ -488,14 +488,14 @@ int HttpServer::onRead(int fd)
             {
                 EndpointObject* endpoint = routeTable[connection->request->path];
                 connection->response_type = endpoint->handleRequest(connection->request);
-                connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
-                memset(&connection->rqst_state, 0, sizeof(rqst_state_t));
             }
             catch(const RunTimeException& e)
             {
                 mlog(e.level(), "No attached endpoint at %s: %s", connection->request->path, e.what());
                 status = INVALID_RC; // will close socket
             }
+            connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
+            memset(&connection->rqst_state, 0, sizeof(rqst_state_t));
         }
     }
     else

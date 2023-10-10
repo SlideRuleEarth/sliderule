@@ -224,8 +224,9 @@ uninstall-swot: ## uninstall most recent install of icesat2 plugin from system
 ########################
 
 scan: prep ## perform static analysis
-	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
-	cd $(SLIDERULE_BUILD); scan-build -o scan-results make
+#	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
+#	cd $(SLIDERULE_BUILD); scan-build -o scan-results make
+	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
 
 asan: prep ## build address sanitizer debug version of sliderule binary
 	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)

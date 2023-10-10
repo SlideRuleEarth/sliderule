@@ -1,21 +1,8 @@
 # ICESat-2 SlideRule Plugin top-level CMake build script
 
 project (ICESAT2 LANGUAGES CXX)
-
-#################
-# CMake Options #
-#################
-
-set (CMAKE_LEGACY_CYGWIN_WIN32 0) # Squelch a warning when building on Win32/Cygwin
 cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
-cmake_policy(SET CMP0079 NEW) # add link library to target which is not built in this directory
-cmake_policy(SET CMP0053 NEW) # simplified variable escape processing (recommended by cmake)
-
-###################
-# Project Options #
-###################
-
-option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
+include(${CMAKE_SOURCE_DIR}/../../project-config.cmake)
 
 ###################
 # ICESat-2 Plugin #
@@ -30,15 +17,10 @@ set_target_properties (icesat2 PROPERTIES PREFIX "")
 find_package (Lua "5.3")
 find_package (GDAL)
 
-# Version Information #
-file(STRINGS ${PROJECT_SOURCE_DIR}/../../version.txt TGTVER)
+# Build Information #
 execute_process (COMMAND git --work-tree ${PROJECT_SOURCE_DIR}/../.. --git-dir ${PROJECT_SOURCE_DIR}/../../.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
 string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
 target_compile_definitions (icesat2 PUBLIC BUILDINFO="${BUILDINFO}")
-
-# Set Environment Variables #
-set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
-set (CONFDIR ${INSTALLDIR}/etc/sliderule)
 
 # Compile Definitions #
 target_compile_definitions (icesat2 PUBLIC BINID="${TGTVER}")
