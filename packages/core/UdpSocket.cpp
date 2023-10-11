@@ -109,7 +109,7 @@ UdpSocket::UdpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
  *----------------------------------------------------------------------------*/
 UdpSocket::~UdpSocket(void)
 {
-    closeConnection();
+    UdpSocket::closeConnection();
     if(ip_addr) delete [] ip_addr;
     if(config) delete [] config;
 }

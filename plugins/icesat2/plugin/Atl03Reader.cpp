@@ -443,7 +443,6 @@ void Atl03Reader::Region::polyregion (void)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
-    bool last_segment_found = false;
     int segment = 0;
     while(segment < segment_ph_cnt.size)
     {
@@ -478,13 +477,11 @@ void Atl03Reader::Region::polyregion (void)
                 first_photon += segment_ph_cnt[segment];
             }
         }
-        else if(!last_segment_found)
+        else
         {
             /* If Coordinate Is NOT In Polygon */
             if(!inclusion && segment_ph_cnt[segment] != 0)
             {
-                /* Set Last Segment */
-                last_segment_found = true;
                 break; // full extent found!
             }
             else
@@ -630,7 +627,9 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
             }
             SafeString dataset_name("%s/%s", group_name, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, dataset_name.str()).str(), &info->reader->context, 0, region.first_segment, region.num_segments);
-            anc_geo_data.add(field_name, array);
+            bool status = anc_geo_data.add(field_name, array);
+            if(!status) delete array;
+            assert(status); // the dictionary add should never fail
         }
     }
 
@@ -642,7 +641,9 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
             const char* field_name = (*photon_fields)[i].str();
             SafeString dataset_name("heights/%s", field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, dataset_name.str()).str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
-            anc_ph_data.add(field_name, array);
+            bool status = anc_ph_data.add(field_name, array);
+            if(!status) delete array;
+            assert(status); // the dictionary add should never fail
         }
     }
 
@@ -1229,6 +1230,7 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
     bckgrd_in          = 0;
     extent_segment     = 0;
     extent_valid       = true;
+    extent_length      = 0.0;
 }
 
 /*----------------------------------------------------------------------------
@@ -1416,7 +1418,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         float relief = 0.0;
                         uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
                         uint8_t snowcover_flag = Atl08Class::INVALID_FLAG;
-                        if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+                        if(atl08.phoreal)
                         {
                             /* Set Relief */
                             if(!parms->phoreal.use_abs_h)

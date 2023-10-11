@@ -88,7 +88,7 @@ Uart::Uart (lua_State* L, const char* _device, int _baud, parity_t _parity):
 Uart::~Uart (void)
 {
     if(config) delete [] config;
-    closeConnection();
+    Uart::closeConnection();
 }
 
 /*----------------------------------------------------------------------------

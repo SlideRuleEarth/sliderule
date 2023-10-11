@@ -688,7 +688,6 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Process Remaining Records */
     builder->processRecordBatch(row_cnt);
-    row_cnt = 0;
 
     /* Close Parquet Writer */
     (void)builder->pimpl->parquetWriter->Close();

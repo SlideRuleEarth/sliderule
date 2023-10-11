@@ -1070,6 +1070,23 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         print2term("Address of Root Block:                                           0x%lx\n", (unsigned long)root_blk_addr);
         print2term("Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
     }
+    else
+    {
+        (void)heap_obj_id_len;
+        (void)max_size_mg_obj;
+        (void)next_huge_obj_id;
+        (void)btree_addr_huge_obj;
+        (void)free_space_mg_blks;
+        (void)addr_free_space_mg;
+        (void)mg_space;
+        (void)alloc_mg_space;
+        (void)dblk_alloc_iter;
+        (void)huge_obj_size;
+        (void)huge_objs;
+        (void)tiny_obj_size;
+        (void)tiny_objs;
+        (void)start_num_rows;
+    }
 
     /* Read Filter Information */
     if(io_filter_len > 0)
@@ -2142,28 +2159,40 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        uint64_t max_create_index = readField(8, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t max_create_index = readField(8, &pos);
             print2term("Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
+        }
+        else
+        {
+            pos += 8;
         }
     }
 
     /* Read Heap and Name Offsets */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    uint64_t name_index = readField(metaData.offsetsize, &pos);
     if(H5_VERBOSE)
     {
+        uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
+    }
+    else
+    {
+        pos += metaData.offsetsize;
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order_index = readField(metaData.offsetsize, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+        }
+        else
+        {
+            pos += metaData.offsetsize;
         }
     }
 
@@ -2484,20 +2513,28 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Creation Order */
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order = readField(8, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t create_order = readField(8, &pos);
             print2term("Creation Order:                                                  %lX\n", (unsigned long)create_order);
+        }
+        else
+        {
+            pos += 8;
         }
     }
 
     /* Read Character Set */
     if(flags & CHAR_SET_PRESENT_BIT)
     {
-        uint8_t char_set = readField(1, &pos);
         if(H5_VERBOSE)
         {
-            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
+            uint8_t char_set = readField(1, &pos);
+            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);            
+        }
+        else
+        {
+            pos += 1;
         }
     }
 
@@ -2938,28 +2975,40 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        uint16_t max_create_index = readField(2, &pos);
         if(H5_VERBOSE)
         {
+            uint16_t max_create_index = readField(2, &pos);
             print2term("Maximum Creation Index:                                          %u\n", (unsigned short)max_create_index);
+        }
+        else
+        {
+            pos += 2;
         }
     }
 
     /* Read Heap and Name Offsets */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    uint64_t name_index = readField(metaData.offsetsize, &pos);
     if(H5_VERBOSE)
     {
+        uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
+    }
+    else
+    {
+        pos += metaData.offsetsize;
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order_index = readField(metaData.offsetsize, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+        }
+        else
+        {
+            pos += metaData.offsetsize;
         }
     }
 

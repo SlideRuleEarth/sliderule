@@ -286,7 +286,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
     bool first_line_found = false;
     bool last_line_found = false;
     int line = 0;
-    while(line < lat.size)
+    while(line < lat.size && !last_line_found)
     {
         bool inclusion = false;
 
@@ -307,11 +307,10 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
             first_line_found = true;
             first_line = line;
         }
-        else if(first_line_found && !last_line_found && !inclusion)
+        else if(first_line_found && !inclusion)
         {
             /* Set Last Line */
             last_line_found = true;
-            break; // full extent found!
         }
 
         /* Bump Line */
@@ -321,7 +320,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
     /* Set Number of Segments */
     if(first_line_found)
     {
-        num_lines = line - first_line;
+        num_lines = (line - 1) - first_line;
     }
 
     /* Delete Projected Polygon */

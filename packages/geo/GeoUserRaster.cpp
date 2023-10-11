@@ -141,24 +141,10 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
     if(filelength <= 0)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
-    GByte* data = NULL;
-    try
-    {
-        rasterFileName = getFileName();
+    rasterFileName = getFileName();
 
-        /* Make a copy of the raster data and pass the ownership to the VSIFile */
-        data = (GByte*)malloc(filelength);
-        memcpy(data, file, filelength);
-
-        /* Load user raster to vsimem */
-        bool takeOwnership = true;
-        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, (vsi_l_offset)filelength, takeOwnership);
-        CHECKPTR(fp);
-        VSIFCloseL(fp);
-    }
-    catch(const RunTimeException& e)
-    {
-        if(data) free(data);
-        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
-    }
+    /* Load user raster to vsimem */
+    VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), (GByte*)file, (vsi_l_offset)filelength, FALSE);
+    if(fp) VSIFCloseL(fp);
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating GeoJsonRaster: unable to create file from memory buffer");
 }

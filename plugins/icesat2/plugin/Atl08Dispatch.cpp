@@ -198,6 +198,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
     /* Initialize Results */
     vegetation_t result;
+    result.pflags = 0;
     geolocateResult(extent, result);
 
     /* Execute Algorithm Stages */
@@ -328,6 +329,14 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
             result.x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance;
         }
     }
+    else // unexpected geolocation setting
+    {
+        result.time_ns = 0;
+        result.latitude = 0.0;
+        result.longitude = 0.0;
+        result.x_atc = extent->segment_distance;
+    }
+
 
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
@@ -505,6 +514,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     result.h_te_median = h_te_median;
 
     /* Calculate Percentiles */
+    if(veg_cnt > 0)
     {
         int b = 0; // bin index
         for(int p = 0; p < NUM_PERCENTILES; p++)
@@ -531,6 +541,11 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
             }
             b++;
         }
+    }
+    else // zero out results
+    {
+        memset(result.canopy_h_metrics, 0, sizeof(result.canopy_h_metrics));
+        result.h_canopy = 0.0;
     }
 
     /* Clean Up */
@@ -561,8 +576,7 @@ void Atl08Dispatch::postResult (vegetation_t* result)
             int bufsize = recObj->serialize(&buffer, RecordObject::REFERENCE, size);
 
             /* Post Record */
-            int post_status = MsgQ::STATE_TIMEOUT;
-            while((post_status = outQ->postCopy(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+            while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
 
             /* Reset Batch Index */
             batchIndex = 0;

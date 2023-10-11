@@ -291,7 +291,7 @@ class Atl03Reader: public LuaObject
                 int32_t         seg_in;             // segment index
                 int32_t         seg_ph;             // current photon index in segment
                 int32_t         start_segment;      // used to set start_distance
-                double          start_distance;     // distance to start of extent
+                double          start_distance;     // distance to start of extent (in meters from equator)
                 double          seg_distance;       // distance to start of atl03 segment
                 double          start_seg_portion;  // portion of segment extent is starting from
                 bool            track_complete;     // flag when track processing has finished
@@ -299,7 +299,7 @@ class Atl03Reader: public LuaObject
                 List<photon_t>  extent_photons;     // list of individual photons in extent
                 int32_t         extent_segment;     // current segment extent is pulling photons from
                 bool            extent_valid;       // flag for validity of extent (atl06 checks)
-                double          extent_length;
+                double          extent_length;      // custom length of the extent (in meters)
 
                 TrackState      (Atl03Data& atl03);
                 ~TrackState     (void);

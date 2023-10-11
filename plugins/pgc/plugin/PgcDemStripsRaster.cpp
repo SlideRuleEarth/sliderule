@@ -89,9 +89,9 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
 
     emptyFeaturesList();
 
-    for(double ix = minx; ix < maxx; ix++ )
+    for(long ix = minx; ix < maxx; ix++ )
     {
-        for(double iy = miny; iy < maxy; iy++)
+        for(long iy = miny; iy < maxy; iy++)
         {
             std::string newFile;
             _getIndexFile(ix, iy, newFile);
