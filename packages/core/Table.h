@@ -45,7 +45,7 @@
 /*
  * Table - time sorted hash of data type T and index type K
  */
-template <class T, typename K=unsigned long>
+template <class T, typename K=unsigned long, bool IS_MANAGED=false, bool IS_ARRAY=false>
 class Table
 {
     public:
@@ -115,11 +115,11 @@ class Table
         hash_func_t hash;
         node_t*     table;
         K           size;
-        K           num_entries;
-        K           oldest_entry;
-        K           newest_entry;
-        K           current_entry;
-        K           open_entry;
+        K           numEntries;
+        K           oldestEntry;
+        K           newestEntry;
+        K           currentEntry;
+        K           openEntry;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -129,21 +129,7 @@ class Table
         bool            writeNode       (K index, K key, T& data);
         bool            overwriteNode   (K index, K key, T& data, bool with_delete);
         void            makeNewest      (K index);
-        virtual void    freeNode        (K index);
-};
-
-/******************************************************************************
- * MANAGED TABLE TEMPLATE
- ******************************************************************************/
-
-template <class T, typename K=unsigned long, bool is_array=false>
-class MgTable: public Table<T,K>
-{
-    public:
-        MgTable (K table_size=Table<T,K>::DEFAULT_TABLE_SIZE, typename Table<T,K>::hash_func_t _hash=Table<T,K>::identity);
-        ~MgTable (void);
-    private:
-        void freeNode (K index) override;
+        void            freeNode        (K index);
 };
 
 /******************************************************************************
@@ -153,8 +139,8 @@ class MgTable: public Table<T,K>
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Table<T,K>::Table(K table_size, hash_func_t _hash)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Table<T,K,IS_MANAGED,IS_ARRAY>::Table(K table_size, hash_func_t _hash)
 {
     assert(table_size > 0);
 
@@ -178,8 +164,8 @@ Table<T,K>::Table(K table_size, hash_func_t _hash)
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Table<T,K>::~Table(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Table<T,K,IS_MANAGED,IS_ARRAY>::~Table(void)
 {
     /* Free Hash Structure */
     delete [] table;
@@ -190,8 +176,8 @@ Table<T,K>::~Table(void)
  *
  *  Note - mid-function returns
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::add(K key, T& data, bool overwrite, bool with_delete)
 {
     K curr_index = hash(key) % size;
 
@@ -205,7 +191,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
         if(prev_index != (K)INVALID_KEY) table[prev_index].next = next_index;
 
         /* Update Open Entry if Collision on Head */
-        if(open_entry == curr_index) open_entry = next_index;
+        if(openEntry == curr_index) openEntry = next_index;
 
         /* Populate Index */
         writeNode(curr_index, key, data);
@@ -237,7 +223,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
         }
 
         /* Find First Open Hash Slot */
-        K open_index = open_entry;
+        K open_index = openEntry;
         if(open_index == (K)INVALID_KEY)
         {
             /* Hash Full */
@@ -245,8 +231,8 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
         }
 
         /* Move Open Entry to Next Open Index */
-        open_entry = table[open_entry].next;
-        if(open_entry != (K)INVALID_KEY) table[open_entry].prev = (K)INVALID_KEY;
+        openEntry = table[openEntry].next;
+        if(openEntry != (K)INVALID_KEY) table[openEntry].prev = (K)INVALID_KEY;
 
         /* Insert Node */
         if(table[curr_index].prev == (K)INVALID_KEY) /* End of Chain Insertion (chain == 1) */
@@ -274,17 +260,17 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
             if(before_index != (K)INVALID_KEY)  table[before_index].after = open_index;
 
             /* Update Oldest Entry */
-            if(oldest_entry == curr_index)
+            if(oldestEntry == curr_index)
             {
-                oldest_entry = open_index;
-                table[oldest_entry].before = (K)INVALID_KEY;
+                oldestEntry = open_index;
+                table[oldestEntry].before = (K)INVALID_KEY;
             }
 
             /* Update Newest Entry */
-            if(newest_entry == curr_index)
+            if(newestEntry == curr_index)
             {
-                newest_entry = open_index;
-                table[newest_entry].after = (K)INVALID_KEY;
+                newestEntry = open_index;
+                table[newestEntry].after = (K)INVALID_KEY;
             }
 
             /* Add Entry to Current Slot */
@@ -293,7 +279,7 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
     }
 
     /* New Entry Added */
-    num_entries++;
+    numEntries++;
 
     /* Return Success */
     return true;
@@ -302,8 +288,8 @@ bool Table<T,K>::add(K key, T& data, bool overwrite, bool with_delete)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-T& Table<T,K>::get(K key, match_t match, bool resort)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+T& Table<T,K,IS_MANAGED,IS_ARRAY>::get(K key, match_t match, bool resort)
 {
     K curr_index = hash(key) % size;
 
@@ -366,8 +352,8 @@ T& Table<T,K>::get(K key, match_t match, bool resort)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Table<T,K>::find(K key, match_t match, T* data, bool resort)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::find(K key, match_t match, T* data, bool resort)
 {
     try
     {
@@ -385,8 +371,8 @@ bool Table<T,K>::find(K key, match_t match, T* data, bool resort)
 /*----------------------------------------------------------------------------
  * remove
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Table<T,K>::remove(K key)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::remove(K key)
 {
     K curr_index = hash(key) % size;
 
@@ -423,8 +409,8 @@ bool Table<T,K>::remove(K key)
     if(before_index != (K)INVALID_KEY)  table[before_index].after = after_index;
 
     /* Update Newest and Oldest Entry */
-    if(curr_index == newest_entry)  newest_entry = before_index;
-    if(curr_index == oldest_entry)  oldest_entry = after_index;
+    if(curr_index == newestEntry)  newestEntry = before_index;
+    if(curr_index == oldestEntry)  oldestEntry = after_index;
 
     /* Remove End of Chain */
     K end_index = curr_index;
@@ -452,8 +438,8 @@ bool Table<T,K>::remove(K key)
         if(before_index != (K)INVALID_KEY)    table[before_index].after = curr_index;
 
         /* Update Newest and Oldest Entry */
-        if(end_index == newest_entry)  newest_entry = curr_index;
-        if(end_index == oldest_entry)  oldest_entry = curr_index;
+        if(end_index == newestEntry)  newestEntry = curr_index;
+        if(end_index == oldestEntry)  oldestEntry = curr_index;
     }
 
     /* Remove End of Chain */
@@ -466,11 +452,11 @@ bool Table<T,K>::remove(K key)
 
     /* Add to Open List */
     table[open_index].prev = (K)INVALID_KEY;
-    table[open_index].next = open_entry;
-    open_entry = open_index;
+    table[open_index].next = openEntry;
+    openEntry = open_index;
 
     /* Update Statistics */
-    num_entries--;
+    numEntries--;
 
     /* Return Success */
     return true;
@@ -479,26 +465,26 @@ bool Table<T,K>::remove(K key)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-long Table<T,K>::length(void) const
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+long Table<T,K,IS_MANAGED,IS_ARRAY>::length(void) const
 {
-    return num_entries;
+    return numEntries;
 }
 
 /*----------------------------------------------------------------------------
  * isfull
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Table<T,K>::isfull(void) const
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::isfull(void) const
 {
-    return num_entries >= size;
+    return numEntries >= size;
 }
 
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Table<T,K>::clear(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Table<T,K,IS_MANAGED,IS_ARRAY>::clear(void)
 {
     /* Initialize Hash Table */
     for(K i = 0; i < size; i++)
@@ -519,13 +505,13 @@ void Table<T,K>::clear(void)
     }
 
     /* Initialize Hash Attributes */
-    num_entries     = 0;
-    oldest_entry    = (K)INVALID_KEY;
-    newest_entry    = (K)INVALID_KEY;
-    current_entry   = (K)INVALID_KEY;
+    numEntries     = 0;
+    oldestEntry    = (K)INVALID_KEY;
+    newestEntry    = (K)INVALID_KEY;
+    currentEntry   = (K)INVALID_KEY;
 
     /* Build Open List */
-    open_entry = (K)0;
+    openEntry = (K)0;
     for(K i = 0; i < size; i++)
     {
         table[i].prev = i - 1;
@@ -538,15 +524,15 @@ void Table<T,K>::clear(void)
 /*----------------------------------------------------------------------------
  * first
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Table<T,K>::first(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Table<T,K,IS_MANAGED,IS_ARRAY>::first(T* data)
 {
-    current_entry = oldest_entry;
-    if(current_entry != (K)INVALID_KEY)
+    currentEntry = oldestEntry;
+    if(currentEntry != (K)INVALID_KEY)
     {
-        assert(table[current_entry].occupied);
-        if(data) *data = table[current_entry].data;
-        return table[current_entry].key;
+        assert(table[currentEntry].occupied);
+        if(data) *data = table[currentEntry].data;
+        return table[currentEntry].key;
     }
 
     return (K)INVALID_KEY;
@@ -555,17 +541,17 @@ K Table<T,K>::first(T* data)
 /*----------------------------------------------------------------------------
  * next
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Table<T,K>::next(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Table<T,K,IS_MANAGED,IS_ARRAY>::next(T* data)
 {
-    if(current_entry != (K)INVALID_KEY)
+    if(currentEntry != (K)INVALID_KEY)
     {
-        current_entry = table[current_entry].after;
-        if(current_entry != (K)INVALID_KEY)
+        currentEntry = table[currentEntry].after;
+        if(currentEntry != (K)INVALID_KEY)
         {
-            assert(table[current_entry].occupied);
-            if(data) *data = table[current_entry].data;
-            return table[current_entry].key;
+            assert(table[currentEntry].occupied);
+            if(data) *data = table[currentEntry].data;
+            return table[currentEntry].key;
         }
     }
 
@@ -575,15 +561,15 @@ K Table<T,K>::next(T* data)
 /*----------------------------------------------------------------------------
  * last
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Table<T,K>::last(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Table<T,K,IS_MANAGED,IS_ARRAY>::last(T* data)
 {
-    current_entry = newest_entry;
-    if(current_entry != (K)INVALID_KEY)
+    currentEntry = newestEntry;
+    if(currentEntry != (K)INVALID_KEY)
     {
-        assert(table[current_entry].occupied);
-        if(data) *data = table[current_entry].data;
-        return table[current_entry].key;
+        assert(table[currentEntry].occupied);
+        if(data) *data = table[currentEntry].data;
+        return table[currentEntry].key;
     }
 
     return (K)INVALID_KEY;
@@ -592,17 +578,17 @@ K Table<T,K>::last(T* data)
 /*----------------------------------------------------------------------------
  * prev
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Table<T,K>::prev(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Table<T,K,IS_MANAGED,IS_ARRAY>::prev(T* data)
 {
-    if(current_entry != (K)INVALID_KEY)
+    if(currentEntry != (K)INVALID_KEY)
     {
-        current_entry = table[current_entry].before;
-        if(current_entry != (K)INVALID_KEY)
+        currentEntry = table[currentEntry].before;
+        if(currentEntry != (K)INVALID_KEY)
         {
-            assert(table[current_entry].occupied);
-            if(data) *data = table[current_entry].data;
-            return table[current_entry].key;
+            assert(table[currentEntry].occupied);
+            if(data) *data = table[currentEntry].data;
+            return table[currentEntry].key;
         }
     }
 
@@ -612,8 +598,8 @@ K Table<T,K>::prev(T* data)
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Table<T,K>& Table<T,K>::operator=(const Table& other)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Table<T,K,IS_MANAGED,IS_ARRAY>& Table<T,K,IS_MANAGED,IS_ARRAY>::operator=(const Table& other)
 {
     /* clear existing table */
     clear(); // calls freeNode needed for managed tables
@@ -645,8 +631,8 @@ Table<T,K>& Table<T,K>::operator=(const Table& other)
  *   NOTE:  this operator does not support matching other than EXACTLY,
  *          and does not support re-sorting the returned node as the newest
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-T& Table<T,K>::operator[](K key)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+T& Table<T,K,IS_MANAGED,IS_ARRAY>::operator[](K key)
 {
     return get(key);
 }
@@ -654,8 +640,8 @@ T& Table<T,K>::operator[](K key)
 /*----------------------------------------------------------------------------
  * identity
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Table<T,K>::identity(K key)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Table<T,K,IS_MANAGED,IS_ARRAY>::identity(K key)
 {
     return key;
 }
@@ -663,8 +649,8 @@ K Table<T,K>::identity(K key)
 /*----------------------------------------------------------------------------
  * writeNode
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Table<T,K>::writeNode(K index, K key, T& data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::writeNode(K index, K key, T& data)
 {
     table[index].occupied   = true;
     table[index].data       = data;
@@ -672,20 +658,20 @@ bool Table<T,K>::writeNode(K index, K key, T& data)
     table[index].next       = (K)INVALID_KEY;
     table[index].prev       = (K)INVALID_KEY;
     table[index].after      = (K)INVALID_KEY;
-    table[index].before     = newest_entry;
+    table[index].before     = newestEntry;
 
     /* Update Time Order */
-    if(oldest_entry == (K)INVALID_KEY)
+    if(oldestEntry == (K)INVALID_KEY)
     {
         /* First Entry */
-        oldest_entry = index;
-        newest_entry = index;
+        oldestEntry = index;
+        newestEntry = index;
     }
     else
     {
         /* Not First Entry */
-        table[newest_entry].after = index;
-        newest_entry = index;
+        table[newestEntry].after = index;
+        newestEntry = index;
     }
 
     /* Return Success */
@@ -695,8 +681,8 @@ bool Table<T,K>::writeNode(K index, K key, T& data)
 /*----------------------------------------------------------------------------
  * overwriteNode
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::overwriteNode(K index, K key, T& data, bool with_delete)
 {
     /* Delete Entry being Overritten (if requested) */
     if(with_delete)
@@ -718,8 +704,8 @@ bool Table<T,K>::overwriteNode(K index, K key, T& data, bool with_delete)
 /*----------------------------------------------------------------------------
  * makeNewest
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Table<T,K>::makeNewest(K index)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Table<T,K,IS_MANAGED,IS_ARRAY>::makeNewest(K index)
 {
     /* Bridge Over Entry */
     K before_index = table[index].before;
@@ -728,61 +714,36 @@ void Table<T,K>::makeNewest(K index)
     if(after_index != (K)INVALID_KEY) table[after_index].before = before_index;
 
     /* Check if Overwriting Oldest/Newest */
-    if(index == oldest_entry) oldest_entry = after_index;
-    if(index == newest_entry) newest_entry = before_index;
+    if(index == oldestEntry) oldestEntry = after_index;
+    if(index == newestEntry) newestEntry = before_index;
 
     /* Set Current Entry as Newest */
-    K oldest_index = oldest_entry;
-    K newest_index = newest_entry;
+    K oldest_index = oldestEntry;
+    K newest_index = newestEntry;
     table[index].after = (K)INVALID_KEY;
     table[index].before = newest_index;
-    newest_entry = index;
+    newestEntry = index;
 
     /* Update Newest/Oldest */
     if(newest_index != (K)INVALID_KEY) table[newest_index].after = index;
-    if(oldest_index == (K)INVALID_KEY) oldest_entry = index;
+    if(oldest_index == (K)INVALID_KEY) oldestEntry = index;
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Table<T,K>::freeNode(K index)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Table<T,K,IS_MANAGED,IS_ARRAY>::freeNode(K index)
 {
-    (void)index;
-}
-
-/******************************************************************************
- MANAGED ORDERING METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-MgTable<T,K,is_array>::MgTable(K table_size, typename Table<T,K>::hash_func_t _hash):
-    Table<T,K>(table_size, _hash)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-MgTable<T,K,is_array>::~MgTable(void)
-{
-    /* clearing table required to free nodes */
-    Table<T,K>::clear();
-}
-
-/*----------------------------------------------------------------------------
- * freeNode
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-void MgTable<T,K,is_array>::freeNode(K index)
-{
-    if(!is_array)   delete Table<T,K>::table[index].data;
-    else            delete [] Table<T,K>::table[index].data;
+    #if IS_MANAGED
+        #if IS_ARRAY   
+            delete [] table[index].data;
+        #else
+            delete table[index].data;
+        #endif
+    #else
+        (void)index;
+    #endif
 }
 
 #endif  /* __table__ */

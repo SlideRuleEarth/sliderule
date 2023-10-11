@@ -292,8 +292,8 @@ class RecordObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static MgDictionary<definition_t*>  definitions;
-        static Mutex                        defMut;
+        static Dictionary<definition_t*, true>  definitions;
+        static Mutex                            defMut;
 
         definition_t*   recordDefinition;
         unsigned char*  recordMemory;       // block of allocated memory <record type as null terminated string><record data as binary>

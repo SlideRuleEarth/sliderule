@@ -140,13 +140,17 @@ class CommandProcessor: public CommandableObject
                   permanent = _permanent; }
         };
 
+        // Dictionaries //
+        typedef Dictionary<handle_entry_t*, true> HandleDictionary;
+        typedef Dictionary<cvt_entry_t*, true> CvtDictionary;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static const int                MAX_KEY_NAME = 256;
 
-        MgDictionary<handle_entry_t*>   handlers;
+        HandleDictionary                handlers;
 
         Subscriber*                     cmdq_subscriber;
         Publisher*                      cmdq_publisher;
@@ -160,7 +164,7 @@ class CommandProcessor: public CommandableObject
 
         Dictionary<obj_entry_t>         objects;
         List<obj_entry_t>               lockedObjects;
-        MgDictionary<cvt_entry_t*>      currentValueTable;
+        CvtDictionary                   currentValueTable;
         Cond                            cvtCond;
 
         double                          stopwatch_time;

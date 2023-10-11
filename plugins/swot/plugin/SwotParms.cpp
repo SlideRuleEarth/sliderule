@@ -86,7 +86,8 @@ int64_t SwotParms::deltatime2timestamp (double delta_time)
  * Constructor
  *----------------------------------------------------------------------------*/
 SwotParms::SwotParms(lua_State* L, int index):
-    NetsvcParms(L, index)
+    NetsvcParms(L, index),
+    variables(EXPECTED_NUM_FIELDS)
 {
     bool provided = false;
 

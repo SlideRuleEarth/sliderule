@@ -102,11 +102,13 @@ class CcsdsRecord: public RecordObject
             int             size;
         } pktDef_t;
 
+        typedef Dictionary<pktDef_t*, true> PktDefDictionary;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static MgDictionary<pktDef_t*> pktDefs;
+        static PktDefDictionary pktDefs;
         static pktDef_t* pktCrossRefs[PKT_CROSS_REF_TBL_SIZE]; // FC[17:11], APID[10:0]
         static Mutex pktMut;
 

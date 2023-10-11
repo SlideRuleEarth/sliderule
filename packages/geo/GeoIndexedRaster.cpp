@@ -85,7 +85,7 @@ uint32_t GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector
         if(sample(geo, gps))
         {
             /* Populate Return Vector of Samples (slist) */
-            Ordering<rasters_group_t*>::Iterator iter(groupList);
+            GroupOrdering::Iterator iter(groupList);
             for(int i = 0; i < iter.length; i++)
             {
                 const rasters_group_t* rgroup = iter[i].value;
@@ -142,7 +142,7 @@ uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector
         if(sample(geo, gps))
         {
             /* Populate Return Vector of Subsets (slist) */
-            Ordering<rasters_group_t*>::Iterator iter(groupList);
+            GroupOrdering::Iterator iter(groupList);
             for(int i = 0; i < iter.length; i++)
             {
                 const rasters_group_t* rgroup = iter[i].value;
@@ -303,7 +303,7 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
  *----------------------------------------------------------------------------*/
 double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
 {
-    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
+    memset(&gmtDate, 0, sizeof(TimeLib::gmt_time_t));
 
     int i = feature->GetFieldIndex(field);
     if(i == -1)
@@ -661,7 +661,7 @@ void GeoIndexedRaster::createThreads(void)
 bool GeoIndexedRaster::updateCache(void)
 {
     /* Cache contains items/rasters from previous sample run */
-    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+    GroupOrdering::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
@@ -683,7 +683,8 @@ bool GeoIndexedRaster::updateCache(void)
                                               rinfo.dataIsElevation, crscb);
                 item->sample = NULL;
                 item->subset = NULL;
-                cache.add(key, item);
+                bool status = cache.add(key, item);
+                assert(status); (void)status; // cannot fail; prevents linter warnings
             }
 
             /* Mark as Enabled */
@@ -734,7 +735,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
     {
-        Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+        GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
@@ -788,7 +789,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
         /* Find raster group with the closest time */
-        Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+        GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;

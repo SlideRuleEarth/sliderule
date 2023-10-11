@@ -62,7 +62,7 @@ class SwotParms: public NetsvcParms
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
+        typedef List<SafeString> string_list_t;
 
         /*--------------------------------------------------------------------
          * Methods

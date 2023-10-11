@@ -296,7 +296,8 @@ const char* Asset::getEndpoint (void) const
  * Constructor
  *----------------------------------------------------------------------------*/
 Asset::Asset (lua_State* L, attributes_t _attributes, io_driver_t _io_driver):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    resources(ASSET_STARTING_RESOURCES_PER_INDEX)
 {
     attributes.name     = StringLib::duplicate(_attributes.name);
     attributes.identity = StringLib::duplicate(_attributes.identity);

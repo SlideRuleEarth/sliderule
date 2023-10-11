@@ -120,6 +120,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     proj_pipeline       (NULL),
     aoi_bbox            {0, 0, 0, 0},
     catalog             (NULL),
+    bands               (8),
     asset_name          (NULL),
     asset               (NULL),
     key_space           (0)

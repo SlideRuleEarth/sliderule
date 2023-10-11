@@ -124,6 +124,9 @@ class CosmosInterface: public CommandableObject
                 if(pid) delete pid; }
         };
 
+        typedef Ordering<tlm_t*, unsigned long, true> TlmOrdering;
+        typedef Ordering<cmd_t*, unsigned long, true> CmdOrdering;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -134,14 +137,14 @@ class CosmosInterface: public CommandableObject
         // telemetry connections
         Thread*                 tlmListenerPid;
         listener_t              tlmListener;
-        MgOrdering<tlm_t*>      tlmConnections;
+        TlmOrdering             tlmConnections;
         Mutex                   tlmConnMut;
         const char*             tlmQName;
 
         // command connections
         Thread*                 cmdListenerPid;
         listener_t              cmdListener;
-        MgOrdering<cmd_t*>      cmdConnections;
+        CmdOrdering             cmdConnections;
         Mutex                   cmdConnMut;
         const char*             cmdQName;
 

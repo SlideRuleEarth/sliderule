@@ -157,7 +157,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
  *----------------------------------------------------------------------------*/
 H5DatasetDevice::~H5DatasetDevice (void)
 {
-    closeConnection();
+    H5DatasetDevice::closeConnection();
     delete recObj;
     if(config) delete [] config;
     if(dataName) delete [] dataName;

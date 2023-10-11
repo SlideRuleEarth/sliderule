@@ -42,9 +42,16 @@
  * LIST TEMPLATE
  ******************************************************************************/
 
-template <class T, int LIST_BLOCK_SIZE=256>
+template <class T, bool IS_MANAGED=false, bool IS_ARRAY=false>
 class List
 {
+    public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int DEFAULT_LIST_BLOCK_SIZE = 256;
     protected:
 
         /*--------------------------------------------------------------------
@@ -52,7 +59,7 @@ class List
          *--------------------------------------------------------------------*/
 
         typedef struct list_block_t {
-            T                       data[LIST_BLOCK_SIZE];
+            T*                      data;
             int                     offset;
             struct list_block_t*    next;
         } list_node_t;
@@ -70,6 +77,7 @@ class List
                                     ~Iterator   (void);
                 const T&            operator[]  (int index) const;
                 const int           length;
+                const int           blockSize;
             private:
                 const list_node_t** blocks;
         };
@@ -78,9 +86,9 @@ class List
          * Methods
          *--------------------------------------------------------------------*/
 
-                List        (void);
+                List        (int list_block_size=DEFAULT_LIST_BLOCK_SIZE);
                 List        (const List& l1);
-        virtual ~List       (void);
+                ~List       (void);
 
         int     add         (const T& data);
         bool    remove      (int index);
@@ -105,6 +113,7 @@ class List
         int             len;
         list_node_t*    prevnode;
         int             prevblock;
+        int             listBlockSize;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -113,23 +122,9 @@ class List
         void            initialize          (void);
         void            copy                (const List& l1);
         list_node_t*    newNode             (void);
-        virtual void    freeNode            (typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index);
+        void            freeNode            (typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* node, int index);
         void            quicksort           (T* array, int start, int end);
         int             quicksortpartition  (T* array, int start, int end);
-};
-
-/******************************************************************************
- * MANAGED LIST TEMPLATE
- ******************************************************************************/
-
-template <class T, int LIST_BLOCK_SIZE=256, bool is_array=false>
-class MgList: public List<T, LIST_BLOCK_SIZE>
-{
-    public:
-        MgList (void);
-        ~MgList (void);
-    private:
-        void freeNode (typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index);
 };
 
 /******************************************************************************
@@ -139,14 +134,15 @@ class MgList: public List<T, LIST_BLOCK_SIZE>
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>::Iterator::Iterator(const List& l):
-    length(l.len)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+List<T, IS_MANAGED, IS_ARRAY>::Iterator::Iterator(const List& l):
+    length(l.len),
+    blockSize(l.listBlockSize)
 {
-    int num_blocks = (length + (LIST_BLOCK_SIZE - 1)) / LIST_BLOCK_SIZE;
-    blocks = new const List<T, LIST_BLOCK_SIZE>::list_node_t* [num_blocks];
+    int num_blocks = (length + (blockSize - 1)) / blockSize;
+    blocks = new const List<T, IS_MANAGED, IS_ARRAY>::list_node_t* [num_blocks];
 
-    const List<T, LIST_BLOCK_SIZE>::list_node_t* curr_block = &l.head;
+    const List<T, IS_MANAGED, IS_ARRAY>::list_node_t* curr_block = &l.head;
     for(int b = 0; b < num_blocks; b++)
     {
         assert(curr_block);
@@ -158,8 +154,8 @@ List<T, LIST_BLOCK_SIZE>::Iterator::Iterator(const List& l):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>::Iterator::~Iterator(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+List<T, IS_MANAGED, IS_ARRAY>::Iterator::~Iterator(void)
 {
     delete [] blocks;
 }
@@ -167,14 +163,14 @@ List<T, LIST_BLOCK_SIZE>::Iterator::~Iterator(void)
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-const T& List<T, LIST_BLOCK_SIZE>::Iterator::operator[](int index) const
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+const T& List<T, IS_MANAGED, IS_ARRAY>::Iterator::operator[](int index) const
 {
     if( (index < length) && (index >= 0) )
     {
-        int node_block = index / LIST_BLOCK_SIZE;
-        int node_offset = index % LIST_BLOCK_SIZE;
-        const List<T, LIST_BLOCK_SIZE>::list_node_t* block = blocks[node_block];
+        int node_block = index / blockSize;
+        int node_offset = index % blockSize;
+        const List<T, IS_MANAGED, IS_ARRAY>::list_node_t* block = blocks[node_block];
         return block->data[node_offset];
     }
     else
@@ -191,18 +187,23 @@ const T& List<T, LIST_BLOCK_SIZE>::Iterator::operator[](int index) const
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>::List(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+List<T, IS_MANAGED, IS_ARRAY>::List(int list_block_size):
+    listBlockSize(list_block_size)
 {
+    assert(listBlockSize >= 0);
+    listBlockSize = listBlockSize == 0 ? DEFAULT_LIST_BLOCK_SIZE : listBlockSize;
+    head.data = new T [listBlockSize];
     initialize();
 }
 
 /*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>::List(const List<T, LIST_BLOCK_SIZE>& l1)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+List<T, IS_MANAGED, IS_ARRAY>::List(const List<T, IS_MANAGED, IS_ARRAY>& l1)
 {
+    head.data = new T [listBlockSize];
     initialize();
     copy(l1);
 }
@@ -210,20 +211,21 @@ List<T, LIST_BLOCK_SIZE>::List(const List<T, LIST_BLOCK_SIZE>& l1)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>::~List(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+List<T, IS_MANAGED, IS_ARRAY>::~List(void)
 {
     clear();
+    delete [] head.data;
 }
 
 /*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-int List<T, LIST_BLOCK_SIZE>::add(const T& data)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+int List<T, IS_MANAGED, IS_ARRAY>::add(const T& data)
 {
     /* Check if Current Node is Full */
-    if(tail->offset >= LIST_BLOCK_SIZE)
+    if(tail->offset >= listBlockSize)
     {
         tail->next = newNode();
         tail = tail->next;
@@ -241,13 +243,13 @@ int List<T, LIST_BLOCK_SIZE>::add(const T& data)
 /*----------------------------------------------------------------------------
  * remove
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-bool List<T, LIST_BLOCK_SIZE>::remove(int index)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+bool List<T, IS_MANAGED, IS_ARRAY>::remove(int index)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / LIST_BLOCK_SIZE;
-        int node_offset = index % LIST_BLOCK_SIZE;
+        int node_block = index / listBlockSize;
+        int node_offset = index % listBlockSize;
         list_node_t* curr = &head;
         list_node_t* prev = NULL;
         for(int i = 0; i < node_block; i++)
@@ -285,7 +287,7 @@ bool List<T, LIST_BLOCK_SIZE>::remove(int index)
             while(curr != NULL)
             {
                 /* Shift Current Block */
-                for(int i = start_offset; (i < LIST_BLOCK_SIZE - 1) && (curr_offset < len - 1); i++)
+                for(int i = start_offset; (i < listBlockSize - 1) && (curr_offset < len - 1); i++)
                 {
                     curr->data[i] = curr->data[i + 1];
                     curr_offset++;
@@ -294,7 +296,7 @@ bool List<T, LIST_BLOCK_SIZE>::remove(int index)
                 /* Shift Last Item */
                 if(curr_offset < (len - 1) && curr->next != NULL)
                 {
-                    curr->data[LIST_BLOCK_SIZE - 1] = curr->next->data[0];
+                    curr->data[listBlockSize - 1] = curr->next->data[0];
                     curr_offset++;
                     if(curr_offset >= (len - 1))
                     {
@@ -318,7 +320,7 @@ bool List<T, LIST_BLOCK_SIZE>::remove(int index)
         len--;
 
         /* Recalculate the Tail */
-        int tail_block = len / LIST_BLOCK_SIZE;
+        int tail_block = len / listBlockSize;
         tail = &head;
         for (int i = 0; i < tail_block; i++) { assert(tail); tail = tail->next; }
 
@@ -332,13 +334,13 @@ bool List<T, LIST_BLOCK_SIZE>::remove(int index)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-T& List<T, LIST_BLOCK_SIZE>::get(int index)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+T& List<T, IS_MANAGED, IS_ARRAY>::get(int index)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / LIST_BLOCK_SIZE;
-        int node_offset = index % LIST_BLOCK_SIZE;
+        int node_block = index / listBlockSize;
+        int node_offset = index % listBlockSize;
 
         list_node_t* curr = &head;
         if(node_block == prevblock)
@@ -374,13 +376,13 @@ T& List<T, LIST_BLOCK_SIZE>::get(int index)
  *  with_delete which is defaulted to true, can be set to false for times when
  *  the list is reordered in place and the caller wants control over deallocation
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-bool List<T, LIST_BLOCK_SIZE>::set(int index, T& data, bool with_delete)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+bool List<T, IS_MANAGED, IS_ARRAY>::set(int index, T& data, bool with_delete)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / LIST_BLOCK_SIZE;
-        int node_offset = index % LIST_BLOCK_SIZE;
+        int node_block = index / listBlockSize;
+        int node_offset = index % listBlockSize;
 
         list_node_t* curr = &head;
         if(node_block == prevblock)
@@ -415,8 +417,8 @@ bool List<T, LIST_BLOCK_SIZE>::set(int index, T& data, bool with_delete)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-int List<T, LIST_BLOCK_SIZE>::length(void) const
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+int List<T, IS_MANAGED, IS_ARRAY>::length(void) const
 {
     return len;
 }
@@ -424,8 +426,8 @@ int List<T, LIST_BLOCK_SIZE>::length(void) const
 /*----------------------------------------------------------------------------
  * isempty
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-bool List<T, LIST_BLOCK_SIZE>::isempty(void) const
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+bool List<T, IS_MANAGED, IS_ARRAY>::isempty(void) const
 {
     return (len == 0);
 }
@@ -433,8 +435,8 @@ bool List<T, LIST_BLOCK_SIZE>::isempty(void) const
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-void List<T, LIST_BLOCK_SIZE>::clear(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+void List<T, IS_MANAGED, IS_ARRAY>::clear(void)
 {
     /* Delete Head */
     for(int i = 0; i < head.offset; i++) freeNode(&head, i);
@@ -447,6 +449,7 @@ void List<T, LIST_BLOCK_SIZE>::clear(void)
         curr->offset = 0;
         list_node_t* prev = curr;
         curr = curr->next;
+        delete [] prev->data;
         delete prev;
     }
 
@@ -458,8 +461,8 @@ void List<T, LIST_BLOCK_SIZE>::clear(void)
 /*----------------------------------------------------------------------------
  * sort
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-void List<T, LIST_BLOCK_SIZE>::sort(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+void List<T, IS_MANAGED, IS_ARRAY>::sort(void)
 {
     /* Allocate Array */
     T* array = new T[len];
@@ -470,7 +473,7 @@ void List<T, LIST_BLOCK_SIZE>::sort(void)
     int index = 0;
     while(items_remaining > 0)
     {
-        int items_to_copy = MIN(items_remaining, LIST_BLOCK_SIZE);
+        int items_to_copy = MIN(items_remaining, listBlockSize);
         for(int i = 0; i < items_to_copy; i++)
         {
             array[index++] = curr->data[i];
@@ -488,7 +491,7 @@ void List<T, LIST_BLOCK_SIZE>::sort(void)
     index = 0;
     while(items_remaining > 0)
     {
-        int items_to_copy = MIN(items_remaining, LIST_BLOCK_SIZE);
+        int items_to_copy = MIN(items_remaining, listBlockSize);
         for(int i = 0; i < items_to_copy; i++)
         {
             curr->data[i] = array[index++];
@@ -504,8 +507,8 @@ void List<T, LIST_BLOCK_SIZE>::sort(void)
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-T& List<T, LIST_BLOCK_SIZE>::operator[](int index)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+T& List<T, IS_MANAGED, IS_ARRAY>::operator[](int index)
 {
     return get(index);
 }
@@ -513,8 +516,8 @@ T& List<T, LIST_BLOCK_SIZE>::operator[](int index)
 /*----------------------------------------------------------------------------
  * =
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-List<T, LIST_BLOCK_SIZE>& List<T, LIST_BLOCK_SIZE>::operator= (const List<T, LIST_BLOCK_SIZE>& l1)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+List<T, IS_MANAGED, IS_ARRAY>& List<T, IS_MANAGED, IS_ARRAY>::operator= (const List<T, IS_MANAGED, IS_ARRAY>& l1)
 {
     clear();
     copy(l1);
@@ -524,8 +527,8 @@ List<T, LIST_BLOCK_SIZE>& List<T, LIST_BLOCK_SIZE>::operator= (const List<T, LIS
 /*----------------------------------------------------------------------------
  * initialize
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-void List<T, LIST_BLOCK_SIZE>::initialize(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+void List<T, IS_MANAGED, IS_ARRAY>::initialize(void)
 {
     head.offset = 0;
     head.next = NULL;
@@ -538,8 +541,8 @@ void List<T, LIST_BLOCK_SIZE>::initialize(void)
 /*----------------------------------------------------------------------------
  * =
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-void List<T, LIST_BLOCK_SIZE>::copy(const List<T, LIST_BLOCK_SIZE>& l1)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+void List<T, IS_MANAGED, IS_ARRAY>::copy(const List<T, IS_MANAGED, IS_ARRAY>& l1)
 {
     const list_node_t* curr = &l1.head;
     while(curr)
@@ -555,10 +558,11 @@ void List<T, LIST_BLOCK_SIZE>::copy(const List<T, LIST_BLOCK_SIZE>& l1)
 /*----------------------------------------------------------------------------
  * newNode
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-typename List<T, LIST_BLOCK_SIZE>::list_node_t* List<T, LIST_BLOCK_SIZE>::newNode(void)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* List<T, IS_MANAGED, IS_ARRAY>::newNode(void)
 {
     list_node_t* node = new list_node_t;
+    node->data = new T [listBlockSize];
     node->next = NULL;
     node->offset = 0;
     return node;
@@ -567,18 +571,26 @@ typename List<T, LIST_BLOCK_SIZE>::list_node_t* List<T, LIST_BLOCK_SIZE>::newNod
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-void List<T, LIST_BLOCK_SIZE>::freeNode(typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+void List<T, IS_MANAGED, IS_ARRAY>::freeNode(typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* node, int index)
 {
-    (void)node;
-    (void)index;
+    #if IS_MANAGED
+        #if IS_ARRAY   
+            delete [] node->data[index];
+        #else
+            delete node->data[index];
+        #endif
+    #else
+        (void)node;
+        (void)index;
+    #endif
 }
 
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-void List<T, LIST_BLOCK_SIZE>::quicksort(T* array, int start, int end)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+void List<T, IS_MANAGED, IS_ARRAY>::quicksort(T* array, int start, int end)
 {
     if(start < end)
     {
@@ -591,8 +603,8 @@ void List<T, LIST_BLOCK_SIZE>::quicksort(T* array, int start, int end)
 /*----------------------------------------------------------------------------
  * quicksortpartition
  *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE>
-int List<T, LIST_BLOCK_SIZE>::quicksortpartition(T* array, int start, int end)
+template <class T, bool IS_MANAGED, bool IS_ARRAY>
+int List<T, IS_MANAGED, IS_ARRAY>::quicksortpartition(T* array, int start, int end)
 {
     double pivot = array[(start + end) / 2];
 
@@ -608,37 +620,6 @@ int List<T, LIST_BLOCK_SIZE>::quicksortpartition(T* array, int start, int end)
         array[start] = array[end];
         array[end] = tmp;
     }
-}
-
-/******************************************************************************
- * MANAGED LIST METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE, bool is_array>
-MgList<T, LIST_BLOCK_SIZE, is_array>::MgList(void): List<T, LIST_BLOCK_SIZE>()
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE, bool is_array>
-MgList<T, LIST_BLOCK_SIZE, is_array>::~MgList(void)
-{
-    List<T, LIST_BLOCK_SIZE>::clear();
-}
-
-/*----------------------------------------------------------------------------
- * freeNode
- *----------------------------------------------------------------------------*/
-template <class T, int LIST_BLOCK_SIZE, bool is_array>
-void MgList<T, LIST_BLOCK_SIZE, is_array>::freeNode(typename List<T, LIST_BLOCK_SIZE>::list_node_t* node, int index)
-{
-    if(!is_array)   delete node->data[index];
-    else            delete [] node->data[index];
 }
 
 #endif  /* __list__ */

@@ -162,7 +162,7 @@ TcpSocket::~TcpSocket(void)
     /* Kill Listener... so it doesn't automatically reconnect */
     alive = false;
     if(connector) delete connector;
-    closeConnection();
+    TcpSocket::closeConnection();
     if(ip_addr) delete [] ip_addr;
     if(config) delete [] config;
 }

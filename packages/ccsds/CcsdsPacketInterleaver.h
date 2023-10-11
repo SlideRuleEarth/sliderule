@@ -66,10 +66,16 @@ class CcsdsPacketInterleaver: public LuaObject
     protected:
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef List<const char*,true,true> NameList;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsPacketInterleaver      (lua_State* L, MgList<const char*,true>& inq_names, const char* outq_name);
+                    CcsdsPacketInterleaver      (lua_State* L, NameList& inq_names, const char* outq_name);
         virtual     ~CcsdsPacketInterleaver     (void);
 
     private:

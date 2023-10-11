@@ -107,7 +107,7 @@ class MetricDispatch: public DispatchObject
 
         const char*                     dataField;      // value of metric
         List<long>*                     idFilter;       // id of record, not data or key
-        MgDictionary<fieldValue_t*>*    fieldFilter;    // more computationally intensive filter, matches field to value
+        Dictionary<fieldValue_t*, true>* fieldFilter;   // more computationally intensive filter, matches field to value
         Publisher*                      outQ;           // output queue metrics are posted to
 
         bool                            playbackSource;

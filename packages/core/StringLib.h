@@ -92,7 +92,7 @@ class StringLib
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef MgList<const char*, 256, true> TokenList;
+        typedef List<const char*, true> TokenList;
 
         /*--------------------------------------------------------------------
          * Methods

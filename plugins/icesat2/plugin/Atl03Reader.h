@@ -159,6 +159,8 @@ class Atl03Reader: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef Dictionary<H5DArray*, true> H5DArrayDictionary;
+
         typedef struct {
             Atl03Reader*    reader;
             char            prefix[7];
@@ -221,8 +223,8 @@ class Atl03Reader: public LuaObject
                 H5Array<double>     bckgrd_delta_time;
                 H5Array<float>      bckgrd_rate;
 
-                MgDictionary<H5DArray*> anc_geo_data;
-                MgDictionary<H5DArray*> anc_ph_data;
+                H5DArrayDictionary  anc_geo_data;
+                H5DArrayDictionary  anc_ph_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -346,7 +348,7 @@ class Atl03Reader: public LuaObject
         double              calculateBackground         (TrackState& state, Atl03Data& atl03);
         uint32_t            calculateSegmentId          (TrackState& state, Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        void                generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<H5DArray*>& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         void                parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

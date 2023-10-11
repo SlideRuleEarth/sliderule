@@ -110,6 +110,13 @@ class ReportDispatch: public DispatchObject
         };
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef Dictionary<const char*, true, true> ValueDictionary;
+        typedef Ordering<entry_t*, unsigned long, true> EntryOrdering;
+
+        /*--------------------------------------------------------------------
          * Report File Class
          *--------------------------------------------------------------------*/
 
@@ -123,7 +130,7 @@ class ReportDispatch: public DispatchObject
 
                 static const int            MAX_INDEX_STR_SIZE = 256;
                 format_t                    format;
-                MgDictionary<const char*, true> values; // indexed by data point names
+                ValueDictionary             values; // indexed by data point names
                 okey_t                      index;
                 bool                        headerInProgress;
                 indexDisplay_t              indexDisplay;
@@ -139,7 +146,7 @@ class ReportDispatch: public DispatchObject
         bool                    writeHeader;
         bool                    reportError;
         Mutex                   reportMut;
-        MgOrdering<entry_t*>*   entries;
+        EntryOrdering*          entries;
 
         /*--------------------------------------------------------------------
          * Methods

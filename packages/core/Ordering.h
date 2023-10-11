@@ -45,7 +45,7 @@
 /*
  * Ordering - sorted linked list of data type T and index type K
  */
-template <class T, typename K=unsigned long>
+template <class T, typename K=unsigned long, bool IS_MANAGED=false, bool IS_ARRAY=false>
 class Ordering
 {
     public:
@@ -97,8 +97,8 @@ class Ordering
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Ordering    (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
-        virtual     ~Ordering   (void);
+                    Ordering    (typename Ordering<T,K,IS_MANAGED,IS_ARRAY>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
+                    ~Ordering   (void);
 
         bool        add         (K key, const T& data, bool unique=false);
         T&          get         (K key, searchMode_t smode=EXACT_MATCH);
@@ -148,21 +148,7 @@ class Ordering
         bool            setMaxListSize  (long _max_list_size);
         bool            addNode         (K key, const T& data, bool unique);
         void            postNode        (sorted_node_t* node);
-        virtual void    freeNode        (sorted_node_t* node);
-};
-
-/******************************************************************************
- * MANAGED ORDERING TEMPLATE
- ******************************************************************************/
-
-template <class T, typename K=unsigned long, bool is_array=false>
-class MgOrdering: public Ordering<T,K>
-{
-    public:
-        MgOrdering (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=Ordering<T,K>::INFINITE_LIST_SIZE);
-        ~MgOrdering (void);
-    private:
-        void freeNode (typename Ordering<T,K>::sorted_node_t* node);
+        void            freeNode        (sorted_node_t* node);
 };
 
 /******************************************************************************
@@ -172,8 +158,8 @@ class MgOrdering: public Ordering<T,K>
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Ordering<T,K>::Iterator::Iterator(const Ordering& o):
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Ordering<T,K,IS_MANAGED,IS_ARRAY>::Iterator::Iterator(const Ordering& o):
     length(o.len)
 {
     values = new const T* [length];
@@ -193,8 +179,8 @@ Ordering<T,K>::Iterator::Iterator(const Ordering& o):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Ordering<T,K>::Iterator::~Iterator(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Ordering<T,K,IS_MANAGED,IS_ARRAY>::Iterator::~Iterator(void)
 {
     delete [] values;
     delete [] keys;
@@ -203,12 +189,12 @@ Ordering<T,K>::Iterator::~Iterator(void)
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) const
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+typename Ordering<T,K,IS_MANAGED,IS_ARRAY>::kv_t Ordering<T,K,IS_MANAGED,IS_ARRAY>::Iterator::operator[](int index) const
 {
     if( (index < length) && (index >= 0) )
     {
-        Ordering<T,K>::kv_t pair(keys[index], *values[index]);
+        Ordering<T,K,IS_MANAGED,IS_ARRAY>::kv_t pair(keys[index], *values[index]);
         return pair;
     }
     else
@@ -224,8 +210,8 @@ typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) cons
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Ordering<T,K>::Ordering(postFunc_t post_func, void* post_parm, K max_list_size)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Ordering<T,K,IS_MANAGED,IS_ARRAY>::Ordering(postFunc_t post_func, void* post_parm, K max_list_size)
 {
     firstNode   = NULL;
     lastNode    = NULL;
@@ -241,8 +227,8 @@ Ordering<T,K>::Ordering(postFunc_t post_func, void* post_parm, K max_list_size)
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Ordering<T,K>::~Ordering(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Ordering<T,K,IS_MANAGED,IS_ARRAY>::~Ordering(void)
 {
     clear();
 }
@@ -250,8 +236,8 @@ Ordering<T,K>::~Ordering(void)
 /*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Ordering<T,K>::add(K key, const T& data, bool unique)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::add(K key, const T& data, bool unique)
 {
     return addNode(key, data, unique);
 }
@@ -259,8 +245,8 @@ bool Ordering<T,K>::add(K key, const T& data, bool unique)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-T& Ordering<T,K>::get(K key, searchMode_t smode)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+T& Ordering<T,K,IS_MANAGED,IS_ARRAY>::get(K key, searchMode_t smode)
 {
     bool found = false;
 
@@ -315,8 +301,8 @@ T& Ordering<T,K>::get(K key, searchMode_t smode)
  *
  *  TODO factor out common search code into its own function
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Ordering<T,K>::remove(K key, searchMode_t smode)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::remove(K key, searchMode_t smode)
 {
     bool found = false;
 
@@ -382,8 +368,8 @@ bool Ordering<T,K>::remove(K key, searchMode_t smode)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-long Ordering<T,K>::length(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+long Ordering<T,K,IS_MANAGED,IS_ARRAY>::length(void)
 {
     return len;
 }
@@ -391,8 +377,8 @@ long Ordering<T,K>::length(void)
 /*----------------------------------------------------------------------------
  * isempty
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Ordering<T,K>::isempty(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::isempty(void)
 {
     return (len == 0);
 }
@@ -400,8 +386,8 @@ bool Ordering<T,K>::isempty(void)
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Ordering<T,K>::clear(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Ordering<T,K,IS_MANAGED,IS_ARRAY>::clear(void)
 {
     /* Set Current Pointer */
     curr = lastNode;
@@ -431,8 +417,8 @@ void Ordering<T,K>::clear(void)
 /*----------------------------------------------------------------------------
  * flush
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Ordering<T,K>::flush(void)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Ordering<T,K,IS_MANAGED,IS_ARRAY>::flush(void)
 {
     /* Pop List */
     while(firstNode != NULL)
@@ -458,8 +444,8 @@ void Ordering<T,K>::flush(void)
 /*----------------------------------------------------------------------------
  * first
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Ordering<T,K>::first(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Ordering<T,K,IS_MANAGED,IS_ARRAY>::first(T* data)
 {
     curr = firstNode;
 
@@ -475,8 +461,8 @@ K Ordering<T,K>::first(T* data)
 /*----------------------------------------------------------------------------
  * next
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Ordering<T,K>::next(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Ordering<T,K,IS_MANAGED,IS_ARRAY>::next(T* data)
 {
     if (curr != NULL)
     {
@@ -495,8 +481,8 @@ K Ordering<T,K>::next(T* data)
 /*----------------------------------------------------------------------------
  * last
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Ordering<T,K>::last(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Ordering<T,K,IS_MANAGED,IS_ARRAY>::last(T* data)
 {
     curr = lastNode;
 
@@ -512,8 +498,8 @@ K Ordering<T,K>::last(T* data)
 /*----------------------------------------------------------------------------
  * prev
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-K Ordering<T,K>::prev(T* data)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+K Ordering<T,K,IS_MANAGED,IS_ARRAY>::prev(T* data)
 {
     if (curr != NULL)
     {
@@ -532,8 +518,8 @@ K Ordering<T,K>::prev(T* data)
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-Ordering<T,K>& Ordering<T,K>::operator=(const Ordering& other)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+Ordering<T,K,IS_MANAGED,IS_ARRAY>& Ordering<T,K,IS_MANAGED,IS_ARRAY>::operator=(const Ordering& other)
 {
     /* clear existing list */
     clear();
@@ -560,8 +546,8 @@ Ordering<T,K>& Ordering<T,K>::operator=(const Ordering& other)
 /*----------------------------------------------------------------------------
  * operator[]
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-T& Ordering<T,K>::operator[](K key)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+T& Ordering<T,K,IS_MANAGED,IS_ARRAY>::operator[](K key)
 {
     return get(key, EXACT_MATCH);
 }
@@ -569,8 +555,8 @@ T& Ordering<T,K>::operator[](K key)
 /*----------------------------------------------------------------------------
  * setMaxListSize
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Ordering<T,K>::setMaxListSize(long _max_list_size)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::setMaxListSize(long _max_list_size)
 {
     if(_max_list_size >= INFINITE_LIST_SIZE)
     {
@@ -586,8 +572,8 @@ bool Ordering<T,K>::setMaxListSize(long _max_list_size)
  *
  *  take note of mid-function return point
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-bool Ordering<T,K>::addNode(K key, const T& data, bool unique)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::addNode(K key, const T& data, bool unique)
 {
     /* Check for Valid Current Pointer */
     if (curr == NULL && lastNode != NULL) curr = lastNode;
@@ -695,53 +681,29 @@ bool Ordering<T,K>::addNode(K key, const T& data, bool unique)
 /*----------------------------------------------------------------------------
  * postNode
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Ordering<T,K>::postNode(sorted_node_t* node)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Ordering<T,K,IS_MANAGED,IS_ARRAY>::postNode(sorted_node_t* node)
 {
     int status = 0;
     if(postFunc) status = postFunc(&(node->data), sizeof(T), postParm);
-    if (status <= 0) freeNode(node);
+    if(status <= 0) freeNode(node);
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, typename K>
-void Ordering<T,K>::freeNode(sorted_node_t* node)
+template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
+void Ordering<T,K,IS_MANAGED,IS_ARRAY>::freeNode(sorted_node_t* node)
 {
-    (void)node;
-}
-
-/******************************************************************************
- MANAGED ORDERING METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-MgOrdering<T,K,is_array>::MgOrdering(typename Ordering<T,K>::postFunc_t post_func, void* post_parm, K max_list_size):
-    Ordering<T,K>(post_func, post_parm, max_list_size)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-MgOrdering<T,K,is_array>::~MgOrdering(void)
-{
-    Ordering<T,K>::clear();
-}
-
-/*----------------------------------------------------------------------------
- * freeNode
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-void MgOrdering<T,K,is_array>::freeNode(typename Ordering<T,K>::sorted_node_t* node)
-{
-    if(!is_array)   delete node->data;
-    else            delete [] node->data;
+    #if IS_MANAGED
+        #if IS_ARRAY   
+            delete [] node->data;
+        #else
+            delete node->data;
+        #endif
+    #else
+        (void)node;
+    #endif
 }
 
 #endif  /* __ordering__ */

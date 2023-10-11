@@ -506,6 +506,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     parms(_parms),
     recType(StringLib::duplicate(rec_type)),
     batchRecType(NULL),
+    fieldList(LIST_BLOCK_SIZE),
     geoData(geo)
 {
     assert(_parms);

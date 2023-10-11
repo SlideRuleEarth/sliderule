@@ -407,7 +407,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         else if(line_term < 0) // end of headers reached
                         {
                             line_start += 2; // move past header delimeter
-                            line_term = line_start;
                             headers_complete = true;
                         }
                         else // header line not complete (line_term == 0)
@@ -550,7 +549,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                             chunk_trailer_complete = true;
                             chunk_header_complete = false;
                             line_start += 2;
-                            line_term = line_start;
                         }
                         else if(line_term > 0) // chunk invalid
                         {

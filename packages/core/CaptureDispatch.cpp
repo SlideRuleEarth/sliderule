@@ -81,7 +81,6 @@ int CaptureDispatch::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 CaptureDispatch::CaptureDispatch (lua_State* L, const char* outq_name):
     DispatchObject(L, LuaMetaName, LuaMetaTable)
-
 {
     outQ = NULL;
     if(outq_name) outQ = new Publisher(outq_name);

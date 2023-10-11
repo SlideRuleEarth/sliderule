@@ -808,7 +808,7 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
         if(num_strings > 0 && provided)
         {
             /* Allocate string list */
-            *string_list = new string_list_t;
+            *string_list = new string_list_t(EXPECTED_NUM_FIELDS);
             *provided = true;
         }
 

@@ -58,13 +58,16 @@ const char* GeoUserRaster::ELEVATION_KEY     = "elevation";
  *----------------------------------------------------------------------------*/
 int GeoUserRaster::luaCreate (lua_State* L)
 {
+    GeoUserRaster* gur = NULL;
     try
     {
-        return createLuaObject(L, create(L, 1));
+        gur = create( L, 1);
+        return createLuaObject(L, gur);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating GeoUserRaster: %s", e.what());
+        if(gur) delete gur;
         return returnLuaStatus(L, false);
     }
 }
@@ -138,12 +141,13 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
     if(filelength <= 0)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
+    GByte* data = NULL;
     try
     {
         rasterFileName = getFileName();
 
         /* Make a copy of the raster data and pass the ownership to the VSIFile */
-        GByte* data = (GByte*)malloc(filelength);
+        data = (GByte*)malloc(filelength);
         memcpy(data, file, filelength);
 
         /* Load user raster to vsimem */
@@ -154,6 +158,7 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
     }
     catch(const RunTimeException& e)
     {
+        if(data) free(data);
         mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
     }
 }

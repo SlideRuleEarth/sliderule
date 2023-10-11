@@ -62,7 +62,7 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
     try
     {
         /* Get Input Queues */
-        MgList<const char*,true> inq_names;
+        NameList inq_names;
         int inq_table_index = 1;
         if(lua_istable(L, inq_table_index))
         {
@@ -104,7 +104,7 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, MgList<const char*,true>& inq_names, const char* outq_name):
+CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, NameList& inq_names, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
 {
     /* Create Input Streams */

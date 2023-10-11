@@ -109,7 +109,7 @@ class GeoParms: public LuaObject
         * Typedefs
         *--------------------------------------------------------------------*/
 
-        typedef MgList<const char*, 8, true> band_list_t;
+        typedef List<const char*, true, true> band_list_t;
 
         typedef struct {
             double lon_min;

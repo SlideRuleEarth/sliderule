@@ -122,15 +122,22 @@ class GeoIndexedRaster: public RasterObject
         void            emptyFeaturesList     (void);
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef Ordering<rasters_group_t*, unsigned long, true> GroupOrdering;
+        typedef Dictionary<cacheitem_t*, true> CacheDictionary;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Mutex                           samplingMutex;
-        MgOrdering<rasters_group_t*>    groupList;
-        MgDictionary<cacheitem_t*>      cache;
-        List<OGRFeature*>               featuresList;
-        OGRPolygon                      geoIndexPoly;
-        uint32_t                        ssError;
+        Mutex                   samplingMutex;
+        GroupOrdering           groupList;
+        CacheDictionary         cache;
+        List<OGRFeature*>       featuresList;
+        OGRPolygon              geoIndexPoly;
+        uint32_t                ssError;
 
     private:
 

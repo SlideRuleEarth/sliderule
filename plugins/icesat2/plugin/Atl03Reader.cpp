@@ -1734,7 +1734,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<H5DArray*>& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list && indices->length() > 0)
     {

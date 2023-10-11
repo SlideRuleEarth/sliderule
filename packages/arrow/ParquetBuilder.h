@@ -110,7 +110,7 @@ class ParquetBuilder: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef List<RecordObject::field_t, LIST_BLOCK_SIZE> field_list_t;
+        typedef List<RecordObject::field_t> field_list_t;
         typedef field_list_t::Iterator field_iterator_t;
 
         typedef struct {

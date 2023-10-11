@@ -482,7 +482,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
             /* Create Dictionary if Necessary */
             if(lua_obj->fieldFilter == NULL)
             {
-                lua_obj->fieldFilter = new MgDictionary<fieldValue_t*>(FIELD_FILTER_DICT_SIZE);
+                lua_obj->fieldFilter = new Dictionary<fieldValue_t*, true>(FIELD_FILTER_DICT_SIZE);
             }
 
             /* Add Field Filter */

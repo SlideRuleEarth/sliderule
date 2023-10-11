@@ -82,18 +82,24 @@ class S3CacheIODriver: public S3CurlIODriver
         bool    fileGet             (const char* bucket, const char* key, const char** file);
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef Ordering<const char*, okey_t, true, true> FileOrdering;
+        
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static const char*                              cacheRoot;
-        static int                                      cacheMaxSize;
-        static Mutex                                    cacheMut;
-        static okey_t                                   cacheIndex;
-        static Dictionary<okey_t>                       cacheLookUp;
-        static MgOrdering<const char*, okey_t, true>    cacheFiles;
+        static const char*          cacheRoot;
+        static int                  cacheMaxSize;
+        static Mutex                cacheMut;
+        static okey_t               cacheIndex;
+        static Dictionary<okey_t>   cacheLookUp;
+        static FileOrdering         cacheFiles;
 
-        const Asset*    asset;
-        fileptr_t       ioFile;
+        const Asset*                asset;
+        fileptr_t                   ioFile;
 };
 
 #endif  /* __s3_cache_io_driver__ */

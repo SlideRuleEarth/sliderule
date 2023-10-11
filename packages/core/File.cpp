@@ -156,7 +156,7 @@ File::~File (void)
     if(config) delete [] config;
     for(int i = 0; i < numFiles; i++) if(fileList[i]) delete [] fileList[i];
     if(fileList) delete [] fileList;
-    closeConnection();
+    File::closeConnection();
 }
 
 /*----------------------------------------------------------------------------

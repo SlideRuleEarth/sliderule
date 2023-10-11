@@ -149,7 +149,7 @@ class Asset: public LuaObject
         attributes_t                    attributes;
         io_driver_t                     io_driver;
 
-        List<resource_t,ASSET_STARTING_RESOURCES_PER_INDEX> resources;
+        List<resource_t>                resources;
 
         /*--------------------------------------------------------------------
          * Methods

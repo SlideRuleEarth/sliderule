@@ -59,7 +59,7 @@ okey_t      S3CacheIODriver::cacheIndex = 0;
 Mutex       S3CacheIODriver::cacheMut;
 
 Dictionary<okey_t> S3CacheIODriver::cacheLookUp;
-MgOrdering<const char*, okey_t, true> S3CacheIODriver::cacheFiles;
+S3CacheIODriver::FileOrdering S3CacheIODriver::cacheFiles;
 
 /******************************************************************************
  * FILE IO DRIVER CLASS
