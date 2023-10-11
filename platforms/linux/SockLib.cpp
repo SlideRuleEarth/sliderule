@@ -145,68 +145,67 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
     {
         return sock;
     }
-    else // server
+    
+    // server
+    int listen_socket = sock;
+    int server_socket = INVALID_RC;
+
+    /* Make Socket a Listen Socket */
+    if(listen(listen_socket, 1) != 0)
     {
-        int listen_socket = sock;
-        int server_socket = INVALID_RC;
-
-        /* Make Socket a Listen Socket */
-        if(listen(listen_socket, 1) != 0)
-        {
-            dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
-            close(listen_socket);
-            return INVALID_RC;
-        }
-
-        do {
-            /* Build Poll Structure */
-            struct pollfd polllist[1];
-            polllist[0].fd = listen_socket;
-            polllist[0].events = POLLIN;
-            polllist[0].revents = 0;
-
-            /* Poll Listener */
-            int activity = 0;
-            do activity = poll(polllist, 1, SYS_TIMEOUT);
-            while(activity == -1 && (errno == EINTR || errno == EAGAIN));
-
-            /* Accept Connection */
-            if((activity > 0) && (polllist[0].revents & POLLIN))
-            {
-                server_socket = accept(listen_socket, NULL, NULL);
-            }
-        } while(server_socket == INVALID_RC && block && *block && !signal_exit);
-
-        /* Shutdown Listen Socket */
-        shutdown(listen_socket, SHUT_RDWR);
+        dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
         close(listen_socket);
-
-        /* Check Acceptance */
-        if(server_socket < 0)
-        {
-            dlog("Failed to accept connection on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
-            return INVALID_RC;
-        }
-
-        /* Set Keep Alive on Socket */
-        if(sockkeepalive(server_socket) < 0)
-        {
-            dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
-            sockclose(server_socket);
-            return INVALID_RC;
-        }
-
-        /* Make Socket Non-Blocking */
-        if(socknonblock(server_socket) < 0)
-        {
-            dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
-            sockclose(server_socket);
-            return INVALID_RC;
-        }
-
-        /* Return Server Socket */
-        return server_socket;
+        return INVALID_RC;
     }
+
+    do {
+        /* Build Poll Structure */
+        struct pollfd polllist[1];
+        polllist[0].fd = listen_socket;
+        polllist[0].events = POLLIN;
+        polllist[0].revents = 0;
+
+        /* Poll Listener */
+        int activity = 0;
+        do activity = poll(polllist, 1, SYS_TIMEOUT);
+        while(activity == -1 && (errno == EINTR || errno == EAGAIN));
+
+        /* Accept Connection */
+        if((activity > 0) && (polllist[0].revents & POLLIN))
+        {
+            server_socket = accept(listen_socket, NULL, NULL);
+        }
+    } while(server_socket == INVALID_RC && block && *block && !signal_exit);
+
+    /* Shutdown Listen Socket */
+    shutdown(listen_socket, SHUT_RDWR);
+    close(listen_socket);
+
+    /* Check Acceptance */
+    if(server_socket < 0)
+    {
+        dlog("Failed to accept connection on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        return INVALID_RC;
+    }
+
+    /* Set Keep Alive on Socket */
+    if(sockkeepalive(server_socket) < 0)
+    {
+        dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        sockclose(server_socket);
+        return INVALID_RC;
+    }
+
+    /* Make Socket Non-Blocking */
+    if(socknonblock(server_socket) < 0)
+    {
+        dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        sockclose(server_socket);
+        return INVALID_RC;
+    }
+
+    /* Return Server Socket */
+    return server_socket;
 }
 
 /*----------------------------------------------------------------------------
@@ -232,10 +231,7 @@ int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, bool* b
                     sockclose(sock);
                     return INVALID_RC;
                 }
-                else
-                {
-                    dlog("Configured socket on %s:%d to receive multicast packets on %s", ip_addr, port, multicast_group);
-                }
+                dlog("Configured socket on %s:%d to receive multicast packets on %s", ip_addr, port, multicast_group);
             }
             else
             {
@@ -419,7 +415,7 @@ void SockLib::sockclose(int fd)
 /*----------------------------------------------------------------------------
  * startserver
  *----------------------------------------------------------------------------*/
-int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm, bool* listening)
+int SockLib::startserver(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const bool* active, void* parm, bool* listening)
 {
     int status = 0;
 
@@ -650,7 +646,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 /*----------------------------------------------------------------------------
  * startclient
  *----------------------------------------------------------------------------*/
-int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, bool* active, void* parm, bool* connected)
+int SockLib::startclient(const char* ip_addr, int port, int max_num_connections, onPollHandler_t on_poll, onActiveHandler_t on_act, const bool* active, void* parm, bool* connected)
 {
     /* Initialize Connection Variables */
     bool _connected = false;
@@ -700,10 +696,9 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                     dlog("Unable to create client socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
                     return -1;
                 }
-                else // timeout
-                {
-                    OsApi::performIOTimeout();
-                }
+                
+                /* Timeout */
+                OsApi::performIOTimeout();
             }
         }
 
@@ -780,9 +775,11 @@ const char* SockLib::sockipv4 (void)
 /*----------------------------------------------------------------------------
  * sockcreate
  *----------------------------------------------------------------------------*/
-int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server, bool* block)
+int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server, const bool* block)
 {
-    struct addrinfo     hints, *result, *rp;
+    struct addrinfo     hints;
+    struct addrinfo*    result;
+    struct addrinfo*    rp;
     int                 sock = INVALID_RC;
     int                 status = -1; // start with error condition
     char                portstr[PORT_STR_LEN];

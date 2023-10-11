@@ -166,7 +166,8 @@ MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
 {
     coord_t c;
 
-    double lonrad = 0.0, latrad = 90.0;
+    double lonrad = 0.0;
+    double latrad = 90.0;
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
@@ -286,7 +287,8 @@ const std::string MathLib::b64encode(const void* data, const size_t &len)
     std::string result((len + 2) / 3 * 4, '=');
     unsigned char *p = (unsigned  char*) data;
     char *str = &result[0];
-    size_t j = 0, pad = len % 3;
+    size_t j = 0;
+    size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
@@ -376,8 +378,11 @@ void MathLib::swapComplex(complex_t *a, complex_t *b)
  *----------------------------------------------------------------------------*/
 void MathLib::bitReverse(complex_t data[], unsigned long size)
 {
-    unsigned long steps[LOG2DATASIZE], s;
-    unsigned long i,j,k;
+    unsigned long steps[LOG2DATASIZE];
+    unsigned long s;
+    unsigned long i;
+    unsigned long j;
+    unsigned long k;
 
     // Calculate Steps //
     steps[0] = size / 2;
@@ -422,7 +427,8 @@ void MathLib::freqCorrelation(complex_t data[], unsigned long size, int isign)
 {
     unsigned long   halfperiod; // half period of frequency
     unsigned long   offset;     // offset within halfperiod
-    unsigned long   i,j;        // sample indices
+    unsigned long   i;          // sample indices
+    unsigned long   j;          // sample indices
     double          theta;
     complex_t       temp;
     complex_t       w;

@@ -116,9 +116,6 @@ bool ContainerRecord::addRecord(RecordObject& record, int size)
 
         return true;
     }
-    else
-    {
-        return false;
-    }
 
+    return false;
 }

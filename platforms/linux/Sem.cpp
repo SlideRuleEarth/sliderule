@@ -115,6 +115,5 @@ bool Sem::take(int timeout_ms)
     }
     
     /* Return Status */
-    if(status == 0) return true;
-    else            return false;
+    return (status == 0);
 }

@@ -26,8 +26,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     set (
         CMAKE_CXX_CLANG_TIDY clang-tidy;
         #-header-filter=.;
-        #-checks=*;
-        #-warnings-as-errors=*;
+        -checks=clang-analyzer-*,concurrency-*,misc-*,performance-*,portability-*,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-magic-numbers;
+        -warnings-as-errors=*;
     )
 endif()
 

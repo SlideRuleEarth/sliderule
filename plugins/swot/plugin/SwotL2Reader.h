@@ -133,7 +133,7 @@ class SwotL2Reader: public LuaObject
             Region              (Asset* asset, const char* resource, SwotParms* _parms, H5Coro::context_t* context);
             ~Region             (void);
 
-            void cleanup        (void);
+            void cleanup        (void) const;
             void polyregion     (SwotParms* _parms);
             void rasterregion   (SwotParms* _parms);
 

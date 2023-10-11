@@ -47,7 +47,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Cond::Cond(int num_sigs): Mutex()
+Cond::Cond(int num_sigs)
 {
     assert(num_sigs > 0);
     numSigs = num_sigs;
@@ -119,6 +119,5 @@ bool Cond::wait(int sig, int timeout_ms)
     }
 
     /* Return Status */
-    if(status == 0) return true;
-    else            return false;
+    return (status == 0);
 }

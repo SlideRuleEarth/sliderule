@@ -91,7 +91,7 @@ CaptureDispatch::CaptureDispatch (lua_State* L, const char* outq_name):
  *----------------------------------------------------------------------------*/
 CaptureDispatch::~CaptureDispatch (void)
 {
-    if(outQ) delete outQ;
+    delete outQ;
 }
 
 /*----------------------------------------------------------------------------

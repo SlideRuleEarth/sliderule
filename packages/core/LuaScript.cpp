@@ -102,7 +102,7 @@ LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
  *----------------------------------------------------------------------------*/
 LuaScript::~LuaScript(void)
 {
-    if(engine) delete engine;
+    delete engine;
 }
 
 /*----------------------------------------------------------------------------
@@ -153,10 +153,8 @@ int LuaScript::luaResult (lua_State* L)
             lua_pushstring(L, result);
             return returnLuaStatus(L, true, 2);
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
-        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
     }
     catch(const RunTimeException& e)
     {

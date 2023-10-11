@@ -131,7 +131,6 @@ void SwotL2Reader::init (void)
  *----------------------------------------------------------------------------*/
 SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    context{},
     region(_asset, _resource, _parms, &context)
 {
     /* Initialize Reader */
@@ -195,10 +194,10 @@ SwotL2Reader::~SwotL2Reader (void)
 {
     active = false;
 
-    if(geoPid) delete geoPid;
+    delete geoPid;
     for(int i = 0; i < threadCount - 1; i++)
     {
-        if(varPid[i]) delete varPid[i];
+        delete varPid[i];
     }
 
     delete outQ;
@@ -257,9 +256,9 @@ SwotL2Reader::Region::~Region (void)
 /*----------------------------------------------------------------------------
  * Region::cleanup
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::cleanup (void)
+void SwotL2Reader::Region::cleanup (void) const
 {
-    if(inclusion_mask) delete [] inclusion_mask;
+    delete [] inclusion_mask;
 }
 
 /*----------------------------------------------------------------------------
@@ -518,7 +517,7 @@ void* SwotL2Reader::varThread (void* parm)
     reader->checkComplete();
 
     /* Clean Up */
-    if(results.data) delete [] results.data;
+    delete [] results.data;
     delete [] info->variable_name;
     delete info;
 
@@ -541,7 +540,7 @@ int SwotL2Reader::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (SwotL2Reader*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<SwotL2Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

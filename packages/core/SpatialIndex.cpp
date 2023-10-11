@@ -114,7 +114,8 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
     projspan_t proj = project(node->span);
 
     /* Split Region */
-    projspan_t lproj, rproj;
+    projspan_t lproj;
+    projspan_t rproj;
     if(node->depth % 2 == 0) // even depth
     {
         /* Split Across Radius */
@@ -168,17 +169,12 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
     if(node->depth % 2 == 0) // even depth = Radius
     {
         double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
-
-        if(sproj.p0.x <= split_val)  return true;
-        else                        return false;
+        return (sproj.p0.x <= split_val);
     }
-    else // odd depth = Angle
-    {
-        double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
-        if(sproj.p0.y <= split_val)  return true;
-        else                        return false;
-    }
+    // else odd depth = Angle
+    double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
+    return (sproj.p0.y <= split_val);
 }
 
 
@@ -199,17 +195,12 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
     if(node->depth % 2 == 0) // even depth = Radius
     {
         double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
-
-        if(sproj.p1.x >= split_val)  return true;
-        else                        return false;
+        return (sproj.p1.x >= split_val);
     }
-    else // odd depth = Angle
-    {
-        double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
-        if(sproj.p1.y >= split_val)  return true;
-        else                        return false;
-    }
+    // else odd depth = Angle
+    double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
+    return (sproj.p1.y >= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -316,7 +307,7 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
 
         if(provided)
         {
-                 if(StringLib::match("lat0", key))   span.c0.lat = value;
+            if     (StringLib::match("lat0", key))   span.c0.lat = value;
             else if(StringLib::match("lon0", key))   span.c0.lon = value;
             else if(StringLib::match("lat1", key))   span.c1.lat = value;
             else if(StringLib::match("lon1", key))   span.c1.lon = value;
@@ -462,7 +453,8 @@ int SpatialIndex::luaSplit (lua_State* L)
         node.ril = NULL;
 
         /* Split Span */
-        spatialspan_t lspan, rspan;
+        spatialspan_t lspan;
+        spatialspan_t rspan;
         lua_obj->split(&node, lspan, rspan);
 
         /* Return Spans */

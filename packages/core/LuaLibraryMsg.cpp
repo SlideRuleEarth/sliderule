@@ -191,7 +191,7 @@ RecordObject* LuaLibraryMsg::populateRecord (const char* population_string)
     }
     catch (const RunTimeException& e)
     {
-        if(record) delete record;
+        delete record;
         mlog(ERROR, "could not locate record definition for %s: %s", population_string, e.what());
     }
 
@@ -219,7 +219,7 @@ RecordObject* LuaLibraryMsg::associateRecord (const char* recclass, unsigned cha
     }
     catch (const RunTimeException& e)
     {
-        if(record) delete record;
+        delete record;
         mlog(ERROR, "could not locate record definition for %s: %s", recclass, e.what());
     }
 
@@ -359,10 +359,8 @@ int LuaLibraryMsg::lmsg_datatype(lua_State* L)
         lua_pushstring(L, datatypestr);
         return 1;
     }
-    else
-    {
-        return luaL_error(L, "invalid data type specified");
-    }
+
+    return luaL_error(L, "invalid data type specified");
 }
 
 /*----------------------------------------------------------------------------
@@ -715,7 +713,8 @@ int LuaLibraryMsg::lmsg_gettype (lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    else if(rec_data->rec == NULL)
+    
+    if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -740,13 +739,14 @@ int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    else if(rec_data->rec == NULL)
+    
+    if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
 
     RecordObject::field_t field = rec_data->rec->getField(fldname);
-    RecordObject::valType_t valtype = rec_data->rec->getValueType(field);
+    RecordObject::valType_t valtype = RecordObject::getValueType(field);
 
     if(valtype == RecordObject::TEXT)
     {
@@ -785,13 +785,14 @@ int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    else if(rec_data->rec == NULL)
+    
+    if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
 
     RecordObject::field_t field = rec_data->rec->getField(fldname);
-    RecordObject::valType_t valtype = rec_data->rec->getValueType(field);
+    RecordObject::valType_t valtype = RecordObject::getValueType(field);
     if(valtype == RecordObject::TEXT)
     {
         const char* val = lua_tostring(L, 3);
@@ -826,7 +827,8 @@ int LuaLibraryMsg::lmsg_serialize(lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    else if(rec_data->rec == NULL)
+    
+    if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -849,7 +851,8 @@ int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    else if(rec_data->rec == NULL)
+    
+    if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -873,7 +876,8 @@ int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    else if(rec_data->rec == NULL)
+    
+    if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
@@ -889,7 +893,7 @@ int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
     for(int i = 0; i < numfields; i++)
     {
         RecordObject::field_t field = rec_data->rec->getField(fieldnames[i]);
-        switch(rec_data->rec->getValueType(field))
+        switch(RecordObject::getValueType(field))
         {
             case RecordObject::TEXT:
             {
@@ -1007,7 +1011,7 @@ int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
     {
         RecordObject::field_t field = record->getField(fieldnames[i]);
         lua_getfield(L, 1, fieldnames[i]);
-        switch(record->getValueType(field))
+        switch(RecordObject::getValueType(field))
         {
             case RecordObject::TEXT:
             {
@@ -1101,8 +1105,8 @@ int LuaLibraryMsg::lmsg_deleterec (lua_State* L)
     recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
     if(rec_data)
     {
-        if(rec_data->record_str) delete [] rec_data->record_str;
-        if(rec_data->rec) delete rec_data->rec;
+        delete [] rec_data->record_str;
+        delete rec_data->rec;
     }
     return 0;
 }

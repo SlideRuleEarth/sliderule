@@ -281,14 +281,14 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
     Thread pid(requestThread, info, false);
 
     /* Return Response Type */
-    if(request->verb == POST)   return STREAMING;
-    else                        return NORMAL;
+    if(request->verb == POST) return STREAMING;
+    return NORMAL;
 }
 
 /*----------------------------------------------------------------------------
  * normalResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
 {
     char header[MAX_HDR_SIZE];
     double mem;
@@ -335,13 +335,13 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
     }
 
     /* Clean Up */
-    if(engine) delete engine;
+    delete engine;
 }
 
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id)
+void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
 {
     char header[MAX_HDR_SIZE];
     double mem;
@@ -376,7 +376,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
     }
 
     /* Clean Up */
-    if(engine) delete engine;
+    delete engine;
 }
 
 /*----------------------------------------------------------------------------

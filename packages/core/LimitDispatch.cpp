@@ -116,8 +116,8 @@ LimitDispatch::LimitDispatch (lua_State* L, LimitRecord::limit_t _limit, const c
  *----------------------------------------------------------------------------*/
 LimitDispatch::~LimitDispatch(void)
 {
-    if(limitQ) delete limitQ;
-    if(deepQ) delete deepQ;
+    delete limitQ;
+    delete deepQ;
 }
 
 /*----------------------------------------------------------------------------
@@ -188,7 +188,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 }
             }
         }
-        else if(inError == false)
+        else if(!inError)
         {
             inError = true;
             mlog(WARNING, "Failed to find field %s in record %s", limit.field_name, record->getRecordType());

@@ -122,10 +122,10 @@ MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char
  *----------------------------------------------------------------------------*/
 MetricDispatch::~MetricDispatch(void)
 {
-    if(dataField)   delete [] dataField;
-    if(idFilter)    delete idFilter;
-    if(fieldFilter) delete fieldFilter;
-    if(outQ)        delete outQ;
+    delete [] dataField;
+    delete idFilter;
+    delete fieldFilter;
+    delete outQ;
 }
 
 /*----------------------------------------------------------------------------

@@ -169,8 +169,8 @@ Asset* Asset::pythonCreate (const char* name, const char* identity, const char* 
     ioDriverMut.unlock();
 
     /* Return Asset Object */
-    if(_io_driver == NULL)  return NULL;
-    else                    return new Asset(NULL, _attributes, _io_driver);
+    if(_io_driver == NULL) return NULL;
+    return new Asset(NULL, _attributes, _io_driver);
 }
 
 /*----------------------------------------------------------------------------
@@ -194,8 +194,8 @@ bool Asset::registerDriver (const char* _format, io_driver_t driver)
  *----------------------------------------------------------------------------*/
 Asset::IODriver* Asset::createDriver (const char* resource) const
 {
-    if(io_driver)   return io_driver(this, resource);
-    else            return NULL;
+    if(io_driver) return io_driver(this, resource);
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -203,13 +203,13 @@ Asset::IODriver* Asset::createDriver (const char* resource) const
  *----------------------------------------------------------------------------*/
 Asset::~Asset (void)
 {
-    if(attributes.name)     delete [] attributes.name;
-    if(attributes.identity) delete [] attributes.identity;
-    if(attributes.driver)   delete [] attributes.driver;
-    if(attributes.path)     delete [] attributes.path;
-    if(attributes.index)    delete [] attributes.index;
-    if(attributes.region)   delete [] attributes.region;
-    if(attributes.endpoint) delete [] attributes.endpoint;
+    delete [] attributes.name;
+    delete [] attributes.identity;
+    delete [] attributes.driver;
+    delete [] attributes.path;
+    delete [] attributes.index;
+    delete [] attributes.region;
+    delete [] attributes.endpoint;
 }
 
 /*----------------------------------------------------------------------------

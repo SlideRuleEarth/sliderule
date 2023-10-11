@@ -85,8 +85,8 @@ class LuaObject
 
         virtual             ~LuaObject          (void);
 
-        const char*         getType             (void);
-        const char*         getName             (void);
+        const char*         getType             (void) const;
+        const char*         getName             (void) const;
 
         static int          luaGetByName        (lua_State* L);
         static int          getLuaNumParms      (lua_State* L);

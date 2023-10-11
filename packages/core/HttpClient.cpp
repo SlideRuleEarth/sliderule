@@ -158,10 +158,10 @@ HttpClient::HttpClient(lua_State* L, const char* url):
 HttpClient::~HttpClient(void)
 {
     active = false;
-    if(requestPid) delete requestPid;
-    if(requestPub) delete requestPub;
-    if(ipAddr) delete [] ipAddr;
-    if(sock) delete sock;
+    delete requestPid;
+    delete requestPub;
+    delete [] ipAddr;
+    delete sock;
     delete [] rqstBuf;
     delete [] rspsBuf;
 }
@@ -172,37 +172,36 @@ HttpClient::~HttpClient(void)
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
     uint32_t trace_id = start_trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
+    
     if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace_id))
     {
         rsps_t rsps = parseResponse(outq, timeout, trace_id);
         stop_trace(INFO, trace_id);
         return rsps;
     }
-    else
-    {
-        rsps_t rsps = {
-            .code = EndpointObject::Service_Unavailable,
-            .response = NULL,
-            .size = 0
-        };
-        stop_trace(INFO, trace_id);
-        return rsps;
-    }
+
+    rsps_t rsps = {
+        .code = EndpointObject::Service_Unavailable,
+        .response = NULL,
+        .size = 0
+    };
+    stop_trace(INFO, trace_id);
+    return rsps;
 }
 
 /*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
-const char* HttpClient::getIpAddr (void)
+const char* HttpClient::getIpAddr (void) const
 {
-    if(ipAddr)  return ipAddr;
-    else        return "0.0.0.0";
+    if(ipAddr) return ipAddr;
+    return "0.0.0.0";
 }
 
 /*----------------------------------------------------------------------------
  * getPort
  *----------------------------------------------------------------------------*/
-int HttpClient::getPort (void)
+int HttpClient::getPort (void) const
 {
     return port;
 }

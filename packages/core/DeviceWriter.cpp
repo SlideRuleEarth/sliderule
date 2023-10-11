@@ -94,10 +94,10 @@ DeviceWriter::~DeviceWriter(void)
 
     /* Stop Thread */
     ioActive = false;
-    if(ioThread) delete ioThread;
+    delete ioThread;
 
     /* Delete Input Stream */
-    if(inq) delete inq;
+    delete inq;
 
     /* Release Device */
     device->releaseLuaObject();

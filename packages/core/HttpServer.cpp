@@ -112,7 +112,7 @@ HttpServer::~HttpServer(void)
     active = false;
     delete listenerPid;
 
-    if(ipAddr) delete [] ipAddr;
+    delete [] ipAddr;
 
     EndpointObject* endpoint;
     const char* key = routeTable.first(&endpoint);
@@ -135,16 +135,16 @@ HttpServer::~HttpServer(void)
 /*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
-const char* HttpServer::getIpAddr (void)
+const char* HttpServer::getIpAddr (void) const
 {
-    if(ipAddr)  return ipAddr;
-    else        return "0.0.0.0";
+    if(ipAddr) return ipAddr;
+    return "0.0.0.0";
 }
 
 /*----------------------------------------------------------------------------
  * getPort
  *----------------------------------------------------------------------------*/
-int HttpServer::getPort (void)
+int HttpServer::getPort (void) const
 {
     return port;
 }
@@ -172,7 +172,7 @@ void HttpServer::initConnection (connection_t* connection)
 void HttpServer::deinitConnection (connection_t* connection)
 {
     /* Free Stream Buffer */
-    if(connection->rsps_state.stream_buf) delete [] connection->rsps_state.stream_buf;
+    delete [] connection->rsps_state.stream_buf;
 
     /* Free Message Queue */
     if(connection->rsps_state.ref_status > 0)
@@ -186,7 +186,7 @@ void HttpServer::deinitConnection (connection_t* connection)
     delete [] connection->id;
 
     /* Request freed only if present, o/w memory owned by EndpointObject */
-    if(connection->request) delete connection->request;
+    delete connection->request;
 
     /* Stop Trace */
     stop_trace(DEBUG, connection->trace_id);
@@ -535,7 +535,7 @@ int HttpServer::onWrite(int fd)
             if(state->ref.size + STREAM_OVERHEAD_SIZE > state->stream_mem_size)
             {
                 /* Delete Old Buffer */
-                if(state->stream_buf) delete [] state->stream_buf;
+                delete [] state->stream_buf;
 
                 /* Allocate New Buffer */
                 state->stream_mem_size = state->ref.size + STREAM_OVERHEAD_SIZE;
@@ -811,7 +811,7 @@ int HttpServer::luaUntilUp (lua_State* L)
         {
             status = lua_obj->listening;
             if(status) break;
-            else if(timeout > 0) timeout--;
+            if(timeout > 0) timeout--;
             OsApi::performIOTimeout();
         }
         while((timeout == IO_PEND) || (timeout > 0));

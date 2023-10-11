@@ -136,7 +136,7 @@ ClusterSocket::~ClusterSocket(void)
 
     delete [] sockqname;
     delete pubsockq;
-    if(subsockq) delete subsockq;
+    delete subsockq;
 
     /*
      * If connector thread exits before lost connection is detected
@@ -152,8 +152,8 @@ ClusterSocket::~ClusterSocket(void)
     while (fd != (int)INVALID_KEY)
     {
         SockLib::sockclose(fd);
-        if(readCon->payload) delete [] readCon->payload;
-        if(readCon) delete readCon;
+        delete [] readCon->payload;
+        delete readCon;
         fd = read_connections.next( &readCon );
     }
 
@@ -161,7 +161,7 @@ ClusterSocket::~ClusterSocket(void)
     while (fd != (int)INVALID_KEY)
     {
         SockLib::sockclose(fd);
-        if(writeCon) delete writeCon;
+        delete writeCon;
         fd = write_connections.next( &writeCon );
     }
 }
@@ -196,18 +196,17 @@ int ClusterSocket::writeBuffer(const void *buf, int len, int timeout)
     {
         return TIMEOUT_RC;
     }
-    else if(len <= MAX_MSG_SIZE)
+    
+    if(len <= MAX_MSG_SIZE)
     {
         int status = pubsockq->postCopy(buf, len, timeout);
-        if(status > 0)                                  return status;
-        else if(status == MsgQ::STATE_NO_SUBSCRIBERS)   return len;
-        else if(status == MsgQ::STATE_TIMEOUT)          return TIMEOUT_RC;
-        else                                            return SOCK_ERR_RC;
+        if(status > 0)                             return status;
+        if(status == MsgQ::STATE_NO_SUBSCRIBERS)   return len;
+        if(status == MsgQ::STATE_TIMEOUT)          return TIMEOUT_RC;
+        return SOCK_ERR_RC;
     }
-    else
-    {
-        return PARM_ERR_RC;
-    }
+
+    return PARM_ERR_RC;
 }
 
 /*----------------------------------------------------------------------------
@@ -221,14 +220,11 @@ int ClusterSocket::readBuffer(void *buf, int len, int timeout)
     if(buf && subsockq)
     {
         int bytes = subsockq->receiveCopy(buf, len, timeout);
-        if(bytes > 0)                           return bytes;
-        else if(bytes == MsgQ::STATE_TIMEOUT)   return TIMEOUT_RC;
-        else                                    return SOCK_ERR_RC;
+        if(bytes > 0)                      return bytes;
+        if(bytes == MsgQ::STATE_TIMEOUT)   return TIMEOUT_RC;
+        return SOCK_ERR_RC;
     }
-    else
-    {
-        return PARM_ERR_RC;
-    }
+    return PARM_ERR_RC;
 }
 
 /*----------------------------------------------------------------------------
@@ -654,7 +650,7 @@ int ClusterSocket::onDisconnect(int fd)
         if(role == READER)
         {
             read_connection_t* connection = read_connections[fd];
-            if(connection->payload) delete [] connection->payload;
+            delete [] connection->payload;
             delete connection;
             if(!read_connections.remove(fd))
             {
@@ -690,6 +686,6 @@ int ClusterSocket::onDisconnect(int fd)
 uint8_t ClusterSocket::qMeter(void)
 {
     int depth = pubsockq->getDepth();
-    if(depth)   return (uint8_t)((pubsockq->getCount() * 255) / depth);
-    else        return 0;
+    if(depth) return (uint8_t)((pubsockq->getCount() * 255) / depth);
+    return 0;
 }

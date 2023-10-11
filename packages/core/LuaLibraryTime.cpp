@@ -178,29 +178,25 @@ int LuaLibraryTime::ltime_gmt2gps (lua_State* L)
         {
             return luaL_error(L, "expecting 5 arguments");
         }
-        else
-        {
-            TimeLib::gmt_time_t gmt;
-            gmt.year = (int)lua_tonumber(L, 1);             /* get argument 1 */
-            gmt.doy = (int)lua_tonumber(L, 2);              /* get argument 2 */
-            gmt.hour = (int)lua_tonumber(L, 3);             /* get argument 3 */
-            gmt.minute = (int)lua_tonumber(L, 4);           /* get argument 4 */
-            gmt.second = (int)lua_tonumber(L, 5);           /* get argument 5 */
-            gmt.millisecond = (int)lua_tonumber(L, 5) - gmt.second; /* fractional part */
-            int64_t ms = TimeLib::gmt2gpstime(gmt);
-            lua_pushnumber(L, (lua_Number)ms);              /* push "ms" as result */
-            return 1;                                       /* one result */
-        }
-    }
-    else // string
-    {
-        const char* gmt = lua_tostring(L, 1);           /* get argument 1 */
-        if(!gmt) return luaL_error(L, "invalid string passed to gmt2gps function");
 
-        int64_t ms = TimeLib::str2gpstime(gmt);
+        TimeLib::gmt_time_t gmt;
+        gmt.year = (int)lua_tonumber(L, 1);             /* get argument 1 */
+        gmt.doy = (int)lua_tonumber(L, 2);              /* get argument 2 */
+        gmt.hour = (int)lua_tonumber(L, 3);             /* get argument 3 */
+        gmt.minute = (int)lua_tonumber(L, 4);           /* get argument 4 */
+        gmt.second = (int)lua_tonumber(L, 5);           /* get argument 5 */
+        gmt.millisecond = (int)lua_tonumber(L, 5) - gmt.second; /* fractional part */
+        int64_t ms = TimeLib::gmt2gpstime(gmt);
         lua_pushnumber(L, (lua_Number)ms);              /* push "ms" as result */
         return 1;                                       /* one result */
     }
+
+    const char* gmt = lua_tostring(L, 1);               /* get argument 1 */
+    if(!gmt) return luaL_error(L, "invalid string passed to gmt2gps function");
+
+    int64_t ms = TimeLib::str2gpstime(gmt);
+    lua_pushnumber(L, (lua_Number)ms);                  /* push "ms" as result */
+    return 1;                                           /* one result */
 }
 
 /*----------------------------------------------------------------------------

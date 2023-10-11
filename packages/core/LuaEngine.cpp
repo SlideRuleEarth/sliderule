@@ -129,7 +129,7 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
 LuaEngine::~LuaEngine(void)
 {
     engineActive = false;
-    if(engineThread) delete engineThread;
+    delete engineThread;
 
     /* Close Lua State */
     lua_close(L);
@@ -137,8 +137,8 @@ LuaEngine::~LuaEngine(void)
     /* Free Engine Resources */
     if(dInfo)
     {
-        if(dInfo->script) delete [] dInfo->script;
-        if(dInfo->arg) delete [] dInfo->arg;
+        delete [] dInfo->script;
+        delete [] dInfo->arg;
         delete dInfo;
     }
 
@@ -174,8 +174,8 @@ void LuaEngine::deinit(void)
         int num_pkgs = pkgInitTable.length();
         for(int i = 0; i < num_pkgs; i++)
         {
-            if(pkgInitTable[i].pkg_name)    delete [] pkgInitTable[i].pkg_name;
-            if(pkgInitTable[i].pkg_version) delete [] pkgInitTable[i].pkg_version;
+            delete [] pkgInitTable[i].pkg_name;
+            delete [] pkgInitTable[i].pkg_version;
         }
     }
     pkgInitTableMutex.unlock();
@@ -186,7 +186,7 @@ void LuaEngine::deinit(void)
         int num_libs = libInitTable.length();
         for(int i = 0; i < num_libs ; i++)
         {
-            if(libInitTable[i].lib_name)  delete [] libInitTable[i].lib_name;
+            delete [] libInitTable[i].lib_name;
         }
     }
     libInitTableMutex.unlock();
@@ -395,7 +395,7 @@ void LuaEngine::abortHook (lua_State *L, lua_Debug *ar)
 /*----------------------------------------------------------------------------
  * getEngineId
  *----------------------------------------------------------------------------*/
-uint64_t LuaEngine::getEngineId(void)
+uint64_t LuaEngine::getEngineId(void) const
 {
     return engineId;
 }
@@ -438,7 +438,7 @@ bool LuaEngine::executeEngine(int timeout_ms)
 /*----------------------------------------------------------------------------
  * isActive
  *----------------------------------------------------------------------------*/
-bool LuaEngine::isActive(void)
+bool LuaEngine::isActive(void) const
 {
     return engineActive;
 }
@@ -530,10 +530,8 @@ const char* LuaEngine::getResult (void)
     {
         return lua_tostring(L, 1);
     }
-    else
-    {
-        return NULL;
-    }
+
+    return NULL;
 }
 
 /******************************************************************************
@@ -770,7 +768,7 @@ int LuaEngine::readlinecb(void)
 {
     if(lua_readline_interpreter)
     {
-        if(lua_readline_interpreter->engineActive == false)
+        if(!lua_readline_interpreter->engineActive)
         {
             /* Push control-d onto input buffer
              * ... this is used for interactive mode to terminate
@@ -797,10 +795,7 @@ int LuaEngine::msghandler (lua_State* l)
         {
             return 1;  /* that is the message */
         }
-        else
-        {
-            msg = lua_pushfstring(l, "(error object is a %s value)", luaL_typename(l, 1));
-        }
+        msg = lua_pushfstring(l, "(error object is a %s value)", luaL_typename(l, 1));
     }
     luaL_traceback(l, l, msg, 1);  /* append a standard traceback */
     return 1;  /* return the traceback */
@@ -1002,7 +997,8 @@ int LuaEngine::handlescript (const char* fname)
     int status = luaL_loadfile(L, fname);
     if (status == LUA_OK)
     {
-        int i, n;
+        int i;
+        int n;
         if (lua_getglobal(L, "arg") != LUA_TTABLE)
         {
             luaL_error(L, "'arg' is not a table");

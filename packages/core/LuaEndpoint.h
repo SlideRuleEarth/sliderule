@@ -129,8 +129,8 @@ class LuaEndpoint: public EndpointObject
 
         rsptype_t           handleRequest   (Request* request) override;
 
-        void                normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id);
-        void                streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id);
+        void                normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
+        void                streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
 
         int32_t             getMetricId     (const char* endpoint);
 

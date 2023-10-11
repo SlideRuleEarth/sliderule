@@ -150,14 +150,13 @@ int64_t OsApi::timeres(int clkid)
     {
         return 1000000; // microseconds
     }
-    else if (clkid == CPU_CLK)
+    
+    if (clkid == CPU_CLK)
     {
         return 1000000; // microseconds
     }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -280,15 +279,11 @@ double OsApi::memusage (void)
             /* Calculate Memory Usage */
             return 1.0 - ((double)mem_available / (double)mem_total);
         }
-        else
-        {
-            return 0.0;
-        }
-    }
-    else
-    {
+        
         return 0.0;
     }
+
+    return 0.0;
 }
 
 /*----------------------------------------------------------------------------

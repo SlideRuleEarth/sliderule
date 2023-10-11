@@ -54,19 +54,19 @@ Mutex LuaObject::globalMut;
 /*----------------------------------------------------------------------------
  * getType
  *----------------------------------------------------------------------------*/
-const char* LuaObject::getType (void)
+const char* LuaObject::getType (void) const
 {
-    if(ObjectType)  return ObjectType;
-    else            return "<untyped>";
+    if(ObjectType) return ObjectType;
+    return "<untyped>";
 }
 
 /*----------------------------------------------------------------------------
  * getName
  *----------------------------------------------------------------------------*/
-const char* LuaObject::getName (void)
+const char* LuaObject::getName (void) const
 {
-    if(ObjectName)  return ObjectName;
-    else            return "<unnamed>";
+    if(ObjectName) return ObjectName;
+    return "<unnamed>";
 }
 
 /*----------------------------------------------------------------------------
@@ -123,14 +123,13 @@ long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltv
         if(provided) *provided = true;
         return lua_tointeger(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply an integer for parameter #%d", parm);
-    }
+    
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply an integer for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -145,14 +144,13 @@ double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfl
         if(provided) *provided = true;
         return lua_tonumber(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a floating point number for parameter #%d", parm);
-    }
+    
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a floating point number for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -167,14 +165,13 @@ bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltv
         if(provided) *provided = true;
         return lua_toboolean(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a boolean for parameter #%d", parm);
-    }
+    
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a boolean for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -189,14 +186,13 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
         if(provided) *provided = true;
         return lua_tostring(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a string for parameter #%d", parm);
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a string for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -582,20 +578,14 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
             {
                 return user_data->luaObj;
             }
-            else
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
-            }
+
+            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
-        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
 }
 
 /*----------------------------------------------------------------------------
@@ -603,9 +593,9 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void LuaObject::referenceLuaObject (LuaObject* lua_obj)
 {
-    lua_obj->globalMut.lock();
+    globalMut.lock();
     {
         lua_obj->referenceCount++;
     }
-    lua_obj->globalMut.unlock();
+    globalMut.unlock();
 }

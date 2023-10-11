@@ -518,10 +518,8 @@ int LuaLibrarySys::lsys_cwd (lua_State* L)
         lua_pushstring(L, cwd);
         return 1;
     }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------

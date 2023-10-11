@@ -79,8 +79,8 @@ class HttpServer: public LuaObject
                             HttpServer      (lua_State* L, const char* _ip_addr, int _port, int max_connections);
                             ~HttpServer     (void);
 
-        const char*         getIpAddr       (void);
-        int                 getPort         (void);
+        const char*         getIpAddr       (void) const;
+        int                 getPort         (void) const;
 
     private:
 
@@ -143,9 +143,9 @@ class HttpServer: public LuaObject
          *--------------------------------------------------------------------*/
 
         void                initConnection      (connection_t* connection);
-        void                deinitConnection    (connection_t* connection);
-        void                extractPath         (const char* url, const char** path, const char** resource);
-        bool                processHttpHeader   (char* buf, EndpointObject::Request* request);
+        static void         deinitConnection    (connection_t* connection);
+        static void         extractPath         (const char* url, const char** path, const char** resource);
+        static bool         processHttpHeader   (char* buf, EndpointObject::Request* request);
 
         static void*        listenerThread      (void* parm);
         static int          pollHandler         (int fd, short* events, void* parm);

@@ -329,15 +329,15 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     if(size > 0)
     {
         int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
-        bufsize = hdrsize + size;
-        datasize = bufsize - hdrsize;
+        datasize = size;
+        bufsize = hdrsize + datasize;
     }
 
     /* Allocate or Copy Buffer */
     if (mode == ALLOCATE)
     {
         *buffer = new unsigned char[bufsize];
-        uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
+        int bytes_to_copy = MIN(bufsize, memoryAllocated);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
     else if (mode == REFERENCE)
@@ -352,7 +352,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     else // if (mode == COPY)
     {
         assert(*buffer);
-        uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
+        int bytes_to_copy = MIN(bufsize, memoryAllocated);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
 

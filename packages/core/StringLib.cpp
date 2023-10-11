@@ -548,7 +548,7 @@ SafeString& SafeString::operator+=(const char* rstr)
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-SafeString& SafeString::operator=(const SafeString& rhs)
+StringLib::String& SafeString::operator=(const SafeString& rhs)
 {
     if(maxlen < rhs.len)
     {
@@ -566,7 +566,7 @@ SafeString& SafeString::operator=(const SafeString& rhs)
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-SafeString& SafeString::operator=(const char* rstr)
+StringLib::String& SafeString::operator=(const char* rstr)
 {
     if(rstr)
     {

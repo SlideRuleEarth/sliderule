@@ -94,10 +94,10 @@ DeviceReader::~DeviceReader(void)
 
     /* Stop Thread */
     ioActive = false;
-    if(ioThread) delete ioThread;
+    delete ioThread;
 
     /* Delete Output Queue */
-    if(outq) delete outq;
+    delete outq;
 
     /* Release Device */
     device->releaseLuaObject();
