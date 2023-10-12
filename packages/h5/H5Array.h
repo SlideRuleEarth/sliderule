@@ -109,8 +109,8 @@ H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* datase
 template <class T>
 H5Array<T>::~H5Array(void)
 {
-    if(h5f)  delete h5f;
-    if(name) delete [] name;
+    delete h5f;
+    delete [] name;
 }
 
 /*----------------------------------------------------------------------------
@@ -125,10 +125,8 @@ bool H5Array<T>::trim(long offset)
         size = size - offset;
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------

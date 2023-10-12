@@ -91,10 +91,10 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         static bool validateBand   (band_type_t type, const char* bandName);
 
-        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
-        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
-        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
-        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
+        static inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
+        static inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
+        static inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
+        static inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data

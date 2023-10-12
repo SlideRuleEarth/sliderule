@@ -106,12 +106,12 @@ class GdalRaster
         void               open           (void);
         RasterSample*      samplePOI      (OGRPoint* poi);
         RasterSubset*      subsetAOI      (OGRPolygon* poly);
-        const std::string& getFileName    (void) { return fileName;}
-        int                getRows        (void) { return ysize; }
-        int                getCols        (void) { return xsize; }
-        const bbox_t&      getBbox        (void) { return bbox; }
-        double             getCellSize    (void) { return cellSize; }
-        uint32_t           getSSerror     (void) { return ssError; }
+        const std::string& getFileName    (void) const { return fileName;}
+        int                getRows        (void) const { return ysize; }
+        int                getCols        (void) const { return xsize; }
+        const bbox_t&      getBbox        (void) const { return bbox; }
+        double             getCellSize    (void) const { return cellSize; }
+        uint32_t           getSSerror     (void) const { return ssError; }
 
         /*--------------------------------------------------------------------
          * Static Methods
@@ -169,7 +169,7 @@ class GdalRaster
         void        map2pixel           (const OGRPoint* poi, int& x, int& y) { map2pixel(poi->getX(), poi->getY(), x, y); }
         void        pixel2map           (int x, int y, double& mapx, double& mapy);
 
-        bool s3sleep(void) {std::this_thread::sleep_for(std::chrono::milliseconds(50)); return true; }
+        static bool s3sleep(void) {std::this_thread::sleep_for(std::chrono::milliseconds(50)); return true; }
 };
 
 #endif  /* __gdal_raster__ */

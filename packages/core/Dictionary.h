@@ -196,10 +196,8 @@ typename Dictionary<T, IS_MANAGED, IS_ARRAY>::kv_t Dictionary<T, IS_MANAGED, IS_
 
         return Dictionary<T, IS_MANAGED, IS_ARRAY>::kv_t(source.hashTable[table_index].key, source.hashTable[table_index].data);
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Dictionary::Iterator index out of range");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "Dictionary::Iterator index out of range");
 }
 
 /******************************************************************************
@@ -305,7 +303,7 @@ bool Dictionary<T, IS_MANAGED, IS_ARRAY>::add(const char* key, T& data, bool uni
         }
 
         /* Add Node */
-        if(status == true)
+        if(status)
         {
             addNode(key, data, hashKey(key));
             numEntries++;
@@ -336,7 +334,7 @@ T& Dictionary<T, IS_MANAGED, IS_ARRAY>::get(const char* key) const
 {
     unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
-    else                    throw RunTimeException(CRITICAL, RTE_ERROR, "key <%s> not found", key);
+    throw RunTimeException(CRITICAL, RTE_ERROR, "key <%s> not found", key);
 }
 
 /*----------------------------------------------------------------------------
@@ -692,7 +690,8 @@ unsigned int Dictionary<T, IS_MANAGED, IS_ARRAY>::getNode(const char* key) const
                     index = hashTable[index].next;
                     break;
                 }
-                else if(key[i] == '\0')
+                
+                if(key[i] == '\0')
                 {
                     /* If there is no difference AND key is at null, return match */
                     return index;

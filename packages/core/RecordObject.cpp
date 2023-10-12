@@ -629,7 +629,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
 /*----------------------------------------------------------------------------
  * setValueReal
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueReal(const field_t& f, const double val, int element)
+void RecordObject::setValueReal(const field_t& f, double val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
@@ -685,7 +685,7 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
 /*----------------------------------------------------------------------------
  * setValueInteger
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueInteger(const field_t& f, const long val, int element)
+void RecordObject::setValueInteger(const field_t& f, long val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);

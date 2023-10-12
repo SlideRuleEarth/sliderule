@@ -103,8 +103,8 @@ class Ordering
         bool        add         (K key, const T& data, bool unique=false);
         T&          get         (K key, searchMode_t smode=EXACT_MATCH);
         bool        remove      (K key, searchMode_t smode=EXACT_MATCH);
-        long        length      (void);
-        bool        isempty     (void);
+        long        length      (void) const;
+        bool        isempty     (void) const;
         void        flush       (void);
         void        clear       (void);
 
@@ -197,10 +197,8 @@ typename Ordering<T,K,IS_MANAGED,IS_ARRAY>::kv_t Ordering<T,K,IS_MANAGED,IS_ARRA
         Ordering<T,K,IS_MANAGED,IS_ARRAY>::kv_t pair(keys[index], *values[index]);
         return pair;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Ordering::Iterator index out of range");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "Ordering::Iterator index out of range");
 }
 
 /******************************************************************************
@@ -292,8 +290,8 @@ T& Ordering<T,K,IS_MANAGED,IS_ARRAY>::get(K key, searchMode_t smode)
         }
     }
 
-    if (found)  return curr->data;
-    else        throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
+    if(found) return curr->data;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
 }
 
 /*----------------------------------------------------------------------------
@@ -359,17 +357,15 @@ bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::remove(K key, searchMode_t smode)
         /* return success */
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
-long Ordering<T,K,IS_MANAGED,IS_ARRAY>::length(void)
+long Ordering<T,K,IS_MANAGED,IS_ARRAY>::length(void) const
 {
     return len;
 }
@@ -378,7 +374,7 @@ long Ordering<T,K,IS_MANAGED,IS_ARRAY>::length(void)
  * isempty
  *----------------------------------------------------------------------------*/
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
-bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::isempty(void)
+bool Ordering<T,K,IS_MANAGED,IS_ARRAY>::isempty(void) const
 {
     return (len == 0);
 }

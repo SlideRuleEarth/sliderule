@@ -125,7 +125,7 @@ class RecordObject
             int32_t         offset;             // bits for BITFIELD, bytes for everything else
             int32_t         elements;
             const char*     exttype;
-            unsigned int    flags;
+            uint64_t        flags;
         } fieldDef_t;
 
         typedef enum {
@@ -168,7 +168,7 @@ class RecordObject
                             Field           (const Field& f);
                             ~Field          (void);
 
-                Field&      operator=       (const char* const rhs);
+                Field&      operator=       (const char* rhs);
                 Field&      operator=       (double const& rhs);
                 Field&      operator=       (long const& rhs);
 
@@ -216,8 +216,8 @@ class RecordObject
         field_t                 getField            (const char* field_name);
         Field                   field               (const char* field_name);
         void                    setValueText        (const field_t& field, const char* val, int element=0);
-        void                    setValueReal        (const field_t& field, const double val, int element=0);
-        void                    setValueInteger     (const field_t& field, const long val, int element=0);
+        void                    setValueReal        (const field_t& field, double val, int element=0);
+        void                    setValueInteger     (const field_t& field, long val, int element=0);
         const char*             getValueText        (const field_t& field, char* valbuf=NULL, int element=0);
         double                  getValueReal        (const field_t& field, int element=0);
         long                    getValueInteger     (const field_t& field, int element=0);
@@ -284,8 +284,8 @@ class RecordObject
                   data_size = _data_size;
                   record_size = sizeof(rec_hdr_t) + type_size + _data_size; }
             ~definition_t(void)
-                { if(type_name) delete [] type_name;
-                  if(id_field) delete [] id_field; }
+                { delete [] type_name;
+                  delete [] id_field; }
         };
 
         /*--------------------------------------------------------------------

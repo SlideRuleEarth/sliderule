@@ -104,8 +104,8 @@ class ReportDispatch: public DispatchObject
 
             ~entry_t(void)
             {
-                if(name) delete [] name;
-                if(value) delete [] value;
+                delete [] name;
+                delete [] value;
             }
         };
 

@@ -173,10 +173,8 @@ const T& List<T, IS_MANAGED, IS_ARRAY>::Iterator::operator[](int index) const
         const List<T, IS_MANAGED, IS_ARRAY>::list_node_t* block = blocks[node_block];
         return block->data[node_offset];
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "List::Iterator index out of range");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "List::Iterator index out of range");
 }
 
 
@@ -364,10 +362,8 @@ T& List<T, IS_MANAGED, IS_ARRAY>::get(int index)
         assert(curr);
         return curr->data[node_offset];
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "List::get index out of range");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "List::get index out of range");
 }
 
 /*----------------------------------------------------------------------------
@@ -408,10 +404,8 @@ bool List<T, IS_MANAGED, IS_ARRAY>::set(int index, T& data, bool with_delete)
 
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------

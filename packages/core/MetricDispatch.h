@@ -97,7 +97,7 @@ class MetricDispatch: public DispatchObject
 
             ~fieldValue_t(void)
             {
-                if(svalue) delete [] svalue;
+                delete [] svalue;
             }
         };
 

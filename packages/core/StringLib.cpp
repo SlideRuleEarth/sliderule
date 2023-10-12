@@ -761,7 +761,7 @@ char* StringLib::find(const char* big, const char* little, int len)
  *
  *  assumes that str is null terminated
  *----------------------------------------------------------------------------*/
-char* StringLib::find(const char* str, const char c, bool first)
+char* StringLib::find(const char* str, char c, bool first)
 {
     if(first) return (char*)strchr(str, c);
     return (char*)strrchr(str, c);

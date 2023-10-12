@@ -359,7 +359,7 @@ FootprintReader<footprint_t>::Region::~Region (void)
 template <class footprint_t>
 void FootprintReader<footprint_t>::Region::cleanup (void)
 {
-    if(inclusion_mask) delete [] inclusion_mask;
+    delete [] inclusion_mask;
 }
 
 /*----------------------------------------------------------------------------

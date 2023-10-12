@@ -111,7 +111,7 @@ double MathLib::FFT(double result[], const int input[], unsigned long size)
 /*----------------------------------------------------------------------------
  * coord2point
  *----------------------------------------------------------------------------*/
-MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
+MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)
 {
     point_t p;
 
@@ -163,7 +163,7 @@ MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
 /*----------------------------------------------------------------------------
  * point2coord
  *----------------------------------------------------------------------------*/
-MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
+MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
 {
     coord_t c;
 

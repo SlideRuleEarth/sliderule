@@ -83,7 +83,7 @@ class CaptureDispatch: public DispatchObject
                   field_name = StringLib::duplicate(_field_str);
                   timeout = _timeout; }
             ~capture_t(void)
-                { if(field_name) delete [] field_name; }
+                { delete [] field_name; }
         };
 
         /*--------------------------------------------------------------------

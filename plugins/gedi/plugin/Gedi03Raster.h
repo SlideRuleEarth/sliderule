@@ -64,7 +64,7 @@ class Gedi03Raster: public GeoRaster
 
         Gedi03Raster(lua_State* L, GeoParms* _parms) :
          GeoRaster(L, _parms,
-                 std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                 std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()),
                  TimeLib::datetime2gps(2022, 1, 19),
                  true /* Data is elevation */) {}
 };

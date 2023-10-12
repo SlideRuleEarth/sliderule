@@ -122,7 +122,7 @@ template <class T>
 bool GTArray<T>::trim(long* prt_offset)
 {
     if(!prt_offset) return false;
-    else return (gt[Icesat2Parms::RPT_L].trim(prt_offset[Icesat2Parms::RPT_L]) && gt[Icesat2Parms::RPT_R].trim(prt_offset[Icesat2Parms::RPT_R]));
+    return (gt[Icesat2Parms::RPT_L].trim(prt_offset[Icesat2Parms::RPT_L]) && gt[Icesat2Parms::RPT_R].trim(prt_offset[Icesat2Parms::RPT_R]));
 }
 
 /*----------------------------------------------------------------------------

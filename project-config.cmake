@@ -23,12 +23,18 @@ endif()
 # Configure static analysis
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
+
+    # clang-tidy
     set (
         CMAKE_CXX_CLANG_TIDY clang-tidy;
-        #-header-filter=.;
-        -checks=clang-analyzer-*,concurrency-*,misc-*,performance-*,portability-*,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-magic-numbers;
+        -header-filter=.;
+        -checks=clang-analyzer-*,concurrency-*,misc-*,performance-*,portability-*,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-magic-numbers,-misc-non-private-member-variables-in-classes;
         -warnings-as-errors=*;
     )
+
+    # cppcheck
+#   find_program(CMAKE_CXX_CPPCHECK NAMES cppcheck)
+#   list(APPEND CMAKE_CXX_CPPCHECK "--enable=all")
 endif()
 
 ###################

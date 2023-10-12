@@ -63,7 +63,7 @@ class GeoRaster: public RasterObject
 
          GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
 
-         const std::string getFileName(void)
+         std::string getFileName(void)
          {
              return raster.getFileName();
          }

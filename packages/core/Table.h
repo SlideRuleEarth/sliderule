@@ -182,7 +182,7 @@ bool Table<T,K,IS_MANAGED,IS_ARRAY>::add(K key, T& data, bool overwrite, bool wi
     K curr_index = hash(key) % size;
 
     /* Add Entry to Hash */
-    if(table[curr_index].occupied == false)
+    if(!table[curr_index].occupied)
     {
         /* Remove Index from Open List */
         K next_index = table[curr_index].next;
@@ -201,8 +201,8 @@ bool Table<T,K,IS_MANAGED,IS_ARRAY>::add(K key, T& data, bool overwrite, bool wi
         /* Check Current Slot for Duplicate */
         if(table[curr_index].key == key)
         {
-            if(overwrite)   return overwriteNode(curr_index, key, data, with_delete);
-            else            return false;
+            if(overwrite) return overwriteNode(curr_index, key, data, with_delete);
+            return false;
         }
 
         /* Transverse to End of Chain */
@@ -213,8 +213,8 @@ bool Table<T,K,IS_MANAGED,IS_ARRAY>::add(K key, T& data, bool overwrite, bool wi
             /* Check Slot for Duplicate */
             if(table[scan_index].key == key)
             {
-                if(overwrite)   return overwriteNode(scan_index, key, data, with_delete);
-                else            return false;
+                if(overwrite) return overwriteNode(scan_index, key, data, with_delete);
+                return false;
             }
 
             /* Go To Next Slot */
@@ -305,7 +305,8 @@ T& Table<T,K,IS_MANAGED,IS_ARRAY>::get(K key, match_t match, bool resort)
             best_index = curr_index;
             break;
         }
-        else if(match == MATCH_NEAREST_UNDER)
+        
+        if(match == MATCH_NEAREST_UNDER)
         {
             if(table[curr_index].key < key)
             {
@@ -379,7 +380,7 @@ bool Table<T,K,IS_MANAGED,IS_ARRAY>::remove(K key)
     /* Find Node to Remove */
     while(curr_index != (K)INVALID_KEY)
     {
-        if(table[curr_index].occupied == false) /* end of chain */
+        if(!table[curr_index].occupied) /* end of chain */
         {
             curr_index = (K)INVALID_KEY;
         }
@@ -490,7 +491,7 @@ void Table<T,K,IS_MANAGED,IS_ARRAY>::clear(void)
     for(K i = 0; i < size; i++)
     {
         /* Free Data */
-        if(table[i].occupied == true)
+        if(table[i].occupied)
         {
             freeNode(i);
         }

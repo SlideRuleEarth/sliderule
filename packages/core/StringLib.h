@@ -105,7 +105,7 @@ class StringLib
         static int              formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static char*            copy            (char* dst, const char* src, int _size);
         static char*            find            (const char* big, const char* little, int len=MAX_STR_SIZE);
-        static char*            find            (const char* str, const char c, bool first=true);
+        static char*            find            (const char* str, char c, bool first=true);
         static int              size            (const char* str, int len=MAX_STR_SIZE);
         static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
         static TokenList*       split           (const char* str, int len, char separator, bool strip);
