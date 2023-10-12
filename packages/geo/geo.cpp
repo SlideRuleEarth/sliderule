@@ -183,12 +183,8 @@ static void configGDAL(void)
      * which is not supported by a majority of servers (including AWS S3 or Google GCS).
      * SERIAL means that each range will be requested sequentially.
      * YES means that each range will be requested in parallel, using HTTP/2 multiplexing or several HTTP connections.
-     *
-     * NOTE: if set to YES, multirange reads cause errors when multiple reader threads read their data sets.
-     *       Perfromed tests with 200 reader threads each reading 16MB and on average 14 to 16 readers failed.
-     *       setting it to SERIAL fixed the problem.
      */
-    CPLSetConfigOption("GDAL_HTTP_MULTIRANGE", "SERIAL");
+    CPLSetConfigOption("GDAL_HTTP_MULTIRANGE", "YES");
 
     /*
      * Tells GDAL to merge consecutive range GET requests.
@@ -196,7 +192,7 @@ static void configGDAL(void)
      * Only applies when GDAL_HTTP_MULTIRANGE is YES.
      * Defines if ranges of a single ReadMultiRange() request that are consecutive should be merged into a single request.
      */
-    CPLSetConfigOption("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES", "NO");
+    CPLSetConfigOption("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES", "YES");
 
     /*
      * When set to YES, this attempts to download multiple range requests in parallel, reusing the same TCP connection.
