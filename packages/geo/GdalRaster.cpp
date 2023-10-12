@@ -296,7 +296,10 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         if(trace) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
 
         /* Get AOI pixel corners: upper left, lower right */
-        int ulx, uly, lrx, lry;
+        int ulx;
+        int uly;
+        int lrx;
+        int lry;
         map2pixel(aoi_minx, aoi_maxy, ulx, uly);
         map2pixel(aoi_maxx, aoi_miny, lrx, lry);
         if(trace) mlog(DEBUG, "pixel aoi:   (%13d, %13d) (%13d, %13d)", ulx, uly, lrx, lry);
@@ -305,7 +308,8 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         int64_t rows2read = lry - uly;
 
         /* Sanity check for GCC optimizer 'bug'. Raster's top left corner pixel must be (0, 0) */
-        int raster_ulx, raster_uly;
+        int raster_ulx;
+        int raster_uly;
         map2pixel(raster_minx, raster_maxy, raster_ulx, raster_uly);
         if(raster_ulx != 0 || raster_uly != 0)
         {
@@ -473,7 +477,8 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        int x, y;
+        int x;
+        int y;
         map2pixel(poi, x, y);
 
         // mlog(DEBUG, "%dP, %dL\n", x, y);
@@ -608,8 +613,10 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
 {
     try
     {
-        int windowSize, offset;
-        int x, y;
+        int windowSize;
+        int offset;
+        int x;
+        int y;
         map2pixel(poi, x, y);
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
@@ -679,7 +686,8 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
 
     try
     {
-        int x, y;
+        int x;
+        int y;
         map2pixel(poi, x, y);
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
@@ -785,11 +793,11 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error computing zonal stats: %s", e.what());
-        if(samplesArray) delete[] samplesArray;
+        delete[] samplesArray;
         throw;
     }
 
-    if(samplesArray) delete[] samplesArray;
+    delete[] samplesArray;
 }
 
 /*----------------------------------------------------------------------------
@@ -846,7 +854,7 @@ void GdalRaster::createTransform(void)
 
     /* Limit to area of interest if AOI was set */
     bbox_t* aoi  = &parms->aoi_bbox;
-    bool useaoi  = (aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max) ? false : true;
+    bool useaoi  = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
     if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
@@ -868,7 +876,7 @@ void GdalRaster::createTransform(void)
 /*----------------------------------------------------------------------------
  * radius2pixels
  *----------------------------------------------------------------------------*/
-int GdalRaster::radius2pixels(int _radius)
+int GdalRaster::radius2pixels(int _radius) const
 {
     /*
      * Code supports only rasters with units in meters (cellSize and radius must be in meters).

@@ -153,16 +153,14 @@ const char* SafeString::str(bool duplicate)
         StringLib::copy(new_str, carray, len);
         return new_str;
     }
-    else
-    {
-        return carray;
-    }
+
+    return carray;
 }
 
 /*----------------------------------------------------------------------------
  * length - number of non-null characters in string
  *----------------------------------------------------------------------------*/
-long SafeString::length(void)
+long SafeString::length(void) const
 {
     return len - 1; // remove null terminator in length
 }
@@ -170,7 +168,7 @@ long SafeString::length(void)
 /*----------------------------------------------------------------------------
  * bytes - size of memory needed to store string (includes null terminator)
  *----------------------------------------------------------------------------*/
-long SafeString::bytes(void)
+long SafeString::bytes(void) const
 {
     return len;
 }
@@ -291,7 +289,8 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
         int i = 0;
         while(i < (len - 1))
         {
-            int j = i, k = 0;
+            int j = i;
+            int k = 0;
             while((j < (len - 1)) && oldtxt[r][k] && (carray[j] == oldtxt[r][k]))
             {
                 j++;
@@ -336,7 +335,8 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
     char* newstr = new char [maxlen];
 
     /* Populate New String */
-    int orig_i = 0, new_i = 0;
+    int orig_i = 0;
+    int new_i = 0;
     while(carray[orig_i])
     {
         /* For Each Possible Replacement */
@@ -344,7 +344,8 @@ bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_
         for(int r = 0; r < num_replacements; r++)
         {
             /* Check for Match */
-            int j = orig_i, k = 0;
+            int j = orig_i;
+            int k = 0;
             while(carray[j] && oldtxt[r][k] && (carray[j] == oldtxt[r][k]))
             {
                 j++;
@@ -461,7 +462,8 @@ List<SafeString>* SafeString::split(char separator, bool strip)
         token[t++] = '\0';
 
         /*  Strip Leading and Trailing Spaces */
-        int s1 = 0, s2 = t-1;
+        int s1 = 0;
+        int s2 = t-1;
         if(strip)
         {
             while( (s1 < t) && isspace(token[s1]) ) s1++;
@@ -486,10 +488,8 @@ char SafeString::operator[](int index)
     {
         return carray[index];
     }
-    else
-    {
-        return '\0';
-    }
+
+    return '\0';
 }
 
 /*----------------------------------------------------------------------------
@@ -717,19 +717,19 @@ int StringLib::formats(char* dststr, int size, const char* _format, ...)
 /*----------------------------------------------------------------------------
  * copy
  *----------------------------------------------------------------------------*/
-char* StringLib::copy(char* str1, const char* str2, int _size)
+char* StringLib::copy(char* dst, const char* src, int _size)
 {
-    if(str1 && str2 && (_size > 0))
+    if(dst && src && (_size > 0))
     {
-        char* nptr = (char*)memccpy(str1, str2, 0, _size);
-        if(!nptr) str1[_size - 1] = '\0';
+        char* nptr = (char*)memccpy(dst, src, 0, _size);
+        if(!nptr) dst[_size - 1] = '\0';
     }
-    else if(str1 && (_size > 0))
+    else if(dst && (_size > 0))
     {
-        str1[0] = '\0';
+        dst[0] = '\0';
     }
 
-    return str1;
+    return dst;
 }
 
 /*----------------------------------------------------------------------------
@@ -763,8 +763,8 @@ char* StringLib::find(const char* big, const char* little, int len)
  *----------------------------------------------------------------------------*/
 char* StringLib::find(const char* str, const char c, bool first)
 {
-    if(first)   return (char*)strchr(str, c);
-    else        return (char*)strrchr(str, c);
+    if(first) return (char*)strchr(str, c);
+    return (char*)strrchr(str, c);
 }
 
 /*----------------------------------------------------------------------------
@@ -803,7 +803,8 @@ StringLib::TokenList* StringLib::split(const char* str, int len, char separator,
         token[t++] = '\0';
 
         /*  Strip Leading and Trailing Spaces */
-        int s1 = 0, s2 = t-1;
+        int s1 = 0;
+        int s2 = t-1;
         if(strip)
         {
             while( (s1 < t) && isspace(token[s1]) ) s1++;
@@ -904,7 +905,9 @@ char* StringLib::convertLower(char* dst, char* src)
  *----------------------------------------------------------------------------*/
 int StringLib::tokenizeLine(const char* str1, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE])
 {
-    int t = 0, i = 0, j = 0;
+    int t = 0;
+    int i = 0;
+    int j = 0;
 
     if(str1 == NULL || tokens == NULL) return 0;
 
@@ -950,7 +953,8 @@ int StringLib::tokenizeLine(const char* str1, int str_size, char separator, int 
  *----------------------------------------------------------------------------*/
 int StringLib::getLine(char* str, int* ret_len, int max_str_size, FILE* fptr)
 {
-    int c = 0, i = 0;
+    int c = 0;
+    int i = 0;
 
     if (str == NULL || max_str_size < 1) return 0;
 
@@ -968,7 +972,7 @@ int StringLib::getLine(char* str, int* ret_len, int max_str_size, FILE* fptr)
     }
 
     if (c != EOF) return 0;
-    else          return -1;
+    return -1;
 }
 
 /*----------------------------------------------------------------------------
@@ -1100,10 +1104,8 @@ char* StringLib::checkNullStr (const char* str)
     {
         return NULL;
     }
-    else
-    {
-        return (char*)str;
-    }
+
+    return (char*)str;
 }
 
 /*----------------------------------------------------------------------------
@@ -1125,7 +1127,8 @@ char* StringLib::b64encode(const void* data, int* size)
     str[encoded_len - 2] = '=';
 
     unsigned char *p = (unsigned  char*) data;
-    size_t j = 0, pad = len % 3;
+    size_t j = 0;
+    size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
@@ -1164,9 +1167,9 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
     if (len == 0) return (unsigned char*)"";
 
     unsigned char *p = (unsigned char*) data;
-    size_t j = 0,
-        pad1 = len % 4 || p[len - 1] == '=',
-        pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    size_t j = 0;
+    size_t pad1 = len % 4 || p[len - 1] == '=';
+    size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
 
     int decoded_len = last / 4 * 3 + pad1 + pad2;

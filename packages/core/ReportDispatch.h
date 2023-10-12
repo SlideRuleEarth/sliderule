@@ -79,7 +79,7 @@ class ReportDispatch: public DispatchObject
 
         static int              luaCreate       (lua_State* L);
         static format_t         str2format      (const char* str);
-        static const char*      format2str      (format_t _type);
+        static const char*      format2str      (format_t _format);
         static indexDisplay_t   str2display     (const char* str);
         static const char*      display2str     (indexDisplay_t _display);
 

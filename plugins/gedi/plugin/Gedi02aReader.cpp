@@ -231,7 +231,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 /* Populate Entry in Batch Structure */
                 g02a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number             = Gedi02a.shot_number[footprint];
-                fp->time_ns                 = parms->deltatime2timestamp(Gedi02a.delta_time[footprint]);
+                fp->time_ns                 = GediParms::deltatime2timestamp(Gedi02a.delta_time[footprint]);
                 fp->latitude                = region.lat[footprint];
                 fp->longitude               = region.lon[footprint];
                 fp->elevation_lowestmode    = Gedi02a.elev_lowestmode[footprint];

@@ -82,7 +82,8 @@ int RecordDispatcher::luaCreate (lua_State* L)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
         }
-        else if(key_mode == FIELD_KEY_MODE)
+        
+        if(key_mode == FIELD_KEY_MODE)
         {
             key_field = getLuaString(L, 4);
         }
@@ -110,10 +111,10 @@ int RecordDispatcher::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 RecordDispatcher::keyMode_t RecordDispatcher::str2mode(const char* str)
 {
-         if(StringLib::match(str, "FIELD_KEY"))         return FIELD_KEY_MODE;
-    else if(StringLib::match(str, "RECEIPT_KEY"))       return RECEIPT_KEY_MODE;
-    else if(StringLib::match(str, "CALCULATED_KEY"))    return CALCULATED_KEY_MODE;
-    else                                                return INVALID_KEY_MODE;
+    if(StringLib::match(str, "FIELD_KEY"))      return FIELD_KEY_MODE;
+    if(StringLib::match(str, "RECEIPT_KEY"))    return RECEIPT_KEY_MODE;
+    if(StringLib::match(str, "CALCULATED_KEY")) return CALCULATED_KEY_MODE;
+    return INVALID_KEY_MODE;
 }
 
 /*----------------------------------------------------------------------------
@@ -180,13 +181,13 @@ RecordDispatcher::~RecordDispatcher(void)
     dispatcherActive = false;
     for(int i = 0; i < numThreads; i++)
     {
-        if (threadPool[i]) delete threadPool[i];
+        delete threadPool[i];
     }
     delete [] threadPool;
 
     delete inQ;
 
-    if (keyField) delete [] keyField;
+    delete [] keyField;
 
     dispatch_t dispatch;
     const char* key = dispatchTable.first(&dispatch);

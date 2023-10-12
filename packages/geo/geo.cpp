@@ -82,7 +82,8 @@ void test_projlib(void)
     PJ *G2P = proj_create_crs_to_crs_from_pj(C, G, P, A, options);
 
     /* Longitude and latitude of Copenhagen, in degrees. */
-    double lon = 12.0, lat = 55.0;
+    double lon = 12.0;
+    double lat = 55.0;
 
     /* Prepare the input */
     PJ_COORD c_in;

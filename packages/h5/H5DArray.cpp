@@ -63,14 +63,14 @@ H5DArray::H5DArray(const Asset* asset, const char* resource, const char* dataset
  *----------------------------------------------------------------------------*/
 H5DArray::~H5DArray(void)
 {
-    if(h5f)  delete h5f;
-    if(name) delete [] name;
+    delete h5f;
+    delete [] name;
 }
 
 /*----------------------------------------------------------------------------
  * join
  *----------------------------------------------------------------------------*/
-bool H5DArray::join(int timeout, bool throw_exception)
+bool H5DArray::join(int timeout, bool throw_exception) const
 {
     bool status;
 
@@ -110,7 +110,7 @@ bool H5DArray::join(int timeout, bool throw_exception)
 /*----------------------------------------------------------------------------
  * numElements
  *----------------------------------------------------------------------------*/
-int H5DArray::numElements (void)
+int H5DArray::numElements (void) const
 {
     return h5f->info.elements;
 }
@@ -118,7 +118,7 @@ int H5DArray::numElements (void)
 /*----------------------------------------------------------------------------
  * elementSize
  *----------------------------------------------------------------------------*/
-int H5DArray::elementSize (void)
+int H5DArray::elementSize (void) const
 {
     return h5f->info.typesize;
 }
@@ -126,7 +126,7 @@ int H5DArray::elementSize (void)
 /*----------------------------------------------------------------------------
  * elementType
  *----------------------------------------------------------------------------*/
-H5DArray::type_t H5DArray::elementType (void)
+H5DArray::type_t H5DArray::elementType (void) const
 {
     return h5f->info.datatype;
 }
@@ -134,7 +134,7 @@ H5DArray::type_t H5DArray::elementType (void)
 /*----------------------------------------------------------------------------
  * serialize
  *----------------------------------------------------------------------------*/
-uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t num_elements)
+uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t num_elements) const
 {
     /* Serialize Elements of Array */
     if(h5f->info.typesize == 8)

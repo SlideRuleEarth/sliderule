@@ -164,9 +164,9 @@ NetsvcParms::~NetsvcParms (void)
 /*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
-void NetsvcParms::cleanup (void)
+void NetsvcParms::cleanup (void) const
 {
-    if(raster) delete raster;
+    delete raster;
 }
 
 /*----------------------------------------------------------------------------

@@ -81,13 +81,13 @@ class MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static double   FFT         (double result[], int input[], unsigned long size);
+        static double   FFT         (double result[], const int input[], unsigned long size);
         static point_t  coord2point (const coord_t c, proj_t projection);
         static coord_t  point2coord (const point_t p, proj_t projection);
         static bool     inpoly      (point_t* poly, int len, point_t point);
 
-        static const std::string b64encode(const void* data, const size_t &len);
-        static const std::string b64decode(const void* data, const size_t &len);
+        static std::string b64encode(const void* data, const size_t &len);
+        static std::string b64decode(const void* data, const size_t &len);
 
     private:
 

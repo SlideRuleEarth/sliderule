@@ -105,12 +105,12 @@ int EndpointProxy::luaCreate (lua_State* L)
 
         /* Check Parameters */
         if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
-        else if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
+        if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
         /* Return Endpoint Proxy Object */
         EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
         int retcnt = createLuaObject(L, ep);
-        if(_resources) delete [] _resources;
+        delete [] _resources;
         return retcnt;
     }
     catch(const RunTimeException& e)
@@ -121,7 +121,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         {
             delete [] _resources[i];
         }
-        if (_resources) delete [] _resources;
+        delete [] _resources;
 
         return returnLuaStatus(L, false);
     }

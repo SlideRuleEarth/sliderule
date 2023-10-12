@@ -312,8 +312,13 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
         return 0;
     }
 
-    double gpstime = 0, seconds;
-    int year, month, day, hour, minute;
+    double gpstime = 0;
+    double seconds;
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
 
     /*
      * Raster's datetime in geojson index file should be properly formated GMT date time string in ISO8601 format.

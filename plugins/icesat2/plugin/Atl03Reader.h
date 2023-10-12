@@ -240,7 +240,7 @@ class Atl03Reader: public LuaObject
                 Atl08Class          (info_t* info);
                 ~Atl08Class         (void);
                 void classify       (info_t* info, Region& region, Atl03Data& atl03);
-                uint8_t operator[]  (int index);
+                uint8_t operator[]  (int index) const;
 
                 /* Class Data */
                 bool                enabled;
@@ -276,7 +276,7 @@ class Atl03Reader: public LuaObject
                 void yapcV2         (info_t* info, Region& region, Atl03Data& atl03);
                 void yapcV3         (info_t* info, Region& region, Atl03Data& atl03);
 
-                uint8_t operator[]  (int index);
+                uint8_t operator[]  (int index) const;
 
                 /* Generated Data */
                 uint8_t*            score; // [num_photons]
@@ -345,12 +345,12 @@ class Atl03Reader: public LuaObject
 
         static void*        subsettingThread            (void* parm);
 
-        double              calculateBackground         (TrackState& state, Atl03Data& atl03);
+        static double       calculateBackground         (TrackState& state, Atl03Data& atl03);
         uint32_t            calculateSegmentId          (TrackState& state, Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        void                generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
-        void                parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
+        static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 
         static int          luaParms                    (lua_State* L);
         static int          luaStats                    (lua_State* L);

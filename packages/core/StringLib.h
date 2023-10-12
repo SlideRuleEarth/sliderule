@@ -65,8 +65,8 @@ class StringLib
                                 ~String     (void);
 
                 const char*     str         (bool duplicate = false);
-                long            length      (void);
-                long            bytes       (void);
+                long            length      (void) const;
+                long            bytes       (void) const;
                 void            appendChar  (char c);
                 int             findChar    (char c, int start=0);
                 String&         setChar     (char c, int index);
@@ -110,9 +110,9 @@ class StringLib
         static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
         static TokenList*       split           (const char* str, int len, char separator, bool strip);
         static void             convertUpper    (char* str);
-        static char*            convertUpper    (char* src, char* dst);
+        static char*            convertUpper    (char* dst, char* src);
         static void             convertLower    (char* str);
-        static char*            convertLower    (char* src, char* dst);
+        static char*            convertLower    (char* dst, char* src);
         static int              tokenizeLine    (const char* str, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE]);
         static int              getLine         (char* str, int* ret_len, int max_str_size, FILE* fptr);
         static bool             str2bool        (const char* str, bool* val);

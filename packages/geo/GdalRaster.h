@@ -161,8 +161,8 @@ class GdalRaster
         void        computeZonalStats   (const OGRPoint* poi, RasterSample* sample);
         inline bool nodataCheck         (RasterSample* sample);
         void        createTransform     (void);
-        int         radius2pixels       (int _radius);
-        inline bool containsWindow      (int x, int y, int maxx, int maxy, int windowSize);
+        int         radius2pixels       (int _radius) const;
+        static inline bool containsWindow (int x, int y, int maxx, int maxy, int windowSize);
         inline void readRasterWithRetry (int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
 
         void        map2pixel           (double mapx, double mapy, int& x, int& y);

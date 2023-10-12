@@ -195,17 +195,17 @@ class RecordObject
         /* Overloaded Methods */
         virtual bool            deserialize         (unsigned char* buffer, int size);
         virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
-        bool                    post                (Publisher* outq, int size=0, bool* active=NULL, bool verbose=true);
+        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true);
 
         /* Attribute Methods */
-        bool                    isRecordType        (const char* rec_type);
-        const char*             getRecordType       (void); // used to identify type of records (used for parsing)
+        bool                    isRecordType        (const char* rec_type) const;
+        const char*             getRecordType       (void) const; // used to identify type of records (used for parsing)
         long                    getRecordId         (void); // used to identify records of the same type (used for filtering))
-        unsigned char*          getRecordData       (void);
-        int                     getRecordTypeSize   (void);
-        int                     getRecordDataSize   (void);
-        int                     getAllocatedMemory  (void);
-        int                     getAllocatedDataSize(void);
+        unsigned char*          getRecordData       (void) const;
+        int                     getRecordTypeSize   (void) const;
+        int                     getRecordDataSize   (void) const;
+        int                     getAllocatedMemory  (void) const;
+        int                     getAllocatedDataSize(void) const;
         Field*                  createRecordField   (const char* field_name);
 
         /* Get/Set Methods */
@@ -238,14 +238,14 @@ class RecordObject
         static int              getRecordMaxFields  (const char* rec_type);
         static int              getRecordFields     (const char* rec_type, char*** field_names, field_t*** fields);
         static Dictionary<field_t>* getRecordFields (const char* rec_type);
-        static int              parseSerial         (unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
+        static int              parseSerial         (const unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
         static unsigned int     str2flags           (const char* str);
         static const char*      flags2str           (unsigned int flags);
         static fieldType_t      str2ft              (const char* str);
         static bool             str2be              (const char* str);
         static const char*      ft2str              (fieldType_t ft);
         static const char*      vt2str              (valType_t vt);
-        static unsigned long    unpackBitField      (unsigned char* buf, int bit_offset, int bit_length);
+        static unsigned long    unpackBitField      (const unsigned char* buf, int bit_offset, int bit_length);
         static void             packBitField        (unsigned char* buf, int bit_offset, int bit_length, long val);
         static field_t          parseImmediateField (const char* str);
 

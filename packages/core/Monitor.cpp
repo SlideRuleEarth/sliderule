@@ -105,8 +105,8 @@ Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t 
  *----------------------------------------------------------------------------*/
 Monitor::~Monitor(void)
 {
-    if(outQ) delete outQ;
-    if(eventTailArray) delete [] eventTailArray;
+    delete outQ;
+    delete [] eventTailArray;
 }
 
 /*----------------------------------------------------------------------------

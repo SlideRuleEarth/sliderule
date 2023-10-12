@@ -267,10 +267,14 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
         /* Calculate Sums */
-        double time_ns_min = DBL_MAX, time_ns_max = -DBL_MAX;
-        double latitude_min = DBL_MAX, latitude_max = -DBL_MAX;
-        double longitude_min = DBL_MAX, longitude_max = -DBL_MAX;
-        double x_atc_min = DBL_MAX, x_atc_max = -DBL_MAX;
+        double time_ns_min = DBL_MAX;
+        double time_ns_max = -DBL_MAX;
+        double latitude_min = DBL_MAX;
+        double latitude_max = -DBL_MAX;
+        double longitude_min = DBL_MAX;
+        double longitude_max = -DBL_MAX;
+        double x_atc_min = DBL_MAX;
+        double x_atc_max = -DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
             if(ph[i].time_ns    < time_ns_min)      time_ns_min     = ph[i].time_ns;
@@ -392,7 +396,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     /* Create Ground and Vegetation Photon Index Arrays */
     long* gnd_index = new long [gnd_cnt];
     long* veg_index = new long [veg_cnt];
-    long g = 0, v = 0;
+    long g = 0;
+    long v = 0;
     for(long i = 0; i < num_ph; i++)
     {
         if(isGround(&ph[i]) || parms->phoreal.use_abs_h)

@@ -62,7 +62,7 @@ void OrchestratorLib::init (void)
  *----------------------------------------------------------------------------*/
 void OrchestratorLib::deinit (void)
 {
-    if(URL) delete [] URL;
+    delete [] URL;
 }
 
 /*----------------------------------------------------------------------------
@@ -107,7 +107,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
         status = false;
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return status;
 }
@@ -174,7 +174,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
         mlog(CRITICAL, "Encountered HTTP error <%d> when locking nodes on %s", rsps.code, service);
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return nodes;
 }
@@ -221,7 +221,7 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
         status = false;
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return status;
 }
@@ -252,7 +252,7 @@ bool OrchestratorLib::health (void)
         }
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return status;
 }
@@ -266,7 +266,7 @@ int OrchestratorLib::luaUrl(lua_State* L)
     {
         const char* _url = LuaObject::getLuaString(L, 1);
 
-        if(URL) delete [] URL;
+        delete [] URL;
         URL = StringLib::duplicate(_url);
     }
     catch(const RunTimeException& e)
@@ -334,7 +334,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         lua_pushnil(L);
     }
 
-    if(nodes) delete nodes;
+    delete nodes;
 
     return 1;
 }

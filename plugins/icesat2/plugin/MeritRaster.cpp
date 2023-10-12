@@ -75,7 +75,7 @@ RasterObject* MeritRaster::create(lua_State* L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 MeritRaster::~MeritRaster(void)
 {
-    if(cache) delete [] cache;
+    delete [] cache;
     if(asset) asset->releaseLuaObject();
 }
 
@@ -181,7 +181,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
             /* Update Cache */
             cacheMut.lock();
             {
-                if(cache) delete [] cache;
+                delete [] cache;
                 cache = tile;
                 cacheLon = left_lon;
                 cacheLat = upper_lat;

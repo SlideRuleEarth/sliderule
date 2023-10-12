@@ -412,6 +412,10 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     /* Build URL */
     SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
+    /* Check Size and Initialize Data */
+    assert(size > 0);
+    data[0] = 0;
+
     /* Setup Buffer for Callback */
     fixed_data_t info = {
         .buffer = data,
@@ -906,7 +910,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
 
         /* Check Parameters */
         if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid size: %ld", size);
-        else if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
+        if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
 
         /* Get Credentials */
         CredentialStore::Credential credentials = CredentialStore::get(identity);
@@ -1031,5 +1035,5 @@ S3CurlIODriver::~S3CurlIODriver (void)
      *  only ioBucket is freed because ioKey only points
      *  into the memory allocated to ioBucket
      */
-    if(ioBucket) delete [] ioBucket;
+    delete [] ioBucket;
 }

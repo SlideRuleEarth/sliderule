@@ -63,8 +63,8 @@ class UdpSocket: public DeviceObject
         int             getUniqueId         (void) override;
         const char*     getConfig           (void) override;
 
-        const char*     getIpAddr           (void);
-        int             getPort             (void);
+        const char*     getIpAddr           (void) const;
+        int             getPort             (void) const;
 
     private:
 

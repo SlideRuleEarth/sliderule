@@ -290,7 +290,6 @@ GeoParms::~GeoParms (void)
     cleanup();
 }
 
-
 /*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
@@ -332,16 +331,16 @@ void GeoParms::cleanup (void)
  *----------------------------------------------------------------------------*/
 GDALRIOResampleAlg GeoParms::str2algo (const char* str)
 {
-         if (!str)                                          return GRIORA_NearestNeighbour;
-    else if (StringLib::match(str, NEARESTNEIGHBOUR_ALGO))  return GRIORA_NearestNeighbour;
-    else if (StringLib::match(str, BILINEAR_ALGO))          return GRIORA_Bilinear;
-    else if (StringLib::match(str, CUBIC_ALGO))             return GRIORA_Cubic;
-    else if (StringLib::match(str, CUBICSPLINE_ALGO))       return GRIORA_CubicSpline;
-    else if (StringLib::match(str, LANCZOS_ALGO))           return GRIORA_Lanczos;
-    else if (StringLib::match(str, AVERAGE_ALGO))           return GRIORA_Average;
-    else if (StringLib::match(str, MODE_ALGO))              return GRIORA_Mode;
-    else if (StringLib::match(str, GAUSS_ALGO))             return GRIORA_Gauss;
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
+    if(!str)                                            return GRIORA_NearestNeighbour;
+    if(StringLib::match(str, NEARESTNEIGHBOUR_ALGO))    return GRIORA_NearestNeighbour;
+    if(StringLib::match(str, BILINEAR_ALGO))            return GRIORA_Bilinear;
+    if(StringLib::match(str, CUBIC_ALGO))               return GRIORA_Cubic;
+    if(StringLib::match(str, CUBICSPLINE_ALGO))         return GRIORA_CubicSpline;
+    if(StringLib::match(str, LANCZOS_ALGO))             return GRIORA_Lanczos;
+    if(StringLib::match(str, AVERAGE_ALGO))             return GRIORA_Average;
+    if(StringLib::match(str, MODE_ALGO))                return GRIORA_Mode;
+    if(StringLib::match(str, GAUSS_ALGO))               return GRIORA_Gauss;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
 }
 
 /*----------------------------------------------------------------------------

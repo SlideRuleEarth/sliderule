@@ -173,14 +173,13 @@ static void* signal_thread (void* parm)
             signal(SIGINT, console_quick_exit);
             break;
         }
-        else if(app_signal_abort)
+        
+        if(app_signal_abort)
         {
             break; // exit thread for clean up
         }
-        else
-        {
-            console_quick_exit(0);
-        }
+
+        console_quick_exit(0);
     }
 
     return NULL;

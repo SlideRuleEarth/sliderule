@@ -120,7 +120,7 @@ int ReportDispatch::luaCreate (lua_State* L)
     }
 
     /* Clean Up and Return */
-    if(columns) delete [] columns;
+    delete [] columns;
     return num_results;
 }
 
@@ -133,9 +133,9 @@ int ReportDispatch::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 ReportDispatch::format_t ReportDispatch::str2format (const char* str)
 {
-         if(StringLib::match(str, "CSV"))   return CSV;
-    else if(StringLib::match(str, "JSON"))  return JSON;
-    else                                    return INVALID_FORMAT;
+    if(StringLib::match(str, "CSV"))    return CSV;
+    if(StringLib::match(str, "JSON"))   return JSON;
+    return INVALID_FORMAT;
 }
 
 /*----------------------------------------------------------------------------
@@ -143,9 +143,9 @@ ReportDispatch::format_t ReportDispatch::str2format (const char* str)
  *----------------------------------------------------------------------------*/
 const char* ReportDispatch::format2str (format_t _format)
 {
-         if(_format == CSV)     return "CSV";
-    else if(_format == JSON)    return "JSON";
-    else                        return "INVALID";
+    if(_format == CSV)  return "CSV";
+    if(_format == JSON) return "JSON";
+    return "INVALID";
 }
 
 /*----------------------------------------------------------------------------
@@ -153,9 +153,9 @@ const char* ReportDispatch::format2str (format_t _format)
  *----------------------------------------------------------------------------*/
 ReportDispatch::indexDisplay_t ReportDispatch::str2display(const char* str)
 {
-         if(StringLib::match(str, "INT"))   return INT_DISPLAY;
-    else if(StringLib::match(str, "GMT"))   return GMT_DISPLAY;
-    else                                    return INVALID_DISPLAY;
+    if(StringLib::match(str, "INT"))    return INT_DISPLAY;
+    if(StringLib::match(str, "GMT"))    return GMT_DISPLAY;
+    return INVALID_DISPLAY;
 }
 
 /*----------------------------------------------------------------------------
@@ -163,9 +163,9 @@ ReportDispatch::indexDisplay_t ReportDispatch::str2display(const char* str)
  *----------------------------------------------------------------------------*/
 const char* ReportDispatch::display2str(indexDisplay_t _display)
 {
-         if(_display == INT_DISPLAY)    return "INT";
-    else if(_display == GMT_DISPLAY)    return "GMT";
-    else                                return "INVALID";
+    if(_display == INT_DISPLAY) return "INT";
+    if(_display == GMT_DISPLAY) return "GMT";
+    return "INVALID";
 }
 
 /******************************************************************************
@@ -254,7 +254,8 @@ int ReportDispatch::ReportFile::writeFileData (void)
         /* Write Row String */
         return File::writeBuffer(row.str(false), row.length());
     }
-    else if(format == JSON)
+    
+    if(format == JSON)
     {
         /* Build JSON String */
         SafeString json("{\n");
@@ -322,7 +323,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
  *----------------------------------------------------------------------------*/
 ReportDispatch::~ReportDispatch (void)
 {
-    if(entries) delete entries;
+    delete entries;
 }
 
 /*----------------------------------------------------------------------------

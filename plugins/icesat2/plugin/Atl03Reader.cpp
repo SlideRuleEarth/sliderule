@@ -484,11 +484,9 @@ void Atl03Reader::Region::polyregion (void)
             {
                 break; // full extent found!
             }
-            else
-            {
-                /* Update Photon Index */
-                num_photons += segment_ph_cnt[segment];
-            }
+
+            /* Update Photon Index */
+            num_photons += segment_ph_cnt[segment];
         }
 
         /* Bump Segment */
@@ -722,10 +720,10 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::~Atl08Class (void)
 {
-    if(classification) delete [] classification;
-    if(relief) delete [] relief;
-    if(landcover) delete [] landcover;
-    if(snowcover) delete [] snowcover;
+    delete [] classification;
+    delete [] relief;
+    delete [] landcover;
+    delete [] snowcover;
 }
 
 /*----------------------------------------------------------------------------
@@ -865,7 +863,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
 /*----------------------------------------------------------------------------
  * Atl08Class::operator[]
  *----------------------------------------------------------------------------*/
-uint8_t Atl03Reader::Atl08Class::operator[] (int index)
+uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 {
     return classification[index];
 }
@@ -902,7 +900,7 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::~YapcScore (void)
 {
-    if(score) delete [] score;
+    delete [] score;
 }
 
 /*----------------------------------------------------------------------------
@@ -1209,7 +1207,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
 /*----------------------------------------------------------------------------
  * YapcScore::operator[]
  *----------------------------------------------------------------------------*/
-uint8_t Atl03Reader::YapcScore::operator[] (int index)
+uint8_t Atl03Reader::YapcScore::operator[] (int index) const
 {
     return score[index];
 }
@@ -1363,7 +1361,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
                         }
-                        else if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
+                        if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
                         {
                             break;
                         }
@@ -1374,7 +1372,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
                         }
-                        else if(!parms->quality_ph[quality_ph])
+                        if(!parms->quality_ph[quality_ph])
                         {
                             break;
                         }
@@ -1388,7 +1386,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
                             }
-                            else if(!parms->atl08_class[atl08_class])
+                            if(!parms->atl08_class[atl08_class])
                             {
                                 break;
                             }
@@ -1437,7 +1435,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                         /* Add Photon to Extent */
                         photon_t ph = {
-                            .time_ns = parms->deltatime2timestamp(atl03.delta_time[current_photon]),
+                            .time_ns = Icesat2Parms::deltatime2timestamp(atl03.delta_time[current_photon]),
                             .latitude = atl03.lat_ph[current_photon],
                             .longitude = atl03.lon_ph[current_photon],
                             .x_atc = (float)(x_atc - (state.extent_length / 2.0)),
@@ -1543,8 +1541,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     int rec_total_size = 0;
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
-                    reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                    reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
 
                     /* Send Records */
                     if(rec_list.size() == 1)
@@ -1613,8 +1611,8 @@ void* Atl03Reader::subsettingThread (void* parm)
     reader->threadMut.unlock();
 
     /* Clean Up Indices */
-    if(segment_indices) delete segment_indices;
-    if(photon_indices) delete photon_indices;
+    delete segment_indices;
+    delete photon_indices;
 
     /* Clean Up Info */
     delete info;
@@ -1658,11 +1656,9 @@ double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
             }
             break;
         }
-        else
-        {
-            /* Go To Next Background Rate */
-            state.bckgrd_in++;
-        }
+
+        /* Go To Next Background Rate */
+        state.bckgrd_in++;
     }
     return background_rate;
 }

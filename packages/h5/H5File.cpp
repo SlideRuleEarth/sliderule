@@ -111,7 +111,7 @@ H5File::H5File (lua_State* L, Asset* _asset, const char* _resource):
  *----------------------------------------------------------------------------*/
 H5File::~H5File (void)
 {
-    if(resource) delete [] resource;
+    delete [] resource;
     asset->releaseLuaObject();
 }
 
@@ -202,7 +202,9 @@ int H5File::luaRead (lua_State* L)
             for(int i = 0; i < num_datasets; i++)
             {
                 const char* dataset;
-                long col, startrow, numrows;
+                long col;
+                long startrow;
+                long numrows;
                 RecordObject::valType_t valtype;
 
                 /* Get Dataset Entry */

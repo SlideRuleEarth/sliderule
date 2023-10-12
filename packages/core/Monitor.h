@@ -98,9 +98,9 @@ class Monitor: public DispatchObject
 
         bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
 
-        int         textOutput      (EventLib::event_t* event, char* event_buffer);
-        int         jsonOutput      (EventLib::event_t* event, char* event_buffer);
-        int         cloudOutput     (EventLib::event_t* event, char* event_buffer);
+        static int  textOutput      (EventLib::event_t* event, char* event_buffer);
+        static int  jsonOutput      (EventLib::event_t* event, char* event_buffer);
+        static int  cloudOutput     (EventLib::event_t* event, char* event_buffer);
 
         static int  luaConfig       (lua_State* L);
         static int  luaTail         (lua_State* L);

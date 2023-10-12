@@ -217,12 +217,12 @@ void ArrowParms::cleanup (void)
  *----------------------------------------------------------------------------*/
 ArrowParms::format_t ArrowParms::str2outputformat (const char* fmt_str)
 {
-    if     (!fmt_str)                               return UNSUPPORTED;
-    else if(StringLib::match(fmt_str, "native"))    return NATIVE;
-    else if(StringLib::match(fmt_str, "feather"))   return FEATHER;
-    else if(StringLib::match(fmt_str, "parquet"))   return PARQUET;
-    else if(StringLib::match(fmt_str, "csv"))       return CSV;
-    else                                            return UNSUPPORTED;
+    if(!fmt_str)                                return UNSUPPORTED;
+    if(StringLib::match(fmt_str, "native"))     return NATIVE;
+    if(StringLib::match(fmt_str, "feather"))    return FEATHER;
+    if(StringLib::match(fmt_str, "parquet"))    return PARQUET;
+    if(StringLib::match(fmt_str, "csv"))        return CSV;
+    return UNSUPPORTED;
 }
 
 /*----------------------------------------------------------------------------

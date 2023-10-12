@@ -87,7 +87,7 @@ H5Future::H5Future (void)
 H5Future::~H5Future (void)
 {
     wait(IO_PEND);
-    if(info.data) delete [] info.data;
+    delete [] info.data;
 }
 
 /*----------------------------------------------------------------------------
@@ -300,7 +300,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     catch(const RunTimeException& e)
     {
         /* Clean Up Data Allocations */
-        if(info->data) delete [] info->data;
+        delete [] info->data;
         info->data= NULL;
         info->datasize = 0;
 
@@ -326,15 +326,12 @@ H5FileBuffer::~H5FileBuffer (void)
 void H5FileBuffer::tearDown (void)
 {
     /* Close I/O Resources */
-    if(ioDriver)
-    {
-        delete ioDriver;
-    }
+    delete ioDriver;
 
     /* Delete Local Context */
     if(ioContextLocal)
     {
-        if(ioContext) delete ioContext;
+        delete ioContext;
     }
 
     /* Delete Dataset Strings */
@@ -342,8 +339,8 @@ void H5FileBuffer::tearDown (void)
     delete [] datasetPrint;
 
     /* Delete Chunk Buffer */
-    if(dataChunkBuffer) delete [] dataChunkBuffer;
-    if(dataChunkFilterBuffer) delete [] dataChunkFilterBuffer;
+    delete [] dataChunkBuffer;
+    delete [] dataChunkFilterBuffer;
 }
 
 /*----------------------------------------------------------------------------
@@ -626,7 +623,7 @@ void H5FileBuffer::readDataset (info_t* info)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "missing data type information");
     }
-    else if(metaData.ndims < 0)
+    if(metaData.ndims < 0)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "missing data dimension information");
     }
@@ -713,7 +710,7 @@ void H5FileBuffer::readDataset (info_t* info)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "data not allocated in contiguous layout");
         }
-        else if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
+        if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
         }
@@ -745,7 +742,7 @@ void H5FileBuffer::readDataset (info_t* info)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "chunk element size does not match data element size: %d != %d", metaData.elementsize, metaData.typesize);
                     }
-                    else if(metaData.chunkelements <= 0)
+                    if(metaData.chunkelements <= 0)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of chunk elements: %ld", (long)metaData.chunkelements);
                     }
@@ -850,12 +847,12 @@ void H5FileBuffer::readDataset (info_t* info)
                         {
                             dimi[ci--] = 0;
                             if(ci < 0) break;
-                            else dimi[ci]++;
+                            dimi[ci]++;
                         }
 
                         /* Check Exit Condition */
                         if(ci < 0) break;
-                        else ci = FLAT_NDIMS - 1;
+                        ci = FLAT_NDIMS - 1;
                     }
 
                     /* Replace Buffer */
@@ -1529,7 +1526,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "no bytes of chunk data to read: %ld, %lu", (long)chunk_bytes, (unsigned long)chunk_index);
                 }
-                else if((buffer_index + chunk_bytes) > buffer_size)
+                if((buffer_index + chunk_bytes) > buffer_size)
                 {
                     chunk_bytes = buffer_size - buffer_index;
                 }
@@ -1586,7 +1583,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "shuffle filter unsupported on uncompressed chunk");
                         }
-                        else if(dataChunkBufferSize != curr_node.chunk_size)
+                        if(dataChunkBufferSize != curr_node.chunk_size)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
                         }
@@ -1630,7 +1627,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "key did not include a trailing zero: %lu", trailing_zero);
         }
-        else if(H5_VERBOSE && H5_EXTRA_DEBUG)
+        if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
             print2term("Trailing Zero:                                                   %d\n", (int)trailing_zero);
         }
@@ -2845,7 +2842,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid attribute version: %d", (int)version);
         }
-        else if(reserved0 != 0)
+        if(reserved0 != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved field: %d", (int)reserved0);
         }
@@ -2901,10 +2898,8 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         return size;
     }
-    else
-    {
-        highestDataLevel = dlvl + 1;
-    }
+
+    highestDataLevel = dlvl + 1;
 
     /* Read Datatype Message */
     int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
@@ -2912,11 +2907,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
-    else
-    {
-        pos += datatype_bytes_read;
-        pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
-    }
+
+    pos += datatype_bytes_read;
+    pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
@@ -2924,11 +2917,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
-    else
-    {
-        pos += dataspace_bytes_read;
-        pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
-    }
+
+    pos += dataspace_bytes_read;
+    pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
 
     /* Calculate Meta Data */
     metaData.layout = CONTIGUOUS_LAYOUT;
@@ -3158,11 +3149,9 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             break;
         }
-        else
-        {
-            pos += 2 + (2 * metaData.offsetsize) + metaData.lengthsize; // skip entries used, sibling addresses, and first key
-            pos = readField(metaData.offsetsize, &pos); // read and go to first child
-        }
+
+        pos += 2 + (2 * metaData.offsetsize) + metaData.lengthsize; // skip entries used, sibling addresses, and first key
+        pos = readField(metaData.offsetsize, &pos); // read and go to first child
     }
 
     /* Traverse Children Left to Right */
@@ -3194,10 +3183,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             break;
         }
-        else
-        {
-            pos = right_sibling;
-        }
+        pos = right_sibling;
 
         /* Read Header Info */
         if(!H5_ERROR_CHECKING)
@@ -3360,7 +3346,7 @@ int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
 /*----------------------------------------------------------------------------
  * shuffleChunk
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
+int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
 {
     if(H5_ERROR_CHECKING)
     {
@@ -3483,11 +3469,11 @@ void H5Coro::deinit (void)
         {
             delete readerPids[t];
         }
-        if(readerPids) delete [] readerPids;
-        if(rqstSub) delete rqstSub;
+        delete [] readerPids;
+        delete rqstSub;
     }
 
-    if(rqstPub) delete rqstPub;
+    delete rqstPub;
 }
 
 /*----------------------------------------------------------------------------
@@ -3712,7 +3698,7 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
         H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0);
 
         /* Free Data */
-        if(data_info.data) delete [] data_info.data;
+        delete [] data_info.data;
     }
     catch (const RunTimeException& e)
     {
@@ -3751,10 +3737,8 @@ H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* d
         delete rqst.h5f;
         return NULL;
     }
-    else
-    {
-        return rqst.h5f;
-    }
+
+    return rqst.h5f;
 }
 
 /*----------------------------------------------------------------------------

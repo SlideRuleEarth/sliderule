@@ -354,10 +354,8 @@ bool PluginMetrics::setRegion (Icesat2Parms* parms)
         EventLib::incrementMetric(regionMetricIds[region_found]);
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------

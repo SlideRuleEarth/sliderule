@@ -73,7 +73,6 @@ class LandsatHlsRaster: public GeoIndexedRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
                           { return new LandsatHlsRaster(L, _parms); }
 
-
     protected:
 
         /*--------------------------------------------------------------------
@@ -87,12 +86,10 @@ class LandsatHlsRaster: public GeoIndexedRaster
         bool    findRasters      (const OGRGeometry* geo);
         void    getGroupSamples  (const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags) final;
 
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
 
     private:
-        bool validateBand   (band_type_t type, const char* bandName);
+
+        static bool validateBand   (band_type_t type, const char* bandName);
 
         inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
         inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
@@ -102,6 +99,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+        
         std::string filePath;
         std::string indexFile;
         Dictionary<bool> bandsDict;

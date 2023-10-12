@@ -121,10 +121,8 @@ int LuaScript::luaActive (lua_State* L)
             /* Return Is Active */
             return returnLuaStatus(L, lua_obj->engine->isActive());
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
-        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
     }
     catch(const RunTimeException& e)
     {

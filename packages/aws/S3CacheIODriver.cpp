@@ -124,7 +124,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
         }
 
         /* Set Cache Root */
-        if(cacheRoot) delete [] cacheRoot;
+        delete [] cacheRoot;
         cacheRoot = StringLib::duplicate(cache_root);
 
         /* Set Maximum Number of Files */

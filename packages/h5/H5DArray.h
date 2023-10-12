@@ -63,12 +63,12 @@ class H5DArray
                     H5DArray        (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
         virtual     ~H5DArray       (void);
 
-        bool        join            (int timeout, bool throw_exception);
+        bool        join            (int timeout, bool throw_exception) const;
 
-        int         numElements     (void);
-        int         elementSize     (void);
-        type_t      elementType     (void);
-        uint64_t    serialize       (uint8_t* buffer, int32_t start_element, uint32_t num_elements);
+        int         numElements     (void) const;
+        int         elementSize     (void) const;
+        type_t      elementType     (void) const;
+        uint64_t    serialize       (uint8_t* buffer, int32_t start_element, uint32_t num_elements) const;
 
         /*--------------------------------------------------------------------
          * Data

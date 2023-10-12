@@ -155,14 +155,14 @@ class GeoParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        void                cleanup         (void);
-        GDALRIOResampleAlg  str2algo        (const char* str);
-        void                getLuaBands     (lua_State* L, int index, bool* provided);
-        void                getAoiBbox      (lua_State* L, int index, bool* provided);
+        void                        cleanup         (void);
+        static GDALRIOResampleAlg   str2algo        (const char* str);
+        void                        getLuaBands     (lua_State* L, int index, bool* provided);
+        void                        getAoiBbox      (lua_State* L, int index, bool* provided);
 
-        static int          luaAssetName    (lua_State* L);
-        static int          luaAssetRegion  (lua_State* L);
-        static int          luaSetKeySpace  (lua_State* L);
+        static int                  luaAssetName    (lua_State* L);
+        static int                  luaAssetRegion  (lua_State* L);
+        static int                  luaSetKeySpace  (lua_State* L);
 };
 
 #endif  /* __geo_parms__ */

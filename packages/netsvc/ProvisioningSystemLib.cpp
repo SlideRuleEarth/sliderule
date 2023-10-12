@@ -48,7 +48,7 @@
  * Local Functions
  *----------------------------------------------------------------------------*/
 
-size_t write2nothing(char* ptr, size_t size, size_t nmemb, void* userdata)
+size_t write2nothing(const char* ptr, size_t size, size_t nmemb, void* userdata)
 {
     (void)ptr;
     (void)userdata;
@@ -76,8 +76,8 @@ void ProvisioningSystemLib::init (void)
  *----------------------------------------------------------------------------*/
 void ProvisioningSystemLib::deinit (void)
 {
-    if(URL) delete [] URL;
-    if(Organization) delete [] Organization;
+    delete [] URL;
+    delete [] Organization;
 }
 
 /*----------------------------------------------------------------------------
@@ -166,7 +166,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error on login: %s", e.what());
-        if(rsps) delete [] rsps;
+        delete [] rsps;
         rsps = NULL;
     }
 
@@ -251,7 +251,7 @@ int ProvisioningSystemLib::luaUrl(lua_State* L)
     {
         const char* _url = LuaObject::getLuaString(L, 1);
 
-        if(URL) delete [] URL;
+        delete [] URL;
         URL = StringLib::duplicate(_url);
     }
     catch(const RunTimeException& e)
@@ -275,7 +275,7 @@ int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
     {
         const char* _organization = LuaObject::getLuaString(L, 1);
 
-        if(Organization) delete [] Organization;
+        delete [] Organization;
         Organization = StringLib::duplicate(_organization);
     }
     catch(const RunTimeException& e)
@@ -382,14 +382,13 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
     {
         return true; // no authentication used for default organization name
     }
-    else if(token != NULL)
+    
+    if(token != NULL)
     {
         return ProvisioningSystemLib::validate(token);
     }
-    else
-    {
-        return false;
-    }
+    
+    return false;
 }
 
 /*----------------------------------------------------------------------------

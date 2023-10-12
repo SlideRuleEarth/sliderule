@@ -67,7 +67,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating GeoUserRaster: %s", e.what());
-        if(gur) delete gur;
+        delete gur;
         return returnLuaStatus(L, false);
     }
 }

@@ -216,7 +216,7 @@ int RasterObject::luaSamples(lua_State *L)
         num_ret++;
 
         /* Populate samples */
-        if(listvalid && slist.size() > 0)
+        if(listvalid && !slist.empty())
         {
             for(uint32_t i = 0; i < slist.size(); i++)
             {
@@ -267,7 +267,7 @@ int RasterObject::luaSamples(lua_State *L)
 
     /* Free samples */
     for (const RasterSample* sample : slist)
-        if (sample) delete sample;
+        delete sample;
 
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);
@@ -327,7 +327,7 @@ int RasterObject::luaSubset(lua_State *L)
         num_ret++;
 
         /* Populate subsets */
-        if(listvalid && slist.size() > 0)
+        if(listvalid && !slist.empty())
         {
             for(uint32_t i = 0; i < slist.size(); i++)
             {
@@ -378,7 +378,7 @@ int RasterObject::luaSubset(lua_State *L)
 
     /* Free subsets */
     for (const RasterSubset* subset : slist)
-        if (subset) delete subset;
+        delete subset;
 
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);

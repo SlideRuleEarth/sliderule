@@ -142,8 +142,7 @@ bool IntervalIndex::isleft (node_t* node, const intervalspan_t& span)
     double right_val = node->right->span.t0;
     double split_val = (left_val + right_val) / 2.0;
 
-    if(span.t0 <= split_val)    return true;
-    else                        return false;
+    return (span.t0 <= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -158,8 +157,7 @@ bool IntervalIndex::isright (node_t* node, const intervalspan_t& span)
     double right_val = node->right->span.t0;
     double split_val = (left_val + right_val) / 2.0;
 
-    if(span.t1 >= split_val)    return true;
-    else                        return false;
+    return (span.t1 >= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -233,8 +231,8 @@ intervalspan_t IntervalIndex::luatable2span (lua_State* L, int parm)
 
         if(provided)
         {
-                 if(StringLib::match(fieldname0,   key)) span.t0 = value;
-            else if(StringLib::match(fieldname1,   key)) span.t1 = value;
+            if     (StringLib::match(fieldname0, key)) span.t0 = value;
+            else if(StringLib::match(fieldname1, key)) span.t1 = value;
         }
 
         lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration

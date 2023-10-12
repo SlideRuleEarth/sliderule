@@ -239,7 +239,7 @@ RasterSampler::~RasterSampler(void)
 {
     raster->releaseLuaObject();
     delete outQ;
-    if(rasterKey) delete [] rasterKey;
+    delete [] rasterKey;
 }
 
 /*----------------------------------------------------------------------------

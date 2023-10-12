@@ -291,10 +291,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Delete Photon Aray */
-    if(result.photons)
-    {
-        delete [] result.photons;
-    }
+    delete [] result.photons;
 
     /* Bump Statistics */
     stats.h5atl03_rec_cnt++;

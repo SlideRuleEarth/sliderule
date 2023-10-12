@@ -124,8 +124,8 @@ void TimeLib::init(void)
  *----------------------------------------------------------------------------*/
 void TimeLib::deinit(void)
 {
-    if(heartBeat)   delete heartBeat;
-    if(leapSeconds) delete [] leapSeconds;
+    delete heartBeat;
+    delete [] leapSeconds;
 }
 
 /*----------------------------------------------------------------------------
@@ -331,7 +331,9 @@ TimeLib::date_t TimeLib::gmt2date (const gmt_time_t& gmt_time)
     TimeLib::date_t date;
 
     /* Determine Month */
-    int month = 1, day = 0, preceding_day = 0;
+    int month = 1;
+    int day = 0;
+    int preceding_day = 0;
     while(month <= MONTHS_IN_YEAR)
     {
         /* Accumulate Days */
@@ -599,23 +601,22 @@ int64_t TimeLib::str2gpstime (const char* time_str)
         }
     }
 
-    /* Check Success and Return GMT Structure */
-    if(status == false)
+    /* Check for Failures */
+    if(!status)
     {
         mlog(CRITICAL, "Unable to parse supplied time string: %s", time_str);
         return 0;
     }
-    else
-    {
-        gmt_time_t gmt_time;
-        gmt_time.year = year;
-        gmt_time.doy = doy;
-        gmt_time.hour = hour;
-        gmt_time.minute = minute;
-        gmt_time.second = (int)second;
-        gmt_time.millisecond = (int)(((long)(second * 1000))%1000);
-        return gmt2gpstime(gmt_time);
-    }
+
+    /* Return GMT Structure */
+    gmt_time_t gmt_time;
+    gmt_time.year = year;
+    gmt_time.doy = doy;
+    gmt_time.hour = hour;
+    gmt_time.minute = minute;
+    gmt_time.second = (int)second;
+    gmt_time.millisecond = (int)(((long)(second * 1000))%1000);
+    return gmt2gpstime(gmt_time);
 }
 
 /*----------------------------------------------------------------------------
@@ -694,10 +695,8 @@ const char* TimeLib::getmonthname (int month)
     {
         return MonthNames[month_index];
     }
-    else
-    {
-        return NULL;
-    }
+
+    return NULL;
 }
 
 

@@ -71,7 +71,7 @@ const int MathLib::B64INDEX[256] =
 /*----------------------------------------------------------------------------
  * FFT
  *----------------------------------------------------------------------------*/
-double MathLib::FFT(double result[], int input[], unsigned long size)
+double MathLib::FFT(double result[], const int input[], unsigned long size)
 {
 	static complex_t frequency_spectrum[MAXFREQSPEC];
     double maxvalue = 0.0;
@@ -121,7 +121,8 @@ MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
-        double r = 0.0, o = 0.0;
+        double r = 0.0;
+        double o = 0.0;
 
         /* Calculate r */
         if(projection == NORTH_POLAR)
@@ -282,7 +283,7 @@ bool MathLib::inpoly (point_t* poly, int len, point_t point)
  * Author: polfosol
  * License: assumed to be CC BY-SA 3.0
  *----------------------------------------------------------------------------*/
-const std::string MathLib::b64encode(const void* data, const size_t &len)
+std::string MathLib::b64encode(const void* data, const size_t &len)
 {
     std::string result((len + 2) / 3 * 4, '=');
     unsigned char *p = (unsigned  char*) data;
@@ -316,14 +317,14 @@ const std::string MathLib::b64encode(const void* data, const size_t &len)
  * Author: polfosol
  * License: assumed to be CC BY-SA 3.0
  *----------------------------------------------------------------------------*/
-const std::string MathLib::b64decode(const void* data, const size_t &len)
+std::string MathLib::b64decode(const void* data, const size_t &len)
 {
     if (len == 0) return "";
 
     unsigned char *p = (unsigned char*) data;
-    size_t j = 0,
-        pad1 = len % 4 || p[len - 1] == '=',
-        pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    size_t j = 0;
+    size_t pad1 = len % 4 || p[len - 1] == '=';
+    size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
     std::string result(last / 4 * 3 + pad1 + pad2, '\0');
     unsigned char *str = (unsigned char*) &result[0];

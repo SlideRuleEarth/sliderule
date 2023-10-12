@@ -200,7 +200,7 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
                     while(enabled && field_name)
                     {
                         RecordObject::field_t field = record->getField(field_name);
-                        RecordObject::valType_t field_type = record->getValueType(field);
+                        RecordObject::valType_t field_type = RecordObject::getValueType(field);
                         if((field_type == RecordObject::INTEGER) && (filter_value->lvalue != record->getValueInteger(field)))
                         {
                             enabled = filter_value->enable;

@@ -98,7 +98,7 @@ bool MsgProcessor::handleTimeout(void)
 /*----------------------------------------------------------------------------
  * isActive
  *----------------------------------------------------------------------------*/
-bool MsgProcessor::isActive(void)
+bool MsgProcessor::isActive(void) const
 {
     return processorActive;
 }
@@ -106,18 +106,11 @@ bool MsgProcessor::isActive(void)
 /*----------------------------------------------------------------------------
  * isFull
  *----------------------------------------------------------------------------*/
-bool MsgProcessor::isFull(void)
+bool MsgProcessor::isFull(void) const
 {
     int pkts_in_q = inQ->getCount();
     int space_in_q = inQ->getDepth();
-    if (pkts_in_q > 0 && pkts_in_q == space_in_q)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (pkts_in_q > 0 && pkts_in_q == space_in_q);
 }
 
 /*----------------------------------------------------------------------------
@@ -161,7 +154,7 @@ void* MsgProcessor::processorThread(void* parm)
     bool self_delete = false;
 
     /* Initialize Processing */
-    if(processor->initProcessing() != true)
+    if(!processor->initProcessing())
     {
         self_delete = true;
     }

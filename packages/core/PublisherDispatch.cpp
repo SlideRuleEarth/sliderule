@@ -101,6 +101,6 @@ bool PublisherDispatch::processRecord(RecordObject* record, okey_t key, recVec_t
     (void)records;
     unsigned char* buffer; // reference to serial buffer
     int size = record->serialize(&buffer, RecordObject::REFERENCE);
-    if(size > 0)    return (pubQ->postCopy(buffer, size) > 0);
-    else            return false;
+    if(size > 0) return (pubQ->postCopy(buffer, size) > 0);
+    return false;
 }

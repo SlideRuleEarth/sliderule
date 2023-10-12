@@ -520,7 +520,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Define Table Schema */    
     vector<shared_ptr<arrow::Field>> schema_vector;
-    pimpl->addFieldsToSchema(schema_vector, fieldList, &batchRecType, geoData, rec_type, 0, 0);
+    ParquetBuilder::impl::addFieldsToSchema(schema_vector, fieldList, &batchRecType, geoData, rec_type, 0, 0);
     if(geoData.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
     pimpl->schema = make_shared<arrow::Schema>(schema_vector);
     fieldIterator = new field_iterator_t(fieldList);
@@ -554,9 +554,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Build GeoParquet MetaData */
     auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-    if(geoData.as_geo) pimpl->appendGeoMetaData(metadata);
-    pimpl->appendServerMetaData(metadata);
-    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key, geoData.as_geo);
+    if(geoData.as_geo) ParquetBuilder::impl::appendGeoMetaData(metadata);
+    ParquetBuilder::impl::appendServerMetaData(metadata);
+    ParquetBuilder::impl::appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key, geoData.as_geo);
     pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Parquet Writer */

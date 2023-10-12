@@ -255,7 +255,10 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vect
         throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
 
     double invalid = -999999.0;
-    double green, red, nir08, swir16;
+    double green;
+    double red;
+    double nir08;
+    double swir16;
     green = red = nir08 = swir16 = invalid;
 
     /* Collect samples for all rasters */

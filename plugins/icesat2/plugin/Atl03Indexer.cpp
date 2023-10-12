@@ -298,7 +298,7 @@ void* Atl03Indexer::indexerThread (void* parm)
     }
 
     /* Free Context */
-    if(context) delete context;
+    delete context;
 
     /* Count Completion */
     indexer->threadMut.lock();
