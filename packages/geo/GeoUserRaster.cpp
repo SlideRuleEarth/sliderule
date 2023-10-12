@@ -123,6 +123,7 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
 GeoUserRaster::~GeoUserRaster(void)
 {
     VSIUnlink(rasterFileName.c_str());
+    free(data);
 }
 
 /******************************************************************************
@@ -133,7 +134,8 @@ GeoUserRaster::~GeoUserRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double gps, bool iselevation):
-    GeoRaster(L, _parms, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation )
+    GeoRaster(L, _parms, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation ),
+    data(NULL)
 {
     if(file == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
@@ -141,10 +143,22 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
     if(filelength <= 0)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
 
-    rasterFileName = getFileName();
+    try
+    {
+        rasterFileName = getFileName();
 
-    /* Load user raster to vsimem */
-    VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), (GByte*)file, (vsi_l_offset)filelength, FALSE);
-    if(fp) VSIFCloseL(fp);
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating GeoJsonRaster: unable to create file from memory buffer");
+        /* Make a copy of the raster data and pass the ownership to the VSIFile */
+        data = (GByte*)malloc(filelength);
+        memcpy(data, file, filelength);
+
+        /* Load user raster to vsimem */
+        bool takeOwnership = false;
+        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, (vsi_l_offset)filelength, takeOwnership);
+        CHECKPTR(fp);
+        VSIFCloseL(fp);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating GeoUserRaster: %s", e.what());
+    }
 }

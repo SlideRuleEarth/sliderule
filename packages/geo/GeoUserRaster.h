@@ -80,6 +80,7 @@ class GeoUserRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
          std::string rasterFileName;
+         GByte* data;
 };
 
 #endif  /* __geouser_raster__ */
