@@ -137,6 +137,19 @@ class RecordObject
             REGERR_DEF      = -5
         } recordDefErr_t;
 
+        typedef union {
+            int8_t      int8_val;
+            int16_t     int16_val;
+            int32_t     int32_val;
+            int64_t     int64_val;
+            uint8_t     uint8_val;
+            uint16_t    uint16_val;
+            uint32_t    uint32_val;
+            uint64_t    uint64_val;
+            float       float_val;
+            double      double_val;
+        } type_cast_t;
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -164,7 +177,7 @@ class RecordObject
             public:
 
                             Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags=0, int _element=0);
-                            Field           (RecordObject& _rec, field_t _field, int _element=0);
+                            Field           (RecordObject& _rec, const field_t& _field, int _element=0);
                             Field           (const Field& f);
                             ~Field          (void);
 
@@ -188,8 +201,8 @@ class RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                RecordObject        (const char* rec_type, int allocated_memory=0, bool clear=true); // must include the record type
-                                RecordObject        (unsigned char* buffer, int size);
+        explicit                RecordObject        (const char* rec_type, int allocated_memory=0, bool clear=true); // must include the record type
+        explicit                RecordObject        (unsigned char* buffer, int size);
         virtual                 ~RecordObject       (void);
 
         /* Overloaded Methods */

@@ -126,8 +126,8 @@ class Table
          *--------------------------------------------------------------------*/
 
         static K        identity        (K key);
-        bool            writeNode       (K index, K key, T& data);
-        bool            overwriteNode   (K index, K key, T& data, bool with_delete);
+        bool            writeNode       (K index, K key, const T& data);
+        bool            overwriteNode   (K index, K key, const T& data, bool with_delete);
         void            makeNewest      (K index);
         void            freeNode        (K index);
 };
@@ -301,7 +301,6 @@ T& Table<T,K,IS_MANAGED,IS_ARRAY>::get(K key, match_t match, bool resort)
         if(table[curr_index].key == key)
         {
             /* equivalent key is always nearest */
-            best_delta = (K)0;
             best_index = curr_index;
             break;
         }
@@ -602,6 +601,12 @@ K Table<T,K,IS_MANAGED,IS_ARRAY>::prev(T* data)
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
 Table<T,K,IS_MANAGED,IS_ARRAY>& Table<T,K,IS_MANAGED,IS_ARRAY>::operator=(const Table& other)
 {
+    /* check for self assignment */
+    if(this == &other) return *this;
+
+    /* set hash function */
+    hash = other.hash;
+
     /* clear existing table */
     clear(); // calls freeNode needed for managed tables
     delete [] table;
@@ -651,7 +656,7 @@ K Table<T,K,IS_MANAGED,IS_ARRAY>::identity(K key)
  * writeNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
-bool Table<T,K,IS_MANAGED,IS_ARRAY>::writeNode(K index, K key, T& data)
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::writeNode(K index, K key, const T& data)
 {
     table[index].occupied   = true;
     table[index].data       = data;
@@ -683,7 +688,7 @@ bool Table<T,K,IS_MANAGED,IS_ARRAY>::writeNode(K index, K key, T& data)
  * overwriteNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
-bool Table<T,K,IS_MANAGED,IS_ARRAY>::overwriteNode(K index, K key, T& data, bool with_delete)
+bool Table<T,K,IS_MANAGED,IS_ARRAY>::overwriteNode(K index, K key, const T& data, bool with_delete)
 {
     /* Delete Entry being Overritten (if requested) */
     if(with_delete)

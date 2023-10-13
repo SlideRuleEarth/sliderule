@@ -87,8 +87,8 @@ const RecordObject::fieldDef_t Atl08Dispatch::waveRecDef[] = {
 
 /* Lua Functions */
 
-const char* Atl08Dispatch::LuaMetaName = "Atl08Dispatch";
-const struct luaL_Reg Atl08Dispatch::LuaMetaTable[] = {
+const char* Atl08Dispatch::LUA_META_NAME = "Atl08Dispatch";
+const struct luaL_Reg Atl08Dispatch::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -120,7 +120,7 @@ int Atl08Dispatch::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -149,7 +149,7 @@ void Atl08Dispatch::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(outq_name);
     assert(_parms);

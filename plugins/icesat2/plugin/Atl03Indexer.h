@@ -79,8 +79,8 @@ class Atl03Indexer: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods

@@ -48,8 +48,8 @@
 const char* EndpointProxy::SERVICE = "sliderule";
 
 const char* EndpointProxy::OBJECT_TYPE = "EndpointProxy";
-const char* EndpointProxy::LuaMetaName = "EndpointProxy";
-const struct luaL_Reg EndpointProxy::LuaMetaTable[] = {
+const char* EndpointProxy::LUA_META_NAME = "EndpointProxy";
+const struct luaL_Reg EndpointProxy::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -133,7 +133,7 @@ int EndpointProxy::luaCreate (lua_State* L)
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                               const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
                               int _num_threads, int _rqst_queue_depth):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_resources);
     assert(_parameters);

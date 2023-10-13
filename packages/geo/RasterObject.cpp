@@ -50,8 +50,8 @@
  ******************************************************************************/
 
 const char* RasterObject::OBJECT_TYPE  = "RasterObject";
-const char* RasterObject::LuaMetaName  = "RasterObject";
-const struct luaL_Reg RasterObject::LuaMetaTable[] = {
+const char* RasterObject::LUA_META_NAME  = "RasterObject";
+const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -85,7 +85,7 @@ int RasterObject::luaCreate( lua_State* L )
     try
     {
         /* Get Parameters */
-        _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
+        _parms = dynamic_cast<GeoParms*>(getLuaObject(L, 1, GeoParms::OBJECT_TYPE));
         if(_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create GeoParms object");
 
         /* Get Factory */
@@ -109,7 +109,7 @@ int RasterObject::luaCreate( lua_State* L )
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -147,7 +147,7 @@ RasterObject::~RasterObject(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
     /* Add Lua Functions */
@@ -185,7 +185,7 @@ int RasterObject::luaSamples(lua_State *L)
     try
     {
         /* Get Self */
-        lua_obj = (RasterObject*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
 
         /* Get Coordinates */
         double lon    = getLuaFloat(L, 2);
@@ -289,7 +289,7 @@ int RasterObject::luaSubset(lua_State *L)
     try
     {
         /* Get Self */
-        lua_obj = (RasterObject*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
 
         /* Get extent */
         double lon_min = getLuaFloat(L, 2);

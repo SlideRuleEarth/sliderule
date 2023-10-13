@@ -43,8 +43,8 @@
  ******************************************************************************/
 
 const char* CcsdsPacketInterleaver::OBJECT_TYPE = "CcsdsPacketInterleaver";
-const char* CcsdsPacketInterleaver::LuaMetaName = "CcsdsPacketInterleaver";
-const struct luaL_Reg CcsdsPacketInterleaver::LuaMetaTable[] = {
+const char* CcsdsPacketInterleaver::LUA_META_NAME = "CcsdsPacketInterleaver";
+const struct luaL_Reg CcsdsPacketInterleaver::LUA_META_TABLE[] = {
     {"start",       luaSetStartTime},
     {"stop",        luaSetStopTime},
     {NULL,          NULL}
@@ -105,7 +105,7 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, NameList& inq_names, const char* outq_name):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Create Input Streams */
     for(int i = 0; i < inq_names.length(); i++)

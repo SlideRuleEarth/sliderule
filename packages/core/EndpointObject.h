@@ -109,7 +109,7 @@ class EndpointObject: public LuaObject
                 uint32_t                    trace_id;
                 const char*                 id; // must be unique
 
-                Request (const char* _id);
+                explicit Request (const char* _id);
                 ~Request (void);
         };
 

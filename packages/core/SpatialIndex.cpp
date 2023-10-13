@@ -48,8 +48,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* SpatialIndex::LuaMetaName = "SpatialIndex";
-const struct luaL_Reg SpatialIndex::LuaMetaTable[] = {
+const char* SpatialIndex::LUA_META_NAME = "SpatialIndex";
+const struct luaL_Reg SpatialIndex::LUA_META_TABLE[] = {
     {"add",         luaAdd},
     {"query",       luaQuery},
     {"display",     luaDisplay},
@@ -73,7 +73,7 @@ int SpatialIndex::luaCreate (lua_State* L)
     try
     {
         /* Get Asset Directory */
-        Asset*          _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        Asset*          _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         MathLib::proj_t _projection = (MathLib::proj_t)getLuaInteger(L, 2);
         int             _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
 
@@ -82,7 +82,7 @@ int SpatialIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -91,7 +91,7 @@ int SpatialIndex::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, MathLib::proj_t _projection, int _threshold):
-    AssetIndex<spatialspan_t>(L, *_asset, LuaMetaName, LuaMetaTable, _threshold)
+    AssetIndex<spatialspan_t>(L, *_asset, LUA_META_NAME, LUA_META_TABLE, _threshold)
 {
     projection = _projection;
 
@@ -374,7 +374,7 @@ int SpatialIndex::luaProject (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spherical Coordinates */
         MathLib::coord_t c;
@@ -406,7 +406,7 @@ int SpatialIndex::luaSphere (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Polar Coordinates */
         MathLib::point_t p;
@@ -438,7 +438,7 @@ int SpatialIndex::luaSplit (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Span */
         spatialspan_t span = lua_obj->luatable2span(L, 2);
@@ -489,7 +489,7 @@ int SpatialIndex::luaIntersect (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Spans */
         spatialspan_t span1 = lua_obj->luatable2span(L, 2);
@@ -519,7 +519,7 @@ int SpatialIndex::luaCombine (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Spans */
         spatialspan_t span1 = lua_obj->luatable2span(L, 2);

@@ -51,8 +51,8 @@ const char* ArrowParms::REGION              = "region";
 const char* ArrowParms::CREDENTIALS         = "credentials";
 
 const char* ArrowParms::OBJECT_TYPE = "ArrowParms";
-const char* ArrowParms::LuaMetaName = "ArrowParms";
-const struct luaL_Reg ArrowParms::LuaMetaTable[] = {
+const char* ArrowParms::LUA_META_NAME = "ArrowParms";
+const struct luaL_Reg ArrowParms::LUA_META_TABLE[] = {
     {"isnative",    luaIsNative},
     {"isfeather",   luaIsFeather},
     {"isparquet",   luaIsParquet},
@@ -83,7 +83,7 @@ int ArrowParms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -92,7 +92,7 @@ int ArrowParms::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 ArrowParms::ArrowParms (lua_State* L, int index):
-    LuaObject           (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     path                (NULL),
     format              (NATIVE),
     open_on_complete    (false),
@@ -148,7 +148,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             }
             else if(asset_name != NULL)
             {
-                Asset* asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+                Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
                 region = StringLib::duplicate(asset->getRegion());
                 asset->releaseLuaObject();
             }
@@ -232,7 +232,7 @@ int ArrowParms::luaIsNative (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = (ArrowParms*)getLuaSelf(L, 1);
+        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == NATIVE);
     }
     catch(const RunTimeException& e)
@@ -248,7 +248,7 @@ int ArrowParms::luaIsFeather (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = (ArrowParms*)getLuaSelf(L, 1);
+        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == FEATHER);
     }
     catch(const RunTimeException& e)
@@ -264,7 +264,7 @@ int ArrowParms::luaIsParquet (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = (ArrowParms*)getLuaSelf(L, 1);
+        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == PARQUET);
     }
     catch(const RunTimeException& e)
@@ -280,7 +280,7 @@ int ArrowParms::luaIsCSV (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = (ArrowParms*)getLuaSelf(L, 1);
+        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == CSV);
     }
     catch(const RunTimeException& e)
@@ -296,7 +296,7 @@ int ArrowParms::luaPath (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = (ArrowParms*)getLuaSelf(L, 1);
+        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         if(lua_obj->path) lua_pushstring(L, lua_obj->path);
         else lua_pushnil(L);
         return 1;

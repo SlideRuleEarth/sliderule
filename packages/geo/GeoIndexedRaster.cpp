@@ -202,7 +202,9 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     cache        (MAX_READER_THREADS),
     ssError      (SS_NO_ERRORS),
     crscb        (cb),
-    bbox         {0, 0, 0, 0}
+    bbox         {0, 0, 0, 0},
+    rows         (0),
+    cols         (0)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -516,7 +518,7 @@ int GeoIndexedRaster::luaDimensions(lua_State *L)
     try
     {
         /* Get Self */
-        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = dynamic_cast<GeoIndexedRaster*>(getLuaSelf(L, 1));
 
         /* Return dimensions of index vector file */
         lua_pushinteger(L, lua_obj->rows);
@@ -546,7 +548,7 @@ int GeoIndexedRaster::luaBoundingBox(lua_State *L)
     try
     {
         /* Get Self */
-        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = dynamic_cast<GeoIndexedRaster*>(getLuaSelf(L, 1));
 
         /* Return bbox of index vector file */
         lua_pushnumber(L, lua_obj->bbox.lon_min);

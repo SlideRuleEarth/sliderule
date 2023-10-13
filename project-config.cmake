@@ -25,16 +25,48 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
 
     # clang-tidy
-    set (
-        CMAKE_CXX_CLANG_TIDY clang-tidy;
+    set (CLANG_TIDY_CHECKS
+        clang-analyzer-*
+        concurrency-*
+        misc-*
+        performance-*
+        portability-*
+        readability-*
+        -readability-braces-around-statements
+        -readability-implicit-bool-conversion
+        -readability-magic-numbers
+        -misc-non-private-member-variables-in-classes
+    )
+    list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
+    set (CMAKE_CXX_CLANG_TIDY 
+        clang-tidy;
         -header-filter=.;
-        -checks=clang-analyzer-*,concurrency-*,misc-*,performance-*,portability-*,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-magic-numbers,-misc-non-private-member-variables-in-classes;
+        -checks=${CLANG_TIDY_CHECKS_PARM};
+#        -checks=clang-analyzer-*,concurrency-*,misc-*,performance-*,portability-*,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-magic-numbers,-misc-non-private-member-variables-in-classes;
         -warnings-as-errors=*;
     )
 
     # cppcheck
-#   find_program(CMAKE_CXX_CPPCHECK NAMES cppcheck)
-#   list(APPEND CMAKE_CXX_CPPCHECK "--enable=all")
+    find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
+    list (APPEND CMAKE_CXX_CPPCHECK 
+        "--quiet"
+        "--enable=all" 
+        "--suppress=unmatchedSuppression"
+        "--suppress=unusedFunction" 
+        "--suppress=missingInclude"
+        "--suppress=noOperatorEq"
+        "--suppress=noCopyConstructor"
+        "--suppress=unusedPrivateFunction"
+        "--suppress=memsetClassFloat"
+        "--suppress=useStlAlgorithm"
+        "--suppress=constParameter:*/Table.h"
+        "--suppress=constParameter:*/Ordering.h"
+        "--suppress=constParameter:*/List.h"
+        "--suppress=constParameter:*/Dictionary.h"
+        "--suppress=unreadVariable:*/TimeLib.cpp"
+        "--error-exitcode=1"
+        "-DLLONG_MAX"
+    )
 endif()
 
 ###################
@@ -43,7 +75,6 @@ endif()
 
 # Project Options #
 
-option (PYTHON_BINDINGS "Create Python bindings, including h5lite module" OFF)
 option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
 option (SERVER_APP "Create sliderule server binary" ON)
 

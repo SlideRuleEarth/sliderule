@@ -124,8 +124,8 @@ const RecordObject::fieldDef_t Atl06Dispatch::ancRecDef[] = {
 };
 
 /* Lua Functions */
-const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
-const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
+const char* Atl06Dispatch::LUA_META_NAME = "Atl06Dispatch";
+const struct luaL_Reg Atl06Dispatch::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -152,7 +152,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -181,7 +181,7 @@ void Atl06Dispatch::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
-    DispatchObject(L, LuaMetaName, LuaMetaTable),
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     elevationRecord(atRecType, sizeof(atl06_t))
 {
     assert(outq_name);
@@ -671,7 +671,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error configuring %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error configuring %s: %s", LUA_META_NAME, e.what());
     }
 
     /* Return Status */

@@ -77,8 +77,8 @@ class CcsdsParserAOSFrameModule: public CcsdsParserModule
         static const int FRAME_COUNTER_UNSET  = -2;
         static const int FRAME_MPDU_CONTINUE  = 0xFFFF;
 
-        static const char*  LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char*  LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types

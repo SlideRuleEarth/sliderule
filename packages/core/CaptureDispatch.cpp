@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CaptureDispatch::LuaMetaName = "CaptureDispatch";
-const struct luaL_Reg CaptureDispatch::LuaMetaTable[] = {
+const char* CaptureDispatch::LUA_META_NAME = "CaptureDispatch";
+const struct luaL_Reg CaptureDispatch::LUA_META_TABLE[] = {
     {"capture",     luaCapture},
     {"clear",       luaClear},
     {"remove",      luaRemove},
@@ -67,7 +67,7 @@ int CaptureDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -80,7 +80,7 @@ int CaptureDispatch::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 CaptureDispatch::CaptureDispatch (lua_State* L, const char* outq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     outQ = NULL;
     if(outq_name) outQ = new Publisher(outq_name);
@@ -102,7 +102,7 @@ void CaptureDispatch::freeCaptureEntry (void* obj, void* parm)
     (void)parm;
     if(obj)
     {
-        capture_t* entry = (capture_t*)obj;
+        capture_t* entry = static_cast<capture_t*>(obj);
         delete entry;
     }
 }
@@ -164,7 +164,7 @@ int CaptureDispatch::luaCapture (lua_State* L)
     try
     {
         /* Get Self */
-        CaptureDispatch* lua_obj = (CaptureDispatch*)getLuaSelf(L, 1);
+        CaptureDispatch* lua_obj = dynamic_cast<CaptureDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool        filter      = false;
@@ -226,7 +226,7 @@ int CaptureDispatch::luaClear (lua_State* L)
     try
     {
         /* Get Self */
-        CaptureDispatch* lua_obj = (CaptureDispatch*)getLuaSelf(L, 1);
+        CaptureDispatch* lua_obj = dynamic_cast<CaptureDispatch*>(getLuaSelf(L, 1));
 
         /* Clear All Captures */
         lua_obj->capMut.lock();
@@ -257,7 +257,7 @@ int CaptureDispatch::luaRemove (lua_State* L)
     try
     {
         /* Get Self */
-        CaptureDispatch* lua_obj = (CaptureDispatch*)getLuaSelf(L, 1);
+        CaptureDispatch* lua_obj = dynamic_cast<CaptureDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* field_str = getLuaString(L, 2);

@@ -47,8 +47,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* ReportDispatch::LuaMetaName = "ReportDispatch";
-const struct luaL_Reg ReportDispatch::LuaMetaTable[] = {
+const char* ReportDispatch::LUA_META_NAME = "ReportDispatch";
+const struct luaL_Reg ReportDispatch::LUA_META_TABLE[] = {
     {"idxdisplay",  luaSetIndexDisplay},
     {"flushrow",    luaFlushRow},
     {NULL,          NULL}
@@ -115,7 +115,7 @@ int ReportDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         num_results = returnLuaStatus(L, false);
     }
 
@@ -177,7 +177,8 @@ const char* ReportDispatch::display2str(indexDisplay_t _display)
  *----------------------------------------------------------------------------*/
 ReportDispatch::ReportFile::ReportFile(lua_State* L, const char* _filename, format_t _format):
     File(L, _filename, File::TEXT, File::WRITER, File::FLUSHED),
-    format(_format)
+    format(_format),
+    index(0)
 {
     headerInProgress = false;
     indexDisplay = INT_DISPLAY;
@@ -290,7 +291,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
  * Constructor - ReportDispatch
  *----------------------------------------------------------------------------*/
 ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _format, int buffer, const char** columns, int num_columns):
-    DispatchObject(L, LuaMetaName, LuaMetaTable),
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     report(L ,_filename, _format)
 {
     /* Define Metric Record */
@@ -381,7 +382,7 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
  *----------------------------------------------------------------------------*/
 int ReportDispatch::postEntry(void* data, int size, void* parm)
 {
-    ReportDispatch* dispatch = (ReportDispatch*)parm;
+    ReportDispatch* dispatch = static_cast<ReportDispatch*>(parm);
     int status = size;
     entry_t* entry = *(entry_t**)data;
     okey_t index = entry->index;
@@ -467,7 +468,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
     try
     {
         /* Get Self */
-        ReportDispatch* lua_obj = (ReportDispatch*)getLuaSelf(L, 1);
+        ReportDispatch* lua_obj = dynamic_cast<ReportDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* display_str = getLuaString(L, 2);
@@ -506,7 +507,7 @@ int ReportDispatch::luaFlushRow(lua_State* L)
     try
     {
         /* Get Self */
-        ReportDispatch* lua_obj = (ReportDispatch*)getLuaSelf(L, 1);
+        ReportDispatch* lua_obj = dynamic_cast<ReportDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* scope_str = getLuaString(L, 2, true, "ROW", &flush_all);

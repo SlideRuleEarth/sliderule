@@ -73,8 +73,8 @@ class Atl08Dispatch: public DispatchObject
         static const char* waveRecType;
         static const RecordObject::fieldDef_t waveRecDef[];
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const double PercentileInterval[NUM_PERCENTILES];
 

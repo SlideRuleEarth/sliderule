@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* LuaEndpoint::LuaMetaName = "LuaEndpoint";
-const struct luaL_Reg LuaEndpoint::LuaMetaTable[] = {
+const char* LuaEndpoint::LUA_META_NAME = "LuaEndpoint";
+const struct luaL_Reg LuaEndpoint::LUA_META_TABLE[] = {
     {"metric",      luaMetric},
     {"auth",        luaAuth},
     {NULL,          NULL}
@@ -71,8 +71,8 @@ int32_t LuaEndpoint::totalMetricId = EventLib::INVALID_METRIC;
  ******************************************************************************/
 
 const char* LuaEndpoint::Authenticator::OBJECT_TYPE = "Authenticator";
-const char* LuaEndpoint::Authenticator::LuaMetaName = "Authenticator";
-const struct luaL_Reg LuaEndpoint::Authenticator::LuaMetaTable[] = {
+const char* LuaEndpoint::Authenticator::LUA_META_NAME = "Authenticator";
+const struct luaL_Reg LuaEndpoint::Authenticator::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -80,7 +80,7 @@ const struct luaL_Reg LuaEndpoint::Authenticator::LuaMetaTable[] = {
  * Constructor
  *----------------------------------------------------------------------------*/
 LuaEndpoint::Authenticator::Authenticator(lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
 }
 
@@ -103,7 +103,7 @@ bool LuaEndpoint::init (void)
     bool status = true;
 
     /* Register Metric */
-    totalMetricId = EventLib::registerMetric(LuaEndpoint::LuaMetaName, EventLib::COUNTER, "%s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
+    totalMetricId = EventLib::registerMetric(LuaEndpoint::LUA_META_NAME, EventLib::COUNTER, "%s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
     if(totalMetricId == EventLib::INVALID_METRIC)
     {
         mlog(ERROR, "Registry failed for %s.%s", UNREGISTERED_ENDPOINT, HITS_METRIC);
@@ -133,7 +133,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -169,7 +169,7 @@ void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publis
  * Constructor
  *----------------------------------------------------------------------------*/
 LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh, event_level_t lvl):
-    EndpointObject(L, LuaMetaName, LuaMetaTable),
+    EndpointObject(L, LUA_META_NAME, LUA_META_TABLE),
     metricIds(INITIAL_NUM_ENDPOINTS),
     normalRequestMemoryThreshold(normal_mem_thresh),
     streamRequestMemoryThreshold(stream_mem_thresh),
@@ -192,7 +192,7 @@ void* LuaEndpoint::requestThread (void* parm)
 {
     EndpointObject::info_t* info = (EndpointObject::info_t*)parm;
     EndpointObject::Request* request = info->request;
-    LuaEndpoint* lua_endpoint = (LuaEndpoint*)info->endpoint;
+    LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
 
     /* Get Request Script */
     const char* script_pathname = LuaEngine::sanitize(request->resource);
@@ -419,7 +419,7 @@ int LuaEndpoint::luaMetric (lua_State* L)
     try
     {
         /* Get Self */
-        LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+        LuaEndpoint* lua_obj = dynamic_cast<LuaEndpoint*>(getLuaSelf(L, 1));
 
         /* Get Endpoint Name */
         const char* endpoint_name = getLuaString(L, 2);
@@ -464,10 +464,10 @@ int LuaEndpoint::luaAuth (lua_State* L)
     try
     {
         /* Get Self */
-        LuaEndpoint* lua_obj = (LuaEndpoint*)getLuaSelf(L, 1);
+        LuaEndpoint* lua_obj = dynamic_cast<LuaEndpoint*>(getLuaSelf(L, 1));
 
         /* Get Authenticator */
-        Authenticator* auth = (Authenticator*)getLuaObject(L, 2, LuaEndpoint::Authenticator::OBJECT_TYPE);
+        Authenticator* auth = dynamic_cast<Authenticator*>(getLuaObject(L, 2, LuaEndpoint::Authenticator::OBJECT_TYPE));
 
         /* Set Authenticator */
         lua_obj->authenticator = auth;

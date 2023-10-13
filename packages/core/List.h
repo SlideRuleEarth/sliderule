@@ -73,7 +73,7 @@ class List
         class Iterator
         {
             public:
-                                    Iterator    (const List& l);
+                explicit            Iterator    (const List& l);
                                     ~Iterator   (void);
                 const T&            operator[]  (int index) const;
                 const int           length;
@@ -93,7 +93,7 @@ class List
         int     add         (const T& data);
         bool    remove      (int index);
         T&      get         (int index);
-        bool    set         (int index, T& data, bool with_delete=true);
+        bool    set         (int index, const T& data, bool with_delete=true);
         int     length      (void) const;
         bool    isempty     (void) const;
         void    clear       (void);
@@ -201,6 +201,7 @@ List<T, IS_MANAGED, IS_ARRAY>::List(int list_block_size):
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
 List<T, IS_MANAGED, IS_ARRAY>::List(const List<T, IS_MANAGED, IS_ARRAY>& l1)
 {
+    listBlockSize = l1.listBlockSize;
     head.data = new T [listBlockSize];
     initialize();
     copy(l1);
@@ -373,7 +374,7 @@ T& List<T, IS_MANAGED, IS_ARRAY>::get(int index)
  *  the list is reordered in place and the caller wants control over deallocation
  *----------------------------------------------------------------------------*/
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
-bool List<T, IS_MANAGED, IS_ARRAY>::set(int index, T& data, bool with_delete)
+bool List<T, IS_MANAGED, IS_ARRAY>::set(int index, const T& data, bool with_delete)
 {
     if( (index < len) && (index >= 0) )
     {
@@ -513,6 +514,8 @@ T& List<T, IS_MANAGED, IS_ARRAY>::operator[](int index)
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
 List<T, IS_MANAGED, IS_ARRAY>& List<T, IS_MANAGED, IS_ARRAY>::operator= (const List<T, IS_MANAGED, IS_ARRAY>& l1)
 {
+    if(this == &l1) return *this;
+    listBlockSize = l1.listBlockSize;
     clear();
     copy(l1);
     return *this;

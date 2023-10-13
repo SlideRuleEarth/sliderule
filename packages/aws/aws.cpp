@@ -79,8 +79,8 @@ void initaws (void)
     CredentialStore::init();
 
     /* Register I/O Drivers */
-    Asset::registerDriver(S3CacheIODriver::FORMAT, S3CacheIODriver::create);
-    Asset::registerDriver(S3CurlIODriver::FORMAT, S3CurlIODriver::create);
+    Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
+    Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_AWS_LIBNAME, aws_open);

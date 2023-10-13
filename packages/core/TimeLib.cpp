@@ -246,7 +246,7 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
         gps_days += (int)(gps_msecs / TIME_MILLISECS_IN_A_DAY);
         gps_msecs = gps_msecs % TIME_MILLISECS_IN_A_DAY;
     }
-    else if(gps_msecs < 0)
+    else // if(gps_msecs < 0)
     {
         gps_days -= (int)(((-gps_msecs) / TIME_MILLISECS_IN_A_DAY) + 1);
         gps_msecs = TIME_MILLISECS_IN_A_DAY - ((-gps_msecs) % TIME_MILLISECS_IN_A_DAY);

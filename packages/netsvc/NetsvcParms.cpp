@@ -52,8 +52,8 @@ const char* NetsvcParms::READ_TIMEOUT   = "read-timeout";
 const char* NetsvcParms::GLOBAL_TIMEOUT = "timeout";
 
 const char* NetsvcParms::OBJECT_TYPE = "NetsvcParms";
-const char* NetsvcParms::LuaMetaName = "NetsvcParms";
-const struct luaL_Reg NetsvcParms::LuaMetaTable[] = {
+const char* NetsvcParms::LUA_META_NAME = "NetsvcParms";
+const struct luaL_Reg NetsvcParms::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -79,7 +79,7 @@ int NetsvcParms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -92,7 +92,7 @@ int NetsvcParms::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 NetsvcParms::NetsvcParms(lua_State* L, int index):
-    LuaObject                   (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject                   (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     raster                      (NULL),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),

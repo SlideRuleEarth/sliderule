@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsPacketizer::LuaMetaName = "CcsdsPacketizer";
-const struct luaL_Reg CcsdsPacketizer::LuaMetaTable[] = {
+const char* CcsdsPacketizer::LUA_META_NAME = "CcsdsPacketizer";
+const struct luaL_Reg CcsdsPacketizer::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -69,7 +69,7 @@ int CcsdsPacketizer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -82,7 +82,7 @@ int CcsdsPacketizer::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsPacketizer::CcsdsPacketizer(lua_State* L, const char* inq_name, const char* outq_name, int _pkttype, uint16_t _apid, uint8_t _fc, uint16_t _len):
-    MsgProcessor(L, inq_name, LuaMetaName, LuaMetaTable)
+    MsgProcessor(L, inq_name, LUA_META_NAME, LUA_META_TABLE)
 {
     pktType = _pkttype;
     apid = _apid;

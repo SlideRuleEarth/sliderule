@@ -568,8 +568,6 @@ Subscriber::Subscriber(const MsgQ& existing_q, subscriber_type_t type): MsgQ(exi
  *----------------------------------------------------------------------------*/
 Subscriber::~Subscriber()
 {
-    bool space_reclaimed = false;
-
     msgQ->locknblock->lock();
     {
         /* Dereference All Nodes */
@@ -579,7 +577,7 @@ Subscriber::~Subscriber()
             node->refs--;
             node = node->next;
         }
-        space_reclaimed = reclaim_nodes(true);
+        bool space_reclaimed = reclaim_nodes(true);
 
         /* Clean up Remaining Free Blocks */
         if(msgQ->subscriptions == 1)
@@ -727,8 +725,6 @@ int Subscriber::receiveCopy(void* data, int size, int timeout)
  *----------------------------------------------------------------------------*/
 int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
 {
-    bool space_reclaimed = false;
-
     /* initialize reference structure */
     ref.state = STATE_OKAY;
     ref.size = size;
@@ -737,6 +733,8 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
     /* receive data */
     msgQ->locknblock->lock();
     {
+        bool space_reclaimed = false;
+        
         /* check state of queue */
         if(timeout != IO_CHECK)
         {

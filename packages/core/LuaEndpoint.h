@@ -56,8 +56,8 @@ class LuaEndpoint: public EndpointObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const char* EndpointExceptionRecType;
         static const RecordObject::fieldDef_t EndpointExceptionRecDef[];
@@ -93,8 +93,8 @@ class LuaEndpoint: public EndpointObject
         {
             public:
                 static const char* OBJECT_TYPE;
-                static const char* LuaMetaName;
-                static const struct luaL_Reg LuaMetaTable[];
+                static const char* LUA_META_NAME;
+                static const struct luaL_Reg LUA_META_TABLE[];
 
                 Authenticator(lua_State* L);
                 virtual ~Authenticator(void);

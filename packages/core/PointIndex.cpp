@@ -43,8 +43,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* PointIndex::LuaMetaName = "PointIndex";
-const struct luaL_Reg PointIndex::LuaMetaTable[] = {
+const char* PointIndex::LUA_META_NAME = "PointIndex";
+const struct luaL_Reg PointIndex::LUA_META_TABLE[] = {
     {"add",         luaAdd},
     {"query",       luaQuery},
     {"display",     luaDisplay},
@@ -63,7 +63,7 @@ int PointIndex::luaCreate (lua_State* L)
     try
     {
         /* Get Asset Directory */
-        Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        Asset*      _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _fieldname  = getLuaString(L, 2);
         int         _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
 
@@ -72,7 +72,7 @@ int PointIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -81,7 +81,7 @@ int PointIndex::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 PointIndex::PointIndex(lua_State* L, Asset* _asset, const char* _fieldname, int _threshold):
-    AssetIndex<pointspan_t>(L, *_asset, LuaMetaName, LuaMetaTable, _threshold)
+    AssetIndex<pointspan_t>(L, *_asset, LUA_META_NAME, LUA_META_TABLE, _threshold)
 {
     assert(_fieldname);
 

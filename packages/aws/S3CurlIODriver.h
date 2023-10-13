@@ -62,7 +62,7 @@ class S3CurlIODriver: public Asset::IODriver
         static const long SSL_VERIFYHOST = 0;
         static const char* DEFAULT_REGION;
         static const char* DEFAULT_IDENTITY;
-        static const char* FORMAT;
+        static const char* CURL_FORMAT;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -102,8 +102,8 @@ class S3CurlIODriver: public Asset::IODriver
          * Methods
          *--------------------------------------------------------------------*/
 
-                            S3CurlIODriver  (const Asset* _asset);
-                            S3CurlIODriver  (const Asset* _asset, const char* resource);
+        explicit            S3CurlIODriver  (const Asset* _asset);
+        explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
         virtual             ~S3CurlIODriver (void);
 
         /*--------------------------------------------------------------------

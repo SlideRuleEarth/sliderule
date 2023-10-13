@@ -90,8 +90,8 @@ const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
 
 const char* Atl03Reader::OBJECT_TYPE = "Atl03Reader";
-const char* Atl03Reader::LuaMetaName = "Atl03Reader";
-const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
+const char* Atl03Reader::LUA_META_NAME = "Atl03Reader";
+const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
     {"parms",       luaParms},
     {"stats",       luaStats},
     {NULL,          NULL}
@@ -226,7 +226,7 @@ void Atl03Reader::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
     assert(_asset);

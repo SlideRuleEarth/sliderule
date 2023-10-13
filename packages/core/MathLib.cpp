@@ -383,7 +383,6 @@ void MathLib::bitReverse(complex_t data[], unsigned long size)
     unsigned long s;
     unsigned long i;
     unsigned long j;
-    unsigned long k;
 
     // Calculate Steps //
     steps[0] = size / 2;
@@ -404,7 +403,7 @@ void MathLib::bitReverse(complex_t data[], unsigned long size)
 
         // Calculate Step Size //
         s = 0;
-        k = i;
+        unsigned long k = i;
         while(k % 2 != 0) // trying to find first zero in binary representation
         {
             k >>= 1;
@@ -430,14 +429,13 @@ void MathLib::freqCorrelation(complex_t data[], unsigned long size, int isign)
     unsigned long   offset;     // offset within halfperiod
     unsigned long   i;          // sample indices
     unsigned long   j;          // sample indices
-    double          theta;
     complex_t       temp;
     complex_t       w;
     complex_t       wp;
 
     for(halfperiod = 1; halfperiod < size; halfperiod *= 2)
     {
-        theta = isign * (M_PI / halfperiod);
+        double theta = isign * (M_PI / halfperiod);
 
         wp.r = -2.0 * pow(sin(0.5 * theta),2);
         wp.i = sin(theta);

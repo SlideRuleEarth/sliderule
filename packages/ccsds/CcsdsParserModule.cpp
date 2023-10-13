@@ -41,8 +41,8 @@
  ******************************************************************************/
 
 const char* CcsdsParserModule::OBJECT_TYPE = "CcsdsParserModule";
-const char* CcsdsParserModule::LuaMetaName = "CcsdsParserModule";
-const struct luaL_Reg CcsdsParserModule::LuaMetaTable[] = {
+const char* CcsdsParserModule::LUA_META_NAME = "CcsdsParserModule";
+const struct luaL_Reg CcsdsParserModule::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -62,7 +62,7 @@ int CcsdsParserModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -75,7 +75,7 @@ int CcsdsParserModule::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsParserModule::CcsdsParserModule(lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     gotoInitState(true);
 }

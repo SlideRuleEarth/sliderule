@@ -94,8 +94,8 @@ class MsgQ
          * Methods
          *--------------------------------------------------------------------*/
 
-                        MsgQ            (const char* name, free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
+        explicit        MsgQ            (const char* name, free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
                         ~MsgQ           (void);
 
                 int     getCount        (void);
@@ -119,7 +119,7 @@ class MsgQ
          *--------------------------------------------------------------------*/
 
         static const int MSGQ_DEFAULT_SUBSCRIBERS = 2;
-        static const unsigned int MSGQ_COPYQ_MASK = 1 << ((sizeof(unsigned int) * 8) - 1);
+        static const unsigned int MSGQ_COPYQ_MASK = 1U << ((sizeof(unsigned int) * 8) - 1);
 
         /*--------------------------------------------------------------------
          * Types
@@ -182,8 +182,8 @@ class Publisher: public MsgQ
 
         static const int MAX_POSTED_STR = 1024;
 
-                    Publisher       (const char* name, MsgQ::free_func_t free_func=defaultFree, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                    Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=defaultFree);
+        explicit    Publisher       (const char* name, MsgQ::free_func_t free_func=defaultFree, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit    Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=defaultFree);
                     ~Publisher      (void);
 
 
@@ -215,8 +215,8 @@ class Subscriber: public MsgQ
             void*   _handle;
         } msgRef_t;
 
-                        Subscriber      (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                        Subscriber      (const MsgQ& existing_q, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE);
+        explicit        Subscriber      (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit        Subscriber      (const MsgQ& existing_q, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE);
                         ~Subscriber     (void);
 
         bool            dereference     (msgRef_t& ref, bool with_delete=true);

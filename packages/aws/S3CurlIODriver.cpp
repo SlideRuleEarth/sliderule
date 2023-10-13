@@ -376,7 +376,7 @@ static CURL* initializeWriteRequest (SafeString& url, headers_t headers, write_c
 
 const char* S3CurlIODriver::DEFAULT_REGION = "us-west-2";
 const char* S3CurlIODriver::DEFAULT_IDENTITY = "iam-role";
-const char* S3CurlIODriver::FORMAT = "s3";
+const char* S3CurlIODriver::CURL_FORMAT = "s3";
 
 /******************************************************************************
  * AWS S3 cURL I/O DRIVER CLASS
@@ -529,11 +529,11 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
     /* Initialize cURL Request */
-    bool rqst_complete = false;
-    int attempts = ATTEMPTS_PER_REQUEST;
     CURL* curl = initializeReadRequest(url, headers, curlWriteStreaming, &rsps_set);
     if(curl)
     {
+        bool rqst_complete = false;
+        int attempts = ATTEMPTS_PER_REQUEST;
         while(!rqst_complete && (attempts-- > 0))
         {
             /* Perform Request */
@@ -641,11 +641,11 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
         SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
         /* Initialize cURL Request */
-        bool rqst_complete = false;
-        int attempts = ATTEMPTS_PER_REQUEST;
         CURL* curl = initializeReadRequest(url, headers, curlWriteFile, &data);
         if(curl)
         {
+            bool rqst_complete = false;
+            int attempts = ATTEMPTS_PER_REQUEST;
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
@@ -739,11 +739,11 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
         SafeString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
         /* Initialize cURL Request */
-        bool rqst_complete = false;
-        int attempts = ATTEMPTS_PER_REQUEST;
         CURL* curl = initializeWriteRequest(url, headers, curlReadFile, &data);
         if(curl)
         {
+            bool rqst_complete = false;
+            int attempts = ATTEMPTS_PER_REQUEST;
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */

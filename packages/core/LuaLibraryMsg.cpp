@@ -468,9 +468,9 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     /* Get Message */
     size_t attr_size = 0;
     const char* attr = lua_tolstring(L, 3, &attr_size);
-    if(attr_size <= 0)
+    if(attr_size == 0)
     {
-        mlog(CRITICAL, "Invalid length of message: %ld", attr_size);
+        mlog(CRITICAL, "Invalid length of message: %lu", attr_size);
         return 0;
     }
 

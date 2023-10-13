@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CsvDispatch::LuaMetaName = "CsvDispatch";
-const struct luaL_Reg CsvDispatch::LuaMetaTable[] = {
+const char* CsvDispatch::LUA_META_NAME = "CsvDispatch";
+const struct luaL_Reg CsvDispatch::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -87,7 +87,7 @@ int CsvDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -102,7 +102,7 @@ int CsvDispatch::luaCreate (lua_State* L)
  *  Note: object takes ownership of columns pointer and must free memory
  *----------------------------------------------------------------------------*/
 CsvDispatch::CsvDispatch (lua_State* L, const char* outq_name, const char** _columns, int _num_columns):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_columns);
 

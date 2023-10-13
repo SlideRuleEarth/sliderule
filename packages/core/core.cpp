@@ -171,7 +171,7 @@ void initcore (void)
     ContainerRecord::init();
     
     /* Register IO Drivers */
-    Asset::registerDriver(Asset::IODriver::FORMAT, Asset::IODriver::create);
+    Asset::registerDriver("nil", Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
 
     /* Initialize Modules */

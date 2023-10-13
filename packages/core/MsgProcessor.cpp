@@ -150,7 +150,7 @@ void* MsgProcessor::processorThread(void* parm)
 {
     assert(parm);
 
-    MsgProcessor* processor = (MsgProcessor*)parm;
+    MsgProcessor* processor = static_cast<MsgProcessor*>(parm);
     bool self_delete = false;
 
     /* Initialize Processing */
@@ -212,7 +212,7 @@ int MsgProcessor::luaDrain (lua_State* L)
     try
     {
         /* Get Self */
-        MsgProcessor* lua_obj = (MsgProcessor*)getLuaSelf(L, 1);
+        MsgProcessor* lua_obj = dynamic_cast<MsgProcessor*>(getLuaSelf(L, 1));
 
         /* Drain Queue */
         lua_obj->inQ->drain();

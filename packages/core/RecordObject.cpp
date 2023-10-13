@@ -98,7 +98,7 @@ RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, i
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RecordObject::Field::Field(RecordObject& _rec, field_t _field, int _element):
+RecordObject::Field::Field(RecordObject& _rec, const field_t& _field, int _element):
     record(_rec),
     field(_field),
     element(_element)
@@ -633,6 +633,7 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
@@ -643,18 +644,18 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;       break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;      break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;      break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;      break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;      break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;     break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;     break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
+            case INT8:      cast->int8_val   = (int8_t)val;     break;
+            case INT16:     cast->int16_val  = (int16_t)val;    break;
+            case INT32:     cast->int32_val  = (int32_t)val;    break;
+            case INT64:     cast->int64_val  = (int64_t)val;    break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;    break;
+            case UINT16:    cast->uint16_val = (uint16_t)val;   break;
+            case UINT32:    cast->uint32_val = (uint32_t)val;   break;
+            case UINT64:    cast->uint64_val = (uint64_t)val;   break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;          break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = val;                 break;
-            case TIME8:     *(int64_t*)(recordData + elem_offset) = (int64_t)val;       break;
+            case FLOAT:     cast->float_val  = (float)val;      break;
+            case DOUBLE:    cast->double_val = val;             break;
+            case TIME8:     cast->int64_val  = (int64_t)val;    break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
@@ -664,17 +665,18 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                   break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);    break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);    break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = OsApi::swapll((int64_t)val);   break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                  break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);   break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);   break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);              break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);        break;
-            case DOUBLE:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
+            case INT8:      cast->int8_val   = (int8_t)val;                 break;
+            case INT16:     cast->int16_val  = OsApi::swaps((int16_t)val);  break;
+            case INT32:     cast->int32_val  = OsApi::swapl((int32_t)val);  break;
+            case INT64:     cast->int64_val  = OsApi::swapll((int64_t)val); break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;                break;
+            case UINT16:    cast->uint16_val = OsApi::swaps((uint16_t)val); break;
+            case UINT32:    cast->uint32_val = OsApi::swapl((uint32_t)val); break;
+            case UINT64:    cast->uint64_val = OsApi::swapll((uint64_t)val);break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
+            case FLOAT:     cast->float_val  = OsApi::swapf((float)val);    break;
+            case DOUBLE:    cast->double_val = OsApi::swapf((double)val);   break;
+            case TIME8 :    cast->int64_val  = OsApi::swapll((uint64_t)val);break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
@@ -689,6 +691,7 @@ void RecordObject::setValueInteger(const field_t& f, long val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
@@ -699,18 +702,18 @@ void RecordObject::setValueInteger(const field_t& f, long val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;       break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;      break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;      break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;      break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;      break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;     break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;     break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;          break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = val;                 break;
-            case TIME8:     *(int64_t*)(recordData + elem_offset) = (int64_t)val;       break;
+            case INT8:      cast->int8_val   = (int8_t)val;     break;
+            case INT16:     cast->int16_val  = (int16_t)val;    break;
+            case INT32:     cast->int32_val  = (int32_t)val;    break;
+            case INT64:     cast->int64_val  = (int64_t)val;    break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;    break;
+            case UINT16:    cast->uint16_val = (uint16_t)val;   break;
+            case UINT32:    cast->uint32_val = (uint32_t)val;   break;
+            case UINT64:    cast->uint64_val = (uint64_t)val;   break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
+            case FLOAT:     cast->float_val  = (float)val;      break;
+            case DOUBLE:    cast->double_val = val;             break;
+            case TIME8:     cast->int64_val  = (int64_t)val;    break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
@@ -720,18 +723,18 @@ void RecordObject::setValueInteger(const field_t& f, long val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                   break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);    break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);    break;
-            case INT64:     *(int64_t*)(recordData + elem_offset)  = OsApi::swapll((int64_t)val);   break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                  break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);   break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);   break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);              break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);        break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val);      break;
-            case TIME8:     *(int64_t*)(recordData + elem_offset) = OsApi::swapll((int64_t)val);    break;
+            case INT8:      cast->int8_val   = (int8_t)val;                   break;
+            case INT16:     cast->int16_val  = OsApi::swaps((int16_t)val);    break;
+            case INT32:     cast->int32_val  = OsApi::swapl((int32_t)val);    break;
+            case INT64:     cast->int64_val  = OsApi::swapll((int64_t)val);   break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;                  break;
+            case UINT16:    cast->uint16_val = OsApi::swaps((uint16_t)val);   break;
+            case UINT32:    cast->uint32_val = OsApi::swapl((uint32_t)val);   break;
+            case UINT64:    cast->uint64_val = OsApi::swapll((uint64_t)val);  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
+            case FLOAT:     cast->float_val  = OsApi::swapf((float)val);      break;
+            case DOUBLE:    cast->double_val = OsApi::swaplf((double)val);    break;
+            case TIME8:     cast->int64_val  = OsApi::swapll((int64_t)val);   break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
@@ -804,6 +807,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
@@ -815,18 +819,18 @@ double RecordObject::getValueReal(const field_t& f, int element)
     {
         switch(f.type)
         {
-            case INT8:      return (double)*(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (double)*(int16_t*) (recordData + elem_offset);
-            case INT32:     return (double)*(int32_t*) (recordData + elem_offset);
-            case INT64:     return (double)*(int64_t*) (recordData + elem_offset);
-            case UINT8:     return (double)*(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (double)*(uint16_t*)(recordData + elem_offset);
-            case UINT32:    return (double)*(uint32_t*)(recordData + elem_offset);
-            case UINT64:    return (double)*(uint64_t*)(recordData + elem_offset);
+            case INT8:      return (double)cast->int8_val;
+            case INT16:     return (double)cast->int16_val;
+            case INT32:     return (double)cast->int32_val;
+            case INT64:     return (double)cast->int64_val;
+            case UINT8:     return (double)cast->uint8_val;
+            case UINT16:    return (double)cast->uint16_val;
+            case UINT32:    return (double)cast->uint32_val;
+            case UINT64:    return (double)cast->uint64_val;
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (double)*(float*) (recordData + elem_offset);
-            case DOUBLE:    return *(double*)(recordData + elem_offset);
-            case TIME8:     return (double)*(int64_t*)(recordData + elem_offset);
+            case FLOAT:     return (double)cast->float_val;
+            case DOUBLE:    return (double)cast->double_val;
+            case TIME8:     return (double)cast->int64_val;
             default:        return 0.0;
         }
     }
@@ -834,18 +838,18 @@ double RecordObject::getValueReal(const field_t& f, int element)
     // Swap
     switch(f.type)
     {
-        case INT8:      return (double)              *(int8_t*)  (recordData + elem_offset);
-        case INT16:     return (double)OsApi::swaps (*(int16_t*) (recordData + elem_offset));
-        case INT32:     return (double)OsApi::swapl (*(int32_t*) (recordData + elem_offset));
-        case INT64:     return (double)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
-        case UINT8:     return (double)              *(uint8_t*) (recordData + elem_offset);
-        case UINT16:    return (double)OsApi::swaps (*(uint16_t*)(recordData + elem_offset));
-        case UINT32:    return (double)OsApi::swapl (*(uint32_t*)(recordData + elem_offset));
-        case UINT64:    return (double)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
+        case INT8:      return (double)              cast->int8_val;
+        case INT16:     return (double)OsApi::swaps (cast->int16_val);
+        case INT32:     return (double)OsApi::swapl (cast->int32_val);
+        case INT64:     return (double)OsApi::swapll(cast->int64_val);
+        case UINT8:     return (double)              cast->uint8_val;
+        case UINT16:    return (double)OsApi::swaps (cast->uint16_val);
+        case UINT32:    return (double)OsApi::swapl (cast->uint32_val);
+        case UINT64:    return (double)OsApi::swapll(cast->uint64_val);
         case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-        case FLOAT:     return (double)OsApi::swapf (*(float*)   (recordData + elem_offset));
-        case DOUBLE:    return (double)OsApi::swaplf(*(double*)  (recordData + elem_offset));
-        case TIME8:     return (double)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
+        case FLOAT:     return (double)OsApi::swapf (cast->float_val);
+        case DOUBLE:    return (double)OsApi::swaplf(cast->double_val);
+        case TIME8:     return (double)OsApi::swapll(cast->int64_val);
         default:        return 0.0;
     }
 }
@@ -857,6 +861,7 @@ long RecordObject::getValueInteger(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
@@ -869,18 +874,18 @@ long RecordObject::getValueInteger(const field_t& f, int element)
     {
         switch(f.type)
         {
-            case INT8:      return (long)*(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (long)*(int16_t*) (recordData + elem_offset);
-            case INT32:     return (long)*(int32_t*) (recordData + elem_offset);
-            case INT64:     return (long)*(int64_t*) (recordData + elem_offset);
-            case UINT8:     return (long)*(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (long)*(uint16_t*)(recordData + elem_offset);
-            case UINT32:    return (long)*(uint32_t*)(recordData + elem_offset);
-            case UINT64:    return (long)*(uint64_t*)(recordData + elem_offset);
+            case INT8:      return (long)cast->int8_val;
+            case INT16:     return (long)cast->int16_val;
+            case INT32:     return (long)cast->int32_val;
+            case INT64:     return (long)cast->int64_val;
+            case UINT8:     return (long)cast->uint8_val;
+            case UINT16:    return (long)cast->uint16_val;
+            case UINT32:    return (long)cast->uint32_val;
+            case UINT64:    return (long)cast->uint64_val;
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (long)*(float*) (recordData + elem_offset);
-            case DOUBLE:    return (long)*(double*)(recordData + elem_offset);
-            case TIME8:     return (long)*(int64_t*)(recordData + elem_offset);
+            case FLOAT:     return (long)cast->float_val;
+            case DOUBLE:    return (long)cast->double_val;
+            case TIME8:     return (long)cast->int64_val;
             default:        return 0;
         }
     }
@@ -888,18 +893,18 @@ long RecordObject::getValueInteger(const field_t& f, int element)
     // Swap
     switch(f.type)
     {
-        case INT8:      return (long)              *(int8_t*)  (recordData + elem_offset);
-        case INT16:     return (long)OsApi::swaps (*(int16_t*) (recordData + elem_offset));
-        case INT32:     return (long)OsApi::swapl (*(int32_t*) (recordData + elem_offset));
-        case INT64:     return (long)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
-        case UINT8:     return (long)              *(uint8_t*) (recordData + elem_offset);
-        case UINT16:    return (long)OsApi::swaps (*(uint16_t*)(recordData + elem_offset));
-        case UINT32:    return (long)OsApi::swapl (*(uint32_t*)(recordData + elem_offset));
-        case UINT64:    return (long)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
+        case INT8:      return (long)              cast->int8_val;
+        case INT16:     return (long)OsApi::swaps (cast->int16_val);
+        case INT32:     return (long)OsApi::swapl (cast->int32_val);
+        case INT64:     return (long)OsApi::swapll(cast->int64_val);
+        case UINT8:     return (long)              cast->uint8_val;
+        case UINT16:    return (long)OsApi::swaps (cast->uint16_val);
+        case UINT32:    return (long)OsApi::swapl (cast->uint32_val);
+        case UINT64:    return (long)OsApi::swapll(cast->uint64_val);
         case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-        case FLOAT:     return (long)OsApi::swapf (*(float*) (recordData + elem_offset));
-        case DOUBLE:    return (long)OsApi::swaplf(*(double*)(recordData + elem_offset));
-        case TIME8:     return (long)OsApi::swapll(*(int64_t*)(recordData + elem_offset));
+        case FLOAT:     return (long)OsApi::swapf (cast->float_val);
+        case DOUBLE:    return (long)OsApi::swaplf(cast->double_val);
+        case TIME8:     return (long)OsApi::swapll(cast->int64_val);
         default:        return 0;
     }
 }

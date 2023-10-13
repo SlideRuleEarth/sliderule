@@ -285,12 +285,11 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     ObjectName(NULL),
     LuaMetaName(meta_name),
     LuaMetaTable(meta_table),
-    LuaState(L)
+    LuaState(L),
+    referenceCount(0),
+    objComplete(false)
 {
     uint32_t engine_trace_id = ORIGIN;
-
-    referenceCount = 0;
-    objComplete = false;
 
     if(LuaState)
     {
@@ -382,11 +381,11 @@ int LuaObject::luaDelete (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaObject::luaName(lua_State* L)
 {
-    bool status = false;
-
     try
     {
-        /* Get Self */
+         bool status = false;
+
+       /* Get Self */
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Get Name */

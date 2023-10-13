@@ -803,10 +803,10 @@ StringLib::TokenList* StringLib::split(const char* str, int len, char separator,
         token[t++] = '\0';
 
         /*  Strip Leading and Trailing Spaces */
-        int s1 = 0;
-        int s2 = t-1;
         if(strip)
         {
+            int s1 = 0;
+            int s2 = t-1;
             while( (s1 < t) && isspace(token[s1]) ) s1++;
             while( (s2 > s1) && isspace(token[s2]) ) s2--;
             token[++s2] = '\0';

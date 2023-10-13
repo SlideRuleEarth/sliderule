@@ -31,10 +31,6 @@ set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
 set_target_properties (slideruleLib PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
-if(${PYTHON_BINDINGS})
-    set_target_properties (slideruleLib PROPERTIES POSITION_INDEPENDENT_CODE 1)
-endif()
-
 # Compile Definitions #
 
 if (${ENABLE_TIME_HEARTBEAT})
@@ -153,12 +149,6 @@ add_subdirectory (scripts)
 
 install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
 
-if(${PYTHON_BINDINGS})
-
-    add_subdirectory (targets/binding-python)
-
-elseif(${SERVER_APP} AND (CMAKE_BUILD_PLATFORM MATCHES "Linux"))
-
+if(${SERVER_APP} AND (CMAKE_BUILD_PLATFORM MATCHES "Linux"))
     add_subdirectory (targets/server-linux)
-
 endif()

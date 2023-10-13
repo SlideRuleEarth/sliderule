@@ -42,8 +42,8 @@
 
 Dictionary<RecordDispatcher::calcFunc_t> RecordDispatcher::keyCalcFunctions;
 
-const char* RecordDispatcher::LuaMetaName = "RecordDispatcher";
-const struct luaL_Reg RecordDispatcher::LuaMetaTable[] = {
+const char* RecordDispatcher::LUA_META_NAME = "RecordDispatcher";
+const struct luaL_Reg RecordDispatcher::LUA_META_TABLE[] = {
     {"run",         luaRun},
     {"attach",      luaAttachDispatch},
     {"clear",       luaClearError},
@@ -101,7 +101,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -149,7 +149,7 @@ bool RecordDispatcher::addKeyCalcFunc(const char* calc_name, calcFunc_t func)
 RecordDispatcher::RecordDispatcher( lua_State* L, const char* inputq_name,
                                     keyMode_t key_mode, const char* key_field, calcFunc_t key_func,
                                     int num_threads, MsgQ::subscriber_type_t type):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, BASE_OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(inputq_name);
     assert(num_threads > 0);
@@ -220,7 +220,7 @@ int RecordDispatcher::luaRun(lua_State* L)
     try
     {
         /* Get Self */
-        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+        RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Start Threads */
         lua_obj->dispatcherActive = true;
@@ -251,11 +251,11 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
     try
     {
         /* Get Self */
-        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+        RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         int             num_parms   = getLuaNumParms(L);
-        DispatchObject* dispatch    = (DispatchObject*)getLuaObject(L, 2, DispatchObject::OBJECT_TYPE);
+        DispatchObject* dispatch    = dynamic_cast<DispatchObject*>(getLuaObject(L, 2, DispatchObject::OBJECT_TYPE));
 
         /* Check if Active */
         if(lua_obj->dispatcherActive)
@@ -344,7 +344,7 @@ int RecordDispatcher::luaClearError(lua_State* L)
     try
     {
         /* Get Self */
-        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+        RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Clear Errors */
         lua_obj->recError = false;
@@ -371,7 +371,7 @@ int RecordDispatcher::luaDrain (lua_State* L)
     try
     {
         /* Get Self */
-        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+        RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Clear Errors */
         lua_obj->inQ->drain();
@@ -398,7 +398,7 @@ int RecordDispatcher::luaAbortOnTimeout (lua_State* L)
     try
     {
         /* Get Self */
-        RecordDispatcher* lua_obj = (RecordDispatcher*)getLuaSelf(L, 1);
+        RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Abort On Timeout */
         lua_obj->abortOnTimeout = true;
@@ -424,7 +424,7 @@ int RecordDispatcher::luaAbortOnTimeout (lua_State* L)
  *----------------------------------------------------------------------------*/
 void* RecordDispatcher::dispatcherThread(void* parm)
 {
-    RecordDispatcher* dispatcher = (RecordDispatcher*)parm;
+    RecordDispatcher* dispatcher = static_cast<RecordDispatcher*>(parm);
 
     /* Loop Forever */
     while(dispatcher->dispatcherActive)

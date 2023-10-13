@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* MsgBridge::LuaMetaName = "MsgBridge";
-const struct luaL_Reg MsgBridge::LuaMetaTable[] = {
+const char* MsgBridge::LUA_META_NAME = "MsgBridge";
+const struct luaL_Reg MsgBridge::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -65,7 +65,7 @@ int MsgBridge::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -78,7 +78,7 @@ int MsgBridge::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 MsgBridge::MsgBridge(lua_State* L, const char* inputq_name, const char* outputq_name):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, BASE_OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(inputq_name);
     assert(outputq_name);
@@ -112,7 +112,7 @@ MsgBridge::~MsgBridge(void)
  *----------------------------------------------------------------------------*/
 void* MsgBridge::bridgeThread(void* parm)
 {
-    MsgBridge* bridge = (MsgBridge*)parm;
+    MsgBridge* bridge = static_cast<MsgBridge*>(parm);
 
     /* Loop Forever */
     while(bridge->active)

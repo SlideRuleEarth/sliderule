@@ -45,8 +45,8 @@
 const char* HttpServer::DURATION_METRIC = "duration";
 
 const char* HttpServer::OBJECT_TYPE = "HttpServer";
-const char* HttpServer::LuaMetaName = "HttpServer";
-const struct luaL_Reg HttpServer::LuaMetaTable[] = {
+const char* HttpServer::LUA_META_NAME = "HttpServer";
+const struct luaL_Reg HttpServer::LUA_META_TABLE[] = {
     {"attach",      luaAttach},
     {"metric",      luaMetric},
     {"untilup",     luaUntilUp},
@@ -91,7 +91,7 @@ int HttpServer::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_connections):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     connections(max_connections)
 {
     ipAddr = StringLib::duplicate(_ip_addr);
@@ -199,9 +199,6 @@ void HttpServer::deinitConnection (connection_t* connection)
  *----------------------------------------------------------------------------*/
 void HttpServer::extractPath (const char* url, const char** path, const char** resource)
 {
-    const char* src;
-    char* dst;
-
     *path = NULL;
     *resource = NULL;
 
@@ -213,8 +210,8 @@ void HttpServer::extractPath (const char* url, const char** path, const char** r
         {
             /* Get Endpoint */
             int path_len = second_slash - first_slash + 1; // this includes null terminator and slash
-            dst = new char[path_len];
-            src = first_slash ; // include the slash
+            char* dst = new char[path_len];
+            const char* src = first_slash ; // include the slash
             *path = dst;
             while(src < second_slash) *dst++ = *src++;
             *dst = '\0';
@@ -302,7 +299,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
  *----------------------------------------------------------------------------*/
 void* HttpServer::listenerThread(void* parm)
 {
-    HttpServer* s = (HttpServer*)parm;
+    HttpServer* s = static_cast<HttpServer*>(parm);
 
     while(s->active)
     {
@@ -332,7 +329,7 @@ void* HttpServer::listenerThread(void* parm)
  *----------------------------------------------------------------------------*/
 int HttpServer::pollHandler(int fd, short* events, void* parm)
 {
-    HttpServer* s = (HttpServer*)parm;
+    HttpServer* s = static_cast<HttpServer*>(parm);
 
     /* Get Connection */
     connection_t* connection = s->connections[fd];
@@ -356,7 +353,7 @@ int HttpServer::pollHandler(int fd, short* events, void* parm)
  *----------------------------------------------------------------------------*/
 int HttpServer::activeHandler(int fd, int flags, void* parm)
 {
-    HttpServer* s = (HttpServer*)parm;
+    HttpServer* s = static_cast<HttpServer*>(parm);
 
     int rc = 0;
 
@@ -521,14 +518,15 @@ int HttpServer::onWrite(int fd)
     connection_t* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
     uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
-    bool ref_complete = false;
-
-    uint8_t* buffer;
-    int bytes_left;
+    
 
     /* If Something to Send */
     if(state->ref_status > 0)
     {
+        bool ref_complete = false;
+        uint8_t* buffer;
+        int bytes_left;
+
         if(state->header_sent && connection->response_type == EndpointObject::STREAMING) /* Setup Streaming */
         {
             /* Allocate Streaming Buffer (if necessary) */
@@ -737,10 +735,10 @@ int HttpServer::luaAttach (lua_State* L)
     try
     {
         /* Get Self */
-        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
+        HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        EndpointObject* endpoint = (EndpointObject*)getLuaObject(L, 2, EndpointObject::OBJECT_TYPE);
+        EndpointObject* endpoint = dynamic_cast<EndpointObject*>(getLuaObject(L, 2, EndpointObject::OBJECT_TYPE));
         const char* url = getLuaString(L, 3);
 
         /* Add Route to Table */
@@ -767,7 +765,7 @@ int HttpServer::luaMetric (lua_State* L)
     try
     {
         /* Get Self */
-        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
+        HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
 
         /* Get Object Name */
         const char* obj_name = lua_obj->getName();
@@ -801,7 +799,7 @@ int HttpServer::luaUntilUp (lua_State* L)
     try
     {
         /* Get Self */
-        HttpServer* lua_obj = (HttpServer*)getLuaSelf(L, 1);
+        HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         int timeout = getLuaInteger(L, 2, true, IO_PEND);

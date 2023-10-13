@@ -69,8 +69,8 @@ const char* GeoParms::MODE_ALGO             = "Mode";
 const char* GeoParms::GAUSS_ALGO            = "Gauss";
 
 const char* GeoParms::OBJECT_TYPE           = "GeoParms";
-const char* GeoParms::LuaMetaName           = "GeoParms";
-const struct luaL_Reg GeoParms::LuaMetaTable[] = {
+const char* GeoParms::LUA_META_NAME           = "GeoParms";
+const struct luaL_Reg GeoParms::LUA_META_TABLE[] = {
     {"name",        luaAssetName},
     {"region",      luaAssetRegion},
     {"keyspace",    luaSetKeySpace},
@@ -99,7 +99,7 @@ int GeoParms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -108,7 +108,7 @@ int GeoParms::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
-    LuaObject           (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     sampling_algo       (GRIORA_NearestNeighbour),
     sampling_radius     (0),
     zonal_stats         (false),

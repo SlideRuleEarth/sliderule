@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* PublisherDispatch::LuaMetaName = "PublisherDispatch";
-const struct luaL_Reg PublisherDispatch::LuaMetaTable[] = {
+const char* PublisherDispatch::LUA_META_NAME = "PublisherDispatch";
+const struct luaL_Reg PublisherDispatch::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -64,7 +64,7 @@ int PublisherDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -77,7 +77,7 @@ int PublisherDispatch::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 PublisherDispatch::PublisherDispatch(lua_State* L, const char* recq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(recq_name);
 

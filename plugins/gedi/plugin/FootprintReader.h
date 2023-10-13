@@ -65,8 +65,8 @@ class FootprintReader: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types
@@ -161,10 +161,10 @@ template <typename footprint_t>
 const char* FootprintReader<footprint_t>::OBJECT_TYPE = "FootprintReader";
 
 template <typename footprint_t>
-const char* FootprintReader<footprint_t>::LuaMetaName = "FootprintReader";
+const char* FootprintReader<footprint_t>::LUA_META_NAME = "FootprintReader";
 
 template <typename footprint_t>
-const struct luaL_Reg FootprintReader<footprint_t>::LuaMetaTable[] = {
+const struct luaL_Reg FootprintReader<footprint_t>::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -181,7 +181,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
                                                 const char* outq_name, GediParms* _parms, bool _send_terminator,
                                                 const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                 subset_func_t subsetter ):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
     batchRecord(batch_rec_type, sizeof(batch_t))
 {

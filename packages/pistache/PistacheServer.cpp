@@ -44,8 +44,8 @@ using namespace Rest;
  * STATIC DATA
  ******************************************************************************/
 
-const char* PistacheServer::LuaMetaName = "PistacheServer";
-const struct luaL_Reg PistacheServer::LuaMetaTable[] = {
+const char* PistacheServer::LUA_META_NAME = "PistacheServer";
+const struct luaL_Reg PistacheServer::LUA_META_TABLE[] = {
     {"route",       luaRoute},
     {NULL,          NULL}
 };
@@ -78,7 +78,7 @@ int PistacheServer::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -130,7 +130,7 @@ long PistacheServer::getUniqueId (char id_str[REQUEST_ID_LEN])
  * Constructor
  *----------------------------------------------------------------------------*/
 PistacheServer::PistacheServer(lua_State* L,  Address addr, size_t num_threads):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, BASE_OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     requestId(0),
     numThreads(num_threads),
     httpEndpoint(std::make_shared<Http::Endpoint>(addr))

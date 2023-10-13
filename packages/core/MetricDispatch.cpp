@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* MetricDispatch::LuaMetaName = "MetricDispatch";
-const struct luaL_Reg MetricDispatch::LuaMetaTable[] = {
+const char* MetricDispatch::LUA_META_NAME = "MetricDispatch";
+const struct luaL_Reg MetricDispatch::LUA_META_TABLE[] = {
     {"pbsource",    luaPlaybackSource},
     {"pbtext",      luaPlaybackText},
     {"pbname",      luaPlaybackName},
@@ -84,7 +84,7 @@ int MetricDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -97,7 +97,7 @@ int MetricDispatch::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char* outq_name, List<long>* _id_filter):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Define Metric Record */
     RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::metric_t), MetricRecord::rec_def, MetricRecord::rec_elem);
@@ -237,13 +237,19 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
 
                     /* Playback Text */
                     const char* text = NULL;
-                    char valbuf[RecordObject::MAX_VAL_STR_SIZE];
-                    if(playbackText) text = record->getValueText(data_field, valbuf);
+                    if(playbackText)
+                    {
+                        char valbuf[RecordObject::MAX_VAL_STR_SIZE];
+                        text = record->getValueText(data_field, valbuf);
+                    }
 
                     /* Playback Name */
                     const char* name = NULL;
-                    char nambuf[MAX_STR_SIZE];
-                    if(playbackName) name = StringLib::format(nambuf, MAX_STR_SIZE, "%s.%s", record->getRecordType(), dataField);
+                    if(playbackName)
+                    {
+                        char nambuf[MAX_STR_SIZE];
+                        name = StringLib::format(nambuf, MAX_STR_SIZE, "%s.%s", record->getRecordType(), dataField);
+                    }
 
                     /* Playback Value */
                     double value = record->getValueReal(data_field);
@@ -284,7 +290,7 @@ int MetricDispatch::luaPlaybackSource(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Playback Source */
         lua_obj->playbackSource = getLuaBoolean(L, 2, false, false, &status);
@@ -308,7 +314,7 @@ int MetricDispatch::luaPlaybackText(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Playback Source */
         lua_obj->playbackText = getLuaBoolean(L, 2, false, false, &status);
@@ -332,7 +338,7 @@ int MetricDispatch::luaPlaybackName(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Playback Source */
         lua_obj->playbackName = getLuaBoolean(L, 2, false, false, &status);
@@ -356,7 +362,7 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Get Offset String */
         const char* offset_str = getLuaString(L, 2);
@@ -397,7 +403,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Get Offset String */
         const char* min_str = getLuaString(L, 2);
@@ -463,7 +469,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* field_name  = getLuaString(L, 2);

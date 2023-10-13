@@ -41,8 +41,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsPayloadDispatch::LuaMetaName = "CcsdsPayloadDispatch";
-const struct luaL_Reg CcsdsPayloadDispatch::LuaMetaTable[] = {
+const char* CcsdsPayloadDispatch::LUA_META_NAME = "CcsdsPayloadDispatch";
+const struct luaL_Reg CcsdsPayloadDispatch::LUA_META_TABLE[] = {
     {"forward",     luaForwardPacket},
     {"checklen",    luaCheckLength},
     {"checkcs",     luaCheckChecksum},
@@ -65,7 +65,7 @@ int CcsdsPayloadDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -140,7 +140,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key, recVe
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsPayloadDispatch::CcsdsPayloadDispatch(lua_State* L):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     memset(outQ, 0, sizeof(outQ));
     checkLength = false;

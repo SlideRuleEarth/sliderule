@@ -67,7 +67,6 @@ class Asset: public LuaObject
         class IODriver
         {
             public:
-                static const char*  FORMAT;
                 static IODriver*    create      (const Asset* _asset, const char* resource);
                                     IODriver    (void);
                 virtual             ~IODriver   (void);
@@ -122,8 +121,8 @@ class Asset: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*              LuaMetaName;
-        static const struct luaL_Reg    LuaMetaTable[];
+        static const char*              LUA_META_NAME;
+        static const struct luaL_Reg    LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Typedefs

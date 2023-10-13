@@ -65,8 +65,8 @@ class HttpClient: public LuaObject
         static const int MAX_DIGITS         = 10;
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Typedefs

@@ -53,8 +53,8 @@
  ******************************************************************************/
 
 const char* SwotL2Reader::OBJECT_TYPE = "SwotL2Reader";
-const char* SwotL2Reader::LuaMetaName = "SwotL2Reader";
-const struct luaL_Reg SwotL2Reader::LuaMetaTable[] = {
+const char* SwotL2Reader::LUA_META_NAME = "SwotL2Reader";
+const struct luaL_Reg SwotL2Reader::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -130,7 +130,7 @@ void SwotL2Reader::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     region(_asset, _resource, _parms, &context)
 {
     /* Initialize Reader */

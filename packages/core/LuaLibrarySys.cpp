@@ -422,11 +422,10 @@ int LuaLibrarySys::lsys_getiosize (lua_State* L)
 int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
 {
     bool status = false;
-    int type_mask = 0;
 
     if(lua_isnumber(L, 1))
     {
-        type_mask = lua_tonumber(L, 1);
+        int type_mask = lua_tonumber(L, 1);
         if(lua_isnumber(L, 2))
         {
             event_level_t lvl = (event_level_t)lua_tonumber(L, 2);

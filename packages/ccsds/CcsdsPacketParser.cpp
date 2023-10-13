@@ -44,8 +44,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsPacketParser::LuaMetaName = "CcsdsPacketParser";
-const struct luaL_Reg CcsdsPacketParser::LuaMetaTable[] = {
+const char* CcsdsPacketParser::LUA_META_NAME = "CcsdsPacketParser";
+const struct luaL_Reg CcsdsPacketParser::LUA_META_TABLE[] = {
     {"passinvalid", luaPassInvalid},
     {"resetinvalid",luaResetInvalid},
     {"stats",       luaLogPktStats},
@@ -85,7 +85,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -98,7 +98,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsPacketParser::CcsdsPacketParser(lua_State* L, CcsdsParserModule* _parser, CcsdsPacket::type_t _type, const char* inq_name, const char* outq_name, const char* statq_name):
-    MsgProcessor(L, inq_name, LuaMetaName, LuaMetaTable)
+    MsgProcessor(L, inq_name, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_parser);
     assert(inq_name);

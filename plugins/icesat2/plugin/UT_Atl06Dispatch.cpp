@@ -45,8 +45,8 @@
 
 const char* UT_Atl06Dispatch::OBJECT_TYPE = "UT_Atl06Dispatch";
 
-const char* UT_Atl06Dispatch::LuaMetaName = "UT_Atl06Dispatch";
-const struct luaL_Reg UT_Atl06Dispatch::LuaMetaTable[] = {
+const char* UT_Atl06Dispatch::LUA_META_NAME = "UT_Atl06Dispatch";
+const struct luaL_Reg UT_Atl06Dispatch::LUA_META_TABLE[] = {
     {"lsftest",         luaLsfTest},
     {"sorttest",        luaSortTest},
     {NULL,              NULL}
@@ -68,7 +68,7 @@ int UT_Atl06Dispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -81,7 +81,7 @@ int UT_Atl06Dispatch::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_Atl06Dispatch::UT_Atl06Dispatch (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
 }
 

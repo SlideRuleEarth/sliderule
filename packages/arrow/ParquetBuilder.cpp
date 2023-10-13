@@ -61,8 +61,8 @@ using std::vector;
  ******************************************************************************/
 
 const char* ParquetBuilder::OBJECT_TYPE = "ParquetBuilder";
-const char* ParquetBuilder::LuaMetaName = "ParquetBuilder";
-const struct luaL_Reg ParquetBuilder::LuaMetaTable[] = {
+const char* ParquetBuilder::LUA_META_NAME = "ParquetBuilder";
+const struct luaL_Reg ParquetBuilder::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -430,7 +430,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _parms                      = (ArrowParms*)getLuaObject(L, 1, ArrowParms::OBJECT_TYPE);
+        _parms                      = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
         const char* outq_name       = getLuaString(L, 2);
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
@@ -471,7 +471,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -501,8 +501,8 @@ void ParquetBuilder::deinit (void)
  *----------------------------------------------------------------------------*/
 ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* outq_name, const char* inq_name,
-                                const char* rec_type, const char* id, geo_data_t geo, const char* index_key):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+                                const char* rec_type, const char* id, const geo_data_t& geo, const char* index_key):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     recType(StringLib::duplicate(rec_type)),
     batchRecType(NULL),
@@ -607,7 +607,7 @@ ParquetBuilder::~ParquetBuilder(void)
  *----------------------------------------------------------------------------*/
 void* ParquetBuilder::builderThread(void* parm)
 {
-    ParquetBuilder* builder = (ParquetBuilder*)parm;
+    ParquetBuilder* builder = static_cast<ParquetBuilder*>(parm);
     int row_cnt = 0;
 
     /* Early Exit on No Writer */

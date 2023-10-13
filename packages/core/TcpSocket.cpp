@@ -297,7 +297,7 @@ int TcpSocket::getPort (void) const
  *----------------------------------------------------------------------------*/
 void* TcpSocket::connectionThread(void* parm)
 {
-    TcpSocket* socket = (TcpSocket*)parm;
+    TcpSocket* socket = static_cast<TcpSocket*>(parm);
     socket->sock = INVALID_RC;
     bool connected_once = false;
 

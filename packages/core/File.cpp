@@ -346,11 +346,10 @@ int File::readBuffer (void* buf, int len, int timeout)
         /* Read Next Packet */
         unsigned char* pkt_buffer = (unsigned char*)buf;
         char b[5] = {'0', 'x', '\0', '\0', '\0'};
-        int ch = EOF;
         int n = 0;
         while(recv_bytes < len)
         {
-            ch = getc(fp);
+            int ch = getc(fp);
             if(ch == '\n')
             {
                 break;
@@ -503,7 +502,7 @@ bool File::openNewFileForWriting(void)
     if(fp != NULL) fclose(fp);
 
     /* Create Active File Name */
-    int slen = FILENAME_MAX_CHARS;
+    int slen;
     if(fileCount == 1)  slen = snprintf(activeFile, FILENAME_MAX_CHARS - 1, "%s", filename);
     else                slen = snprintf(activeFile, FILENAME_MAX_CHARS - 1, "%s.%ld", filename, fileCount);
     int len = MIN(slen, FILENAME_MAX_CHARS - 1);

@@ -64,24 +64,37 @@ DOCKER_PLATFORM ?= # linux/arm64
 ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
-CLANG_VER = "-12"
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
+
 TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
 MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/scripts/systests/subset_perf_test.lua
+
 USERCFG ?=
-SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
-SLIDERULECFG += -DUSE_ARROW_PACKAGE=ON
-SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
-SLIDERULECFG += -DUSE_H5_PACKAGE=ON
-SLIDERULECFG += -DUSE_NETSVC_PACKAGE=ON
-SLIDERULECFG += -DUSE_GEO_PACKAGE=ON
-SLIDERULECFG += -DUSE_LEGACY_PACKAGE=OFF
-SLIDERULECFG += -DUSE_CCSDS_PACKAGE=OFF
-SLIDERULECFG += $(USERCFG)
+SLIDERULE_CFG := -DMAX_FREE_STACK_SIZE=1
+SLIDERULE_CFG += -DUSE_ARROW_PACKAGE=ON
+SLIDERULE_CFG += -DUSE_AWS_PACKAGE=ON
+SLIDERULE_CFG += -DUSE_H5_PACKAGE=ON
+SLIDERULE_CFG += -DUSE_NETSVC_PACKAGE=ON
+SLIDERULE_CFG += -DUSE_GEO_PACKAGE=ON
+SLIDERULE_CFG += -DUSE_LEGACY_PACKAGE=OFF
+SLIDERULE_CFG += -DUSE_CCSDS_PACKAGE=OFF
+SLIDERULE_CFG += $(USERCFG)
+
+CLANG_VER = "-12"
+CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
+
+DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
+#DEBUG_CFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+DEBUG_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
+DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
+
+RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
+RELEASE_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
 
 all: sliderule
 
@@ -95,35 +108,25 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(OPENDATA_BUILD_DIR)
 	mkdir -p $(SWOT_BUILD_DIR)
 
-config-debug: prep ## configure the server for running locally with debug symbols
-	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
+config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_CFG) -DENABLE_TRACING=ON $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
+	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
+	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
 
-config-release: prep ## configure server to run release version locally (useful for using valgrind)
-	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
-
-config-asan: prep ## configure server to run with address sanitizer locally
-	cd $(SLIDERULE_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
+config-release: prep ## configure server to run a release version locally
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) $(SLIDERULE_CFG) $(SLIDERULE_SOURCE_DIR)
+	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
+	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
+	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
+	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
+	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
 
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)

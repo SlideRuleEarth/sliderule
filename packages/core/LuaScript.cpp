@@ -43,8 +43,8 @@
  ******************************************************************************/
 
 const char* LuaScript::OBJECT_TYPE = "LuaScript";
-const char* LuaScript::LuaMetaName = "LuaScript";
-const struct luaL_Reg LuaScript::LuaMetaTable[] = {
+const char* LuaScript::LUA_META_NAME = "LuaScript";
+const struct luaL_Reg LuaScript::LUA_META_TABLE[] = {
     {"active",      luaActive},
     {"result",      luaResult},
     {NULL,          NULL}
@@ -79,7 +79,7 @@ int LuaScript::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(script);
 
@@ -113,7 +113,7 @@ int LuaScript::luaActive (lua_State* L)
     try
     {
         /* Get Self */
-        LuaScript* lua_obj = (LuaScript*)getLuaSelf(L, 1);
+        LuaScript* lua_obj = dynamic_cast<LuaScript*>(getLuaSelf(L, 1));
 
         /* Check Engine */
         if(lua_obj->engine)
@@ -139,7 +139,7 @@ int LuaScript::luaResult (lua_State* L)
     try
     {
         /* Get Self */
-        LuaScript* lua_obj = (LuaScript*)getLuaSelf(L, 1);
+        LuaScript* lua_obj = dynamic_cast<LuaScript*>(getLuaSelf(L, 1));
 
         /* Check Engine */
         if(lua_obj->engine)

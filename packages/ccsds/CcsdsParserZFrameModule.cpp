@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsParserZFrameModule::LuaMetaName = "CcsdsParserZFrameModule";
-const struct luaL_Reg CcsdsParserZFrameModule::LuaMetaTable[] = {
+const char* CcsdsParserZFrameModule::LUA_META_NAME = "CcsdsParserZFrameModule";
+const struct luaL_Reg CcsdsParserZFrameModule::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -64,7 +64,7 @@ int CcsdsParserZFrameModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -271,7 +271,7 @@ void CcsdsParserZFrameModule::gotoInitState(bool reset)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsParserZFrameModule::CcsdsParserZFrameModule(lua_State* L, bool file):
-    CcsdsParserModule(L, LuaMetaName, LuaMetaTable)
+    CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE)
 {
     frameFile = file;
     gotoInitState(true);

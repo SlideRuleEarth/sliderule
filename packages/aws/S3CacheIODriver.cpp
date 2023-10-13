@@ -49,7 +49,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* S3CacheIODriver::FORMAT = "s3cache";
+const char* S3CacheIODriver::CACHE_FORMAT = "s3cache";
 
 const char* S3CacheIODriver::DEFAULT_CACHE_ROOT = ".cache";
 const char* S3CacheIODriver::cacheRoot = NULL;

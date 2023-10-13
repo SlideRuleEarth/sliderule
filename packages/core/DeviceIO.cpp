@@ -47,8 +47,8 @@
  ******************************************************************************/
 
 const char* DeviceIO::OBJECT_TYPE = "DeviceIO";
-const char* DeviceIO::LuaMetaName = "DeviceReader";
-const struct luaL_Reg DeviceIO::LuaMetaTable[] = {
+const char* DeviceIO::LUA_META_NAME = "DeviceReader";
+const struct luaL_Reg DeviceIO::LUA_META_TABLE[] = {
     {"stats",       luaLogPktStats},
     {"wait",        luaWaitOnConnect},
     {"block",       luaConfigBlock},
@@ -64,7 +64,7 @@ const struct luaL_Reg DeviceIO::LuaMetaTable[] = {
  * Constructor
  *----------------------------------------------------------------------------*/
 DeviceIO::DeviceIO(lua_State* L, DeviceObject* _device):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_device);
 
@@ -104,7 +104,7 @@ int DeviceIO::luaLogPktStats(lua_State* L)
     try
     {
         /* Get Self */
-        DeviceIO* lua_obj = (DeviceIO*)getLuaSelf(L, 1);
+        DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Event Level */
         event_level_t lvl = (event_level_t)getLuaInteger(L, 2, true, INVALID_EVENT_LEVEL);
@@ -145,7 +145,7 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
     try
     {
         /* Get Self */
-        DeviceIO* lua_obj = (DeviceIO*)getLuaSelf(L, 1);
+        DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         long timeout_seconds        = getLuaInteger(L, 2, true, 5);
@@ -192,7 +192,7 @@ int DeviceIO::luaConfigBlock(lua_State* L)
     try
     {
         /* Get Self */
-        DeviceIO* lua_obj = (DeviceIO*)getLuaSelf(L, 1);
+        DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Block Value */
         if(lua_isboolean(L, 2))
@@ -233,7 +233,7 @@ int DeviceIO::luaDieOnDisconnect(lua_State* L)
     try
     {
         /* Get Self */
-        DeviceIO* lua_obj = (DeviceIO*)getLuaSelf(L, 1);
+        DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool enable = getLuaBoolean(L, 2);

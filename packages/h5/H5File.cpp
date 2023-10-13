@@ -40,9 +40,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* H5File::ObjectType = "H5File";
-const char* H5File::LuaMetaName = "H5File";
-const struct luaL_Reg H5File::LuaMetaTable[] = {
+const char* H5File::OBJECT_TYPE = "H5File";
+const char* H5File::LUA_META_NAME = "H5File";
+const struct luaL_Reg H5File::LUA_META_TABLE[] = {
     {"read",        luaRead},
     {"dir",         luaTraverse},
     {"inspect",     luaInspect},
@@ -100,7 +100,7 @@ void H5File::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 H5File::H5File (lua_State* L, Asset* _asset, const char* _resource):
-    LuaObject(L, ObjectType, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     asset = _asset;
     resource = StringLib::duplicate(_resource);

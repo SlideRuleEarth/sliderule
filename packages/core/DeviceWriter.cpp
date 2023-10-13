@@ -51,7 +51,7 @@ int DeviceWriter::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _device = (DeviceObject*)getLuaObject(L, 1, DeviceObject::OBJECT_TYPE);
+        _device = dynamic_cast<DeviceObject*>(getLuaObject(L, 1, DeviceObject::OBJECT_TYPE));
         const char* q_name  = getLuaString(L, 2, true, NULL);
 
         /* Return DeviceReader Object */
@@ -60,7 +60,7 @@ int DeviceWriter::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(_device) _device->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -109,7 +109,7 @@ DeviceWriter::~DeviceWriter(void)
 void* DeviceWriter::writerThread (void* parm)
 {
     assert(parm != NULL);
-    DeviceWriter* dw = (DeviceWriter*)parm;
+    DeviceWriter* dw = static_cast<DeviceWriter*>(parm);
 
     /* Read Loop */
     while(dw->ioActive)

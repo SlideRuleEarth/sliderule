@@ -112,7 +112,7 @@ void SockLib::init()
     else if(host != NULL)
     {
         uint32_t addr = ((struct in_addr*)host->h_addr_list[0])->s_addr;
-        snprintf(ipv4, IPV4_STR_LEN, "%d.%d.%d.%d", addr & 0xFF, (addr >> 8) & 0xFF, (addr >> 16) & 0xFF, (addr >> 24) & 0xFF);
+        snprintf(ipv4, IPV4_STR_LEN, "%u.%u.%u.%u", addr & 0xFF, (addr >> 8) & 0xFF, (addr >> 16) & 0xFF, (addr >> 24) & 0xFF);
     }
 }
 
@@ -255,7 +255,6 @@ int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, bool* b
  *----------------------------------------------------------------------------*/
 int SockLib::socksend(int fd, const void* buf, int size, int timeout)
 {
-    int activity = 1;
     int revents = POLLOUT;
     int c = TIMEOUT_RC;
 
@@ -268,6 +267,8 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
 
     if(timeout != IO_CHECK)
     {
+        int activity = 1;
+        
         /* Build Poll Structure */
         struct pollfd polllist[1];
         polllist[0].fd = fd;
@@ -423,7 +424,6 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
     int num_sockets = 0;
     int max_num_sockets = max_num_connections + 1; // add in listener
     struct pollfd* polllist = new struct pollfd [max_num_sockets];
-    int* flags = new int [max_num_sockets];
 
     /* Create Listen Socket */
     int listen_socket = sockcreate(SOCK_STREAM, ip_addr, port, true, NULL);
@@ -637,7 +637,6 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
     /* Clean Up Allocated Memory */
     delete [] polllist;
-    delete [] flags;
 
     /* Return Status */
     return status;

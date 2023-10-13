@@ -43,8 +43,8 @@ using namespace Pistache;
  * STATIC DATA
  ******************************************************************************/
 
-const char* PistacheClient::LuaMetaName = "PistacheClient";
-const struct luaL_Reg PistacheClient::LuaMetaTable[] = {
+const char* PistacheClient::LUA_META_NAME = "PistacheClient";
+const struct luaL_Reg PistacheClient::LUA_META_TABLE[] = {
     {"request",     luaRequest},
     {NULL,          NULL}
 };
@@ -75,7 +75,7 @@ int PistacheClient::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -88,7 +88,7 @@ int PistacheClient::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 PistacheClient::PistacheClient(lua_State* L,  const char* outq_name, size_t num_threads):
-    LuaObject(L, BASE_OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, BASE_OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Create Output Queue */
     outQ = NULL;

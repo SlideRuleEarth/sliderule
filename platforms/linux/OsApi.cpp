@@ -190,7 +190,7 @@ float OsApi::swapf(float val)
 {
     float rtrndata = 0.0;
     uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint32_t* tempf = (uint32_t*)&val;
+    uint32_t* tempf = (uint32_t*)(char*)&val;
     *(uint32_t*)(dataptr) = bswap_32(*tempf);
     return rtrndata;
 }
@@ -202,7 +202,7 @@ double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
     uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint64_t* tempd = (uint64_t*)&val;
+    uint64_t* tempd = (uint64_t*)(char*)&val;
     *(uint64_t*)(dataptr) = bswap_64(*tempd);
     return rtrndata;
 }
@@ -223,7 +223,6 @@ double OsApi::memusage (void)
     const int BUFSIZE = 128;
     const char* mem_total_ptr = NULL;
     const char* mem_available_ptr = NULL;
-    int i = 0;
     char buffer[BUFSIZE];
     char *endptr;
 
@@ -236,7 +235,7 @@ double OsApi::memusage (void)
             buffer[bytes_read] = '\0';
 
             /* Find MemTotal */
-            i = 9; // start after colon
+            int i = 9; // start after colon
             while(buffer[i] == ' ') i++; // moves one past space
             mem_total_ptr = &buffer[i]; // mark start
             while(buffer[i] != ' ') i++; // stays at first space
@@ -309,7 +308,7 @@ void OsApi::print (const char* file_name, unsigned int line_number, const char* 
     else
     {
         /* Default */
-        printf("%s:%d %s\n", file_name, line_number, message);
+        printf("%s:%u %s\n", file_name, line_number, message);
     }
 }
 

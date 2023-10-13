@@ -47,8 +47,8 @@ RecordObject::fieldDef_t ProgressMessager::rec_def[] =
 };
 
 const char* ProgressMessager::OBJECT_TYPE = "ProgressMessager";
-const char* ProgressMessager::LuaMetaName = "ProgressMessager";
-const struct luaL_Reg ProgressMessager::LuaMetaTable[] = {
+const char* ProgressMessager::LUA_META_NAME = "ProgressMessager";
+const struct luaL_Reg ProgressMessager::LUA_META_TABLE[] = {
     {"post",        luaPost},
     {NULL,          NULL}
 };
@@ -89,7 +89,7 @@ void ProgressMessager::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 ProgressMessager::ProgressMessager (lua_State* L, const char* rspq_name):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(rspq_name);
     rspQ = new Publisher(rspq_name);

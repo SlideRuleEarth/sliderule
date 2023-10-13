@@ -66,10 +66,7 @@ Options include:
    -DRUNTIMEDIR=[directory]            location for run-time files like plugins, configuration files, and lua scripts
                                        default: /usr/local/etc/sliderule
 
-   -DPYTHON_BINDINGS=[ON|OFF]          build python bindings instead of sliderule executable (overrides all other targets)
-                                       default: OFF
-
-   -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets except for PYTHON_BINDINGS)
+   -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets)
                                        default: OFF
 
    -DENABLE_COMPAT=[ON|OFF]            configure build for older tool chains (needed to build on CentOS 7)

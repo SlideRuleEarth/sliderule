@@ -46,8 +46,8 @@
  ******************************************************************************/
 
 const char* Asset::OBJECT_TYPE = "Asset";
-const char* Asset::LuaMetaName = "Asset";
-const struct luaL_Reg Asset::LuaMetaTable[] = {
+const char* Asset::LUA_META_NAME = "Asset";
+const struct luaL_Reg Asset::LUA_META_TABLE[] = {
     {"info",        luaInfo},
     {"load",        luaLoad},
     {NULL,          NULL}
@@ -59,8 +59,6 @@ Dictionary<Asset::io_driver_t> Asset::ioDrivers;
 /******************************************************************************
  * VOID IO DRIVER CLASS
  ******************************************************************************/
-
-const char* Asset::IODriver::FORMAT = "nil";
 
 /*----------------------------------------------------------------------------
  * create
@@ -139,7 +137,7 @@ int Asset::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -296,7 +294,7 @@ const char* Asset::getEndpoint (void) const
  * Constructor
  *----------------------------------------------------------------------------*/
 Asset::Asset (lua_State* L, attributes_t _attributes, io_driver_t _io_driver):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     resources(ASSET_STARTING_RESOURCES_PER_INDEX)
 {
     attributes.name     = StringLib::duplicate(_attributes.name);
@@ -319,7 +317,7 @@ int Asset::luaInfo (lua_State* L)
     try
     {
         /* Get Self */
-        Asset* lua_obj = (Asset*)getLuaSelf(L, 1);
+        Asset* lua_obj = dynamic_cast<Asset*>(getLuaSelf(L, 1));
         attributes_t* attr = &lua_obj->attributes;
 
         /* Push Info */
@@ -353,7 +351,7 @@ int Asset::luaLoad (lua_State* L)
     try
     {
         /* Get Self */
-        Asset* lua_obj = (Asset*)getLuaSelf(L, 1);
+        Asset* lua_obj = dynamic_cast<Asset*>(getLuaSelf(L, 1));
 
         /* Get Resource */
         const char* resource_name = getLuaString(L, 2);

@@ -84,7 +84,7 @@ class Ordering
         class Iterator
         {
             public:
-                                    Iterator    (const Ordering& o);
+                explicit            Iterator    (const Ordering& o);
                                     ~Iterator   (void);
                 kv_t                operator[]  (int index) const;
                 const int           length;

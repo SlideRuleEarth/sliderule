@@ -54,8 +54,8 @@ class CcsdsPacketParser: public MsgProcessor
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const unsigned int IGNORE_LENGTH             = 0;
         static const unsigned int MAX_ALLOWED_PKT_LENGTH    = 0xFFFF;

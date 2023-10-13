@@ -73,7 +73,7 @@ class Dictionary
         class Iterator
         {
             public:
-                                    Iterator    (const Dictionary& d);
+                explicit            Iterator    (const Dictionary& d);
                                     ~Iterator   (void);
                 kv_t                operator[]  (int index);
                 const int           length;
@@ -90,7 +90,7 @@ class Dictionary
                     Dictionary      (int hash_size=DEFAULT_HASH_TABLE_SIZE, double hash_load=DEFAULT_HASH_TABLE_LOAD);
                     ~Dictionary     (void);
 
-        bool        add             (const char* key, T& data, bool unique=false);
+        bool        add             (const char* key, const T& data, bool unique=false);
         T&          get             (const char* key) const;
         bool        find            (const char* key, T* data=NULL) const;
         bool        remove          (const char* key);
@@ -140,7 +140,7 @@ class Dictionary
 
         unsigned int    hashKey     (const char* key) const;  // returns unconstrained hash
         unsigned int    getNode     (const char* key) const;  // returns index into hash table
-        void            addNode     (const char* key, T& data, unsigned int hash, bool rehashed=false);
+        void            addNode     (const char* key, const T& data, unsigned int hash, bool rehashed=false);
         void            freeNode    (unsigned int hash_index);
 };
 
@@ -254,7 +254,7 @@ Dictionary<T, IS_MANAGED, IS_ARRAY>::~Dictionary(void)
  *  if not unique then old data is automatically deleted and overwritten
  *----------------------------------------------------------------------------*/
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
-bool Dictionary<T, IS_MANAGED, IS_ARRAY>::add(const char* key, T& data, bool unique)
+bool Dictionary<T, IS_MANAGED, IS_ARRAY>::add(const char* key, const T& data, bool unique)
 {
     assert(key);
 
@@ -457,7 +457,7 @@ int Dictionary<T, IS_MANAGED, IS_ARRAY>::getMaxChain(void) const
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
 int Dictionary<T, IS_MANAGED, IS_ARRAY>::getKeys (char*** keys) const
 {
-    if (numEntries <= 0) return 0;
+    if (numEntries == 0) return 0;
 
     *keys = new char* [numEntries];
     for(unsigned int i = 0, j = 0; i < hashSize; i++)
@@ -591,6 +591,9 @@ const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::last (T* data)
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
 Dictionary<T, IS_MANAGED, IS_ARRAY>& Dictionary<T, IS_MANAGED, IS_ARRAY>::operator=(const Dictionary& other)
 {
+    /* Check Self Assignment */
+    if(this == &other) return *this;
+    
     /* Clear Hash */
     clear();
 
@@ -707,7 +710,7 @@ unsigned int Dictionary<T, IS_MANAGED, IS_ARRAY>::getNode(const char* key) const
  * addNode
  *----------------------------------------------------------------------------*/
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
-void Dictionary<T, IS_MANAGED, IS_ARRAY>::addNode (const char* key, T& data, unsigned int hash, bool rehashed)
+void Dictionary<T, IS_MANAGED, IS_ARRAY>::addNode (const char* key, const T& data, unsigned int hash, bool rehashed)
 {
     assert(hashSize);
 

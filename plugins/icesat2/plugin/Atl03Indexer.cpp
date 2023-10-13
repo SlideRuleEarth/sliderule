@@ -53,8 +53,8 @@ const RecordObject::fieldDef_t Atl03Indexer::recDef[] = {
     {"rgt",     RecordObject::UINT32,   offsetof(index_t, rgt),     1,                              NULL, NATIVE_FLAGS},
 };
 const char* Atl03Indexer::OBJECT_TYPE = "Atl03Indexer";
-const char* Atl03Indexer::LuaMetaName = "Atl03Indexer";
-const struct luaL_Reg Atl03Indexer::LuaMetaTable[] = {
+const char* Atl03Indexer::LUA_META_NAME = "Atl03Indexer";
+const struct luaL_Reg Atl03Indexer::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -129,7 +129,7 @@ void Atl03Indexer::init (void)
  *          (const char*) inside the list; responsible for freeing both
  *----------------------------------------------------------------------------*/
 Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<const char*>* _resources, const char* outq_name, int num_threads):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(outq_name);
     assert(_resources);
@@ -357,7 +357,7 @@ int Atl03Indexer::luaStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error configuring %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error configuring %s: %s", LUA_META_NAME, e.what());
     }
 
     /* Return Status */

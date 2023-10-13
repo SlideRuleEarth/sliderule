@@ -379,7 +379,7 @@ void LuaEngine::abortHook (lua_State *L, lua_Debug *ar)
     (void)ar;
     lua_pushstring(L, LUA_SELFKEY);
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
+    LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
     if(!li)
     {
         luaL_error(L, "Unable to access Lua engine - aborting!");
@@ -1079,7 +1079,7 @@ int LuaEngine::pmain (lua_State *L)
     /* retrieve LuaEngine object from registry */
     lua_pushstring(L, LUA_SELFKEY);
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
+    LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
     if(!li)
     {
         mlog(CRITICAL, "Unable to access lua interpreter");

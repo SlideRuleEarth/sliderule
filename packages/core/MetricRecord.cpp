@@ -61,7 +61,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
     RecordObject(rec_type, calcRecordSize(_text, _name, _src_size))
 {
     /* Populate Initial Metric */
-    metric = (metric_t*)recordData;
+    metric = reinterpret_cast<metric_t*>(recordData);
     metric->index = _index;
     metric->value = _value;
     metric->text_offset = 0;

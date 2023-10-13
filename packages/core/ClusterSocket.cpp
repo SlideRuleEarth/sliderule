@@ -232,12 +232,12 @@ int ClusterSocket::readBuffer(void *buf, int len, int timeout)
  *----------------------------------------------------------------------------*/
 void* ClusterSocket::connectionThread(void* parm)
 {
-    ClusterSocket* s = (ClusterSocket*)parm;
+    ClusterSocket* s = static_cast<ClusterSocket*>(parm);
 
     int status = 0;
 
-    if(s->is_server) SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
-    else             SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
+    if(s->is_server) status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
+    else             status = SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
 
     if(status < 0)   mlog(CRITICAL, "Failed to establish cluster %s socket on %s:%d (%d)", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
 
@@ -253,7 +253,7 @@ int ClusterSocket::pollHandler(int fd, short* events, void* parm)
 {
     (void)fd;
 
-    ClusterSocket* s = (ClusterSocket*)parm;
+    ClusterSocket* s = static_cast<ClusterSocket*>(parm);
 
     /* Set Polling Flags */
     *events = IO_READ_FLAG;
@@ -287,7 +287,7 @@ int ClusterSocket::pollHandler(int fd, short* events, void* parm)
  *----------------------------------------------------------------------------*/
 int ClusterSocket::activeHandler(int fd, int flags, void* parm)
 {
-    ClusterSocket* s = (ClusterSocket*)parm;
+    ClusterSocket* s = static_cast<ClusterSocket*>(parm);
 
     int rc = 0;
 
@@ -462,7 +462,7 @@ int ClusterSocket::onWrite(int fd)
                         spin_block = false;
 
                         /* Dereference If Payload Fully Sent */
-                        if(connection->payload_left <= 0)
+                        if(connection->payload_left == 0)
                         {
                             connection->subconnq->dereference(connection->payload_ref);
                         }

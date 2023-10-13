@@ -11,12 +11,6 @@ USGS3DEP_BUILD = $(BUILD)/usgs3dep
 OPENDATA_BUILD = $(BUILD)/opendata
 SWOT_BUILD = $(BUILD)/swot
 
-# when using the llvm toolchain to build the source
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
-
-# for a MacOSX host to have this ip command you must install homebrew(see https://brew.sh/) then run 'brew install iproute2mac' on your mac host
-MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-
 ########################
 # Core Framework Targets
 ########################
@@ -223,20 +217,6 @@ uninstall-swot: ## uninstall most recent install of icesat2 plugin from system
 # Development Targets
 ########################
 
-scan: prep ## perform static analysis
-#	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; scan-build cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
-#	cd $(SLIDERULE_BUILD); scan-build -o scan-results make
-	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) $(ROOT)
-
-asan: prep ## build address sanitizer debug version of sliderule binary
-	cd $(SLIDERULE_BUILD); export CC=clang; export CXX=clang++; cmake $(CLANG_OPT) $(DEVCFG) -DCMAKE_BUILD_TYPE=Debug -DENABLE_ADDRESS_SANITIZER=ON $(ROOT)
-	cd $(SLIDERULE_BUILD); make
-
-ctags: ## generate ctags
-	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
-	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
-	/usr/bin/jq -s 'add' $(SLIDERULE_BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json $(USGS3DEP_BUILD)/compile_commands.json $(OPENDATA_BUILD)/compile_commands.json $(SWOT_BUILD)/compile_commands.json > compile_commands.json
-
 testmem: ## run memory test on sliderule
 	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
 
@@ -257,13 +237,14 @@ testcov: ## analyze results of test coverage report
 	genhtml $(SLIDERULE_BUILD)/coverage.info --output-directory $(SLIDERULE_BUILD)/coverage_html
 	# firefox $(SLIDERULE_BUILD)/coverage_html/index.html
 
-testpy: ## run python binding test
-	cp scripts/systests/coro.py $(SLIDERULE_BUILD)
-	cd $(SLIDERULE_BUILD); /usr/bin/python3 coro.py
-
 ########################
 # Global Targets
 ########################
+
+ctags: ## generate ctags
+	if [ -d ".clangd/index/" ]; then rm -f .clangd/index/*; fi             ## clear clagnd index (before clangd-11)
+	if [ -d ".cache/clangd/index/" ]; then rm -f .cache/clangd/index/*; fi ## clear clagnd index (clangd-11)
+	/usr/bin/jq -s 'add' $(SLIDERULE_BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json $(USGS3DEP_BUILD)/compile_commands.json $(OPENDATA_BUILD)/compile_commands.json $(SWOT_BUILD)/compile_commands.json > compile_commands.json
 
 prep: ## create necessary build directories
 	mkdir -p $(SLIDERULE_BUILD)

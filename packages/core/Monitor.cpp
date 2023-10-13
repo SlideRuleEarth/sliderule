@@ -42,8 +42,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Monitor::LuaMetaName = "Monitor";
-const struct luaL_Reg Monitor::LuaMetaTable[] = {
+const char* Monitor::LUA_META_NAME = "Monitor";
+const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
     {"config",      luaConfig},
     {"tail",        luaTail},
     {"cat",         luaCat},
@@ -72,7 +72,7 @@ int Monitor::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -85,7 +85,7 @@ int Monitor::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Initialize Event Monitor */
     eventTypeMask   = type_mask;
@@ -117,9 +117,6 @@ bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records
     (void)key;
     (void)records;
 
-    int event_size;
-    char event_buffer[MAX_EVENT_SIZE];
-
     /* Pull Out Log Message */
     EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
 
@@ -140,6 +137,9 @@ bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records
     }
     else
     {
+        int event_size;
+        char event_buffer[MAX_EVENT_SIZE];
+    
         /* Format Event */
         if(outputFormat == CLOUD)
         {
@@ -254,7 +254,7 @@ int Monitor::luaConfig (lua_State* L)
     try
     {
         /* Get Self */
-        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+        Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Set Type Mask */
         uint8_t type_mask = getLuaInteger(L, 2, true, 0, &provided);
@@ -294,7 +294,7 @@ int Monitor::luaTail (lua_State* L)
     try
     {
         /* Get Self */
-        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+        Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Get Tail Size */
         int tail_size = getLuaInteger(L, 2);
@@ -339,7 +339,7 @@ int Monitor::luaCat (lua_State* L)
     try
     {
         /* Get Self */
-        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+        Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Get Mode */
         cat_mode_t mode = (cat_mode_t)getLuaInteger(L, 2, true, TERM);
