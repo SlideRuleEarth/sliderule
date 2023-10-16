@@ -52,7 +52,7 @@ sliderule.scaleout(desired_nodes=5, time_to_live=60) # request and wait for 5 no
 
 ## Troubleshooting
 
-* **Version Incompatibilities**: Private clusters run a pinned version of the sliderule server code which is deteremined by the owner of the cluster.  If your client is on a different version than the server, please work with the owner of your cluster to resolve which client version you should be running.  Note that version incompatibilities will be reported by the client on initialization like so:
+* **Version Incompatibilities**: Private clusters run a pinned version of the sliderule server code which is determined by the owner of the cluster.  If your client is on a different version than the server, please work with the owner of your cluster to resolve which client version you should be running.  Note that version incompatibilities will be reported by the client on initialization like so:
 ```
 RuntimeError: Client (version (4, 0, 2)) is incompatible with the server (version (3, 7, 0))
 ```
