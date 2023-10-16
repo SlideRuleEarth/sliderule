@@ -218,7 +218,7 @@ static void configGDAL(void)
      * Sets the number of worker threads to be used by GDAL operations that support multithreading.
      * The default value depends on the context in which it is used.
      */
-    CPLSetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
+    // CPLSetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
 
     /*
      * Enable PROJ library network capabilities for accessing GeoTIFF grids
