@@ -122,11 +122,19 @@ void test_projlib(void)
 static void configGDAL(void)
 {
     /*
-     * Very verbose GDAL and CURL tracing, works with release build (-03)
+     * Verbose GDAL debug messages
      */
-#if 0
-    CPLSetConfigOption("CPL_DEBUG", "ON");
-#endif
+    CPLSetConfigOption("CPL_DEBUG", "OFF");
+
+    /*
+     * Very, very verbose CURL tracing
+     */
+    CPLSetConfigOption("CPL_CURL_VERBOSE", "NO");
+
+    /*
+     * AWS region, defaults to us-east-1
+     */
+    CPLSetConfigOption("AWS_DEFAULT_REGION", "us-west-2");
 
     /*
      * When reading datasets with necessary external sidecar files, it's imperative to set FALSE.
