@@ -8,6 +8,9 @@ services:
     entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
     stdin_open: true # docker run -i
     tty: true # docker run -t
+    ulimits:
+      nofile:
+        soft: "8192"
     volumes:
       - /etc/ssl/certs:/etc/ssl/certs
       - /data:/data
