@@ -22,7 +22,7 @@ Using SlideRule means issuing HTTP requests to SlideRule's endpoints to perform 
 
 The SlideRule Python Client helps make the above steps a lot easier by providing a user-friendly interface for accomplishing typical workflows.
 
-#. The Python client supports an *area of interest* being defined in multiple ways - as a dictionary of latitude and longitudes, a list of coordinates, a GeoJSON file, a Shapefile, or a GeoDataFrame - and then representing the area of interest in standard formats accepted by SlideRule and other NASA web services.
+#. The Python client supports an *area of interest* being defined in multiple ways - as a dictionary of latitude and longitudes, a list of coordinates, a GeoJSON file, a Shapefile, or a GeoDataFrame - and then converting that representation into the different forms required by SlideRule and other NASA web services.
 #. The Python client queries NASA's Common Metadata Repository (CMR) system automatically for the user and populates the requests to SlideRule with the available science data pertinent to the user's request.
 #. The Python client allows users to define their processing parameters as Python dictionaries, and make requests to SlideRule using Python functions.
 #. The Python client handles the HTTPS connection to the SlideRule servers as well as any necessary authentication requests to the SlideRule Provisioning System when private clusters are being used.
@@ -138,7 +138,7 @@ For example:
                {"lon": -108.3605610678553, "lat": 39.25086131372244},
                {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
 
-In order to facilitate other formats, the ``sliderule.toregion`` function can be used to convert polygons from the GeoJSON and Shapefile formats to the format accepted by `SlideRule`.
+In order to facilitate other formats, the ``sliderule.toregion`` function can be used to convert polygons from the GeoJSON and Shapefile formats into this format accepted by `SlideRule`.
 
 There is no limit to the number of points in the polygon, but note that as the number of points grow, the amount of time it takes to perform the subsetting process also grows. For that reason, it is recommended that if your polygon has more than a few hundred points, it is best to enable the rasterization option described in the GeoJSON section below.
 

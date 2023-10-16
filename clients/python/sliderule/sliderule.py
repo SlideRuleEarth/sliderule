@@ -1221,29 +1221,59 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     dict
         a list of longitudes and latitudes containing the region of interest that can be used for the **poly** and **raster** parameters in a processing request to SlideRule.
 
-        region = {"poly": [{"lat": <lat1>, "lon": <lon1> }, ...], "clusters": [[{"lat": <lat1>, "lon": <lon1>}, ...], [{"lat": <lat1>, "lon": <lon1>}, ...]], "raster": {"data": <geojson file as string>, "length": <length of geojson file>, "cellsize": <parameter cellsize>}}
+        region = {
+
+            "gdf": <GeoDataFrame of region>
+            
+            "poly": [{"lat": <lat1>, "lon": <lon1> }, ...], 
+            
+            "raster": {"data": <geojson file as string>, 
+
+            "clusters": [[{"lat": <lat1>, "lon": <lon1>}, ...], [{"lat": <lat1>, "lon": <lon1>}, ...]] }
 
     Examples
     --------
-        >>> from sliderule import icesat2
-        >>> # Region of Interest #
-        >>> region_filename = sys.argv[1]
-        >>> region = sliderule.toregion(region_filename)
-        >>> # Configure SlideRule #
-        >>> icesat2.init("slideruleearth.io", False)
-        >>> # Build ATL06 Request #
-        >>> parms = {
-        ...     "poly": region["poly"],
-        ...     "srt": icesat2.SRT_LAND,
-        ...     "cnf": icesat2.CNF_SURFACE_HIGH,
-        ...     "ats": 10.0,
-        ...     "cnt": 10,
-        ...     "len": 40.0,
-        ...     "res": 20.0,
-        ...     "maxi": 1
-        ... }
-        >>> # Get ATL06 Elevations
-        >>> atl06 = icesat2.atl06p(parms)
+    >>> import sliderule, json
+    >>> region = sliderule.toregion("tests/data/grandmesa.geojson")
+    >>> print(json.dumps(region["poly"], indent=4))
+    [
+        {
+            "lon": -108.20772968780051,
+            "lat": 38.8232055291981
+        },
+        {
+            "lon": -108.07460164311031,
+            "lat": 38.8475137825863
+        },
+        {
+            "lon": -107.72839858755752,
+            "lat": 39.01510930230633
+        },
+        {
+            "lon": -107.78724142490994,
+            "lat": 39.195630349659986
+        },
+        {
+            "lon": -108.17287000970857,
+            "lat": 39.15920066396116
+        },
+        {
+            "lon": -108.31168256553767,
+            "lat": 39.13757646212944
+        },
+        {
+            "lon": -108.34115668325224,
+            "lat": 39.03758987613325
+        },
+        {
+            "lon": -108.2878686387796,
+            "lat": 38.89051431295789
+        },
+        {
+            "lon": -108.20772968780051,
+            "lat": 38.8232055291981
+        }
+    ]    
     '''
 
     tstart = time.perf_counter()
