@@ -194,10 +194,10 @@ int Atl03Reader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (Icesat2Parms*)getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE);
+        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -586,7 +586,7 @@ void Atl03Reader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
+Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                   "/orbit_info/sc_orient",              &info->reader->context),
     velocity_sc         (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/velocity_sc").str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/delta_time").str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -729,7 +729,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data& atl03)
+void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!info->reader->parms->stages[Icesat2Parms::STAGE_ATL08])
@@ -871,7 +871,7 @@ uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl03):
+Atl03Reader::YapcScore::YapcScore (info_t* info, const Region& region, const Atl03Data& atl03):
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
@@ -906,7 +906,7 @@ Atl03Reader::YapcScore::~YapcScore (void)
 /*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Hard-Coded Parameters */
     const double MAXIMUM_HSPREAD = 15000.0; // meters
@@ -1077,7 +1077,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
 /*----------------------------------------------------------------------------
  * yapcV3
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
     Icesat2Parms::yapc_t* settings = &info->reader->parms->yapc;
@@ -1215,7 +1215,7 @@ uint8_t Atl03Reader::YapcScore::operator[] (int index) const
 /*----------------------------------------------------------------------------
  * TrackState::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
+Atl03Reader::TrackState::TrackState (const Atl03Data& atl03)
 {
     ph_in              = 0;
     seg_in             = 0;
@@ -1248,7 +1248,6 @@ void* Atl03Reader::subsettingThread (void* parm)
     Atl03Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
-    uint32_t extent_counter = 0;
     List<int32_t>* segment_indices = NULL;    // used for ancillary data
     List<int32_t>* photon_indices = NULL;     // used for ancillary data
 
@@ -1257,7 +1256,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
-    {
+    {        
         /* Start Reading ATL08 Data */
         Atl08Class atl08(info);
 
@@ -1282,6 +1281,9 @@ void* Atl03Reader::subsettingThread (void* parm)
         /* Calculate Length of Extent in Meters (used for distance) */
         state.extent_length = parms->extent_length;
         if(parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
+
+        /* Initialize Extent Counter */
+        uint32_t extent_counter = 0;
 
         /* Traverse All Photons In Dataset */
         while(reader->active && !state.track_complete)
@@ -1627,7 +1629,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
+double Atl03Reader::calculateBackground (TrackState& state, const Atl03Data& atl03)
 {
     double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(state.bckgrd_in < atl03.bckgrd_rate.size)
@@ -1666,7 +1668,7 @@ double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
 /*----------------------------------------------------------------------------
  * calculateSegmentId
  *----------------------------------------------------------------------------*/
-uint32_t Atl03Reader::calculateSegmentId (TrackState& state, Atl03Data& atl03)
+uint32_t Atl03Reader::calculateSegmentId (const TrackState& state, const Atl03Data& atl03)
 {
     /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
     double atl06_segment_id = (double)atl03.segment_id[state.extent_segment]; // start with first segment in extent
@@ -1687,7 +1689,7 @@ uint32_t Atl03Reader::calculateSegmentId (TrackState& state, Atl03Data& atl03)
 /*----------------------------------------------------------------------------
  * generateExtentRecord
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
 {
     /* Calculate Extent Record Size */
     int num_photons = state.extent_photons.length();
@@ -1874,7 +1876,7 @@ int Atl03Reader::luaParms (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<Atl03Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {
@@ -1924,7 +1926,7 @@ int Atl03Reader::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<Atl03Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

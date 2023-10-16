@@ -74,7 +74,7 @@ int H5File::luaCreate(lua_State* L)
     try
     {
         /* Get Parameters */
-        _asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        _asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _resource = getLuaString(L, 2);
 
         /* Return File Device Object */
@@ -179,18 +179,18 @@ int H5File::luaRead (lua_State* L)
 {
     bool status = true;
 
-    int self_index = 1;
-    int tbl_index = 2;
-    int outq_index = 3;
-
     List<Thread*> pids;
     const char* outq_name = NULL;
     H5File* lua_obj = NULL;
 
     try
     {
+        int self_index = 1;
+        int tbl_index = 2;
+        int outq_index = 3;
+
         /* Get Self */
-        lua_obj = (H5File*)getLuaSelf(L, self_index);
+        lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, self_index));
 
         /* Get Output Queue */
         outq_name = getLuaString(L, outq_index);
@@ -294,7 +294,7 @@ int H5File::luaTraverse (lua_State* L)
     try
     {
         /* Get Self */
-        H5File* lua_obj = (H5File*)getLuaSelf(L, 1);
+        H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         uint32_t max_depth = getLuaInteger(L, 2, true, 32);
@@ -322,7 +322,7 @@ int H5File::luaInspect (lua_State* L)
     try
     {
         /* Get Self */
-        H5File* lua_obj = (H5File*)getLuaSelf(L, 1);
+        H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* dataset_name = getLuaString(L, 2);

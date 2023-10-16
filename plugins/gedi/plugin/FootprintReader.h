@@ -100,7 +100,7 @@ class FootprintReader: public LuaObject
         {
             public:
 
-                Region              (info_t* info);
+                explicit Region     (info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);

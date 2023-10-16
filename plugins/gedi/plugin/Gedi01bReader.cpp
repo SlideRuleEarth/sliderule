@@ -82,10 +82,10 @@ int Gedi01bReader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (GediParms*)getLuaObject(L, 4, GediParms::OBJECT_TYPE);
+        parms = dynamic_cast<GediParms*>(getLuaObject(L, 4, GediParms::OBJECT_TYPE));
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -169,7 +169,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    Gedi01bReader* reader = (Gedi01bReader*)info->reader;
+    Gedi01bReader* reader = dynamic_cast<Gedi01bReader*>(info->reader);
     GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 

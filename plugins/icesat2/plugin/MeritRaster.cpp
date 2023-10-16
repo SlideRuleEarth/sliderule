@@ -105,7 +105,7 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
     gpsTime = TimeLib::gmt2gpstime(gmt_date);
 
     /*  Inintialize Asset */
-    asset = (Asset*)LuaObject::getLuaObjectByName(ASSET_NAME, Asset::OBJECT_TYPE);
+    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(ASSET_NAME, Asset::OBJECT_TYPE));
     if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", ASSET_NAME);
 }
 

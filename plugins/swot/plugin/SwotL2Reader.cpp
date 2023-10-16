@@ -98,10 +98,10 @@ int SwotL2Reader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (SwotParms*)getLuaObject(L, 4, SwotParms::OBJECT_TYPE);
+        parms = dynamic_cast<SwotParms*>(getLuaObject(L, 4, SwotParms::OBJECT_TYPE));
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -403,7 +403,7 @@ void SwotL2Reader::checkComplete (void)
 void* SwotL2Reader::geoThread (void* parm)
 {
     /* Get Thread Info */
-    SwotL2Reader* reader = (SwotL2Reader*)parm;
+    SwotL2Reader* reader = static_cast<SwotL2Reader*>(parm);
 
     /* Calculate Total Size of Record Data */
     int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
@@ -447,7 +447,7 @@ void* SwotL2Reader::varThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    SwotL2Reader* reader = (SwotL2Reader*)info->reader;
+    SwotL2Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Initialize Results */

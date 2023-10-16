@@ -112,7 +112,7 @@ int Atl08Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = (Icesat2Parms*)getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE);
+        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl08Dispatch(L, outq_name, parms));
@@ -163,7 +163,7 @@ Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
      * definition.
      */
     recObj = new RecordObject(batchRecType, sizeof(atl08_t));
-    recData = (atl08_t*)recObj->getRecordData();
+    recData = reinterpret_cast<atl08_t*>(recObj->getRecordData());
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
@@ -191,7 +191,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Check Extent */
-    if(extent->photon_count <= 0)
+    if(extent->photon_count == 0)
     {
         return true;
     }

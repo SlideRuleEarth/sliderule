@@ -69,11 +69,11 @@ class UT_Atl06Dispatch: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        UT_Atl06Dispatch        (lua_State* L);
-                        ~UT_Atl06Dispatch       (void);
+                        explicit UT_Atl06Dispatch   (lua_State* L);
+                        ~UT_Atl06Dispatch           (void);
 
-        static int      luaLsfTest              (lua_State* L);
-        static int      luaSortTest             (lua_State* L);
+        static int      luaLsfTest                  (lua_State* L);
+        static int      luaSortTest                 (lua_State* L);
 };
 
 #endif  /* __ut_atl06dispatch__ */

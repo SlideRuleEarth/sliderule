@@ -93,8 +93,8 @@ class ProvisioningSystemLib
         {
             public:
                 static int luaCreate (lua_State* L);
-                Authenticator(lua_State* L);
-                ~Authenticator(void);
+                explicit Authenticator(lua_State* L);
+                ~Authenticator(void) override;
                 bool isValid(const char* token) override;
         };
 };

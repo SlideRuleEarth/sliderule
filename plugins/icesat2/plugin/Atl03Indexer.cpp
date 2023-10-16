@@ -73,7 +73,7 @@ int Atl03Indexer::luaCreate (lua_State* L)
     try
     {
         /* Get URL */
-                    _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+                    _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         int         tblindex    = 2;
         const char* outq_name   = getLuaString(L, 3);
         int         num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
@@ -197,8 +197,7 @@ Atl03Indexer::~Atl03Indexer (void)
 void* Atl03Indexer::indexerThread (void* parm)
 {
     /* Get Thread Info */
-    Atl03Indexer* indexer = (Atl03Indexer*)parm;
-    bool complete = false;
+    Atl03Indexer* indexer = reinterpret_cast<Atl03Indexer*>(parm);
 
     /* Start Trace */
     uint32_t trace_id = start_trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
@@ -213,6 +212,7 @@ void* Atl03Indexer::indexerThread (void* parm)
 
     try
     {
+        bool complete = false;
         while(!complete)
         {
             const char* resource_name = NULL;
@@ -343,7 +343,7 @@ int Atl03Indexer::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        Atl03Indexer* lua_obj = (Atl03Indexer*)getLuaSelf(L, 1);
+        Atl03Indexer* lua_obj = dynamic_cast<Atl03Indexer*>(getLuaSelf(L, 1));
 
         /* Create Statistics Table */
         lua_newtable(L);

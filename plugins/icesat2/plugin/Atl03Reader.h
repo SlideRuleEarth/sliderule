@@ -173,7 +173,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Region              (info_t* info);
+                explicit Region     (info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
@@ -202,7 +202,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, Region& region);
+                Atl03Data           (info_t* info, const Region& region);
                 ~Atl03Data          (void);
 
                 /* Read Data */
@@ -237,9 +237,9 @@ class Atl03Reader: public LuaObject
                 static const uint8_t INVALID_FLAG = 0xFF;
 
                 /* Methods */
-                Atl08Class          (info_t* info);
+                explicit Atl08Class (info_t* info);
                 ~Atl08Class         (void);
-                void classify       (info_t* info, Region& region, Atl03Data& atl03);
+                void classify       (info_t* info, const Region& region, const Atl03Data& atl03);
                 uint8_t operator[]  (int index) const;
 
                 /* Class Data */
@@ -270,11 +270,11 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                YapcScore           (info_t* info, Region& region, Atl03Data& atl03);
+                YapcScore           (info_t* info, const Region& region, const Atl03Data& atl03);
                 ~YapcScore          (void);
 
-                void yapcV2         (info_t* info, Region& region, Atl03Data& atl03);
-                void yapcV3         (info_t* info, Region& region, Atl03Data& atl03);
+                void yapcV2         (info_t* info, const Region& region, const Atl03Data& atl03);
+                void yapcV3         (info_t* info, const Region& region, const Atl03Data& atl03);
 
                 uint8_t operator[]  (int index) const;
 
@@ -301,8 +301,8 @@ class Atl03Reader: public LuaObject
                 bool            extent_valid;       // flag for validity of extent (atl06 checks)
                 double          extent_length;      // custom length of the extent (in meters)
 
-                TrackState      (Atl03Data& atl03);
-                ~TrackState     (void);
+                explicit TrackState (const Atl03Data& atl03);
+                ~TrackState         (void);
         };
 
         /*--------------------------------------------------------------------
@@ -345,9 +345,9 @@ class Atl03Reader: public LuaObject
 
         static void*        subsettingThread            (void* parm);
 
-        static double       calculateBackground         (TrackState& state, Atl03Data& atl03);
-        uint32_t            calculateSegmentId          (TrackState& state, Atl03Data& atl03);
-        void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
+        static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
+        uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
+        void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
         static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);

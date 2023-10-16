@@ -51,6 +51,15 @@ class H5Array
     public:
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef union {
+            uint8_t*    raw_data;
+            T*          typed_data;
+        } type_cast_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -58,7 +67,7 @@ class H5Array
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
-        T&      operator[]  (long index);
+        T&      operator[]  (long index) const;
         bool    join        (int timeout, bool throw_exception);
 
         /*--------------------------------------------------------------------
@@ -135,7 +144,7 @@ bool H5Array<T>::trim(long offset)
  *  Note: intentionally left unsafe for performance reasons
  *----------------------------------------------------------------------------*/
 template <class T>
-T& H5Array<T>::operator[](long index)
+T& H5Array<T>::operator[](long index) const
 {
     return pointer[index];
 }
@@ -155,7 +164,8 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
         {
             status = true;
             size = h5f->info.elements;
-            data = (T*)h5f->info.data;
+            type_cast_t* cast = reinterpret_cast<type_cast_t*>(h5f->info.data);
+            data = cast->typed_data;
             pointer = data;
         }
         else

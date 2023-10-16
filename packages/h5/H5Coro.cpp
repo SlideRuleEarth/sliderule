@@ -104,8 +104,8 @@ H5Future::rc_t H5Future::wait (int timeout)
             sync.wait(0, timeout);
         }
 
-        if      (!complete) rc = TIMEOUT;
-        else if (!valid)    rc = INVALID;
+        if      (!valid)    rc = INVALID;
+        else if (!complete) rc = TIMEOUT;
         else                rc = COMPLETE;
     }
     sync.unlock();
@@ -742,7 +742,7 @@ void H5FileBuffer::readDataset (info_t* info)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "chunk element size does not match data element size: %d != %d", metaData.elementsize, metaData.typesize);
                     }
-                    if(metaData.chunkelements <= 0)
+                    if(metaData.chunkelements == 0)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of chunk elements: %ld", (long)metaData.chunkelements);
                     }
@@ -1534,9 +1534,9 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 /* Display Info */
                 if(H5_VERBOSE && H5_EXTRA_DEBUG)
                 {
-                    print2term("Chunk Offset:                                                    %ld (%ld)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
-                    print2term("Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
-                    print2term("Chunk Bytes:                                                     %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
+                    print2term("Chunk Offset:                                                    %lu (%lu)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
+                    print2term("Buffer Index:                                                    %lu (%lu)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
+                    print2term("Chunk Bytes:                                                     %lu (%lu)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
                 }
 
                 /* Read Chunk */
@@ -3166,7 +3166,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             print2term("Entries Used:                                                    %d\n", (int)entries_used);
             print2term("Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
             print2term("Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
-            print2term("First Key:                                                       %ld\n", (unsigned long)key0);
+            print2term("First Key:                                                       %lu\n", (unsigned long)key0);
         }
 
         /* Loop Through Entries in Current Node */

@@ -223,7 +223,7 @@ EndpointProxy::~EndpointProxy (void)
  *----------------------------------------------------------------------------*/
 void* EndpointProxy::collatorThread (void* parm)
 {
-    EndpointProxy* proxy = (EndpointProxy*)parm;
+    EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
     int current_resource = 0;
 
     while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
@@ -298,7 +298,7 @@ void* EndpointProxy::collatorThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* EndpointProxy::proxyThread (void* parm)
 {
-    EndpointProxy* proxy = (EndpointProxy*)parm;
+    EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
 
     while(proxy->active)
     {

@@ -262,7 +262,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
             if(asset_name)
             {
-                asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+                asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
                 if(!asset && asset_required) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset_name);
                 mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
             }
@@ -435,7 +435,7 @@ int GeoParms::luaAssetName (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset_name) lua_pushstring(L, lua_obj->asset_name);
         else lua_pushnil(L);
         return 1;
@@ -453,7 +453,7 @@ int GeoParms::luaAssetRegion (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getRegion());
         else lua_pushnil(L);
         return 1;
@@ -471,7 +471,7 @@ int GeoParms::luaSetKeySpace (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         uint64_t key_space = (uint64_t)getLuaInteger(L, 2);
 
         lua_obj->key_space = key_space;
