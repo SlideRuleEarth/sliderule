@@ -149,6 +149,7 @@ class LuaObject
         static Mutex                    globalMut;
 
         std::atomic<long>               referenceCount;
+        luaUserData_t*                  userData;
         Cond                            objSignal;
         bool                            objComplete;
 };

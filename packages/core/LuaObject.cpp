@@ -267,6 +267,7 @@ bool LuaObject::releaseLuaObject (void)
     /* Delete THIS Object */
     if(is_delete_pending)
     {
+        userData->luaObj = NULL;
         delete this;
     }
 
@@ -287,6 +288,7 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     LuaMetaTable(meta_table),
     LuaState(L),
     referenceCount(0),
+    userData(NULL),
     objComplete(false)
 {
     uint32_t engine_trace_id = ORIGIN;
@@ -516,8 +518,8 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
 int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 {
     /* Create Lua User Data Object */
-    luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
-    if(!user_data)
+    lua_obj->userData = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
+    if(!lua_obj->userData)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
     }
@@ -526,7 +528,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
     lua_obj->referenceCount++;
 
     /* Return User Data to Lua */
-    user_data->luaObj = lua_obj;
+    lua_obj->userData->luaObj = lua_obj;
     luaL_getmetatable(L, lua_obj->LuaMetaName);
     lua_setmetatable(L, -2);
     return 1;

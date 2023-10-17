@@ -73,7 +73,7 @@ sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level global
 local monitor = core.monitor(core.LOG, core.DEBUG, event_format):name("EventMonitor") -- monitor only logs
 monitor:tail(1024)
 
-local dispatcher = core.dispatcher(core.EVENTQ):name("EventDispatcher")
+local dispatcher = core.dispatcher(core.EVENTQ, 1):name("EventDispatcher")
 dispatcher:attach(monitor, "eventrec")
 dispatcher:run()
 
