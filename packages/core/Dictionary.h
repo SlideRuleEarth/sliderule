@@ -825,15 +825,15 @@ void Dictionary<T>::addNode (const char* key, const T& data, unsigned int hash, 
  * freeNode
  *----------------------------------------------------------------------------*/
 template <class T>
-static void deleteIfPointer(const T& t) { (void)t; }
+void dictionaryDeleteIfPointer(const T& t) { (void)t; }
 
 template <class T>
-static void deleteIfPointer(T* t) { delete t; }
+void dictionaryDeleteIfPointer(T* t) { delete t; }
 
 template <class T>
 void Dictionary<T>::freeNode(unsigned int hash_index)
 {
-    deleteIfPointer(hashTable[hash_index].data);
+    dictionaryDeleteIfPointer(hashTable[hash_index].data);
 }
 
 

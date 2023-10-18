@@ -74,7 +74,7 @@ class CcsdsPublisherProcessorModule: public CcsdsProcessorModule
                 CcsdsPublisherProcessorModule   (CommandProcessor* cmd_proc, const char* obj_name, const char* pubq_name);
                 ~CcsdsPublisherProcessorModule  (void);
 
-        bool    processSegments                 (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments                 (List<CcsdsSpacePacket*, false>& segments, int numpkts);
 
         int     concatSegmentsCmd               (int argc, char argv[][MAX_CMD_SIZE]);
         int     checkLengthCmd                  (int argc, char argv[][MAX_CMD_SIZE]);

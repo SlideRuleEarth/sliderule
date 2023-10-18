@@ -75,23 +75,24 @@ class GeoIndexedRaster: public RasterObject
             int64_t                    gpsTime;
         } rasters_group_t;
 
-        typedef struct cacheitem {
+        typedef struct CacheItem {
             bool            enabled;
             RasterSample*   sample;
             RasterSubset*   subset;
             GdalRaster*     raster;
-            ~cacheitem(void) {delete raster;}
+            ~CacheItem(void) {delete raster;}
         } cacheitem_t;
 
-        typedef struct {
-            GeoIndexedRaster* obj;
-            OGRGeometry* geo;
-            Thread*      thread;
-            cacheitem_t* entry;
-            Cond*        sync;
-            bool         run;
+        typedef struct Reader {
+            GeoIndexedRaster*   obj;
+            OGRGeometry*        geo;
+            Thread*             thread;
+            cacheitem_t*        entry;
+            Cond                sync;
+            bool                run;
+            explicit Reader(GeoIndexedRaster* raster);
+            ~Reader(void);
         } reader_t;
-
 
         /*--------------------------------------------------------------------
          * Methods
@@ -125,7 +126,7 @@ class GeoIndexedRaster: public RasterObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef Ordering<rasters_group_t*, unsigned long, true> GroupOrdering;
+        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
         typedef Dictionary<cacheitem_t*> CacheDictionary;
 
         /*--------------------------------------------------------------------
@@ -135,7 +136,7 @@ class GeoIndexedRaster: public RasterObject
         Mutex                   samplingMutex;
         GroupOrdering           groupList;
         CacheDictionary         cache;
-        List<OGRFeature*>       featuresList;
+        vector<OGRFeature*>     featuresList;
         OGRPolygon              geoIndexPoly;
         uint32_t                ssError;
 
@@ -165,18 +166,15 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaDimensions(lua_State* L);
-        static int luaBoundingBox(lua_State* L);
-        static int luaCellSize(lua_State* L);
+        static int      luaDimensions   (lua_State* L);
+        static int      luaBoundingBox  (lua_State* L);
+        static int      luaCellSize     (lua_State* L);
 
-        static void* readingThread (void *param);
+        static void*    readingThread   (void *param);
 
-        void       createThreads           (void);
-        bool       updateCache             (void);
-        bool       filterRasters           (int64_t gps);
+        void            createThreads   (void);
+        bool            updateCache     (void);
+        bool            filterRasters   (int64_t gps);
 };
-
-
-
 
 #endif  /* __geo_indexed_raster__ */

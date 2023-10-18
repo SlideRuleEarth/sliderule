@@ -179,6 +179,18 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #include "TTYLib.h"
 
 /******************************************************************************
+ * Standard Template Classes
+ ******************************************************************************/
+
+#include <memory>
+#include <vector>
+
+using std::shared_ptr;
+using std::unique_ptr;
+using std::make_shared;
+using std::vector;
+
+/******************************************************************************
  * LIBRARY CLASS
  ******************************************************************************/
 

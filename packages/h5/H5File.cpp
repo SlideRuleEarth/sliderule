@@ -178,8 +178,6 @@ void* H5File::readThread (void* parm)
 int H5File::luaRead (lua_State* L)
 {
     bool status = true;
-
-    List<Thread*> pids;
     const char* outq_name = NULL;
     H5File* lua_obj = NULL;
 
@@ -199,6 +197,12 @@ int H5File::luaRead (lua_State* L)
         int num_datasets = lua_rawlen(L, tbl_index);
         if(lua_istable(L, tbl_index) && num_datasets > 0)
         {
+            /* Allocate List of Threads
+             *  they will go out of scope at the end of this if block;
+             *  when that happens, each thread will join as it is deleted
+             *  automatically by the List object */
+            List<Thread*> pids(num_datasets);
+
             for(int i = 0; i < num_datasets; i++)
             {
                 const char* dataset;
@@ -256,28 +260,18 @@ int H5File::luaRead (lua_State* L)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "expecting list of datasets");
         }
+
+        /* Status Complete */
+        mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->asset->getName());
+
+        /* Terminate Data */
+        Publisher outQ(outq_name);
+        outQ.postCopy("", 0);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Failed to read resource: %s", e.what());
         status = false;
-    }
-
-    /* Clean Up and Terminate */
-    if(lua_obj && outq_name)
-    {
-        /* Wait for Threads to Complete */
-        for(int i = 0; i < pids.length(); i++)
-        {
-            delete pids[i]; // performs join
-        }
-
-        /* Status Complete */
-        mlog(INFO, "Finished reading %d datasets from %s", pids.length(), lua_obj->asset->getName());
-
-        /* Terminate Data */
-        Publisher outQ(outq_name);
-        outQ.postCopy("", 0);
     }
 
     /* Return Status */

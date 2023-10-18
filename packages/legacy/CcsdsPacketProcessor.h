@@ -79,7 +79,7 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
         typedef struct {
             CcsdsProcessorModule*       processor;
             bool                        enable;
-            List<CcsdsSpacePacket*>*    segments;   // allocated at run time
+            List<CcsdsSpacePacket*, false>*    segments;   // allocated at run time
             int                         intpkts;    // full packets (not segments))
             int                         intperiod;  // full packets (not segments))
         } pktProcessor_t;
@@ -87,7 +87,7 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
         typedef struct {
             CcsdsPacketProcessor*       msgproc;
             CcsdsProcessorModule*       processor;
-            List<CcsdsSpacePacket*>*    segments;   // passed from pktProcessor_t
+            List<CcsdsSpacePacket*, false>*    segments;   // passed from pktProcessor_t
             unsigned int                numpkts;
             unsigned int                tries;      // 0 is infinite
             Sem                         runsem;

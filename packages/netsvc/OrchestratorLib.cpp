@@ -115,9 +115,9 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 /*----------------------------------------------------------------------------
  * lock
  *----------------------------------------------------------------------------*/
-OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
+vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
 {
-    NodeList* nodes = NULL;
+    vector<Node*>* nodes = NULL;
     HttpClient orchestrator(NULL, URL);
     SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
@@ -133,13 +133,13 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
             unsigned int num_transactions = json["transactions"].Size();
             if(num_members == num_transactions)
             {
-                nodes = new NodeList; // allocate node list to be returned
+                nodes = new vector<Node*>; // allocate node list to be returned
                 for(rapidjson::SizeType i = 0; i < num_members; i++)
                 {
                     const char* name = json["members"][i].GetString();
                     double transaction = json["transactions"][i].GetDouble();
                     Node* node = new Node(name, transaction);
-                    nodes->add(node);
+                    nodes->push_back(node);
                 }
             }
             else
@@ -149,9 +149,9 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
 
             if(verbose && nodes)
             {
-                for(int i = 0; i < nodes->length(); i++)
+                for(unsigned i = 0; i < nodes->size(); i++)
                 {
-                    mlog(INFO, "Locked - %s <%ld>", nodes->get(i)->member, nodes->get(i)->transaction);
+                    mlog(INFO, "Locked - %s <%ld>", nodes->at(i)->member, nodes->at(i)->transaction);
                 }
             }
         }
@@ -160,9 +160,9 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
             mlog(CRITICAL, "Failed process response to lock: %s", rsps.response);
             if(nodes)
             {
-                for(int i = 0; i < nodes->length(); i++)
+                for(unsigned i = 0; i < nodes->size(); i++)
                 {
-                    delete nodes->get(i);
+                    delete nodes->at(i);
                 }
                 delete nodes;
                 nodes = NULL;
@@ -180,7 +180,7 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
 }
 
 /*----------------------------------------------------------------------------
- * lock
+ * unlock
  *----------------------------------------------------------------------------*/
 bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool verbose)
 {
@@ -310,7 +310,7 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaLock(lua_State* L)
 {
-    NodeList* nodes = NULL;
+    vector<Node*>* nodes = NULL;
     try
     {
         const char* service = LuaObject::getLuaString(L, 1);
@@ -321,11 +321,11 @@ int OrchestratorLib::luaLock(lua_State* L)
         nodes = lock(service, nodes_needed, timeout_secs, verbose);
 
         lua_newtable(L);
-        for(int i = 0; i < nodes->length(); i++)
+        for(unsigned i = 0; i < nodes->size(); i++)
         {
-            SafeString txidstr("%ld", nodes->get(i)->transaction);
-            LuaEngine::setAttrStr(L, txidstr.str(), nodes->get(i)->member);
-            delete nodes->get(i); // free node after using it
+            SafeString txidstr("%ld", nodes->at(i)->transaction);
+            LuaEngine::setAttrStr(L, txidstr.str(), nodes->at(i)->member);
+            delete nodes->at(i); // free node after using it
         }
     }
     catch(const RunTimeException& e)

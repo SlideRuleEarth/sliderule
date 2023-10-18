@@ -96,14 +96,22 @@ class DeviceObject: public LuaObject
         static const struct luaL_Reg    LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            DeviceObject*   device_obj;
+        } device_t;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Ordering<DeviceObject*>  deviceList;
-        static Mutex                    deviceListMut;
-        static okey_t                   currentListKey;
+        static Ordering<device_t>   deviceList;
+        static Mutex                deviceListMut;
+        static okey_t               currentListKey;
 
-        okey_t                          deviceListKey;
+        okey_t                      deviceListKey;
 
         /*--------------------------------------------------------------------
          * Methods

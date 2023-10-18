@@ -231,13 +231,13 @@ void* EndpointProxy::collatorThread (void* parm)
         /* Get Available Nodes */
         int resources_to_process = proxy->numResources - current_resource;
         int num_nodes_to_request = MIN(resources_to_process, proxy->numProxyThreads);
-        OrchestratorLib::NodeList* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout);
+        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout);
         if(nodes)
         {
-            for(int i = 0; i < nodes->length(); i++)
+            for(unsigned i = 0; i < nodes->size(); i++)
             {
                 /* Populate Request */
-                proxy->nodes[current_resource] = nodes->get(i);
+                proxy->nodes[current_resource] = nodes->at(i);
 
                 /* Post Request to Proxy Threads */
                 int status = MsgQ::STATE_TIMEOUT;
@@ -256,7 +256,7 @@ void* EndpointProxy::collatorThread (void* parm)
             }
 
             /*  If No Nodes Available */
-            if(nodes->length() <= 0)
+            if(nodes->empty())
             {
                 OsApi::sleep(0.20); // 5Hz
             }

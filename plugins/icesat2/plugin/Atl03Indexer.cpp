@@ -79,10 +79,10 @@ int Atl03Indexer::luaCreate (lua_State* L)
         int         num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
 
         /* Build Resource Table */
-        _resources = new List<const char*>();
         if(lua_type(L, tblindex) == LUA_TTABLE)
         {
             int size = lua_rawlen(L, tblindex);
+            _resources = new List<const char*>(size);
             for(int e = 0; e < size; e++)
             {
                 lua_rawgeti(L, tblindex, e + 1);
@@ -105,7 +105,7 @@ int Atl03Indexer::luaCreate (lua_State* L)
     }
 
     /* Clean Up Resources Not Used Since Failed to Create Indexer */
-    if(_resources) freeResources(_resources);
+    if(_resources) delete _resources;
 
     /* Release Asset Since Failed to Create Indexer */
     if(_asset) _asset->releaseLuaObject();
@@ -185,7 +185,7 @@ Atl03Indexer::~Atl03Indexer (void)
     delete outQ;
 
     /* Clean Up Resource List */
-    freeResources(resources);
+    delete resources;
 
     /* Release Asset */
     asset->releaseLuaObject();
@@ -318,18 +318,6 @@ void* Atl03Indexer::indexerThread (void* parm)
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * freeResources
- *----------------------------------------------------------------------------*/
-void Atl03Indexer::freeResources (List<const char*>* _resources)
-{
-    for(int i = 0; i < _resources->length(); i++)
-    {
-        delete [] _resources->get(i);
-    }
-    delete _resources;
 }
 
 /*----------------------------------------------------------------------------

@@ -55,6 +55,37 @@ const char* GeoIndexedRaster::VALUE_TAG = "Value";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Reader Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* raster):
+    obj(raster),
+    geo(NULL),
+    entry(NULL),
+    sync(NUM_SYNC_SIGNALS),
+    run(true)
+{
+    thread = new Thread(GeoIndexedRaster::readingThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * Reader Destructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::Reader::~Reader (void)
+{
+    sync.lock();
+    {
+        run = false; /* Set run flag to false */
+        sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+    }
+    sync.unlock();
+
+    delete thread; /* delete thread waits on thread to join */
+
+    /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
+    if(geo) OGR_G_DestroyGeometry(geo);
+}
+
+/*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::init (void)
@@ -164,29 +195,6 @@ uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    /* Terminate all reader threads */
-    List<reader_t*>::Iterator reader_iter(readers);
-    for(int i = 0; i < reader_iter.length; i++)
-    {
-        reader_t* reader = readers[i];
-        if(reader->thread != NULL)
-        {
-            reader->sync->lock();
-            {
-                reader->run    = false; /* Set run flag to false */
-                reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-            }
-            reader->sync->unlock();
-
-            delete reader->thread; /* delete thread waits on thread to join */
-            delete reader->sync;
-
-            /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
-            if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
-            delete reader;
-        }
-    }
-
     emptyFeaturesList();
 }
 
@@ -356,7 +364,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
     getIndexFile(geo, newFile);
 
     /* Trying to open the same file? */
-    if(!featuresList.isempty() && newFile == indexFile)
+    if(!featuresList.empty() && newFile == indexFile)
         return true;
 
     GDALDataset* dset = NULL;
@@ -381,7 +389,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         while(OGRFeature* feature = layer->GetNextFeature())
         {
             OGRFeature* fp = feature->Clone();
-            featuresList.add(fp);
+            featuresList.push_back(fp);
             OGRFeature::DestroyFeature(feature);
         }
 
@@ -404,7 +412,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %d index file features/rasters from: %s", featuresList.length(), newFile.c_str());
+        mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -435,15 +443,15 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
     while(key != NULL)
     {
         reader_t* reader = readers[i++];
-        reader->sync->lock();
+        reader->sync.lock();
         {
             reader->entry = item;
             if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
             reader->geo = geo->clone();
-            reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+            reader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
             signaledReaders++;
         }
-        reader->sync->unlock();
+        reader->sync.unlock();
         key = cache.next(&item);
     }
 
@@ -451,12 +459,12 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
     for(int j = 0; j < signaledReaders; j++)
     {
         reader_t* reader = readers[j];
-        reader->sync->lock();
+        reader->sync.lock();
         {
             while(reader->entry != NULL)
-                reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
+                reader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
         }
-        reader->sync->unlock();
+        reader->sync.unlock();
     }
 }
 
@@ -493,9 +501,9 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::emptyFeaturesList(void)
 {
-    if(featuresList.isempty()) return;
+    if(featuresList.empty()) return;
 
-    for(int i = 0; i < featuresList.length(); i++)
+    for(unsigned i = 0; i < featuresList.size(); i++)
     {
         OGRFeature* feature = featuresList[i];
         OGRFeature::DestroyFeature(feature);
@@ -607,13 +615,13 @@ void* GeoIndexedRaster::readingThread(void *param)
 
     while(reader->run)
     {
-        reader->sync->lock();
+        reader->sync.lock();
         {
             /* Wait for raster to work on */
             while((reader->entry == NULL) && reader->run)
-                reader->sync->wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
+                reader->sync.wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
         }
-        reader->sync->unlock();
+        reader->sync.unlock();
 
         cacheitem_t* entry = reader->entry;
         if(entry != NULL)
@@ -624,12 +632,12 @@ void* GeoIndexedRaster::readingThread(void *param)
                 entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
             entry->enabled = false; /* raster samples/subsetted */
 
-            reader->sync->lock();
+            reader->sync.lock();
             {
                 reader->entry = NULL; /* Done with this raster */
-                reader->sync->signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+                reader->sync.signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
             }
-            reader->sync->unlock();
+            reader->sync.unlock();
         }
     }
 
@@ -650,13 +658,7 @@ void GeoIndexedRaster::createThreads(void)
 
     for(int i = 0; i < newThreadsCnt; i++)
     {
-        reader_t* r = new reader_t;
-        r->obj    = this;
-        r->geo    = NULL;
-        r->entry  = NULL;
-        r->run    = true;
-        r->sync   = new Cond(NUM_SYNC_SIGNALS);
-        r->thread = new Thread(readingThread, r);
+        Reader* r = new Reader(this);
         readers.add(r);
     }
     assert(readers.length() == threadsNeeded);

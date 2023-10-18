@@ -1711,7 +1711,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         }
 
         /* Process Link */
-        if(dlvl < datasetPath.length())
+        if(dlvl < static_cast<int>(datasetPath.size()))
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
@@ -2565,7 +2565,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             print2term("Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
         }
 
-        if(dlvl < datasetPath.length())
+        if(dlvl < static_cast<int>(datasetPath.size()))
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
@@ -2893,7 +2893,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Shortcut Out if Not Desired Attribute */
-    if( ((dlvl + 1) != datasetPath.length()) ||
+    if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
         !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
     {
         return size;
@@ -3231,7 +3231,7 @@ void H5FileBuffer::parseDataset (void)
     /* Build Path to Dataset */
     while(true)
     {
-        datasetPath.add(gptr);                      // add group to dataset path
+        datasetPath.push_back(gptr);                      // add group to dataset path
         char* nptr = StringLib::find(gptr, '/');    // look for next group marker
         if(nptr == NULL) break;                     // if not found, then exit
         *nptr = '\0';                               // terminate group string
@@ -3242,7 +3242,7 @@ void H5FileBuffer::parseDataset (void)
     {
         print2term("\n----------------\n");
         print2term("Dataset: ");
-        for(int g = 0; g < datasetPath.length(); g++)
+        for(unsigned g = 0; g < datasetPath.size(); g++)
         {
             print2term("/%s", datasetPath[g]);
         }

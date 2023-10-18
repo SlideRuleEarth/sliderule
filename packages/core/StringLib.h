@@ -92,7 +92,7 @@ class StringLib
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef List<const char*, true> TokenList;
+        typedef List<const char*> TokenList;
 
         /*--------------------------------------------------------------------
          * Methods

@@ -43,9 +43,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-Ordering<DeviceObject*> DeviceObject::deviceList;
-Mutex                   DeviceObject::deviceListMut;
-okey_t                  DeviceObject::currentListKey = 0;
+Ordering<DeviceObject::device_t>    DeviceObject::deviceList;
+Mutex                               DeviceObject::deviceListMut;
+okey_t                              DeviceObject::currentListKey = 0;
 
 const char* DeviceObject::OBJECT_TYPE = "DeviceObject";
 const char* DeviceObject::LUA_META_NAME = "DeviceObject";
@@ -72,8 +72,8 @@ DeviceObject::DeviceObject (lua_State* L, role_t _role):
     /* Add Device to List */
     deviceListMut.lock();
     {
-        DeviceObject* this_device = this;
-        deviceList.add(currentListKey, this_device);
+        device_t device = { .device_obj = this };
+        deviceList.add(currentListKey, device);
         deviceListKey = currentListKey++;
     }
     deviceListMut.unlock();
@@ -108,11 +108,11 @@ char* DeviceObject::getDeviceList(void)
         liststr = new char[liststrlen];
         liststr[0] = '\0';
 
-        DeviceObject* dev;
+        device_t dev;
         okey_t key = deviceList.first(&dev);
         while(key != INVALID_KEY)
         {
-            StringLib::format(devstr, DEV_STR_SIZE, "%c %s\n", dev->isConnected(0) ? 'C' : 'D', dev->getConfig());
+            StringLib::format(devstr, DEV_STR_SIZE, "%c %s\n", dev.device_obj->isConnected(0) ? 'C' : 'D', dev.device_obj->getConfig());
             StringLib::concat(liststr, devstr, liststrlen);
             key = deviceList.next(&dev);
         }

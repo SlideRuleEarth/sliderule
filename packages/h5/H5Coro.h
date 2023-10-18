@@ -381,7 +381,7 @@ class H5FileBuffer
         /* Class Data */
         const char*         datasetName;            // holds buffer of dataset name that datasetPath points back into
         const char*         datasetPrint;           // holds untouched dataset name string used for displaying the name
-        List<const char*>   datasetPath;
+        vector<const char*> datasetPath;
         uint64_t            datasetStartRow;
         int                 datasetNumRows;
         bool                errorChecking;

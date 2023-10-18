@@ -97,7 +97,7 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
 {
     try
     {
-        for(int i = 0; i < featuresList.length(); i++)
+        for(unsigned i = 0; i < featuresList.size(); i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();

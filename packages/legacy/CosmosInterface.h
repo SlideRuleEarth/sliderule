@@ -124,8 +124,8 @@ class CosmosInterface: public CommandableObject
                 if(pid) delete pid; }
         };
 
-        typedef Ordering<tlm_t*, unsigned long, true> TlmOrdering;
-        typedef Ordering<cmd_t*, unsigned long, true> CmdOrdering;
+        typedef Ordering<tlm_t*, unsigned long> TlmOrdering;
+        typedef Ordering<cmd_t*, unsigned long> CmdOrdering;
 
         /*--------------------------------------------------------------------
          * Data

@@ -215,7 +215,7 @@ bool CommandProcessor::executeScript (const char* script_name)
     }
 
     /* Build Command List */
-    List<const char*, true, true> script_cmds;
+    List<const char*> script_cmds;
     while(true)
     {
         char line[MAX_CMD_SIZE];

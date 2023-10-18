@@ -489,7 +489,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
         /* Buffer Segment */
         if(pktProcessor[apid].segments == NULL)
         {
-            pktProcessor[apid].segments = new List<CcsdsSpacePacket*>();
+            pktProcessor[apid].segments = new List<CcsdsSpacePacket*, false>();
         }
         pktProcessor[apid].segments->add(pkt);
 

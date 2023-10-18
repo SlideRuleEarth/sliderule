@@ -118,11 +118,11 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
                 while(OGRFeature* feature = layer->GetNextFeature())
                 {
                     OGRFeature* fp = feature->Clone();
-                    featuresList.add(fp);
+                    featuresList.push_back(fp);
                     OGRFeature::DestroyFeature(feature);
                 }
 
-                mlog(DEBUG, "Loaded %d index file features/rasters from: %s", featuresList.length(), newFile.c_str());
+                mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
                 GDALClose((GDALDatasetH)dset);
             }
             catch(const RunTimeException& e)
@@ -133,7 +133,7 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
         }
     }
 
-    if(featuresList.isempty())
+    if(featuresList.empty())
     {
         /* All geocells were 'empty' */
         geoIndexPoly.empty();
@@ -176,7 +176,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
     std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
-        for(int i = 0; i < featuresList.length(); i++)
+        for(unsigned i = 0; i < featuresList.size(); i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry* rastergeo = feature->GetGeometryRef();

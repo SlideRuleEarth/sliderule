@@ -74,7 +74,7 @@ UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
  *----------------------------------------------------------------------------*/
 UT_Dictionary::~UT_Dictionary(void)
 {
-    List<SafeString*>* wordlist;
+    List<SafeString*, false>* wordlist;
     const char* wordset_name = wordsets.first(&wordlist);
     while(wordset_name != NULL)
     {
@@ -108,10 +108,10 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     /* Get Word List */
     const char* wordset_name = argv[0];
-    List<SafeString*>* wordlist_ptr;
+    List<SafeString*, false>* wordlist_ptr;
     try
     {
-        wordlist_ptr = (List<SafeString*>*)wordsets[wordset_name];
+        wordlist_ptr = (List<SafeString*, false>*)wordsets[wordset_name];
         if(wordlist_ptr->length() <= 0)
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
@@ -125,7 +125,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Get Number of Words */
-    List<SafeString*>& wordset = *wordlist_ptr;
+    List<SafeString*, false>& wordset = *wordlist_ptr;
     int numwords = wordset.length();
 
     /* Set Entries */
@@ -305,10 +305,10 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     /* Get Word List */
     const char* wordset_name = argv[0];
-    List<SafeString*>* wordlist_ptr;
+    List<SafeString*, false>* wordlist_ptr;
     try
     {
-        wordlist_ptr = (List<SafeString*>*)wordsets[wordset_name];
+        wordlist_ptr = (List<SafeString*, false>*)wordsets[wordset_name];
         if(wordlist_ptr->length() <= 0)
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
@@ -322,7 +322,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Get Word Set */
-    List<SafeString*>& wordset = *wordlist_ptr;
+    List<SafeString*, false>& wordset = *wordlist_ptr;
     int numwords = wordset.length();
 
     /* Set Entries */
@@ -442,7 +442,7 @@ int UT_Dictionary::addWordSetCmd (int argc, char argv[][MAX_CMD_SIZE])
  *----------------------------------------------------------------------------*/
 int UT_Dictionary::createWordSet (const char* name, const char* filename)
 {
-    List<SafeString*>* wordlist = new List<SafeString*>();
+    List<SafeString*, false>* wordlist = new List<SafeString*, false>();
 
     FILE* wordfile = fopen(filename, "r");
     if(wordfile == NULL)

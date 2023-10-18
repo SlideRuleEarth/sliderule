@@ -114,7 +114,7 @@ class ReportDispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         typedef Dictionary<const char*> ValueDictionary;
-        typedef Ordering<entry_t*, unsigned long, true> EntryOrdering;
+        typedef Ordering<entry_t*, unsigned long> EntryOrdering;
 
         /*--------------------------------------------------------------------
          * Report File Class

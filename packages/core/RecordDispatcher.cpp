@@ -267,7 +267,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         /* Attach Dispatches */
         for(int p = 3; p <= num_parms; p++)
         {
-            List<DispatchObject*> new_dispatch_list;
+            vector<DispatchObject*> new_dispatch_list;
 
             /* Build Record Type */
             const char* rec_type = getLuaString(L, p);
@@ -289,7 +289,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     /* Copy Dispatches Over to New List */
                     for(int d = 0; d < old_dispatch.size; d++)
                     {
-                        new_dispatch_list.add(old_dispatch.list[d]);
+                        new_dispatch_list.push_back(old_dispatch.list[d]);
                     }
 
                     /* Remove Old Dispatch List */
@@ -302,10 +302,10 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
             }
 
             /* Attach Dispatch */
-            new_dispatch_list.add(dispatch);
+            new_dispatch_list.push_back(dispatch);
 
             /* Create New Dispatch Table Entry */
-            dispatch_t new_dispatch = { NULL, new_dispatch_list.length() };
+            dispatch_t new_dispatch = { NULL, static_cast<int>(new_dispatch_list.size()) };
             new_dispatch.list = new DispatchObject* [new_dispatch.size];
             for(int d = 0; d < new_dispatch.size; d++)
             {
@@ -321,7 +321,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         }
 
         /* Add Dispatch to List */
-        lua_obj->dispatchList.add(dispatch);
+        lua_obj->dispatchList.push_back(dispatch);
 
         /* Set Success */
         status = true;
@@ -483,7 +483,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         else if(recv_status == MsgQ::STATE_TIMEOUT)
         {
             /* Signal Timeout to Dispatches */
-            int num_dispatches = dispatcher->dispatchList.length();
+            int num_dispatches = dispatcher->dispatchList.size();
             for(int d = 0; d < num_dispatches; d++)
             {
                 DispatchObject* dis = dispatcher->dispatchList[d];

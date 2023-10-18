@@ -90,9 +90,9 @@ class CaptureDispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        List<capture_t*, true>  captures;
-        Mutex                   capMut;
-        Publisher*              outQ;
+        List<capture_t*>    captures;
+        Mutex               capMut;
+        Publisher*          outQ;
 
         /*--------------------------------------------------------------------
          * Methods

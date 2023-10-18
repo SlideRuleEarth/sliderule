@@ -138,7 +138,7 @@ class RecordDispatcher: public LuaObject
         int                     threadsComplete;
         Mutex                   threadMut;
         Subscriber*             inQ;
-        List<DispatchObject*>   dispatchList;   // for processTimeout
+        vector<DispatchObject*> dispatchList;   // for processTimeout
         Dictionary<dispatch_t>  dispatchTable;  // for processRecord
         Mutex                   dispatchMutex;
         keyMode_t               keyMode;        // determines key of metric
