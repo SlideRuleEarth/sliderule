@@ -108,25 +108,7 @@ HttpServer::~HttpServer(void)
 {
     active = false;
     delete listenerPid;
-
     delete [] ipAddr;
-
-    EndpointObject* endpoint;
-    const char* key = routeTable.first(&endpoint);
-    while(key != NULL)
-    {
-        endpoint->releaseLuaObject();
-        key = routeTable.next(&endpoint);
-    }
-
-    connection_t* connection = NULL;
-    int fd = connections.first(&connection);
-    while(fd != (int)INVALID_KEY)
-    {
-        deinitConnection(connection);
-        delete connection;
-        fd = connections.next(&connection);
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -147,46 +129,77 @@ int HttpServer::getPort (void) const
 }
 
 /*----------------------------------------------------------------------------
- * initConnection
+ * Connection Constructor
  *----------------------------------------------------------------------------*/
-void HttpServer::initConnection (connection_t* connection)
+HttpServer::Connection::Connection (const char* _name)
 {
-    long cnt = requestId++;
-    memset(&connection->rsps_state, 0, sizeof(rsps_state_t));
-    connection->start_time = TimeLib::latchtime();
-    connection->keep_alive = false;
-    connection->id = new char [REQUEST_ID_LEN];
-    StringLib::format(connection->id, REQUEST_ID_LEN, "%s.%ld", getName(), cnt);
-    connection->trace_id = start_trace(DEBUG, ORIGIN, "http_server", "{\"rqst_id\":\"%s\"}", connection->id);
-    connection->rsps_state.rspq = new Subscriber(connection->id);
-    connection->request = new EndpointObject::Request(connection->id);
-    connection->request->trace_id = connection->trace_id;
+    initialize(_name);
+    memset(&rqst_state, 0, sizeof(rqst_state_t));
 }
 
 /*----------------------------------------------------------------------------
- * deinitConnection
+ * Connection Copy Constructor
  *----------------------------------------------------------------------------*/
-void HttpServer::deinitConnection (connection_t* connection)
+HttpServer::Connection::Connection (const Connection& other)
+{
+    initialize(other.name);
+    memcpy(&rqst_state, &other.rqst_state, sizeof(rqst_state_t));
+}
+
+/*----------------------------------------------------------------------------
+ * Connection Destructor
+ *----------------------------------------------------------------------------*/
+HttpServer::Connection::~Connection (void)
 {
     /* Free Stream Buffer */
-    delete [] connection->rsps_state.stream_buf;
+    delete [] rsps_state.stream_buf;
 
     /* Free Message Queue */
-    if(connection->rsps_state.ref_status > 0)
+    if(rsps_state.ref_status > 0)
     {
-        connection->rsps_state.rspq->dereference(connection->rsps_state.ref);
-        connection->rsps_state.ref_status = 0;
+        rsps_state.rspq->dereference(rsps_state.ref);
+        rsps_state.ref_status = 0;
     }
-    delete connection->rsps_state.rspq;
+    delete rsps_state.rspq;
 
     /* Free Id */
-    delete [] connection->id;
+    delete [] id;
+    delete [] name;
 
     /* Request freed only if present, o/w memory owned by EndpointObject */
-    delete connection->request;
+    delete request;
 
     /* Stop Trace */
-    stop_trace(DEBUG, connection->trace_id);
+    stop_trace(DEBUG, trace_id);
+}
+
+/*----------------------------------------------------------------------------
+ * Connection Initialization
+ *----------------------------------------------------------------------------*/
+void HttpServer::Connection::initialize (const char* _name)
+{
+    /* Initialize Response State Variables */
+    memset(&rsps_state, 0, sizeof(rsps_state_t));
+    response_type = EndpointObject::INVALID;
+
+    /* Default Keep Alive to False */
+    keep_alive = false;
+
+    /* Create Unique ID for Request */
+    name = StringLib::duplicate(_name);
+    id = new char [REQUEST_ID_LEN];
+    long cnt = requestId++;
+    StringLib::format(id, REQUEST_ID_LEN, "%s.%ld", name, cnt);
+
+    /* Start Trace */
+    trace_id = start_trace(DEBUG, ORIGIN, "http_server", "{\"rqst_id\":\"%s\"}", id);
+
+    /* Subscribe to Response Q (data return by endpoint) */
+    rsps_state.rspq = new Subscriber(id);
+
+    /* Create Request */
+    request = new EndpointObject::Request(id);
+    request->trace_id = trace_id;
 }
 
 /*----------------------------------------------------------------------------
@@ -329,7 +342,7 @@ int HttpServer::pollHandler(int fd, short* events, void* parm)
     HttpServer* s = static_cast<HttpServer*>(parm);
 
     /* Get Connection */
-    connection_t* connection = s->connections[fd];
+    Connection* connection = s->connections[fd];
     rsps_state_t* state = &connection->rsps_state;
 
     /* Set Read Polling Flag (if request is ready) */
@@ -371,7 +384,7 @@ int HttpServer::activeHandler(int fd, int flags, void* parm)
 int HttpServer::onRead(int fd)
 {
     int status = 0;
-    connection_t* connection = connections[fd];
+    Connection* connection = connections[fd];
     rqst_state_t* state = &connection->rqst_state;
     uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
 
@@ -480,7 +493,7 @@ int HttpServer::onRead(int fd)
             /* Handle Request */
             try
             {
-                EndpointObject* endpoint = routeTable[connection->request->path];
+                EndpointObject* endpoint = routeTable[connection->request->path].route;
                 connection->response_type = endpoint->handleRequest(connection->request);
             }
             catch(const RunTimeException& e)
@@ -512,11 +525,10 @@ int HttpServer::onRead(int fd)
 int HttpServer::onWrite(int fd)
 {
     int status = 0;
-    connection_t* connection = connections[fd];
+    Connection* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
     uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
     
-
     /* If Something to Send */
     if(state->ref_status > 0)
     {
@@ -632,9 +644,18 @@ int HttpServer::onWrite(int fd)
         /* Check for Keep Alive */
         if(state->response_complete && connection->keep_alive)
         {
-            deinitConnection(connection);
-            initConnection(connection);
-            status = 0; // will keep socket open
+            Connection* new_connection = new Connection(*connection);
+            bool rc = connections.add(fd, new_connection, true, true); // deletes old connection
+            if(rc)
+            {
+                status = 0; // will keep socket open
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to keep connection open due to table error");
+                status = INVALID_RC; // will close socket
+                delete new_connection; // free memory that would otherwise be leaked
+            }
         }
     }
 
@@ -651,7 +672,7 @@ int HttpServer::onWrite(int fd)
  *----------------------------------------------------------------------------*/
 int HttpServer::onAlive(int fd)
 {
-    connection_t* connection = connections[fd];
+    Connection* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
 
     if(!state->response_complete && state->ref_status <= 0)
@@ -672,15 +693,12 @@ int HttpServer::onConnect(int fd)
     int status = 0;
 
     /* Create and Initialize New Request */
-    connection_t* connection = new connection_t;
-    initConnection(connection);
-    memset(&connection->rqst_state, 0, sizeof(rqst_state_t));
+    Connection* connection = new Connection(getName());
 
     /* Register Connection */
     if(!connections.add(fd, connection, false))
     {
         mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->id);
-        deinitConnection(connection);
         delete connection;
         status = INVALID_RC;
     }
@@ -697,16 +715,10 @@ int HttpServer::onDisconnect(int fd)
 {
     int status = 0;
 
-    connection_t* connection = connections[fd];
+    Connection* connection = connections[fd];
 
     /* Remove Connection */
-    if(connections.remove(fd))
-    {
-        /* Free Connection */
-        deinitConnection(connection);
-        delete connection;
-    }
-    else
+    if(!connections.remove(fd))
     {
         mlog(CRITICAL, "HTTP server at %s failed to release connection", connection->id);
         status = INVALID_RC;
@@ -732,7 +744,8 @@ int HttpServer::luaAttach (lua_State* L)
         const char* url = getLuaString(L, 3);
 
         /* Add Route to Table */
-        status = lua_obj->routeTable.add(url, endpoint, true);
+        RouteEntry entry(endpoint);
+        status = lua_obj->routeTable.add(url, entry, true);
     }
     catch(const RunTimeException& e)
     {

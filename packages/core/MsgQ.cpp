@@ -45,7 +45,7 @@
  ******************************************************************************/
 
 int MsgQ::StandardQueueDepth = MsgQ::CFG_DEPTH_INFINITY;
-Dictionary<MsgQ::message_queue_t*, false> MsgQ::queues;
+Dictionary<MsgQ::global_queue_t> MsgQ::queues;
 Mutex MsgQ::listmut;
 
 /******************************************************************************
@@ -62,7 +62,7 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
     {
         try
         {
-            msgQ = queues[name]; // exception thrown here if name is null or not found
+            msgQ = queues[name].queue; // exception thrown here if name is null or not found
             msgQ->attachments++; // if found, then another attachment is made
             // set free function to support publishers later establishing a
             // free function on a queue created by a subscriber
@@ -103,7 +103,8 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             }
 
             // Register message queue with non-null name
-            if(msgQ->name) queues.add(msgQ->name, msgQ);
+            global_queue_t global_queue = { .queue = msgQ };
+            if(msgQ->name) queues.add(msgQ->name, global_queue);
         }
     }
     listmut.unlock();
@@ -225,15 +226,15 @@ void MsgQ::init(void)
  *----------------------------------------------------------------------------*/
 void MsgQ::deinit(void)
 {
-    message_queue_t* curr_q = NULL;
+    global_queue_t curr_q;
     const char* curr_name = queues.first(&curr_q);
     while(curr_name)
     {
-        delete [] curr_q->name;
-        delete [] curr_q->free_block_stack;
-        delete [] curr_q->subscriber_type;
-        delete [] curr_q->curr_nodes;
-        delete curr_q;
+        delete [] curr_q.queue->name;
+        delete [] curr_q.queue->free_block_stack;
+        delete [] curr_q.queue->subscriber_type;
+        delete [] curr_q.queue->curr_nodes;
+        delete curr_q.queue;
         curr_name = queues.next(&curr_q);
     }
 }
@@ -260,15 +261,15 @@ int MsgQ::numQ(void)
 int MsgQ::listQ(queueDisplay_t* list, int list_size)
 {
     int j = 0;
-    message_queue_t* curr_q = NULL;
+    global_queue_t curr_q;
     const char* curr_name = queues.first(&curr_q);
     while(curr_name)
     {
         if(j >= list_size) break;
-        list[j].name = curr_q->name;
-        list[j].len = curr_q->len;
-        list[j].subscriptions = curr_q->subscriptions;
-        switch(curr_q->state)
+        list[j].name = curr_q.queue->name;
+        list[j].len = curr_q.queue->len;
+        list[j].subscriptions = curr_q.queue->subscriptions;
+        switch(curr_q.queue->state)
         {
             case STATE_OKAY         : list[j].state = "OKAY";       break;
             case STATE_TIMEOUT      : list[j].state = "TIMEOUT";    break;

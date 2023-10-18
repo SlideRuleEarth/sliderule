@@ -143,16 +143,24 @@ class LuaObject
         static int          luaWaitOn           (lua_State* L);
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            LuaObject*  lua_obj;
+        } global_object_t;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Dictionary<LuaObject*, false>   globalObjects;
-        static Mutex                    globalMut;
+        static Dictionary<global_object_t>  globalObjects;
+        static Mutex                        globalMut;
 
-        std::atomic<long>               referenceCount;
-        luaUserData_t*                  userData;
-        Cond                            objSignal;
-        bool                            objComplete;
+        std::atomic<long>                   referenceCount;
+        luaUserData_t*                      userData;
+        Cond                                objSignal;
+        bool                                objComplete;
 };
 
 #endif  /* __lua_object__ */

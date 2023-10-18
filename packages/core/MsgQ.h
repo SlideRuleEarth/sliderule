@@ -161,12 +161,16 @@ class MsgQ
             int                     free_blocks;                        // current number of blocks of free_block_stack
         } message_queue_t;
 
+        typedef struct {
+            message_queue_t*        queue;
+        } global_queue_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static int                          StandardQueueDepth;
-        static Dictionary<message_queue_t*, false> queues;
+        static Dictionary<global_queue_t>   queues;
         static Mutex                        listmut;
 
         message_queue_t* msgQ;

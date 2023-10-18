@@ -107,16 +107,31 @@ class HttpServer: public LuaObject
             int                         stream_mem_size;
         } rsps_state_t;
 
-        typedef struct {
+        struct Connection {
+            explicit Connection(const char* _name);
+            explicit Connection(const Connection& other);
+            ~Connection(void);
+            void initialize (const char* _name);
+            const char*                 name;
             char*                       id;
             uint32_t                    trace_id;
             rqst_state_t                rqst_state;
             rsps_state_t                rsps_state;
-            double                      start_time;
             bool                        keep_alive;
             EndpointObject::rsptype_t   response_type;
             EndpointObject::Request*    request;
-        } connection_t;
+        };
+
+        struct RouteEntry {
+            RouteEntry(EndpointObject* _route=NULL) { route = _route; }
+            ~RouteEntry(void) { route->releaseLuaObject(); }
+            RouteEntry& operator= (const RouteEntry& other) { 
+                if (this == &other) return *this;
+                route = other.route;
+                return *this;
+            }
+            EndpointObject* route;
+        };
 
         /*--------------------------------------------------------------------
          * Data
@@ -127,9 +142,9 @@ class HttpServer: public LuaObject
         bool                            active;
         bool                            listening;
         Thread*                         listenerPid;
-        Table<connection_t*, int>       connections;
+        Table<Connection*, int>         connections;
 
-        Dictionary<EndpointObject*, false>     routeTable;
+        Dictionary<RouteEntry>          routeTable;
 
         char*                           ipAddr;
         int                             port;
@@ -140,8 +155,6 @@ class HttpServer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        void                initConnection      (connection_t* connection);
-        static void         deinitConnection    (connection_t* connection);
         static void         extractPath         (const char* url, const char** path, const char** resource);
         static bool         processHttpHeader   (char* buf, EndpointObject::Request* request);
 

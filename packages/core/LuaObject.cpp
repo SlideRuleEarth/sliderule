@@ -44,7 +44,7 @@
  ******************************************************************************/
 
 const char* LuaObject::BASE_OBJECT_TYPE = "LuaObject";
-Dictionary<LuaObject*, false> LuaObject::globalObjects;
+Dictionary<LuaObject::global_object_t> LuaObject::globalObjects;
 Mutex LuaObject::globalMut;
 
 /******************************************************************************
@@ -93,7 +93,7 @@ int LuaObject::luaGetByName(lua_State* L)
             verbose = getLuaBoolean(L, 2, true, true);
 
             /* Get Self */
-            lua_obj = globalObjects.get(name);
+            lua_obj = globalObjects.get(name).lua_obj;
 
             /* Return Lua Object */
             associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
@@ -229,7 +229,7 @@ LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_t
     {
         try
         {
-            LuaObject* obj = globalObjects.get(name);
+            LuaObject* obj = globalObjects.get(name).lua_obj;
             if(StringLib::match(obj->getType(), object_type))
             {
                 lua_obj = obj;
@@ -445,7 +445,8 @@ int LuaObject::luaName(lua_State* L)
             if(!lua_obj->ObjectName)
             {
                 /* Register Name */
-                if(globalObjects.add(name, lua_obj, true))
+                global_object_t global_object = { .lua_obj = lua_obj };
+                if(globalObjects.add(name, global_object, true))
                 {
                     /* Associate Name */
                     lua_obj->ObjectName = StringLib::duplicate(name);
