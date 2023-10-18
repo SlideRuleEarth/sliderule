@@ -645,7 +645,7 @@ int HttpServer::onWrite(int fd)
         if(state->response_complete && connection->keep_alive)
         {
             Connection* new_connection = new Connection(*connection);
-            bool rc = connections.add(fd, new_connection, true, true); // deletes old connection
+            bool rc = connections.add(fd, new_connection, false); // deletes old connection
             if(rc)
             {
                 status = 0; // will keep socket open
@@ -696,7 +696,7 @@ int HttpServer::onConnect(int fd)
     Connection* connection = new Connection(getName());
 
     /* Register Connection */
-    if(!connections.add(fd, connection, false))
+    if(!connections.add(fd, connection, true))
     {
         mlog(CRITICAL, "HTTP server at %s failed to register connection due to duplicate entry", connection->id);
         delete connection;

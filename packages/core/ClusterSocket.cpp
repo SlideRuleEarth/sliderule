@@ -152,8 +152,6 @@ ClusterSocket::~ClusterSocket(void)
     while (fd != (int)INVALID_KEY)
     {
         SockLib::sockclose(fd);
-        delete [] readCon->payload;
-        delete readCon;
         fd = read_connections.next( &readCon );
     }
 
@@ -161,7 +159,6 @@ ClusterSocket::~ClusterSocket(void)
     while (fd != (int)INVALID_KEY)
     {
         SockLib::sockclose(fd);
-        delete writeCon;
         fd = write_connections.next( &writeCon );
     }
 }
@@ -592,11 +589,9 @@ int ClusterSocket::onConnect(int fd)
     {
         /* Populate Read Connection Structure */
         read_connection_t* connection = new read_connection_t;
-        memset(connection, 0, sizeof(read_connection_t));
-        connection->payload_index = -MSG_HDR_SIZE;
 
         /* Add to Read Connections */
-        if(!read_connections.add(fd, connection, false))
+        if(!read_connections.add(fd, connection, true))
         {
             mlog(CRITICAL, "Cluster socket failed to register file descriptor for read connection due to duplicate entry");
             delete connection;
@@ -606,8 +601,6 @@ int ClusterSocket::onConnect(int fd)
     else if(role == WRITER)
     {
         write_connection_t* connection = new write_connection_t;
-        memset(connection, 0, sizeof(write_connection_t));
-        connection->meter = METER_SEND_THRESH;
 
         /* Initialize Subscriber for Connection */
         if(protocol == BUS)
@@ -620,10 +613,9 @@ int ClusterSocket::onConnect(int fd)
         }
 
         /* Add to Write Connections */
-        if(!write_connections.add(fd, connection, false))
+        if(!write_connections.add(fd, connection, true))
         {
             mlog(CRITICAL, "Cluster socket failed to register file descriptor for write connection due to duplicate entry");
-            if(role == WRITER && protocol == BUS && connection->subconnq) delete connection->subconnq;
             delete connection;
             status = -1;
         }
@@ -649,10 +641,7 @@ int ClusterSocket::onDisconnect(int fd)
     {
         if(role == READER)
         {
-            read_connection_t* connection = read_connections[fd];
-            delete [] connection->payload;
-            delete connection;
-            if(!read_connections.remove(fd))
+            if(!read_connections.remove(fd)) // frees connection memory
             {
                 mlog(CRITICAL, "Cluster socket on %s:%d failed to remove connection information for reader file descriptor %d", getIpAddr(), getPort(), fd);
                 status = -1;
@@ -660,10 +649,7 @@ int ClusterSocket::onDisconnect(int fd)
         }
         if(role == WRITER)
         {
-            write_connection_t* connection = write_connections[fd];
-            if(protocol == BUS && connection->subconnq) delete connection->subconnq;
-            delete connection;
-            if(!write_connections.remove(fd))
+            if(!write_connections.remove(fd)) // frees connection memory
             {
                 mlog(CRITICAL, "Cluster socket on %s:%d failed to remove connection information for writer file descriptor %d", getIpAddr(), getPort(), fd);
                 status = -1;

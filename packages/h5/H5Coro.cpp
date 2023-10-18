@@ -293,7 +293,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
             }
 
             /* Add Entry to Repository */
-            metaRepo.add(meta_key, metaData, true);
+            metaRepo.add(meta_key, metaData, false);
         }
         metaMutex.unlock();
     }
@@ -472,7 +472,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                 }
 
                 /* Add Cache Entry */
-                if(!cache->add(file_position, entry))
+                if(!cache->add(file_position, entry, true))
                 {
                     /* Free Previously Allocated Entry
                      *  should only fail to add if the cache line was
