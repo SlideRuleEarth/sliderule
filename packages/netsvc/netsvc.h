@@ -36,6 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "AoiMetrics.h"
 #include "CurlLib.h"
 #include "EndpointProxy.h"
 #include "OrchestratorLib.h"

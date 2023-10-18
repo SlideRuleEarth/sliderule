@@ -29,24 +29,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __monitor__
-#define __monitor__
+#ifndef __aoi_metrics__
+#define __aoi_metrics__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
-#include "DispatchObject.h"
-#include "RecordObject.h"
 #include "OsApi.h"
-#include "EventLib.h"
+#include "MathLib.h"
+#include "NetsvcParms.h"
 
 /******************************************************************************
- * Monitor CLASS
+ * METRICS FOR PLUGIN
  ******************************************************************************/
 
-class Monitor: public DispatchObject
+class AoiMetrics
 {
     public:
 
@@ -54,76 +52,53 @@ class Monitor: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        static const int MAX_POINTS_IN_POLY = 10;
 
-        /*--------------------------------------------------------------------
+         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
         typedef enum {
-            TEXT,
-            JSON,
-            CLOUD,
-            RECORD
-        } format_t;
+            REGION_CONTINENTAL_US = 0,
+            REGION_ALASKA = 1,
+            REGION_CANADA = 2,
+            REGION_GREENLAND = 3,
+            REGION_CENTRAL_AMERICA = 4,
+            REGION_SOUTH_AMERICA = 5,
+            REGION_AFRICA = 6,
+            REGION_MIDDLE_EAST = 7,
+            REGION_EUROPE = 8,
+            REGION_NORTH_ASIA = 9,
+            REGION_SOUTH_ASIA = 10,
+            REGION_OCEANIA = 11,
+            REGION_ANTARCTICA = 12,
+            REGION_UNKNOWN = 13,
+            NUM_REGIONS = 14
+        } regions_t;
 
-        typedef enum {
-            TERM = 0,
-            LOCAL = 1,
-            MSGQ = 2
-        } cat_mode_t;
+        typedef struct {
+            const char* name;
+            MathLib::proj_t proj;
+            MathLib::coord_t coords[MAX_POINTS_IN_POLY];
+            MathLib::point_t points[MAX_POINTS_IN_POLY];
+            int num_points;
+        } region_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size);
-                     Monitor        (lua_State* L, uint8_t type_mask, event_level_t level, format_t format);
-                     ~Monitor       (void);
-
+        static bool         init            (void);
+        static regions_t    setRegion       (NetsvcParms* parms);
+    
     private:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int MAX_EVENT_SIZE = 1280;
-        static const int MAX_TAIL_SIZE = 65536;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-
-        bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
-
-        static int  textOutput      (EventLib::event_t* event, char* event_buffer);
-        static int  jsonOutput      (EventLib::event_t* event, char* event_buffer);
-        static int  cloudOutput     (EventLib::event_t* event, char* event_buffer);
-
-        static int  luaConfig       (lua_State* L);
-        static int  luaTail         (lua_State* L);
-        static int  luaCat          (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        uint8_t         eventTypeMask;
-        event_level_t   eventLevel;
-        format_t        outputFormat;
-        char*           eventTailArray; // [][MAX_EVENT_SIZE]
-        int             eventTailSize;
-        int             eventTailIndex;
+        static region_t*    region2struct   (regions_t region);
+        static bool         checkRegion     (MathLib::coord_t coord, regions_t r);
 };
 
-#endif  /* __monitor__ */
+#endif  /* __aoi_metrics__ */

@@ -30,83 +30,71 @@
  */
 
 /******************************************************************************
- *INCLUDES
+ * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "netsvc.h"
+#include "PublishMonitor.h"
+#include "Monitor.h"
+#include "EventLib.h"
+#include "TimeLib.h"
+#include "RecordObject.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_NETSVC_LIBNAME  "netsvc"
-
-/******************************************************************************
- * LOCAL FUNCTIONS
+ * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * netsvc_open
+ * luaCreate - create([<type mask>], [<level>], [<output format>], <outputq>)
  *----------------------------------------------------------------------------*/
-int netsvc_open (lua_State* L)
+int PublishMonitor::luaCreate (lua_State* L)
 {
-    static const struct luaL_Reg netsvc_functions[] = {
-        {"get",         CurlLib::luaGet},
-        {"post",        CurlLib::luaPost},
-        {"proxy",       EndpointProxy::luaCreate},
-        {"orchurl",     OrchestratorLib::luaUrl},
-        {"orchreg",     OrchestratorLib::luaRegisterService},
-        {"orchlock",    OrchestratorLib::luaLock},
-        {"orchunlock",  OrchestratorLib::luaUnlock},
-        {"orchhealth",  OrchestratorLib::luaHealth},
-        {"psurl",       ProvisioningSystemLib::luaUrl},
-        {"psorg",       ProvisioningSystemLib::luaSetOrganization},
-        {"pslogin",     ProvisioningSystemLib::luaLogin},
-        {"psvalidate",  ProvisioningSystemLib::luaValidate},
-        {"psauth",      ProvisioningSystemLib::Authenticator::luaCreate},
-        {"parms",       NetsvcParms::luaCreate},
-        {NULL,          NULL}
-    };
+    try
+    {
+        /* Get Parmeters */
+        uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
+        event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
+        format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
+        const char* outq_name = getLuaString(L, 4, true, NULL);
 
-    /* Set Library */
-    luaL_newlib(L, netsvc_functions);
-
-    /* Set Globals */
-    LuaEngine::setAttrInt(L, "RQST_TIMEOUT",  NetsvcParms::DEFAULT_RQST_TIMEOUT);
-    LuaEngine::setAttrInt(L, "NODE_TIMEOUT",  NetsvcParms::DEFAULT_NODE_TIMEOUT);
-    LuaEngine::setAttrInt(L, "READ_TIMEOUT",  NetsvcParms::DEFAULT_READ_TIMEOUT);
-
-    return 1;
+        /* Return Dispatch Object */
+        return createLuaObject(L, new PublishMonitor(L, type_mask, level, format, outq_name));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /******************************************************************************
- * EXPORTED FUNCTIONS
+ * PROTECTED METHODS
  ******************************************************************************/
 
-extern "C" {
-void initnetsvc (void)
+/*----------------------------------------------------------------------------
+ * processEvent
+ *----------------------------------------------------------------------------*/
+void PublishMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
-    /* Initialize Modules */
-    AoiMetrics::init();
-    CurlLib::init();
-    OrchestratorLib::init();
-    ProvisioningSystemLib::init();
-
-    /* Extend Lua */
-    LuaEngine::extend(LUA_NETSVC_LIBNAME, netsvc_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_NETSVC_LIBNAME, LIBID);
-
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_NETSVC_LIBNAME, LIBID);
+    outQ->postCopy(event_buf_ptr, event_size, IO_CHECK);
 }
 
-void deinitnetsvc (void)
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name):
+    Monitor(L, type_mask, level, format)
 {
-    ProvisioningSystemLib::deinit();
-    OrchestratorLib::deinit();
-    CurlLib::deinit();
+    outQ = new Publisher(outq_name);
 }
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+PublishMonitor::~PublishMonitor(void)
+{
+    delete outQ;
 }

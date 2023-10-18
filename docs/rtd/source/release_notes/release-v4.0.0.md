@@ -122,10 +122,6 @@ parms = { "poly": region['poly'],
 
 [https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.0.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.0.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v4.0.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v4.0.0)
-
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v4.0.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v4.0.0)
-
 ## Benchmarks
 
 ```

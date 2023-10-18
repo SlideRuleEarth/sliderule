@@ -18,6 +18,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/AoiMetrics.cpp
             ${CMAKE_CURRENT_LIST_DIR}/CurlLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.cpp
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
@@ -34,6 +35,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/netsvc.h
+            ${CMAKE_CURRENT_LIST_DIR}/AoiMetrics.h
             ${CMAKE_CURRENT_LIST_DIR}/CurlLib.h
             ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.h
             ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h

@@ -75,6 +75,7 @@ static int core_open (lua_State *L)
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
         {"monitor",         Monitor::luaCreate},
+        {"pmonitor",        PublishMonitor::luaCreate},
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},
         {"tcp",             TcpSocket::luaCreate},

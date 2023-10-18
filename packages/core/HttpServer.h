@@ -64,8 +64,6 @@ class HttpServer: public LuaObject
         static const int DEFAULT_MAX_CONNECTIONS    = 256;
         static const int STREAM_OVERHEAD_SIZE       = 128; // chunk size, record size, and line breaks
 
-        static const char* DURATION_METRIC;
-
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];

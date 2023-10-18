@@ -67,12 +67,9 @@ class LuaEndpoint: public EndpointObject
 
         static const int MAX_SOURCED_RESPONSE_SIZE = 0x8000000; // 128M
         static const int MAX_RESPONSE_TIME_MS = 5000;
-        static const int INITIAL_NUM_ENDPOINTS = 32;
         static const int MAX_EXCEPTION_TEXT_SIZE = 256;
         static const char* LUA_RESPONSE_QUEUE;
         static const char* LUA_REQUEST_ID;
-        static const char* UNREGISTERED_ENDPOINT;
-        static const char* HITS_METRIC;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -112,7 +109,7 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static bool         init                    (void);
+        static void         init                    (void);
         static int          luaCreate               (lua_State* L);
         static void         generateExceptionStatus (int code, event_level_t level, Publisher* outq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
@@ -132,17 +129,12 @@ class LuaEndpoint: public EndpointObject
         void                normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
         void                streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
 
-        int32_t             getMetricId     (const char* endpoint);
-
-        static int          luaMetric       (lua_State* L);
         static int          luaAuth         (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static int32_t      totalMetricId;
-        Dictionary<int32_t> metricIds;
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
         event_level_t       logLevel;

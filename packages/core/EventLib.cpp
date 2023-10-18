@@ -83,10 +83,6 @@ event_level_t EventLib::log_level;
 event_level_t EventLib::trace_level;
 event_level_t EventLib::metric_level;
 
-Mutex EventLib::metric_mut;
-Dictionary<Dictionary<int32_t>*, false> EventLib::metric_categories(MAX_METRICS, 1.0);
-List<EventLib::metric_t> EventLib::metric_vals;
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -119,25 +115,6 @@ void EventLib::deinit (void)
 {
     /* Cleanup Output Q */
     delete outq;
-
-    /* Clean Up Metrics */
-    metric_mut.lock();
-    {
-        Dictionary<int32_t>* ids = NULL;
-        const char* category = metric_categories.first(&ids);
-        while(category != NULL)
-        {
-            delete ids;
-            category = metric_categories.next(&ids);
-        }
-
-        for(int m = 0; m < metric_vals.length(); m++)
-        {
-            delete [] metric_vals[m].name;
-            delete [] metric_vals[m].category;
-        }
-    }
-    metric_mut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -217,7 +194,7 @@ const char* EventLib::type2str (type_t type)
 /*----------------------------------------------------------------------------
  * subtype2str
  *----------------------------------------------------------------------------*/
-const char* EventLib::subtype2str (subtype_t subtype)
+const char* EventLib::subtype2str (metric_subtype_t subtype)
 {
     switch(subtype)
     {
@@ -313,7 +290,6 @@ uint32_t EventLib::grabId (void)
     return (uint32_t)(unsigned long long)Thread::getGlobal(trace_key);
 }
 
-
 /*----------------------------------------------------------------------------
  * logMsg
  *----------------------------------------------------------------------------*/
@@ -354,144 +330,20 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 }
 
 /*----------------------------------------------------------------------------
- * registerMetric
- *----------------------------------------------------------------------------*/
-int32_t EventLib::registerMetric (const char* category, subtype_t subtype, const char* name_fmt, ...)
-{
-    assert(category);
-
-    int32_t metric_id = INVALID_METRIC;
-
-    /* Build Metric Name */
-    char name_buf[MAX_ATTR_SIZE];
-    va_list args;
-    va_start(args, name_fmt);
-    int vlen = vsnprintf(name_buf, MAX_ATTR_SIZE - 1, name_fmt, args);
-    int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
-    name_buf[attr_size - 1] = '\0';
-    va_end(args);
-
-    /* Regsiter Metric */
-    metric_mut.lock();
-    {
-        /* Get Metric Category Dictionary */
-        Dictionary<int32_t>* ids;
-        if(metric_categories.find(category))
-        {
-            ids = metric_categories[category];
-        }
-        else
-        {
-            ids = new Dictionary<int32_t>(MAX_METRICS, 1.0);
-            if(!metric_categories.add(category, ids, true))
-            {
-                mlog(WARNING, "Failed to add attribute to metrics: %s", category);
-            }
-        }
-
-        /* Create Metric */
-        metric_t metric;
-        metric.value    = 0.0;
-        metric.subtype  = subtype;
-        metric.name     = StringLib::duplicate(name_buf);
-        metric.category = StringLib::duplicate(category);
-        metric.id       = metric_vals.length();
-        metric_vals.add(metric);
-
-        /* Register Metric */
-        if(ids->add(metric.name, metric.id, true))
-        {
-            metric_id = metric.id;
-        }
-        else try // getting existing metric
-        {
-            metric_id = ids->get(metric.name);
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Failed to register metric %s", metric.name);
-        }
-    }
-    metric_mut.unlock();
-
-    /* Return Metric Id */
-    return metric_id;
-}
-
-/*----------------------------------------------------------------------------
- * updateMetric
- *----------------------------------------------------------------------------*/
-void EventLib::updateMetric (int32_t id, double value)
-{
-    metric_mut.lock();
-    {
-        try
-        {
-            metric_t& metric = metric_vals[id];
-            metric.value = value;
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Failed to update metric %d: %s", id, e.what());
-        }
-    }
-    metric_mut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * incrementMetric
- *----------------------------------------------------------------------------*/
-void EventLib::incrementMetric (int32_t id, double value)
-{
-    metric_mut.lock();
-    {
-        try
-        {
-            metric_t& metric = metric_vals[id];
-            metric.value += value;
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Failed to increment metric %d: %s", id, e.what());
-        }
-    }
-    metric_mut.unlock();
-}
-
-/*----------------------------------------------------------------------------
  * generateMetric
  *----------------------------------------------------------------------------*/
-void EventLib::generateMetric (int32_t id, event_level_t lvl)
+void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subtype_t subtype, double value)
 {
     event_t event;
-    metric_t metric;
 
     /* Return Here If Nothing to Do */
     if(lvl < metric_level) return;
 
-    /* Get Metric */
-    metric_mut.lock();
-    {
-        try
-        {
-            metric = metric_vals[id];
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Failed to generate metric %d: %s", id, e.what());
-            metric.id = INVALID_METRIC;
-        }
-    }
-    metric_mut.unlock();
-
-    /* Check for Valid Metric */
-    if (metric.id == INVALID_METRIC) return;
-
     /* Initialize Log Message */
     event.systime   = TimeLib::gpstime();
     event.tid       = Thread::getId();
-    event.id        = metric.id;
-    event.parent    = metric.subtype;
+    event.id        = subtype;
+    event.parent    = ORIGIN;
     event.flags     = 0;
     event.type      = METRIC;
     event.level     = lvl;
@@ -499,62 +351,13 @@ void EventLib::generateMetric (int32_t id, event_level_t lvl)
     /* Copy IP Address */
     StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
-    /* Copy Name and Attribute */
-    StringLib::copy(event.name, metric.name, MAX_NAME_SIZE);
-    StringLib::copy(event.attr, metric.category, MAX_ATTR_SIZE);
+    /* Populate Name and Populate Attribute */
+    StringLib::copy(event.name, name, MAX_NAME_SIZE);
+    StringLib::formats(event.attr, MAX_ATTR_SIZE, "%lf", value);
 
     /* Post Metric */
-    int attr_size = StringLib::size(metric.category) + 1;
+    int attr_size = StringLib::size(event.attr) + 1;
     sendEvent(&event, attr_size);
-}
-
-/*----------------------------------------------------------------------------
- * iterateMetric
- *----------------------------------------------------------------------------*/
-void EventLib::_iterateMetric (Dictionary<int32_t>* ids, metric_func_t cb, void* parm)
-{
-    int32_t id;
-    int i = 0;
-    const char* name = ids->first(&id);
-    while(name != NULL)
-    {
-        metric_t metric = metric_vals[id];
-        cb(metric, i++, parm);
-        name = ids->next(&id);
-    }
-}
-
-void EventLib::iterateMetric (const char* category, metric_func_t cb, void* parm)
-{
-    assert(cb);
-
-    metric_mut.lock();
-    {
-        try
-        {
-            if(category)
-            {
-                Dictionary<int32_t>* ids = metric_categories[category];
-                _iterateMetric(ids, cb, parm);
-            }
-            else // all categories
-            {
-                /// need mutex
-                Dictionary<int32_t>* ids;
-                const char* next_category = metric_categories.first(&ids);
-                while(next_category != NULL)
-                {
-                    _iterateMetric(ids, cb, parm);
-                    next_category = metric_categories.next(&ids);
-                }
-            }
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Failed to iterate metrics for %s: %s", category, e.what());
-        }
-    }
-    metric_mut.unlock();
 }
 
 /*----------------------------------------------------------------------------

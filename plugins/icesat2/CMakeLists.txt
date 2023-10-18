@@ -49,7 +49,6 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/MeritRaster.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp
 )
@@ -92,7 +91,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/MeritRaster.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/PluginMetrics.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h
     DESTINATION

@@ -29,83 +29,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __plugin_metrics__
-#define __plugin_metrics__
+#ifndef __publish_monitor__
+#define __publish_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "MsgQ.h"
+#include "Monitor.h"
+#include "RecordObject.h"
 #include "OsApi.h"
-#include "Icesat2Parms.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * METRICS FOR PLUGIN
+ * PUBLISH MONITOR CLASS
  ******************************************************************************/
 
-class PluginMetrics
+class PublishMonitor: public Monitor
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int MAX_POINTS_IN_POLY = 10;
-
-         /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            REGION_CONTINENTAL_US = 0,
-            REGION_ALASKA = 1,
-            REGION_CANADA = 2,
-            REGION_GREENLAND = 3,
-            REGION_CENTRAL_AMERICA = 4,
-            REGION_SOUTH_AMERICA = 5,
-            REGION_AFRICA = 6,
-            REGION_MIDDLE_EAST = 7,
-            REGION_EUROPE = 8,
-            REGION_NORTH_ASIA = 9,
-            REGION_SOUTH_ASIA = 10,
-            REGION_OCEANIA = 11,
-            REGION_ANTARCTICA = 12,
-            REGION_UNKNOWN = 13,
-            NUM_REGIONS = 14
-        } regions_t;
-
-        typedef struct {
-            const char* name;
-            MathLib::proj_t proj;
-            MathLib::coord_t coords[MAX_POINTS_IN_POLY];
-            MathLib::point_t points[MAX_POINTS_IN_POLY];
-            int num_points;
-        } region_t;
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* CATEGORY;
-        static const char* REGION_METRIC;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static bool         init            (void);
-        static region_t*    region2struct   (regions_t region);
-        static bool         setRegion       (Icesat2Parms* parms);
-        static bool         checkRegion     (MathLib::coord_t coord, regions_t r);
+        static int luaCreate (lua_State* L);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
+        ~PublishMonitor (void);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static int32_t regionMetricIds[NUM_REGIONS];
+        Publisher* outQ;
 };
 
-#endif  /* __plugin_metrics__ */
+#endif  /* __publish_monitor__ */
