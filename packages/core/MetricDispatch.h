@@ -105,19 +105,19 @@ class MetricDispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*                     dataField;      // value of metric
-        List<long>*                     idFilter;       // id of record, not data or key
-        Dictionary<fieldValue_t*, true>* fieldFilter;   // more computationally intensive filter, matches field to value
-        Publisher*                      outQ;           // output queue metrics are posted to
+        const char*                 dataField;      // value of metric
+        List<long>*                 idFilter;       // id of record, not data or key
+        Dictionary<fieldValue_t*>*  fieldFilter;   // more computationally intensive filter, matches field to value
+        Publisher*                  outQ;           // output queue metrics are posted to
 
-        bool                            playbackSource;
-        bool                            playbackText;
-        bool                            playbackName;
-        okey_t                          keyOffset;
-        okey_t                          minKey;
-        okey_t                          maxKey;
+        bool                        playbackSource;
+        bool                        playbackText;
+        bool                        playbackName;
+        okey_t                      keyOffset;
+        okey_t                      minKey;
+        okey_t                      maxKey;
 
-        Mutex                           metricMutex;
+        Mutex                       metricMutex;
 
         /*--------------------------------------------------------------------
          * Methods

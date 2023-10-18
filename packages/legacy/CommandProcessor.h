@@ -141,8 +141,8 @@ class CommandProcessor: public CommandableObject
         };
 
         // Dictionaries //
-        typedef Dictionary<handle_entry_t*, true> HandleDictionary;
-        typedef Dictionary<cvt_entry_t*, true> CvtDictionary;
+        typedef Dictionary<handle_entry_t*> HandleDictionary;
+        typedef Dictionary<cvt_entry_t*> CvtDictionary;
 
         /*--------------------------------------------------------------------
          * Data

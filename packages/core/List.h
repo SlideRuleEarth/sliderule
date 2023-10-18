@@ -125,6 +125,26 @@ class List
         void            freeNode            (typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* node, int index);
         void            quicksort           (T* array, int start, int end);
         int             quicksortpartition  (T* array, int start, int end);
+
+        /*--------------------------------------------------------------------
+         * Specialized Template Methods
+         *--------------------------------------------------------------------*/
+
+        template <class C=T, typename std::enable_if_t<std::is_pointer<C>::value>* = 0>
+        void freeNode(typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* node, int index)
+        {
+            if(IS_MANAGED)
+            {
+                if(IS_ARRAY)
+                {
+                    delete [] node->data[index];
+                }
+                else
+                {
+                    delete node->data[index];
+                }
+            }
+        }
 };
 
 /******************************************************************************
@@ -571,16 +591,8 @@ typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* List<T, IS_MANAGED, IS_ARRA
 template <class T, bool IS_MANAGED, bool IS_ARRAY>
 void List<T, IS_MANAGED, IS_ARRAY>::freeNode(typename List<T, IS_MANAGED, IS_ARRAY>::list_node_t* node, int index)
 {
-    #if IS_MANAGED
-        #if IS_ARRAY   
-            delete [] node->data[index];
-        #else
-            delete node->data[index];
-        #endif
-    #else
-        (void)node;
-        (void)index;
-    #endif
+    (void)node;
+    (void)index;
 }
 
 /*----------------------------------------------------------------------------

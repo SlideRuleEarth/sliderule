@@ -25,7 +25,7 @@ local encodedRaster = base64.encode( rasterfile )
 local len = string.len(encodedRaster)
 local params = {data = encodedRaster, length = len, date = 0, elevation = true}
 
-local robj = geo.userraster(params)
+local robj = geo.userraster(params):name("userraster")
 runner.check(robj ~= nil)
 
 

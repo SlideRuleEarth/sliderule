@@ -126,7 +126,7 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         typedef Ordering<rasters_group_t*, unsigned long, true> GroupOrdering;
-        typedef Dictionary<cacheitem_t*, true> CacheDictionary;
+        typedef Dictionary<cacheitem_t*> CacheDictionary;
 
         /*--------------------------------------------------------------------
          * Data

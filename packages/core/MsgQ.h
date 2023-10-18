@@ -166,7 +166,7 @@ class MsgQ
          *--------------------------------------------------------------------*/
 
         static int                          StandardQueueDepth;
-        static Dictionary<message_queue_t*> queues;
+        static Dictionary<message_queue_t*, false> queues;
         static Mutex                        listmut;
 
         message_queue_t* msgQ;

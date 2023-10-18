@@ -113,7 +113,7 @@ class ReportDispatch: public DispatchObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef Dictionary<const char*, true, true> ValueDictionary;
+        typedef Dictionary<const char*> ValueDictionary;
         typedef Ordering<entry_t*, unsigned long, true> EntryOrdering;
 
         /*--------------------------------------------------------------------

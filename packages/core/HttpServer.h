@@ -131,7 +131,7 @@ class HttpServer: public LuaObject
         Thread*                         listenerPid;
         Table<connection_t*, int>       connections;
 
-        Dictionary<EndpointObject*>     routeTable;
+        Dictionary<EndpointObject*, false>     routeTable;
 
         char*                           ipAddr;
         int                             port;

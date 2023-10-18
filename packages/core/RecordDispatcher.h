@@ -56,7 +56,11 @@ class RecordDispatcher: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef okey_t (*calcFunc_t) (unsigned char* buffer, int size);
+        typedef okey_t (*calcFunc_f) (unsigned char* buffer, int size);
+
+        typedef struct {
+            calcFunc_f  calc;
+        } calcFunc_t;
 
         typedef enum {
             FIELD_KEY_MODE = 0,
@@ -79,7 +83,7 @@ class RecordDispatcher: public LuaObject
 
         static keyMode_t    str2mode        (const char* str);
         static const char*  mode2str        (keyMode_t mode);
-        static bool         addKeyCalcFunc  (const char* calc_name, calcFunc_t func);
+        static bool         addKeyCalcFunc  (const char* calc_name, calcFunc_f calc_func);
 
     protected:
 
@@ -101,7 +105,7 @@ class RecordDispatcher: public LuaObject
          *--------------------------------------------------------------------*/
 
                                 RecordDispatcher    (lua_State* L, const char* inputq_name,
-                                                     keyMode_t key_mode, const char* key_field, calcFunc_t key_func,
+                                                     keyMode_t key_mode, const char* key_field, calcFunc_f key_func,
                                                      int num_threads, MsgQ::subscriber_type_t type);
         virtual                 ~RecordDispatcher   (void);
         virtual RecordObject*   createRecord        (unsigned char* buffer, int size);
@@ -140,7 +144,7 @@ class RecordDispatcher: public LuaObject
         keyMode_t               keyMode;        // determines key of metric
         okey_t                  keyRecCnt;      // used with RECEIPT_KEY_MODE
         const char*             keyField;       // used with FIELD_KEY_MODE
-        calcFunc_t              keyFunc;        // used with CALCULATED_KEY_MODE
+        calcFunc_f              keyFunc;        // used with CALCULATED_KEY_MODE
         bool                    recError;
 
         /*--------------------------------------------------------------------

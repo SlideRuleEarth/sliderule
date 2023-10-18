@@ -44,7 +44,7 @@
  ******************************************************************************/
 
 const char* LuaObject::BASE_OBJECT_TYPE = "LuaObject";
-Dictionary<LuaObject*> LuaObject::globalObjects;
+Dictionary<LuaObject*, false> LuaObject::globalObjects;
 Mutex LuaObject::globalMut;
 
 /******************************************************************************
@@ -267,7 +267,7 @@ bool LuaObject::releaseLuaObject (void)
     /* Delete THIS Object */
     if(is_delete_pending)
     {
-        userData->luaObj = NULL;
+        if(userData) userData->luaObj = NULL;
         delete this;
     }
 
@@ -330,7 +330,7 @@ LuaObject::~LuaObject (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaDelete
+ * luaDelete - called only by the garbage collector
  *----------------------------------------------------------------------------*/
 int LuaObject::luaDelete (lua_State* L)
 {
@@ -354,6 +354,7 @@ int LuaObject::luaDelete (lua_State* L)
                 else
                 {
                     mlog(DEBUG, "Delaying delete on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                    lua_obj->userData = NULL; // user data is now out of scope
                 }
             }
             else
@@ -377,6 +378,50 @@ int LuaObject::luaDelete (lua_State* L)
     return 0;
 }
 
+/*----------------------------------------------------------------------------
+ * luaDestroy - called explicitly by scripts
+ *----------------------------------------------------------------------------*/
+int LuaObject::luaDestroy (lua_State* L)
+{
+    try
+    {
+        luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
+        if(user_data)
+        {
+            LuaObject* lua_obj = user_data->luaObj;
+            if(lua_obj)
+            {
+                int count = lua_obj->referenceCount--;
+                mlog(DEBUG, "Destroying object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+
+                if(lua_obj->referenceCount == 0)
+                {
+                    /* Delete Object */
+                    delete lua_obj;
+                    user_data->luaObj = NULL;
+                }
+                else
+                {
+                    mlog(DEBUG, "Delaying destroy on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                }
+            }
+            else
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Attempting to destroy lua object that has already been deleted");
+            }
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to retrieve user data");
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error destroying object: %s", e.what());
+    }
+
+    return 0;
+}
 
 /*----------------------------------------------------------------------------
  * luaName
@@ -505,7 +550,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         LuaEngine::setAttrFunc(L, "name", luaName);
         LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
-        LuaEngine::setAttrFunc(L, "destroy", luaDelete);
+        LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
     }
 }

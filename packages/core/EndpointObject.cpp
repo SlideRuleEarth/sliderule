@@ -68,16 +68,6 @@ EndpointObject::Request::Request (const char* _id):
  *----------------------------------------------------------------------------*/
 EndpointObject::Request::~Request (void)
 {
-    /* Clear Out Headers */
-    const char* header;
-    const char* key = headers.first(&header);
-    while(key != NULL)
-    {
-        delete [] header;
-        key = headers.next(&header);
-    }
-
-    /* Free Allocate Members */
     delete [] body;
     delete [] resource;
     delete [] path;

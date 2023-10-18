@@ -102,7 +102,7 @@ class CcsdsRecord: public RecordObject
             int             size;
         } pktDef_t;
 
-        typedef Dictionary<pktDef_t*, true> PktDefDictionary;
+        typedef Dictionary<pktDef_t*> PktDefDictionary;
 
         /*--------------------------------------------------------------------
          * Data

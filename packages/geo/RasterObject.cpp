@@ -89,18 +89,19 @@ int RasterObject::luaCreate( lua_State* L )
         if(_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create GeoParms object");
 
         /* Get Factory */
-        factory_t _create = NULL;
+        factory_t factory;
+        bool found = false;
         factoryMut.lock();
         {
-            factories.find(_parms->asset_name, &_create);
+            found = factories.find(_parms->asset_name, &factory);
         }
         factoryMut.unlock();
 
         /* Check Factory */
-        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
+        if(!found) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
 
         /* Create Raster */
-        RasterObject* _raster = _create(L, _parms);
+        RasterObject* _raster = factory.create(L, _parms);
         if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", _parms->asset_name);
 
         /* Return Object */
@@ -117,13 +118,14 @@ int RasterObject::luaCreate( lua_State* L )
 /*----------------------------------------------------------------------------
  * registerDriver
  *----------------------------------------------------------------------------*/
-bool RasterObject::registerRaster (const char* _name, factory_t create)
+bool RasterObject::registerRaster (const char* _name, factory_f create)
 {
     bool status;
 
     factoryMut.lock();
     {
-        status = factories.add(_name, create);
+        factory_t factory = { .create = create };
+        status = factories.add(_name, factory);
     }
     factoryMut.unlock();
 

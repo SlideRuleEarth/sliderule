@@ -130,6 +130,26 @@ class Table
         bool            overwriteNode   (K index, K key, const T& data, bool with_delete);
         void            makeNewest      (K index);
         void            freeNode        (K index);
+
+        /*--------------------------------------------------------------------
+         * Specialized Template Methods
+         *--------------------------------------------------------------------*/
+
+        template <class C=T, typename J=K, typename std::enable_if_t<std::is_pointer<C>::value>* = 0>
+        void freeNode(J index)
+        {
+            if(IS_MANAGED)
+            {
+                if(IS_ARRAY)
+                {
+                    delete [] table[index].data;
+                }
+                else
+                {
+                    delete table[index].data;
+                }
+            }
+        }
 };
 
 /******************************************************************************
@@ -741,15 +761,7 @@ void Table<T,K,IS_MANAGED,IS_ARRAY>::makeNewest(K index)
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
 void Table<T,K,IS_MANAGED,IS_ARRAY>::freeNode(K index)
 {
-    #if IS_MANAGED
-        #if IS_ARRAY   
-            delete [] table[index].data;
-        #else
-            delete table[index].data;
-        #endif
-    #else
-        (void)index;
-    #endif
+    (void)index;
 }
 
 #endif  /* __table__ */

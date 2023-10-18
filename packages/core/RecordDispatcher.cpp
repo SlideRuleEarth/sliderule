@@ -77,7 +77,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         /* Set Key Mode */
         keyMode_t key_mode = str2mode(key_mode_str);
         const char* key_field = NULL;
-        calcFunc_t  key_func = NULL;
+        calcFunc_f  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
@@ -90,7 +90,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         else if(key_mode == CALCULATED_KEY_MODE)
         {
             const char* key_func_str = getLuaString(L, 4);
-            key_func = keyCalcFunctions[key_func_str];
+            key_func = keyCalcFunctions[key_func_str].calc;
         }
 
         /* Set Subscriber Type */
@@ -134,9 +134,10 @@ const char* RecordDispatcher::mode2str(keyMode_t mode)
 /*----------------------------------------------------------------------------
  * addKeyCalcFunc
  *----------------------------------------------------------------------------*/
-bool RecordDispatcher::addKeyCalcFunc(const char* calc_name, calcFunc_t func)
+bool RecordDispatcher::addKeyCalcFunc(const char* calc_name, calcFunc_f calc_func)
 {
-    return keyCalcFunctions.add(calc_name, func);
+    calcFunc_t calc = { .calc = calc_func };
+    return keyCalcFunctions.add(calc_name, calc);
 }
 
 /******************************************************************************
@@ -147,7 +148,7 @@ bool RecordDispatcher::addKeyCalcFunc(const char* calc_name, calcFunc_t func)
  * Constructor
  *----------------------------------------------------------------------------*/
 RecordDispatcher::RecordDispatcher( lua_State* L, const char* inputq_name,
-                                    keyMode_t key_mode, const char* key_field, calcFunc_t key_func,
+                                    keyMode_t key_mode, const char* key_field, calcFunc_f key_func,
                                     int num_threads, MsgQ::subscriber_type_t type):
     LuaObject(L, BASE_OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {

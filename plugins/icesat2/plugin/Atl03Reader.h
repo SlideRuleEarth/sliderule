@@ -159,7 +159,7 @@ class Atl03Reader: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef Dictionary<H5DArray*, true> H5DArrayDictionary;
+        typedef Dictionary<H5DArray*> H5DArrayDictionary;
 
         typedef struct {
             Atl03Reader*    reader;

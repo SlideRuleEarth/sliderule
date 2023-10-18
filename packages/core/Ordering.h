@@ -149,6 +149,26 @@ class Ordering
         bool            addNode         (K key, const T& data, bool unique);
         void            postNode        (sorted_node_t* node);
         void            freeNode        (sorted_node_t* node);
+
+        /*--------------------------------------------------------------------
+         * Specialized Template Methods
+         *--------------------------------------------------------------------*/
+
+        template <class C=T, typename std::enable_if_t<std::is_pointer<C>::value>* = 0>
+        void freeNode(sorted_node_t* node)
+        {
+            if(IS_MANAGED)
+            {
+                if(IS_ARRAY)
+                {
+                    delete [] node->data;
+                }
+                else
+                {
+                    delete node->data;
+                }
+            }
+        }
 };
 
 /******************************************************************************
@@ -691,15 +711,7 @@ void Ordering<T,K,IS_MANAGED,IS_ARRAY>::postNode(sorted_node_t* node)
 template <class T, typename K, bool IS_MANAGED, bool IS_ARRAY>
 void Ordering<T,K,IS_MANAGED,IS_ARRAY>::freeNode(sorted_node_t* node)
 {
-    #if IS_MANAGED
-        #if IS_ARRAY   
-            delete [] node->data;
-        #else
-            delete node->data;
-        #endif
-    #else
-        (void)node;
-    #endif
+    (void)node;
 }
 
 #endif  /* __ordering__ */

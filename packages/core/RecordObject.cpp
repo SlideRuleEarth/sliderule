@@ -51,7 +51,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-Dictionary<RecordObject::definition_t*, true> RecordObject::definitions;
+Dictionary<RecordObject::definition_t*> RecordObject::definitions;
 Mutex RecordObject::defMut;
 
 const char* RecordObject::DEFAULT_DOUBLE_FORMAT = "%.6lf";

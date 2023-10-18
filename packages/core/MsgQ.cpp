@@ -45,7 +45,7 @@
  ******************************************************************************/
 
 int MsgQ::StandardQueueDepth = MsgQ::CFG_DEPTH_INFINITY;
-Dictionary<MsgQ::message_queue_t*> MsgQ::queues;
+Dictionary<MsgQ::message_queue_t*, false> MsgQ::queues;
 Mutex MsgQ::listmut;
 
 /******************************************************************************

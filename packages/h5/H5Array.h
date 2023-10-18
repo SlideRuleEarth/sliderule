@@ -51,15 +51,6 @@ class H5Array
     public:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef union {
-            uint8_t     raw_data[];
-            T           typed_data[];
-        } type_cast_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -164,8 +155,15 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
         {
             status = true;
             size = h5f->info.elements;
-            type_cast_t* cast = reinterpret_cast<type_cast_t*>(h5f->info.data);
-            data = cast->typed_data;
+            /*
+             * There is no way to do this in a portable "safe" way. The code
+             * below works because our target architectures are x86_64 and aarch64.
+             * The data pointed to by info.data is new'ed and therefore guaranteed
+             * to be aligned to a 16 byte boundary.  The calling code is responsible
+             * for knowing what the data being read out of the h5 file is and 
+             * providing the correct type to the template.
+             */ 
+            data = reinterpret_cast<T*>(h5f->info.data);
             pointer = data;
         }
         else

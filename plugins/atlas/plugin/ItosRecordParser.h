@@ -70,7 +70,7 @@ class ItosRecordParser: public CommandableObject
 
         MgDictionary<Itos::Record*> dictionary; // key'ed database of all records
 
-        Dictionary<List<Itos::Record*>*> instantiations; // given a system prototype name, gives list of instantiated system records
+        Dictionary<List<Itos::Record*>*, false> instantiations; // given a system prototype name, gives list of instantiated system records
 
         MgList<Itos::Record*> declarations;         // zero-depth records in rec files
         MgList<Itos::Packet*> packets;              // list of all the packet definitions: commands, telemetry

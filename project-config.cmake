@@ -64,6 +64,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameter:*/List.h"
         "--suppress=constParameter:*/Dictionary.h"
         "--suppress=unreadVariable:*/TimeLib.cpp"
+        "--suppress=invalidPointerCast:*/H5Array.h"
         "--error-exitcode=1"
         "-DLLONG_MAX"
     )

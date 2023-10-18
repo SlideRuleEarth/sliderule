@@ -138,6 +138,7 @@ class LuaObject
 
         /* Meta Table Functions */
         static int          luaDelete           (lua_State* L);
+        static int          luaDestroy          (lua_State* L);
         static int          luaName             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
 
@@ -145,7 +146,7 @@ class LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static Dictionary<LuaObject*>   globalObjects;
+        static Dictionary<LuaObject*, false>   globalObjects;
         static Mutex                    globalMut;
 
         std::atomic<long>               referenceCount;

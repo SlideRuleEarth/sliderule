@@ -45,7 +45,7 @@
  * DICTIONARY TEMPLATE
  ******************************************************************************/
 
-template <class T, bool IS_MANAGED=false, bool IS_ARRAY=false>
+template <class T>
 class Dictionary
 {
     public:
@@ -127,7 +127,7 @@ class Dictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        typename Dictionary<T, IS_MANAGED, IS_ARRAY>::hash_node_t* hashTable;
+        typename Dictionary<T>::hash_node_t* hashTable;
         unsigned int hashSize;
         unsigned int numEntries;
         unsigned int maxChain;
@@ -142,6 +142,7 @@ class Dictionary
         unsigned int    getNode     (const char* key) const;  // returns index into hash table
         void            addNode     (const char* key, const T& data, unsigned int hash, bool rehashed=false);
         void            freeNode    (unsigned int hash_index);
+
 };
 
 /******************************************************************************
@@ -151,8 +152,8 @@ class Dictionary
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-Dictionary<T, IS_MANAGED, IS_ARRAY>::Iterator::Iterator(const Dictionary& d):
+template <class T>
+Dictionary<T>::Iterator::Iterator(const Dictionary& d):
     length(d.numEntries),
     source(d),
     table_index(-1),
@@ -163,16 +164,16 @@ Dictionary<T, IS_MANAGED, IS_ARRAY>::Iterator::Iterator(const Dictionary& d):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-Dictionary<T, IS_MANAGED, IS_ARRAY>::Iterator::~Iterator(void)
+template <class T>
+Dictionary<T>::Iterator::~Iterator(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * []
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-typename Dictionary<T, IS_MANAGED, IS_ARRAY>::kv_t Dictionary<T, IS_MANAGED, IS_ARRAY>::Iterator::operator[](int index)
+template <class T>
+typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index)
 {
     if( (index < length) && (index >= 0) )
     {
@@ -194,7 +195,7 @@ typename Dictionary<T, IS_MANAGED, IS_ARRAY>::kv_t Dictionary<T, IS_MANAGED, IS_
             }
         }
 
-        return Dictionary<T, IS_MANAGED, IS_ARRAY>::kv_t(source.hashTable[table_index].key, source.hashTable[table_index].data);
+        return Dictionary<T>::kv_t(source.hashTable[table_index].key, source.hashTable[table_index].data);
     }
 
     throw RunTimeException(CRITICAL, RTE_ERROR, "Dictionary::Iterator index out of range");
@@ -204,8 +205,8 @@ typename Dictionary<T, IS_MANAGED, IS_ARRAY>::kv_t Dictionary<T, IS_MANAGED, IS_
  * PUBLIC STATIC DATA
  ******************************************************************************/
 
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-const double Dictionary<T, IS_MANAGED, IS_ARRAY>::DEFAULT_HASH_TABLE_LOAD = 0.75;
+template <class T>
+const double Dictionary<T>::DEFAULT_HASH_TABLE_LOAD = 0.75;
 
 /******************************************************************************
  * DICTIONARY METHODS
@@ -214,8 +215,8 @@ const double Dictionary<T, IS_MANAGED, IS_ARRAY>::DEFAULT_HASH_TABLE_LOAD = 0.75
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-Dictionary<T, IS_MANAGED, IS_ARRAY>::Dictionary(int hash_size, double hash_load)
+template <class T>
+Dictionary<T>::Dictionary(int hash_size, double hash_load)
 {
     assert(hash_size >= 0);
 
@@ -241,8 +242,8 @@ Dictionary<T, IS_MANAGED, IS_ARRAY>::Dictionary(int hash_size, double hash_load)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-Dictionary<T, IS_MANAGED, IS_ARRAY>::~Dictionary(void)
+template <class T>
+Dictionary<T>::~Dictionary(void)
 {
     clear();
     delete [] hashTable;
@@ -253,8 +254,8 @@ Dictionary<T, IS_MANAGED, IS_ARRAY>::~Dictionary(void)
  *
  *  if not unique then old data is automatically deleted and overwritten
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-bool Dictionary<T, IS_MANAGED, IS_ARRAY>::add(const char* key, const T& data, bool unique)
+template <class T>
+bool Dictionary<T>::add(const char* key, const T& data, bool unique)
 {
     assert(key);
 
@@ -329,8 +330,8 @@ bool Dictionary<T, IS_MANAGED, IS_ARRAY>::add(const char* key, const T& data, bo
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-T& Dictionary<T, IS_MANAGED, IS_ARRAY>::get(const char* key) const
+template <class T>
+T& Dictionary<T>::get(const char* key) const
 {
     unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
@@ -342,8 +343,8 @@ T& Dictionary<T, IS_MANAGED, IS_ARRAY>::get(const char* key) const
  *
  *  returns false if key not in dictionary, else returns true
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-bool Dictionary<T, IS_MANAGED, IS_ARRAY>::find(const char* key, T* data) const
+template <class T>
+bool Dictionary<T>::find(const char* key, T* data) const
 {
     bool found = false;
 
@@ -363,8 +364,8 @@ bool Dictionary<T, IS_MANAGED, IS_ARRAY>::find(const char* key, T* data) const
 /*----------------------------------------------------------------------------
  * remove
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-bool Dictionary<T, IS_MANAGED, IS_ARRAY>::remove(const char* key)
+template <class T>
+bool Dictionary<T>::remove(const char* key)
 {
     bool status = true;
 
@@ -427,8 +428,8 @@ bool Dictionary<T, IS_MANAGED, IS_ARRAY>::remove(const char* key)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-int Dictionary<T, IS_MANAGED, IS_ARRAY>::length(void) const
+template <class T>
+int Dictionary<T>::length(void) const
 {
     return numEntries;
 }
@@ -436,8 +437,8 @@ int Dictionary<T, IS_MANAGED, IS_ARRAY>::length(void) const
 /*----------------------------------------------------------------------------
  * getHashSize
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-int Dictionary<T, IS_MANAGED, IS_ARRAY>::getHashSize(void) const
+template <class T>
+int Dictionary<T>::getHashSize(void) const
 {
     return hashSize;
 }
@@ -445,8 +446,8 @@ int Dictionary<T, IS_MANAGED, IS_ARRAY>::getHashSize(void) const
 /*----------------------------------------------------------------------------
  * getMaxChain
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-int Dictionary<T, IS_MANAGED, IS_ARRAY>::getMaxChain(void) const
+template <class T>
+int Dictionary<T>::getMaxChain(void) const
 {
     return maxChain;
 }
@@ -454,8 +455,8 @@ int Dictionary<T, IS_MANAGED, IS_ARRAY>::getMaxChain(void) const
 /*----------------------------------------------------------------------------
  * getKeys
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-int Dictionary<T, IS_MANAGED, IS_ARRAY>::getKeys (char*** keys) const
+template <class T>
+int Dictionary<T>::getKeys (char*** keys) const
 {
     if (numEntries == 0) return 0;
 
@@ -478,8 +479,8 @@ int Dictionary<T, IS_MANAGED, IS_ARRAY>::getKeys (char*** keys) const
  *
  *  deletes everything in the dictionary
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-void Dictionary<T, IS_MANAGED, IS_ARRAY>::clear (void)
+template <class T>
+void Dictionary<T>::clear (void)
 {
     /* Clear Hash */
     for(unsigned int i = 0; numEntries > 0 && i < hashSize; i++)
@@ -500,8 +501,8 @@ void Dictionary<T, IS_MANAGED, IS_ARRAY>::clear (void)
 /*----------------------------------------------------------------------------
  * first
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::first (T* data)
+template <class T>
+const char* Dictionary<T>::first (T* data)
 {
     const char* key = NULL;
 
@@ -523,8 +524,8 @@ const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::first (T* data)
 /*----------------------------------------------------------------------------
  * next
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::next (T* data)
+template <class T>
+const char* Dictionary<T>::next (T* data)
 {
     const char* key = NULL;
 
@@ -544,8 +545,8 @@ const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::next (T* data)
 /*----------------------------------------------------------------------------
  * prev
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::prev (T* data)
+template <class T>
+const char* Dictionary<T>::prev (T* data)
 {
     const char* key = NULL;
 
@@ -565,8 +566,8 @@ const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::prev (T* data)
 /*----------------------------------------------------------------------------
  * last
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::last (T* data)
+template <class T>
+const char* Dictionary<T>::last (T* data)
 {
     const char* key = NULL;
 
@@ -588,8 +589,8 @@ const char* Dictionary<T, IS_MANAGED, IS_ARRAY>::last (T* data)
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-Dictionary<T, IS_MANAGED, IS_ARRAY>& Dictionary<T, IS_MANAGED, IS_ARRAY>::operator=(const Dictionary& other)
+template <class T>
+Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
 {
     /* Check Self Assignment */
     if(this == &other) return *this;
@@ -635,8 +636,8 @@ Dictionary<T, IS_MANAGED, IS_ARRAY>& Dictionary<T, IS_MANAGED, IS_ARRAY>::operat
  *
  *  indexed by key
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-T& Dictionary<T, IS_MANAGED, IS_ARRAY>::operator[](const char* key) const
+template <class T>
+T& Dictionary<T>::operator[](const char* key) const
 {
     return get(key);
 }
@@ -644,8 +645,8 @@ T& Dictionary<T, IS_MANAGED, IS_ARRAY>::operator[](const char* key) const
 /*----------------------------------------------------------------------------
  * hashKey
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-unsigned int Dictionary<T, IS_MANAGED, IS_ARRAY>::hashKey(const char *key) const
+template <class T>
+unsigned int Dictionary<T>::hashKey(const char *key) const
 {
     const char* ptr = key;
     long        h   = 0;
@@ -670,8 +671,8 @@ unsigned int Dictionary<T, IS_MANAGED, IS_ARRAY>::hashKey(const char *key) const
  *
  *  must be called from locked context
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-unsigned int Dictionary<T, IS_MANAGED, IS_ARRAY>::getNode(const char* key) const
+template <class T>
+unsigned int Dictionary<T>::getNode(const char* key) const
 {
     assert(hashSize);
 
@@ -709,8 +710,8 @@ unsigned int Dictionary<T, IS_MANAGED, IS_ARRAY>::getNode(const char* key) const
 /*----------------------------------------------------------------------------
  * addNode
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-void Dictionary<T, IS_MANAGED, IS_ARRAY>::addNode (const char* key, const T& data, unsigned int hash, bool rehashed)
+template <class T>
+void Dictionary<T>::addNode (const char* key, const T& data, unsigned int hash, bool rehashed)
 {
     assert(hashSize);
 
@@ -823,18 +824,17 @@ void Dictionary<T, IS_MANAGED, IS_ARRAY>::addNode (const char* key, const T& dat
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
-template <class T, bool IS_MANAGED, bool IS_ARRAY>
-void Dictionary<T, IS_MANAGED, IS_ARRAY>::freeNode(unsigned int hash_index)
+template <class T>
+static void deleteIfPointer(const T& t) { (void)t; }
+
+template <class T>
+static void deleteIfPointer(T* t) { delete t; }
+
+template <class T>
+void Dictionary<T>::freeNode(unsigned int hash_index)
 {
-    #if IS_MANAGED
-        #if IS_ARRAY   
-            delete [] hashTable[hash_index].data;
-        #else
-            delete hashTable[hash_index].data;
-        #endif
-    #else
-        (void)hash_index;
-    #endif
+    deleteIfPointer(hashTable[hash_index].data);
 }
+
 
 #endif  /* __dictionary__ */

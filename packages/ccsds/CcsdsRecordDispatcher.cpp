@@ -62,7 +62,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         /* Set Key Mode */
         keyMode_t key_mode = str2mode(key_mode_str);
         const char* key_field = NULL;
-        calcFunc_t  key_func = NULL;
+        calcFunc_f  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
@@ -74,7 +74,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         else if(key_mode == CALCULATED_KEY_MODE)
         {
             const char* key_func_str = getLuaString(L, 4);
-            key_func = keyCalcFunctions[key_func_str];
+            key_func = keyCalcFunctions[key_func_str].calc;
         }
 
         /* Create Record Dispatcher */
@@ -94,7 +94,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordDispatcher::CcsdsRecordDispatcher(lua_State* L, const char* inputq_name, keyMode_t key_mode, const char* key_field, calcFunc_t key_func, int num_threads):
+CcsdsRecordDispatcher::CcsdsRecordDispatcher(lua_State* L, const char* inputq_name, keyMode_t key_mode, const char* key_field, calcFunc_f key_func, int num_threads):
     RecordDispatcher(L, inputq_name, key_mode, key_field, key_func, num_threads, MsgQ::SUBSCRIBER_OF_CONFIDENCE)
 {
 }

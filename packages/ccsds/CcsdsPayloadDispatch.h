@@ -71,7 +71,7 @@ class CcsdsPayloadDispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<Publisher*>  qLookUp; // qLookUp[qname] ==> Publisher* , this prevents multiple publishers to same queue
+        Dictionary<Publisher*, false>  qLookUp; // qLookUp[qname] ==> Publisher* , this prevents multiple publishers to same queue
         Publisher*              outQ[CCSDS_NUM_APIDS];
         Mutex                   qMut;
         bool                    checkLength;

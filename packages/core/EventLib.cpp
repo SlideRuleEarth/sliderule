@@ -84,7 +84,7 @@ event_level_t EventLib::trace_level;
 event_level_t EventLib::metric_level;
 
 Mutex EventLib::metric_mut;
-Dictionary<Dictionary<int32_t>*> EventLib::metric_categories(MAX_METRICS, 1.0);
+Dictionary<Dictionary<int32_t>*, false> EventLib::metric_categories(MAX_METRICS, 1.0);
 List<EventLib::metric_t> EventLib::metric_vals;
 
 /******************************************************************************

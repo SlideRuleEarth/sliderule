@@ -169,7 +169,7 @@ class EventLib
         static event_level_t metric_level;
 
         static Mutex metric_mut;
-        static Dictionary<Dictionary<int32_t>*> metric_categories;
+        static Dictionary<Dictionary<int32_t>*, false> metric_categories;
         static List<metric_t> metric_vals;
 };
 

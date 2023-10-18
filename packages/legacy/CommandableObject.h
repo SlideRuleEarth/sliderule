@@ -115,7 +115,7 @@ class CommandableObject
                 { if(desc) delete [] desc; }
         };
         
-        typedef Dictionary<obj_cmd_entry_t*, true> CmdDictionary;
+        typedef Dictionary<obj_cmd_entry_t*> CmdDictionary;
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
