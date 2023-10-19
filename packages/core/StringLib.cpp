@@ -70,7 +70,7 @@ SafeString::String(long _maxlen)
     if(_maxlen <= 0)    maxlen = DEFAULT_STR_SIZE;
     else                maxlen = _maxlen;
     carray = new char[maxlen];
-    memset(carray, 0, maxlen);
+    carray[0] ='\0';
     len = 1;
 }
 
@@ -88,7 +88,7 @@ SafeString::String(long _maxlen, const char* _str, ...)
         carray = new char[len]; // allocate memory
         maxlen = len;
         va_start(args, _str);
-        vsnprintf(carray, _maxlen, _str, args); // copy in formatted contents
+        vsprintf(carray, _str, args); // copy in formatted contents
         va_end(args);
         carray[maxlen - 1] ='\0'; // null terminate
     }
@@ -96,7 +96,7 @@ SafeString::String(long _maxlen, const char* _str, ...)
     {
         maxlen = DEFAULT_STR_SIZE;
         carray = new char[maxlen];
-        memset(carray, 0, maxlen);
+        carray[0] = '\0';
         len = 1;
     }
 }
@@ -108,8 +108,9 @@ SafeString::String(const char* _str)
 {
     maxlen = StringLib::size(_str) + 1;
     carray = new char[maxlen];
-    memset(carray, 0, maxlen);
     len = maxlen;
+    StringLib::copy(carray, _str, len);
+    carray[len - 1] = '\0';
 }
 
 /*----------------------------------------------------------------------------
@@ -119,9 +120,9 @@ SafeString::String(const SafeString& other)
 {
     maxlen = other.maxlen;
     carray = new char[maxlen];
-    memset(carray, 0, maxlen);
     len = other.len;
     StringLib::copy(carray, other.carray, len);
+    carray[len - 1] = '\0';
 }
 
 /*----------------------------------------------------------------------------
