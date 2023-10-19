@@ -110,7 +110,7 @@ CcsdsPublisherProcessorModule::~CcsdsPublisherProcessorModule(void)
  *          should be 1).  Otherwise, part of the packets could be sent, then a failure
  *          would result in a retry on all of them.  Duplicate data could result.
  *----------------------------------------------------------------------------*/
-bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*, false>& segments, int numpkts)
+bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, int numpkts)
 {
     (void)numpkts;
 

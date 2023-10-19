@@ -75,7 +75,8 @@ CommandableObject* UT_Ordering::createObject(CommandProcessor* cmd_proc, const c
  * Constructor  -
  *----------------------------------------------------------------------------*/
 UT_Ordering::UT_Ordering(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+    CommandableObject(cmd_proc, obj_name, TYPE),
+    failures(0)
 {
     /* Register Commands */
     registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_Ordering::testAddRemove,  0, "");

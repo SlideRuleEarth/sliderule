@@ -161,9 +161,9 @@ class CcsdsPacket
          * Methods
          *--------------------------------------------------------------------*/
 
-                                CcsdsPacket         (type_t _type) { pkt_type = _type; }
-        virtual                 ~CcsdsPacket        (void) { }
-        type_t                  getType             (void) { return pkt_type; }
+                                CcsdsPacket         (type_t _type);
+        virtual                 ~CcsdsPacket        (void);
+        type_t                  getType             (void);
 
         virtual int             getAPID             (void) const = 0;
         virtual void            setAPID             (int apid) = 0;
@@ -243,8 +243,8 @@ class CcsdsSpacePacket: public CcsdsPacket
                             CcsdsSpacePacket    (unsigned char* buf, int size, bool copy=false);
                             ~CcsdsSpacePacket   (void);
 
-        int                 getAPID             (void) const;
-        void                setAPID             (int apid);
+        int                 getAPID             (void) const override;
+        void                setAPID             (int apid) override;
         bool                hasSHDR             (void) const;
         void                setSHDR             (bool value);
         bool                isCMD               (void) const;
@@ -253,12 +253,12 @@ class CcsdsSpacePacket: public CcsdsPacket
         void                setTLM              (void);
         uint8_t             getVERS             (void) const;
         void                setVERS             (uint8_t value);
-        int                 getSEQ              (void) const;
-        void                setSEQ              (int value);
+        int                 getSEQ              (void) const override;
+        void                setSEQ              (int value) override;
         seg_flags_t         getSEQFLG           (void) const;
         void                setSEQFLG           (seg_flags_t value);
-        int                 getLEN              (void) const;
-        void                setLEN              (int value);
+        int                 getLEN              (void) const override;
+        void                setLEN              (int value) override;
 
         int                 getFunctionCode     (void) const;
         bool                setFunctionCode     (uint8_t value);
@@ -272,20 +272,20 @@ class CcsdsSpacePacket: public CcsdsPacket
         pkt_time_t          getCdsTimeAsGmt     (void) const;
         bool                setCdsTime          (double gps);
 
-        void                initPkt             (int apid, int len, bool clear);
-        void                resetPkt            (void);
+        void                initPkt             (int apid, int len, bool clear) override;
+        void                resetPkt            (void) override;
         bool                loadChecksum        (void);
         bool                validChecksum       (void) const;
         int                 computeChecksum     (void) const;
 
-        bool                setIndex            (int offset);
-        int                 getIndex            (void) const;
-        int                 appendStream        (unsigned char* bytes, int len);
-        bool                isFull              (void) const;
+        bool                setIndex            (int offset) override;
+        int                 getIndex            (void) const override;
+        int                 appendStream        (unsigned char* bytes, int len) override;
+        bool                isFull              (void) const override;
 
-        unsigned char*      getBuffer           (void);
-        unsigned char*      getPayload          (void);
-        int                 getHdrSize          (void) const;
+        unsigned char*      getBuffer           (void) override;
+        unsigned char*      getPayload          (void) override;
+        int                 getHdrSize          (void) const override;
 
         CcsdsSpacePacket&   operator=           (const CcsdsSpacePacket& rhp);
 
@@ -307,24 +307,24 @@ class CcsdsEncapPacket: public CcsdsPacket
                         CcsdsEncapPacket    (int len=CCSDS_MAX_SPACE_PACKET_SIZE);
                         ~CcsdsEncapPacket   (void);
 
-        int             getAPID             (void) const;
-        void            setAPID             (int apid);
-        int             getSEQ              (void) const;
-        void            setSEQ              (int value);
-        int             getLEN              (void) const;
-        void            setLEN              (int value);
+        int             getAPID             (void) const override;
+        void            setAPID             (int apid) override;
+        int             getSEQ              (void) const override;
+        void            setSEQ              (int value) override;
+        int             getLEN              (void) const override;
+        void            setLEN              (int value) override;
 
-        void            initPkt             (int apid, int len, bool clear);
-        void            resetPkt            (void);
+        void            initPkt             (int apid, int len, bool clear) override;
+        void            resetPkt            (void) override;
 
-        bool            setIndex            (int offset);
-        int             getIndex            (void) const;
-        int             appendStream        (unsigned char* bytes, int len);
-        bool            isFull              (void) const;
+        bool            setIndex            (int offset) override;
+        int             getIndex            (void) const override;
+        int             appendStream        (unsigned char* bytes, int len) override;
+        bool            isFull              (void) const override;
 
-        unsigned char*  getBuffer           (void);
-        unsigned char*  getPayload          (void);
-        int             getHdrSize          (void) const;
+        unsigned char*  getBuffer           (void) override;
+        unsigned char*  getPayload          (void) override;
+        int             getHdrSize          (void) const override;
 };
 
 #endif /* __ccsds_packet__*/

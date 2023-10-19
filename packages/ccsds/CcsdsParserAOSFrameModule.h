@@ -53,8 +53,8 @@ class CcsdsParserAOSFrameModule: public CcsdsParserModule
          *--------------------------------------------------------------------*/
 
         static int  luaCreate       (lua_State* L);
-        int         parseBuffer     (unsigned char* buffer, int bytes, CcsdsPacket* pkt); // returns number of bytes consumed
-        void        gotoInitState   (bool reset);
+        int         parseBuffer     (unsigned char* buffer, int bytes, CcsdsPacket* pkt) override; // returns number of bytes consumed
+        void        gotoInitState   (bool reset) override;
 
     protected:
 

@@ -426,7 +426,10 @@ CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int
 
     inSync = true;
 
-    gotoInitState(true);
+    mpduOffset = 0;
+    frameCRC = 0;
+
+    CcsdsParserAOSFrameModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

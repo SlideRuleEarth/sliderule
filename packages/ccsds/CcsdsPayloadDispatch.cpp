@@ -173,13 +173,13 @@ void CcsdsPayloadDispatch::setPublisher (int apid, const char* qname)
         {
             try
             {
-                pub = qLookUp[qname];
+                pub = qLookUp[qname].pub;
             }
             catch(RunTimeException& e)
             {
                 (void)e;
-                pub = new Publisher(qname);
-                qLookUp.add(qname, pub);
+                pub_t pub_lookup = { .pub = new Publisher(qname) };
+                qLookUp.add(qname, pub_lookup);
             }
         }
 
@@ -223,7 +223,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPayloadDispatch* lua_obj = (CcsdsPayloadDispatch*)getLuaSelf(L, 1);
+        CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         long        apid        = getLuaInteger(L, 1);
@@ -268,7 +268,7 @@ int CcsdsPayloadDispatch::luaCheckLength(lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPayloadDispatch* lua_obj = (CcsdsPayloadDispatch*)getLuaSelf(L, 1);
+        CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool enable = getLuaBoolean(L, 2);
@@ -298,7 +298,7 @@ int CcsdsPayloadDispatch::luaCheckChecksum(lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPayloadDispatch* lua_obj = (CcsdsPayloadDispatch*)getLuaSelf(L, 1);
+        CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool enable = getLuaBoolean(L, 2);

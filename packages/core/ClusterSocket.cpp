@@ -600,7 +600,7 @@ int ClusterSocket::onConnect(int fd)
     }
     else if(role == WRITER)
     {
-        write_connection_t* connection = new write_connection_t;
+        write_connection_t* connection = new write_connection_t(protocol == BUS);
 
         /* Initialize Subscriber for Connection */
         if(protocol == BUS)

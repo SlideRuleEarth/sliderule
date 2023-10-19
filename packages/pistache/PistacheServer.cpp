@@ -347,7 +347,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
  *----------------------------------------------------------------------------*/
 void* PistacheServer::serverThread (void* parm)
 {
-    PistacheServer* server = (PistacheServer*)parm;
+    PistacheServer* server = static_cast<PistacheServer*>(parm);
 
     try
     {
@@ -372,7 +372,7 @@ int PistacheServer::luaRoute(lua_State* L)
     try
     {
         /* Get Self */
-        PistacheServer* lua_obj = (PistacheServer*)getLuaSelf(L, 1);
+        PistacheServer* lua_obj = dynamic_cast<PistacheServer*>(getLuaSelf(L, 1));
 
         /* Get Action */
         verb_t action = INVALID;
@@ -396,7 +396,7 @@ int PistacheServer::luaRoute(lua_State* L)
         const char* url = getLuaString(L, 3);
 
         /* Get Route Handler */
-        RouteHandler* handler = (RouteHandler*)getLuaObject(L, 4, RouteHandler::OBJECT_TYPE);
+        RouteHandler* handler = dynamic_cast<RouteHandler*>(getLuaObject(L, 4, RouteHandler::OBJECT_TYPE));
 
         /* Set Route */
         if(action == GET)

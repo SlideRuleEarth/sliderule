@@ -58,7 +58,7 @@ class CcsdsProcessorModule: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual bool    processSegments     (List<CcsdsSpacePacket*, false>& segments, int numpkts) = 0;
+        virtual bool    processSegments     (List<CcsdsSpacePacket*>& segments, int numpkts) = 0;
 
     protected:
 

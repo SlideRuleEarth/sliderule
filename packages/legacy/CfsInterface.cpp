@@ -214,7 +214,7 @@ CfsInterface::~CfsInterface(void)
  *----------------------------------------------------------------------------*/
 void* CfsInterface::telemetryThread (void* parm)
 {
-    CfsInterface* interface = (CfsInterface*)parm;
+    CfsInterface* interface = static_cast<CfsInterface*>(parm);
     unsigned char* buffer = new unsigned char[CCSDS_MAX_SPACE_PACKET_SIZE];
 
     while(interface->interfaceActive)
@@ -284,7 +284,7 @@ void* CfsInterface::telemetryThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* CfsInterface::commandThread (void* parm)
 {
-    CfsInterface* interface = (CfsInterface*)parm;
+    CfsInterface* interface = static_cast<CfsInterface*>(parm);
     unsigned char buffer[CCSDS_MAX_SPACE_PACKET_SIZE];
 
     while(interface->interfaceActive)

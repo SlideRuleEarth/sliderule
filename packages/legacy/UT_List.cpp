@@ -69,7 +69,8 @@ CommandableObject* UT_List::createObject(CommandProcessor* cmd_proc, const char*
  * Constructor  -
  *----------------------------------------------------------------------------*/
 UT_List::UT_List(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+    CommandableObject(cmd_proc, obj_name, TYPE),
+    failures(0)
 {
     /* Register Commands */
     registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_List::testAddRemove,  0, "");

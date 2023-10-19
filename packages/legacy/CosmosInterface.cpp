@@ -180,7 +180,7 @@ void* CosmosInterface::listenerThread (void* parm)
 {
     assert(parm != NULL);
 
-    listener_t* l = (listener_t*)parm;
+    listener_t* l = static_cast<listener_t*>(parm);
 
     int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, &l->ci->interfaceActive, (void*)l->ci);
     if(status < 0)
@@ -213,7 +213,7 @@ int CosmosInterface::pollHandler(int fd, short* events, void* parm)
  *----------------------------------------------------------------------------*/
 int CosmosInterface::tlmActiveHandler(int fd, int flags, void* parm)
 {
-    CosmosInterface* ci = (CosmosInterface*)parm;
+    CosmosInterface* ci = static_cast<CosmosInterface*>(parm);
 
     if(flags & IO_CONNECT_FLAG)
     {
@@ -243,7 +243,7 @@ int CosmosInterface::tlmActiveHandler(int fd, int flags, void* parm)
  *----------------------------------------------------------------------------*/
 int CosmosInterface::cmdActiveHandler(int fd, int flags, void* parm)
 {
-    CosmosInterface* ci = (CosmosInterface*)parm;
+    CosmosInterface* ci = static_cast<CosmosInterface*>(parm);
 
     if(flags & IO_CONNECT_FLAG)
     {
@@ -271,7 +271,7 @@ int CosmosInterface::cmdActiveHandler(int fd, int flags, void* parm)
  *----------------------------------------------------------------------------*/
 void* CosmosInterface::telemetryThread (void* parm)
 {
-    tlm_t* rqst = (tlm_t*)parm;
+    tlm_t* rqst = static_cast<tlm_t*>(parm);
     CosmosInterface* ci = rqst->ci;
 
     unsigned char* buffer = new unsigned char[MAX_PACKET_SIZE + HEADER_SIZE];
@@ -319,7 +319,7 @@ void* CosmosInterface::telemetryThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* CosmosInterface::commandThread (void* parm)
 {
-    cmd_t* c = (cmd_t*)parm;
+    cmd_t* c = static_cast<cmd_t*>(parm);
     unsigned char header_buf[HEADER_SIZE];
     int header_index = 0;
     int packet_index = 0;

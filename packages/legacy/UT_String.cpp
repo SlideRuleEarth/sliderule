@@ -69,7 +69,8 @@ CommandableObject* UT_String::createObject(CommandProcessor* cmd_proc, const cha
  * Constructor  -
  *----------------------------------------------------------------------------*/
 UT_String::UT_String(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+    CommandableObject(cmd_proc, obj_name, TYPE),
+    failures(0)
 {
     /* Register Commands */
     registerCommand("REPLACEMENT", (cmdFunc_t)&UT_String::testReplace,  0, "");

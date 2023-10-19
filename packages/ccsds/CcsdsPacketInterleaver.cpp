@@ -133,10 +133,6 @@ CcsdsPacketInterleaver::~CcsdsPacketInterleaver(void)
 {
     active = false;
     delete pid;
-    for(int i = 0; i < inQs.length(); i++)
-    {
-        delete inQs[i];
-    }
     delete outQ;
 }
 
@@ -151,7 +147,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
 {
     assert(parm);
 
-    CcsdsPacketInterleaver* processor = (CcsdsPacketInterleaver*)parm;
+    CcsdsPacketInterleaver* processor = static_cast<CcsdsPacketInterleaver*>(parm);
 
     /* Get Number of Inputs */
     int num_inputs = processor->inQs.length();
@@ -290,7 +286,7 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketInterleaver* lua_obj = (CcsdsPacketInterleaver*)getLuaSelf(L, 1);
+        CcsdsPacketInterleaver* lua_obj = dynamic_cast<CcsdsPacketInterleaver*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* gmt_str = getLuaString(L, 2);
@@ -324,7 +320,7 @@ int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketInterleaver* lua_obj = (CcsdsPacketInterleaver*)getLuaSelf(L, 1);
+        CcsdsPacketInterleaver* lua_obj = dynamic_cast<CcsdsPacketInterleaver*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* gmt_str = getLuaString(L, 2);

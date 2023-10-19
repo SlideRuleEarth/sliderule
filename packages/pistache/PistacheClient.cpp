@@ -123,13 +123,12 @@ PistacheClient::~PistacheClient(void)
 int PistacheClient::luaRequest(lua_State* L)
 {
     bool status = false;
-    bool in_error = false;
     int num_obj_to_return = 1;
 
     try
     {
         /* Get Self */
-        PistacheClient* lua_obj = (PistacheClient*)getLuaSelf(L, 1);
+        PistacheClient* lua_obj = dynamic_cast<PistacheClient*>(getLuaSelf(L, 1));
 
         /* Get Action */
         PistacheServer::verb_t action = PistacheServer::INVALID;
@@ -176,6 +175,7 @@ int PistacheClient::luaRequest(lua_State* L)
         }
         else if(action == PistacheServer::POST)
         {
+            bool in_error = false;
             SafeString lua_result;
             auto resp = lua_obj->client.post(url).body(body).send();
             resp.then(  [&](Http::Response response)

@@ -94,7 +94,7 @@ ProgressMessager::ProgressMessager (lua_State* L, const char* rspq_name):
     assert(rspq_name);
     rspQ = new Publisher(rspq_name);
     record = new RecordObject(rec_type);
-    progressMessage = (progress_message_t*)record->getRecordData();
+    progressMessage = reinterpret_cast<progress_message_t*>(record->getRecordData());
 
 }
 
@@ -117,7 +117,7 @@ int ProgressMessager::luaPost (lua_State* L)
     try
     {
         /* Get Self */
-        ProgressMessager* lua_obj = (ProgressMessager*)getLuaSelf(L, 1);
+        ProgressMessager* lua_obj = dynamic_cast<ProgressMessager*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* message = getLuaString(L, 2);

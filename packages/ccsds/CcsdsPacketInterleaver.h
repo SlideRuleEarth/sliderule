@@ -80,7 +80,7 @@ class CcsdsPacketInterleaver: public LuaObject
 
         bool                active;
         Thread*             pid;
-        List<Subscriber*, false>   inQs;
+        List<Subscriber*>   inQs;
         Publisher*          outQ;
         double              startTime;
         double              stopTime;

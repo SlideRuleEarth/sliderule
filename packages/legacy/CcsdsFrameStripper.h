@@ -95,7 +95,7 @@ class CcsdsFrameStripper: public CcsdsMsgProcessor
                 CcsdsFrameStripper  (CommandProcessor* cmd_proc, const char* obj_name, const char* inq_name, const char* outq_name, uint8_t* sync_marker, int sync_size, int strip_size, int frame_size);
         virtual ~CcsdsFrameStripper (void);
 
-        bool    processMsg          (unsigned char* msg, int bytes); // OVERLOAD
+        bool    processMsg          (unsigned char* msg, int bytes) override;
 };
 
 #endif  /* __ccsds_frame_stripper__ */

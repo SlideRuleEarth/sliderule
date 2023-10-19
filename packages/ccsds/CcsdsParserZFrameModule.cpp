@@ -86,10 +86,6 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
 
         if(state == FRAME_Z)
         {
-            /* Synchronization Data for Start of Frame */
-            const char* frame_sync = "CCSD3ZA00001";
-            #define FRAME_SYNC_SIZE 12 // size of above string
-
             /* Copy into Frame Buffer */
             int cpylen = MIN(frameZBytes, bytes_left);
             memcpy(&frameBuffer[frameIndex], &parse_buffer[parse_index], cpylen);
@@ -100,6 +96,10 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
             /* Pull off Z header */
             if(frameZBytes == 0)
             {
+                /* Synchronization Data for Start of Frame */
+                const char* frame_sync = "CCSD3ZA00001";
+                #define FRAME_SYNC_SIZE 12 // size of above string
+
                 /* Compare Sync Mark */
                 if(!StringLib::match(frame_sync, frameBuffer, FRAME_SYNC_SIZE))
                 {
@@ -274,7 +274,7 @@ CcsdsParserZFrameModule::CcsdsParserZFrameModule(lua_State* L, bool file):
     CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE)
 {
     frameFile = file;
-    gotoInitState(true);
+    CcsdsParserZFrameModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

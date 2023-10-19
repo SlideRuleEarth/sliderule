@@ -61,7 +61,7 @@ class CcsdsRecordDispatcher: public RecordDispatcher
                         CcsdsRecordDispatcher   (lua_State* L, const char* inputq_name, keyMode_t key_mode, const char* key_field, calcFunc_f key_func, int num_threads);
                         ~CcsdsRecordDispatcher  (void);
 
-        RecordObject*   createRecord            (unsigned char* buffer, int size);
+        RecordObject*   createRecord            (unsigned char* buffer, int size) override;
 };
 
 #endif  /* __ccsds_record_dispatcher__ */

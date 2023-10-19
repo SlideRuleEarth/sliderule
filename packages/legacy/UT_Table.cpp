@@ -69,7 +69,8 @@ CommandableObject* UT_Table::createObject(CommandProcessor* cmd_proc, const char
  * Constructor  -
  *----------------------------------------------------------------------------*/
 UT_Table::UT_Table(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+    CommandableObject(cmd_proc, obj_name, TYPE),
+    failures(0)
 {
     /* Register Commands */
     registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_Table::testAddRemove,  0, "");
@@ -422,7 +423,6 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
     int data_order[64];
     int test_cycles = 65536;
     int key_range = 0xFFFFFFFF;
-    int num_added = 0;
     Table<int,int> mytable(size);
 
     failures = 0;
@@ -434,7 +434,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
     for(int j = 0; j < test_cycles; j++)
     {
         /* Reset Test */
-        num_added = 0;
+        int num_added = 0;
 
         /* Load Hash */
         for(int i = 0; i < size; i++)

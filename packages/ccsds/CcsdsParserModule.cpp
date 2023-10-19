@@ -77,7 +77,7 @@ int CcsdsParserModule::luaCreate (lua_State* L)
 CcsdsParserModule::CcsdsParserModule(lua_State* L):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    gotoInitState(true);
+    CcsdsParserModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -86,7 +86,7 @@ CcsdsParserModule::CcsdsParserModule(lua_State* L):
 CcsdsParserModule::CcsdsParserModule(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
     LuaObject(L, OBJECT_TYPE, meta_name, meta_table)
 {
-    gotoInitState(true);
+    CcsdsParserModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

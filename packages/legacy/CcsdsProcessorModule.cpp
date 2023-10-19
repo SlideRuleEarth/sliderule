@@ -87,15 +87,23 @@ double CcsdsProcessorModule::parseFlt(unsigned char* ptr, int size)
 {
     if(size == 4)
     {
-        uint32_t ival = parseInt(ptr, size);
-        float* fval = (float*)&ival;
-        return (double)*fval;
+        typedef union {
+            uint32_t    ival;
+            float       fval;
+        } float_cast_t;
+        float_cast_t cast;
+        cast.ival = parseInt(ptr, size);
+        return static_cast<double>(cast.fval);
     }
     else if(size == 8)
     {
-        uint64_t ival = parseInt(ptr, size);
-        double* dval = (double*)&ival;
-        return *dval;
+        typedef union {
+            uint64_t    lval;
+            double      dval;
+        } double_cast_t;
+        double_cast_t cast;
+        cast.lval = parseInt(ptr, size);
+        return cast.dval;
     }
     else
     {

@@ -79,7 +79,7 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
         typedef struct {
             CcsdsProcessorModule*       processor;
             bool                        enable;
-            List<CcsdsSpacePacket*, false>*    segments;   // allocated at run time
+            List<CcsdsSpacePacket*>*    segments;   // allocated at run time
             int                         intpkts;    // full packets (not segments))
             int                         intperiod;  // full packets (not segments))
         } pktProcessor_t;
@@ -87,7 +87,7 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
         typedef struct {
             CcsdsPacketProcessor*       msgproc;
             CcsdsProcessorModule*       processor;
-            List<CcsdsSpacePacket*, false>*    segments;   // passed from pktProcessor_t
+            List<CcsdsSpacePacket*>*    segments;   // passed from pktProcessor_t
             unsigned int                numpkts;
             unsigned int                tries;      // 0 is infinite
             Sem                         runsem;
@@ -133,8 +133,8 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
 
         static void*    workerThread            (void* parm);
 
-        bool            processMsg              (unsigned char* msg, int bytes); // OVERLOAD
-        bool            handleTimeout           (void); // OVERLOAD
+        bool            processMsg              (unsigned char* msg, int bytes) override;
+        bool            handleTimeout           (void) override;
         bool            resetProcessing         (void);
 
         static void     freeWorker              (void* obj, void* parm);

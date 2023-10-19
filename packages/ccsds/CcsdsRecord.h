@@ -70,12 +70,12 @@ class CcsdsRecord: public RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                CcsdsRecord         (const char* rec_type);
+        explicit                CcsdsRecord         (const char* rec_type);
                                 CcsdsRecord         (unsigned char* buffer, int size);
 
         /* Overloaded Methods */
-        bool                    deserialize         (unsigned char* buffer, int size);
-        int                     serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
+        bool                    deserialize         (unsigned char* buffer, int size) override;
+        int                     serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0) override;
 
         /* Regular Methods */
         pktType_t               getPktType          (void);

@@ -153,7 +153,7 @@ CcsdsParserStripModule::CcsdsParserStripModule(lua_State* L, int header_size):
     CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE),
     HDR_SIZE(header_size)
 {
-    gotoInitState(true);
+    CcsdsParserStripModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

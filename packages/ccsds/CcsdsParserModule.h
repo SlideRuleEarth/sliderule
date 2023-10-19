@@ -70,9 +70,9 @@ class CcsdsParserModule: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        CcsdsParserModule   (lua_State* L);
-        CcsdsParserModule   (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-        ~CcsdsParserModule  (void);
+        explicit CcsdsParserModule  (lua_State* L);
+        CcsdsParserModule           (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
+        ~CcsdsParserModule          (void);
 
     private:
 

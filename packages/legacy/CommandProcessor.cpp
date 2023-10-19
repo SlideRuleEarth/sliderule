@@ -440,7 +440,7 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
  *----------------------------------------------------------------------------*/
 void* CommandProcessor::cmdProcThread (void* parm)
 {
-    CommandProcessor* cp = (CommandProcessor*)parm;
+    CommandProcessor* cp = static_cast<CommandProcessor*>(parm);
 
     char* cmdstr = new char[MAX_CMD_SIZE];
     char* pristr = new char[MAX_CMD_SIZE];
@@ -889,8 +889,6 @@ int CommandProcessor::abortCmd (int argc, char argv[][MAX_CMD_SIZE])
  *----------------------------------------------------------------------------*/
 int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
 {
-    int minargs = 2;
-
     /* Pull Out Parameters */
     const char* class_name = argv[0];
     const char* obj_name = argv[1];
@@ -904,6 +902,8 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     try
     {
+        int minargs = 2;
+
         /* Look Up Handler */
         handle_entry_t* handle = handlers[class_name];
 
@@ -1236,7 +1236,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 
-    int status = 0, post_status = 0;
+    int status = 0;
 
     const char* rec_type = argv[0];
     const char* qname = StringLib::StringLib::checkNullStr(argv[1]);
@@ -1258,7 +1258,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
             const char* id_field = RecordObject::getRecordIdField(rectypes[i]);
             int data_size = RecordObject::getRecordDataSize(rectypes[i]);
             int max_fields = RecordObject::getRecordMaxFields(rectypes[i]);
-            post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size, max_fields);
+            int post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size, max_fields);
             if(post_status <= 0)
             {
                 mlog(CRITICAL, "Failed to post definition for %s on stream %s", rectypes[i], qname);
@@ -1295,7 +1295,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
         const char* id_field = RecordObject::getRecordIdField(rec_type);
         int data_size = RecordObject::getRecordDataSize(rec_type);
         int max_fields = RecordObject::getRecordMaxFields(rec_type);
-        post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rec_type, id_field != NULL ? id_field : "NA", data_size, max_fields);
+        int post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rec_type, id_field != NULL ? id_field : "NA", data_size, max_fields);
         if(post_status <= 0)
         {
             mlog(CRITICAL, "Failed to post definition for %s on stream %s", rec_type, qname);

@@ -39,6 +39,37 @@
 #include <math.h>
 
 /******************************************************************************
+ * CCSDS PACKET
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+CcsdsPacket::CcsdsPacket(type_t _type):
+    buffer(NULL),
+    index(0),
+    is_malloced(false),
+    max_pkt_len(0),
+    pkt_type(_type)
+{    
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+CcsdsPacket::~CcsdsPacket(void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * getType
+ *----------------------------------------------------------------------------*/
+CcsdsPacket::type_t CcsdsPacket::getType(void)
+{
+    return pkt_type;
+}
+
+/******************************************************************************
  * CCSDS SPACE PACKET - PUBLIC FUNCTIONS
  ******************************************************************************/
 
@@ -77,7 +108,7 @@ CcsdsSpacePacket::CcsdsSpacePacket(uint16_t apid, int len, bool clear): CcsdsPac
     else
     {
         buffer = new unsigned char[len];
-        initPkt(apid, len, clear);
+        CcsdsSpacePacket::initPkt(apid, len, clear);
         index = CCSDS_SPACE_HEADER_SIZE; // start after primary header
         is_malloced = true;
         max_pkt_len = len;
@@ -513,8 +544,8 @@ void CcsdsSpacePacket::initPkt(int apid, int len, bool clear)
 
     index = 0; // restart at beginning of packet
 
-    setAPID(apid);
-    setLEN(len);
+    CcsdsSpacePacket::setAPID(apid);
+    CcsdsSpacePacket::setLEN(len);
 }
 
 /*----------------------------------------------------------------------------
@@ -567,14 +598,13 @@ bool CcsdsSpacePacket::validChecksum(void) const
  *----------------------------------------------------------------------------*/
 int CcsdsSpacePacket::computeChecksum(void) const
 {
-    uint16_t    len = getLEN();
-    uint8_t     cs  = 0xFF;
-    int         i   = 0;
-
     if(getLEN() > 7 && isCMD() && hasSHDR())
     {
+        uint16_t len = getLEN();
         if((max_pkt_len <= 0) || (len <= max_pkt_len))
         {
+            uint8_t cs = 0xFF;
+            int i = 0;
             while (len--)
             {
                 if(i != 7)
@@ -708,6 +738,9 @@ int CcsdsSpacePacket::getHdrSize(void) const
  *----------------------------------------------------------------------------*/
 CcsdsSpacePacket& CcsdsSpacePacket::operator=(const CcsdsSpacePacket& rhp)
 {
+    /* Check Self Assignment */
+    if(this == &rhp) return *this;
+    
     /* Get Buffer and Buffer Length */
     if(max_pkt_len < rhp.max_pkt_len)
     {

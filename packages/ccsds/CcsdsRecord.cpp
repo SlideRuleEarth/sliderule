@@ -307,6 +307,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
  *----------------------------------------------------------------------------*/
 CcsdsRecord::CcsdsRecord(void): RecordObject()
 {
+    pktDef = NULL;
 }
 
 /*----------------------------------------------------------------------------

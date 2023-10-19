@@ -67,7 +67,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        CcsdsParserModule*  _parser     = (CcsdsParserModule*)getLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE);
+        CcsdsParserModule*  _parser     = dynamic_cast<CcsdsParserModule*>(getLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE));
         const char*         type_str    = getLuaString(L, 2);
         const char*         inq_name    = getLuaString(L, 3);
         const char*         outq_name   = getLuaString(L, 4, true, NULL);
@@ -187,7 +187,7 @@ int CcsdsPacketParser::luaPassInvalid (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
+        CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool pass_invalid = getLuaBoolean(L, 2);
@@ -217,7 +217,7 @@ int CcsdsPacketParser::luaResetInvalid (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
+        CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool reset_invalid = getLuaBoolean(L, 2);
@@ -248,7 +248,7 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
+        CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         long            apid    = getLuaInteger(L, 2);
@@ -328,7 +328,7 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
+        CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool enable = getLuaBoolean(L, 2);
@@ -376,7 +376,7 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
+        CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         int apid = getLuaInteger(L, 2);
@@ -420,7 +420,7 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPacketParser* lua_obj = (CcsdsPacketParser*)getLuaSelf(L, 1);
+        CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool strip_hdr = getLuaBoolean(L, 2);
@@ -590,16 +590,17 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
  *----------------------------------------------------------------------------*/
 void* CcsdsPacketParser::telemetry_thread (void* parm)
 {
-    double now = 0.0, last = 0.0, elapsed = 0.0;
+    double now = 0.0;
+    double elapsed = 0.0;
 
-    CcsdsPacketParser* parser = (CcsdsPacketParser*)parm;
+    CcsdsPacketParser* parser = static_cast<CcsdsPacketParser*>(parm);
 
     while(parser->telemetryActive)
     {
         OsApi::sleep(parser->telemetryWaitSeconds);
 
         /* Calculate Elapsed Time */
-        last = now;
+        double last = now;
         now = TimeLib::latchtime();
         if(last == 0.0) continue; // skip first cycle
         elapsed = now - last;

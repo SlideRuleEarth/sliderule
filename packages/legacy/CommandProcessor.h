@@ -71,7 +71,7 @@ class CommandProcessor: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            CommandProcessor        (const char* cmdq_name);
+        explicit            CommandProcessor        (const char* cmdq_name);
                             ~CommandProcessor       (void);
 
         bool                postCommand             (const char* cmdstr, ...) VARG_CHECK(printf, 2, 3); // "this" is 1

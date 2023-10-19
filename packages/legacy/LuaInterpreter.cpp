@@ -90,7 +90,7 @@ void LuaInterpreter::abortHook (lua_State *L, lua_Debug *ar)
     /* Check if Interpreter still Active -  in which case don't abort */
     lua_pushstring(L, LuaEngine::LUA_SELFKEY);
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = (LuaEngine*)lua_touserdata(L, -1);
+    LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
     if(li) abort = !li->isActive();
 
     /* If Aborting */

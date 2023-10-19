@@ -66,35 +66,44 @@ DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
+USERCFG ?=
 
 TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
 MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/scripts/systests/subset_perf_test.lua
 
-USERCFG ?=
-SLIDERULE_CFG := -DMAX_FREE_STACK_SIZE=1
-SLIDERULE_CFG += -DUSE_ARROW_PACKAGE=ON
-SLIDERULE_CFG += -DUSE_AWS_PACKAGE=ON
-SLIDERULE_CFG += -DUSE_H5_PACKAGE=ON
-SLIDERULE_CFG += -DUSE_NETSVC_PACKAGE=ON
-SLIDERULE_CFG += -DUSE_GEO_PACKAGE=ON
-SLIDERULE_CFG += -DUSE_LEGACY_PACKAGE=OFF
-SLIDERULE_CFG += -DUSE_CCSDS_PACKAGE=OFF
-SLIDERULE_CFG += $(USERCFG)
-
 CLANG_VER = "-12"
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-#DEBUG_CFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 DEBUG_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
+DEBUG_CFG += -DMAX_FREE_STACK_SIZE=1
+DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
+DEBUG_CFG += -DUSE_AWS_PACKAGE=ON
+DEBUG_CFG += -DUSE_CCSDS_PACKAGE=ON
+DEBUG_CFG += -DUSE_GEO_PACKAGE=ON
+DEBUG_CFG += -DUSE_H5_PACKAGE=ON
+DEBUG_CFG += -DUSE_LEGACY_PACKAGE=ON
+DEBUG_CFG += -DUSE_NETSVC_PACKAGE=ON
+DEBUG_CFG += -DUSE_PISTACHE_PACKAGE=ON
+DEBUG_CFG += $(USERCFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
+RELEASE_CFG += 
+RELEASE_CFG += -DUSE_ARROW_PACKAGE=ON
+RELEASE_CFG += -DUSE_AWS_PACKAGE=ON
+RELEASE_CFG += -DUSE_GEO_PACKAGE=ON
+RELEASE_CFG += -DUSE_H5_PACKAGE=ON
+RELEASE_CFG += -DUSE_NETSVC_PACKAGE=ON
+RELEASE_CFG += -DUSE_CCSDS_PACKAGE=OFF
+RELEASE_CFG += -DUSE_LEGACY_PACKAGE=OFF
+RELEASE_CFG += -DUSE_PISTACHE_PACKAGE=OFF
+RELEASE_CFG += $(USERCFG)
 
 all: sliderule
 
@@ -109,7 +118,7 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(SWOT_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
-	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_CFG) -DENABLE_TRACING=ON $(SLIDERULE_SOURCE_DIR)
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(SLIDERULE_SOURCE_DIR)
 	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
@@ -119,7 +128,7 @@ config-debug: prep ## configure the server for running locally with debug symbol
 	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
 
 config-release: prep ## configure server to run a release version locally
-	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) $(SLIDERULE_CFG) $(SLIDERULE_SOURCE_DIR)
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(SLIDERULE_SOURCE_DIR)
 	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat

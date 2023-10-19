@@ -121,6 +121,7 @@ class ClusterSocket: public TcpSocket
 
         typedef struct WriteConnection
         {
+            bool delete_q;
             Subscriber* subconnq;
             Subscriber::msgRef_t payload_ref;
             uint32_t  payload_left;
@@ -128,8 +129,9 @@ class ClusterSocket: public TcpSocket
             uint32_t  buffer_index;
             uint8_t   buffer[MSG_BUFFER_SIZE];
             uint8_t   meter;
-            WriteConnection(void)
+            explicit WriteConnection(bool _delete_q)
             {
+                delete_q = _delete_q;
                 subconnq = NULL;
                 memset(&payload_ref, 0, sizeof(payload_ref));
                 payload_left = 0;
@@ -140,7 +142,7 @@ class ClusterSocket: public TcpSocket
             }
             ~WriteConnection(void)
             {
-                delete subconnq;
+                if(delete_q) delete subconnq;
             }
         } write_connection_t;
 

@@ -61,7 +61,7 @@ class CcsdsRecordFileWriter: public CcsdsFileWriter
                                 CcsdsRecordFileWriter   (CommandProcessor* cmd_proc, const char* name, const char* _prefix, const char* inq_name, const char** _bound_fields, int _num_bound_fields, unsigned int _max_file_size=FILE_MAX_SIZE);
                                 ~CcsdsRecordFileWriter  (void);
 
-        virtual int             writeMsg                (void* msg, int size, bool with_header=false);
+        virtual int             writeMsg                (void* msg, int size, bool with_header=false) override;
         virtual RecordObject*   createRecord            (unsigned char* buffer, int size);
         virtual const char*     createPrependStr        (unsigned char* buffer, int size);
 
