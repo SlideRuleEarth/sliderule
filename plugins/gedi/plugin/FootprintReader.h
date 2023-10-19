@@ -305,8 +305,8 @@ FootprintReader<footprint_t>::~FootprintReader (void)
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
 FootprintReader<footprint_t>::Region::Region (info_t* info):
-    lat             (info->reader->asset, info->reader->resource, SafeString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).str(), &info->reader->context),
-    lon             (info->reader->asset, info->reader->resource, SafeString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).str(), &info->reader->context),
+    lat             (info->reader->asset, info->reader->resource, SafeString(0, "%s/%s", GediParms::beam2group(info->beam), info->reader->latName).str(), &info->reader->context),
+    lon             (info->reader->asset, info->reader->resource, SafeString(0, "%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).str(), &info->reader->context),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {

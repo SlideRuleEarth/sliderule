@@ -152,7 +152,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
     }
 
     /* Build Dataset Name */
-    SafeString dataset("%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
+    SafeString dataset(0, "%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
 
     try
     {

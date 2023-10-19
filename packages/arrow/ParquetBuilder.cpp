@@ -263,11 +263,11 @@ struct ParquetBuilder::impl
         int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
         TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
         TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-        SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+        SafeString timestr(0, "%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
 
         /* Build Duration String */
         int64_t duration = TimeLib::gpstime() - launch_time_gps;
-        SafeString durationstr("%ld", duration);
+        SafeString durationstr(0, "%ld", duration);
 
         /* Build Package String */
         const char** pkg_list = LuaEngine::getPkgList();
@@ -397,7 +397,7 @@ struct ParquetBuilder::impl
         }
 
         /* Build Index String */
-        SafeString indexstr("\"%s\"", index_key ? index_key : "");
+        SafeString indexstr(0, "\"%s\"", index_key ? index_key : "");
         if(!index_key) indexstr = "";
 
         /* Fill In Pandas Meta Data String */
@@ -531,7 +531,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Create Unique Temporary Filename */
-    SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
+    SafeString tmp_file(0, "%s%s.parquet", TMP_FILE_PREFIX, id);
     fileName = tmp_file.str(true);
 
     /* Create Arrow Output Stream */

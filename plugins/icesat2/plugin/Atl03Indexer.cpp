@@ -68,7 +68,7 @@ const struct luaL_Reg Atl03Indexer::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Indexer::luaCreate (lua_State* L)
 {
-    List<const char*>* _resources = NULL;
+    List<SafeString>* _resources = NULL;
     Asset* _asset = NULL;
     try
     {
@@ -82,11 +82,11 @@ int Atl03Indexer::luaCreate (lua_State* L)
         if(lua_type(L, tblindex) == LUA_TTABLE)
         {
             int size = lua_rawlen(L, tblindex);
-            _resources = new List<const char*>(size);
+            _resources = new List<SafeString>(size);
             for(int e = 0; e < size; e++)
             {
                 lua_rawgeti(L, tblindex, e + 1);
-                const char* name = StringLib::duplicate(getLuaString(L, -1));
+                SafeString name(getLuaString(L, -1));
                 _resources->add(name);
                 lua_pop(L, 1);
             }
@@ -128,7 +128,7 @@ void Atl03Indexer::init (void)
  *  Note:   object takes ownership of _resources list as well as pointers to urls
  *          (const char*) inside the list; responsible for freeing both
  *----------------------------------------------------------------------------*/
-Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<const char*>* _resources, const char* outq_name, int num_threads):
+Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<SafeString>* _resources, const char* outq_name, int num_threads):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(outq_name);
@@ -222,7 +222,7 @@ void* Atl03Indexer::indexerThread (void* parm)
             {
                 if(indexer->resourceEntry < indexer->resources->length())
                 {
-                    resource_name = indexer->resources->get(indexer->resourceEntry);
+                    resource_name = indexer->resources->get(indexer->resourceEntry).str();
                     indexer->resourceEntry++;
                 }
                 else

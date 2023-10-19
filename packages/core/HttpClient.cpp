@@ -247,7 +247,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         if(verb != EndpointObject::RAW)
         {
             /* Build Request Header */
-            SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+            SafeString rqst_hdr(0, "%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
                                 EndpointObject::verb2str(verb),
                                 resource,
                                 getIpAddr(),

@@ -149,7 +149,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
                         StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
 
                         /* Reformat Filename to Key */
-                        SafeString key("%s", ent->d_name);
+                        SafeString key(ent->d_name);
                         key.replace("#", PATH_DELIMETER_STR);
 
                         /* Add File to Cache */
@@ -247,9 +247,9 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     cacheMut.unlock();
 
     /* Build Cache Filename */
-    SafeString cache_filename("%s", key);
+    SafeString cache_filename(key);
     cache_filename.replace(PATH_DELIMETER_STR, "#");
-    SafeString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.str());
+    SafeString cache_filepath(0, "%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.str());
 
     /* Log Operation */
     mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.str());
@@ -280,9 +280,9 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
             if(oldest_key != NULL)
             {
                 /* Delete File in Local File System */
-                SafeString oldest_filename("%s", oldest_key);
+                SafeString oldest_filename(oldest_key);
                 oldest_filename.replace(PATH_DELIMETER_STR, "#");
-                SafeString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.str());
+                SafeString oldest_filepath(0, "%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.str());
                 remove(oldest_filepath.str());
                 cacheFiles.remove(index);
             }

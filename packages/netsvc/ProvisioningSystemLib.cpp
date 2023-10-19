@@ -90,13 +90,13 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
     try
     {
         /* Build API URL */
-        SafeString url_str("%s/api/org_token/", URL);
+        SafeString url_str(0, "%s/api/org_token/", URL);
 
         /* Build Bearer Token Header */
         SafeString hdr_str("Content-Type: application/json");
 
         /* Initialize Request */
-        SafeString data_str("{\"username\":\"%s\",\"password\":\"%s\",\"org_name\":\"%s\"}", username, password, organization);
+        SafeString data_str(0, "{\"username\":\"%s\",\"password\":\"%s\",\"org_name\":\"%s\"}", username, password, organization);
 
         /* Initialize Response */
         List<data_t> rsps_set;
@@ -184,10 +184,10 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
     try
     {
         /* Build API URL */
-        SafeString url_str("%s/api/membership_status/%s/", URL, Organization);
+        SafeString url_str(0, "%s/api/membership_status/%s/", URL, Organization);
 
         /* Build Bearer Token Header */
-        SafeString hdr_str("Authorization: Bearer %s", access_token);
+        SafeString hdr_str(0, "Authorization: Bearer %s", access_token);
 
         /* Initialize cURL */
         CURL* curl = curl_easy_init();

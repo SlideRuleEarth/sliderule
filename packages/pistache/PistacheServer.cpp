@@ -50,7 +50,7 @@ const struct luaL_Reg PistacheServer::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-StringLib::String PistacheServer::serverHead("sliderule/%s", LIBID);
+StringLib::String PistacheServer::serverHead(0, "sliderule/%s", LIBID);
 
 const char* PistacheServer::RESPONSE_QUEUE = "rspq";
 
@@ -102,10 +102,10 @@ PistacheServer::verb_t PistacheServer::str2verb (const char* str)
  *----------------------------------------------------------------------------*/
 const char* PistacheServer::sanitize (const char* filename)
 {
-    SafeString delimeter("%c", PATH_DELIMETER);
-    SafeString safe_filename("%s", filename);
+    SafeString delimeter(0, "%c", PATH_DELIMETER);
+    SafeString safe_filename(filename);
     safe_filename.replace(delimeter.str(), "_");
-    SafeString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.str());
+    SafeString safe_pathname(0, "%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.str());
     return safe_pathname.str(true);
 }
 

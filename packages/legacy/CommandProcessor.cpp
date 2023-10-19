@@ -215,7 +215,7 @@ bool CommandProcessor::executeScript (const char* script_name)
     }
 
     /* Build Command List */
-    List<const char*> script_cmds;
+    vector<const char*> script_cmds;
     while(true)
     {
         char line[MAX_CMD_SIZE];
@@ -231,7 +231,7 @@ bool CommandProcessor::executeScript (const char* script_name)
             else if((line[0] != '\n') && line[0] != '\0')
             {
                 const char* script_cmd = StringLib::duplicate(line);
-                script_cmds.add(script_cmd);
+                script_cmds.push_back(script_cmd);
             }
         }
         else
@@ -241,9 +241,10 @@ bool CommandProcessor::executeScript (const char* script_name)
     }
 
     /* Post All Commands */
-    for(int i = 0; i < script_cmds.length(); i++)
+    for(unsigned i = 0; i < script_cmds.size(); i++)
     {
         postCommand("%s", script_cmds[i]);
+        delete [] script_cmds[i];
     }
 
     /* Close Script and Return */

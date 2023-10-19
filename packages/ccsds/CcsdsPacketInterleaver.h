@@ -69,7 +69,7 @@ class CcsdsPacketInterleaver: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsPacketInterleaver      (lua_State* L, List<const char*>& inq_names, const char* outq_name);
+                    CcsdsPacketInterleaver      (lua_State* L, List<SafeString>& inq_names, const char* outq_name);
         virtual     ~CcsdsPacketInterleaver     (void);
 
     private:

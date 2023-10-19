@@ -1104,7 +1104,7 @@ int RecordObject::parseSerial(const unsigned char* buffer, int size, const char*
 unsigned int RecordObject::str2flags (const char* str)
 {
     unsigned int flags = NATIVE_FLAGS;
-    SafeString flagss("%s", str);
+    SafeString flagss(str);
     List<SafeString>* flaglist = flagss.split('|');
     for(int i = 0; i < flaglist->length(); i++)
     {

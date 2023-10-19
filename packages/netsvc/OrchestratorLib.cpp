@@ -73,7 +73,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
     bool status = true;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
+    SafeString rqst(0, "{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
 
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
@@ -119,7 +119,7 @@ vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int 
 {
     vector<Node*>* nodes = NULL;
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
+    SafeString rqst(0, "{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
     HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
@@ -189,7 +189,7 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
     bool status = true;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"transactions\": [%ld", transactions[0]);
+    SafeString rqst(0, "{\"transactions\": [%ld", transactions[0]);
     char txstrbuf[64];
     for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(txstrbuf, 64, ",%ld", transactions[t]);
     rqst += "]}";
@@ -323,7 +323,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         lua_newtable(L);
         for(unsigned i = 0; i < nodes->size(); i++)
         {
-            SafeString txidstr("%ld", nodes->at(i)->transaction);
+            SafeString txidstr(0, "%ld", nodes->at(i)->transaction);
             LuaEngine::setAttrStr(L, txidstr.str(), nodes->at(i)->member);
             delete nodes->at(i); // free node after using it
         }

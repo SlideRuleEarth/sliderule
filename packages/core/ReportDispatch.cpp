@@ -240,14 +240,14 @@ int ReportDispatch::ReportFile::writeFileData (void)
         /* Build Row String and Clear Values */
         SafeString row;
         row += index_str;
-        const char* value = NULL;
+        SafeString* value;
         const char* column = values.first(&value);
         while(column)
         {
             row += ",";
-            if(value)   row += value;
-            const char* space = StringLib::duplicate(REPORT_SPACE);
-            values.add(column, space);
+            if(value) row += *value;
+            SafeString* space = new SafeString(REPORT_SPACE);
+            if(!values.add(column, space)) delete space;
             column = values.next(&value);
         }
         row += "\n";
@@ -260,17 +260,17 @@ int ReportDispatch::ReportFile::writeFileData (void)
     {
         /* Build JSON String */
         SafeString json("{\n");
-        const char* value = NULL;
+        SafeString* value;
         const char* column = values.first(&value);
         while(column)
         {
             json += "\t\"";
             json += column;
             json += "\": \"";
-            if(value) json += value;
+            if(value) json += *value;
             json += "\"";
-            const char* space = StringLib::duplicate(REPORT_SPACE);
-            values.add(column, space);
+            SafeString* space = new SafeString(REPORT_SPACE);
+            if(!values.add(column, space)) delete space;
             column = values.next(&value);
             if(column)  json += ",\n";
             else        json += "\n}";
@@ -313,7 +313,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
         fixedHeader = true;
         for(int i = 0; i < num_columns; i++)
         {
-            const char* space = StringLib::duplicate(REPORT_SPACE);
+            SafeString* space = new SafeString(REPORT_SPACE);
             report.values.add(columns[i], space);
         }
     }
@@ -387,7 +387,7 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
     entry_t* entry = *(entry_t**)data;
     okey_t index = entry->index;
     const char* name = entry->name;
-    const char* value = StringLib::duplicate(entry->value);
+    SafeString* value = new SafeString(entry->value);
 
     /* Flush Row on New Index */
     if(dispatch->lastIndex != index && dispatch->lastIndex != INVALID_KEY)
@@ -400,17 +400,18 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
     dispatch->report.index = index;
 
     /* Update Value */
+    bool value_added = false;
     if(dispatch->fixedHeader)
     {
         if(dispatch->report.values.find(name))
         {
-            dispatch->report.values.add(name, value);
+            value_added = dispatch->report.values.add(name, value);
         }
     }
     else // dynamic header
     {
         int prev_num_values = dispatch->report.values.length();
-        dispatch->report.values.add(name, value);
+        value_added = dispatch->report.values.add(name, value);
         if(dispatch->report.values.length() != prev_num_values)
         {
             dispatch->writeHeader = true;
@@ -419,6 +420,9 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
 
     /* Set Error Reporting Back to True */
     dispatch->reportError = true;
+
+    /* Remove Dangling Value */
+    if(!value_added) delete value;
 
     /* Free Entry and Return Status */
     if(status > 0) delete entry;

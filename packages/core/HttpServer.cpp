@@ -249,7 +249,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
     bool status = true;
 
     /* Parse Request */
-    SafeString http_header("%s", buf);
+    SafeString http_header(buf);
     List<SafeString>* header_list = http_header.split('\r');
 
     /* Parse Request Line */
@@ -286,7 +286,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         try
         {
             char* key = (char*)(*keyvalue_list)[0].str();
-            const char* value = (*keyvalue_list)[1].str(true);
+            SafeString value((*keyvalue_list)[1].str());
             StringLib::convertLower(key);
             request->headers.add(key, value, true);
         }
@@ -442,7 +442,7 @@ int HttpServer::onRead(int fd)
                     /* Get Content Length */
                     try
                     {
-                        if(StringLib::str2long(connection->request->headers["content-length"], &connection->request->length))
+                        if(StringLib::str2long(connection->request->headers["content-length"].str(), &connection->request->length))
                         {
                             /* Allocate and Prepopulate Request Body */
                             connection->request->body = new uint8_t[connection->request->length + 1];
@@ -453,7 +453,7 @@ int HttpServer::onRead(int fd)
                         }
                         else
                         {
-                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"]);
+                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"].str());
                             status = INVALID_RC; // will close socket
                         }
                     }
@@ -465,7 +465,7 @@ int HttpServer::onRead(int fd)
                     /* Get Keep Alive Setting */
                     try
                     {
-                        if(StringLib::match(connection->request->headers["connection"], "keep-alive"))
+                        if(StringLib::match(connection->request->headers["connection"].str(), "keep-alive"))
                         {
                             connection->keep_alive = true;
                         }

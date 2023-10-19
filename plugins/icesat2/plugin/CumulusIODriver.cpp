@@ -87,7 +87,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     memcpy(&day[0], &date[6], 3);
     day[2] = '\0';
 
-    SafeString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, day, resource);
+    SafeString resourcepath(0, "%s/ATLAS/%s/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, day, resource);
 
     /*
      * Determine ioBucket and ioKey

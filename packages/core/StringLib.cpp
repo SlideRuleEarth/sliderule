@@ -77,18 +77,18 @@ SafeString::String(long _maxlen)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SafeString::String(const char* _str, ...)
+SafeString::String(long _maxlen, const char* _str, ...)
 {
     if(_str != NULL)
     {
         va_list args;
         va_start(args, _str);
-        len = vsnprintf(NULL, 0, _str, args) + 1; // get length
+        len = vsnprintf(NULL, _maxlen, _str, args) + 1; // get length
         va_end(args);
         carray = new char[len]; // allocate memory
         maxlen = len;
         va_start(args, _str);
-        vsprintf(carray, _str, args); // copy in formatted contents
+        vsnprintf(carray, _maxlen, _str, args); // copy in formatted contents
         va_end(args);
         carray[maxlen - 1] ='\0'; // null terminate
     }
@@ -99,6 +99,17 @@ SafeString::String(const char* _str, ...)
         memset(carray, 0, maxlen);
         len = 1;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+SafeString::String(const char* _str)
+{
+    maxlen = StringLib::size(_str) + 1;
+    carray = new char[maxlen];
+    memset(carray, 0, maxlen);
+    len = maxlen;
 }
 
 /*----------------------------------------------------------------------------
@@ -472,7 +483,7 @@ List<SafeString>* SafeString::split(char separator, bool strip)
         }
 
         /* Add Token to List */
-        SafeString ss("%s", &token[s1]);
+        SafeString ss(&token[s1]);
         if(ss.length() > 0) tokens->add(ss);
     }
 
@@ -796,25 +807,24 @@ StringLib::TokenList* StringLib::split(const char* str, int len, char separator,
     while(i < len && str[i] != '\0')
     {
         /* Create Token */
-        char* token = new char[MAX_STR_SIZE];
-        int t = 0;
+        SafeString token;;
         while( (i < len) && (str[i] != '\0') && (str[i] == separator) ) i++; // find first character
-        while( (i < len) && (str[i] != '\0') && (str[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = str[i++]; // copy characters in
-        token[t++] = '\0';
+        while( (i < len) && (str[i] != '\0') && (str[i] != separator) && (token.length() < (MAX_STR_SIZE - 1))) token += str[i++]; // copy characters in
+        token += '\0';
 
         /*  Strip Leading and Trailing Spaces */
         if(strip)
         {
+            int t = token.length() + 1;
             int s1 = 0;
             int s2 = t-1;
             while( (s1 < t) && isspace(token[s1]) ) s1++;
             while( (s2 > s1) && isspace(token[s2]) ) s2--;
-            token[++s2] = '\0';
+            token.setChar(++s2, '\0');
         }
 
         /* Add Token to List */
-        if(t > 1) tokens->add(token);
-        else delete [] token;
+        if(token.length() > 0) tokens->add(token);
     }
 
     return tokens;

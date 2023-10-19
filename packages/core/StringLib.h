@@ -59,7 +59,8 @@ class StringLib
                 static const int MAX_REPLACEMENTS = 16;
 
                                 String      (long _maxlen=DEFAULT_STR_SIZE);
-                                String      (const char* _str, ...) VARG_CHECK(printf, 2, 3);
+                                String      (long _maxlen, const char* _str, ...) VARG_CHECK(printf, 3, 4);
+                explicit        String      (const char* _str);
                                 String      (const String& other);
                                 String      (int base, unsigned char* buffer, int size);
                                 ~String     (void);
@@ -92,7 +93,7 @@ class StringLib
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef List<const char*> TokenList;
+        typedef List<String> TokenList;
 
         /*--------------------------------------------------------------------
          * Methods

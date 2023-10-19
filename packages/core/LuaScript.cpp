@@ -86,9 +86,9 @@ LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
     /* Sanitize */
     if(script[0] != ' ' && script[0] != '/')
     {
-        SafeString safe_filename("%s", script);
+        SafeString safe_filename(script);
         safe_filename.replace("..", "_");
-        SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.str());
+        SafeString safe_pathname(0, "%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.str());
         engine = new LuaEngine(safe_pathname.str(), arg, traceId, LuaEngine::abortHook, false);
     }
     else

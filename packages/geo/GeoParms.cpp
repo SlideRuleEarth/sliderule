@@ -362,7 +362,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
         {
             /* Add band */
             lua_rawgeti(L, index, i+1);
-            const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            SafeString band_str(LuaObject::getLuaString(L, -1));
             bands.add(band_str);
             lua_pop(L, 1);
         }
@@ -372,7 +372,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
         if(provided) *provided = true;
 
         /* Add band */
-        const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+        SafeString band_str(LuaObject::getLuaString(L, -1));
         bands.add(band_str);
     }
     else if(!lua_isnil(L, index))

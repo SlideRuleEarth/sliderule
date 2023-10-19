@@ -56,7 +56,7 @@ const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
 const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
-SafeString LuaEndpoint::serverHead("sliderule/%s", LIBID);
+SafeString LuaEndpoint::serverHead(0, "sliderule/%s", LIBID);
 
 const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
 const char* LuaEndpoint::LUA_REQUEST_ID = "rqstid";
@@ -195,10 +195,10 @@ void* LuaEndpoint::requestThread (void* parm)
         char* bearer_token = NULL;
 
         /* Extract Bearer Token */
-        const char* auth_hdr = NULL;
+        SafeString auth_hdr;
         if(request->headers.find("Authorization", &auth_hdr))
         {
-            bearer_token = StringLib::find(auth_hdr, ' ');
+            bearer_token = StringLib::find(auth_hdr.str(), ' ');
             if(bearer_token) bearer_token += 1;
         }
 

@@ -98,7 +98,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+    SafeString timestr(0, "%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
     int64_t duration = TimeLib::gpstime() - launch_time_gps;
     const char** pkg_list = LuaEngine::getPkgList();
 

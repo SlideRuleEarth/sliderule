@@ -100,7 +100,7 @@ namespace Itos
             const char*         type;
             const char*         name;
             List<Record*>       subrecords;
-            List<const char*>   subvalues;
+            List<SafeString>    subvalues;
             const char*         comment;
     };
 
@@ -154,7 +154,7 @@ namespace Itos
 
             type_conv_t             type;
             const char*             name;
-            Dictionary<const char*> lookup;
+            Dictionary<SafeString>  lookup;
     };
 
     /*************************************************

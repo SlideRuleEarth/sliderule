@@ -62,26 +62,32 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
     try
     {
         /* Get Input Queues */
-        List<const char*> inq_names;
         int inq_table_index = 1;
-        if(lua_istable(L, inq_table_index))
+        if(!lua_istable(L, inq_table_index))
         {
-            /* Get number of names in table */
-            int num_names = lua_rawlen(L, inq_table_index);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply table of input queues");
+        }
 
-            /* Iterate through each name in table */
-            for(int i = 0; i < num_names; i++)
-            {
-                /* Get name */
-                lua_rawgeti(L, inq_table_index, i+1);
-                const char* name_str = StringLib::duplicate(getLuaString(L, -1));
+        /* Get number of names in table */
+        int num_names = lua_rawlen(L, inq_table_index);
+        if(num_names <= 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply at least one input queue");
+        }
 
-                /* Add name to list */
-                inq_names.add(name_str);
+        /* Iterate through each name in table */
+        List<SafeString> inq_names(num_names);
+        for(int i = 0; i < num_names; i++)
+        {
+            /* Get name */
+            lua_rawgeti(L, inq_table_index, i+1);
+            SafeString name_str(getLuaString(L, -1));
 
-                /* Clean up stack */
-                lua_pop(L, 1);
-            }
+            /* Add name to list */
+            inq_names.add(name_str);
+
+            /* Clean up stack */
+            lua_pop(L, 1);
         }
 
         /* Get Output Queue */
@@ -104,13 +110,13 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, List<const char*>& inq_names, const char* outq_name):
+CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, List<SafeString>& inq_names, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Create Input Streams */
     for(int i = 0; i < inq_names.length(); i++)
     {
-       Subscriber* sub = new Subscriber(inq_names[i]);
+       Subscriber* sub = new Subscriber(inq_names[i].str());
        inQs.add(sub);
     }
 

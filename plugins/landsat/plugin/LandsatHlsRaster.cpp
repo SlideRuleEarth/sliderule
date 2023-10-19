@@ -102,7 +102,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     bool returnBandSample;
     for(int i = 0; i < _parms->bands.length(); i++)
     {
-        const char* name = _parms->bands[i];
+        const char* name = _parms->bands[i].str();
         if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
         {
             if(!bandsDict.find(name, &returnBandSample))
@@ -111,9 +111,9 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
                 bandsDict.add(name, returnBandSample);
             }
 
-            if(strcasecmp(_parms->bands[i], "NDSI") == 0) ndsi = true;
-            if(strcasecmp(_parms->bands[i], "NDVI") == 0) ndvi = true;
-            if(strcasecmp(_parms->bands[i], "NDWI") == 0) ndwi = true;
+            if(strcasecmp(_parms->bands[i].str(), "NDSI") == 0) ndsi = true;
+            if(strcasecmp(_parms->bands[i].str(), "NDVI") == 0) ndvi = true;
+            if(strcasecmp(_parms->bands[i].str(), "NDWI") == 0) ndwi = true;
         }
     }
 
