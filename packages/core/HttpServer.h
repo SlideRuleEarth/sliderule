@@ -144,7 +144,7 @@ class HttpServer: public LuaObject
         Thread*                         listenerPid;
         Table<Connection*, int>         connections;
 
-        Dictionary<RouteEntry>          routeTable;
+        Dictionary<RouteEntry*>         routeTable;
 
         char*                           ipAddr;
         int                             port;

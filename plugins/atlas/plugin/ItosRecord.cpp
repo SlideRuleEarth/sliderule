@@ -288,7 +288,7 @@ TypeConversion::~TypeConversion(void)
  *----------------------------------------------------------------------------*/
 void TypeConversion::addEnumLookup(const char* enum_name, const char* value)
 {
-    SafeString valstr(value);
+    SafeString* valstr = new SafeString(value);
     lookup.add(enum_name, valstr);
 }
 
@@ -299,7 +299,7 @@ const char* TypeConversion::getEnumValue(const char* enum_name)
 {
     try
     {
-        return lookup[enum_name].str();
+        return lookup[enum_name]->str();
     }
     catch(RunTimeException& e)
     {

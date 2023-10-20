@@ -154,7 +154,7 @@ namespace Itos
 
             type_conv_t             type;
             const char*             name;
-            Dictionary<SafeString>  lookup;
+            Dictionary<SafeString*> lookup;
     };
 
     /*************************************************

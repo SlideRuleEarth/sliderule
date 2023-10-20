@@ -51,7 +51,8 @@ class List
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int DEFAULT_LIST_BLOCK_SIZE = 256;
+        static const int DEFAULT_LIST_BLOCK_SIZE = 32;
+
     protected:
 
         /*--------------------------------------------------------------------

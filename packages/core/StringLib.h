@@ -74,7 +74,7 @@ class StringLib
                 bool            replace     (const char* oldtxt, const char* newtxt);
                 bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
                 String&         urlize      (void);
-                List<String>*   split       (char separator, bool strip=true);
+                List<String*>*  split       (char separator, bool strip=true);
                 char            operator[]  (int index);
                 String&         operator+=  (const String& rhs);
                 String&         operator+=  (const char* rstr);
@@ -109,7 +109,7 @@ class StringLib
         static char*            find            (const char* str, char c, bool first=true);
         static int              size            (const char* str, int len=MAX_STR_SIZE);
         static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
-        static TokenList*       split           (const char* str, int len, char separator, bool strip);
+        static List<String*>*   split           (const char* str, int len, char separator, bool strip);
         static void             convertUpper    (char* str);
         static char*            convertUpper    (char* dst, char* src);
         static void             convertLower    (char* str);

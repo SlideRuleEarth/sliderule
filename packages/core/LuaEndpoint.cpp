@@ -195,10 +195,10 @@ void* LuaEndpoint::requestThread (void* parm)
         char* bearer_token = NULL;
 
         /* Extract Bearer Token */
-        SafeString auth_hdr;
+        SafeString* auth_hdr;
         if(request->headers.find("Authorization", &auth_hdr))
         {
-            bearer_token = StringLib::find(auth_hdr.str(), ' ');
+            bearer_token = StringLib::find(auth_hdr->str(), ' ');
             if(bearer_token) bearer_token += 1;
         }
 

@@ -1105,10 +1105,10 @@ unsigned int RecordObject::str2flags (const char* str)
 {
     unsigned int flags = NATIVE_FLAGS;
     SafeString flagss(str);
-    List<SafeString>* flaglist = flagss.split('|');
+    List<SafeString*>* flaglist = flagss.split('|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i].str(false);
+        const char* flag = (*flaglist)[i]->str(false);
         if(StringLib::match(flag, "NATIVE"))    flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))   flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))   flags |= BIGENDIAN;

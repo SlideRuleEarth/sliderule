@@ -391,7 +391,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add entry %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */
@@ -440,7 +440,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
         for(int i = 0; i < size; i++)
         {
             key = rand() % key_range;
-            if(mytable.add(key, key, false))
+            if(mytable.add(key, key, true))
             {
                 data_order[num_added++] = key;
             }

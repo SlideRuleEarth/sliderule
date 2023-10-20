@@ -250,15 +250,15 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
 
     /* Parse Request */
     SafeString http_header(buf);
-    List<SafeString>* header_list = http_header.split('\r');
+    List<SafeString*>* header_list = http_header.split('\r');
 
     /* Parse Request Line */
     try
     {
-        List<SafeString>* request_line = (*header_list)[0].split(' ');
-        const char* verb_str = (*request_line)[0].str();
-        const char* url_str = (*request_line)[1].str();
-
+        List<SafeString*>* request_line = (*header_list)[0]->split(' ');
+        const char* verb_str = (*request_line)[0]->str();
+        const char* url_str = (*request_line)[1]->str();
+printf("HEADER FIRST LINE: %s\n", (*header_list)[0]->str());
         /* Get Verb */
         request->verb = EndpointObject::str2verb(verb_str);
 
@@ -282,17 +282,17 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
     for(int h = 1; h < header_list->length(); h++)
     {
         /* Create Key/Value Pairs */
-        List<SafeString>* keyvalue_list = (*header_list)[h].split(':');
+        List<SafeString*>* keyvalue_list = (*header_list)[h]->split(':');
         try
         {
-            char* key = (char*)(*keyvalue_list)[0].str();
-            SafeString value((*keyvalue_list)[1].str());
+            char* key = (char*)(*keyvalue_list)[0]->str();
+            SafeString* value = new SafeString(*(*keyvalue_list)[1]);
             StringLib::convertLower(key);
-            request->headers.add(key, value, true);
+            if(!request->headers.add(key, value, true)) delete value;
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h].str(), e.what());
+            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h]->str(), e.what());
         }
         delete keyvalue_list;
     }
@@ -442,7 +442,7 @@ int HttpServer::onRead(int fd)
                     /* Get Content Length */
                     try
                     {
-                        if(StringLib::str2long(connection->request->headers["content-length"].str(), &connection->request->length))
+                        if(StringLib::str2long(connection->request->headers["content-length"]->str(), &connection->request->length))
                         {
                             /* Allocate and Prepopulate Request Body */
                             connection->request->body = new uint8_t[connection->request->length + 1];
@@ -453,7 +453,7 @@ int HttpServer::onRead(int fd)
                         }
                         else
                         {
-                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"].str());
+                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"]->str());
                             status = INVALID_RC; // will close socket
                         }
                     }
@@ -465,7 +465,7 @@ int HttpServer::onRead(int fd)
                     /* Get Keep Alive Setting */
                     try
                     {
-                        if(StringLib::match(connection->request->headers["connection"].str(), "keep-alive"))
+                        if(StringLib::match(connection->request->headers["connection"]->str(), "keep-alive"))
                         {
                             connection->keep_alive = true;
                         }
@@ -493,7 +493,7 @@ int HttpServer::onRead(int fd)
             /* Handle Request */
             try
             {
-                EndpointObject* endpoint = routeTable[connection->request->path].route;
+                EndpointObject* endpoint = routeTable[connection->request->path]->route;
                 connection->response_type = endpoint->handleRequest(connection->request);
             }
             catch(const RunTimeException& e)
@@ -744,8 +744,9 @@ int HttpServer::luaAttach (lua_State* L)
         const char* url = getLuaString(L, 3);
 
         /* Add Route to Table */
-        RouteEntry entry(endpoint);
+        RouteEntry* entry = new RouteEntry(endpoint);
         status = lua_obj->routeTable.add(url, entry, true);
+        if(!status) delete entry;
     }
     catch(const RunTimeException& e)
     {

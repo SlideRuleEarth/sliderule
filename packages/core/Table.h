@@ -201,7 +201,7 @@ bool Table<T,K>::add(K key, T& data, bool unique)
         /* Check Current Slot for Duplicate */
         if(table[curr_index].key == key)
         {
-            if(unique) return overwriteNode(curr_index, key, data);
+            if(!unique) return overwriteNode(curr_index, key, data);
             return false;
         }
 
@@ -213,7 +213,7 @@ bool Table<T,K>::add(K key, T& data, bool unique)
             /* Check Slot for Duplicate */
             if(table[scan_index].key == key)
             {
-                if(unique) return overwriteNode(scan_index, key, data);
+                if(!unique) return overwriteNode(scan_index, key, data);
                 return false;
             }
 
