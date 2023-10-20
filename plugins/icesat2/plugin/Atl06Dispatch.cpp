@@ -229,6 +229,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     /* Declare and Clear Results */
     result_t result;
     result.provided = false;
+    result.photons = NULL;
 
     /* Get Input */
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
