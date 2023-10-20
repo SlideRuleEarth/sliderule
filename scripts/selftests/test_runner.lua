@@ -61,7 +61,7 @@ if __legacy__ then
     runner.script(td .. "record_dispatcher.lua")
     runner.script(td .. "limit_dispatch.lua")
 end
---[[
+
 -- Run ICESat-2 Plugin Self Tests
 if __icesat2__ then
     local icesat2_td = td .. "../../plugins/icesat2/selftests/"
@@ -105,7 +105,7 @@ if __usgs3dep__ then
     local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
---]]
+
 
 if maxRuns > 1 then
     print(string.format("\n--------------------------------\nTest Repeat Run: %d of %d finished\n--------------------------------", runNum, maxRuns))

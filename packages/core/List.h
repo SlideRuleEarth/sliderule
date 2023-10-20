@@ -265,9 +265,6 @@ bool List<T>::remove(int index)
         prevnode = &head;
         prevblock = 0;
 
-        /* Update Length */
-        len--;
-
         /* Last Item In List */
         if(node_offset == (curr->offset - 1))
         {
@@ -277,6 +274,7 @@ bool List<T>::remove(int index)
                 /* Current Block Is Empty */
                 if(prev) // check that current block isn't head
                 {
+                    delete [] prev->next->data;
                     delete prev->next;
                     prev->next = NULL;
                 }
@@ -304,6 +302,7 @@ bool List<T>::remove(int index)
                     if(curr_index >= (len - 1))
                     {
                         /* Next Block Is Empty */
+                        delete [] curr->next->data;
                         delete curr->next;
                         curr->next = NULL;
                     }
@@ -318,6 +317,9 @@ bool List<T>::remove(int index)
                 curr = curr->next;
             }
         }
+
+        /* Update Length */
+        len--;
 
         /* Recalculate the Tail */
         int tail_block = len / listBlockSize;

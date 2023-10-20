@@ -160,8 +160,8 @@ int UT_List::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     mylist.remove(44);
     mylist.remove(33);
     mylist.remove(22);
-//    mylist.remove(11);
-//    mylist.remove(0);
+    mylist.remove(11);
+    mylist.remove(0);
 
     // check new size
     ut_assert(mylist.length() == 68, "failed length check %d\n", mylist.length());
