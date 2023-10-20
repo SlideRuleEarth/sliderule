@@ -71,6 +71,10 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
     std::ignore = param;
 
     samplingMutex.lock();
+
+    /* Enable multi-threaded decompression in Gtiff driver */
+    CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
+
     try
     {
         /* Get samples, if none found, return */
@@ -81,6 +85,10 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
     {
         mlog(e.level(), "Error subsetting raster: %s", e.what());
     }
+
+    /* Disable multi-threaded decompression in Gtiff driver */
+    CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");
+
     samplingMutex.unlock();
 
     return raster.getSSerror();

@@ -217,8 +217,11 @@ static void configGDAL(void)
     /*
      * Sets the number of worker threads to be used by GDAL operations that support multithreading.
      * The default value depends on the context in which it is used.
+     *
+     * NOTE: Disable GDAL multi-thread support used by Gtiff driver for decompression
+     *       GeoRaster::getSubsets() temporarily enables/disables multi-thread support
      */
-    // CPLSetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
+    CPLSetConfigOption("GDAL_NUM_THREADS", "1");
 
     /*
      * Enable PROJ library network capabilities for accessing GeoTIFF grids
