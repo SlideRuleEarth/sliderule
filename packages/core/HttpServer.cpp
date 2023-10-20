@@ -258,7 +258,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         List<SafeString*>* request_line = (*header_list)[0]->split(' ');
         const char* verb_str = (*request_line)[0]->str();
         const char* url_str = (*request_line)[1]->str();
-printf("HEADER FIRST LINE: %s\n", (*header_list)[0]->str());
+
         /* Get Verb */
         request->verb = EndpointObject::str2verb(verb_str);
 
@@ -491,17 +491,18 @@ int HttpServer::onRead(int fd)
         if(state->header_complete && (state->body_size >= connection->request->length) && (status >= 0))
         {
             /* Handle Request */
+            const char* path = connection->request->path;
             try
             {
-                EndpointObject* endpoint = routeTable[connection->request->path]->route;
+                EndpointObject* endpoint = routeTable[path]->route;
                 connection->response_type = endpoint->handleRequest(connection->request);
+                connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             }
             catch(const RunTimeException& e)
             {
-                mlog(e.level(), "No attached endpoint at %s: %s", connection->request->path, e.what());
+                mlog(e.level(), "No attached endpoint at %s: %s", path, e.what());
                 status = INVALID_RC; // will close socket
             }
-            connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             memset(&connection->rqst_state, 0, sizeof(rqst_state_t));
         }
     }

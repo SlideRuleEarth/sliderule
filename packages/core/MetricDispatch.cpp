@@ -236,20 +236,16 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
                     if(playbackSource) size = record->serialize(&src, RecordObject::ALLOCATE); // allocates memory here
 
                     /* Playback Text */
-                    const char* text = NULL;
-                    if(playbackText)
-                    {
-                        char valbuf[RecordObject::MAX_VAL_STR_SIZE];
-                        text = record->getValueText(data_field, valbuf);
-                    }
+                    char valbuf[RecordObject::MAX_VAL_STR_SIZE];
+                    char* text = &valbuf[0];
+                    if(playbackText) record->getValueText(data_field, valbuf);
+                    else text = NULL;
 
                     /* Playback Name */
-                    const char* name = NULL;
-                    if(playbackName)
-                    {
-                        char nambuf[MAX_STR_SIZE];
-                        name = StringLib::format(nambuf, MAX_STR_SIZE, "%s.%s", record->getRecordType(), dataField);
-                    }
+                    char namebuf[MAX_STR_SIZE];
+                    char* name = &namebuf[0];
+                    if(playbackName) StringLib::format(namebuf, MAX_STR_SIZE, "%s.%s", record->getRecordType(), dataField);
+                    else name = NULL;
 
                     /* Playback Value */
                     double value = record->getValueReal(data_field);

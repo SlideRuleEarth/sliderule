@@ -149,7 +149,7 @@ int UT_Table::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     /* Add Initial Set */
     for(key = 0; key < size; key++)
     {
-        ut_assert(mytable.add(key, key, false), "Failed to add entry %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Check Size */
@@ -191,7 +191,7 @@ int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add entry %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */
@@ -218,7 +218,8 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     (void)argc;
     (void)argv;
 
-    int key, data;
+    int key;
+    int data;
     int size = 16;
     Table<int,int> mytable(size);
     int test_data[16]    = {0, 16, 32,  1, 17, 33,  2, 18, 34,  3,  4,  5,  6,  7,  8,  9};
@@ -231,7 +232,7 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add entry %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */
@@ -269,40 +270,40 @@ int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < 9; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add key %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
     }
 
     /* Add Duplicate Set */
     for(int i = 0; i < 9; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false) == false, "Failed to reject duplicate key %d\n", key);
+        ut_assert(mytable.add(key, key, true) == false, "Failed to reject duplicate key %d\n", key);
     }
 
     /* Overwrite Duplicate Set */
     for(int i = 0; i < 9; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to overwrite duplicate key %d\n", key);
+        ut_assert(mytable.add(key, key, false), "Failed to overwrite duplicate key %d\n", key);
     }
 
     /* Add Rest of Set */
     for(int i = 9; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add key %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
     }
 
     /* Overwrite Entire Duplicate Set */
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to overwrite duplicate key %d\n", key);
+        ut_assert(mytable.add(key, key, false), "Failed to overwrite duplicate key %d\n", key);
     }
 
     /* Attempt to Add to Full Hash */
     key = 35;
-    ut_assert(mytable.add(key, key, true) == false, "Failed to detect full table\n");
+    ut_assert(mytable.add(key, key, false) == false, "Failed to detect full table\n");
 
     /* Check Size */
     ut_assert(mytable.length() == size, "Failed to rget size of table\n");
@@ -329,42 +330,42 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add key %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
     }
 
     /* Fail to Add on Full Table */
-    key = 0; ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table, %d\n", key);
-    key = 8; ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table, %d\n", key);
-    key = 9; ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table, %d\n", key);
+    key = 0; ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
+    key = 8; ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
+    key = 9; ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
 
     /* Fail to Add on Changing Full Table */
     for(key = 0; key < size; key++)
     {
-        ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table %d\n", key);
+        ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
         ut_assert(mytable.remove(key), "Failed to remove key %d\n", key);
 
-        ut_assert(mytable.add(key, key, false), "Failed to add key %d\n", key);
+        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
 
         int new1_key = key + size;
-        ut_assert(mytable.add(new1_key, new1_key, false) == false, "Failed to error on adding key to full table %d\n", new1_key);
+        ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
         int new2_key = key + size + 1;
-        ut_assert(mytable.add(new2_key, new2_key, false) == false, "Failed to error on adding key to full table %d\n", new2_key);
+        ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
     /* Fail to Add on Overwritten Full Table */
     for(key = 0; key < size; key++)
     {
-        ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table %d\n", key);
-        ut_assert(mytable.add(key, key, true), "Failed to overwrite key %d\n", key);
+        ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
+        ut_assert(mytable.add(key, key, false), "Failed to overwrite key %d\n", key);
 
-        ut_assert(mytable.add(key, key, false) == false, "Failed to error on adding key to full table %d\n", key);
+        ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
 
         int new1_key = key + size;
-        ut_assert(mytable.add(new1_key, new1_key, false) == false, "Failed to error on adding key to full table %d\n", new1_key);
+        ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
         int new2_key = key + size + 1;
-        ut_assert(mytable.add(new2_key, new2_key, false) == false, "Failed to error on adding key to full table %d\n", new2_key);
+        ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
     return failures == 0 ? 0 : -1;
@@ -391,7 +392,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
+        ut_assert(mytable.add(key, key, false), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */

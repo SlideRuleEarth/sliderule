@@ -265,6 +265,9 @@ bool List<T>::remove(int index)
         prevnode = &head;
         prevblock = 0;
 
+        /* Update Length */
+        len--;
+
         /* Last Item In List */
         if(node_offset == (curr->offset - 1))
         {
@@ -283,22 +286,22 @@ bool List<T>::remove(int index)
         {
             /* Shift for Each Block */
             int start_offset = node_offset;
-            int curr_offset = index;
+            int curr_index = index;
             while(curr != NULL)
             {
                 /* Shift Current Block */
-                for(int i = start_offset; (i < listBlockSize - 1) && (curr_offset < len - 1); i++)
+                for(int i = start_offset; (i < listBlockSize - 1) && (curr_index < len - 1); i++)
                 {
                     curr->data[i] = curr->data[i + 1];
-                    curr_offset++;
+                    curr_index++;
                 }
 
                 /* Shift Last Item */
-                if(curr_offset < (len - 1) && curr->next != NULL)
+                if(curr_index < (len - 1) && curr->next != NULL)
                 {
                     curr->data[listBlockSize - 1] = curr->next->data[0];
-                    curr_offset++;
-                    if(curr_offset >= (len - 1))
+                    curr_index++;
+                    if(curr_index >= (len - 1))
                     {
                         /* Next Block Is Empty */
                         delete curr->next;
@@ -315,9 +318,6 @@ bool List<T>::remove(int index)
                 curr = curr->next;
             }
         }
-
-        /* Update Length */
-        len--;
 
         /* Recalculate the Tail */
         int tail_block = len / listBlockSize;
