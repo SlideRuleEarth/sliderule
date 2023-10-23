@@ -106,7 +106,7 @@ SafeString::String(long _maxlen, const char* _str, ...)
  *----------------------------------------------------------------------------*/
 SafeString::String(const char* _str)
 {
-    maxlen = StringLib::size(_str) + 1;
+    maxlen = strlen(_str) + 1;
     carray = new char[maxlen];
     len = maxlen;
     StringLib::copy(carray, _str, len);

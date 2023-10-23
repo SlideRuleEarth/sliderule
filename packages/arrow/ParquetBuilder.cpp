@@ -251,7 +251,6 @@ struct ParquetBuilder::impl
         /* Append Meta String */
         const char* str = geostr.str();
         metadata->Append("geo", str);
-        
     }
 
     /*----------------------------------------------------------------------------
