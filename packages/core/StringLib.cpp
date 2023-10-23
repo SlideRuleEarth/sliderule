@@ -59,6 +59,74 @@ const int StringLib::B64INDEX[256] =
 };
 
 /******************************************************************************
+ * FORMATTED STRING METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+StringLib::FormattedString::FormattedString(const char* _str, ...)
+{
+    if(_str != NULL)
+    {
+        va_list args;
+        va_start(args, _str);
+        bufsize = vsnprintf(NULL, 0, _str, args) + 1; // get length
+        va_end(args);
+        carray = new char[bufsize]; // allocate memory
+        va_start(args, _str);
+        vsprintf(carray, _str, args); // copy in formatted contents
+        va_end(args);
+        carray[bufsize - 1] ='\0'; // null terminate
+    }
+    else
+    {
+        carray = new char[1];
+        carray[0] = '\0';
+        bufsize = 1;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+StringLib::FormattedString::~FormattedString(void)
+{
+    delete [] carray;
+}
+
+/*----------------------------------------------------------------------------
+ * c_str
+ *----------------------------------------------------------------------------*/
+const char* StringLib::FormattedString::c_str(bool duplicate)
+{
+    if(duplicate)
+    {
+        char* new_str = new char[bufsize];
+        StringLib::copy(new_str, carray, bufsize);
+        return new_str;
+    }
+
+    return carray;
+}
+
+/*----------------------------------------------------------------------------
+ * length - number of non-null characters in string
+ *----------------------------------------------------------------------------*/
+long StringLib::FormattedString::length(void) const
+{
+    return bufsize - 1; // remove null terminator in length
+}
+
+/*----------------------------------------------------------------------------
+ * size - alias for length
+ *----------------------------------------------------------------------------*/
+long StringLib::FormattedString::size(void) const
+{
+    return length();
+}
+
+/******************************************************************************
  * STRING PUBLIC METHODS
  ******************************************************************************/
 

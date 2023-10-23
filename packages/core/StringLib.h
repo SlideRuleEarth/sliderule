@@ -89,6 +89,23 @@ class StringLib
                 long    maxlen;
         };
 
+        class FormattedString
+        {
+            public:
+
+                FormattedString (const char* _str, ...) VARG_CHECK(printf, 2, 3);
+                ~FormattedString (void);
+
+                const char*     c_str       (bool duplicate = false);
+                long            length      (void) const;
+                long            size        (void) const;
+
+            private:
+
+                char*   carray;
+                long    bufsize;
+        };
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -136,6 +153,7 @@ class StringLib
  * Syntax Sugar
  *----------------------------------------------------------------------------*/
 
+typedef StringLib::FormattedString FString;
 typedef StringLib::String SafeString;
 SafeString operator+ (SafeString lhs, const SafeString& rhs);
 
