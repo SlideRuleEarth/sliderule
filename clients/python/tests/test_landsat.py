@@ -57,7 +57,10 @@ class TestHLS:
                     {"lon": -177.0000000001, "lat": 51.0000000001} ]
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
         rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI","B01", "B02", "B03", "B04", "B05", "B06","B07", "B08", "B09", "B10", "B11", "B12", "B8A"]}, "extents": [[-179.87, 50.45, -178.27, 51.44]]}
+        default_request_timeout = sliderule.request_timeout
+        sliderule.set_rqst_timeout((10,600))
         rsps = sliderule.source("subsets", rqst)
+        sliderule.set_rqst_timeout(default_request_timeout)
         subsets = rsps['subsets'][0]
         assert init
         assert len(subsets) == 167

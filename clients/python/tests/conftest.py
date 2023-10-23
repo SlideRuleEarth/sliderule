@@ -8,6 +8,7 @@ def pytest_addoption(parser):
     parser.addoption("--domain", action="store", default="slideruleearth.io")
     parser.addoption("--organization", action="store", default="sliderule")
     parser.addoption("--desired_nodes", action="store", default=None)
+    parser.addoption("--performance", action="store_true", default=False)
 
 @pytest.fixture(scope='session')
 def domain(request):
@@ -36,3 +37,7 @@ def desired_nodes(request):
 @pytest.fixture(scope='function')
 def init(domain, organization, desired_nodes):
     return sliderule.init(domain, verbose=True, loglevel=logging.DEBUG, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+
+@pytest.fixture(scope='session')
+def performance(request):
+    return request.config.option.performance
