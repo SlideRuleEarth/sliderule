@@ -85,7 +85,7 @@ class S3CacheIODriver: public S3CurlIODriver
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef Ordering<const char*, okey_t> FileOrdering;
+        typedef Ordering<string*, okey_t> FileOrdering;
         
         /*--------------------------------------------------------------------
          * Data

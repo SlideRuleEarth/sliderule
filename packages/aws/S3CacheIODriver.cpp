@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <regex>
 
 /******************************************************************************
  * STATIC DATA
@@ -149,15 +150,14 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
                         StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
 
                         /* Reformat Filename to Key */
-                        SafeString key(ent->d_name);
-                        key.replace("#", PATH_DELIMETER_STR);
+                        string* cache_key = new string(ent->d_name);
+                        *cache_key = std::regex_replace(*cache_key, std::regex("#"), PATH_DELIMETER_STR);
 
                         /* Add File to Cache */
                         cacheIndex++;
-                        cacheLookUp.add(key.str(), cacheIndex);
-                        const char* cache_key = StringLib::duplicate(key.str());
+                        cacheLookUp.add(cache_key->c_str(), cacheIndex);
                         cacheFiles.add(cacheIndex, cache_key);
-                        mlog(INFO, "Caching %s for S3 retrieval", key.str());
+                        mlog(INFO, "Caching %s for S3 retrieval", cache_key->c_str());
                     }
                 }
             }
@@ -239,7 +239,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
             cacheIndex++;
             cacheFiles.remove(cacheLookUp[key]);
             cacheLookUp.add(key, cacheIndex);
-            const char* cache_key = StringLib::duplicate(key);
+            string* cache_key = new string(key);
             cacheFiles.add(cacheIndex, cache_key);
             found_in_cache = true;
         }
@@ -247,22 +247,22 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     cacheMut.unlock();
 
     /* Build Cache Filename */
-    SafeString cache_filename(key);
-    cache_filename.replace(PATH_DELIMETER_STR, "#");
-    SafeString cache_filepath(0, "%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.str());
+    string cache_filename(key);
+    cache_filename = std::regex_replace(cache_filename, std::regex(PATH_DELIMETER_STR), "#");
+    FString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.c_str());
 
     /* Log Operation */
-    mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.str());
+    mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.c_str());
 
     /* Quick Exit If Cache Hit */
     if(found_in_cache)
     {
-        *file = cache_filepath.str(true);
+        *file = cache_filepath.c_str(true);
         return true;
     }
 
     /* Download File */
-    int64_t bytes_read = get(cache_filepath.str(), bucket, key, asset->getRegion(), &latestCredentials);
+    int64_t bytes_read = get(cache_filepath.c_str(), bucket, key, asset->getRegion(), &latestCredentials);
     if(bytes_read <= 0)
     {
         mlog(CRITICAL, "Failed to download S3 object: %ld", (long int)bytes_read);
@@ -275,15 +275,15 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
         if(cacheLookUp.length() >= cacheMaxSize)
         {
             /* Get Oldest File from Cache */
-            const char* oldest_key = NULL;
+            string* oldest_key = NULL;
             okey_t index = cacheFiles.first(&oldest_key);
             if(oldest_key != NULL)
             {
                 /* Delete File in Local File System */
-                SafeString oldest_filename(oldest_key);
-                oldest_filename.replace(PATH_DELIMETER_STR, "#");
-                SafeString oldest_filepath(0, "%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.str());
-                remove(oldest_filepath.str());
+                string oldest_filename(*oldest_key);
+                oldest_filename = std::regex_replace(oldest_filename, std::regex(PATH_DELIMETER_STR), "#");
+                FString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.c_str());
+                remove(oldest_filepath.c_str());
                 cacheFiles.remove(index);
             }
         }
@@ -291,12 +291,12 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
         /* Add New File to Cache */
         cacheIndex++;
         cacheLookUp.add(key, cacheIndex);
-        const char* cache_key = StringLib::duplicate(key);
+        string* cache_key = new string(key);
         cacheFiles.add(cacheIndex, cache_key);
     }
     cacheMut.unlock();
 
     /* Return Success */
-    *file = cache_filepath.str(true);
+    *file = cache_filepath.c_str(true);
     return true;
 }

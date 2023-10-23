@@ -155,24 +155,25 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
     /* Build Date String and Date Header */
     TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
     TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
-    SafeString date(0, "%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
-    SafeString dateHeader(0, "Date: %s", date.str());
-    headers = curl_slist_append(headers, dateHeader.str());
+    FString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
+    FString dateHeader("Date: %s", date.c_str());
+    headers = curl_slist_append(headers, dateHeader.c_str());
 
     if(credentials && credentials->provided)
     {
         /* Build SecurityToken Header */
-        SafeString securityTokenHeader(0, "x-amz-security-token:%s", credentials->sessionToken);
-        headers = curl_slist_append(headers, securityTokenHeader.str());
+        FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        headers = curl_slist_append(headers, securityTokenHeader.c_str());
 
         /* Build Authorization Header */
-        SafeString stringToSign(0, "GET\n\n\n%s\n%s\n/%s/%s", date.str(), securityTokenHeader.str(), bucket, key);
+        FString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.str(), stringToSign.bytes() - 1, hash, &hash_size);
-        SafeString encodedHash(64, hash, hash_size);
-        SafeString authorizationHeader(0, "Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash.str());
-        headers = curl_slist_append(headers, authorizationHeader.str());
+        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.c_str(), stringToSign.size(), hash, &hash_size);
+        int encoded_hash_size = static_cast<int>(hash_size);
+        const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
+        FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
+        headers = curl_slist_append(headers, authorizationHeader.c_str());
     }
 
     /* Return */

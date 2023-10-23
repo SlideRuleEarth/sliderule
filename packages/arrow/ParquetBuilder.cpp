@@ -532,8 +532,8 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Create Unique Temporary Filename */
-    SafeString tmp_file(0, "%s%s.parquet", TMP_FILE_PREFIX, id);
-    fileName = tmp_file.str(true);
+    FString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
+    fileName = tmp_file.c_str(true);
 
     /* Create Arrow Output Stream */
     shared_ptr<arrow::io::FileOutputStream> file_output_stream;
