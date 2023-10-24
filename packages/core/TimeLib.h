@@ -175,10 +175,10 @@ class TimeLib
         static void heartbeat (void);
         static void parsenistfile (void);
 
-        static inline int64_t GPS_TO_SYS (int64_t gpsnow) { return (((gpsnow) + 315964800000LL) * 1000); }   // IN: milliseconds, OUT: microseconds
-        static inline int64_t SYS_TO_GPS (int64_t sysnow) { return (((sysnow) - 315964800000000LL) / 1000); } // IN: microseconds, OUT: milliseconds
-        static inline int64_t NTP_TO_SYS (int64_t ntpnow) { return (((ntpnow) - 2208988800LL)); } // IN: seconds, OUT: seconds
-        static inline double GPS_TO_SYS_EX (double gps_secs) { return (((gps_secs) + 315964800.0)); }   // IN: seconds, OUT: seconds
+        static int64_t GPS_TO_SYS (int64_t gpsnow) { return (((gpsnow) + 315964800000LL) * 1000); }   // IN: milliseconds, OUT: microseconds
+        static int64_t SYS_TO_GPS (int64_t sysnow) { return (((sysnow) - 315964800000000LL) / 1000); } // IN: microseconds, OUT: milliseconds
+        static int64_t NTP_TO_SYS (int64_t ntpnow) { return (((ntpnow) - 2208988800LL)); } // IN: seconds, OUT: seconds
+        static double GPS_TO_SYS_EX (double gps_secs) { return (((gps_secs) + 315964800.0)); }   // IN: seconds, OUT: seconds
 };
 
 #endif  /* __time_lib__ */

@@ -166,12 +166,12 @@ class Atl08Dispatch: public DispatchObject
          * Inline Methods
          *--------------------------------------------------------------------*/
 
-        static inline bool isVegetation (Atl03Reader::photon_t* ph)
+        static bool isVegetation (Atl03Reader::photon_t* ph)
         {
             return (ph->atl08_class == Icesat2Parms::ATL08_CANOPY || ph->atl08_class == Icesat2Parms::ATL08_TOP_OF_CANOPY);
         }
 
-        static inline bool isGround (Atl03Reader::photon_t* ph)
+        static bool isGround (Atl03Reader::photon_t* ph)
         {
             return (ph->atl08_class == Icesat2Parms::ATL08_GROUND);
         }
