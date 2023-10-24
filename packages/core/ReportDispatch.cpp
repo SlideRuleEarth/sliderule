@@ -194,7 +194,7 @@ int ReportDispatch::ReportFile::writeFileHeader (void)
     if(format == CSV)
     {
         /* Build Header String */
-        SafeString header("Index");
+        string header("Index");
         const char* column = values.first(NULL);
         while(column)
         {
@@ -206,7 +206,7 @@ int ReportDispatch::ReportFile::writeFileHeader (void)
 
         /* Write Header String */
         headerInProgress = true;
-        int status = File::writeBuffer(header.str(false), header.length());
+        int status = File::writeBuffer(header.c_str(), header.length());
         headerInProgress = false;
         return status;
     }
@@ -238,29 +238,29 @@ int ReportDispatch::ReportFile::writeFileData (void)
         }
 
         /* Build Row String and Clear Values */
-        SafeString row;
+        string row;
         row += index_str;
-        SafeString* value;
+        string* value;
         const char* column = values.first(&value);
         while(column)
         {
             row += ",";
             if(value) row += *value;
-            SafeString* space = new SafeString(REPORT_SPACE);
+            string* space = new string(REPORT_SPACE);
             if(!values.add(column, space)) delete space;
             column = values.next(&value);
         }
         row += "\n";
 
         /* Write Row String */
-        return File::writeBuffer(row.str(false), row.length());
+        return File::writeBuffer(row.c_str(), row.length());
     }
     
     if(format == JSON)
     {
         /* Build JSON String */
-        SafeString json("{\n");
-        SafeString* value;
+        string json("{\n");
+        string* value;
         const char* column = values.first(&value);
         while(column)
         {
@@ -269,7 +269,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
             json += "\": \"";
             if(value) json += *value;
             json += "\"";
-            SafeString* space = new SafeString(REPORT_SPACE);
+            string* space = new string(REPORT_SPACE);
             if(!values.add(column, space)) delete space;
             column = values.next(&value);
             if(column)  json += ",\n";
@@ -277,7 +277,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         }
 
         /* Write Row String */
-        return File::writeBuffer(json.str(false), json.length());
+        return File::writeBuffer(json.c_str(), json.length());
     }
 
     return 0;
@@ -313,7 +313,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
         fixedHeader = true;
         for(int i = 0; i < num_columns; i++)
         {
-            SafeString* space = new SafeString(REPORT_SPACE);
+            string* space = new string(REPORT_SPACE);
             report.values.add(columns[i], space);
         }
     }
@@ -387,7 +387,7 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
     entry_t* entry = *(entry_t**)data;
     okey_t index = entry->index;
     const char* name = entry->name;
-    SafeString* value = new SafeString(entry->value);
+    string* value = new string(entry->value);
 
     /* Flush Row on New Index */
     if(dispatch->lastIndex != index && dispatch->lastIndex != INVALID_KEY)

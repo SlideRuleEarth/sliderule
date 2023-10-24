@@ -1104,11 +1104,10 @@ int RecordObject::parseSerial(const unsigned char* buffer, int size, const char*
 unsigned int RecordObject::str2flags (const char* str)
 {
     unsigned int flags = NATIVE_FLAGS;
-    SafeString flagss(str);
-    List<SafeString*>* flaglist = flagss.split('|');
+    List<string*>* flaglist = StringLib::split(str, strlen(str), '|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i]->str(false);
+        const char* flag = (*flaglist)[i]->c_str();
         if(StringLib::match(flag, "NATIVE"))    flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))   flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))   flags |= BIGENDIAN;
@@ -1125,14 +1124,14 @@ unsigned int RecordObject::str2flags (const char* str)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::flags2str (unsigned int flags)
 {
-    SafeString flagss;
+    string flagss;
 
     if(flags & BIGENDIAN)   flagss += "BE";
     else                    flagss += "LE";
 
     if(flags & POINTER)     flagss += "|PTR";
 
-    return flagss.str(true);
+    return StringLib::duplicate(flagss.c_str());
 }
 
 /*----------------------------------------------------------------------------

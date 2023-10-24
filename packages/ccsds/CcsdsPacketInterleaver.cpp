@@ -76,12 +76,12 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
         }
 
         /* Iterate through each name in table */
-        List<SafeString> inq_names(num_names);
+        List<string> inq_names(num_names);
         for(int i = 0; i < num_names; i++)
         {
             /* Get name */
             lua_rawgeti(L, inq_table_index, i+1);
-            SafeString name_str(getLuaString(L, -1));
+            string name_str(getLuaString(L, -1));
 
             /* Add name to list */
             inq_names.add(name_str);
@@ -110,13 +110,13 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, List<SafeString>& inq_names, const char* outq_name):
+CcsdsPacketInterleaver::CcsdsPacketInterleaver(lua_State* L, List<string>& inq_names, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Create Input Streams */
     for(int i = 0; i < inq_names.length(); i++)
     {
-       Subscriber* sub = new Subscriber(inq_names[i].str());
+       Subscriber* sub = new Subscriber(inq_names[i].c_str());
        inQs.add(sub);
     }
 

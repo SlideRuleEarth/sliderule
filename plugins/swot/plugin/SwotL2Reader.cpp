@@ -170,7 +170,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
             {
                 info_t* info = new info_t;
                 info->reader = this;
-                info->variable_name = parms->variables[i].str(true);
+                info->variable_name = StringLib::duplicate(parms->variables[i].c_str());
                 varPid[i] = new Thread(varThread, info);
             }
         }

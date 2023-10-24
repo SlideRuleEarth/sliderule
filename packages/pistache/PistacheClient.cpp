@@ -176,7 +176,7 @@ int PistacheClient::luaRequest(lua_State* L)
         else if(action == PistacheServer::POST)
         {
             bool in_error = false;
-            SafeString lua_result;
+            string lua_result;
             auto resp = lua_obj->client.post(url).body(body).send();
             resp.then(  [&](Http::Response response)
                         {
@@ -224,7 +224,7 @@ int PistacheClient::luaRequest(lua_State* L)
                 {
                     if(lua_obj->requestSignal.wait(REQUEST_SIGNAL, timeout))
                     {
-                        lua_pushlstring(L, lua_result.str(), lua_result.bytes());
+                        lua_pushlstring(L, lua_result.c_str(), lua_result.size() + 1);
                         num_obj_to_return = 2;
                         status = true;
                     }

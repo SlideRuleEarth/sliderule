@@ -204,7 +204,7 @@ class Icesat2Parms: public NetsvcParms
         } phoreal_geoloc_t;
 
         /* List of Strings */
-        typedef List<SafeString> string_list_t;
+        typedef List<string> string_list_t;
 
         /* YAPC Settings */
         typedef struct {

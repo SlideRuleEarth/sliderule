@@ -803,11 +803,11 @@ void TimeLib::parsenistfile(void)
     List<int64_t> ntp_leap_seconds;
 
     /* Read contents of file and store in temporary array */
-    SafeString leap_second_file_name;
+    string leap_second_file_name;
     leap_second_file_name += CONFDIR;
-    leap_second_file_name.appendChar(PATH_DELIMETER);
+    leap_second_file_name += PATH_DELIMETER_STR;
     leap_second_file_name += NIST_LIST_FILENAME;
-    FILE* fd = fopen( leap_second_file_name.str(), "r" );
+    FILE* fd = fopen( leap_second_file_name.c_str(), "r" );
     if( fd != NULL )
     {
         char line[MAX_STR_SIZE];

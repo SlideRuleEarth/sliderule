@@ -96,7 +96,7 @@ class EndpointObject: public LuaObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef Dictionary<SafeString*> HeaderDictionary;
+        typedef Dictionary<string*> HeaderDictionary;
 
         /*--------------------------------------------------------------------
          * Request Subclass

@@ -821,7 +821,7 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
             if(lua_isstring(L, -1))
             {
                 const char* item_str = LuaObject::getLuaString(L, -1);
-                SafeString item(item_str);
+                string item(item_str);
                 (*string_list)->add(item);
                 mlog(DEBUG, "Adding %s to list of strings", item_str);
             }

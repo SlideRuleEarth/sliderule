@@ -150,8 +150,10 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
                         StringLib::format(cache_filepath, MAX_STR_SIZE, "%s%c%s", cacheRoot, PATH_DELIMETER, ent->d_name);
 
                         /* Reformat Filename to Key */
-                        string* cache_key = new string(ent->d_name);
-                        *cache_key = std::regex_replace(*cache_key, std::regex("#"), PATH_DELIMETER_STR);
+                        char* sanitized_dir_name = StringLib::duplicate(ent->d_name);
+                        StringLib::replace(sanitized_dir_name, '#', PATH_DELIMETER);
+                        string* cache_key = new string(sanitized_dir_name);
+                        delete [] sanitized_dir_name;
 
                         /* Add File to Cache */
                         cacheIndex++;
@@ -247,9 +249,10 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     cacheMut.unlock();
 
     /* Build Cache Filename */
-    string cache_filename(key);
-    cache_filename = std::regex_replace(cache_filename, std::regex(PATH_DELIMETER_STR), "#");
-    FString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename.c_str());
+    char* cache_filename = StringLib::duplicate(key);
+    StringLib::replace(cache_filename, PATH_DELIMETER, '#');
+    FString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename);
+    delete [] cache_filename;
 
     /* Log Operation */
     mlog(DEBUG, "S3 %s object %s in bucket %s: %s", found_in_cache ? "cache hit on" : "download of", key, bucket, cache_filepath.c_str());
@@ -280,11 +283,12 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
             if(oldest_key != NULL)
             {
                 /* Delete File in Local File System */
-                string oldest_filename(*oldest_key);
-                oldest_filename = std::regex_replace(oldest_filename, std::regex(PATH_DELIMETER_STR), "#");
-                FString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename.c_str());
+                char* oldest_filename = StringLib::duplicate(oldest_key->c_str());
+                StringLib::replace(oldest_filename, PATH_DELIMETER, '#');
+                FString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename);
                 remove(oldest_filepath.c_str());
                 cacheFiles.remove(index);
+                delete [] oldest_filename;
             }
         }
 

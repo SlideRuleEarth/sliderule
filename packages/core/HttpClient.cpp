@@ -247,7 +247,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         if(verb != EndpointObject::RAW)
         {
             /* Build Request Header */
-            SafeString rqst_hdr(0, "%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+            FString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
                                 EndpointObject::verb2str(verb),
                                 resource,
                                 getIpAddr(),
@@ -260,7 +260,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             rqst_len = content_length + hdr_len;
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
-                memcpy(rqstBuf, rqst_hdr.str(), hdr_len);
+                memcpy(rqstBuf, rqst_hdr.c_str(), hdr_len);
                 if(data) memcpy(&rqstBuf[hdr_len], data, content_length);
             }
             else

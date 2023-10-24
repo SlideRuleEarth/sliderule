@@ -249,15 +249,15 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
     bool status = true;
 
     /* Parse Request */
-    SafeString http_header(buf);
-    List<SafeString*>* header_list = http_header.split('\r');
+    string http_header(buf);
+    List<string*>* header_list = StringLib::split(http_header.c_str(), http_header.length(), '\r');
 
     /* Parse Request Line */
     try
     {
-        List<SafeString*>* request_line = (*header_list)[0]->split(' ');
-        const char* verb_str = (*request_line)[0]->str();
-        const char* url_str = (*request_line)[1]->str();
+        List<string*>* request_line = StringLib::split((*header_list)[0]->c_str(), (*header_list)[0]->length(), ' ');
+        const char* verb_str = (*request_line)[0]->c_str();
+        const char* url_str = (*request_line)[1]->c_str();
 
         /* Get Verb */
         request->verb = EndpointObject::str2verb(verb_str);
@@ -282,17 +282,17 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
     for(int h = 1; h < header_list->length(); h++)
     {
         /* Create Key/Value Pairs */
-        List<SafeString*>* keyvalue_list = (*header_list)[h]->split(':');
+        List<string*>* keyvalue_list = StringLib::split((*header_list)[h]->c_str(), (*header_list)[h]->length(), ':');
         try
         {
-            char* key = (char*)(*keyvalue_list)[0]->str();
-            SafeString* value = new SafeString(*(*keyvalue_list)[1]);
+            char* key = (char*)(*keyvalue_list)[0]->c_str();
+            string* value = new string(*(*keyvalue_list)[1]);
             StringLib::convertLower(key);
             if(!request->headers.add(key, value, true)) delete value;
         }
         catch(const RunTimeException& e)
         {
-            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h]->str(), e.what());
+            mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h]->c_str(), e.what());
         }
         delete keyvalue_list;
     }
@@ -442,7 +442,7 @@ int HttpServer::onRead(int fd)
                     /* Get Content Length */
                     try
                     {
-                        if(StringLib::str2long(connection->request->headers["content-length"]->str(), &connection->request->length))
+                        if(StringLib::str2long(connection->request->headers["content-length"]->c_str(), &connection->request->length))
                         {
                             /* Allocate and Prepopulate Request Body */
                             connection->request->body = new uint8_t[connection->request->length + 1];
@@ -453,7 +453,7 @@ int HttpServer::onRead(int fd)
                         }
                         else
                         {
-                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"]->str());
+                            mlog(CRITICAL, "Invalid Content-Length header: %s", connection->request->headers["content-length"]->c_str());
                             status = INVALID_RC; // will close socket
                         }
                     }
@@ -465,7 +465,7 @@ int HttpServer::onRead(int fd)
                     /* Get Keep Alive Setting */
                     try
                     {
-                        if(StringLib::match(connection->request->headers["connection"]->str(), "keep-alive"))
+                        if(StringLib::match(connection->request->headers["connection"]->c_str(), "keep-alive"))
                         {
                             connection->keep_alive = true;
                         }

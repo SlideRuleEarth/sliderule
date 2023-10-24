@@ -56,7 +56,7 @@ const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
 const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
-SafeString LuaEndpoint::serverHead(0, "sliderule/%s", LIBID);
+FString LuaEndpoint::serverHead("sliderule/%s", LIBID);
 
 const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
 const char* LuaEndpoint::LUA_REQUEST_ID = "rqstid";
@@ -195,10 +195,10 @@ void* LuaEndpoint::requestThread (void* parm)
         char* bearer_token = NULL;
 
         /* Extract Bearer Token */
-        SafeString* auth_hdr;
+        string* auth_hdr;
         if(request->headers.find("Authorization", &auth_hdr))
         {
-            bearer_token = StringLib::find(auth_hdr->str(), ' ');
+            bearer_token = StringLib::find(auth_hdr->c_str(), ' ');
             if(bearer_token) bearer_token += 1;
         }
 
@@ -285,7 +285,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             if(result)
             {
                 int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
-                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.str());
+                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length);
                 rspq->postCopy(result, result_length);
             }
@@ -328,7 +328,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
         ((mem = OsApi::memusage()) < streamRequestMemoryThreshold) )
     {
         /* Send Header */
-        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.str());
+        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
         rspq->postCopy(header, header_length);
 
         /* Create Engine */

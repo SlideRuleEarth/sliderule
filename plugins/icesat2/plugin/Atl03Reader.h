@@ -243,7 +243,6 @@ class Atl03Reader: public LuaObject
                 /* Class Data */
                 bool                enabled;
                 bool                phoreal;
-                SafeString          resource;
 
                 /* Generated Data */
                 uint8_t*            classification; // [num_photons]
@@ -320,7 +319,7 @@ class Atl03Reader: public LuaObject
         int                 numComplete;
         Asset*              asset;
         const char*         resource;
-        const char*         resource08;
+        char*               resource08;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;

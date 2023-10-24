@@ -62,7 +62,7 @@ class SwotParms: public NetsvcParms
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef List<SafeString> string_list_t;
+        typedef List<string> string_list_t;
 
         /*--------------------------------------------------------------------
          * Methods

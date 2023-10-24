@@ -103,7 +103,7 @@ class LuaEndpoint: public EndpointObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static SafeString serverHead;
+        static FString serverHead;
 
         /*--------------------------------------------------------------------
          * Methods

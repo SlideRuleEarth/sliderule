@@ -95,23 +95,23 @@ class Atl03Indexer: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
-        Thread**            indexerPid;
-        Mutex               threadMut;
-        int                 threadCount;
-        int                 numComplete;
-        Publisher*          outQ;
-        index_t             indexRec;
-        List<SafeString>*   resources;
-        int                 resourceEntry;
-        Mutex               resourceMut;
-        Asset*              asset;
+        bool            active;
+        Thread**        indexerPid;
+        Mutex           threadMut;
+        int             threadCount;
+        int             numComplete;
+        Publisher*      outQ;
+        index_t         indexRec;
+        List<string>*   resources;
+        int             resourceEntry;
+        Mutex           resourceMut;
+        Asset*          asset;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Indexer        (lua_State* L, Asset* _asset, List<SafeString>* _resources, const char* outq_name, int num_threads);
+                            Atl03Indexer        (lua_State* L, Asset* _asset, List<string>* _resources, const char* outq_name, int num_threads);
                             ~Atl03Indexer       (void);
 
         static void*        indexerThread       (void* parm);

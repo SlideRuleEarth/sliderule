@@ -98,7 +98,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    SafeString timestr(0, "%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+    FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
     int64_t duration = TimeLib::gpstime() - launch_time_gps;
     const char** pkg_list = LuaEngine::getPkgList();
 
@@ -106,7 +106,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     print2term("SlideRule Version:   %s\n", LIBID);
     print2term("Build Information:   %s\n", BUILDINFO);
     print2term("Environment Version: %s\n", OsApi::getEnvVersion());
-    print2term("Launch Time: %s\n", timestr.str());
+    print2term("Launch Time: %s\n", timestr.c_str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
     print2term("Packages: [ ");
     if(pkg_list)
@@ -125,7 +125,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
     lua_pushstring(L, OsApi::getEnvVersion());
-    lua_pushstring(L, timestr.str());
+    lua_pushstring(L, timestr.c_str());
     lua_pushinteger(L, duration);
     lua_newtable(L);
     if(pkg_list)

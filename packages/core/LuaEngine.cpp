@@ -35,6 +35,7 @@
 
 #include "LuaEngine.h"
 #include "core.h"
+#include <regex>
 
 /******************************************************************************
  * STATIC DATA
@@ -364,11 +365,11 @@ void LuaEngine::showStack (lua_State* l, const char* prefix)
  *----------------------------------------------------------------------------*/
 const char* LuaEngine::sanitize (const char* filename)
 {
-    SafeString delimeter(0, "%c", PATH_DELIMETER);
-    SafeString safe_filename(filename);
-    safe_filename.replace(delimeter.str(), "_");
-    SafeString safe_pathname(0, "%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename.str());
-    return safe_pathname.str(true);
+    char* safe_filename = StringLib::duplicate(filename);
+    StringLib::replace(safe_filename, PATH_DELIMETER, '_');
+    FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename);
+    delete [] safe_filename;
+    return safe_pathname.c_str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -663,11 +664,11 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setglobal(l, LUA_CONFDIR);
 
     /* Set Starting Lua Path */
-    SafeString lpath(0, "%s/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
+    FString lpath("%s/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
     lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5
-    lua_pushstring(l, lpath.str(false)); // push the new one
+    lua_pushstring(l, lpath.c_str()); // push the new one
     lua_setfield(l, -2, "path" ); // set the field "path" in table at -2 with value at top of stack
     lua_pop(l, 1 ); // get rid of package table from top of stack
 

@@ -109,7 +109,7 @@ class GeoParms: public LuaObject
         * Typedefs
         *--------------------------------------------------------------------*/
 
-        typedef List<SafeString> band_list_t;
+        typedef List<string> band_list_t;
 
         typedef struct {
             double lon_min;

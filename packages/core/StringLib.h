@@ -74,7 +74,7 @@ class StringLib
                 bool            replace     (const char* oldtxt, const char* newtxt);
                 bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
                 String&         urlize      (void);
-                List<String*>*  split       (char separator, bool strip=true);
+                List<string*>*  split       (char separator, bool strip=true);
                 char            operator[]  (int index);
                 String&         operator+=  (const String& rhs);
                 String&         operator+=  (const char* rstr);
@@ -106,6 +106,8 @@ class StringLib
                 long    bufsize;
         };
 
+        static const int MAX_NUM_REPLACEMENTS = 16;
+        
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -120,7 +122,7 @@ class StringLib
         static char*            find            (const char* str, char c, bool first=true);
         static int              size            (const char* str, int len=MAX_STR_SIZE);
         static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
-        static List<String*>*   split           (const char* str, int len, char separator, bool strip);
+        static List<string*>*   split           (const char* str, int len, char separator, bool strip=true);
         static void             convertUpper    (char* str);
         static char*            convertUpper    (char* dst, char* src);
         static void             convertLower    (char* str);
@@ -138,6 +140,10 @@ class StringLib
         static unsigned char*   b64decode       (const void* data, int* size);
         static char*            b16encode       (const void* data, int size, bool lower_case, char* dst=NULL);
         static int              printify        (char* buffer, int size);
+        static int              replace         (char* str, char oldchar, char newchar);
+        static char*            replace         (const char* str, const char* oldtxt, const char* newtxt);
+        static char*            replace         (const char* str, const char* oldtxt[], const char* newtxt[], int num_replacements);
+        static char*            urlize          (const char* str);
 
     private:
 

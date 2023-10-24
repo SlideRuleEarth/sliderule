@@ -131,16 +131,16 @@ Gedi01bReader::~Gedi01bReader (void)
  * Gedi01b::Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bReader::Gedi01b::Gedi01b (info_t* info, Region& region):
-    shot_number     (info->reader->asset, info->reader->resource, SafeString(0, "%s/shot_number",                  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->asset, info->reader->resource, SafeString(0, "%s/geolocation/delta_time",       GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_bin0       (info->reader->asset, info->reader->resource, SafeString(0, "%s/geolocation/elevation_bin0",   GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_lastbin    (info->reader->asset, info->reader->resource, SafeString(0, "%s/geolocation/elevation_lastbin",GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->asset, info->reader->resource, SafeString(0, "%s/geolocation/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->asset, info->reader->resource, SafeString(0, "%s/geolocation/degrade",          GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    tx_sample_count (info->reader->asset, info->reader->resource, SafeString(0, "%s/tx_sample_count",              GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    tx_start_index  (info->reader->asset, info->reader->resource, SafeString(0, "%s/tx_sample_start_index",        GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    rx_sample_count (info->reader->asset, info->reader->resource, SafeString(0, "%s/rx_sample_count",              GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    rx_start_index  (info->reader->asset, info->reader->resource, SafeString(0, "%s/rx_sample_start_index",        GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->asset, info->reader->resource, FString("%s/shot_number",                  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->asset, info->reader->resource, FString("%s/geolocation/delta_time",       GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_bin0       (info->reader->asset, info->reader->resource, FString("%s/geolocation/elevation_bin0",   GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_lastbin    (info->reader->asset, info->reader->resource, FString("%s/geolocation/elevation_lastbin",GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->asset, info->reader->resource, FString("%s/geolocation/solar_elevation",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->asset, info->reader->resource, FString("%s/geolocation/degrade",          GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    tx_sample_count (info->reader->asset, info->reader->resource, FString("%s/tx_sample_count",              GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    tx_start_index  (info->reader->asset, info->reader->resource, FString("%s/tx_sample_start_index",        GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    rx_sample_count (info->reader->asset, info->reader->resource, FString("%s/rx_sample_count",              GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    rx_start_index  (info->reader->asset, info->reader->resource, FString("%s/rx_sample_start_index",        GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
 {
     /* Join Hardcoded Reads */
     shot_number.join(info->reader->read_timeout_ms, true);
@@ -190,8 +190,8 @@ void* Gedi01bReader::subsettingThread (void* parm)
         long txN = gedi01b.tx_start_index[region.num_footprints - 1] - 1 + gedi01b.tx_sample_count[region.num_footprints - 1] - tx0;
         long rx0 = gedi01b.rx_start_index[0] - 1;
         long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
-        H5Array<float> txwaveform(info->reader->asset, info->reader->resource, SafeString(0, "%s/txwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, tx0, txN);
-        H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, SafeString(0, "%s/rxwaveform", GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, rx0, rxN);
+        H5Array<float> txwaveform(info->reader->asset, info->reader->resource, FString("%s/txwaveform", GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, tx0, txN);
+        H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, FString("%s/rxwaveform", GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, rx0, rxN);
         txwaveform.join(info->reader->read_timeout_ms, true);
         rxwaveform.join(info->reader->read_timeout_ms, true);
 

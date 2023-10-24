@@ -152,7 +152,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
     }
 
     /* Build Dataset Name */
-    SafeString dataset(0, "%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
+    FString dataset("%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
 
     try
     {
@@ -174,7 +174,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
         if(!value_cached)
         {
             H5Coro::context_t context;
-            H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
+            H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.c_str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
             assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
             int32_t* tile = (int32_t*)info.data;
 
@@ -201,7 +201,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
     }
     catch(const RunTimeException& e)
     {
-        mlog(ERROR, "Failed to sample dataset: %s", dataset.str());
+        mlog(ERROR, "Failed to sample dataset: %s", dataset.c_str());
     }
 
     return SS_NO_ERRORS;

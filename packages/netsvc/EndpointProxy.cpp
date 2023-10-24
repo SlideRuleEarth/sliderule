@@ -317,10 +317,10 @@ void* EndpointProxy::proxyThread (void* parm)
             {
                 try
                 {
-                    SafeString path(0, "/source/%s", proxy->endpoint);
-                    SafeString data(0, "{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
+                    FString path("/source/%s", proxy->endpoint);
+                    FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
                     HttpClient client(NULL, node->member);
-                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.str(), data.str(), false, proxy->outQ, proxy->timeout * 1000);
+                    HttpClient::rsps_t rsps = client.request(EndpointObject::POST, path.c_str(), data.c_str(), false, proxy->outQ, proxy->timeout * 1000);
                     if(rsps.code == EndpointObject::OK) valid = true;
                     else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)rsps.code);
                 }

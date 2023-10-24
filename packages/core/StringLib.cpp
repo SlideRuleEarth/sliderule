@@ -526,9 +526,40 @@ SafeString& SafeString::urlize(void)
 /*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-List<SafeString*>* SafeString::split(char separator, bool strip)
+List<string*>* SafeString::split(char separator, bool strip)
 {
-    return StringLib::split(carray, len - 1, separator, strip);
+    List<string*>* tokens = new List<string*>;
+
+    int i = 0;
+    while(i < length() && carray[i] != '\0')
+    {
+        char token[MAX_STR_SIZE];
+        int t = 0;
+
+        /* Create Token */
+        while( (i < length()) && (carray[i] != '\0') && (carray[i] == separator) ) i++; // find first character
+        while( (i < length()) && (carray[i] != '\0') && (carray[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = carray[i++]; // copy characters in
+        token[t++] = '\0';
+
+        /*  Strip Leading and Trailing Spaces */
+        int s1 = 0;
+        if(strip)
+        {
+            int s2 = t-1;
+            while( (s1 < t) && isspace(token[s1]) ) s1++;
+            while( (s2 > s1) && isspace(token[s2]) ) s2--;
+            token[++s2] = '\0';
+        }
+
+        /* Add Token to List */
+        if(t > 1)
+        {
+            string* s = new string(&token[s1]);
+            tokens->add(s);
+        }
+    }
+
+    return tokens;
 }
 
 /*----------------------------------------------------------------------------
@@ -840,9 +871,9 @@ bool StringLib::match(const char* str1, const char* str2, int len)
 /*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-List<StringLib::String*>* StringLib::split(const char* str, int len, char separator, bool strip)
+List<string*>* StringLib::split(const char* str, int len, char separator, bool strip)
 {
-    List<SafeString*>* tokens = new List<SafeString*>;
+    List<string*>* tokens = new List<string*>;
 
     int i = 0;
     while(i < len && str[i] != '\0')
@@ -868,8 +899,8 @@ List<StringLib::String*>* StringLib::split(const char* str, int len, char separa
         /* Add Token to List */
         if(t > 1)
         {
-            SafeString* ss = new SafeString(&token[s1]);
-            tokens->add(ss);
+            string* s = new string(&token[s1]);
+            tokens->add(s);
         }
     }
 
@@ -1303,4 +1334,210 @@ int StringLib::printify (char* buffer, int size)
     }
     buffer[size - 1] = '\0';
     return replacements;
+}
+
+/*----------------------------------------------------------------------------
+ * replace
+ *
+ *  replaces all occurrences of a character
+ *----------------------------------------------------------------------------*/
+int StringLib::replace(char* str, char oldchar, char newchar)
+{
+    int num_replacements = 0;
+    int len = strlen(str);
+    for(int i = 0; i < len; i++)
+    {
+        if(str[i] == oldchar)
+        {
+            str[i] = newchar;
+            num_replacements++;
+        }
+    }
+    return num_replacements;
+}
+
+/*----------------------------------------------------------------------------
+ * replace
+ *
+ *  replaces all occurrences of a single substring
+ *----------------------------------------------------------------------------*/
+char* StringLib::replace(const char* str, const char* oldtxt, const char* newtxt)
+{
+    const char* oldtxt_array[1] = { oldtxt };
+    const char* newtxt_array[1] = { newtxt };
+    return StringLib::replace(str, oldtxt_array, newtxt_array, 1);
+}
+
+/*----------------------------------------------------------------------------
+ * replace
+ *
+ *  replaces all occurrences of multiple substrings
+ *----------------------------------------------------------------------------*/
+char* StringLib::replace (const char* str, const char* oldtxt[], const char* newtxt[], int num_replacements)
+{
+    /* Initialize Return String */
+    char* new_str = NULL;
+
+    /* Get Size of String */
+    int bytes = (int)strlen(str) + 1;
+
+    /* Check Number of Replacements */
+    if(num_replacements > MAX_NUM_REPLACEMENTS)
+    {
+        return new_str;
+    }
+
+    /* Get Delta Sizes for each Replacement */
+    int replacement_size_delta[MAX_NUM_REPLACEMENTS];
+    for(int r = 0; r < num_replacements; r++)
+    {
+        replacement_size_delta[r] = strlen(newtxt[r]) - strlen(oldtxt[r]);
+    }
+
+    /* Count Number of Replacements */
+    int replacement_count[MAX_NUM_REPLACEMENTS];
+    for(int r = 0; r < num_replacements; r++)
+    {
+        replacement_count[r] = 0;
+        int i = 0;
+        while(i < (bytes - 1))
+        {
+            int j = i;
+            int k = 0;
+            while((j < (bytes - 1)) && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            {
+                j++;
+                k++;
+            }
+
+            if(oldtxt[r][k] == '\0')
+            {
+                replacement_count[r]++;
+                i = j;
+            }
+            else
+            {
+                i++;
+            }
+        }
+    }
+
+    /* Calculate Size of New String */
+    int total_size_delta = 0;
+    for(int r = 0; r < num_replacements; r++)
+    {
+        total_size_delta += replacement_size_delta[r] * replacement_count[r];
+    }
+
+    /* Set New Size */
+    int new_size = bytes + total_size_delta;
+
+    /* Check if String is Empty */
+    if(new_size == 0)
+    {
+        new_str = new char [1];
+        new_str[0] = '\0';
+        return new_str;
+    }
+
+    /* Allocate New String */
+    new_str = new char [new_size];
+
+    /* Populate New String */
+    int orig_i = 0;
+    int new_i = 0;
+    while(str[orig_i])
+    {
+        /* For Each Possible Replacement */
+        bool replacement = false;
+        for(int r = 0; r < num_replacements; r++)
+        {
+            /* Check for Match */
+            int j = orig_i;
+            int k = 0;
+            while(str[j] && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            {
+                j++;
+                k++;
+            }
+
+            /* Replace Matched Text */
+            if(oldtxt[r][k] == '\0')
+            {
+                int i = 0;
+                while(newtxt[r][i])
+                {
+                    new_str[new_i++] = newtxt[r][i++];
+                }
+                orig_i = j;
+                replacement = true;
+                break;
+            }
+        }
+
+        /* Copy Over and Advance String Indices */
+        if(!replacement)
+        {
+            new_str[new_i++] = str[orig_i++];
+        }
+    }
+
+    /* Terminate New String */
+    new_str[new_i] = '\0';
+
+    /* Return New String */
+    return new_str;
+}
+
+/*----------------------------------------------------------------------------
+ * urlize
+ *
+ * ! 	    # 	    $ 	    & 	    ' 	    ( 	    ) 	    * 	    +
+ * %21 	    %23 	%24 	%26 	%27 	%28 	%29 	%2A 	%2B
+ *
+ * ,        / 	    : 	    ; 	    = 	    ? 	    @ 	    [ 	    ]
+ * %2C      %2F 	%3A 	%3B 	%3D 	%3F 	%40 	%5B 	%5D
+ *----------------------------------------------------------------------------*/
+char* StringLib::urlize(const char* str)
+{
+    /* Get Size of Strings */
+    int bytes = strlen(str) + 1;
+    int new_size = bytes * 3;
+
+    /* Setup pointers to new and old strings */
+    char* alloc_str = new char [new_size];
+    char* new_str = alloc_str;
+    const char* old_str = str;
+
+    /* Translate old string into new string */
+    while(*old_str != '\0')
+    {
+        switch (*old_str)
+        {
+            case '!':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '1';   break;
+            case '#':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '3';   break;
+            case '$':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '4';   break;
+            case '&':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '6';   break;
+            case '\'':  *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '7';   break;
+            case '(':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '8';   break;
+            case ')':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '9';   break;
+            case '*':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'A';   break;
+            case '+':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'B';   break;
+            case ',':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'C';   break;
+            case '/':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'F';   break;
+            case ':':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'A';   break;
+            case ';':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'B';   break;
+            case '=':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'D';   break;
+            case '?':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'F';   break;
+            case '@':   *(new_str++) = '%';   *(new_str++) = '4';   *(new_str++) = '0';   break;
+            case '[':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'B';   break;
+            case ']':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'D';   break;
+            default:    *(new_str++) = *old_str;  break;
+        }
+        old_str++;
+    }
+    *(new_str++) = '\0';
+
+    /* Return Self */
+    return alloc_str;
 }
