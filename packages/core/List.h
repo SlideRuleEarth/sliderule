@@ -96,7 +96,7 @@ class List
         T&      get         (int index);
         bool    set         (int index, const T& data, bool with_delete=true);
         int     length      (void) const;
-        bool    isempty     (void) const;
+        bool    empty       (void) const;
         void    clear       (void);
         void    sort        (void);
 
@@ -422,10 +422,10 @@ int List<T>::length(void) const
 }
 
 /*----------------------------------------------------------------------------
- * isempty
+ * empty
  *----------------------------------------------------------------------------*/
 template <class T>
-bool List<T>::isempty(void) const
+bool List<T>::empty(void) const
 {
     return (len == 0);
 }
