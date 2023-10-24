@@ -137,21 +137,20 @@ int UT_String::testReplace(int argc, char argv[][MAX_CMD_SIZE])
     failures = 0;
 
     // 1) Replace Single Character
-    SafeString test1("Hello World");
-    test1.replace("o", "X");
-    ut_assert(StringLib::match(test1.str(), "HellX WXrld"), "Failed single character test: %s", test1.str());
-
+    char* test1 = StringLib::replace("Hello World", "o", "X");
+    ut_assert(StringLib::match(test1, "HellX WXrld"), "Failed single character test: %s", test1);
+    delete [] test1;
     // 2) Replace String
-    SafeString test2("Hello World");
-    test2.replace("ello", "eal");
-    ut_assert(StringLib::match(test2.str(), "Heal World"), "Failed to replace string: %s", test2.str());
+    char* test2 = StringLib::replace("Hello World", "ello", "eal");
+    ut_assert(StringLib::match(test2, "Heal World"), "Failed to replace string: %s", test2);
+    delete [] test2;
 
     // 3) Replace Strings
-    SafeString test3("This is a long $1 and I am $2 sure if this $1 will work or $2");
     const char* oldtxt[2] = { "$1", "$2" };
     const char* newtxt[2] = { "sentence", "not" };
-    test3.inreplace(oldtxt, newtxt, 2);
-    ut_assert(StringLib::match(test3.str(), "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3.str());
+    char* test3 = StringLib::replace("This is a long $1 and I am $2 sure if this $1 will work or $2", oldtxt, newtxt, 2);
+    ut_assert(StringLib::match(test3, "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3);
+    delete test3;
 
     // return success or failure
     return failures == 0 ? 0 : -1;

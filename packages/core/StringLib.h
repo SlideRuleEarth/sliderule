@@ -47,48 +47,6 @@ class StringLib
 {
     public:
 
-        /*--------------------------------------------------------------------
-         * String (subclass)
-         *--------------------------------------------------------------------*/
-
-        class String
-        {
-            public:
-
-                static const long DEFAULT_STR_SIZE = 64;
-                static const int MAX_REPLACEMENTS = 16;
-
-                                String      (long _maxlen=DEFAULT_STR_SIZE);
-                                String      (long _maxlen, const char* _str, ...) VARG_CHECK(printf, 3, 4);
-                explicit        String      (const char* _str);
-                                String      (const String& other);
-                                String      (int base, unsigned char* buffer, int size);
-                                ~String     (void);
-
-                const char*     str         (bool duplicate = false);
-                long            length      (void) const;
-                long            bytes       (void) const;
-                void            appendChar  (char c);
-                int             findChar    (char c, int start=0);
-                String&         setChar     (char c, int index);
-                bool            replace     (const char* oldtxt, const char* newtxt);
-                bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
-                String&         urlize      (void);
-                List<string*>*  split       (char separator, bool strip=true);
-                char            operator[]  (int index);
-                String&         operator+=  (const String& rhs);
-                String&         operator+=  (const char* rstr);
-                String&         operator=   (const String& rhs);
-                String&         operator=   (const char* rstr);
-                void            reset       (void);
-
-            private:
-
-                char*   carray;
-                long    len;
-                long    maxlen;
-        };
-
         class FormattedString
         {
             public:
@@ -105,8 +63,6 @@ class StringLib
                 char*   carray;
                 long    bufsize;
         };
-
-        static const int MAX_NUM_REPLACEMENTS = 16;
         
         /*--------------------------------------------------------------------
          * Methods
@@ -151,6 +107,7 @@ class StringLib
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int MAX_NUM_REPLACEMENTS = 16;
         static const char* B64CHARS;
         static const int B64INDEX[256];
 };
@@ -160,7 +117,5 @@ class StringLib
  *----------------------------------------------------------------------------*/
 
 typedef StringLib::FormattedString FString;
-typedef StringLib::String SafeString;
-SafeString operator+ (SafeString lhs, const SafeString& rhs);
 
 #endif  /* __string_lib__ */

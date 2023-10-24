@@ -38,6 +38,7 @@ target_sources(atlas
     ${CMAKE_CURRENT_LIST_DIR}/plugin/CmdEchoProcessorModule.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/DiagLogProcessorModule.cpp
     ${CMAKE_CURRENT_LIST_DIR}/plugin/HstvsSimulator.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/plugin/SafeString.cpp
 )
 
 # Include Directories #

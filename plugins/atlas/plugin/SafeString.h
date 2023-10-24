@@ -29,44 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atlas__
-#define __atlas__
+#ifndef __safe_string__
+#define __safe_string__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "ccsds.h"
-#include "legacy.h"
-
-#include "atlasdefines.h"
-
-#include "ItosRecord.h"
-#include "ItosRecordParser.h"
-#include "AtlasFileWriter.h"
-#include "AtlasHistogram.h"
-#include "AltimetryHistogram.h"
-#include "TimeTagHistogram.h"
-#include "TimeTagProcessorModule.h"
-#include "AltimetryProcessorModule.h"
-#include "MajorFrameProcessorModule.h"
-#include "TimeProcessorModule.h"
-#include "LaserProcessorModule.h"
-#include "CmdEchoProcessorModule.h"
-#include "DiagLogProcessorModule.h"
-#include "HstvsSimulator.h"
-#include "SafeString.h"
+#include "OsApi.h"
+#include "List.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * SAFE STRING CLASS
  ******************************************************************************/
 
-extern "C" {
-void initatlas (void);
-void deinitatlas (void);
-}
+class SafeString
+{
+    public:
 
-#endif  /* __atlas__ */
+        static const long DEFAULT_STR_SIZE = 64;
+        static const int MAX_REPLACEMENTS = 16;
 
+                        SafeString  (long _maxlen=DEFAULT_STR_SIZE);
+                        SafeString  (long _maxlen, const char* _str, ...) VARG_CHECK(printf, 3, 4);
+        explicit        SafeString  (const char* _str);
+                        SafeString  (const SafeString& other);
+                        SafeString  (int base, unsigned char* buffer, int size);
+                        ~SafeString (void);
 
+        const char*     str         (bool duplicate = false);
+        long            length      (void) const;
+        long            bytes       (void) const;
+        void            appendChar  (char c);
+        int             findChar    (char c, int start=0);
+        SafeString&     setChar     (char c, int index);
+        bool            replace     (const char* oldtxt, const char* newtxt);
+        bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
+        SafeString&     urlize      (void);
+        List<string*>*  split       (char separator, bool strip=true);
+        char            operator[]  (int index);
+        SafeString&     operator+=  (const SafeString& rhs);
+        SafeString&     operator+=  (const char* rstr);
+        SafeString&     operator=   (const SafeString& rhs);
+        SafeString&     operator=   (const char* rstr);
+        void            reset       (void);
+
+    private:
+
+        char*   carray;
+        long    len;
+        long    maxlen;
+};
+
+#endif  /* __string_lib__ */
