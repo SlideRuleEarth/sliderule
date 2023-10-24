@@ -156,10 +156,10 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
                         delete [] sanitized_dir_name;
 
                         /* Add File to Cache */
+                        mlog(INFO, "Caching %s for S3 retrieval", cache_key->c_str());
                         cacheIndex++;
                         cacheLookUp.add(cache_key->c_str(), cacheIndex);
                         cacheFiles.add(cacheIndex, cache_key);
-                        mlog(INFO, "Caching %s for S3 retrieval", cache_key->c_str());
                     }
                 }
             }
