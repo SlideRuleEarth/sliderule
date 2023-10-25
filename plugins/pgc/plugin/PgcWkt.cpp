@@ -41,8 +41,8 @@
 #include "OsApi.h"
 
 
-static std::string pgcArcticWkt2 = "";
-static std::string pgcRemaWkt2   = "";
+static std::string pgcArcticWkt2;
+static std::string pgcRemaWkt2;
 
 static void loadWKtFile(std::string& str, const std::string& wktPath)
 {

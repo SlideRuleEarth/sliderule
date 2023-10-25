@@ -70,7 +70,7 @@ class LimitRecord: public RecordObject
         static int rec_elem;
 
         LimitRecord(void);
-        LimitRecord(limit_t _limit);
+        explicit LimitRecord(const limit_t& _limit);
         ~LimitRecord(void);
 };
 

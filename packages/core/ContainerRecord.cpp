@@ -80,7 +80,7 @@ ContainerRecord::ContainerRecord(int rec_cnt, int size):
 {
     recsContained = 0;
     recsOffset = hdrSize(rec_cnt);
-    container = (rec_t*)recordData;
+    container = reinterpret_cast<rec_t*>(recordData);
     container->rec_cnt = rec_cnt;
     container->start_of_recs = recsOffset;
 }
@@ -116,9 +116,6 @@ bool ContainerRecord::addRecord(RecordObject& record, int size)
 
         return true;
     }
-    else
-    {
-        return false;
-    }
 
+    return false;
 }

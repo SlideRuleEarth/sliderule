@@ -73,8 +73,8 @@ class Atl08Dispatch: public DispatchObject
         static const char* waveRecType;
         static const RecordObject::fieldDef_t waveRecDef[];
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const double PercentileInterval[NUM_PERCENTILES];
 
@@ -166,12 +166,12 @@ class Atl08Dispatch: public DispatchObject
          * Inline Methods
          *--------------------------------------------------------------------*/
 
-        inline bool isVegetation (Atl03Reader::photon_t* ph)
+        static bool isVegetation (Atl03Reader::photon_t* ph)
         {
             return (ph->atl08_class == Icesat2Parms::ATL08_CANOPY || ph->atl08_class == Icesat2Parms::ATL08_TOP_OF_CANOPY);
         }
 
-        inline bool isGround (Atl03Reader::photon_t* ph)
+        static bool isGround (Atl03Reader::photon_t* ph)
         {
             return (ph->atl08_class == Icesat2Parms::ATL08_GROUND);
         }

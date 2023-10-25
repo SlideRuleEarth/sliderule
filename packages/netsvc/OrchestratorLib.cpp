@@ -62,7 +62,7 @@ void OrchestratorLib::init (void)
  *----------------------------------------------------------------------------*/
 void OrchestratorLib::deinit (void)
 {
-    if(URL) delete [] URL;
+    delete [] URL;
 }
 
 /*----------------------------------------------------------------------------
@@ -73,9 +73,9 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
     bool status = true;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
+    FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.str(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.c_str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -107,7 +107,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
         status = false;
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return status;
 }
@@ -115,13 +115,13 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 /*----------------------------------------------------------------------------
  * lock
  *----------------------------------------------------------------------------*/
-OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
+vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
 {
-    NodeList* nodes = NULL;
+    vector<Node*>* nodes = NULL;
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
+    FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.str(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.c_str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -133,13 +133,13 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
             unsigned int num_transactions = json["transactions"].Size();
             if(num_members == num_transactions)
             {
-                nodes = new NodeList; // allocate node list to be returned
+                nodes = new vector<Node*>; // allocate node list to be returned
                 for(rapidjson::SizeType i = 0; i < num_members; i++)
                 {
                     const char* name = json["members"][i].GetString();
                     double transaction = json["transactions"][i].GetDouble();
                     Node* node = new Node(name, transaction);
-                    nodes->add(node);
+                    nodes->push_back(node);
                 }
             }
             else
@@ -149,9 +149,9 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
 
             if(verbose && nodes)
             {
-                for(int i = 0; i < nodes->length(); i++)
+                for(unsigned i = 0; i < nodes->size(); i++)
                 {
-                    mlog(INFO, "Locked - %s <%ld>", nodes->get(i)->member, nodes->get(i)->transaction);
+                    mlog(INFO, "Locked - %s <%ld>", nodes->at(i)->member, nodes->at(i)->transaction);
                 }
             }
         }
@@ -160,9 +160,9 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
             mlog(CRITICAL, "Failed process response to lock: %s", rsps.response);
             if(nodes)
             {
-                for(int i = 0; i < nodes->length(); i++)
+                for(unsigned i = 0; i < nodes->size(); i++)
                 {
-                    delete nodes->get(i);
+                    delete nodes->at(i);
                 }
                 delete nodes;
                 nodes = NULL;
@@ -174,13 +174,13 @@ OrchestratorLib::NodeList* OrchestratorLib::lock (const char* service, int nodes
         mlog(CRITICAL, "Encountered HTTP error <%d> when locking nodes on %s", rsps.code, service);
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return nodes;
 }
 
 /*----------------------------------------------------------------------------
- * lock
+ * unlock
  *----------------------------------------------------------------------------*/
 bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool verbose)
 {
@@ -189,12 +189,13 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
     bool status = true;
 
     HttpClient orchestrator(NULL, URL);
-    SafeString rqst("{\"transactions\": [%ld", transactions[0]);
-    char txstrbuf[64];
-    for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(txstrbuf, 64, ",%ld", transactions[t]);
+    char strbuf[64];
+    string rqst;
+    rqst += StringLib::format(strbuf, 64, "{\"transactions\": [%ld", transactions[0]);
+    for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(strbuf, 64, ",%ld", transactions[t]);
     rqst += "]}";
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/unlock", rqst.str(), false, NULL);
+    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/unlock", rqst.c_str(), false, NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -221,7 +222,7 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
         status = false;
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return status;
 }
@@ -252,7 +253,7 @@ bool OrchestratorLib::health (void)
         }
     }
 
-    if(rsps.response) delete [] rsps.response;
+    delete [] rsps.response;
 
     return status;
 }
@@ -266,7 +267,7 @@ int OrchestratorLib::luaUrl(lua_State* L)
     {
         const char* _url = LuaObject::getLuaString(L, 1);
 
-        if(URL) delete [] URL;
+        delete [] URL;
         URL = StringLib::duplicate(_url);
     }
     catch(const RunTimeException& e)
@@ -310,7 +311,7 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaLock(lua_State* L)
 {
-    NodeList* nodes = NULL;
+    vector<Node*>* nodes = NULL;
     try
     {
         const char* service = LuaObject::getLuaString(L, 1);
@@ -321,11 +322,11 @@ int OrchestratorLib::luaLock(lua_State* L)
         nodes = lock(service, nodes_needed, timeout_secs, verbose);
 
         lua_newtable(L);
-        for(int i = 0; i < nodes->length(); i++)
+        for(unsigned i = 0; i < nodes->size(); i++)
         {
-            SafeString txidstr("%ld", nodes->get(i)->transaction);
-            LuaEngine::setAttrStr(L, txidstr.str(), nodes->get(i)->member);
-            delete nodes->get(i); // free node after using it
+            FString txidstr("%ld", nodes->at(i)->transaction);
+            LuaEngine::setAttrStr(L, txidstr.c_str(), nodes->at(i)->member);
+            delete nodes->at(i); // free node after using it
         }
     }
     catch(const RunTimeException& e)
@@ -334,7 +335,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         lua_pushnil(L);
     }
 
-    if(nodes) delete nodes;
+    delete nodes;
 
     return 1;
 }

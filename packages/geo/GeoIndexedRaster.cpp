@@ -55,6 +55,37 @@ const char* GeoIndexedRaster::VALUE_TAG = "Value";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Reader Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* raster):
+    obj(raster),
+    geo(NULL),
+    entry(NULL),
+    sync(NUM_SYNC_SIGNALS),
+    run(true)
+{
+    thread = new Thread(GeoIndexedRaster::readingThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * Reader Destructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::Reader::~Reader (void)
+{
+    sync.lock();
+    {
+        run = false; /* Set run flag to false */
+        sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+    }
+    sync.unlock();
+
+    delete thread; /* delete thread waits on thread to join */
+
+    /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
+    if(geo) OGR_G_DestroyGeometry(geo);
+}
+
+/*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::init (void)
@@ -85,7 +116,7 @@ uint32_t GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector
         if(sample(geo, gps))
         {
             /* Populate Return Vector of Samples (slist) */
-            Ordering<rasters_group_t*>::Iterator iter(groupList);
+            GroupOrdering::Iterator iter(groupList);
             for(int i = 0; i < iter.length; i++)
             {
                 const rasters_group_t* rgroup = iter[i].value;
@@ -142,7 +173,7 @@ uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector
         if(sample(geo, gps))
         {
             /* Populate Return Vector of Subsets (slist) */
-            Ordering<rasters_group_t*>::Iterator iter(groupList);
+            GroupOrdering::Iterator iter(groupList);
             for(int i = 0; i < iter.length; i++)
             {
                 const rasters_group_t* rgroup = iter[i].value;
@@ -164,29 +195,6 @@ uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    /* Terminate all reader threads */
-    List<reader_t*>::Iterator reader_iter(readers);
-    for(int i = 0; i < reader_iter.length; i++)
-    {
-        reader_t* reader = readers[i];
-        if(reader->thread != NULL)
-        {
-            reader->sync->lock();
-            {
-                reader->run    = false; /* Set run flag to false */
-                reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-            }
-            reader->sync->unlock();
-
-            delete reader->thread; /* delete thread waits on thread to join */
-            delete reader->sync;
-
-            /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
-            if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
-            delete reader;
-        }
-    }
-
     emptyFeaturesList();
 }
 
@@ -202,7 +210,9 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     cache        (MAX_READER_THREADS),
     ssError      (SS_NO_ERRORS),
     crscb        (cb),
-    bbox         {0, 0, 0, 0}
+    bbox         {0, 0, 0, 0},
+    rows         (0),
+    cols         (0)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -303,7 +313,7 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
  *----------------------------------------------------------------------------*/
 double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
 {
-    bzero(&gmtDate, sizeof(TimeLib::gmt_time_t));
+    memset(&gmtDate, 0, sizeof(TimeLib::gmt_time_t));
 
     int i = feature->GetFieldIndex(field);
     if(i == -1)
@@ -312,8 +322,13 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
         return 0;
     }
 
-    double gpstime = 0, seconds;
-    int year, month, day, hour, minute;
+    double gpstime = 0;
+    double seconds;
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
 
     /*
      * Raster's datetime in geojson index file should be properly formated GMT date time string in ISO8601 format.
@@ -349,7 +364,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
     getIndexFile(geo, newFile);
 
     /* Trying to open the same file? */
-    if(!featuresList.isempty() && newFile == indexFile)
+    if(!featuresList.empty() && newFile == indexFile)
         return true;
 
     GDALDataset* dset = NULL;
@@ -374,7 +389,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         while(OGRFeature* feature = layer->GetNextFeature())
         {
             OGRFeature* fp = feature->Clone();
-            featuresList.add(fp);
+            featuresList.push_back(fp);
             OGRFeature::DestroyFeature(feature);
         }
 
@@ -397,7 +412,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %d index file features/rasters from: %s", featuresList.length(), newFile.c_str());
+        mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -428,15 +443,15 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
     while(key != NULL)
     {
         reader_t* reader = readers[i++];
-        reader->sync->lock();
+        reader->sync.lock();
         {
             reader->entry = item;
             if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
             reader->geo = geo->clone();
-            reader->sync->signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+            reader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
             signaledReaders++;
         }
-        reader->sync->unlock();
+        reader->sync.unlock();
         key = cache.next(&item);
     }
 
@@ -444,12 +459,12 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
     for(int j = 0; j < signaledReaders; j++)
     {
         reader_t* reader = readers[j];
-        reader->sync->lock();
+        reader->sync.lock();
         {
             while(reader->entry != NULL)
-                reader->sync->wait(DATA_SAMPLED, SYS_TIMEOUT);
+                reader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
         }
-        reader->sync->unlock();
+        reader->sync.unlock();
     }
 }
 
@@ -486,9 +501,9 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::emptyFeaturesList(void)
 {
-    if(featuresList.isempty()) return;
+    if(featuresList.empty()) return;
 
-    for(int i = 0; i < featuresList.length(); i++)
+    for(unsigned i = 0; i < featuresList.size(); i++)
     {
         OGRFeature* feature = featuresList[i];
         OGRFeature::DestroyFeature(feature);
@@ -511,7 +526,7 @@ int GeoIndexedRaster::luaDimensions(lua_State *L)
     try
     {
         /* Get Self */
-        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = dynamic_cast<GeoIndexedRaster*>(getLuaSelf(L, 1));
 
         /* Return dimensions of index vector file */
         lua_pushinteger(L, lua_obj->rows);
@@ -541,7 +556,7 @@ int GeoIndexedRaster::luaBoundingBox(lua_State *L)
     try
     {
         /* Get Self */
-        GeoIndexedRaster *lua_obj = (GeoIndexedRaster *)getLuaSelf(L, 1);
+        GeoIndexedRaster *lua_obj = dynamic_cast<GeoIndexedRaster*>(getLuaSelf(L, 1));
 
         /* Return bbox of index vector file */
         lua_pushnumber(L, lua_obj->bbox.lon_min);
@@ -600,13 +615,13 @@ void* GeoIndexedRaster::readingThread(void *param)
 
     while(reader->run)
     {
-        reader->sync->lock();
+        reader->sync.lock();
         {
             /* Wait for raster to work on */
             while((reader->entry == NULL) && reader->run)
-                reader->sync->wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
+                reader->sync.wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
         }
-        reader->sync->unlock();
+        reader->sync.unlock();
 
         cacheitem_t* entry = reader->entry;
         if(entry != NULL)
@@ -617,12 +632,12 @@ void* GeoIndexedRaster::readingThread(void *param)
                 entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
             entry->enabled = false; /* raster samples/subsetted */
 
-            reader->sync->lock();
+            reader->sync.lock();
             {
                 reader->entry = NULL; /* Done with this raster */
-                reader->sync->signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+                reader->sync.signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
             }
-            reader->sync->unlock();
+            reader->sync.unlock();
         }
     }
 
@@ -643,13 +658,7 @@ void GeoIndexedRaster::createThreads(void)
 
     for(int i = 0; i < newThreadsCnt; i++)
     {
-        reader_t* r = new reader_t;
-        r->obj    = this;
-        r->geo    = NULL;
-        r->entry  = NULL;
-        r->run    = true;
-        r->sync   = new Cond(NUM_SYNC_SIGNALS);
-        r->thread = new Thread(readingThread, r);
+        Reader* r = new Reader(this);
         readers.add(r);
     }
     assert(readers.length() == threadsNeeded);
@@ -661,7 +670,7 @@ void GeoIndexedRaster::createThreads(void)
 bool GeoIndexedRaster::updateCache(void)
 {
     /* Cache contains items/rasters from previous sample run */
-    Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+    GroupOrdering::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
@@ -683,7 +692,8 @@ bool GeoIndexedRaster::updateCache(void)
                                               rinfo.dataIsElevation, crscb);
                 item->sample = NULL;
                 item->subset = NULL;
-                cache.add(key, item);
+                bool status = cache.add(key, item);
+                assert(status); (void)status; // cannot fail; prevents linter warnings
             }
 
             /* Mark as Enabled */
@@ -734,7 +744,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time )
     {
-        Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+        GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
@@ -788,7 +798,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
         /* Find raster group with the closest time */
-        Ordering<rasters_group_t*>::Iterator group_iter(groupList);
+        GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;

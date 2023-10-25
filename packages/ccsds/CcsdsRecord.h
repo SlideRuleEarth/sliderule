@@ -70,12 +70,12 @@ class CcsdsRecord: public RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                CcsdsRecord         (const char* rec_type);
+        explicit                CcsdsRecord         (const char* rec_type);
                                 CcsdsRecord         (unsigned char* buffer, int size);
 
         /* Overloaded Methods */
-        bool                    deserialize         (unsigned char* buffer, int size);
-        int                     serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
+        bool                    deserialize         (unsigned char* buffer, int size) override;
+        int                     serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0) override;
 
         /* Regular Methods */
         pktType_t               getPktType          (void);
@@ -102,11 +102,13 @@ class CcsdsRecord: public RecordObject
             int             size;
         } pktDef_t;
 
+        typedef Dictionary<pktDef_t*> PktDefDictionary;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static MgDictionary<pktDef_t*> pktDefs;
+        static PktDefDictionary pktDefs;
         static pktDef_t* pktCrossRefs[PKT_CROSS_REF_TBL_SIZE]; // FC[17:11], APID[10:0]
         static Mutex pktMut;
 

@@ -68,8 +68,8 @@ class MsgProcessor: public LuaObject
         virtual bool    deinitProcessing    (void); // ...that would be undesirable to put in a constructor / destructor
         virtual bool    handleTimeout       (void);
 
-        bool            isActive            (void);
-        bool            isFull              (void);
+        bool            isActive            (void) const;
+        bool            isFull              (void) const;
         void            flush               (void);
         void            stop                (void);
         void            start               (void);

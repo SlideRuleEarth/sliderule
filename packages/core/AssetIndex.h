@@ -365,13 +365,15 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
     if(root_size >= threshold)
     {
         /* Split Node */
-        T lspan, rspan;
+        T lspan;
+        T rspan;
         split(root, lspan, rspan);
         node_t* lnode = newnode(lspan);
         node_t* rnode = newnode(rspan);
         
         /* Split Resources on Both Leaves */
-        int lcnt = 0, rcnt = 0;
+        int lcnt = 0;
+        int rcnt = 0;
         for(int j = 0; j < root_size; j++)
         {
             int resource_index = root->ril->get(j);
@@ -454,11 +456,13 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
         if(node_size >= threshold)
         {
             /* Split Node */
-            T lspan, rspan;
+            T lspan;
+            T rspan;
             split(curr, lspan, rspan);
             
             /* Preview Split Resources on Both Leaves */
-            int lcnt = 0, rcnt = 0;
+            int lcnt = 0;
+            int rcnt = 0;
             for(int j = 0; j < node_size; j++)
             {
                 int resource_index = curr->ril->get(j);
@@ -659,7 +663,7 @@ void AssetIndex<T>::deletenode (node_t* node)
     node_t* right = node->right;
     
     /* Delete Node */
-    if(node->ril) delete node->ril;
+    delete node->ril;
     delete node;
 
     /* Recurse */

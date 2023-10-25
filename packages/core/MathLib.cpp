@@ -71,7 +71,7 @@ const int MathLib::B64INDEX[256] =
 /*----------------------------------------------------------------------------
  * FFT
  *----------------------------------------------------------------------------*/
-double MathLib::FFT(double result[], int input[], unsigned long size)
+double MathLib::FFT(double result[], const int input[], unsigned long size)
 {
 	static complex_t frequency_spectrum[MAXFREQSPEC];
     double maxvalue = 0.0;
@@ -111,7 +111,7 @@ double MathLib::FFT(double result[], int input[], unsigned long size)
 /*----------------------------------------------------------------------------
  * coord2point
  *----------------------------------------------------------------------------*/
-MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
+MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)
 {
     point_t p;
 
@@ -121,7 +121,8 @@ MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
-        double r = 0.0, o = 0.0;
+        double r = 0.0;
+        double o = 0.0;
 
         /* Calculate r */
         if(projection == NORTH_POLAR)
@@ -162,11 +163,12 @@ MathLib::point_t MathLib::coord2point (const coord_t c, proj_t projection)
 /*----------------------------------------------------------------------------
  * point2coord
  *----------------------------------------------------------------------------*/
-MathLib::coord_t MathLib::point2coord (const point_t p, proj_t projection)
+MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
 {
     coord_t c;
 
-    double lonrad = 0.0, latrad = 90.0;
+    double lonrad = 0.0;
+    double latrad = 90.0;
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
@@ -281,12 +283,13 @@ bool MathLib::inpoly (point_t* poly, int len, point_t point)
  * Author: polfosol
  * License: assumed to be CC BY-SA 3.0
  *----------------------------------------------------------------------------*/
-const std::string MathLib::b64encode(const void* data, const size_t &len)
+std::string MathLib::b64encode(const void* data, const size_t &len)
 {
     std::string result((len + 2) / 3 * 4, '=');
     unsigned char *p = (unsigned  char*) data;
     char *str = &result[0];
-    size_t j = 0, pad = len % 3;
+    size_t j = 0;
+    size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
@@ -314,14 +317,14 @@ const std::string MathLib::b64encode(const void* data, const size_t &len)
  * Author: polfosol
  * License: assumed to be CC BY-SA 3.0
  *----------------------------------------------------------------------------*/
-const std::string MathLib::b64decode(const void* data, const size_t &len)
+std::string MathLib::b64decode(const void* data, const size_t &len)
 {
     if (len == 0) return "";
 
     unsigned char *p = (unsigned char*) data;
-    size_t j = 0,
-        pad1 = len % 4 || p[len - 1] == '=',
-        pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    size_t j = 0;
+    size_t pad1 = len % 4 || p[len - 1] == '=';
+    size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
     std::string result(last / 4 * 3 + pad1 + pad2, '\0');
     unsigned char *str = (unsigned char*) &result[0];
@@ -376,8 +379,10 @@ void MathLib::swapComplex(complex_t *a, complex_t *b)
  *----------------------------------------------------------------------------*/
 void MathLib::bitReverse(complex_t data[], unsigned long size)
 {
-    unsigned long steps[LOG2DATASIZE], s;
-    unsigned long i,j,k;
+    unsigned long steps[LOG2DATASIZE];
+    unsigned long s;
+    unsigned long i;
+    unsigned long j;
 
     // Calculate Steps //
     steps[0] = size / 2;
@@ -398,7 +403,7 @@ void MathLib::bitReverse(complex_t data[], unsigned long size)
 
         // Calculate Step Size //
         s = 0;
-        k = i;
+        unsigned long k = i;
         while(k % 2 != 0) // trying to find first zero in binary representation
         {
             k >>= 1;
@@ -422,15 +427,15 @@ void MathLib::freqCorrelation(complex_t data[], unsigned long size, int isign)
 {
     unsigned long   halfperiod; // half period of frequency
     unsigned long   offset;     // offset within halfperiod
-    unsigned long   i,j;        // sample indices
-    double          theta;
+    unsigned long   i;          // sample indices
+    unsigned long   j;          // sample indices
     complex_t       temp;
     complex_t       w;
     complex_t       wp;
 
     for(halfperiod = 1; halfperiod < size; halfperiod *= 2)
     {
-        theta = isign * (M_PI / halfperiod);
+        double theta = isign * (M_PI / halfperiod);
 
         wp.r = -2.0 * pow(sin(0.5 * theta),2);
         wp.i = sin(theta);

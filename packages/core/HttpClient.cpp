@@ -45,8 +45,8 @@
  ******************************************************************************/
 
 const char* HttpClient::OBJECT_TYPE = "HttpClient";
-const char* HttpClient::LuaMetaName = "HttpClient";
-const struct luaL_Reg HttpClient::LuaMetaTable[] = {
+const char* HttpClient::LUA_META_NAME = "HttpClient";
+const struct luaL_Reg HttpClient::LUA_META_TABLE[] = {
     {"request",     luaRequest},
     {"connected",   luaConnected},
     {NULL,          NULL}
@@ -87,7 +87,7 @@ int HttpClient::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     active = true;
     ipAddr = StringLib::duplicate(_ip_addr);
@@ -103,7 +103,7 @@ HttpClient::HttpClient(lua_State* L, const char* _ip_addr, int _port):
  * Constructor
  *----------------------------------------------------------------------------*/
 HttpClient::HttpClient(lua_State* L, const char* url):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     // Initial Settings
     active = false;
@@ -158,10 +158,10 @@ HttpClient::HttpClient(lua_State* L, const char* url):
 HttpClient::~HttpClient(void)
 {
     active = false;
-    if(requestPid) delete requestPid;
-    if(requestPub) delete requestPub;
-    if(ipAddr) delete [] ipAddr;
-    if(sock) delete sock;
+    delete requestPid;
+    delete requestPub;
+    delete [] ipAddr;
+    delete sock;
     delete [] rqstBuf;
     delete [] rspsBuf;
 }
@@ -172,37 +172,36 @@ HttpClient::~HttpClient(void)
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
     uint32_t trace_id = start_trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
+    
     if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace_id))
     {
         rsps_t rsps = parseResponse(outq, timeout, trace_id);
         stop_trace(INFO, trace_id);
         return rsps;
     }
-    else
-    {
-        rsps_t rsps = {
-            .code = EndpointObject::Service_Unavailable,
-            .response = NULL,
-            .size = 0
-        };
-        stop_trace(INFO, trace_id);
-        return rsps;
-    }
+
+    rsps_t rsps = {
+        .code = EndpointObject::Service_Unavailable,
+        .response = NULL,
+        .size = 0
+    };
+    stop_trace(INFO, trace_id);
+    return rsps;
 }
 
 /*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
-const char* HttpClient::getIpAddr (void)
+const char* HttpClient::getIpAddr (void) const
 {
-    if(ipAddr)  return ipAddr;
-    else        return "0.0.0.0";
+    if(ipAddr) return ipAddr;
+    return "0.0.0.0";
 }
 
 /*----------------------------------------------------------------------------
  * getPort
  *----------------------------------------------------------------------------*/
-int HttpClient::getPort (void)
+int HttpClient::getPort (void) const
 {
     return port;
 }
@@ -225,10 +224,10 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
     uint32_t trace_id = start_trace(INFO, parent_trace_id, "make_request", "%s", "{}");
 
     bool status = true;
-    int rqst_len = 0;
-
     try
     {
+        int rqst_len = 0;
+    
         /* Calculate Content Length */
         int content_length = 0;
         if(data)
@@ -248,7 +247,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         if(verb != EndpointObject::RAW)
         {
             /* Build Request Header */
-            SafeString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+            FString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
                                 EndpointObject::verb2str(verb),
                                 resource,
                                 getIpAddr(),
@@ -261,7 +260,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             rqst_len = content_length + hdr_len;
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
-                memcpy(rqstBuf, rqst_hdr.str(), hdr_len);
+                memcpy(rqstBuf, rqst_hdr.c_str(), hdr_len);
                 if(data) memcpy(&rqstBuf[hdr_len], data, content_length);
             }
             else
@@ -324,22 +323,22 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         .size = MAX_UNBOUNDED_RSPS
     };
 
-    int     header_num              = 0;
-    int     rsps_index              = 0;
-    int     rsps_buf_index          = 0;
-    long    content_remaining       = MAX_UNBOUNDED_RSPS;
-    long    chunk_remaining         = 0;
-    bool    unbounded_content       = true;
-    bool    chunk_encoding          = false;
-    bool    chunk_header_complete   = false;
-    bool    chunk_payload_complete  = false;
-    bool    chunk_trailer_complete  = false;
-    bool    headers_complete        = false;
-    bool    response_complete       = false;
-
     /* Process Response */
     try
     {
+        int     header_num              = 0;
+        int     rsps_index              = 0;
+        int     rsps_buf_index          = 0;
+        long    content_remaining       = MAX_UNBOUNDED_RSPS;
+        long    chunk_remaining         = 0;
+        bool    unbounded_content       = true;
+        bool    chunk_encoding          = false;
+        bool    chunk_header_complete   = false;
+        bool    chunk_payload_complete  = false;
+        bool    chunk_trailer_complete  = false;
+        bool    headers_complete        = false;
+        bool    response_complete       = false;
+
         while(active && !response_complete)
         {
             int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
@@ -407,7 +406,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         else if(line_term < 0) // end of headers reached
                         {
                             line_start += 2; // move past header delimeter
-                            line_term = line_start;
                             headers_complete = true;
                         }
                         else // header line not complete (line_term == 0)
@@ -550,7 +548,6 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                             chunk_trailer_complete = true;
                             chunk_header_complete = false;
                             line_start += 2;
-                            line_term = line_start;
                         }
                         else if(line_term > 0) // chunk invalid
                         {
@@ -727,7 +724,7 @@ const char* HttpClient::parseChunkHeaderLine (int start, int term)
  *----------------------------------------------------------------------------*/
 void* HttpClient::requestThread(void* parm)
 {
-    HttpClient* client = (HttpClient*)parm;
+    HttpClient* client = static_cast<HttpClient*>(parm);
     Subscriber* request_sub = new Subscriber(*(client->requestPub));
 
     while(client->active)
@@ -771,7 +768,7 @@ int HttpClient::luaRequest (lua_State* L)
     try
     {
         /* Get Self */
-        HttpClient* lua_obj = (HttpClient*)getLuaSelf(L, 1);
+        HttpClient* lua_obj = dynamic_cast<HttpClient*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* verb_str    = getLuaString(L, 2);
@@ -847,7 +844,7 @@ int HttpClient::luaConnected (lua_State* L)
     try
     {
         /* Get Self */
-        HttpClient* lua_obj = (HttpClient*)getLuaSelf(L, 1);
+        HttpClient* lua_obj = dynamic_cast<HttpClient*>(getLuaSelf(L, 1));
 
         /* Determine Connection Status */
         if(lua_obj->sock)

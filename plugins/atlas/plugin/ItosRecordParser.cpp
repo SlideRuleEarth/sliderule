@@ -1055,7 +1055,7 @@ void ItosRecordParser::createMnemonics (void)
         mlog(INFO, "Generating definition for mnemonic: %s", mnem->getName());
 
         /* Create Name List */
-        List<const char*> namelist;
+        List<SafeString> namelist;
         bool instantiated = false;
         char* tmpname = (char*)mnem->getName();
         char* dotptr = strstr(tmpname, ".");
@@ -1071,7 +1071,7 @@ void ItosRecordParser::createMnemonics (void)
                     Record* instrec = instlist->get(i);
                     char newname[Record::MAX_TOKEN_SIZE];
                     snprintf(newname, Record::MAX_TOKEN_SIZE, "%s.%s", instrec->getName(), dotptr + 1);
-                    const char* instname = StringLib::duplicate(newname);
+                    SafeString instname(newname);
                     namelist.add(instname);
                 }
             }
@@ -1080,7 +1080,7 @@ void ItosRecordParser::createMnemonics (void)
         /* Not Instantiated */
         if(!instantiated)
         {
-            const char* instname = mnem->getName();
+            SafeString instname(mnem->getName());
             namelist.add(instname);
         }
 
@@ -1089,7 +1089,7 @@ void ItosRecordParser::createMnemonics (void)
         {
             /* Initialize Mnemonic Definition */
             Mnemonic* def = new Mnemonic;
-            def->name = namelist[n];
+            def->name = namelist[n].str(true);
             def->type = NULL;
             def->source = NULL;
             def->source_packet = NULL;
@@ -1852,12 +1852,12 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
     snprintf (timestr, 25, "%d:%d", timeinfo.year, timeinfo.doy);
 
     /* Generate Content */
-    List<const char*> pktptrs;
+    List<SafeString> pktptrs;
     SafeString pktreport(1000);
     for(int p = 0; p < packets.length(); p++)
     {
         Packet* packet = packets[p];
-        const char* pkthtml = createPacketDetails(packet);
+        SafeString pkthtml(createPacketDetails(packet));
         pktptrs.add(pkthtml);
         pktreport += pkthtml;
     }
@@ -1928,7 +1928,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
     /* Generate Packet Summary from Template */
     for(int i = 0; i < pktptrs.length(); i++)
     {
-        const char* pkthtml = (const char*)pktptrs[i];
+        const char* pkthtml = pktptrs[i].str();
         const char* pktname = packets[i]->getName();
         SafeString* pktsummary = readFile(summarytemplate);
         if(pktsummary == NULL)

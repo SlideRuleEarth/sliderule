@@ -94,7 +94,7 @@ class ClusterSocket: public TcpSocket
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct
+        typedef struct ReadConnection
         {
             int64_t   prev; // time
             uint8_t*  payload; // dynamically allocated
@@ -103,10 +103,25 @@ class ClusterSocket: public TcpSocket
             int32_t   buffer_index; // signed for comparisons
             int32_t   buffer_size; // returned from receive call
             uint8_t   buffer[MSG_BUFFER_SIZE];
+            ReadConnection(void)
+            {
+                prev = 0;
+                payload = NULL;
+                payload_size = 0;
+                payload_index = -MSG_HDR_SIZE;
+                buffer_index = 0;
+                buffer_size = 0;
+                memset(buffer, 0, MSG_BUFFER_SIZE);
+            }
+            ~ReadConnection(void)
+            {
+                delete [] payload;
+            }
         } read_connection_t;
 
-        typedef struct
+        typedef struct WriteConnection
         {
+            bool delete_q;
             Subscriber* subconnq;
             Subscriber::msgRef_t payload_ref;
             uint32_t  payload_left;
@@ -114,6 +129,21 @@ class ClusterSocket: public TcpSocket
             uint32_t  buffer_index;
             uint8_t   buffer[MSG_BUFFER_SIZE];
             uint8_t   meter;
+            explicit WriteConnection(bool _delete_q)
+            {
+                delete_q = _delete_q;
+                subconnq = NULL;
+                memset(&payload_ref, 0, sizeof(payload_ref));
+                payload_left = 0;
+                bytes_processed = 0;
+                buffer_index = 0;
+                memset(buffer, 0, MSG_BUFFER_SIZE);
+                meter = METER_SEND_THRESH;
+            }
+            ~WriteConnection(void)
+            {
+                if(delete_q) delete subconnq;
+            }
         } write_connection_t;
 
         /*--------------------------------------------------------------------

@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* LimitDispatch::LuaMetaName = "LimitDispatch";
-const struct luaL_Reg LimitDispatch::LuaMetaTable[] = {
+const char* LimitDispatch::LUA_META_NAME = "LimitDispatch";
+const struct luaL_Reg LimitDispatch::LUA_META_TABLE[] = {
     {"setloglvl",   luaSetLogLevel},
     {"gmtdisplay",  luaGMTDisplay},
     {NULL,          NULL}
@@ -76,7 +76,7 @@ int LimitDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -88,8 +88,8 @@ int LimitDispatch::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LimitDispatch::LimitDispatch (lua_State* L, LimitRecord::limit_t _limit, const char* deepq_name, const char* limitq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+LimitDispatch::LimitDispatch (lua_State* L, const LimitRecord::limit_t& _limit, const char* deepq_name, const char* limitq_name):
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     LimitRecord::defineRecord(LimitRecord::rec_type, "TYPE", sizeof(LimitRecord::limit_t), LimitRecord::rec_def, LimitRecord::rec_elem);
 
@@ -116,8 +116,8 @@ LimitDispatch::LimitDispatch (lua_State* L, LimitRecord::limit_t _limit, const c
  *----------------------------------------------------------------------------*/
 LimitDispatch::~LimitDispatch(void)
 {
-    if(limitQ) delete limitQ;
-    if(deepQ) delete deepQ;
+    delete limitQ;
+    delete deepQ;
 }
 
 /*----------------------------------------------------------------------------
@@ -188,7 +188,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 }
             }
         }
-        else if(inError == false)
+        else if(!inError)
         {
             inError = true;
             mlog(WARNING, "Failed to find field %s in record %s", limit.field_name, record->getRecordType());
@@ -208,7 +208,7 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
     try
     {
         /* Get Self */
-        LimitDispatch* lua_obj = (LimitDispatch*)getLuaSelf(L, 1);
+        LimitDispatch* lua_obj = dynamic_cast<LimitDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         event_level_t lvl = (event_level_t)getLuaInteger(L, 2);
@@ -238,7 +238,7 @@ int LimitDispatch::luaGMTDisplay(lua_State* L)
     try
     {
         /* Get Self */
-        LimitDispatch* lua_obj = (LimitDispatch*)getLuaSelf(L, 1);
+        LimitDispatch* lua_obj = dynamic_cast<LimitDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Display */
         lua_obj->gmtDisplay = getLuaBoolean(L, 2, false, false, &status);

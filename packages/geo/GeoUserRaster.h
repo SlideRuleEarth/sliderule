@@ -71,7 +71,7 @@ class GeoUserRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoUserRaster(lua_State* L, GeoParms* _parms, const char* image, long imagelength, double gps, bool iselevation);
+        GeoUserRaster(lua_State* L, GeoParms* _parms, const char* file, long filelength, double gps, bool iselevation);
 
     private:
 
@@ -80,6 +80,7 @@ class GeoUserRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
          std::string rasterFileName;
+         GByte* data;
 };
 
 #endif  /* __geouser_raster__ */

@@ -71,7 +71,7 @@ int GediParms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -100,15 +100,15 @@ const char* GediParms::beam2group (int beam)
  *----------------------------------------------------------------------------*/
 int GediParms::group2beam (const char* group)
 {
-    if      (StringLib::match(group, "BEAM0000"))   return BEAM0000;
-    else if (StringLib::match(group, "BEAM0001"))   return BEAM0001;
-    else if (StringLib::match(group, "BEAM0010"))   return BEAM0010;
-    else if (StringLib::match(group, "BEAM0011"))   return BEAM0011;
-    else if (StringLib::match(group, "BEAM0101"))   return BEAM0101;
-    else if (StringLib::match(group, "BEAM0110"))   return BEAM0110;
-    else if (StringLib::match(group, "BEAM1000"))   return BEAM1000;
-    else if (StringLib::match(group, "BEAM1011"))   return BEAM1011;
-    else                                            return UNKNOWN_BEAM;
+    if(StringLib::match(group, "BEAM0000"))   return BEAM0000;
+    if(StringLib::match(group, "BEAM0001"))   return BEAM0001;
+    if(StringLib::match(group, "BEAM0010"))   return BEAM0010;
+    if(StringLib::match(group, "BEAM0011"))   return BEAM0011;
+    if(StringLib::match(group, "BEAM0101"))   return BEAM0101;
+    if(StringLib::match(group, "BEAM0110"))   return BEAM0110;
+    if(StringLib::match(group, "BEAM1000"))   return BEAM1000;
+    if(StringLib::match(group, "BEAM1011"))   return BEAM1011;
+    return UNKNOWN_BEAM;
 }
 
 /*----------------------------------------------------------------------------
@@ -239,11 +239,9 @@ bool GediParms::set_beam(int beam)
         mlog(DEBUG, "Selecting beam %d", beam);
         return true;
     }
-    else
-    {
-        mlog(ERROR, "Invalid beam: %d", beam);
-        return false;
-    }
+
+    mlog(ERROR, "Invalid beam: %d", beam);
+    return false;
 }
 
 /*----------------------------------------------------------------------------

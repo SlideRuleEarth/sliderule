@@ -106,5 +106,5 @@ RasterSubset::~RasterSubset( void )
         poolsize += size;
     }
     mutex.unlock();
-    if(data) delete [] data;
+    delete [] data;
 }

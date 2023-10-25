@@ -51,7 +51,7 @@ int DeviceReader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _device = (DeviceObject*)getLuaObject(L, 1, DeviceObject::OBJECT_TYPE);
+        _device = dynamic_cast<DeviceObject*>(getLuaObject(L, 1, DeviceObject::OBJECT_TYPE));
         const char* q_name  = getLuaString(L, 2, true, NULL);
 
         /* Return DeviceReader Object */
@@ -60,7 +60,7 @@ int DeviceReader::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(_device) _device->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -94,10 +94,10 @@ DeviceReader::~DeviceReader(void)
 
     /* Stop Thread */
     ioActive = false;
-    if(ioThread) delete ioThread;
+    delete ioThread;
 
     /* Delete Output Queue */
-    if(outq) delete outq;
+    delete outq;
 
     /* Release Device */
     device->releaseLuaObject();
@@ -109,7 +109,7 @@ DeviceReader::~DeviceReader(void)
 void* DeviceReader::readerThread (void* parm)
 {
     assert(parm != NULL);
-    DeviceReader* dr = (DeviceReader*)parm;
+    DeviceReader* dr = static_cast<DeviceReader*>(parm);
     int io_maxsize = OsApi::getIOMaxsize();
     unsigned char* buf = new unsigned char [io_maxsize];
 

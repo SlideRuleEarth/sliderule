@@ -97,7 +97,7 @@ class CredentialStore
                 copy(c);
             };
 
-            const Credential& operator=(const Credential& c) {
+            Credential& operator=(const Credential& c) {
                 cleanup();
                 copy(c);
                 return *this;
@@ -185,7 +185,7 @@ class CredentialStore
                 }
             };
 
-            void toLua (lua_State* L)
+            void toLua (lua_State* L) const
             {
                 lua_newtable(L);
 
@@ -217,11 +217,11 @@ class CredentialStore
                     expirationGps = 0L;
                 }
 
-                void cleanup (void) {
-                    if(accessKeyId) delete [] accessKeyId;
-                    if(secretAccessKey) delete [] secretAccessKey;
-                    if(sessionToken) delete [] sessionToken;
-                    if(expiration) delete [] expiration;
+                void cleanup (void) const {
+                    delete [] accessKeyId;
+                    delete [] secretAccessKey;
+                    delete [] sessionToken;
+                    delete [] expiration;
                 }
 
                 void copy (const Credential& c) {

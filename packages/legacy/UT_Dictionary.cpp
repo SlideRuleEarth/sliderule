@@ -74,17 +74,6 @@ UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
  *----------------------------------------------------------------------------*/
 UT_Dictionary::~UT_Dictionary(void)
 {
-    List<SafeString*>* wordlist;
-    const char* wordset_name = wordsets.first(&wordlist);
-    while(wordset_name != NULL)
-    {
-        for(int w = 0; w < wordlist->length(); w++)
-        {
-            delete wordlist->get(w);
-        }
-        delete wordlist;
-        wordset_name = wordsets.next(&wordlist);
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -108,11 +97,11 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     /* Get Word List */
     const char* wordset_name = argv[0];
-    List<SafeString*>* wordlist_ptr;
+    vector<string>* wordlist_ptr;
     try
     {
-        wordlist_ptr = (List<SafeString*>*)wordsets[wordset_name];
-        if(wordlist_ptr->length() <= 0)
+        wordlist_ptr = wordsets[wordset_name];
+        if(wordlist_ptr->empty())
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
             return -1;
@@ -125,16 +114,16 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Get Number of Words */
-    List<SafeString*>& wordset = *wordlist_ptr;
-    int numwords = wordset.length();
+    vector<string>& wordset = *wordlist_ptr;
+    int numwords = static_cast<int>(wordset.size());
 
     /* Set Entries */
     for(int i = 0; i < numwords; i++)
     {
         seq = i;
-        if(!d1.add(wordset[i]->str(), seq))
+        if(!d1.add(wordset[i].c_str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->str());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
             failure = true;
         }
     }
@@ -142,9 +131,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Find Entries */
     for(int i = 0; i < numwords; i++)
     {
-        if(!d1.find(wordset[i]->str()))
+        if(!d1.find(wordset[i].c_str()))
         {
-            print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i]->str());
+            print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i].c_str());
             failure = true;
         }
     }
@@ -154,16 +143,16 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         try
         {
-            long data = d1.get(wordset[i]->str());
+            long data = d1.get(wordset[i].c_str());
             if(data != i)
             {
-                print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i]->str());
+                print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i].c_str());
                 failure = true;
             }
         }
         catch(RunTimeException& e)
         {
-            print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i]->str(), e.what());
+            print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i].c_str(), e.what());
             failure = true;
         }
     }
@@ -193,7 +182,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         const char** true_list = new const char* [numwords];
         for(int i = 0; i < numwords; i++)
         {
-            true_list[i] = wordset[i]->str();
+            true_list[i] = wordset[i].c_str();
         }
 
         for(int i = 0; i < numwords; i++)
@@ -215,7 +204,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
                 }
                 if(!found)
                 {
-                    print2term("[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i]->str());
+                    print2term("[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i].c_str());
                     failure = true;
                 }
 
@@ -229,9 +218,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Remove Entries */
     for(int i = 0; i < numwords; i++)
     {
-        if(d1.remove(wordset[i]->str()) != true)
+        if(d1.remove(wordset[i].c_str()) != true)
         {
-            print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i]->str(), i);
+            print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i].c_str(), i);
             failure = true;
         }
     }
@@ -251,9 +240,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 0; i < numwords; i++)
     {
         seq = i;
-        if(!d1.add(wordset[i]->str(), seq))
+        if(!d1.add(wordset[i].c_str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->str());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
             failure = true;
         }
     }
@@ -264,9 +253,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     /* Find Entries - Should Not Find Them */
     for(int i = 0; i < numwords; i++)
     {
-        if(d1.find(wordset[i]->str()))
+        if(d1.find(wordset[i].c_str()))
         {
-            print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i]->str());
+            print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i].c_str());
             failure = true;
         }
     }
@@ -300,16 +289,15 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     (void)argc;
 
     Dictionary<long> d1;
-    long seq, sum;
     bool failure=false;
 
     /* Get Word List */
     const char* wordset_name = argv[0];
-    List<SafeString*>* wordlist_ptr;
+    vector<string>* wordlist_ptr;
     try
     {
-        wordlist_ptr = (List<SafeString*>*)wordsets[wordset_name];
-        if(wordlist_ptr->length() <= 0)
+        wordlist_ptr = wordsets[wordset_name];
+        if(wordlist_ptr->empty())
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
             return -1;
@@ -322,18 +310,18 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Get Word Set */
-    List<SafeString*>& wordset = *wordlist_ptr;
-    int numwords = wordset.length();
+    vector<string>& wordset = *wordlist_ptr;
+    int numwords = static_cast<int>(wordset.size());
 
     /* Set Entries */
-    sum = 0;
+    long sum = 0;
     for(int i = 0; i < numwords; i++)
     {
-        seq = i;
+        long seq = i;
         sum += i;
-        if(!d1.add(wordset[i]->str(), seq))
+        if(!d1.add(wordset[i].c_str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i]->str());
+            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
             failure = true;
         }
     }
@@ -442,15 +430,14 @@ int UT_Dictionary::addWordSetCmd (int argc, char argv[][MAX_CMD_SIZE])
  *----------------------------------------------------------------------------*/
 int UT_Dictionary::createWordSet (const char* name, const char* filename)
 {
-    List<SafeString*>* wordlist = new List<SafeString*>();
-
     FILE* wordfile = fopen(filename, "r");
     if(wordfile == NULL)
     {
        print2term("[%d] ERROR: Unable to open word list file: %s\n", __LINE__, filename);
-       delete wordlist;
        return -1;
     }
+
+    vector<string>* wordlist = new vector<string>;
 
     while(true)
     {
@@ -459,8 +446,8 @@ int UT_Dictionary::createWordSet (const char* name, const char* filename)
         {
             if((line[0] != '\n') && line[0] != '\0')
             {
-                SafeString* word = new SafeString("%s", line);
-                wordlist->add(word);
+                string word(line);
+                wordlist->push_back(word);
             }
         }
         else
@@ -473,7 +460,7 @@ int UT_Dictionary::createWordSet (const char* name, const char* filename)
 
     if(wordsets.add(name, wordlist, true))
     {
-        return wordlist->length();
+        return wordlist->size();
     }
     else
     {

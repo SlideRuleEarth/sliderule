@@ -58,13 +58,16 @@ const char* GeoUserRaster::ELEVATION_KEY     = "elevation";
  *----------------------------------------------------------------------------*/
 int GeoUserRaster::luaCreate (lua_State* L)
 {
+    GeoUserRaster* gur = NULL;
     try
     {
-        return createLuaObject(L, create(L, 1));
+        gur = create( L, 1);
+        return createLuaObject(L, gur);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating GeoUserRaster: %s", e.what());
+        delete gur;
         return returnLuaStatus(L, false);
     }
 }
@@ -120,6 +123,7 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
 GeoUserRaster::~GeoUserRaster(void)
 {
     VSIUnlink(rasterFileName.c_str());
+    free(data);
 }
 
 /******************************************************************************
@@ -130,7 +134,8 @@ GeoUserRaster::~GeoUserRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double gps, bool iselevation):
-    GeoRaster(L, _parms, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation )
+    GeoRaster(L, _parms, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation ),
+    data(NULL)
 {
     if(file == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
@@ -143,17 +148,17 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
         rasterFileName = getFileName();
 
         /* Make a copy of the raster data and pass the ownership to the VSIFile */
-        GByte* data = (GByte*)malloc(filelength);
+        data = (GByte*)malloc(filelength);
         memcpy(data, file, filelength);
 
         /* Load user raster to vsimem */
-        bool takeOwnership = true;
+        bool takeOwnership = false;
         VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, (vsi_l_offset)filelength, takeOwnership);
         CHECKPTR(fp);
         VSIFCloseL(fp);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
+        mlog(e.level(), "Error creating GeoUserRaster: %s", e.what());
     }
 }

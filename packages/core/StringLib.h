@@ -47,53 +47,23 @@ class StringLib
 {
     public:
 
-        /*--------------------------------------------------------------------
-         * String (subclass)
-         *--------------------------------------------------------------------*/
-
-        class String
+        class FormattedString
         {
             public:
 
-                static const long DEFAULT_STR_SIZE = 64;
-                static const int MAX_REPLACEMENTS = 16;
+                FormattedString (const char* _str, ...) VARG_CHECK(printf, 2, 3);
+                ~FormattedString (void);
 
-                                String      (long _maxlen=DEFAULT_STR_SIZE);
-                                String      (const char* _str, ...) VARG_CHECK(printf, 2, 3);
-                                String      (const String& other);
-                                String      (int base, unsigned char* buffer, int size);
-                                ~String     (void);
-
-                const char*     str         (bool duplicate = false);
-                long            length      (void);
-                long            bytes       (void);
-                void            appendChar  (char c);
-                int             findChar    (char c, int start=0);
-                String&         setChar     (char c, int index);
-                bool            replace     (const char* oldtxt, const char* newtxt);
-                bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
-                String&         urlize      (void);
-                List<String>*   split       (char separator, bool strip=true);
-                char            operator[]  (int index);
-                String&         operator+=  (const String& rhs);
-                String&         operator+=  (const char* rstr);
-                String&         operator=   (const String& rhs);
-                String&         operator=   (const char* rstr);
-                void            reset       (void);
+                const char*     c_str       (bool duplicate = false);
+                long            length      (void) const;
+                long            size        (void) const;
 
             private:
 
                 char*   carray;
-                long    len;
-                long    maxlen;
+                long    bufsize;
         };
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef MgList<const char*, 256, true> TokenList;
-
+        
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -105,14 +75,14 @@ class StringLib
         static int              formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static char*            copy            (char* dst, const char* src, int _size);
         static char*            find            (const char* big, const char* little, int len=MAX_STR_SIZE);
-        static char*            find            (const char* str, const char c, bool first=true);
+        static char*            find            (const char* str, char c, bool first=true);
         static int              size            (const char* str, int len=MAX_STR_SIZE);
         static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
-        static TokenList*       split           (const char* str, int len, char separator, bool strip);
+        static List<string*>*   split           (const char* str, int len, char separator, bool strip=true);
         static void             convertUpper    (char* str);
-        static char*            convertUpper    (char* src, char* dst);
+        static char*            convertUpper    (char* dst, char* src);
         static void             convertLower    (char* str);
-        static char*            convertLower    (char* src, char* dst);
+        static char*            convertLower    (char* dst, char* src);
         static int              tokenizeLine    (const char* str, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE]);
         static int              getLine         (char* str, int* ret_len, int max_str_size, FILE* fptr);
         static bool             str2bool        (const char* str, bool* val);
@@ -126,6 +96,10 @@ class StringLib
         static unsigned char*   b64decode       (const void* data, int* size);
         static char*            b16encode       (const void* data, int size, bool lower_case, char* dst=NULL);
         static int              printify        (char* buffer, int size);
+        static int              replace         (char* str, char oldchar, char newchar);
+        static char*            replace         (const char* str, const char* oldtxt, const char* newtxt);
+        static char*            replace         (const char* str, const char* oldtxt[], const char* newtxt[], int num_replacements);
+        static char*            urlize          (const char* str);
 
     private:
 
@@ -133,6 +107,7 @@ class StringLib
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int MAX_NUM_REPLACEMENTS = 16;
         static const char* B64CHARS;
         static const int B64INDEX[256];
 };
@@ -141,7 +116,6 @@ class StringLib
  * Syntax Sugar
  *----------------------------------------------------------------------------*/
 
-typedef StringLib::String SafeString;
-SafeString operator+ (SafeString lhs, const SafeString& rhs);
+typedef StringLib::FormattedString FString;
 
 #endif  /* __string_lib__ */

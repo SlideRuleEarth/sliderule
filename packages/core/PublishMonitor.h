@@ -29,31 +29,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __py_s3cache__
-#define __py_s3cache__
+#ifndef __publish_monitor__
+#define __publish_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <pybind11/pybind11.h>
-#include "S3CacheIODriver.h"
+#include "MsgQ.h"
+#include "Monitor.h"
+#include "RecordObject.h"
+#include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * NAMESPACES
+ * PUBLISH MONITOR CLASS
  ******************************************************************************/
 
-namespace py = pybind11;
-
-/******************************************************************************
- * pyS3Cache Class
- ******************************************************************************/
-
-class pyS3Cache
+class PublishMonitor: public Monitor
 {
     public:
-        pyS3Cache   (const std::string &_cache_root, const int _max_files);
-        ~pyS3Cache  (void);
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int luaCreate (lua_State* L);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
+        ~PublishMonitor (void);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        Publisher* outQ;
 };
 
-#endif /* __py_s3cache__ */
+#endif  /* __publish_monitor__ */

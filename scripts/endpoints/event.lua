@@ -25,7 +25,7 @@ local duration = parm["duration"] or 0
 
 -- Attach monitor to post event to response queue --
 local userevents = core.dispatcher(core.EVENTQ)
-userevents:attach(core.monitor(type, level, format, rspq), "eventrec")
+userevents:attach(core.pmonitor(type, level, format, rspq), "eventrec")
 userevents:run()
 
 -- Bounds check duration

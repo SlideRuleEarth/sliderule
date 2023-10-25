@@ -65,8 +65,8 @@ class HttpClient: public LuaObject
         static const int MAX_DIGITS         = 10;
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -89,8 +89,8 @@ class HttpClient: public LuaObject
                         ~HttpClient     (void);
 
         rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout=SYS_TIMEOUT);
-        const char*     getIpAddr       (void);
-        int             getPort         (void);
+        const char*     getIpAddr       (void) const;
+        int             getPort         (void) const;
 
     private:
 
@@ -132,7 +132,7 @@ class HttpClient: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        TcpSocket*      initializeSocket    (const char* _ip_addr, int _port);
+        static TcpSocket* initializeSocket  (const char* _ip_addr, int _port);
         bool            makeRequest         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, int32_t parent_trace_id);
         rsps_t          parseResponse       (Publisher* outq, int timeout, int32_t parent_trace_id);
         long            parseLine           (int start, int end);

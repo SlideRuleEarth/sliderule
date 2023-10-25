@@ -88,6 +88,7 @@ extern "C" {
 void initnetsvc (void)
 {
     /* Initialize Modules */
+    AoiMetrics::init();
     CurlLib::init();
     OrchestratorLib::init();
     ProvisioningSystemLib::init();

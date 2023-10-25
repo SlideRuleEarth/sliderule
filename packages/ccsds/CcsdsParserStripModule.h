@@ -53,8 +53,8 @@ class CcsdsParserStripModule: public CcsdsParserModule
          *--------------------------------------------------------------------*/
 
         static int  luaCreate       (lua_State* L);
-        int         parseBuffer     (unsigned char* buffer, int bytes, CcsdsPacket* pkt); // returns number of bytes consumed
-        void        gotoInitState   (bool reset);
+        int         parseBuffer     (unsigned char* buffer, int bytes, CcsdsPacket* pkt) override; // returns number of bytes consumed
+        void        gotoInitState   (bool reset) override;
 
     private:
 
@@ -62,8 +62,8 @@ class CcsdsParserStripModule: public CcsdsParserModule
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*  LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char*  LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types

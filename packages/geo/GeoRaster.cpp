@@ -139,7 +139,7 @@ int GeoRaster::luaDimensions(lua_State *L)
     try
     {
         /* Get Self */
-        GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
+        GeoRaster *lua_obj = dynamic_cast<GeoRaster*>(getLuaSelf(L, 1));
 
         /* Set Return Values */
         lua_pushinteger(L, lua_obj->raster.getRows());
@@ -169,7 +169,7 @@ int GeoRaster::luaBoundingBox(lua_State *L)
     try
     {
         /* Get Self */
-        GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
+        GeoRaster *lua_obj = dynamic_cast<GeoRaster*>(getLuaSelf(L, 1));
 
         /* Set Return Values */
         GdalRaster::bbox_t bbox = lua_obj->raster.getBbox();
@@ -202,7 +202,7 @@ int GeoRaster::luaCellSize(lua_State *L)
     try
     {
         /* Get Self */
-        GeoRaster *lua_obj = (GeoRaster *)getLuaSelf(L, 1);
+        GeoRaster *lua_obj = dynamic_cast<GeoRaster*>(getLuaSelf(L, 1));
 
         /* Set Return Values */
         lua_pushnumber(L, lua_obj->raster.getCellSize());

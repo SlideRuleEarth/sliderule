@@ -54,8 +54,8 @@ class ReportDispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types
@@ -79,7 +79,7 @@ class ReportDispatch: public DispatchObject
 
         static int              luaCreate       (lua_State* L);
         static format_t         str2format      (const char* str);
-        static const char*      format2str      (format_t _type);
+        static const char*      format2str      (format_t _format);
         static indexDisplay_t   str2display     (const char* str);
         static const char*      display2str     (indexDisplay_t _display);
 
@@ -104,10 +104,17 @@ class ReportDispatch: public DispatchObject
 
             ~entry_t(void)
             {
-                if(name) delete [] name;
-                if(value) delete [] value;
+                delete [] name;
+                delete [] value;
             }
         };
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef Dictionary<string*> ValueDictionary;
+        typedef Ordering<entry_t*, unsigned long> EntryOrdering;
 
         /*--------------------------------------------------------------------
          * Report File Class
@@ -123,7 +130,7 @@ class ReportDispatch: public DispatchObject
 
                 static const int            MAX_INDEX_STR_SIZE = 256;
                 format_t                    format;
-                MgDictionary<const char*, true> values; // indexed by data point names
+                ValueDictionary             values; // indexed by data point names
                 okey_t                      index;
                 bool                        headerInProgress;
                 indexDisplay_t              indexDisplay;
@@ -139,7 +146,7 @@ class ReportDispatch: public DispatchObject
         bool                    writeHeader;
         bool                    reportError;
         Mutex                   reportMut;
-        MgOrdering<entry_t*>*   entries;
+        EntryOrdering*          entries;
 
         /*--------------------------------------------------------------------
          * Methods

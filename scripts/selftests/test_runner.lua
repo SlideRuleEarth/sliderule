@@ -100,7 +100,6 @@ if __landsat__ then
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 
-
 -- Run usgs3dep Plugin Self Tests
 if __usgs3dep__ then
     local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"

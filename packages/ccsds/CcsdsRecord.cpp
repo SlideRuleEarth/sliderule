@@ -40,7 +40,7 @@
  * CCSDS RECORD: STATIC DATA
  ******************************************************************************/
 
-MgDictionary<CcsdsRecord::pktDef_t*> CcsdsRecord::pktDefs;
+CcsdsRecord::PktDefDictionary CcsdsRecord::pktDefs;
 CcsdsRecord::pktDef_t* CcsdsRecord::pktCrossRefs[PKT_CROSS_REF_TBL_SIZE];
 Mutex CcsdsRecord::pktMut;
 
@@ -307,6 +307,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
  *----------------------------------------------------------------------------*/
 CcsdsRecord::CcsdsRecord(void): RecordObject()
 {
+    pktDef = NULL;
 }
 
 /*----------------------------------------------------------------------------

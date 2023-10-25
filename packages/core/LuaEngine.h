@@ -105,9 +105,9 @@ class LuaEngine
         static const char*  sanitize        (const char* filename);
         static void         abortHook       (lua_State* L, lua_Debug *ar);
 
-        uint64_t            getEngineId     (void);
+        uint64_t            getEngineId     (void) const;
         bool                executeEngine   (int timeout_ms);
-        bool                isActive        (void);
+        bool                isActive        (void) const;
         void                setBoolean      (const char* name, bool val);
         void                setInteger      (const char* name, long val);
         void                setNumber       (const char* name, double val);
@@ -196,7 +196,7 @@ class LuaEngine
                void     lprint              (void);
                void     doREPL              (void);
                int      handlescript        (const char* fname);
-               int      collectargs         (char** argv, int* first);
+        static int      collectargs         (char** argv, int* first);
         static int      pmain               (lua_State *L);
 };
 

@@ -102,7 +102,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     bool returnBandSample;
     for(int i = 0; i < _parms->bands.length(); i++)
     {
-        const char* name = _parms->bands[i];
+        const char* name = _parms->bands[i].c_str();
         if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
         {
             if(!bandsDict.find(name, &returnBandSample))
@@ -111,9 +111,9 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
                 bandsDict.add(name, returnBandSample);
             }
 
-            if(strcasecmp(_parms->bands[i], "NDSI") == 0) ndsi = true;
-            if(strcasecmp(_parms->bands[i], "NDVI") == 0) ndvi = true;
-            if(strcasecmp(_parms->bands[i], "NDWI") == 0) ndwi = true;
+            if(strcasecmp(_parms->bands[i].c_str(), "NDSI") == 0) ndsi = true;
+            if(strcasecmp(_parms->bands[i].c_str(), "NDVI") == 0) ndvi = true;
+            if(strcasecmp(_parms->bands[i].c_str(), "NDWI") == 0) ndwi = true;
         }
     }
 
@@ -169,7 +169,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
 {
     try
     {
-        for(int i = 0; i < featuresList.length(); i++)
+        for(unsigned i = 0; i < featuresList.size(); i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();
@@ -255,7 +255,10 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, std::vect
         throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
 
     double invalid = -999999.0;
-    double green, red, nir08, swir16;
+    double green;
+    double red;
+    double nir08;
+    double swir16;
     green = red = nir08 = swir16 = invalid;
 
     /* Collect samples for all rasters */

@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsParserStripModule::LuaMetaName = "CcsdsParserStripModule";
-const struct luaL_Reg CcsdsParserStripModule::LuaMetaTable[] = {
+const char* CcsdsParserStripModule::LUA_META_NAME = "CcsdsParserStripModule";
+const struct luaL_Reg CcsdsParserStripModule::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -64,7 +64,7 @@ int CcsdsParserStripModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -150,10 +150,10 @@ void CcsdsParserStripModule::gotoInitState(bool reset)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsParserStripModule::CcsdsParserStripModule(lua_State* L, int header_size):
-    CcsdsParserModule(L, LuaMetaName, LuaMetaTable),
+    CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE),
     HDR_SIZE(header_size)
 {
-    gotoInitState(true);
+    CcsdsParserStripModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

@@ -44,7 +44,7 @@
  ******************************************************************************/
 
 const char* LuaObject::BASE_OBJECT_TYPE = "LuaObject";
-Dictionary<LuaObject*> LuaObject::globalObjects;
+Dictionary<LuaObject::global_object_t> LuaObject::globalObjects;
 Mutex LuaObject::globalMut;
 
 /******************************************************************************
@@ -54,19 +54,19 @@ Mutex LuaObject::globalMut;
 /*----------------------------------------------------------------------------
  * getType
  *----------------------------------------------------------------------------*/
-const char* LuaObject::getType (void)
+const char* LuaObject::getType (void) const
 {
-    if(ObjectType)  return ObjectType;
-    else            return "<untyped>";
+    if(ObjectType) return ObjectType;
+    return "<untyped>";
 }
 
 /*----------------------------------------------------------------------------
  * getName
  *----------------------------------------------------------------------------*/
-const char* LuaObject::getName (void)
+const char* LuaObject::getName (void) const
 {
-    if(ObjectName)  return ObjectName;
-    else            return "<unnamed>";
+    if(ObjectName) return ObjectName;
+    return "<unnamed>";
 }
 
 /*----------------------------------------------------------------------------
@@ -93,7 +93,7 @@ int LuaObject::luaGetByName(lua_State* L)
             verbose = getLuaBoolean(L, 2, true, true);
 
             /* Get Self */
-            lua_obj = globalObjects.get(name);
+            lua_obj = globalObjects.get(name).lua_obj;
 
             /* Return Lua Object */
             associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
@@ -123,14 +123,13 @@ long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltv
         if(provided) *provided = true;
         return lua_tointeger(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply an integer for parameter #%d", parm);
-    }
+    
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply an integer for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -145,14 +144,13 @@ double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfl
         if(provided) *provided = true;
         return lua_tonumber(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a floating point number for parameter #%d", parm);
-    }
+    
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a floating point number for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -167,14 +165,13 @@ bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltv
         if(provided) *provided = true;
         return lua_toboolean(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a boolean for parameter #%d", parm);
-    }
+    
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a boolean for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -189,14 +186,13 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
         if(provided) *provided = true;
         return lua_tostring(L, parm);
     }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    
+    if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a string for parameter #%d", parm);
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a string for parameter #%d", parm);
 }
 
 /*----------------------------------------------------------------------------
@@ -233,7 +229,7 @@ LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_t
     {
         try
         {
-            LuaObject* obj = globalObjects.get(name);
+            LuaObject* obj = globalObjects.get(name).lua_obj;
             if(StringLib::match(obj->getType(), object_type))
             {
                 lua_obj = obj;
@@ -271,6 +267,7 @@ bool LuaObject::releaseLuaObject (void)
     /* Delete THIS Object */
     if(is_delete_pending)
     {
+        if(userData) userData->luaObj = NULL;
         delete this;
     }
 
@@ -289,12 +286,12 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
     ObjectName(NULL),
     LuaMetaName(meta_name),
     LuaMetaTable(meta_table),
-    LuaState(L)
+    LuaState(L),
+    referenceCount(0),
+    userData(NULL),
+    objComplete(false)
 {
     uint32_t engine_trace_id = ORIGIN;
-
-    referenceCount = 0;
-    objComplete = false;
 
     if(LuaState)
     {
@@ -333,7 +330,7 @@ LuaObject::~LuaObject (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaDelete
+ * luaDelete - called only by the garbage collector
  *----------------------------------------------------------------------------*/
 int LuaObject::luaDelete (lua_State* L)
 {
@@ -357,6 +354,7 @@ int LuaObject::luaDelete (lua_State* L)
                 else
                 {
                     mlog(DEBUG, "Delaying delete on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                    lua_obj->userData = NULL; // user data is now out of scope
                 }
             }
             else
@@ -380,17 +378,61 @@ int LuaObject::luaDelete (lua_State* L)
     return 0;
 }
 
+/*----------------------------------------------------------------------------
+ * luaDestroy - called explicitly by scripts
+ *----------------------------------------------------------------------------*/
+int LuaObject::luaDestroy (lua_State* L)
+{
+    try
+    {
+        luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
+        if(user_data)
+        {
+            LuaObject* lua_obj = user_data->luaObj;
+            if(lua_obj)
+            {
+                int count = lua_obj->referenceCount--;
+                mlog(DEBUG, "Destroying object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+
+                if(lua_obj->referenceCount == 0)
+                {
+                    /* Delete Object */
+                    delete lua_obj;
+                    user_data->luaObj = NULL;
+                }
+                else
+                {
+                    mlog(DEBUG, "Delaying destroy on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
+                }
+            }
+            else
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Attempting to destroy lua object that has already been deleted");
+            }
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to retrieve user data");
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error destroying object: %s", e.what());
+    }
+
+    return 0;
+}
 
 /*----------------------------------------------------------------------------
  * luaName
  *----------------------------------------------------------------------------*/
 int LuaObject::luaName(lua_State* L)
 {
-    bool status = false;
-
     try
     {
-        /* Get Self */
+         bool status = false;
+
+       /* Get Self */
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Get Name */
@@ -403,7 +445,8 @@ int LuaObject::luaName(lua_State* L)
             if(!lua_obj->ObjectName)
             {
                 /* Register Name */
-                if(globalObjects.add(name, lua_obj, true))
+                global_object_t global_object = { .lua_obj = lua_obj };
+                if(globalObjects.add(name, global_object, true))
                 {
                     /* Associate Name */
                     lua_obj->ObjectName = StringLib::duplicate(name);
@@ -508,7 +551,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         LuaEngine::setAttrFunc(L, "name", luaName);
         LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
-        LuaEngine::setAttrFunc(L, "destroy", luaDelete);
+        LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
     }
 }
@@ -521,8 +564,8 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
 int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 {
     /* Create Lua User Data Object */
-    luaUserData_t* user_data = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
-    if(!user_data)
+    lua_obj->userData = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
+    if(!lua_obj->userData)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
     }
@@ -531,7 +574,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
     lua_obj->referenceCount++;
 
     /* Return User Data to Lua */
-    user_data->luaObj = lua_obj;
+    lua_obj->userData->luaObj = lua_obj;
     luaL_getmetatable(L, lua_obj->LuaMetaName);
     lua_setmetatable(L, -2);
     return 1;
@@ -582,20 +625,14 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
             {
                 return user_data->luaObj;
             }
-            else
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
-            }
+
+            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
-        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
 }
 
 /*----------------------------------------------------------------------------
@@ -603,9 +640,9 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void LuaObject::referenceLuaObject (LuaObject* lua_obj)
 {
-    lua_obj->globalMut.lock();
+    globalMut.lock();
     {
         lua_obj->referenceCount++;
     }
-    lua_obj->globalMut.unlock();
+    globalMut.unlock();
 }

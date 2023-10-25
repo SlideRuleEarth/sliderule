@@ -42,8 +42,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* RasterSampler::LuaMetaName = "RasterSampler";
-const struct luaL_Reg RasterSampler::LuaMetaTable[] = {
+const char* RasterSampler::LUA_META_NAME = "RasterSampler";
+const struct luaL_Reg RasterSampler::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -105,7 +105,7 @@ int RasterSampler::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _raster                 = (RasterObject*)getLuaObject(L, 1, RasterObject::OBJECT_TYPE);
+        _raster                 = dynamic_cast<RasterObject*>(getLuaObject(L, 1, RasterObject::OBJECT_TYPE));
         const char* raster_key  = getLuaString(L, 2);
         const char* outq_name   = getLuaString(L, 3);
         const char* rec_type    = getLuaString(L, 4);
@@ -121,7 +121,7 @@ int RasterSampler::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(_raster) _raster->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -156,7 +156,7 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
                               const char* outq_name, const char* rec_type,
                               const char* index_key, const char* lon_key, const char* lat_key,
                               const char* time_key, const char* height_key):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_raster);
     assert(outq_name);
@@ -239,7 +239,7 @@ RasterSampler::~RasterSampler(void)
 {
     raster->releaseLuaObject();
     delete outQ;
-    if(rasterKey) delete [] rasterKey;
+    delete [] rasterKey;
 }
 
 /*----------------------------------------------------------------------------

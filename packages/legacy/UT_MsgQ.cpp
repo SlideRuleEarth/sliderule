@@ -281,8 +281,6 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
  *----------------------------------------------------------------------------*/
 int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 {
-    clock_t start, end, total_start, total_end;
-    double pub_time, sub_time, total_time;
     long depth = 500000;
     long size = 1000;
     bool failure = false;
@@ -319,7 +317,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         perf_thread_t* RAW = new perf_thread_t[numsubs];
 
-        total_start = clock();
+        clock_t total_start = clock();
 
         /* Kick-off Subscribers */
         Thread** t = new Thread* [numsubs];
@@ -334,7 +332,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
 
         /* Publish Packets */
-        start = clock();
+        clock_t start = clock();
         unsigned char* pkt = new unsigned char [size];
         for(int i = 0; i < depth; i++)
         {
@@ -351,8 +349,8 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
             }
         }
         delete [] pkt;
-        end = clock();
-        pub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+        clock_t end = clock();
+        double pub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
         /* Start Subscribers */
         start = clock();
@@ -369,10 +367,10 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
         delete [] t;
         end = clock();
-        sub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+        double sub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
-        total_end = clock();
-        total_time = ((double) (total_end - total_start)) / CLOCKS_PER_SEC;
+        clock_t total_end = clock();
+        double total_time = ((double) (total_end - total_start)) / CLOCKS_PER_SEC;
 
         /* Print Results */
         print2term("%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);

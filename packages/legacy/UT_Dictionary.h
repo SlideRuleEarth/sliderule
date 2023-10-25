@@ -64,7 +64,7 @@ class UT_Dictionary: public CommandableObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<List<SafeString*>*> wordsets;
+        Dictionary<vector<string>*> wordsets;
 
         /*--------------------------------------------------------------------
          * Methods

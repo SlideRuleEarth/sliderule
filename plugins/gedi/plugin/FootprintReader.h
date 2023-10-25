@@ -65,8 +65,8 @@ class FootprintReader: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types
@@ -100,7 +100,7 @@ class FootprintReader: public LuaObject
         {
             public:
 
-                Region              (info_t* info);
+                explicit Region     (info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
@@ -161,10 +161,10 @@ template <typename footprint_t>
 const char* FootprintReader<footprint_t>::OBJECT_TYPE = "FootprintReader";
 
 template <typename footprint_t>
-const char* FootprintReader<footprint_t>::LuaMetaName = "FootprintReader";
+const char* FootprintReader<footprint_t>::LUA_META_NAME = "FootprintReader";
 
 template <typename footprint_t>
-const struct luaL_Reg FootprintReader<footprint_t>::LuaMetaTable[] = {
+const struct luaL_Reg FootprintReader<footprint_t>::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -181,7 +181,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
                                                 const char* outq_name, GediParms* _parms, bool _send_terminator,
                                                 const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                 subset_func_t subsetter ):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
     batchRecord(batch_rec_type, sizeof(batch_t))
 {
@@ -305,8 +305,8 @@ FootprintReader<footprint_t>::~FootprintReader (void)
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
 FootprintReader<footprint_t>::Region::Region (info_t* info):
-    lat             (info->reader->asset, info->reader->resource, SafeString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).str(), &info->reader->context),
-    lon             (info->reader->asset, info->reader->resource, SafeString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).str(), &info->reader->context),
+    lat             (info->reader->asset, info->reader->resource, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).c_str(), &info->reader->context),
+    lon             (info->reader->asset, info->reader->resource, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).c_str(), &info->reader->context),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
@@ -359,7 +359,7 @@ FootprintReader<footprint_t>::Region::~Region (void)
 template <class footprint_t>
 void FootprintReader<footprint_t>::Region::cleanup (void)
 {
-    if(inclusion_mask) delete [] inclusion_mask;
+    delete [] inclusion_mask;
 }
 
 /*----------------------------------------------------------------------------

@@ -156,7 +156,7 @@ void* CcsdsMsgProcessor::processorThread(void* parm)
 {
     assert(parm);
 
-    CcsdsMsgProcessor* processor = (CcsdsMsgProcessor*)parm;
+    CcsdsMsgProcessor* processor = static_cast<CcsdsMsgProcessor*>(parm);
     bool self_delete = false;
 
     /* Initialize Processing */

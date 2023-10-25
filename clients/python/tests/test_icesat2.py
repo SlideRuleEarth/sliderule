@@ -9,7 +9,7 @@ import time
 
 @pytest.mark.network
 class TestAlgorithm:
-    def test_atl06(self, init):
+    def test_atl06(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -20,12 +20,12 @@ class TestAlgorithm:
         perf_start = time.perf_counter()
         gdf = icesat2.atl06(parms, resource)
         assert init
-        assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622419
+        assert not performance or (time.perf_counter() - perf_start) < 50
 
-    def test_atl06p(self, init):
+    def test_atl06p(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
                   "ats": 20.0,
@@ -36,12 +36,12 @@ class TestAlgorithm:
         perf_start = time.perf_counter()
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert (time.perf_counter() - perf_start) < 50
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["h_mean"]) == 622419
+        assert not performance or (time.perf_counter() - perf_start) < 50
 
-    def test_atl03s(self, init):
+    def test_atl03s(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -62,12 +62,12 @@ class TestAlgorithm:
         perf_start = time.perf_counter()
         gdf = icesat2.atl03s(parms, resource)
         assert init
-        assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488690
+        assert not performance or (time.perf_counter() - perf_start) < 40
 
-    def test_atl03sp(self, init):
+    def test_atl03sp(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
@@ -88,12 +88,12 @@ class TestAlgorithm:
         perf_start = time.perf_counter()
         gdf = icesat2.atl03sp(parms, resources=[resource])
         assert init
-        assert (time.perf_counter() - perf_start) < 40
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 488690
+        assert not performance or (time.perf_counter() - perf_start) < 40
 
-    def test_atl08(self, init):
+    def test_atl08(self, init, performance):
         resource = "ATL03_20181213075606_11560106_005_01.h5"
         track = 1
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
@@ -114,7 +114,6 @@ class TestAlgorithm:
         perf_start = time.perf_counter()
         gdf = icesat2.atl03s(parms, resource)
         assert init
-        assert (time.perf_counter() - perf_start) < 30
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
         assert len(gdf["height"]) == 241127
@@ -123,6 +122,7 @@ class TestAlgorithm:
         assert len(gdf[gdf["atl08_class"] == 2]) == 54292
         assert len(gdf[gdf["atl08_class"] == 3]) == 18285
         assert len(gdf[gdf["atl08_class"] == 4]) == 15978
+        assert not performance or (time.perf_counter() - perf_start) < 30
 
     def test_gs(self, init):
         resource_prefix = "20210114170723_03311012_005_01.h5"

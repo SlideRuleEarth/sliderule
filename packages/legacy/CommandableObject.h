@@ -114,15 +114,16 @@ class CommandableObject
             ~obj_cmd_entry_t(void) 
                 { if(desc) delete [] desc; }
         };
-                
+        
+        typedef Dictionary<obj_cmd_entry_t*> CmdDictionary;
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
         
-        const char*                     objName;
-        const char*                     objType;
-        MgDictionary<obj_cmd_entry_t*>  commands;
-        CommandProcessor*               cmdProc;   
+        const char*         objName;
+        const char*         objType;
+        CmdDictionary       commands;
+        CommandProcessor*   cmdProc;   
 };
 
 #endif  /* __commandable_object__ */

@@ -62,15 +62,15 @@ int LimitRecord::rec_elem = sizeof(LimitRecord::rec_def) / sizeof(RecordObject::
  *----------------------------------------------------------------------------*/
 LimitRecord::LimitRecord(void): RecordObject(rec_type)
 {
-    limit = (limit_t*)recordData;
+    limit = reinterpret_cast<limit_t*>(recordData);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LimitRecord::LimitRecord(limit_t _limit): RecordObject(rec_type)
+LimitRecord::LimitRecord(const limit_t& _limit): RecordObject(rec_type)
 {
-    limit = (limit_t*)recordData;
+    limit = reinterpret_cast<limit_t*>(recordData);
     *limit = _limit;
 }
 

@@ -95,7 +95,7 @@ int Icesat2Parms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -110,35 +110,35 @@ uint8_t Icesat2Parms::getSpotNumber(sc_orient_t sc_orient, track_t track, int pa
         if(track == RPT_1)
         {
             if(pair == Icesat2Parms::RPT_L) return SPOT_1;
-            else if(pair == Icesat2Parms::RPT_R) return SPOT_2;
+            if(pair == Icesat2Parms::RPT_R) return SPOT_2;
         }
-        else if(track == RPT_2)
+        if(track == RPT_2)
         {
             if(pair == Icesat2Parms::RPT_L) return SPOT_3;
-            else if(pair == Icesat2Parms::RPT_R) return SPOT_4;
+            if(pair == Icesat2Parms::RPT_R) return SPOT_4;
         }
-        else if(track == RPT_3)
+        if(track == RPT_3)
         {
             if(pair == Icesat2Parms::RPT_L) return SPOT_5;
-            else if(pair == Icesat2Parms::RPT_R) return SPOT_6;
+            if(pair == Icesat2Parms::RPT_R) return SPOT_6;
         }
     }
-    else if(sc_orient == SC_FORWARD)
+    if(sc_orient == SC_FORWARD)
     {
         if(track == RPT_1)
         {
             if(pair == Icesat2Parms::RPT_L) return SPOT_6;
-            else if(pair == Icesat2Parms::RPT_R) return SPOT_5;
+            if(pair == Icesat2Parms::RPT_R) return SPOT_5;
         }
-        else if(track == RPT_2)
+        if(track == RPT_2)
         {
             if(pair == Icesat2Parms::RPT_L) return SPOT_4;
-            else if(pair == Icesat2Parms::RPT_R) return SPOT_3;
+            if(pair == Icesat2Parms::RPT_R) return SPOT_3;
         }
-        else if(track == RPT_3)
+        if(track == RPT_3)
         {
             if(pair == Icesat2Parms::RPT_L) return SPOT_2;
-            else if(pair == Icesat2Parms::RPT_R) return SPOT_1;
+            if(pair == Icesat2Parms::RPT_R) return SPOT_1;
         }
     }
 
@@ -155,35 +155,35 @@ uint8_t Icesat2Parms::getGroundTrack (sc_orient_t sc_orient, track_t track, int 
         if(track == RPT_1)
         {
             if(pair == Icesat2Parms::RPT_L) return GT1L;
-            else if(pair == Icesat2Parms::RPT_R) return GT1R;
+            if(pair == Icesat2Parms::RPT_R) return GT1R;
         }
-        else if(track == RPT_2)
+        if(track == RPT_2)
         {
             if(pair == Icesat2Parms::RPT_L) return GT2L;
-            else if(pair == Icesat2Parms::RPT_R) return GT2R;
+            if(pair == Icesat2Parms::RPT_R) return GT2R;
         }
-        else if(track == RPT_3)
+        if(track == RPT_3)
         {
             if(pair == Icesat2Parms::RPT_L) return GT3L;
-            else if(pair == Icesat2Parms::RPT_R) return GT3R;
+            if(pair == Icesat2Parms::RPT_R) return GT3R;
         }
     }
-    else if(sc_orient == SC_FORWARD)
+    if(sc_orient == SC_FORWARD)
     {
         if(track == RPT_1)
         {
             if(pair == Icesat2Parms::RPT_L) return GT1L;
-            else if(pair == Icesat2Parms::RPT_R) return GT1R;
+            if(pair == Icesat2Parms::RPT_R) return GT1R;
         }
-        else if(track == RPT_2)
+        if(track == RPT_2)
         {
             if(pair == Icesat2Parms::RPT_L) return GT2L;
-            else if(pair == Icesat2Parms::RPT_R) return GT2R;
+            if(pair == Icesat2Parms::RPT_R) return GT2R;
         }
-        else if(track == RPT_3)
+        if(track == RPT_3)
         {
             if(pair == Icesat2Parms::RPT_L) return GT3L;
-            else if(pair == Icesat2Parms::RPT_R) return GT3R;
+            if(pair == Icesat2Parms::RPT_R) return GT3R;
         }
     }
 
@@ -195,14 +195,14 @@ uint8_t Icesat2Parms::getGroundTrack (sc_orient_t sc_orient, track_t track, int 
  *----------------------------------------------------------------------------*/
 Icesat2Parms::signal_conf_t Icesat2Parms::str2atl03cnf (const char* confidence_str)
 {
-    if     (StringLib::match(confidence_str, "atl03_tep")               ||  StringLib::match(confidence_str, "tep"))            return CNF_POSSIBLE_TEP;
-    else if(StringLib::match(confidence_str, "atl03_not_considered")    ||  StringLib::match(confidence_str, "not_considered")) return CNF_NOT_CONSIDERED;
-    else if(StringLib::match(confidence_str, "atl03_background")        ||  StringLib::match(confidence_str, "background"))     return CNF_BACKGROUND;
-    else if(StringLib::match(confidence_str, "atl03_within_10m")        ||  StringLib::match(confidence_str, "within_10m"))     return CNF_WITHIN_10M;
-    else if(StringLib::match(confidence_str, "atl03_low")               ||  StringLib::match(confidence_str, "low"))            return CNF_SURFACE_LOW;
-    else if(StringLib::match(confidence_str, "atl03_medium")            ||  StringLib::match(confidence_str, "medium"))         return CNF_SURFACE_MEDIUM;
-    else if(StringLib::match(confidence_str, "atl03_high")              ||  StringLib::match(confidence_str, "high"))           return CNF_SURFACE_HIGH;
-    else                                                                                                                        return ATL03_INVALID_CONFIDENCE;
+    if(StringLib::match(confidence_str, "atl03_tep")               ||  StringLib::match(confidence_str, "tep"))            return CNF_POSSIBLE_TEP;
+    if(StringLib::match(confidence_str, "atl03_not_considered")    ||  StringLib::match(confidence_str, "not_considered")) return CNF_NOT_CONSIDERED;
+    if(StringLib::match(confidence_str, "atl03_background")        ||  StringLib::match(confidence_str, "background"))     return CNF_BACKGROUND;
+    if(StringLib::match(confidence_str, "atl03_within_10m")        ||  StringLib::match(confidence_str, "within_10m"))     return CNF_WITHIN_10M;
+    if(StringLib::match(confidence_str, "atl03_low")               ||  StringLib::match(confidence_str, "low"))            return CNF_SURFACE_LOW;
+    if(StringLib::match(confidence_str, "atl03_medium")            ||  StringLib::match(confidence_str, "medium"))         return CNF_SURFACE_MEDIUM;
+    if(StringLib::match(confidence_str, "atl03_high")              ||  StringLib::match(confidence_str, "high"))           return CNF_SURFACE_HIGH;
+    return ATL03_INVALID_CONFIDENCE;
 }
 
 /*----------------------------------------------------------------------------
@@ -210,11 +210,11 @@ Icesat2Parms::signal_conf_t Icesat2Parms::str2atl03cnf (const char* confidence_s
  *----------------------------------------------------------------------------*/
 Icesat2Parms::quality_ph_t Icesat2Parms::str2atl03quality (const char* quality_ph_str)
 {
-    if     (StringLib::match(quality_ph_str, "atl03_quality_nominal")           || StringLib::match(quality_ph_str, "nominal"))             return QUALITY_NOMINAL;
-    else if(StringLib::match(quality_ph_str, "atl03_quality_afterpulse")        || StringLib::match(quality_ph_str, "afterpulse"))          return QUALITY_POSSIBLE_AFTERPULSE;
-    else if(StringLib::match(quality_ph_str, "atl03_quality_impulse_response")  || StringLib::match(quality_ph_str, "impulse_response"))    return QUALITY_POSSIBLE_IMPULSE_RESPONSE;
-    else if(StringLib::match(quality_ph_str, "atl03_quality_tep")               || StringLib::match(quality_ph_str, "tep"))                 return QUALITY_POSSIBLE_TEP;
-    else                                                                                                                                    return ATL03_INVALID_QUALITY;
+    if(StringLib::match(quality_ph_str, "atl03_quality_nominal")           || StringLib::match(quality_ph_str, "nominal"))             return QUALITY_NOMINAL;
+    if(StringLib::match(quality_ph_str, "atl03_quality_afterpulse")        || StringLib::match(quality_ph_str, "afterpulse"))          return QUALITY_POSSIBLE_AFTERPULSE;
+    if(StringLib::match(quality_ph_str, "atl03_quality_impulse_response")  || StringLib::match(quality_ph_str, "impulse_response"))    return QUALITY_POSSIBLE_IMPULSE_RESPONSE;
+    if(StringLib::match(quality_ph_str, "atl03_quality_tep")               || StringLib::match(quality_ph_str, "tep"))                 return QUALITY_POSSIBLE_TEP;
+    return ATL03_INVALID_QUALITY;
 }
 
 /*----------------------------------------------------------------------------
@@ -222,12 +222,12 @@ Icesat2Parms::quality_ph_t Icesat2Parms::str2atl03quality (const char* quality_p
  *----------------------------------------------------------------------------*/
 Icesat2Parms::atl08_classification_t Icesat2Parms::str2atl08class (const char* classifiction_str)
 {
-    if     (StringLib::match(classifiction_str, "atl08_noise")          || StringLib::match(classifiction_str, "noise"))           return ATL08_NOISE;
-    else if(StringLib::match(classifiction_str, "atl08_ground")         || StringLib::match(classifiction_str, "ground"))          return ATL08_GROUND;
-    else if(StringLib::match(classifiction_str, "atl08_canopy")         || StringLib::match(classifiction_str, "canopy"))          return ATL08_CANOPY;
-    else if(StringLib::match(classifiction_str, "atl08_top_of_canopy")  || StringLib::match(classifiction_str, "top_of_canopy"))   return ATL08_TOP_OF_CANOPY;
-    else if(StringLib::match(classifiction_str, "atl08_unclassified")   || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
-    else                                                                                                                           return ATL08_INVALID_CLASSIFICATION;
+    if(StringLib::match(classifiction_str, "atl08_noise")          || StringLib::match(classifiction_str, "noise"))           return ATL08_NOISE;
+    if(StringLib::match(classifiction_str, "atl08_ground")         || StringLib::match(classifiction_str, "ground"))          return ATL08_GROUND;
+    if(StringLib::match(classifiction_str, "atl08_canopy")         || StringLib::match(classifiction_str, "canopy"))          return ATL08_CANOPY;
+    if(StringLib::match(classifiction_str, "atl08_top_of_canopy")  || StringLib::match(classifiction_str, "top_of_canopy"))   return ATL08_TOP_OF_CANOPY;
+    if(StringLib::match(classifiction_str, "atl08_unclassified")   || StringLib::match(classifiction_str, "unclassified"))    return ATL08_UNCLASSIFIED;
+    return ATL08_INVALID_CLASSIFICATION;
 }
 
 /*----------------------------------------------------------------------------
@@ -235,10 +235,10 @@ Icesat2Parms::atl08_classification_t Icesat2Parms::str2atl08class (const char* c
  *----------------------------------------------------------------------------*/
 Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
 {
-    if     (StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
-    else if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
-    else if(StringLib::match(fmt_str, "center"))    return PHOREAL_CENTER;
-    else                                            return PHOREAL_UNSUPPORTED;
+    if(StringLib::match(fmt_str, "mean"))      return PHOREAL_MEAN;
+    if(StringLib::match(fmt_str, "median"))    return PHOREAL_MEDIAN;
+    if(StringLib::match(fmt_str, "center"))    return PHOREAL_CENTER;
+    return PHOREAL_UNSUPPORTED;
 }
 
 /*----------------------------------------------------------------------------
@@ -427,10 +427,10 @@ Icesat2Parms::~Icesat2Parms (void)
 /*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
-void Icesat2Parms::cleanup (void)
+void Icesat2Parms::cleanup (void) const
 {
-    if(atl03_geo_fields) delete atl03_geo_fields;
-    if(atl03_ph_fields) delete atl03_ph_fields;
+    delete atl03_geo_fields;
+    delete atl03_ph_fields;
 }
 
 /*----------------------------------------------------------------------------
@@ -808,7 +808,7 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
         if(num_strings > 0 && provided)
         {
             /* Allocate string list */
-            *string_list = new string_list_t;
+            *string_list = new string_list_t(EXPECTED_NUM_FIELDS);
             *provided = true;
         }
 
@@ -821,7 +821,7 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
             if(lua_isstring(L, -1))
             {
                 const char* item_str = LuaObject::getLuaString(L, -1);
-                SafeString item("%s", item_str);
+                string item(item_str);
                 (*string_list)->add(item);
                 mlog(DEBUG, "Adding %s to list of strings", item_str);
             }

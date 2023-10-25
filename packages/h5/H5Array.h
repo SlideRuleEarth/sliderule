@@ -58,7 +58,7 @@ class H5Array
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
-        T&      operator[]  (long index);
+        T&      operator[]  (long index) const;
         bool    join        (int timeout, bool throw_exception);
 
         /*--------------------------------------------------------------------
@@ -109,8 +109,8 @@ H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* datase
 template <class T>
 H5Array<T>::~H5Array(void)
 {
-    if(h5f)  delete h5f;
-    if(name) delete [] name;
+    delete h5f;
+    delete [] name;
 }
 
 /*----------------------------------------------------------------------------
@@ -125,10 +125,8 @@ bool H5Array<T>::trim(long offset)
         size = size - offset;
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -137,7 +135,7 @@ bool H5Array<T>::trim(long offset)
  *  Note: intentionally left unsafe for performance reasons
  *----------------------------------------------------------------------------*/
 template <class T>
-T& H5Array<T>::operator[](long index)
+T& H5Array<T>::operator[](long index) const
 {
     return pointer[index];
 }
@@ -157,7 +155,15 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
         {
             status = true;
             size = h5f->info.elements;
-            data = (T*)h5f->info.data;
+            /*
+             * There is no way to do this in a portable "safe" way. The code
+             * below works because our target architectures are x86_64 and aarch64.
+             * The data pointed to by info.data is new'ed and therefore guaranteed
+             * to be aligned to a 16 byte boundary.  The calling code is responsible
+             * for knowing what the data being read out of the h5 file is and 
+             * providing the correct type to the template.
+             */ 
+            data = reinterpret_cast<T*>(h5f->info.data);
             pointer = data;
         }
         else

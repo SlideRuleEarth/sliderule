@@ -63,7 +63,7 @@ class RemaDemMosaicRaster: public GeoRaster
 
         RemaDemMosaicRaster(lua_State* L, GeoParms* _parms):
          GeoRaster(L, _parms,
-                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()).c_str(),
+                  std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()),
                   TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44),
                   true, /* Data is elevation */
                   &overrideTargetCRS) {}

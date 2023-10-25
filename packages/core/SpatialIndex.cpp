@@ -48,8 +48,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* SpatialIndex::LuaMetaName = "SpatialIndex";
-const struct luaL_Reg SpatialIndex::LuaMetaTable[] = {
+const char* SpatialIndex::LUA_META_NAME = "SpatialIndex";
+const struct luaL_Reg SpatialIndex::LUA_META_TABLE[] = {
     {"add",         luaAdd},
     {"query",       luaQuery},
     {"display",     luaDisplay},
@@ -73,7 +73,7 @@ int SpatialIndex::luaCreate (lua_State* L)
     try
     {
         /* Get Asset Directory */
-        Asset*          _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        Asset*          _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         MathLib::proj_t _projection = (MathLib::proj_t)getLuaInteger(L, 2);
         int             _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
 
@@ -82,7 +82,7 @@ int SpatialIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -91,7 +91,7 @@ int SpatialIndex::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, MathLib::proj_t _projection, int _threshold):
-    AssetIndex<spatialspan_t>(L, *_asset, LuaMetaName, LuaMetaTable, _threshold)
+    AssetIndex<spatialspan_t>(L, *_asset, LUA_META_NAME, LUA_META_TABLE, _threshold)
 {
     projection = _projection;
 
@@ -114,7 +114,8 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
     projspan_t proj = project(node->span);
 
     /* Split Region */
-    projspan_t lproj, rproj;
+    projspan_t lproj;
+    projspan_t rproj;
     if(node->depth % 2 == 0) // even depth
     {
         /* Split Across Radius */
@@ -168,17 +169,12 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
     if(node->depth % 2 == 0) // even depth = Radius
     {
         double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
-
-        if(sproj.p0.x <= split_val)  return true;
-        else                        return false;
+        return (sproj.p0.x <= split_val);
     }
-    else // odd depth = Angle
-    {
-        double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
-        if(sproj.p0.y <= split_val)  return true;
-        else                        return false;
-    }
+    // else odd depth = Angle
+    double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
+    return (sproj.p0.y <= split_val);
 }
 
 
@@ -199,17 +195,12 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
     if(node->depth % 2 == 0) // even depth = Radius
     {
         double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
-
-        if(sproj.p1.x >= split_val)  return true;
-        else                        return false;
+        return (sproj.p1.x >= split_val);
     }
-    else // odd depth = Angle
-    {
-        double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
 
-        if(sproj.p1.y >= split_val)  return true;
-        else                        return false;
-    }
+    // else odd depth = Angle
+    double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
+    return (sproj.p1.y >= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -316,7 +307,7 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
 
         if(provided)
         {
-                 if(StringLib::match("lat0", key))   span.c0.lat = value;
+            if     (StringLib::match("lat0", key))   span.c0.lat = value;
             else if(StringLib::match("lon0", key))   span.c0.lon = value;
             else if(StringLib::match("lat1", key))   span.c1.lat = value;
             else if(StringLib::match("lon1", key))   span.c1.lon = value;
@@ -383,7 +374,7 @@ int SpatialIndex::luaProject (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spherical Coordinates */
         MathLib::coord_t c;
@@ -415,7 +406,7 @@ int SpatialIndex::luaSphere (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Polar Coordinates */
         MathLib::point_t p;
@@ -447,7 +438,7 @@ int SpatialIndex::luaSplit (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Span */
         spatialspan_t span = lua_obj->luatable2span(L, 2);
@@ -462,7 +453,8 @@ int SpatialIndex::luaSplit (lua_State* L)
         node.ril = NULL;
 
         /* Split Span */
-        spatialspan_t lspan, rspan;
+        spatialspan_t lspan;
+        spatialspan_t rspan;
         lua_obj->split(&node, lspan, rspan);
 
         /* Return Spans */
@@ -497,7 +489,7 @@ int SpatialIndex::luaIntersect (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Spans */
         spatialspan_t span1 = lua_obj->luatable2span(L, 2);
@@ -527,7 +519,7 @@ int SpatialIndex::luaCombine (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = (SpatialIndex*)getLuaSelf(L, 1);
+        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Spans */
         spatialspan_t span1 = lua_obj->luatable2span(L, 2);

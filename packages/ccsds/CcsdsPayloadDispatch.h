@@ -55,8 +55,8 @@ class CcsdsPayloadDispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -68,10 +68,18 @@ class CcsdsPayloadDispatch: public DispatchObject
     private:
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            Publisher* pub;
+        } pub_t;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<Publisher*>  qLookUp; // qLookUp[qname] ==> Publisher* , this prevents multiple publishers to same queue
+        Dictionary<pub_t>       qLookUp; // qLookUp[qname] ==> Publisher* , this prevents multiple publishers to same queue
         Publisher*              outQ[CCSDS_NUM_APIDS];
         Mutex                   qMut;
         bool                    checkLength;
@@ -81,7 +89,7 @@ class CcsdsPayloadDispatch: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsPayloadDispatch    (lua_State* L);
+        explicit    CcsdsPayloadDispatch    (lua_State* L);
                     ~CcsdsPayloadDispatch   (void);
 
         void        setPublisher            (int apid, const char* qname);

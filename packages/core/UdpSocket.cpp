@@ -109,9 +109,9 @@ UdpSocket::UdpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
  *----------------------------------------------------------------------------*/
 UdpSocket::~UdpSocket(void)
 {
-    closeConnection();
-    if(ip_addr) delete [] ip_addr;
-    if(config) delete [] config;
+    UdpSocket::closeConnection();
+    delete [] ip_addr;
+    delete [] config;
 }
 
 /*----------------------------------------------------------------------------
@@ -120,9 +120,7 @@ UdpSocket::~UdpSocket(void)
 bool UdpSocket::isConnected(int num_connections)
 {
     (void)num_connections;
-
-    if(sock < 0)    return false;
-    else            return true;
+    return (sock >= 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -171,7 +169,7 @@ const char* UdpSocket::getConfig (void)
 /*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
-const char* UdpSocket::getIpAddr (void)
+const char* UdpSocket::getIpAddr (void) const
 {
     return ip_addr;
 }
@@ -179,7 +177,7 @@ const char* UdpSocket::getIpAddr (void)
 /*----------------------------------------------------------------------------
  * getPort
  *----------------------------------------------------------------------------*/
-int UdpSocket::getPort (void)
+int UdpSocket::getPort (void) const
 {
     return port;
 }

@@ -53,8 +53,8 @@ class UT_Atl03Reader: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -69,7 +69,7 @@ class UT_Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        UT_Atl03Reader          (lua_State* L);
+                        explicit UT_Atl03Reader (lua_State* L);
                         ~UT_Atl03Reader         (void);
 
         static int      luaTriangleTest         (lua_State* L);

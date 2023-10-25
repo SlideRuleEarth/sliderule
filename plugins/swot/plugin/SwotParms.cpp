@@ -65,7 +65,7 @@ int SwotParms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -86,7 +86,8 @@ int64_t SwotParms::deltatime2timestamp (double delta_time)
  * Constructor
  *----------------------------------------------------------------------------*/
 SwotParms::SwotParms(lua_State* L, int index):
-    NetsvcParms(L, index)
+    NetsvcParms(L, index),
+    variables(EXPECTED_NUM_FIELDS)
 {
     bool provided = false;
 
@@ -146,7 +147,7 @@ void SwotParms::get_lua_string_list (lua_State* L, int index, string_list_t& str
             if(lua_isstring(L, -1))
             {
                 const char* item_str = LuaObject::getLuaString(L, -1);
-                SafeString item("%s", item_str);
+                string item(item_str);
                 string_list.add(item);
                 mlog(DEBUG, "Adding %s to list of strings", item_str);
             }

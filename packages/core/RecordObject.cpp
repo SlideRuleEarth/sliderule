@@ -51,7 +51,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-MgDictionary<RecordObject::definition_t*> RecordObject::definitions;
+Dictionary<RecordObject::definition_t*> RecordObject::definitions;
 Mutex RecordObject::defMut;
 
 const char* RecordObject::DEFAULT_DOUBLE_FORMAT = "%.6lf";
@@ -98,7 +98,7 @@ RecordObject::Field::Field(RecordObject& _rec, fieldType_t _type, int _offset, i
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RecordObject::Field::Field(RecordObject& _rec, field_t _field, int _element):
+RecordObject::Field::Field(RecordObject& _rec, const field_t& _field, int _element):
     record(_rec),
     field(_field),
     element(_element)
@@ -178,7 +178,7 @@ long RecordObject::Field::getValueInteger(void)
  *----------------------------------------------------------------------------*/
 RecordObject::valType_t RecordObject::Field::getValueType(void)
 {
-    return record.getValueType(field);
+    return RecordObject::getValueType(field);
 }
 
 /******************************************************************************
@@ -305,7 +305,8 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
     {
         return false; // buffer passed in too large
     }
-    else if(size < def->type_size)
+    
+    if(size < def->type_size)
     {
         return false; // buffer not large enough to populate type string
     }
@@ -329,15 +330,15 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     if(size > 0)
     {
         int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
-        bufsize = hdrsize + size;
-        datasize = bufsize - hdrsize;
+        datasize = size;
+        bufsize = hdrsize + datasize;
     }
 
     /* Allocate or Copy Buffer */
     if (mode == ALLOCATE)
     {
         *buffer = new unsigned char[bufsize];
-        uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
+        int bytes_to_copy = MIN(bufsize, memoryAllocated);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
     else if (mode == REFERENCE)
@@ -352,7 +353,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     else // if (mode == COPY)
     {
         assert(*buffer);
-        uint32_t bytes_to_copy = MIN(bufsize, memoryAllocated);
+        int bytes_to_copy = MIN(bufsize, memoryAllocated);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
 
@@ -370,7 +371,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 /*----------------------------------------------------------------------------
  * post
  *----------------------------------------------------------------------------*/
-bool RecordObject::post(Publisher* outq, int size, bool* active, bool verbose)
+bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verbose)
 {
     bool status = true;
 
@@ -397,7 +398,7 @@ bool RecordObject::post(Publisher* outq, int size, bool* active, bool verbose)
 /*----------------------------------------------------------------------------
  * isRecordType
  *----------------------------------------------------------------------------*/
-bool RecordObject::isRecordType(const char* rec_type)
+bool RecordObject::isRecordType(const char* rec_type) const
 {
     return (StringLib::match(rec_type, recordDefinition->type_name));
 }
@@ -405,7 +406,7 @@ bool RecordObject::isRecordType(const char* rec_type)
 /*----------------------------------------------------------------------------
  * getRecordType
  *----------------------------------------------------------------------------*/
-const char* RecordObject::getRecordType(void)
+const char* RecordObject::getRecordType(void) const
 {
     return recordDefinition->type_name;
 }
@@ -431,7 +432,7 @@ long RecordObject::getRecordId(void)
 /*----------------------------------------------------------------------------
  * getRecordData
  *----------------------------------------------------------------------------*/
-unsigned char* RecordObject::getRecordData(void)
+unsigned char* RecordObject::getRecordData(void) const
 {
     return recordData;
 }
@@ -439,7 +440,7 @@ unsigned char* RecordObject::getRecordData(void)
 /*----------------------------------------------------------------------------
  * getRecordTypeSize
  *----------------------------------------------------------------------------*/
-int RecordObject::getRecordTypeSize(void)
+int RecordObject::getRecordTypeSize(void) const
 {
     return recordDefinition->type_size;
 }
@@ -447,7 +448,7 @@ int RecordObject::getRecordTypeSize(void)
 /*----------------------------------------------------------------------------
  * getRecordDataSize
  *----------------------------------------------------------------------------*/
-int RecordObject::getRecordDataSize(void)
+int RecordObject::getRecordDataSize(void) const
 {
     return recordDefinition->data_size;
 }
@@ -455,7 +456,7 @@ int RecordObject::getRecordDataSize(void)
 /*----------------------------------------------------------------------------
  * getAllocatedMemory
  *----------------------------------------------------------------------------*/
-int RecordObject::getAllocatedMemory(void)
+int RecordObject::getAllocatedMemory(void) const
 {
     return memoryAllocated;
 }
@@ -463,7 +464,7 @@ int RecordObject::getAllocatedMemory(void)
 /*----------------------------------------------------------------------------
  * getAllocatedDataSize
  *----------------------------------------------------------------------------*/
-int RecordObject::getAllocatedDataSize(void)
+int RecordObject::getAllocatedDataSize(void) const
 {
     return memoryAllocated - (sizeof(rec_hdr_t) + recordDefinition->type_size);
 }
@@ -528,7 +529,7 @@ void RecordObject::setIdField (const char* id_field)
 {
     defMut.lock();
     {
-        if(recordDefinition->id_field) delete [] recordDefinition->id_field;
+        delete [] recordDefinition->id_field;
         recordDefinition->id_field = StringLib::duplicate(id_field);
     }
     defMut.unlock();
@@ -559,10 +560,7 @@ RecordObject::field_t RecordObject::getField(const char* field_name)
     {
         return parseImmediateField(field_name);
     }
-    else
-    {
-        return getUserField(recordDefinition, field_name);
-    }
+    return getUserField(recordDefinition, field_name);
 }
 
 /*----------------------------------------------------------------------------
@@ -586,7 +584,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
     {
         field_t ptr_field = getPointedToField(f, false, element);
         if(val == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Cannot null existing pointer!");
-        else            setValueText(ptr_field, val);
+        setValueText(ptr_field, val);
     }
     else if(val_type == TEXT)
     {
@@ -631,10 +629,11 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
 /*----------------------------------------------------------------------------
  * setValueReal
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueReal(const field_t& f, const double val, int element)
+void RecordObject::setValueReal(const field_t& f, double val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
@@ -645,18 +644,18 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;       break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;      break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;      break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;      break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;      break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;     break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;     break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
+            case INT8:      cast->int8_val   = (int8_t)val;     break;
+            case INT16:     cast->int16_val  = (int16_t)val;    break;
+            case INT32:     cast->int32_val  = (int32_t)val;    break;
+            case INT64:     cast->int64_val  = (int64_t)val;    break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;    break;
+            case UINT16:    cast->uint16_val = (uint16_t)val;   break;
+            case UINT32:    cast->uint32_val = (uint32_t)val;   break;
+            case UINT64:    cast->uint64_val = (uint64_t)val;   break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;          break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = val;                 break;
-            case TIME8:     *(int64_t*)(recordData + elem_offset) = (int64_t)val;       break;
+            case FLOAT:     cast->float_val  = (float)val;      break;
+            case DOUBLE:    cast->double_val = val;             break;
+            case TIME8:     cast->int64_val  = (int64_t)val;    break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
@@ -666,17 +665,18 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                   break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);    break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);    break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = OsApi::swapll((int64_t)val);   break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                  break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);   break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);   break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);              break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);        break;
-            case DOUBLE:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
+            case INT8:      cast->int8_val   = (int8_t)val;                 break;
+            case INT16:     cast->int16_val  = OsApi::swaps((int16_t)val);  break;
+            case INT32:     cast->int32_val  = OsApi::swapl((int32_t)val);  break;
+            case INT64:     cast->int64_val  = OsApi::swapll((int64_t)val); break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;                break;
+            case UINT16:    cast->uint16_val = OsApi::swaps((uint16_t)val); break;
+            case UINT32:    cast->uint32_val = OsApi::swapl((uint32_t)val); break;
+            case UINT64:    cast->uint64_val = OsApi::swapll((uint64_t)val);break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
+            case FLOAT:     cast->float_val  = OsApi::swapf((float)val);    break;
+            case DOUBLE:    cast->double_val = OsApi::swapf((double)val);   break;
+            case TIME8 :    cast->int64_val  = OsApi::swapll((uint64_t)val);break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
             default:        break;
@@ -687,10 +687,11 @@ void RecordObject::setValueReal(const field_t& f, const double val, int element)
 /*----------------------------------------------------------------------------
  * setValueInteger
  *----------------------------------------------------------------------------*/
-void RecordObject::setValueInteger(const field_t& f, const long val, int element)
+void RecordObject::setValueInteger(const field_t& f, long val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
@@ -701,18 +702,18 @@ void RecordObject::setValueInteger(const field_t& f, const long val, int element
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;       break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = (int16_t)val;      break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = (int32_t)val;      break;
-            case INT64:     *(int64_t*) (recordData + elem_offset) = (int64_t)val;      break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;      break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = (uint16_t)val;     break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = (uint32_t)val;     break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = (uint64_t)val;     break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);  break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = (float)val;          break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = val;                 break;
-            case TIME8:     *(int64_t*)(recordData + elem_offset) = (int64_t)val;       break;
+            case INT8:      cast->int8_val   = (int8_t)val;     break;
+            case INT16:     cast->int16_val  = (int16_t)val;    break;
+            case INT32:     cast->int32_val  = (int32_t)val;    break;
+            case INT64:     cast->int64_val  = (int64_t)val;    break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;    break;
+            case UINT16:    cast->uint16_val = (uint16_t)val;   break;
+            case UINT32:    cast->uint32_val = (uint32_t)val;   break;
+            case UINT64:    cast->uint64_val = (uint64_t)val;   break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
+            case FLOAT:     cast->float_val  = (float)val;      break;
+            case DOUBLE:    cast->double_val = val;             break;
+            case TIME8:     cast->int64_val  = (int64_t)val;    break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
@@ -722,18 +723,18 @@ void RecordObject::setValueInteger(const field_t& f, const long val, int element
     {
         switch(f.type)
         {
-            case INT8:      *(int8_t*)  (recordData + elem_offset) = (int8_t)val;                   break;
-            case INT16:     *(int16_t*) (recordData + elem_offset) = OsApi::swaps((int16_t)val);    break;
-            case INT32:     *(int32_t*) (recordData + elem_offset) = OsApi::swapl((int32_t)val);    break;
-            case INT64:     *(int64_t*)(recordData + elem_offset)  = OsApi::swapll((int64_t)val);   break;
-            case UINT8:     *(uint8_t*) (recordData + elem_offset) = (uint8_t)val;                  break;
-            case UINT16:    *(uint16_t*)(recordData + elem_offset) = OsApi::swaps((uint16_t)val);   break;
-            case UINT32:    *(uint32_t*)(recordData + elem_offset) = OsApi::swapl((uint32_t)val);   break;
-            case UINT64:    *(uint64_t*)(recordData + elem_offset) = OsApi::swapll((uint64_t)val);  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val);              break;
-            case FLOAT:     *(float*) (recordData + elem_offset) = OsApi::swapf((float)val);        break;
-            case DOUBLE:    *(double*)(recordData + elem_offset) = OsApi::swaplf((double)val);      break;
-            case TIME8:     *(int64_t*)(recordData + elem_offset) = OsApi::swapll((int64_t)val);    break;
+            case INT8:      cast->int8_val   = (int8_t)val;                   break;
+            case INT16:     cast->int16_val  = OsApi::swaps((int16_t)val);    break;
+            case INT32:     cast->int32_val  = OsApi::swapl((int32_t)val);    break;
+            case INT64:     cast->int64_val  = OsApi::swapll((int64_t)val);   break;
+            case UINT8:     cast->uint8_val  = (uint8_t)val;                  break;
+            case UINT16:    cast->uint16_val = OsApi::swaps((uint16_t)val);   break;
+            case UINT32:    cast->uint32_val = OsApi::swapl((uint32_t)val);   break;
+            case UINT64:    cast->uint64_val = OsApi::swapll((uint64_t)val);  break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, (long)val); break;
+            case FLOAT:     cast->float_val  = OsApi::swapf((float)val);      break;
+            case DOUBLE:    cast->double_val = OsApi::swaplf((double)val);    break;
+            case TIME8:     cast->int64_val  = OsApi::swapll((int64_t)val);   break;
             case STRING:    StringLib::format((char*)(recordData + elem_offset), f.elements, DEFAULT_LONG_FORMAT, val);
                             break;
             default:        break;
@@ -758,10 +759,11 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
     if(f.flags & POINTER)
     {
         field_t ptr_field = getPointedToField(f, true, element);
-        if(ptr_field.offset == 0)   return NULL;
-        else                        return getValueText(ptr_field, valbuf);
+        if(ptr_field.offset == 0) return NULL;
+        return getValueText(ptr_field, valbuf);
     }
-    else if(val_type == TEXT)
+    
+    if(val_type == TEXT)
     {
         char* str = (char*)(recordData + TOBYTES(f.offset));
         if(valbuf)
@@ -770,26 +772,26 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
             {
                 return StringLib::copy(valbuf, str, f.elements);
             }
-            else // variable length
+            
+            // variable length
+            int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
+            if(memory_left > 1)
             {
-                int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
-                if(memory_left > 1)
-                {
-                    return StringLib::copy(valbuf, str, memory_left);
-                }
+                return StringLib::copy(valbuf, str, memory_left);
             }
         }
-        else // valbuf not supplied
-        {
-            return str;
-        }
+        
+        // valbuf not supplied
+        return str;
     }
-    else if(val_type == INTEGER && valbuf)
+    
+    if(val_type == INTEGER && valbuf)
     {
         long val = getValueInteger(f);
         return StringLib::format(valbuf, MAX_VAL_STR_SIZE, DEFAULT_LONG_FORMAT, val);
     }
-    else if(val_type == REAL && valbuf)
+    
+    if(val_type == REAL && valbuf)
     {
         double val = getValueReal(f);
         return StringLib::format(valbuf, MAX_VAL_STR_SIZE, DEFAULT_DOUBLE_FORMAT, val);
@@ -805,49 +807,50 @@ double RecordObject::getValueReal(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
         field_t ptr_field = getPointedToField(f, false, element);
         return getValueReal(ptr_field, 0);
     }
-    else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
+    
+    if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
-            case INT8:      return (double)*(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (double)*(int16_t*) (recordData + elem_offset);
-            case INT32:     return (double)*(int32_t*) (recordData + elem_offset);
-            case INT64:     return (double)*(int64_t*) (recordData + elem_offset);
-            case UINT8:     return (double)*(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (double)*(uint16_t*)(recordData + elem_offset);
-            case UINT32:    return (double)*(uint32_t*)(recordData + elem_offset);
-            case UINT64:    return (double)*(uint64_t*)(recordData + elem_offset);
+            case INT8:      return (double)cast->int8_val;
+            case INT16:     return (double)cast->int16_val;
+            case INT32:     return (double)cast->int32_val;
+            case INT64:     return (double)cast->int64_val;
+            case UINT8:     return (double)cast->uint8_val;
+            case UINT16:    return (double)cast->uint16_val;
+            case UINT32:    return (double)cast->uint32_val;
+            case UINT64:    return (double)cast->uint64_val;
             case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (double)*(float*) (recordData + elem_offset);
-            case DOUBLE:    return *(double*)(recordData + elem_offset);
-            case TIME8:     return (double)*(int64_t*)(recordData + elem_offset);
+            case FLOAT:     return (double)cast->float_val;
+            case DOUBLE:    return (double)cast->double_val;
+            case TIME8:     return (double)cast->int64_val;
             default:        return 0.0;
         }
     }
-    else // Swap
+    
+    // Swap
+    switch(f.type)
     {
-        switch(f.type)
-        {
-            case INT8:      return (double)                 *(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (double)OsApi::swaps (*(int16_t*) (recordData + elem_offset));
-            case INT32:     return (double)OsApi::swapl (*(int32_t*) (recordData + elem_offset));
-            case INT64:     return (double)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
-            case UINT8:     return (double)                 *(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (double)OsApi::swaps (*(uint16_t*)(recordData + elem_offset));
-            case UINT32:    return (double)OsApi::swapl (*(uint32_t*)(recordData + elem_offset));
-            case UINT64:    return (double)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
-            case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (double)OsApi::swapf (*(float*) (recordData + elem_offset));
-            case DOUBLE:    return (double)OsApi::swaplf(*(double*)(recordData + elem_offset));
-            case TIME8:     return (double)OsApi::swapll(*(int64_t*)(recordData + elem_offset));
-            default:        return 0.0;
-        }
+        case INT8:      return (double)              cast->int8_val;
+        case INT16:     return (double)OsApi::swaps (cast->int16_val);
+        case INT32:     return (double)OsApi::swapl (cast->int32_val);
+        case INT64:     return (double)OsApi::swapll(cast->int64_val);
+        case UINT8:     return (double)              cast->uint8_val;
+        case UINT16:    return (double)OsApi::swaps (cast->uint16_val);
+        case UINT32:    return (double)OsApi::swapl (cast->uint32_val);
+        case UINT64:    return (double)OsApi::swapll(cast->uint64_val);
+        case BITFIELD:  return (double)unpackBitField(recordData, f.offset, f.elements);
+        case FLOAT:     return (double)OsApi::swapf (cast->float_val);
+        case DOUBLE:    return (double)OsApi::swaplf(cast->double_val);
+        case TIME8:     return (double)OsApi::swapll(cast->int64_val);
+        default:        return 0.0;
     }
 }
 
@@ -858,49 +861,51 @@ long RecordObject::getValueInteger(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
     uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
         field_t ptr_field = getPointedToField(f, false, element);
         return getValueInteger(ptr_field, 0);
     }
-    else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
+    
+    // Native
+    if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
         {
-            case INT8:      return (long)*(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (long)*(int16_t*) (recordData + elem_offset);
-            case INT32:     return (long)*(int32_t*) (recordData + elem_offset);
-            case INT64:     return (long)*(int64_t*) (recordData + elem_offset);
-            case UINT8:     return (long)*(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (long)*(uint16_t*)(recordData + elem_offset);
-            case UINT32:    return (long)*(uint32_t*)(recordData + elem_offset);
-            case UINT64:    return (long)*(uint64_t*)(recordData + elem_offset);
+            case INT8:      return (long)cast->int8_val;
+            case INT16:     return (long)cast->int16_val;
+            case INT32:     return (long)cast->int32_val;
+            case INT64:     return (long)cast->int64_val;
+            case UINT8:     return (long)cast->uint8_val;
+            case UINT16:    return (long)cast->uint16_val;
+            case UINT32:    return (long)cast->uint32_val;
+            case UINT64:    return (long)cast->uint64_val;
             case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (long)*(float*) (recordData + elem_offset);
-            case DOUBLE:    return (long)*(double*)(recordData + elem_offset);
-            case TIME8:     return (long)*(int64_t*)(recordData + elem_offset);
+            case FLOAT:     return (long)cast->float_val;
+            case DOUBLE:    return (long)cast->double_val;
+            case TIME8:     return (long)cast->int64_val;
             default:        return 0;
         }
     }
-    else // Swap
+    
+    // Swap
+    switch(f.type)
     {
-        switch(f.type)
-        {
-            case INT8:      return (long)              *(int8_t*)  (recordData + elem_offset);
-            case INT16:     return (long)OsApi::swaps (*(int16_t*) (recordData + elem_offset));
-            case INT32:     return (long)OsApi::swapl (*(int32_t*) (recordData + elem_offset));
-            case INT64:     return (long)OsApi::swapll(*(int64_t*) (recordData + elem_offset));
-            case UINT8:     return (long)              *(uint8_t*) (recordData + elem_offset);
-            case UINT16:    return (long)OsApi::swaps (*(uint16_t*)(recordData + elem_offset));
-            case UINT32:    return (long)OsApi::swapl (*(uint32_t*)(recordData + elem_offset));
-            case UINT64:    return (long)OsApi::swapll(*(uint64_t*)(recordData + elem_offset));
-            case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
-            case FLOAT:     return (long)OsApi::swapf (*(float*) (recordData + elem_offset));
-            case DOUBLE:    return (long)OsApi::swaplf(*(double*)(recordData + elem_offset));
-            case TIME8:     return (long)OsApi::swapll(*(int64_t*)(recordData + elem_offset));
-            default:        return 0;
-        }
+        case INT8:      return (long)              cast->int8_val;
+        case INT16:     return (long)OsApi::swaps (cast->int16_val);
+        case INT32:     return (long)OsApi::swapl (cast->int32_val);
+        case INT64:     return (long)OsApi::swapll(cast->int64_val);
+        case UINT8:     return (long)              cast->uint8_val;
+        case UINT16:    return (long)OsApi::swaps (cast->uint16_val);
+        case UINT32:    return (long)OsApi::swapl (cast->uint32_val);
+        case UINT64:    return (long)OsApi::swapll(cast->uint64_val);
+        case BITFIELD:  return (long)unpackBitField(recordData, f.offset, f.elements);
+        case FLOAT:     return (long)OsApi::swapf (cast->float_val);
+        case DOUBLE:    return (long)OsApi::swaplf(cast->double_val);
+        case TIME8:     return (long)OsApi::swapll(cast->int64_val);
+        default:        return 0;
     }
 }
 
@@ -963,8 +968,7 @@ RecordObject::recordDefErr_t RecordObject::defineField(const char* rec_type, con
  *----------------------------------------------------------------------------*/
 bool RecordObject::isRecord(const char* rec_type)
 {
-    if(getDefinition(rec_type) != NULL) return true;
-    else                                return false;
+    return (getDefinition(rec_type) != NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -1073,7 +1077,7 @@ Dictionary<RecordObject::field_t>* RecordObject::getRecordFields (const char* re
  *
  *  Allocates no memory, returns size of type
  *----------------------------------------------------------------------------*/
-int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data)
+int RecordObject::parseSerial(const unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data)
 {
     if(rec_type) *rec_type = NULL;
     if(rec_data) *rec_data = NULL;
@@ -1100,11 +1104,10 @@ int RecordObject::parseSerial(unsigned char* buffer, int size, const char** rec_
 unsigned int RecordObject::str2flags (const char* str)
 {
     unsigned int flags = NATIVE_FLAGS;
-    SafeString flagss("%s", str);
-    List<SafeString>* flaglist = flagss.split('|');
+    List<string*>* flaglist = StringLib::split(str, strlen(str), '|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i].str(false);
+        const char* flag = (*flaglist)[i]->c_str();
         if(StringLib::match(flag, "NATIVE"))    flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))   flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))   flags |= BIGENDIAN;
@@ -1121,14 +1124,14 @@ unsigned int RecordObject::str2flags (const char* str)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::flags2str (unsigned int flags)
 {
-    SafeString flagss;
+    string flagss;
 
     if(flags & BIGENDIAN)   flagss += "BE";
     else                    flagss += "LE";
 
     if(flags & POINTER)     flagss += "|PTR";
 
-    return flagss.str(true);
+    return StringLib::duplicate(flagss.c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -1136,39 +1139,39 @@ const char* RecordObject::flags2str (unsigned int flags)
  *----------------------------------------------------------------------------*/
 RecordObject::fieldType_t RecordObject::str2ft (const char* str)
 {
-         if(StringLib::match(str, "INT8"))      return INT8;
-    else if(StringLib::match(str, "INT16"))     return INT16;
-    else if(StringLib::match(str, "INT32"))     return INT32;
-    else if(StringLib::match(str, "INT64"))     return INT64;
-    else if(StringLib::match(str, "UINT8"))     return UINT8;
-    else if(StringLib::match(str, "UINT16"))    return UINT16;
-    else if(StringLib::match(str, "UINT32"))    return UINT32;
-    else if(StringLib::match(str, "UINT64"))    return UINT64;
-    else if(StringLib::match(str, "BITFIELD"))  return BITFIELD;
-    else if(StringLib::match(str, "FLOAT"))     return FLOAT;
-    else if(StringLib::match(str, "DOUBLE"))    return DOUBLE;
-    else if(StringLib::match(str, "TIME8"))     return TIME8;
-    else if(StringLib::match(str, "STRING"))    return STRING;
-    else if(StringLib::match(str, "USER"))      return USER;
-    else if(StringLib::match(str, "INT16BE"))   return INT16;
-    else if(StringLib::match(str, "INT32BE"))   return INT32;
-    else if(StringLib::match(str, "INT64BE"))   return INT64;
-    else if(StringLib::match(str, "UINT16BE"))  return UINT16;
-    else if(StringLib::match(str, "UINT32BE"))  return UINT32;
-    else if(StringLib::match(str, "UINT64BE"))  return UINT64;
-    else if(StringLib::match(str, "FLOATBE"))   return FLOAT;
-    else if(StringLib::match(str, "DOUBLEBE"))  return DOUBLE;
-    else if(StringLib::match(str, "TIME8BE"))   return TIME8;
-    else if(StringLib::match(str, "INT16LE"))   return INT16;
-    else if(StringLib::match(str, "INT32LE"))   return INT32;
-    else if(StringLib::match(str, "INT64LE"))   return INT64;
-    else if(StringLib::match(str, "UINT16LE"))  return UINT16;
-    else if(StringLib::match(str, "UINT32LE"))  return UINT32;
-    else if(StringLib::match(str, "UINT64LE"))  return UINT64;
-    else if(StringLib::match(str, "FLOATLE"))   return FLOAT;
-    else if(StringLib::match(str, "DOUBLELE"))  return DOUBLE;
-    else if(StringLib::match(str, "TIME8LE"))   return TIME8;
-    else                                        return INVALID_FIELD;
+    if(StringLib::match(str, "INT8"))       return INT8;
+    if(StringLib::match(str, "INT16"))      return INT16;
+    if(StringLib::match(str, "INT32"))      return INT32;
+    if(StringLib::match(str, "INT64"))      return INT64;
+    if(StringLib::match(str, "UINT8"))      return UINT8;
+    if(StringLib::match(str, "UINT16"))     return UINT16;
+    if(StringLib::match(str, "UINT32"))     return UINT32;
+    if(StringLib::match(str, "UINT64"))     return UINT64;
+    if(StringLib::match(str, "BITFIELD"))   return BITFIELD;
+    if(StringLib::match(str, "FLOAT"))      return FLOAT;
+    if(StringLib::match(str, "DOUBLE"))     return DOUBLE;
+    if(StringLib::match(str, "TIME8"))      return TIME8;
+    if(StringLib::match(str, "STRING"))     return STRING;
+    if(StringLib::match(str, "USER"))       return USER;
+    if(StringLib::match(str, "INT16BE"))    return INT16;
+    if(StringLib::match(str, "INT32BE"))    return INT32;
+    if(StringLib::match(str, "INT64BE"))    return INT64;
+    if(StringLib::match(str, "UINT16BE"))   return UINT16;
+    if(StringLib::match(str, "UINT32BE"))   return UINT32;
+    if(StringLib::match(str, "UINT64BE"))   return UINT64;
+    if(StringLib::match(str, "FLOATBE"))    return FLOAT;
+    if(StringLib::match(str, "DOUBLEBE"))   return DOUBLE;
+    if(StringLib::match(str, "TIME8BE"))    return TIME8;
+    if(StringLib::match(str, "INT16LE"))    return INT16;
+    if(StringLib::match(str, "INT32LE"))    return INT32;
+    if(StringLib::match(str, "INT64LE"))    return INT64;
+    if(StringLib::match(str, "UINT16LE"))   return UINT16;
+    if(StringLib::match(str, "UINT32LE"))   return UINT32;
+    if(StringLib::match(str, "UINT64LE"))   return UINT64;
+    if(StringLib::match(str, "FLOATLE"))    return FLOAT;
+    if(StringLib::match(str, "DOUBLELE"))   return DOUBLE;
+    if(StringLib::match(str, "TIME8LE"))    return TIME8;
+    return INVALID_FIELD;
 }
 
 /*----------------------------------------------------------------------------
@@ -1178,40 +1181,40 @@ bool RecordObject::str2be (const char* str)
 {
     #define _IS_BIGENDIAN ((NATIVE_FLAGS & BIGENDIAN) == BIGENDIAN)
 
-         if(StringLib::match(str, "BE"))        return true;
-    else if(StringLib::match(str, "LE"))        return false;
-    else if(StringLib::match(str, "INT8"))      return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "INT16"))     return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "INT32"))     return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "INT64"))     return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "UINT8"))     return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "UINT16"))    return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "UINT32"))    return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "UINT64"))    return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "BITFIELD"))  return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "FLOAT"))     return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "DOUBLE"))    return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "TIME8"))     return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "STRING"))    return _IS_BIGENDIAN;
-    else if(StringLib::match(str, "INT16BE"))   return true;
-    else if(StringLib::match(str, "INT32BE"))   return true;
-    else if(StringLib::match(str, "INT64BE"))   return true;
-    else if(StringLib::match(str, "UINT16BE"))  return true;
-    else if(StringLib::match(str, "UINT32BE"))  return true;
-    else if(StringLib::match(str, "UINT64BE"))  return true;
-    else if(StringLib::match(str, "FLOATBE"))   return true;
-    else if(StringLib::match(str, "DOUBLEBE"))  return true;
-    else if(StringLib::match(str, "TIME8BE"))   return true;
-    else if(StringLib::match(str, "INT16LE"))   return false;
-    else if(StringLib::match(str, "INT32LE"))   return false;
-    else if(StringLib::match(str, "INT64LE"))   return false;
-    else if(StringLib::match(str, "UINT16LE"))  return false;
-    else if(StringLib::match(str, "UINT32LE"))  return false;
-    else if(StringLib::match(str, "UINT64LE"))  return false;
-    else if(StringLib::match(str, "FLOATLE"))   return false;
-    else if(StringLib::match(str, "DOUBLELE"))  return false;
-    else if(StringLib::match(str, "TIME8LE"))   return false;
-    else                                        return _IS_BIGENDIAN; // default native
+    if(StringLib::match(str, "BE"))         return true;
+    if(StringLib::match(str, "LE"))         return false;
+    if(StringLib::match(str, "INT8"))       return _IS_BIGENDIAN;
+    if(StringLib::match(str, "INT16"))      return _IS_BIGENDIAN;
+    if(StringLib::match(str, "INT32"))      return _IS_BIGENDIAN;
+    if(StringLib::match(str, "INT64"))      return _IS_BIGENDIAN;
+    if(StringLib::match(str, "UINT8"))      return _IS_BIGENDIAN;
+    if(StringLib::match(str, "UINT16"))     return _IS_BIGENDIAN;
+    if(StringLib::match(str, "UINT32"))     return _IS_BIGENDIAN;
+    if(StringLib::match(str, "UINT64"))     return _IS_BIGENDIAN;
+    if(StringLib::match(str, "BITFIELD"))   return _IS_BIGENDIAN;
+    if(StringLib::match(str, "FLOAT"))      return _IS_BIGENDIAN;
+    if(StringLib::match(str, "DOUBLE"))     return _IS_BIGENDIAN;
+    if(StringLib::match(str, "TIME8"))      return _IS_BIGENDIAN;
+    if(StringLib::match(str, "STRING"))     return _IS_BIGENDIAN;
+    if(StringLib::match(str, "INT16BE"))    return true;
+    if(StringLib::match(str, "INT32BE"))    return true;
+    if(StringLib::match(str, "INT64BE"))    return true;
+    if(StringLib::match(str, "UINT16BE"))   return true;
+    if(StringLib::match(str, "UINT32BE"))   return true;
+    if(StringLib::match(str, "UINT64BE"))   return true;
+    if(StringLib::match(str, "FLOATBE"))    return true;
+    if(StringLib::match(str, "DOUBLEBE"))   return true;
+    if(StringLib::match(str, "TIME8BE"))    return true;
+    if(StringLib::match(str, "INT16LE"))    return false;
+    if(StringLib::match(str, "INT32LE"))    return false;
+    if(StringLib::match(str, "INT64LE"))    return false;
+    if(StringLib::match(str, "UINT16LE"))   return false;
+    if(StringLib::match(str, "UINT32LE"))   return false;
+    if(StringLib::match(str, "UINT64LE"))   return false;
+    if(StringLib::match(str, "FLOATLE"))    return false;
+    if(StringLib::match(str, "DOUBLELE"))   return false;
+    if(StringLib::match(str, "TIME8LE"))    return false;
+    return _IS_BIGENDIAN; // default native
 }
 
 /*----------------------------------------------------------------------------
@@ -1258,7 +1261,7 @@ const char* RecordObject::vt2str (valType_t vt)
  *
  *  TODO only supports big endian representation
  *----------------------------------------------------------------------------*/
-unsigned long RecordObject::unpackBitField (unsigned char* buf, int bit_offset, int bit_length)
+unsigned long RecordObject::unpackBitField (const unsigned char* buf, int bit_offset, int bit_length)
 {
     /* Setup Parameters */
     int bits_left = bit_length;
@@ -1446,7 +1449,7 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Attempted to dereference null pointer field!");
         }
-        else if(f.offset > ((memoryAllocated - recordDefinition->type_size) * 8))
+        if(f.offset > ((memoryAllocated - recordDefinition->type_size) * 8))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
@@ -1621,7 +1624,7 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 
     /* Check Definition */
     if(!def) return NOTFOUND_DEF;
-    else if(!field_name) return FIELDERR_DEF;
+    if(!field_name) return FIELDERR_DEF;
 
     /* Initialize Parameters */
     recordDefErr_t status = FIELDERR_DEF;
@@ -1676,7 +1679,7 @@ RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, i
 {
     /* Check Parameters */
     if(buffer == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Null buffer used to retrieve record definition");
-    else if(size <= (int)sizeof(rec_hdr_t)) throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer too small to retrieve record definition");
+    if(size <= (int)sizeof(rec_hdr_t)) throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer too small to retrieve record definition");
 
     /* Get Record Definitions */
     char* rec_type = (char*)&buffer[sizeof(rec_hdr_t)];

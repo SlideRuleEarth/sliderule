@@ -59,566 +59,72 @@ const int StringLib::B64INDEX[256] =
 };
 
 /******************************************************************************
- * STRING PUBLIC METHODS
+ * FORMATTED STRING METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SafeString::String(long _maxlen)
-{
-    if(_maxlen <= 0)    maxlen = DEFAULT_STR_SIZE;
-    else                maxlen = _maxlen;
-    carray = new char[maxlen];
-    memset(carray, 0, maxlen);
-    len = 1;
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-SafeString::String(const char* _str, ...)
+StringLib::FormattedString::FormattedString(const char* _str, ...)
 {
     if(_str != NULL)
     {
         va_list args;
         va_start(args, _str);
-        len = vsnprintf(NULL, 0, _str, args) + 1; // get length
+        bufsize = vsnprintf(NULL, 0, _str, args) + 1; // get length
         va_end(args);
-        carray = new char[len]; // allocate memory
-        maxlen = len;
+        carray = new char[bufsize]; // allocate memory
         va_start(args, _str);
         vsprintf(carray, _str, args); // copy in formatted contents
         va_end(args);
-        carray[maxlen - 1] ='\0'; // null terminate
+        carray[bufsize - 1] ='\0'; // null terminate
     }
     else
     {
-        maxlen = DEFAULT_STR_SIZE;
-        carray = new char[maxlen];
-        memset(carray, 0, maxlen);
-        len = 1;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * Constructor (COPY)
- *----------------------------------------------------------------------------*/
-SafeString::String(const SafeString& other)
-{
-    maxlen = other.maxlen;
-    carray = new char[maxlen];
-    memset(carray, 0, maxlen);
-    len = other.len;
-    StringLib::copy(carray, other.carray, len);
-}
-
-/*----------------------------------------------------------------------------
- * Constructor (ENCODE)
- *----------------------------------------------------------------------------*/
-SafeString::String (int base, unsigned char* buffer, int size)
-{
-    if(base == 64)
-    {
-        int encoded_len = size;
-        carray = StringLib::b64encode(buffer, &encoded_len);
-        maxlen = encoded_len;
-        len = encoded_len;
-    }
-    else
-    {
-        maxlen = DEFAULT_STR_SIZE;
-        carray = new char[maxlen];
-        memset(carray, 0, maxlen);
-        len = 1;
+        carray = new char[1];
+        carray[0] = '\0';
+        bufsize = 1;
     }
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-SafeString::~String(void)
+StringLib::FormattedString::~FormattedString(void)
 {
     delete [] carray;
 }
 
 /*----------------------------------------------------------------------------
- * getString
+ * c_str
  *----------------------------------------------------------------------------*/
-const char* SafeString::str(bool duplicate)
+const char* StringLib::FormattedString::c_str(bool duplicate)
 {
     if(duplicate)
     {
-        char* new_str = new char[len];
-        StringLib::copy(new_str, carray, len);
+        char* new_str = new char[bufsize];
+        StringLib::copy(new_str, carray, bufsize);
         return new_str;
     }
-    else
-    {
-        return carray;
-    }
+
+    return carray;
 }
 
 /*----------------------------------------------------------------------------
  * length - number of non-null characters in string
  *----------------------------------------------------------------------------*/
-long SafeString::length(void)
+long StringLib::FormattedString::length(void) const
 {
-    return len - 1; // remove null terminator in length
+    return bufsize - 1; // remove null terminator in length
 }
 
 /*----------------------------------------------------------------------------
- * bytes - size of memory needed to store string (includes null terminator)
+ * size - alias for length
  *----------------------------------------------------------------------------*/
-long SafeString::bytes(void)
+long StringLib::FormattedString::size(void) const
 {
-    return len;
+    return length();
 }
-
-/*----------------------------------------------------------------------------
- * appendChar
- *----------------------------------------------------------------------------*/
-void SafeString::appendChar(char c)
-{
-    if(len >= maxlen)
-    {
-        maxlen *= 2; // optimization
-        char* new_str = new char[maxlen];
-        memset(new_str, 0, maxlen);
-        StringLib::copy(new_str, carray, len);
-        delete [] carray;
-        carray = new_str;
-    }
-
-    carray[len-1] = c;
-    carray[len] = '\0';
-    len++;
-}
-
-/*----------------------------------------------------------------------------
- * findChar
- *----------------------------------------------------------------------------*/
-int SafeString::findChar (char c, int start)
-{
-    if(start >= 0)
-    {
-        for(int i = start; i < len; i++)
-        {
-            if(carray[i] == c)
-            {
-                return i;
-            }
-        }
-    }
-
-    return -1;
-}
-
-/*----------------------------------------------------------------------------
- * setChar
- *----------------------------------------------------------------------------*/
-SafeString& SafeString::setChar (char c, int index)
-{
-    if(index >= 0 && index < len)
-    {
-        carray[index] = c;
-    }
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * replace
- *
- *  replaces all occurrences
- *----------------------------------------------------------------------------*/
-bool SafeString::replace(const char* oldtxt, const char* newtxt)
-{
-    bool status = false;
-
-    int newtxtlen = (int)strlen(newtxt);
-    char* startptr = strstr(carray, oldtxt);
-    char* endptr = startptr + strlen(oldtxt);
-
-    while(startptr != NULL)
-    {
-        status = true;
-
-        maxlen += newtxtlen;
-        char* newstr = new char[maxlen];
-        memset(newstr, 0, maxlen);
-
-        memcpy(newstr, carray, (startptr - carray));
-        memcpy(newstr + (startptr - carray), newtxt, newtxtlen);
-        memcpy(newstr + (startptr - carray) + newtxtlen, endptr, len - (endptr - carray));
-
-        delete [] carray;
-        carray = newstr;
-
-        len = (int)strlen(carray) + 1;
-
-        startptr = strstr(carray, oldtxt);
-        endptr = startptr + strlen(oldtxt);
-    }
-
-    return status;
-}
-
-/*----------------------------------------------------------------------------
- * inreplace
- *
- *  replaces all occurrences in place
- *----------------------------------------------------------------------------*/
-bool SafeString::inreplace (const char* oldtxt[], const char* newtxt[], int num_replacements)
-{
-    /* Check Number of Replacements */
-    if(num_replacements > MAX_REPLACEMENTS)
-    {
-        return false;
-    }
-
-    /* Get Delta Sizes for each Replacement */
-    int replacement_size_delta[MAX_REPLACEMENTS];
-    for(int r = 0; r < num_replacements; r++)
-    {
-        replacement_size_delta[r] = strlen(newtxt[r]) - strlen(oldtxt[r]);
-    }
-
-    /* Count Number of Replacements */
-    int replacement_count[MAX_REPLACEMENTS];
-    for(int r = 0; r < num_replacements; r++)
-    {
-        replacement_count[r] = 0;
-        int i = 0;
-        while(i < (len - 1))
-        {
-            int j = i, k = 0;
-            while((j < (len - 1)) && oldtxt[r][k] && (carray[j] == oldtxt[r][k]))
-            {
-                j++;
-                k++;
-            }
-
-            if(oldtxt[r][k] == '\0')
-            {
-                replacement_count[r]++;
-                i = j;
-            }
-            else
-            {
-                i++;
-            }
-        }
-    }
-
-    /* Calculate Size of New String */
-    int total_size_delta = 0;
-    for(int r = 0; r < num_replacements; r++)
-    {
-        total_size_delta += replacement_size_delta[r] * replacement_count[r];
-    }
-
-    /* Set New Size */
-    int new_size = len + total_size_delta;
-    if(new_size > 0)
-    {
-        len = new_size;
-        maxlen = new_size;
-    }
-    else
-    {
-        len = 1;
-        maxlen = 1;
-        carray[0] = '\0';
-        return true;
-    }
-
-    /* Allocate New String */
-    char* newstr = new char [maxlen];
-
-    /* Populate New String */
-    int orig_i = 0, new_i = 0;
-    while(carray[orig_i])
-    {
-        /* For Each Possible Replacement */
-        bool replacement = false;
-        for(int r = 0; r < num_replacements; r++)
-        {
-            /* Check for Match */
-            int j = orig_i, k = 0;
-            while(carray[j] && oldtxt[r][k] && (carray[j] == oldtxt[r][k]))
-            {
-                j++;
-                k++;
-            }
-
-            /* Replace Matched Text */
-            if(oldtxt[r][k] == '\0')
-            {
-                int i = 0;
-                while(newtxt[r][i])
-                {
-                    newstr[new_i++] = newtxt[r][i++];
-                }
-                orig_i = j;
-                replacement = true;
-                break;
-            }
-        }
-
-        /* Copy Over and Advance String Indices */
-        if(!replacement)
-        {
-            newstr[new_i++] = carray[orig_i++];
-        }
-    }
-
-    /* Terminate New String and Replace Existing String */
-    newstr[new_i] = '\0';
-    delete [] carray;
-    carray = newstr;
-
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * urlize
- *
- * ! 	    # 	    $ 	    & 	    ' 	    ( 	    ) 	    * 	    +
- * %21 	    %23 	%24 	%26 	%27 	%28 	%29 	%2A 	%2B
- *
- * ,        / 	    : 	    ; 	    = 	    ? 	    @ 	    [ 	    ]
- * %2C      %2F 	%3A 	%3B 	%3D 	%3F 	%40 	%5B 	%5D
- *----------------------------------------------------------------------------*/
-SafeString& SafeString::urlize(void)
-{
-    /* Allocate enough room to hold urlized string */
-    if(maxlen < (len * 3))
-    {
-        maxlen = len * 3;
-    }
-
-    /* Setup pointers to new and old strings */
-    char* alloc_str = new char [maxlen];
-    char* new_str = alloc_str;
-    char* old_str = carray;
-
-    /* Translate old string into new string */
-    while(*old_str != '\0')
-    {
-        switch (*old_str)
-        {
-            case '!':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '1';   break;
-            case '#':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '3';   break;
-            case '$':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '4';   break;
-            case '&':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '6';   break;
-            case '\'':  *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '7';   break;
-            case '(':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '8';   break;
-            case ')':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '9';   break;
-            case '*':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'A';   break;
-            case '+':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'B';   break;
-            case ',':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'C';   break;
-            case '/':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'F';   break;
-            case ':':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'A';   break;
-            case ';':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'B';   break;
-            case '=':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'D';   break;
-            case '?':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'F';   break;
-            case '@':   *(new_str++) = '%';   *(new_str++) = '4';   *(new_str++) = '0';   break;
-            case '[':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'B';   break;
-            case ']':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'D';   break;
-            default:    *(new_str++) = *old_str;  break;
-        }
-        old_str++;
-    }
-    *(new_str++) = '\0';
-
-    /* Calculate length of new string */
-    len = new_str - alloc_str;
-
-    /* Replace member string */
-    delete [] carray;
-    carray = alloc_str;
-
-    /* Return Self */
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * split
- *----------------------------------------------------------------------------*/
-List<SafeString>* SafeString::split(char separator, bool strip)
-{
-    List<SafeString>* tokens = new List<SafeString>;
-
-    char token[MAX_STR_SIZE];
-    int i = 0;
-
-    while(i < len && carray[i] != '\0')
-    {
-        /* Create Token */
-        int t = 0;
-        while( (i < len) && (carray[i] != '\0') && (carray[i] == separator) ) i++; // find first character
-        while( (i < len) && (carray[i] != '\0') && (carray[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = carray[i++]; // copy characters in
-        token[t++] = '\0';
-
-        /*  Strip Leading and Trailing Spaces */
-        int s1 = 0, s2 = t-1;
-        if(strip)
-        {
-            while( (s1 < t) && isspace(token[s1]) ) s1++;
-            while( (s2 > s1) && isspace(token[s2]) ) s2--;
-            token[++s2] = '\0';
-        }
-
-        /* Add Token to List */
-        SafeString ss("%s", &token[s1]);
-        if(ss.length() > 0) tokens->add(ss);
-    }
-
-    return tokens;
-}
-
-/*----------------------------------------------------------------------------
- * operator[]
- *----------------------------------------------------------------------------*/
-char SafeString::operator[](int index)
-{
-    if(index >= 0 && index < len)
-    {
-        return carray[index];
-    }
-    else
-    {
-        return '\0';
-    }
-}
-
-/*----------------------------------------------------------------------------
- * operator+=
- *----------------------------------------------------------------------------*/
-SafeString& SafeString::operator+=(const SafeString& rhs)
-{
-    if((len + rhs.len) < (maxlen - 1))
-    {
-        StringLib::concat(carray, rhs.carray, maxlen);
-        len += rhs.len;
-    }
-    else
-    {
-        maxlen += rhs.maxlen;
-        char* new_str = new char[maxlen];
-        memset(new_str, 0, maxlen);
-        StringLib::copy(new_str, carray, maxlen);
-        StringLib::concat(new_str, rhs.carray, maxlen);
-        len = (int)strlen(new_str) + 1;
-        delete [] carray;
-        carray = new_str;
-    }
-
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * operator+=
- *----------------------------------------------------------------------------*/
-SafeString& SafeString::operator+=(const char* rstr)
-{
-    int rlen = (int)strlen(rstr);
-
-    if((len + rlen) < (maxlen - 1))
-    {
-        StringLib::concat(carray, rstr, maxlen);
-        len += rlen;
-    }
-    else
-    {
-        maxlen += rlen + 1;
-        maxlen *= 2; // optimization
-        char* new_str = new char[maxlen];
-        memset(new_str, 0, maxlen);
-        StringLib::copy(new_str, carray, maxlen);
-        StringLib::concat(new_str, rstr, maxlen);
-        len = (int)strlen(new_str) + 1;
-        delete [] carray;
-        carray = new_str;
-    }
-
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * operator=
- *----------------------------------------------------------------------------*/
-SafeString& SafeString::operator=(const SafeString& rhs)
-{
-    if(maxlen < rhs.len)
-    {
-        delete [] carray;
-        maxlen = rhs.maxlen;
-        carray = new char[maxlen];
-    }
-
-    StringLib::copy(carray, rhs.carray, rhs.len);
-    len = rhs.len;
-
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * operator=
- *----------------------------------------------------------------------------*/
-SafeString& SafeString::operator=(const char* rstr)
-{
-    if(rstr)
-    {
-        int rlen = (int)strlen(rstr);
-        if(rlen <= 0)
-        {
-            carray[0] = '\0';
-            len = 1;
-        }
-        else if(maxlen < rlen)
-        {
-            delete [] carray;
-            maxlen = rlen;
-            carray = new char[maxlen];
-        }
-
-        StringLib::copy(carray, rstr, rlen);
-        len = rlen + 1;
-    }
-    else
-    {
-        delete [] carray;
-        maxlen = DEFAULT_STR_SIZE;
-        carray = new char[maxlen];
-        memset(carray, 0, maxlen);
-        len = 1;
-    }
-
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * operator+
- *----------------------------------------------------------------------------*/
-SafeString operator+(SafeString lhs, const SafeString& rhs)
-{
-    lhs += rhs;
-    return lhs;
-}
-
-/*----------------------------------------------------------------------------
- * reset
- *----------------------------------------------------------------------------*/
-void SafeString::reset(void)
-{
-    delete [] carray;
-    maxlen = DEFAULT_STR_SIZE;
-    carray = new char[maxlen];
-    memset(carray, 0, maxlen);
-    len = 1;
-}
-
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -717,19 +223,19 @@ int StringLib::formats(char* dststr, int size, const char* _format, ...)
 /*----------------------------------------------------------------------------
  * copy
  *----------------------------------------------------------------------------*/
-char* StringLib::copy(char* str1, const char* str2, int _size)
+char* StringLib::copy(char* dst, const char* src, int _size)
 {
-    if(str1 && str2 && (_size > 0))
+    if(dst && src && (_size > 0))
     {
-        char* nptr = (char*)memccpy(str1, str2, 0, _size);
-        if(!nptr) str1[_size - 1] = '\0';
+        char* nptr = (char*)memccpy(dst, src, 0, _size);
+        if(!nptr) dst[_size - 1] = '\0';
     }
-    else if(str1 && (_size > 0))
+    else if(dst && (_size > 0))
     {
-        str1[0] = '\0';
+        dst[0] = '\0';
     }
 
-    return str1;
+    return dst;
 }
 
 /*----------------------------------------------------------------------------
@@ -761,10 +267,10 @@ char* StringLib::find(const char* big, const char* little, int len)
  *
  *  assumes that str is null terminated
  *----------------------------------------------------------------------------*/
-char* StringLib::find(const char* str, const char c, bool first)
+char* StringLib::find(const char* str, char c, bool first)
 {
-    if(first)   return (char*)strchr(str, c);
-    else        return (char*)strrchr(str, c);
+    if(first) return (char*)strchr(str, c);
+    return (char*)strrchr(str, c);
 }
 
 /*----------------------------------------------------------------------------
@@ -788,32 +294,37 @@ bool StringLib::match(const char* str1, const char* str2, int len)
 /*----------------------------------------------------------------------------
  * split
  *----------------------------------------------------------------------------*/
-StringLib::TokenList* StringLib::split(const char* str, int len, char separator, bool strip)
+List<string*>* StringLib::split(const char* str, int len, char separator, bool strip)
 {
-    TokenList* tokens = new TokenList;
+    List<string*>* tokens = new List<string*>;
 
     int i = 0;
     while(i < len && str[i] != '\0')
     {
-        /* Create Token */
-        char* token = new char[MAX_STR_SIZE];
+        char token[MAX_STR_SIZE];
         int t = 0;
+
+        /* Create Token */
         while( (i < len) && (str[i] != '\0') && (str[i] == separator) ) i++; // find first character
         while( (i < len) && (str[i] != '\0') && (str[i] != separator) && (t < (MAX_STR_SIZE - 1))) token[t++] = str[i++]; // copy characters in
         token[t++] = '\0';
 
         /*  Strip Leading and Trailing Spaces */
-        int s1 = 0, s2 = t-1;
+        int s1 = 0;
         if(strip)
         {
+            int s2 = t-1;
             while( (s1 < t) && isspace(token[s1]) ) s1++;
             while( (s2 > s1) && isspace(token[s2]) ) s2--;
             token[++s2] = '\0';
         }
 
         /* Add Token to List */
-        if(t > 1) tokens->add(token);
-        else delete [] token;
+        if(t > 1)
+        {
+            string* s = new string(&token[s1]);
+            tokens->add(s);
+        }
     }
 
     return tokens;
@@ -904,7 +415,9 @@ char* StringLib::convertLower(char* dst, char* src)
  *----------------------------------------------------------------------------*/
 int StringLib::tokenizeLine(const char* str1, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE])
 {
-    int t = 0, i = 0, j = 0;
+    int t = 0;
+    int i = 0;
+    int j = 0;
 
     if(str1 == NULL || tokens == NULL) return 0;
 
@@ -950,7 +463,8 @@ int StringLib::tokenizeLine(const char* str1, int str_size, char separator, int 
  *----------------------------------------------------------------------------*/
 int StringLib::getLine(char* str, int* ret_len, int max_str_size, FILE* fptr)
 {
-    int c = 0, i = 0;
+    int c = 0;
+    int i = 0;
 
     if (str == NULL || max_str_size < 1) return 0;
 
@@ -968,7 +482,7 @@ int StringLib::getLine(char* str, int* ret_len, int max_str_size, FILE* fptr)
     }
 
     if (c != EOF) return 0;
-    else          return -1;
+    return -1;
 }
 
 /*----------------------------------------------------------------------------
@@ -1100,10 +614,8 @@ char* StringLib::checkNullStr (const char* str)
     {
         return NULL;
     }
-    else
-    {
-        return (char*)str;
-    }
+
+    return (char*)str;
 }
 
 /*----------------------------------------------------------------------------
@@ -1125,7 +637,8 @@ char* StringLib::b64encode(const void* data, int* size)
     str[encoded_len - 2] = '=';
 
     unsigned char *p = (unsigned  char*) data;
-    size_t j = 0, pad = len % 3;
+    size_t j = 0;
+    size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
@@ -1164,9 +677,9 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
     if (len == 0) return (unsigned char*)"";
 
     unsigned char *p = (unsigned char*) data;
-    size_t j = 0,
-        pad1 = len % 4 || p[len - 1] == '=',
-        pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    size_t j = 0;
+    size_t pad1 = len % 4 || p[len - 1] == '=';
+    size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
 
     int decoded_len = last / 4 * 3 + pad1 + pad2;
@@ -1244,4 +757,210 @@ int StringLib::printify (char* buffer, int size)
     }
     buffer[size - 1] = '\0';
     return replacements;
+}
+
+/*----------------------------------------------------------------------------
+ * replace
+ *
+ *  replaces all occurrences of a character
+ *----------------------------------------------------------------------------*/
+int StringLib::replace(char* str, char oldchar, char newchar)
+{
+    int num_replacements = 0;
+    int len = strlen(str);
+    for(int i = 0; i < len; i++)
+    {
+        if(str[i] == oldchar)
+        {
+            str[i] = newchar;
+            num_replacements++;
+        }
+    }
+    return num_replacements;
+}
+
+/*----------------------------------------------------------------------------
+ * replace
+ *
+ *  replaces all occurrences of a single substring
+ *----------------------------------------------------------------------------*/
+char* StringLib::replace(const char* str, const char* oldtxt, const char* newtxt)
+{
+    const char* oldtxt_array[1] = { oldtxt };
+    const char* newtxt_array[1] = { newtxt };
+    return StringLib::replace(str, oldtxt_array, newtxt_array, 1);
+}
+
+/*----------------------------------------------------------------------------
+ * replace
+ *
+ *  replaces all occurrences of multiple substrings
+ *----------------------------------------------------------------------------*/
+char* StringLib::replace (const char* str, const char* oldtxt[], const char* newtxt[], int num_replacements)
+{
+    /* Initialize Return String */
+    char* new_str = NULL;
+
+    /* Get Size of String */
+    int bytes = (int)strlen(str) + 1;
+
+    /* Check Number of Replacements */
+    if(num_replacements > MAX_NUM_REPLACEMENTS)
+    {
+        return new_str;
+    }
+
+    /* Get Delta Sizes for each Replacement */
+    int replacement_size_delta[MAX_NUM_REPLACEMENTS];
+    for(int r = 0; r < num_replacements; r++)
+    {
+        replacement_size_delta[r] = strlen(newtxt[r]) - strlen(oldtxt[r]);
+    }
+
+    /* Count Number of Replacements */
+    int replacement_count[MAX_NUM_REPLACEMENTS];
+    for(int r = 0; r < num_replacements; r++)
+    {
+        replacement_count[r] = 0;
+        int i = 0;
+        while(i < (bytes - 1))
+        {
+            int j = i;
+            int k = 0;
+            while((j < (bytes - 1)) && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            {
+                j++;
+                k++;
+            }
+
+            if(oldtxt[r][k] == '\0')
+            {
+                replacement_count[r]++;
+                i = j;
+            }
+            else
+            {
+                i++;
+            }
+        }
+    }
+
+    /* Calculate Size of New String */
+    int total_size_delta = 0;
+    for(int r = 0; r < num_replacements; r++)
+    {
+        total_size_delta += replacement_size_delta[r] * replacement_count[r];
+    }
+
+    /* Set New Size */
+    int new_size = bytes + total_size_delta;
+
+    /* Check if String is Empty */
+    if(new_size == 0)
+    {
+        new_str = new char [1];
+        new_str[0] = '\0';
+        return new_str;
+    }
+
+    /* Allocate New String */
+    new_str = new char [new_size];
+
+    /* Populate New String */
+    int orig_i = 0;
+    int new_i = 0;
+    while(str[orig_i])
+    {
+        /* For Each Possible Replacement */
+        bool replacement = false;
+        for(int r = 0; r < num_replacements; r++)
+        {
+            /* Check for Match */
+            int j = orig_i;
+            int k = 0;
+            while(str[j] && oldtxt[r][k] && (str[j] == oldtxt[r][k]))
+            {
+                j++;
+                k++;
+            }
+
+            /* Replace Matched Text */
+            if(oldtxt[r][k] == '\0')
+            {
+                int i = 0;
+                while(newtxt[r][i])
+                {
+                    new_str[new_i++] = newtxt[r][i++];
+                }
+                orig_i = j;
+                replacement = true;
+                break;
+            }
+        }
+
+        /* Copy Over and Advance String Indices */
+        if(!replacement)
+        {
+            new_str[new_i++] = str[orig_i++];
+        }
+    }
+
+    /* Terminate New String */
+    new_str[new_i] = '\0';
+
+    /* Return New String */
+    return new_str;
+}
+
+/*----------------------------------------------------------------------------
+ * urlize
+ *
+ * ! 	    # 	    $ 	    & 	    ' 	    ( 	    ) 	    * 	    +
+ * %21 	    %23 	%24 	%26 	%27 	%28 	%29 	%2A 	%2B
+ *
+ * ,        / 	    : 	    ; 	    = 	    ? 	    @ 	    [ 	    ]
+ * %2C      %2F 	%3A 	%3B 	%3D 	%3F 	%40 	%5B 	%5D
+ *----------------------------------------------------------------------------*/
+char* StringLib::urlize(const char* str)
+{
+    /* Get Size of Strings */
+    int bytes = strlen(str) + 1;
+    int new_size = bytes * 3;
+
+    /* Setup pointers to new and old strings */
+    char* alloc_str = new char [new_size];
+    char* new_str = alloc_str;
+    const char* old_str = str;
+
+    /* Translate old string into new string */
+    while(*old_str != '\0')
+    {
+        switch (*old_str)
+        {
+            case '!':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '1';   break;
+            case '#':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '3';   break;
+            case '$':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '4';   break;
+            case '&':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '6';   break;
+            case '\'':  *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '7';   break;
+            case '(':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '8';   break;
+            case ')':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '9';   break;
+            case '*':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'A';   break;
+            case '+':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'B';   break;
+            case ',':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'C';   break;
+            case '/':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = 'F';   break;
+            case ':':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'A';   break;
+            case ';':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'B';   break;
+            case '=':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'D';   break;
+            case '?':   *(new_str++) = '%';   *(new_str++) = '3';   *(new_str++) = 'F';   break;
+            case '@':   *(new_str++) = '%';   *(new_str++) = '4';   *(new_str++) = '0';   break;
+            case '[':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'B';   break;
+            case ']':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'D';   break;
+            default:    *(new_str++) = *old_str;  break;
+        }
+        old_str++;
+    }
+    *(new_str++) = '\0';
+
+    /* Return Self */
+    return alloc_str;
 }

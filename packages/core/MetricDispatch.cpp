@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* MetricDispatch::LuaMetaName = "MetricDispatch";
-const struct luaL_Reg MetricDispatch::LuaMetaTable[] = {
+const char* MetricDispatch::LUA_META_NAME = "MetricDispatch";
+const struct luaL_Reg MetricDispatch::LUA_META_TABLE[] = {
     {"pbsource",    luaPlaybackSource},
     {"pbtext",      luaPlaybackText},
     {"pbname",      luaPlaybackName},
@@ -84,7 +84,7 @@ int MetricDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -97,7 +97,7 @@ int MetricDispatch::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char* outq_name, List<long>* _id_filter):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Define Metric Record */
     RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::metric_t), MetricRecord::rec_def, MetricRecord::rec_elem);
@@ -122,10 +122,10 @@ MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char
  *----------------------------------------------------------------------------*/
 MetricDispatch::~MetricDispatch(void)
 {
-    if(dataField)   delete [] dataField;
-    if(idFilter)    delete idFilter;
-    if(fieldFilter) delete fieldFilter;
-    if(outQ)        delete outQ;
+    delete [] dataField;
+    delete idFilter;
+    delete fieldFilter;
+    delete outQ;
 }
 
 /*----------------------------------------------------------------------------
@@ -200,7 +200,7 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
                     while(enabled && field_name)
                     {
                         RecordObject::field_t field = record->getField(field_name);
-                        RecordObject::valType_t field_type = record->getValueType(field);
+                        RecordObject::valType_t field_type = RecordObject::getValueType(field);
                         if((field_type == RecordObject::INTEGER) && (filter_value->lvalue != record->getValueInteger(field)))
                         {
                             enabled = filter_value->enable;
@@ -236,14 +236,16 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
                     if(playbackSource) size = record->serialize(&src, RecordObject::ALLOCATE); // allocates memory here
 
                     /* Playback Text */
-                    const char* text = NULL;
                     char valbuf[RecordObject::MAX_VAL_STR_SIZE];
-                    if(playbackText) text = record->getValueText(data_field, valbuf);
+                    char* text = &valbuf[0];
+                    if(playbackText) record->getValueText(data_field, valbuf);
+                    else text = NULL;
 
                     /* Playback Name */
-                    const char* name = NULL;
-                    char nambuf[MAX_STR_SIZE];
-                    if(playbackName) name = StringLib::format(nambuf, MAX_STR_SIZE, "%s.%s", record->getRecordType(), dataField);
+                    char namebuf[MAX_STR_SIZE];
+                    char* name = &namebuf[0];
+                    if(playbackName) StringLib::format(namebuf, MAX_STR_SIZE, "%s.%s", record->getRecordType(), dataField);
+                    else name = NULL;
 
                     /* Playback Value */
                     double value = record->getValueReal(data_field);
@@ -284,7 +286,7 @@ int MetricDispatch::luaPlaybackSource(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Playback Source */
         lua_obj->playbackSource = getLuaBoolean(L, 2, false, false, &status);
@@ -308,7 +310,7 @@ int MetricDispatch::luaPlaybackText(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Playback Source */
         lua_obj->playbackText = getLuaBoolean(L, 2, false, false, &status);
@@ -332,7 +334,7 @@ int MetricDispatch::luaPlaybackName(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Configure Playback Source */
         lua_obj->playbackName = getLuaBoolean(L, 2, false, false, &status);
@@ -356,7 +358,7 @@ int MetricDispatch::luaSetKeyOffset(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Get Offset String */
         const char* offset_str = getLuaString(L, 2);
@@ -397,7 +399,7 @@ int MetricDispatch::luaSetKeyRange(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Get Offset String */
         const char* min_str = getLuaString(L, 2);
@@ -463,7 +465,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
     try
     {
         /* Get Self */
-        MetricDispatch* lua_obj = (MetricDispatch*)getLuaSelf(L, 1);
+        MetricDispatch* lua_obj = dynamic_cast<MetricDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* field_name  = getLuaString(L, 2);
@@ -482,7 +484,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
             /* Create Dictionary if Necessary */
             if(lua_obj->fieldFilter == NULL)
             {
-                lua_obj->fieldFilter = new MgDictionary<fieldValue_t*>(FIELD_FILTER_DICT_SIZE);
+                lua_obj->fieldFilter = new Dictionary<fieldValue_t*>(FIELD_FILTER_DICT_SIZE);
             }
 
             /* Add Field Filter */

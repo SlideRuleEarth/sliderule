@@ -161,10 +161,10 @@ TcpSocket::~TcpSocket(void)
 {
     /* Kill Listener... so it doesn't automatically reconnect */
     alive = false;
-    if(connector) delete connector;
-    closeConnection();
-    if(ip_addr) delete [] ip_addr;
-    if(config) delete [] config;
+    delete connector;
+    TcpSocket::closeConnection();
+    delete [] ip_addr;
+    delete [] config;
 }
 
 /*----------------------------------------------------------------------------
@@ -173,9 +173,7 @@ TcpSocket::~TcpSocket(void)
 bool TcpSocket::isConnected(int num_connections)
 {
     (void)num_connections;
-
-    if(sock < 0)    return false;
-    else            return true;
+    return (sock >= 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -277,7 +275,7 @@ const char* TcpSocket::getConfig (void)
 /*----------------------------------------------------------------------------
  * getIpAddr
  *----------------------------------------------------------------------------*/
-const char* TcpSocket::getIpAddr (void)
+const char* TcpSocket::getIpAddr (void) const
 {
     return ip_addr;
 }
@@ -285,7 +283,7 @@ const char* TcpSocket::getIpAddr (void)
 /*----------------------------------------------------------------------------
  * getPort
  *----------------------------------------------------------------------------*/
-int TcpSocket::getPort (void)
+int TcpSocket::getPort (void) const
 {
     return port;
 }
@@ -299,7 +297,7 @@ int TcpSocket::getPort (void)
  *----------------------------------------------------------------------------*/
 void* TcpSocket::connectionThread(void* parm)
 {
-    TcpSocket* socket = (TcpSocket*)parm;
+    TcpSocket* socket = static_cast<TcpSocket*>(parm);
     socket->sock = INVALID_RC;
     bool connected_once = false;
 

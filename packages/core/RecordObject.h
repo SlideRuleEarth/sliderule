@@ -125,7 +125,7 @@ class RecordObject
             int32_t         offset;             // bits for BITFIELD, bytes for everything else
             int32_t         elements;
             const char*     exttype;
-            unsigned int    flags;
+            uint64_t        flags;
         } fieldDef_t;
 
         typedef enum {
@@ -136,6 +136,19 @@ class RecordObject
             FIELDERR_DEF    = -4,
             REGERR_DEF      = -5
         } recordDefErr_t;
+
+        typedef union {
+            int8_t      int8_val;
+            int16_t     int16_val;
+            int32_t     int32_val;
+            int64_t     int64_val;
+            uint8_t     uint8_val;
+            uint16_t    uint16_val;
+            uint32_t    uint32_val;
+            uint64_t    uint64_val;
+            float       float_val;
+            double      double_val;
+        } type_cast_t;
 
         /*--------------------------------------------------------------------
          * Constants
@@ -164,11 +177,11 @@ class RecordObject
             public:
 
                             Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags=0, int _element=0);
-                            Field           (RecordObject& _rec, field_t _field, int _element=0);
+                            Field           (RecordObject& _rec, const field_t& _field, int _element=0);
                             Field           (const Field& f);
                             ~Field          (void);
 
-                Field&      operator=       (const char* const rhs);
+                Field&      operator=       (const char* rhs);
                 Field&      operator=       (double const& rhs);
                 Field&      operator=       (long const& rhs);
 
@@ -188,24 +201,24 @@ class RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                RecordObject        (const char* rec_type, int allocated_memory=0, bool clear=true); // must include the record type
-                                RecordObject        (unsigned char* buffer, int size);
+        explicit                RecordObject        (const char* rec_type, int allocated_memory=0, bool clear=true); // must include the record type
+        explicit                RecordObject        (unsigned char* buffer, int size);
         virtual                 ~RecordObject       (void);
 
         /* Overloaded Methods */
         virtual bool            deserialize         (unsigned char* buffer, int size);
         virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
-        bool                    post                (Publisher* outq, int size=0, bool* active=NULL, bool verbose=true);
+        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true);
 
         /* Attribute Methods */
-        bool                    isRecordType        (const char* rec_type);
-        const char*             getRecordType       (void); // used to identify type of records (used for parsing)
+        bool                    isRecordType        (const char* rec_type) const;
+        const char*             getRecordType       (void) const; // used to identify type of records (used for parsing)
         long                    getRecordId         (void); // used to identify records of the same type (used for filtering))
-        unsigned char*          getRecordData       (void);
-        int                     getRecordTypeSize   (void);
-        int                     getRecordDataSize   (void);
-        int                     getAllocatedMemory  (void);
-        int                     getAllocatedDataSize(void);
+        unsigned char*          getRecordData       (void) const;
+        int                     getRecordTypeSize   (void) const;
+        int                     getRecordDataSize   (void) const;
+        int                     getAllocatedMemory  (void) const;
+        int                     getAllocatedDataSize(void) const;
         Field*                  createRecordField   (const char* field_name);
 
         /* Get/Set Methods */
@@ -216,8 +229,8 @@ class RecordObject
         field_t                 getField            (const char* field_name);
         Field                   field               (const char* field_name);
         void                    setValueText        (const field_t& field, const char* val, int element=0);
-        void                    setValueReal        (const field_t& field, const double val, int element=0);
-        void                    setValueInteger     (const field_t& field, const long val, int element=0);
+        void                    setValueReal        (const field_t& field, double val, int element=0);
+        void                    setValueInteger     (const field_t& field, long val, int element=0);
         const char*             getValueText        (const field_t& field, char* valbuf=NULL, int element=0);
         double                  getValueReal        (const field_t& field, int element=0);
         long                    getValueInteger     (const field_t& field, int element=0);
@@ -238,14 +251,14 @@ class RecordObject
         static int              getRecordMaxFields  (const char* rec_type);
         static int              getRecordFields     (const char* rec_type, char*** field_names, field_t*** fields);
         static Dictionary<field_t>* getRecordFields (const char* rec_type);
-        static int              parseSerial         (unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
+        static int              parseSerial         (const unsigned char* buffer, int size, const char** rec_type, const unsigned char** rec_data);
         static unsigned int     str2flags           (const char* str);
         static const char*      flags2str           (unsigned int flags);
         static fieldType_t      str2ft              (const char* str);
         static bool             str2be              (const char* str);
         static const char*      ft2str              (fieldType_t ft);
         static const char*      vt2str              (valType_t vt);
-        static unsigned long    unpackBitField      (unsigned char* buf, int bit_offset, int bit_length);
+        static unsigned long    unpackBitField      (const unsigned char* buf, int bit_offset, int bit_length);
         static void             packBitField        (unsigned char* buf, int bit_offset, int bit_length, long val);
         static field_t          parseImmediateField (const char* str);
 
@@ -284,15 +297,15 @@ class RecordObject
                   data_size = _data_size;
                   record_size = sizeof(rec_hdr_t) + type_size + _data_size; }
             ~definition_t(void)
-                { if(type_name) delete [] type_name;
-                  if(id_field) delete [] id_field; }
+                { delete [] type_name;
+                  delete [] id_field; }
         };
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static MgDictionary<definition_t*>  definitions;
+        static Dictionary<definition_t*>    definitions;
         static Mutex                        defMut;
 
         definition_t*   recordDefinition;

@@ -41,8 +41,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsPayloadDispatch::LuaMetaName = "CcsdsPayloadDispatch";
-const struct luaL_Reg CcsdsPayloadDispatch::LuaMetaTable[] = {
+const char* CcsdsPayloadDispatch::LUA_META_NAME = "CcsdsPayloadDispatch";
+const struct luaL_Reg CcsdsPayloadDispatch::LUA_META_TABLE[] = {
     {"forward",     luaForwardPacket},
     {"checklen",    luaCheckLength},
     {"checkcs",     luaCheckChecksum},
@@ -65,7 +65,7 @@ int CcsdsPayloadDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -140,7 +140,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key, recVe
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsPayloadDispatch::CcsdsPayloadDispatch(lua_State* L):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     memset(outQ, 0, sizeof(outQ));
     checkLength = false;
@@ -173,13 +173,13 @@ void CcsdsPayloadDispatch::setPublisher (int apid, const char* qname)
         {
             try
             {
-                pub = qLookUp[qname];
+                pub = qLookUp[qname].pub;
             }
             catch(RunTimeException& e)
             {
                 (void)e;
-                pub = new Publisher(qname);
-                qLookUp.add(qname, pub);
+                pub_t pub_lookup = { .pub = new Publisher(qname) };
+                qLookUp.add(qname, pub_lookup);
             }
         }
 
@@ -223,7 +223,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPayloadDispatch* lua_obj = (CcsdsPayloadDispatch*)getLuaSelf(L, 1);
+        CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         long        apid        = getLuaInteger(L, 1);
@@ -268,7 +268,7 @@ int CcsdsPayloadDispatch::luaCheckLength(lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPayloadDispatch* lua_obj = (CcsdsPayloadDispatch*)getLuaSelf(L, 1);
+        CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool enable = getLuaBoolean(L, 2);
@@ -298,7 +298,7 @@ int CcsdsPayloadDispatch::luaCheckChecksum(lua_State* L)
     try
     {
         /* Get Self */
-        CcsdsPayloadDispatch* lua_obj = (CcsdsPayloadDispatch*)getLuaSelf(L, 1);
+        CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         bool enable = getLuaBoolean(L, 2);

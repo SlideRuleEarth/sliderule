@@ -152,11 +152,11 @@ File::File (lua_State* L, const char* _filename, type_t _type, role_t _role, io_
  *----------------------------------------------------------------------------*/
 File::~File (void)
 {
-    if(filename) delete [] filename;
-    if(config) delete [] config;
-    for(int i = 0; i < numFiles; i++) if(fileList[i]) delete [] fileList[i];
-    if(fileList) delete [] fileList;
-    closeConnection();
+    delete [] filename;
+    delete [] config;
+    for(int i = 0; i < numFiles; i++) delete [] fileList[i];
+    delete [] fileList;
+    File::closeConnection();
 }
 
 /*----------------------------------------------------------------------------
@@ -164,22 +164,10 @@ File::~File (void)
  *----------------------------------------------------------------------------*/
 bool File::isConnected (int num_open)
 {
-    if(fp == NULL) return false;
-
-    if(role == READER)
-    {
-        if(currFile+1 >= num_open)  return true;
-        else                        return false;
-    }
-    else if(role == WRITER)
-    {
-        if(fileCount >= num_open)   return true;
-        else                        return false;
-    }
-    else
-    {
-        return false;
-    }
+    if(fp == NULL)      return false;
+    if(role == READER)  return (currFile+1 >= num_open);
+    if(role == WRITER)  return (fileCount >= num_open);
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -224,23 +212,19 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     if(fp == NULL || ((fileBytesWritten > maxFileSize) && (maxFileSize != INFINITE_FILE_MAX_SIZE)))
     {
         fileBytesWritten = 0;
-        if(openNewFileForWriting() == false)
+        if(!openNewFileForWriting())
         {
             return INVALID_RC;
         }
-        else
+
+        /* Write File Header */
+        int hdr_bytes = writeFileHeader();
+        if(hdr_bytes < 0)
         {
-            /* Write File Header */
-            int hdr_bytes = writeFileHeader();
-            if(hdr_bytes < 0)
-            {
-                return hdr_bytes;
-            }
-            else
-            {
-                fileBytesWritten += hdr_bytes;
-            }
+            return hdr_bytes;
         }
+
+        fileBytesWritten += hdr_bytes;
     }
 
     /* Write Buffer */
@@ -262,10 +246,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
                 bytes_written = ret;
                 break;
             }
-            else
-            {
-                bytes_written += ret;
-            }
+            bytes_written += ret;
         }
 
         /* Append New Line */
@@ -317,7 +298,8 @@ int File::readBuffer (void* buf, int len, int timeout)
     {
         return ACC_ERR_RC;
     }
-    else if(currFile >= numFiles)
+    
+    if(currFile >= numFiles)
     {
         return SHUTDOWN_RC;
     }
@@ -342,10 +324,8 @@ int File::readBuffer (void* buf, int len, int timeout)
             mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], strerror(errno));
             return INVALID_RC;
         }
-        else
-        {
-            mlog(INFO, "Opened file %s", fileList[currFile]);
-        }
+
+        mlog(INFO, "Opened file %s", fileList[currFile]);
     }
 
     /* Read File */
@@ -366,38 +346,36 @@ int File::readBuffer (void* buf, int len, int timeout)
         /* Read Next Packet */
         unsigned char* pkt_buffer = (unsigned char*)buf;
         char b[5] = {'0', 'x', '\0', '\0', '\0'};
-        int ch = EOF;
         int n = 0;
         while(recv_bytes < len)
         {
-            ch = getc(fp);
+            int ch = getc(fp);
             if(ch == '\n')
             {
                 break;
             }
-            else if(ch == EOF)
+            
+            if(ch == EOF)
             {
                 currFile++;
                 fclose(fp);
                 fp = NULL;
                 break;
             }
-            else
+
+            b[2 + (n++ % 2)] = (char)ch;
+            if(n % 2 == 0)
             {
-                b[2 + (n++ % 2)] = (char)ch;
-                if(n % 2 == 0)
+                char *endptr;
+                errno = 0;
+                unsigned long result = strtoul(b, &endptr, 0);
+                if( (endptr == b) ||
+                    ((result == ULONG_MAX || result == 0) && errno == ERANGE) )
                 {
-                    char *endptr;
-                    errno = 0;
-                    unsigned long result = strtoul(b, &endptr, 0);
-                    if( (endptr == b) ||
-                        ((result == ULONG_MAX || result == 0) && errno == ERANGE) )
-                    {
-                        mlog(CRITICAL, "Read invalid data from file designated as an ASCII HEXDUMP: %s", b);
-                        return INVALID_RC;
-                    }
-                    pkt_buffer[recv_bytes++] = (unsigned char)result;
+                    mlog(CRITICAL, "Read invalid data from file designated as an ASCII HEXDUMP: %s", b);
+                    return INVALID_RC;
                 }
+                pkt_buffer[recv_bytes++] = (unsigned char)result;
             }
         }
     }
@@ -459,11 +437,11 @@ File::io_t File::getIO (void)
  *----------------------------------------------------------------------------*/
 File::type_t File::str2type (const char* str)
 {
-         if(StringLib::match(str, "BINARY"))    return BINARY;
-    else if(StringLib::match(str, "ASCII"))     return ASCII;
-    else if(StringLib::match(str, "TEXT"))      return TEXT;
-    else if(StringLib::match(str, "FIFO"))      return FIFO;
-    else                                        return INVALID_TYPE;
+    if(StringLib::match(str, "BINARY")) return BINARY;
+    if(StringLib::match(str, "ASCII"))  return ASCII;
+    if(StringLib::match(str, "TEXT"))   return TEXT;
+    if(StringLib::match(str, "FIFO"))   return FIFO;
+    return INVALID_TYPE;
 }
 
 /*----------------------------------------------------------------------------
@@ -471,11 +449,11 @@ File::type_t File::str2type (const char* str)
  *----------------------------------------------------------------------------*/
 const char* File::type2str (type_t _type)
 {
-         if(_type == BINARY)    return "BINARY";
-    else if(_type == ASCII)     return "ASCII";
-    else if(_type == TEXT)      return "TEXT";
-    else if(_type == FIFO)      return "FIFO";
-    else                        return "INVALID";
+    if(_type == BINARY) return "BINARY";
+    if(_type == ASCII)  return "ASCII";
+    if(_type == TEXT)   return "TEXT";
+    if(_type == FIFO)   return "FIFO";
+    return "INVALID";
 }
 
 /*----------------------------------------------------------------------------
@@ -483,9 +461,9 @@ const char* File::type2str (type_t _type)
  *----------------------------------------------------------------------------*/
 File::io_t File::str2io (const char* str)
 {
-         if(StringLib::match(str, "FLUSHED"))   return FLUSHED;
-    else if(StringLib::match(str, "CACHED"))    return CACHED;
-    else                                        return INVALID_IO;
+    if(StringLib::match(str, "FLUSHED"))    return FLUSHED;
+    if(StringLib::match(str, "CACHED"))     return CACHED;
+    return INVALID_IO;
 }
 
 /*----------------------------------------------------------------------------
@@ -493,9 +471,9 @@ File::io_t File::str2io (const char* str)
  *----------------------------------------------------------------------------*/
 const char* File::io2str (io_t _io)
 {
-         if(_io == FLUSHED) return "FLUSHED";
-    else if(_io == CACHED)  return "CACHED";
-    else                    return "INVALID";
+    if(_io == FLUSHED) return "FLUSHED";
+    if(_io == CACHED)  return "CACHED";
+    return "INVALID";
 }
 
 /*----------------------------------------------------------------------------
@@ -513,7 +491,8 @@ bool File::openNewFileForWriting(void)
         fp = stdout;
         return true;
     }
-    else if(StringLib::match(filename, "STDERR") || StringLib::match(filename, "stderr"))
+    
+    if(StringLib::match(filename, "STDERR") || StringLib::match(filename, "stderr"))
     {
         fp = stderr;
         return true;
@@ -523,7 +502,7 @@ bool File::openNewFileForWriting(void)
     if(fp != NULL) fclose(fp);
 
     /* Create Active File Name */
-    int slen = FILENAME_MAX_CHARS;
+    int slen;
     if(fileCount == 1)  slen = snprintf(activeFile, FILENAME_MAX_CHARS - 1, "%s", filename);
     else                slen = snprintf(activeFile, FILENAME_MAX_CHARS - 1, "%s.%ld", filename, fileCount);
     int len = MIN(slen, FILENAME_MAX_CHARS - 1);

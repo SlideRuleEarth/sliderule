@@ -85,8 +85,8 @@ class LuaObject
 
         virtual             ~LuaObject          (void);
 
-        const char*         getType             (void);
-        const char*         getName             (void);
+        const char*         getType             (void) const;
+        const char*         getName             (void) const;
 
         static int          luaGetByName        (lua_State* L);
         static int          getLuaNumParms      (lua_State* L);
@@ -138,19 +138,29 @@ class LuaObject
 
         /* Meta Table Functions */
         static int          luaDelete           (lua_State* L);
+        static int          luaDestroy          (lua_State* L);
         static int          luaName             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            LuaObject*  lua_obj;
+        } global_object_t;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Dictionary<LuaObject*>   globalObjects;
-        static Mutex                    globalMut;
+        static Dictionary<global_object_t>  globalObjects;
+        static Mutex                        globalMut;
 
-        std::atomic<long>               referenceCount;
-        Cond                            objSignal;
-        bool                            objComplete;
+        std::atomic<long>                   referenceCount;
+        luaUserData_t*                      userData;
+        Cond                                objSignal;
+        bool                                objComplete;
 };
 
 #endif  /* __lua_object__ */

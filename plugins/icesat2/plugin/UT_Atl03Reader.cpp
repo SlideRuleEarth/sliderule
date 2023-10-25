@@ -45,8 +45,8 @@
 
 const char* UT_Atl03Reader::OBJECT_TYPE = "UT_Atl03Reader";
 
-const char* UT_Atl03Reader::LuaMetaName = "UT_Atl03Reader";
-const struct luaL_Reg UT_Atl03Reader::LuaMetaTable[] = {
+const char* UT_Atl03Reader::LUA_META_NAME = "UT_Atl03Reader";
+const struct luaL_Reg UT_Atl03Reader::LUA_META_TABLE[] = {
     {NULL,              NULL}
 };
 
@@ -66,7 +66,7 @@ int UT_Atl03Reader::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -79,7 +79,7 @@ int UT_Atl03Reader::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_Atl03Reader::UT_Atl03Reader (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
 }
 

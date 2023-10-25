@@ -106,10 +106,14 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
     getSamples(&poi, 0, slist);
     int sampleCnt = slist.size();
 
-    if( sampleCnt == 0 ) return false;
+    if( sampleCnt == 0 ) return false; // no need to delete anything
     if( sampleCnt > 1  ) mlog(ERROR, "Multiple samples returned for lon: %.2lf, lat: %.2lf, using first sample", lon, lat);
 
-    return (static_cast<int>(slist[0]->value) == RASTER_PIXEL_ON);
+    bool pixel_on = static_cast<int>(slist[0]->value) == RASTER_PIXEL_ON;
+
+    for(auto sample: slist) delete sample;
+
+    return pixel_on;
 }
 
 /*----------------------------------------------------------------------------

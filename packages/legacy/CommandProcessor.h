@@ -71,7 +71,7 @@ class CommandProcessor: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            CommandProcessor        (const char* cmdq_name);
+        explicit            CommandProcessor        (const char* cmdq_name);
                             ~CommandProcessor       (void);
 
         bool                postCommand             (const char* cmdstr, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
@@ -140,13 +140,17 @@ class CommandProcessor: public CommandableObject
                   permanent = _permanent; }
         };
 
+        // Dictionaries //
+        typedef Dictionary<handle_entry_t*> HandleDictionary;
+        typedef Dictionary<cvt_entry_t*> CvtDictionary;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static const int                MAX_KEY_NAME = 256;
 
-        MgDictionary<handle_entry_t*>   handlers;
+        HandleDictionary                handlers;
 
         Subscriber*                     cmdq_subscriber;
         Publisher*                      cmdq_publisher;
@@ -160,7 +164,7 @@ class CommandProcessor: public CommandableObject
 
         Dictionary<obj_entry_t>         objects;
         List<obj_entry_t>               lockedObjects;
-        MgDictionary<cvt_entry_t*>      currentValueTable;
+        CvtDictionary                   currentValueTable;
         Cond                            cvtCond;
 
         double                          stopwatch_time;

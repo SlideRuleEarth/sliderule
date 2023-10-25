@@ -54,8 +54,8 @@ class CcsdsPacketInterleaver: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -69,7 +69,7 @@ class CcsdsPacketInterleaver: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsPacketInterleaver      (lua_State* L, MgList<const char*,true>& inq_names, const char* outq_name);
+                    CcsdsPacketInterleaver      (lua_State* L, List<string>& inq_names, const char* outq_name);
         virtual     ~CcsdsPacketInterleaver     (void);
 
     private:

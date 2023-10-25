@@ -40,9 +40,6 @@
 #include "RecordObject.h"
 #include "OsApi.h"
 
-#include <vector>
-using std::vector;
-
 /******************************************************************************
  * DISPATCH OBJECT (PURE VIRTUAL)
  ******************************************************************************/

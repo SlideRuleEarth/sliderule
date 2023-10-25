@@ -45,7 +45,6 @@
 
 Mutex CredentialStore::credentialLock;
 Dictionary<CredentialStore::Credential> CredentialStore::credentialStore(STARTING_STORE_SIZE);
-Dictionary<int32_t> CredentialStore::metricIds(STARTING_STORE_SIZE);
 
 const char* CredentialStore::LIBRARY_NAME = "CredentialStore";
 const char* CredentialStore::EXPIRATION_GPS_METRIC = "exp_gps";
@@ -116,31 +115,6 @@ bool CredentialStore::put (const char* host, Credential& credential)
     {
         /* Store Credentials */
         status = credentialStore.add(host, credential);
-
-        /* Find/Register Metric Id */
-        int32_t metric_id = EventLib::INVALID_METRIC;
-        if(!metricIds.find(host, &metric_id))
-        {
-            metric_id = EventLib::registerMetric(LIBRARY_NAME, EventLib::GAUGE, "%s:%s", host ? host : "<unknown>", EXPIRATION_GPS_METRIC);
-            metricIds.add(host, metric_id);
-        }
-
-        /* Update Metric */
-        if(metric_id != EventLib::INVALID_METRIC)
-        {
-            if(credential.expiration != NULL)
-            {
-                update_metric(DEBUG, metric_id, credential.expirationGps);
-            }
-            else
-            {
-                mlog(CRITICAL, "Null expiration time supplied to credential for %s", host);
-            }
-        }
-        else
-        {
-            mlog(CRITICAL, "Unable to register credential metric for %s", host);
-        }
     }
     credentialLock.unlock();
 

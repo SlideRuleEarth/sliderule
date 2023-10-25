@@ -64,8 +64,8 @@ class TcpSocket: public DeviceObject
         virtual int         getUniqueId         (void) override;
         virtual const char* getConfig           (void) override;
 
-        const char*         getIpAddr           (void);
-        int                 getPort             (void);
+        const char*         getIpAddr           (void) const;
+        int                 getPort             (void) const;
 
     private:
 

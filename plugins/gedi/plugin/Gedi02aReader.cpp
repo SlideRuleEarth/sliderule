@@ -79,10 +79,10 @@ int Gedi02aReader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (GediParms*)getLuaObject(L, 4, GediParms::OBJECT_TYPE);
+        parms = dynamic_cast<GediParms*>(getLuaObject(L, 4, GediParms::OBJECT_TYPE));
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -128,15 +128,15 @@ Gedi02aReader::~Gedi02aReader (void)
  * Gedi02a::Constructor
  *----------------------------------------------------------------------------*/
 Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
-    shot_number     (info->reader->asset, info->reader->resource, SafeString("%s/shot_number",      GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->asset, info->reader->resource, SafeString("%s/delta_time",       GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_lowestmode (info->reader->asset, info->reader->resource, SafeString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_highestreturn (info->reader->asset, info->reader->resource, SafeString("%s/elev_highestreturn",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->asset, info->reader->resource, SafeString("%s/solar_elevation",  GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    sensitivity     (info->reader->asset, info->reader->resource, SafeString("%s/sensitivity",      GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->asset, info->reader->resource, SafeString("%s/degrade_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    quality_flag    (info->reader->asset, info->reader->resource, SafeString("%s/quality_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    surface_flag    (info->reader->asset, info->reader->resource, SafeString("%s/surface_flag",     GediParms::beam2group(info->beam)).str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->asset, info->reader->resource, FString("%s/shot_number",      GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->asset, info->reader->resource, FString("%s/delta_time",       GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_lowestmode (info->reader->asset, info->reader->resource, FString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    elev_highestreturn (info->reader->asset, info->reader->resource, FString("%s/elev_highestreturn",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->asset, info->reader->resource, FString("%s/solar_elevation",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    sensitivity     (info->reader->asset, info->reader->resource, FString("%s/sensitivity",      GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->asset, info->reader->resource, FString("%s/degrade_flag",     GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    quality_flag    (info->reader->asset, info->reader->resource, FString("%s/quality_flag",     GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
+    surface_flag    (info->reader->asset, info->reader->resource, FString("%s/surface_flag",     GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
 {
 
     /* Join Hardcoded Reads */
@@ -165,7 +165,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    Gedi02aReader* reader =  (Gedi02aReader*)info->reader;
+    Gedi02aReader* reader = static_cast<Gedi02aReader*>(info->reader);
     GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
@@ -231,7 +231,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 /* Populate Entry in Batch Structure */
                 g02a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number             = Gedi02a.shot_number[footprint];
-                fp->time_ns                 = parms->deltatime2timestamp(Gedi02a.delta_time[footprint]);
+                fp->time_ns                 = GediParms::deltatime2timestamp(Gedi02a.delta_time[footprint]);
                 fp->latitude                = region.lat[footprint];
                 fp->longitude               = region.lon[footprint];
                 fp->elevation_lowestmode    = Gedi02a.elev_lowestmode[footprint];

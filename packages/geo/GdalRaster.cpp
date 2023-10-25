@@ -209,15 +209,12 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
      *                    'ulx uly lrx lry' for pixel extent
      */
 
-    bool trace = false;
-
     /* For debug tracing serialize all subset threads or debug messages will make no sense */
 #define SUBSET_DEBUG_TRACE 0
 
 #if SUBSET_DEBUG_TRACE
     static Mutex mutex;
     mutex.lock();
-    trace = true;
     #warning Runing with serialized subsetAOI (very slow!!!)
     mlog(CRITICAL, "Runing with serialized subsetAOI (very slow!!!)");
 #endif
@@ -234,7 +231,7 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
 
         OGREnvelope env;
         poly->getEnvelope(&env);
-        if(trace) mlog(DEBUG, "geo aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", env.MinX, env.MinY, env.MaxX, env.MaxY);
+        if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "geo aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", env.MinX, env.MinY, env.MaxX, env.MaxY);
 
         /* Project AOI to map/raster coordinates */
         if(!transf->Transform(1, &env.MinX, &env.MinY))
@@ -246,13 +243,13 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         double aoi_maxx = std::max(env.MinX, env.MaxX);
         double aoi_miny = std::min(env.MinY, env.MaxY);
         double aoi_maxy = std::max(env.MinY, env.MaxY);
-        if(trace) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
+        if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
 
         double raster_minx = bbox.lon_min;
         double raster_miny = bbox.lat_min;
         double raster_maxx = bbox.lon_max;
         double raster_maxy = bbox.lat_max;
-        if(trace) mlog(DEBUG, "map raster:  (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", raster_minx, raster_miny, raster_maxx, raster_maxy);
+        if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "map raster:  (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", raster_minx, raster_miny, raster_maxx, raster_maxy);
 
         /*
          * Check for AOI to be outside of raster bounds (no intersect at all)
@@ -274,38 +271,42 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         /* Adjust AOI to the raster */
         if(aoi_minx < raster_minx)
         {
-            if(trace) mlog(DEBUG, "Clipped aoi_minx %.04lf to raster_minx %.04lf", aoi_minx, raster_minx);
+            if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "Clipped aoi_minx %.04lf to raster_minx %.04lf", aoi_minx, raster_minx);
             aoi_minx = raster_minx;
         }
         if(aoi_miny < raster_miny)
         {
-            if(trace) mlog(DEBUG, "Clipped aoi_miny %.04lf to raster_miny %.04lf", aoi_miny, raster_miny);
+            if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "Clipped aoi_miny %.04lf to raster_miny %.04lf", aoi_miny, raster_miny);
             aoi_miny = raster_miny;
         }
         if(aoi_maxx > raster_maxx)
         {
-            if(trace) mlog(DEBUG, "Clipped aoi_maxx %.04lf to raster_maxx %.04lf", aoi_maxx, raster_maxx);
+            if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "Clipped aoi_maxx %.04lf to raster_maxx %.04lf", aoi_maxx, raster_maxx);
             aoi_maxx = raster_maxx;
         }
         if(aoi_maxy > raster_maxy)
         {
-            if(trace) mlog(DEBUG, "Clipped aoi_maxy %.04lf to raster_maxy %.04lf", aoi_maxy, raster_maxy);
+            if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "Clipped aoi_maxy %.04lf to raster_maxy %.04lf", aoi_maxy, raster_maxy);
             aoi_maxy = raster_maxy;
         }
 
-        if(trace) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
+        if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
 
         /* Get AOI pixel corners: upper left, lower right */
-        int ulx, uly, lrx, lry;
+        int ulx;
+        int uly;
+        int lrx;
+        int lry;
         map2pixel(aoi_minx, aoi_maxy, ulx, uly);
         map2pixel(aoi_maxx, aoi_miny, lrx, lry);
-        if(trace) mlog(DEBUG, "pixel aoi:   (%13d, %13d) (%13d, %13d)", ulx, uly, lrx, lry);
+        if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "pixel aoi:   (%13d, %13d) (%13d, %13d)", ulx, uly, lrx, lry);
 
         int64_t cols2read = lrx - ulx;
         int64_t rows2read = lry - uly;
 
         /* Sanity check for GCC optimizer 'bug'. Raster's top left corner pixel must be (0, 0) */
-        int raster_ulx, raster_uly;
+        int raster_ulx;
+        int raster_uly;
         map2pixel(raster_minx, raster_maxy, raster_ulx, raster_uly);
         if(raster_ulx != 0 || raster_uly != 0)
         {
@@ -357,7 +358,7 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
                 throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
             }
 
-            if(trace) mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, map_ulx: %.2lf, map_uly: %.2lf, cols2read: %ld, rows2read: %ld, datatype %s\n",
+            if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, map_ulx: %.2lf, map_uly: %.2lf, cols2read: %ld, rows2read: %ld, datatype %s\n",
                           subset->size, (float)subset->size/(1024*1024), ulx, uly, subset->map_ulx, subset->map_uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
         }
         else
@@ -473,7 +474,8 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        int x, y;
+        int x;
+        int y;
         map2pixel(poi, x, y);
 
         // mlog(DEBUG, "%dP, %dL\n", x, y);
@@ -608,8 +610,10 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
 {
     try
     {
-        int windowSize, offset;
-        int x, y;
+        int windowSize;
+        int offset;
+        int x;
+        int y;
         map2pixel(poi, x, y);
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
@@ -679,7 +683,8 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
 
     try
     {
-        int x, y;
+        int x;
+        int y;
         map2pixel(poi, x, y);
 
         int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
@@ -785,11 +790,11 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error computing zonal stats: %s", e.what());
-        if(samplesArray) delete[] samplesArray;
+        delete[] samplesArray;
         throw;
     }
 
-    if(samplesArray) delete[] samplesArray;
+    delete[] samplesArray;
 }
 
 /*----------------------------------------------------------------------------
@@ -846,7 +851,7 @@ void GdalRaster::createTransform(void)
 
     /* Limit to area of interest if AOI was set */
     bbox_t* aoi  = &parms->aoi_bbox;
-    bool useaoi  = (aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max) ? false : true;
+    bool useaoi  = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
     if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
@@ -868,7 +873,7 @@ void GdalRaster::createTransform(void)
 /*----------------------------------------------------------------------------
  * radius2pixels
  *----------------------------------------------------------------------------*/
-int GdalRaster::radius2pixels(int _radius)
+int GdalRaster::radius2pixels(int _radius) const
 {
     /*
      * Code supports only rasters with units in meters (cellSize and radius must be in meters).

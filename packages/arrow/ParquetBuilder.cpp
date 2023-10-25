@@ -42,6 +42,7 @@
 #include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
 #include <parquet/file_writer.h>
+#include <regex>
 
 #include "core.h"
 #include "ParquetBuilder.h"
@@ -51,18 +52,13 @@
 #include "aws.h"
 #endif
 
-using std::shared_ptr;
-using std::unique_ptr;
-using std::make_shared;
-using std::vector;
-
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
 const char* ParquetBuilder::OBJECT_TYPE = "ParquetBuilder";
-const char* ParquetBuilder::LuaMetaName = "ParquetBuilder";
-const struct luaL_Reg ParquetBuilder::LuaMetaTable[] = {
+const char* ParquetBuilder::LUA_META_NAME = "ParquetBuilder";
+const struct luaL_Reg ParquetBuilder::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -199,7 +195,7 @@ struct ParquetBuilder::impl
     static void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
     {
         /* Initialize Meta Data String */
-        SafeString geostr(R"json({
+        string geostr(R"json({
             "version": "1.0.0-beta.1",
             "primary_column": "geometry",
             "columns": {
@@ -249,14 +245,11 @@ struct ParquetBuilder::impl
         })json");
 
         /* Reformat JSON */
-        const char* oldtxt[2] = { "    ", "\n" };
-        const char* newtxt[2] = { "",     " " };
-        geostr.inreplace(oldtxt, newtxt, 2);
+        geostr = std::regex_replace(geostr, std::regex("    "), "");
+        geostr = std::regex_replace(geostr, std::regex("\n"), " ");
 
         /* Append Meta String */
-        const char* str = geostr.str();
-        metadata->Append("geo", str);
-        
+        metadata->Append("geo", geostr.c_str());
     }
 
     /*----------------------------------------------------------------------------
@@ -268,15 +261,15 @@ struct ParquetBuilder::impl
         int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
         TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
         TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-        SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+        FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
 
         /* Build Duration String */
         int64_t duration = TimeLib::gpstime() - launch_time_gps;
-        SafeString durationstr("%ld", duration);
+        FString durationstr("%ld", duration);
 
         /* Build Package String */
         const char** pkg_list = LuaEngine::getPkgList();
-        SafeString packagestr("[");
+        string packagestr("[");
         if(pkg_list)
         {
             int index = 0;
@@ -292,26 +285,30 @@ struct ParquetBuilder::impl
         delete [] pkg_list;
 
         /* Initialize Meta Data String */
-        SafeString metastr(R"json({
+        string metastr(R"json({
             "server":
             {
-                "environment":"$1",
-                "version":"$2",
-                "duration":$3,
-                "packages":$4,
-                "commit":"$5",
-                "launch":"$6"
+                "environment":"_1_",
+                "version":"_2_",
+                "duration":_3_,
+                "packages":_4_,
+                "commit":"_5_",
+                "launch":"_6_"
             }
         })json");
 
         /* Fill In Meta Data String */
-        const char* oldtxt[8] = { "    ", "\n", "$1", "$2", "$3", "$4", "$5", "$6" };
-        const char* newtxt[8] = { "", " ", OsApi::getEnvVersion(), LIBID, durationstr.str(), packagestr.str(), BUILDINFO, timestr.str() };
-        metastr.inreplace(oldtxt, newtxt, 8);
+        metastr = std::regex_replace(metastr, std::regex("    "), "");
+        metastr = std::regex_replace(metastr, std::regex("\n"), " ");
+        metastr = std::regex_replace(metastr, std::regex("_1_"), OsApi::getEnvVersion());
+        metastr = std::regex_replace(metastr, std::regex("_2_"), LIBID);
+        metastr = std::regex_replace(metastr, std::regex("_3_"), durationstr.c_str());
+        metastr = std::regex_replace(metastr, std::regex("_4_"), packagestr.c_str());
+        metastr = std::regex_replace(metastr, std::regex("_5_"), BUILDINFO);
+        metastr = std::regex_replace(metastr, std::regex("_6_"), timestr.c_str());
 
         /* Append Meta String */
-        const char* str = metastr.str();
-        metadata->Append("sliderule", str);   
+        metadata->Append("sliderule", metastr.c_str());
     }
 
     /*----------------------------------------------------------------------------
@@ -324,8 +321,8 @@ struct ParquetBuilder::impl
                                       bool as_geo)
     {
         /* Initialize Pandas Meta Data String */
-        SafeString pandasstr(R"json({
-            "index_columns": [$INDEX],
+        string pandasstr(R"json({
+            "index_columns": [_INDEX_],
             "column_indexes": [
                 {
                     "name": null,
@@ -335,18 +332,18 @@ struct ParquetBuilder::impl
                     "metadata": {"encoding": "UTF-8"}
                 }
             ],
-            "columns": [$COLUMNS],
+            "columns": [_COLUMNS_],
             "creator": {"library": "pyarrow", "version": "10.0.1"},
             "pandas_version": "1.5.3"
         })json");
 
         /* Build Columns String */
-        SafeString columns;
+        string columns;
         int index = 0;
         for(const std::string& field_name: _schema->field_names())
         {
             /* Initialize Column String */
-            SafeString columnstr(R"json({"name": "$NAME", "field_name": "$NAME", "pandas_type": "$PTYPE", "numpy_type": "$NTYPE", "metadata": null})json");
+            string columnstr(R"json({"name": "_NAME_", "field_name": "_NAME_", "pandas_type": "_PTYPE_", "numpy_type": "_NTYPE_", "metadata": null})json");
             const char* pandas_type = "";
             const char* numpy_type = "";
             bool is_last_entry = false;
@@ -387,9 +384,9 @@ struct ParquetBuilder::impl
             }
             
             /* Fill In Column String */
-            const char* oldtxt[3] = { "$NAME", "$PTYPE", "$NTYPE" };
-            const char* newtxt[3] = { field_name.c_str(), pandas_type, numpy_type };
-            columnstr.inreplace(oldtxt, newtxt, 3);
+            columnstr = std::regex_replace(columnstr, std::regex("_NAME_"), field_name.c_str());
+            columnstr = std::regex_replace(columnstr, std::regex("_PTYPE_"), pandas_type);
+            columnstr = std::regex_replace(columnstr, std::regex("_NTYPE_"), numpy_type);
 
             /* Add Comma */
             if(!is_last_entry)
@@ -402,17 +399,16 @@ struct ParquetBuilder::impl
         }
 
         /* Build Index String */
-        SafeString indexstr("\"%s\"", index_key ? index_key : "");
-        if(!index_key) indexstr = "";
+        FString indexstr("\"%s\"", index_key ? index_key : "");
 
         /* Fill In Pandas Meta Data String */
-        const char* oldtxt[4] = { "    ", "\n", "$INDEX", "$COLUMNS" };
-        const char* newtxt[4] = { "", " ", indexstr.str(), columns.str() };
-        pandasstr.inreplace(oldtxt, newtxt, 4);
+        pandasstr = std::regex_replace(pandasstr, std::regex("    "), "");
+        pandasstr = std::regex_replace(pandasstr, std::regex("\n"), " ");
+        pandasstr = std::regex_replace(pandasstr, std::regex("_INDEX_"), index_key ? indexstr.c_str() : "");
+        pandasstr = std::regex_replace(pandasstr, std::regex("_COLUMNS_"), columns.c_str());
 
         /* Append Meta String */
-        const char* str = pandasstr.str();
-        metadata->Append("pandas", str);    
+        metadata->Append("pandas", pandasstr.c_str());
     }
 };
 
@@ -430,7 +426,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        _parms                      = (ArrowParms*)getLuaObject(L, 1, ArrowParms::OBJECT_TYPE);
+        _parms                      = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
         const char* outq_name       = getLuaString(L, 2);
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
@@ -471,7 +467,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -501,11 +497,12 @@ void ParquetBuilder::deinit (void)
  *----------------------------------------------------------------------------*/
 ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* outq_name, const char* inq_name,
-                                const char* rec_type, const char* id, geo_data_t geo, const char* index_key):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+                                const char* rec_type, const char* id, const geo_data_t& geo, const char* index_key):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     recType(StringLib::duplicate(rec_type)),
     batchRecType(NULL),
+    fieldList(LIST_BLOCK_SIZE),
     geoData(geo)
 {
     assert(_parms);
@@ -519,7 +516,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Define Table Schema */    
     vector<shared_ptr<arrow::Field>> schema_vector;
-    pimpl->addFieldsToSchema(schema_vector, fieldList, &batchRecType, geoData, rec_type, 0, 0);
+    ParquetBuilder::impl::addFieldsToSchema(schema_vector, fieldList, &batchRecType, geoData, rec_type, 0, 0);
     if(geoData.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
     pimpl->schema = make_shared<arrow::Schema>(schema_vector);
     fieldIterator = new field_iterator_t(fieldList);
@@ -535,8 +532,8 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Create Unique Temporary Filename */
-    SafeString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
-    fileName = tmp_file.str(true);
+    FString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
+    fileName = tmp_file.c_str(true);
 
     /* Create Arrow Output Stream */
     shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -553,9 +550,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Build GeoParquet MetaData */
     auto metadata = pimpl->schema->metadata() ? pimpl->schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-    if(geoData.as_geo) pimpl->appendGeoMetaData(metadata);
-    pimpl->appendServerMetaData(metadata);
-    pimpl->appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key, geoData.as_geo);
+    if(geoData.as_geo) ParquetBuilder::impl::appendGeoMetaData(metadata);
+    ParquetBuilder::impl::appendServerMetaData(metadata);
+    ParquetBuilder::impl::appendPandasMetaData(metadata, pimpl->schema, fieldIterator, index_key, geoData.as_geo);
     pimpl->schema = pimpl->schema->WithMetadata(metadata);
 
     /* Create Parquet Writer */
@@ -606,7 +603,7 @@ ParquetBuilder::~ParquetBuilder(void)
  *----------------------------------------------------------------------------*/
 void* ParquetBuilder::builderThread(void* parm)
 {
-    ParquetBuilder* builder = (ParquetBuilder*)parm;
+    ParquetBuilder* builder = static_cast<ParquetBuilder*>(parm);
     int row_cnt = 0;
 
     /* Early Exit on No Writer */
@@ -687,7 +684,6 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Process Remaining Records */
     builder->processRecordBatch(row_cnt);
-    row_cnt = 0;
 
     /* Close Parquet Writer */
     (void)builder->pimpl->parquetWriter->Close();

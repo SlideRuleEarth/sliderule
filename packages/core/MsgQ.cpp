@@ -45,7 +45,7 @@
  ******************************************************************************/
 
 int MsgQ::StandardQueueDepth = MsgQ::CFG_DEPTH_INFINITY;
-Dictionary<MsgQ::message_queue_t*> MsgQ::queues;
+Dictionary<MsgQ::global_queue_t> MsgQ::queues;
 Mutex MsgQ::listmut;
 
 /******************************************************************************
@@ -62,7 +62,7 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
     {
         try
         {
-            msgQ = queues[name]; // exception thrown here if name is null or not found
+            msgQ = queues[name].queue; // exception thrown here if name is null or not found
             msgQ->attachments++; // if found, then another attachment is made
             // set free function to support publishers later establishing a
             // free function on a queue created by a subscriber
@@ -103,7 +103,8 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             }
 
             // Register message queue with non-null name
-            if(msgQ->name) queues.add(msgQ->name, msgQ);
+            global_queue_t global_queue = { .queue = msgQ };
+            if(msgQ->name) queues.add(msgQ->name, global_queue);
         }
     }
     listmut.unlock();
@@ -143,7 +144,7 @@ MsgQ::~MsgQ()
 
             /* Free message queue resources */
             delete msgQ->locknblock;
-            if(msgQ->name) delete [] msgQ->name;
+            delete [] msgQ->name;
             delete [] msgQ->free_block_stack;
             delete [] msgQ->subscriber_type;
             delete [] msgQ->curr_nodes;
@@ -204,14 +205,8 @@ bool MsgQ::isFull(void)
     {
         return false;
     }
-    else if(msgQ->len >= msgQ->depth)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+
+    return (msgQ->len >= msgQ->depth);
 }
 
 /*----------------------------------------------------------------------------
@@ -231,15 +226,15 @@ void MsgQ::init(void)
  *----------------------------------------------------------------------------*/
 void MsgQ::deinit(void)
 {
-    message_queue_t* curr_q = NULL;
+    global_queue_t curr_q;
     const char* curr_name = queues.first(&curr_q);
     while(curr_name)
     {
-        delete [] curr_q->name;
-        delete [] curr_q->free_block_stack;
-        delete [] curr_q->subscriber_type;
-        delete [] curr_q->curr_nodes;
-        delete curr_q;
+        delete [] curr_q.queue->name;
+        delete [] curr_q.queue->free_block_stack;
+        delete [] curr_q.queue->subscriber_type;
+        delete [] curr_q.queue->curr_nodes;
+        delete curr_q.queue;
         curr_name = queues.next(&curr_q);
     }
 }
@@ -266,15 +261,15 @@ int MsgQ::numQ(void)
 int MsgQ::listQ(queueDisplay_t* list, int list_size)
 {
     int j = 0;
-    message_queue_t* curr_q = NULL;
+    global_queue_t curr_q;
     const char* curr_name = queues.first(&curr_q);
     while(curr_name)
     {
         if(j >= list_size) break;
-        list[j].name = curr_q->name;
-        list[j].len = curr_q->len;
-        list[j].subscriptions = curr_q->subscriptions;
-        switch(curr_q->state)
+        list[j].name = curr_q.queue->name;
+        list[j].len = curr_q.queue->len;
+        list[j].subscriptions = curr_q.queue->subscriptions;
+        switch(curr_q.queue->state)
         {
             case STATE_OKAY         : list[j].state = "OKAY";       break;
             case STATE_TIMEOUT      : list[j].state = "TIMEOUT";    break;
@@ -300,10 +295,8 @@ bool MsgQ::setStdQDepth(int depth)
         StandardQueueDepth = depth;
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /******************************************************************************
@@ -357,8 +350,8 @@ int Publisher::postRef(void* data, int size, int timeout)
 int Publisher::postCopy(const void* data, int size, int timeout)
 {
     int status = post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, NULL, 0, timeout);
-    if(status == STATE_OKAY)    return size;
-    else                        return status;
+    if(status == STATE_OKAY) return size;
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -381,8 +374,8 @@ int Publisher::postCopy(const void* data, int size, const void* secondary_data, 
 
     int status = post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, (void*)secondary_data, secondary_size, timeout);
 
-    if(status == STATE_OKAY)    return size + secondary_size;
-    else                        return status;
+    if(status == STATE_OKAY) return size + secondary_size;
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -410,8 +403,8 @@ int Publisher::postString(const char* format_string, ...)
 
     /* Post the String */
     int status = post(str, ((unsigned int)slen) | MSGQ_COPYQ_MASK, NULL, 0, IO_CHECK);
-    if(status == STATE_OKAY)    return slen;
-    else                        return status;
+    if(status == STATE_OKAY) return slen;
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -576,8 +569,6 @@ Subscriber::Subscriber(const MsgQ& existing_q, subscriber_type_t type): MsgQ(exi
  *----------------------------------------------------------------------------*/
 Subscriber::~Subscriber()
 {
-    bool space_reclaimed = false;
-
     msgQ->locknblock->lock();
     {
         /* Dereference All Nodes */
@@ -587,7 +578,7 @@ Subscriber::~Subscriber()
             node->refs--;
             node = node->next;
         }
-        space_reclaimed = reclaim_nodes(true);
+        bool space_reclaimed = reclaim_nodes(true);
 
         /* Clean up Remaining Free Blocks */
         if(msgQ->subscriptions == 1)
@@ -677,8 +668,7 @@ void Subscriber::drain(bool with_delete)
  *----------------------------------------------------------------------------*/
 bool Subscriber::isEmpty(void)
 {
-    if(msgQ->curr_nodes[id] == NULL)    return true;
-    else                                return false;
+    return (msgQ->curr_nodes[id] == NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -723,8 +713,8 @@ int Subscriber::receiveCopy(void* data, int size, int timeout)
     msgRef_t ref;
     ref.data = data;
     int status = receive(ref, size, timeout, true);
-    if(status == STATE_OKAY)    return ref.size;
-    else                        return status;
+    if(status == STATE_OKAY) return ref.size;
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -736,8 +726,6 @@ int Subscriber::receiveCopy(void* data, int size, int timeout)
  *----------------------------------------------------------------------------*/
 int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
 {
-    bool space_reclaimed = false;
-
     /* initialize reference structure */
     ref.state = STATE_OKAY;
     ref.size = size;
@@ -746,6 +734,8 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
     /* receive data */
     msgQ->locknblock->lock();
     {
+        bool space_reclaimed = false;
+        
         /* check state of queue */
         if(timeout != IO_CHECK)
         {
@@ -774,7 +764,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
             int node_size = node->mask & ~MSGQ_COPYQ_MASK;
 
             /* perform dequeue */
-            if(copy == false)
+            if(!copy)
             {
                 ref.data = node->data;
                 ref.size = node_size;

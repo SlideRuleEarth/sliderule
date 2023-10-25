@@ -87,8 +87,8 @@ const RecordObject::fieldDef_t Atl08Dispatch::waveRecDef[] = {
 
 /* Lua Functions */
 
-const char* Atl08Dispatch::LuaMetaName = "Atl08Dispatch";
-const struct luaL_Reg Atl08Dispatch::LuaMetaTable[] = {
+const char* Atl08Dispatch::LUA_META_NAME = "Atl08Dispatch";
+const struct luaL_Reg Atl08Dispatch::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -112,7 +112,7 @@ int Atl08Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = (Icesat2Parms*)getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE);
+        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl08Dispatch(L, outq_name, parms));
@@ -120,7 +120,7 @@ int Atl08Dispatch::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -149,7 +149,7 @@ void Atl08Dispatch::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(outq_name);
     assert(_parms);
@@ -163,7 +163,7 @@ Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
      * definition.
      */
     recObj = new RecordObject(batchRecType, sizeof(atl08_t));
-    recData = (atl08_t*)recObj->getRecordData();
+    recData = reinterpret_cast<atl08_t*>(recObj->getRecordData());
 
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
@@ -191,13 +191,14 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Check Extent */
-    if(extent->photon_count <= 0)
+    if(extent->photon_count == 0)
     {
         return true;
     }
 
     /* Initialize Results */
     vegetation_t result;
+    result.pflags = 0;
     geolocateResult(extent, result);
 
     /* Execute Algorithm Stages */
@@ -266,10 +267,14 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
     {
         /* Calculate Sums */
-        double time_ns_min = DBL_MAX, time_ns_max = -DBL_MAX;
-        double latitude_min = DBL_MAX, latitude_max = -DBL_MAX;
-        double longitude_min = DBL_MAX, longitude_max = -DBL_MAX;
-        double x_atc_min = DBL_MAX, x_atc_max = -DBL_MAX;
+        double time_ns_min = DBL_MAX;
+        double time_ns_max = -DBL_MAX;
+        double latitude_min = DBL_MAX;
+        double latitude_max = -DBL_MAX;
+        double longitude_min = DBL_MAX;
+        double longitude_max = -DBL_MAX;
+        double x_atc_min = DBL_MAX;
+        double x_atc_max = -DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
             if(ph[i].time_ns    < time_ns_min)      time_ns_min     = ph[i].time_ns;
@@ -328,6 +333,14 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
             result.x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance;
         }
     }
+    else // unexpected geolocation setting
+    {
+        result.time_ns = 0;
+        result.latitude = 0.0;
+        result.longitude = 0.0;
+        result.x_atc = extent->segment_distance;
+    }
+
 
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
@@ -383,7 +396,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     /* Create Ground and Vegetation Photon Index Arrays */
     long* gnd_index = new long [gnd_cnt];
     long* veg_index = new long [veg_cnt];
-    long g = 0, v = 0;
+    long g = 0;
+    long v = 0;
     for(long i = 0; i < num_ph; i++)
     {
         if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
@@ -505,6 +519,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     result.h_te_median = h_te_median;
 
     /* Calculate Percentiles */
+    if(veg_cnt > 0)
     {
         int b = 0; // bin index
         for(int p = 0; p < NUM_PERCENTILES; p++)
@@ -531,6 +546,11 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
             }
             b++;
         }
+    }
+    else // zero out results
+    {
+        memset(result.canopy_h_metrics, 0, sizeof(result.canopy_h_metrics));
+        result.h_canopy = 0.0;
     }
 
     /* Clean Up */
@@ -561,8 +581,7 @@ void Atl08Dispatch::postResult (vegetation_t* result)
             int bufsize = recObj->serialize(&buffer, RecordObject::REFERENCE, size);
 
             /* Post Record */
-            int post_status = MsgQ::STATE_TIMEOUT;
-            while((post_status = outQ->postCopy(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+            while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
 
             /* Reset Batch Index */
             batchIndex = 0;

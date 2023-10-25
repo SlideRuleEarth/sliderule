@@ -3,25 +3,6 @@ local asset = require("asset")
 local json = require("json")
 
 --------------------------------------------------
--- Functions
---------------------------------------------------
-
--- Returns All Available Endpoint Scripts --
-local function available_scripts()
-    local i = 0
-    local scripts = {}
-    local pdir = io.popen('ls "' .. __confdir .. '/api"')
-    if pdir ~= nil then
-        for filename in pdir:lines() do
-            i = i + 1
-            scripts[i] = filename
-        end
-        pdir:close()
-    end
-    return scripts
-end
-
---------------------------------------------------
 -- Process Arguments
 --------------------------------------------------
 
@@ -73,7 +54,7 @@ sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level global
 local monitor = core.monitor(core.LOG, core.DEBUG, event_format):name("EventMonitor") -- monitor only logs
 monitor:tail(1024)
 
-local dispatcher = core.dispatcher(core.EVENTQ):name("EventDispatcher")
+local dispatcher = core.dispatcher(core.EVENTQ, 1):name("EventDispatcher")
 dispatcher:attach(monitor, "eventrec")
 dispatcher:run()
 
@@ -107,13 +88,6 @@ end
 
 -- Configure Application Endpoints --
 local source_endpoint = core.endpoint(normal_mem_thresh, stream_mem_thresh):name("SourceEndpoint")
-for _,script in ipairs(available_scripts()) do
-    local s = script:find(".lua")
-    if s then
-        local metric_name = script:sub(0,s-1)
-        source_endpoint:metric(metric_name)
-    end
-end
 
 -- Configure Provisioning System Authentication --
 netsvc.psurl(ps_url)
@@ -125,7 +99,6 @@ end
 
 -- Run Application HTTP Server --
 local app_server = core.httpd(app_port):name("AppServer")
-app_server:metric() -- register server metrics
 app_server:attach(source_endpoint, "/source")
 
 --------------------------------------------------

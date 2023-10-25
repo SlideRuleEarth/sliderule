@@ -90,8 +90,8 @@ const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
 
 const char* Atl03Reader::OBJECT_TYPE = "Atl03Reader";
-const char* Atl03Reader::LuaMetaName = "Atl03Reader";
-const struct luaL_Reg Atl03Reader::LuaMetaTable[] = {
+const char* Atl03Reader::LUA_META_NAME = "Atl03Reader";
+const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
     {"parms",       luaParms},
     {"stats",       luaStats},
     {NULL,          NULL}
@@ -194,10 +194,10 @@ int Atl03Reader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (Icesat2Parms*)getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE);
+        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -226,7 +226,7 @@ void Atl03Reader::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
     assert(_asset);
@@ -243,9 +243,8 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     parms = _parms;
 
     /* Generate ATL08 Resource Name */
-    SafeString atl08_resource("%s", resource);
-    atl08_resource.setChar('8', 4);
-    resource08 = atl08_resource.str(true);
+    resource08 = StringLib::duplicate(resource);
+    resource08[4] = '8';
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -269,9 +268,6 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
-        /* Set Metrics */
-        PluginMetrics::setRegion(parms);
-
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 
@@ -339,9 +335,9 @@ Atl03Reader::~Atl03Reader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Region::Region (info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/reference_photon_lat").str(), &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/reference_photon_lon").str(), &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").str(), &info->reader->context),
+    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
+    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
+    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -443,7 +439,6 @@ void Atl03Reader::Region::polyregion (void)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
-    bool last_segment_found = false;
     int segment = 0;
     while(segment < segment_ph_cnt.size)
     {
@@ -478,20 +473,16 @@ void Atl03Reader::Region::polyregion (void)
                 first_photon += segment_ph_cnt[segment];
             }
         }
-        else if(!last_segment_found)
+        else
         {
             /* If Coordinate Is NOT In Polygon */
             if(!inclusion && segment_ph_cnt[segment] != 0)
             {
-                /* Set Last Segment */
-                last_segment_found = true;
                 break; // full extent found!
             }
-            else
-            {
-                /* Update Photon Index */
-                num_photons += segment_ph_cnt[segment];
-            }
+
+            /* Update Photon Index */
+            num_photons += segment_ph_cnt[segment];
         }
 
         /* Bump Segment */
@@ -591,23 +582,23 @@ void Atl03Reader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
-    sc_orient           (info->reader->asset, info->reader->resource,                                   "/orbit_info/sc_orient",              &info->reader->context),
-    velocity_sc         (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/velocity_sc").str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/delta_time").str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id          (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/segment_id").str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/segment_dist_x").str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
-    solar_elevation     (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "geolocation/solar_elevation").str(), &info->reader->context, 0, region.first_segment, region.num_segments),
-    dist_ph_along       (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/dist_ph_along").str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
-    dist_ph_across      (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/dist_ph_across").str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
-    h_ph                (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/h_ph").str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/signal_conf_ph").str(),      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
-    quality_ph          (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/quality_ph").str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lat_ph              (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/lat_ph").str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lon_ph              (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/lon_ph").str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    delta_time          (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "heights/delta_time").str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").str(),     &info->reader->context),
-    bckgrd_rate         (info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").str(),    &info->reader->context),
+Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
+    sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
+    velocity_sc         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
+    solar_elevation     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    dist_ph_along       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
+    dist_ph_across      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
+    h_ph                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
+    quality_ph          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
+    lat_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
+    lon_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
+    delta_time          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str(),     &info->reader->context),
+    bckgrd_rate         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str(),    &info->reader->context),
     anc_geo_data        (Icesat2Parms::EXPECTED_NUM_FIELDS),
     anc_ph_data         (Icesat2Parms::EXPECTED_NUM_FIELDS)
 {
@@ -619,7 +610,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     {
         for(int i = 0; i < geo_fields->length(); i++)
         {
-            const char* field_name = (*geo_fields)[i].str();
+            const char* field_name = (*geo_fields)[i].c_str();
             const char* group_name = "geolocation";
             if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
                 (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
@@ -628,9 +619,11 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
             {
                 group_name = "geophys_corr";
             }
-            SafeString dataset_name("%s/%s", group_name, field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, dataset_name.str()).str(), &info->reader->context, 0, region.first_segment, region.num_segments);
-            anc_geo_data.add(field_name, array);
+            FString dataset_name("%s/%s", group_name, field_name);
+            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            bool status = anc_geo_data.add(field_name, array);
+            if(!status) delete array;
+            assert(status); // the dictionary add should never fail
         }
     }
 
@@ -639,10 +632,12 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, Region& region):
     {
         for(int i = 0; i < photon_fields->length(); i++)
         {
-            const char* field_name = (*photon_fields)[i].str();
-            SafeString dataset_name("heights/%s", field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, SafeString("%s/%s", info->prefix, dataset_name.str()).str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
-            anc_ph_data.add(field_name, array);
+            const char* field_name = (*photon_fields)[i].c_str();
+            FString dataset_name("heights/%s", field_name);
+            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
+            bool status = anc_ph_data.add(field_name, array);
+            if(!status) delete array;
+            assert(status); // the dictionary add should never fail
         }
     }
 
@@ -706,13 +701,13 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     relief              {NULL},
     landcover           {NULL},
     snowcover           {NULL},
-    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/ph_segment_id").str(),       &info->reader->context08),
-    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/classed_pc_indx").str(),     &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/classed_pc_flag").str(),     &info->reader->context08),
-    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "signal_photons/ph_h").str(),                &info->reader->context08),
-    segment_id_beg      (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "land_segments/segment_id_beg").str(),       &info->reader->context08),
-    segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "land_segments/segment_landcover").str(),    &info->reader->context08),
-    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, SafeString("%s/%s", info->prefix, "land_segments/segment_snowcover").str(),    &info->reader->context08)
+    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/ph_segment_id").c_str(),       &info->reader->context08),
+    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/classed_pc_indx").c_str(),     &info->reader->context08),
+    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/classed_pc_flag").c_str(),     &info->reader->context08),
+    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/ph_h").c_str(),                &info->reader->context08),
+    segment_id_beg      (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_id_beg").c_str(),       &info->reader->context08),
+    segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_landcover").c_str(),    &info->reader->context08),
+    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str(),    &info->reader->context08)
 {
 }
 
@@ -721,16 +716,16 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl08Class::~Atl08Class (void)
 {
-    if(classification) delete [] classification;
-    if(relief) delete [] relief;
-    if(landcover) delete [] landcover;
-    if(snowcover) delete [] snowcover;
+    delete [] classification;
+    delete [] relief;
+    delete [] landcover;
+    delete [] snowcover;
 }
 
 /*----------------------------------------------------------------------------
  * Atl08Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data& atl03)
+void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!info->reader->parms->stages[Icesat2Parms::STAGE_ATL08])
@@ -864,7 +859,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, Region& region, Atl03Data&
 /*----------------------------------------------------------------------------
  * Atl08Class::operator[]
  *----------------------------------------------------------------------------*/
-uint8_t Atl03Reader::Atl08Class::operator[] (int index)
+uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 {
     return classification[index];
 }
@@ -872,7 +867,7 @@ uint8_t Atl03Reader::Atl08Class::operator[] (int index)
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl03):
+Atl03Reader::YapcScore::YapcScore (info_t* info, const Region& region, const Atl03Data& atl03):
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
@@ -901,13 +896,13 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, Region& region, Atl03Data& atl0
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::~YapcScore (void)
 {
-    if(score) delete [] score;
+    delete [] score;
 }
 
 /*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Hard-Coded Parameters */
     const double MAXIMUM_HSPREAD = 15000.0; // meters
@@ -1078,7 +1073,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, Region& region, Atl03Data& at
 /*----------------------------------------------------------------------------
  * yapcV3
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
     Icesat2Parms::yapc_t* settings = &info->reader->parms->yapc;
@@ -1208,7 +1203,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, Region& region, Atl03Data& at
 /*----------------------------------------------------------------------------
  * YapcScore::operator[]
  *----------------------------------------------------------------------------*/
-uint8_t Atl03Reader::YapcScore::operator[] (int index)
+uint8_t Atl03Reader::YapcScore::operator[] (int index) const
 {
     return score[index];
 }
@@ -1216,7 +1211,7 @@ uint8_t Atl03Reader::YapcScore::operator[] (int index)
 /*----------------------------------------------------------------------------
  * TrackState::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
+Atl03Reader::TrackState::TrackState (const Atl03Data& atl03)
 {
     ph_in              = 0;
     seg_in             = 0;
@@ -1229,6 +1224,7 @@ Atl03Reader::TrackState::TrackState (Atl03Data& atl03)
     bckgrd_in          = 0;
     extent_segment     = 0;
     extent_valid       = true;
+    extent_length      = 0.0;
 }
 
 /*----------------------------------------------------------------------------
@@ -1248,7 +1244,6 @@ void* Atl03Reader::subsettingThread (void* parm)
     Atl03Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
-    uint32_t extent_counter = 0;
     List<int32_t>* segment_indices = NULL;    // used for ancillary data
     List<int32_t>* photon_indices = NULL;     // used for ancillary data
 
@@ -1257,7 +1252,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
-    {
+    {        
         /* Start Reading ATL08 Data */
         Atl08Class atl08(info);
 
@@ -1282,6 +1277,9 @@ void* Atl03Reader::subsettingThread (void* parm)
         /* Calculate Length of Extent in Meters (used for distance) */
         state.extent_length = parms->extent_length;
         if(parms->dist_in_seg) state.extent_length *= ATL03_SEGMENT_LENGTH;
+
+        /* Initialize Extent Counter */
+        uint32_t extent_counter = 0;
 
         /* Traverse All Photons In Dataset */
         while(reader->active && !state.track_complete)
@@ -1361,7 +1359,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
                         }
-                        else if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
+                        if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
                         {
                             break;
                         }
@@ -1372,7 +1370,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
                         }
-                        else if(!parms->quality_ph[quality_ph])
+                        if(!parms->quality_ph[quality_ph])
                         {
                             break;
                         }
@@ -1386,7 +1384,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             {
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
                             }
-                            else if(!parms->atl08_class[atl08_class])
+                            if(!parms->atl08_class[atl08_class])
                             {
                                 break;
                             }
@@ -1416,7 +1414,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         float relief = 0.0;
                         uint8_t landcover_flag = Atl08Class::INVALID_FLAG;
                         uint8_t snowcover_flag = Atl08Class::INVALID_FLAG;
-                        if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+                        if(atl08.phoreal)
                         {
                             /* Set Relief */
                             if(!parms->phoreal.use_abs_h)
@@ -1435,7 +1433,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                         /* Add Photon to Extent */
                         photon_t ph = {
-                            .time_ns = parms->deltatime2timestamp(atl03.delta_time[current_photon]),
+                            .time_ns = Icesat2Parms::deltatime2timestamp(atl03.delta_time[current_photon]),
                             .latitude = atl03.lat_ph[current_photon],
                             .longitude = atl03.lon_ph[current_photon],
                             .x_atc = (float)(x_atc - (state.extent_length / 2.0)),
@@ -1541,8 +1539,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     int rec_total_size = 0;
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
-                    reader->generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                    reader->generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
 
                     /* Send Records */
                     if(rec_list.size() == 1)
@@ -1611,8 +1609,8 @@ void* Atl03Reader::subsettingThread (void* parm)
     reader->threadMut.unlock();
 
     /* Clean Up Indices */
-    if(segment_indices) delete segment_indices;
-    if(photon_indices) delete photon_indices;
+    delete segment_indices;
+    delete photon_indices;
 
     /* Clean Up Info */
     delete info;
@@ -1627,7 +1625,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
+double Atl03Reader::calculateBackground (TrackState& state, const Atl03Data& atl03)
 {
     double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(state.bckgrd_in < atl03.bckgrd_rate.size)
@@ -1656,11 +1654,9 @@ double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
             }
             break;
         }
-        else
-        {
-            /* Go To Next Background Rate */
-            state.bckgrd_in++;
-        }
+
+        /* Go To Next Background Rate */
+        state.bckgrd_in++;
     }
     return background_rate;
 }
@@ -1668,7 +1664,7 @@ double Atl03Reader::calculateBackground (TrackState& state, Atl03Data& atl03)
 /*----------------------------------------------------------------------------
  * calculateSegmentId
  *----------------------------------------------------------------------------*/
-uint32_t Atl03Reader::calculateSegmentId (TrackState& state, Atl03Data& atl03)
+uint32_t Atl03Reader::calculateSegmentId (const TrackState& state, const Atl03Data& atl03)
 {
     /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
     double atl06_segment_id = (double)atl03.segment_id[state.extent_segment]; // start with first segment in extent
@@ -1689,7 +1685,7 @@ uint32_t Atl03Reader::calculateSegmentId (TrackState& state, Atl03Data& atl03)
 /*----------------------------------------------------------------------------
  * generateExtentRecord
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
 {
     /* Calculate Extent Record Size */
     int num_photons = state.extent_photons.length();
@@ -1734,14 +1730,14 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<H5DArray*>& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list && indices->length() > 0)
     {
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            H5DArray* array = field_dict[(*field_list)[i].str()];
+            H5DArray* array = field_dict[(*field_list)[i].c_str()];
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_t, data) +
@@ -1876,7 +1872,7 @@ int Atl03Reader::luaParms (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<Atl03Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {
@@ -1926,7 +1922,7 @@ int Atl03Reader::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (Atl03Reader*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<Atl03Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

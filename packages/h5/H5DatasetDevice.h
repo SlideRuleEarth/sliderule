@@ -101,12 +101,12 @@ class H5DatasetDevice: public DeviceObject
                                             RecordObject::valType_t datatype, long col, long startrow, long numrows);
                     ~H5DatasetDevice    (void);
 
-        bool        isConnected         (int num_open=0);   // is the file open
-        void        closeConnection     (void);             // close the file
-        int         writeBuffer         (const void* buf, int len, int timeout=SYS_TIMEOUT);
-        int         readBuffer          (void* buf, int len, int timeout=SYS_TIMEOUT);
-        int         getUniqueId         (void);             // returns file descriptor
-        const char* getConfig           (void);             // returns filename with attribute list
+        bool        isConnected         (int num_open=0) override;   // is the file open
+        void        closeConnection     (void) override;    // close the file
+        int         writeBuffer         (const void* buf, int len, int timeout=SYS_TIMEOUT) override;
+        int         readBuffer          (void* buf, int len, int timeout=SYS_TIMEOUT) override;
+        int         getUniqueId         (void) override;    // returns file descriptor
+        const char* getConfig           (void) override;    // returns filename with attribute list
 };
 
 #endif  /* __h5_dataset__ */

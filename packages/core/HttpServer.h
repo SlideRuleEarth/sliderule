@@ -64,11 +64,9 @@ class HttpServer: public LuaObject
         static const int DEFAULT_MAX_CONNECTIONS    = 256;
         static const int STREAM_OVERHEAD_SIZE       = 128; // chunk size, record size, and line breaks
 
-        static const char* DURATION_METRIC;
-
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -79,8 +77,8 @@ class HttpServer: public LuaObject
                             HttpServer      (lua_State* L, const char* _ip_addr, int _port, int max_connections);
                             ~HttpServer     (void);
 
-        const char*         getIpAddr       (void);
-        int                 getPort         (void);
+        const char*         getIpAddr       (void) const;
+        int                 getPort         (void) const;
 
     private:
 
@@ -109,16 +107,31 @@ class HttpServer: public LuaObject
             int                         stream_mem_size;
         } rsps_state_t;
 
-        typedef struct {
+        struct Connection {
+            explicit Connection(const char* _name);
+            explicit Connection(const Connection& other);
+            ~Connection(void);
+            void initialize (const char* _name);
+            const char*                 name;
             char*                       id;
             uint32_t                    trace_id;
             rqst_state_t                rqst_state;
             rsps_state_t                rsps_state;
-            double                      start_time;
             bool                        keep_alive;
             EndpointObject::rsptype_t   response_type;
             EndpointObject::Request*    request;
-        } connection_t;
+        };
+
+        struct RouteEntry {
+            RouteEntry(EndpointObject* _route=NULL) { route = _route; }
+            ~RouteEntry(void) { route->releaseLuaObject(); }
+            RouteEntry& operator= (const RouteEntry& other) { 
+                if (this == &other) return *this;
+                route = other.route;
+                return *this;
+            }
+            EndpointObject* route;
+        };
 
         /*--------------------------------------------------------------------
          * Data
@@ -129,9 +142,9 @@ class HttpServer: public LuaObject
         bool                            active;
         bool                            listening;
         Thread*                         listenerPid;
-        Table<connection_t*, int>       connections;
+        Table<Connection*, int>         connections;
 
-        Dictionary<EndpointObject*>     routeTable;
+        Dictionary<RouteEntry*>         routeTable;
 
         char*                           ipAddr;
         int                             port;
@@ -142,10 +155,8 @@ class HttpServer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        void                initConnection      (connection_t* connection);
-        void                deinitConnection    (connection_t* connection);
-        void                extractPath         (const char* url, const char** path, const char** resource);
-        bool                processHttpHeader   (char* buf, EndpointObject::Request* request);
+        static void         extractPath         (const char* url, const char** path, const char** resource);
+        static bool         processHttpHeader   (char* buf, EndpointObject::Request* request);
 
         static void*        listenerThread      (void* parm);
         static int          pollHandler         (int fd, short* events, void* parm);

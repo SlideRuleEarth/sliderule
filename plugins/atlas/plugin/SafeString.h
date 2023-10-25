@@ -29,37 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __py_lua__
-#define __py_lua__
+#ifndef __safe_string__
+#define __safe_string__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <pybind11/pybind11.h>
-#include "LuaEngine.h"
+#include "OsApi.h"
+#include "List.h"
 
 /******************************************************************************
- * NAMESPACES
+ * SAFE STRING CLASS
  ******************************************************************************/
 
-namespace py = pybind11;
-
-/******************************************************************************
- * pyLua Class
- ******************************************************************************/
-
-class pyLua
+class SafeString
 {
     public:
-                    pyLua   (const std::string &scriptpath, const std::string &scriptarg);
-                    ~pyLua  (void);
-        const char* result  (void);
+
+        static const long DEFAULT_STR_SIZE = 64;
+        static const int MAX_REPLACEMENTS = 16;
+
+                        SafeString  (long _maxlen=DEFAULT_STR_SIZE);
+                        SafeString  (long _maxlen, const char* _str, ...) VARG_CHECK(printf, 3, 4);
+        explicit        SafeString  (const char* _str);
+                        SafeString  (const SafeString& other);
+                        SafeString  (int base, unsigned char* buffer, int size);
+                        ~SafeString (void);
+
+        const char*     str         (bool duplicate = false);
+        long            length      (void) const;
+        long            bytes       (void) const;
+        void            appendChar  (char c);
+        int             findChar    (char c, int start=0);
+        SafeString&     setChar     (char c, int index);
+        bool            replace     (const char* oldtxt, const char* newtxt);
+        bool            inreplace   (const char* oldtxt[], const char* newtxt[], int num_replacements);
+        SafeString&     urlize      (void);
+        List<string*>*  split       (char separator, bool strip=true);
+        char            operator[]  (int index);
+        SafeString&     operator+=  (const SafeString& rhs);
+        SafeString&     operator+=  (const char* rstr);
+        SafeString&     operator=   (const SafeString& rhs);
+        SafeString&     operator=   (const char* rstr);
+        void            reset       (void);
 
     private:
-        static const int MAX_RUNTIME_MS = 10000; // 10 seconds
-        LuaEngine* luaEngine;
-        const char* luaResult;
+
+        char*   carray;
+        long    len;
+        long    maxlen;
 };
 
-#endif /* __py_lua__ */
+#endif  /* __string_lib__ */

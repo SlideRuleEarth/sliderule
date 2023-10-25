@@ -42,8 +42,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Monitor::LuaMetaName = "Monitor";
-const struct luaL_Reg Monitor::LuaMetaTable[] = {
+const char* Monitor::LUA_META_NAME = "Monitor";
+const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
     {"config",      luaConfig},
     {"tail",        luaTail},
     {"cat",         luaCat},
@@ -55,7 +55,7 @@ const struct luaL_Reg Monitor::LuaMetaTable[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create([<type mask>], [<level>], [<output format>], [<outputq>])
+ * luaCreate - create([<type mask>], [<level>], [<output format>])
  *----------------------------------------------------------------------------*/
 int Monitor::luaCreate (lua_State* L)
 {
@@ -65,27 +65,34 @@ int Monitor::luaCreate (lua_State* L)
         uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
         event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
         format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
-        const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Monitor(L, type_mask, level, format, outq_name));
+        return createLuaObject(L, new Monitor(L, type_mask, level, format));
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
 
 /******************************************************************************
- * PRIVATE METHODS
+ * PROTECTED METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * processEvent
+ *----------------------------------------------------------------------------*/
+void Monitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
+{
+    fwrite(event_buf_ptr, 1, event_size, stdout);
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name):
-    DispatchObject(L, LuaMetaName, LuaMetaTable)
+Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format):
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Initialize Event Monitor */
     eventTypeMask   = type_mask;
@@ -94,10 +101,6 @@ Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t 
     eventTailArray  = NULL;
     eventTailSize   = 0;
     eventTailIndex  = 0;
-
-    /* Initialize Output Q */
-    if(outq_name)   outQ = new Publisher(outq_name);
-    else            outQ = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -105,9 +108,12 @@ Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t 
  *----------------------------------------------------------------------------*/
 Monitor::~Monitor(void)
 {
-    if(outQ) delete outQ;
-    if(eventTailArray) delete [] eventTailArray;
+    delete [] eventTailArray;
 }
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * processRecord
@@ -119,6 +125,7 @@ bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records
 
     int event_size;
     char event_buffer[MAX_EVENT_SIZE];
+    unsigned char* event_buf_ptr = (unsigned char*)&event_buffer[0];
 
     /* Pull Out Log Message */
     EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
@@ -130,45 +137,38 @@ bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records
         return true;
     }
 
-    /* Process Event */
+    /* Format Event */
     if(outputFormat == RECORD)
     {
-        /* Post Event as Record */
-        unsigned char* buffer; // reference to serial buffer
-        int size = record->serialize(&buffer, RecordObject::REFERENCE);
-        if(outQ) outQ->postCopy(buffer, size, IO_CHECK);
+        event_size = record->serialize(&event_buf_ptr, RecordObject::REFERENCE);
+        event_size = MIN(event_size, MAX_EVENT_SIZE);
+    }
+    else if(outputFormat == CLOUD)
+    {
+        event_size = cloudOutput(event, event_buffer);
+    }
+    else if(outputFormat == TEXT)
+    {
+        event_size = textOutput(event, event_buffer);
+    }
+    else if(outputFormat == JSON)
+    {
+        event_size = jsonOutput(event, event_buffer);
     }
     else
     {
-        /* Format Event */
-        if(outputFormat == CLOUD)
-        {
-            event_size = cloudOutput(event, event_buffer);
-        }
-        else if(outputFormat == TEXT)
-        {
-            event_size = textOutput(event, event_buffer);
-        }
-        else if(outputFormat == JSON)
-        {
-            event_size = jsonOutput(event, event_buffer);
-        }
-        else
-        {
-            return false;
-        }
-
-        /* Post Event */
-        if(outQ) outQ->postCopy(event_buffer, event_size, IO_CHECK);
-        else     fwrite(event_buffer, 1, event_size, stdout);
-
-        /* (Optionally) Tail Event */
-        if(eventTailArray)
-        {
-            memcpy(&eventTailArray[eventTailIndex * MAX_EVENT_SIZE], event_buffer, event_size);
-            eventTailIndex = (eventTailIndex + 1) % eventTailSize;
-        }
+        return false;
     }
+
+    /* (Optionally) Tail Event */
+    if(eventTailArray)
+    {
+        memcpy(&eventTailArray[eventTailIndex * MAX_EVENT_SIZE], event_buf_ptr, event_size);
+        eventTailIndex = (eventTailIndex + 1) % eventTailSize;
+    }
+
+    /* Post Event */
+    processEvent(event_buf_ptr, event_size);
 
     /* Return Success */
     return true;
@@ -224,7 +224,7 @@ int Monitor::jsonOutput (EventLib::event_t* event, char* event_buffer)
     }
 
     /* Return Size of Message */
-    return msg - event_buffer + 1;;
+    return msg - event_buffer + 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -254,7 +254,7 @@ int Monitor::luaConfig (lua_State* L)
     try
     {
         /* Get Self */
-        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+        Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Set Type Mask */
         uint8_t type_mask = getLuaInteger(L, 2, true, 0, &provided);
@@ -294,7 +294,7 @@ int Monitor::luaTail (lua_State* L)
     try
     {
         /* Get Self */
-        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+        Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Get Tail Size */
         int tail_size = getLuaInteger(L, 2);
@@ -339,7 +339,7 @@ int Monitor::luaCat (lua_State* L)
     try
     {
         /* Get Self */
-        Monitor* lua_obj = (Monitor*)getLuaSelf(L, 1);
+        Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Get Mode */
         cat_mode_t mode = (cat_mode_t)getLuaInteger(L, 2, true, TERM);

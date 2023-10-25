@@ -43,8 +43,8 @@
  ******************************************************************************/
 
 const char* LuaScript::OBJECT_TYPE = "LuaScript";
-const char* LuaScript::LuaMetaName = "LuaScript";
-const struct luaL_Reg LuaScript::LuaMetaTable[] = {
+const char* LuaScript::LUA_META_NAME = "LuaScript";
+const struct luaL_Reg LuaScript::LUA_META_TABLE[] = {
     {"active",      luaActive},
     {"result",      luaResult},
     {NULL,          NULL}
@@ -79,17 +79,17 @@ int LuaScript::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(script);
 
     /* Sanitize */
     if(script[0] != ' ' && script[0] != '/')
     {
-        SafeString safe_filename("%s", script);
-        safe_filename.replace("..", "_");
-        SafeString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename.str());
-        engine = new LuaEngine(safe_pathname.str(), arg, traceId, LuaEngine::abortHook, false);
+        const char* safe_filename = StringLib::replace(script, "..", "_");
+        FString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename);
+        engine = new LuaEngine(safe_pathname.c_str(), arg, traceId, LuaEngine::abortHook, false);
+        delete [] safe_filename;
     }
     else
     {
@@ -102,7 +102,7 @@ LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
  *----------------------------------------------------------------------------*/
 LuaScript::~LuaScript(void)
 {
-    if(engine) delete engine;
+    delete engine;
 }
 
 /*----------------------------------------------------------------------------
@@ -113,7 +113,7 @@ int LuaScript::luaActive (lua_State* L)
     try
     {
         /* Get Self */
-        LuaScript* lua_obj = (LuaScript*)getLuaSelf(L, 1);
+        LuaScript* lua_obj = dynamic_cast<LuaScript*>(getLuaSelf(L, 1));
 
         /* Check Engine */
         if(lua_obj->engine)
@@ -121,10 +121,8 @@ int LuaScript::luaActive (lua_State* L)
             /* Return Is Active */
             return returnLuaStatus(L, lua_obj->engine->isActive());
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
-        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
     }
     catch(const RunTimeException& e)
     {
@@ -141,7 +139,7 @@ int LuaScript::luaResult (lua_State* L)
     try
     {
         /* Get Self */
-        LuaScript* lua_obj = (LuaScript*)getLuaSelf(L, 1);
+        LuaScript* lua_obj = dynamic_cast<LuaScript*>(getLuaSelf(L, 1));
 
         /* Check Engine */
         if(lua_obj->engine)
@@ -153,10 +151,8 @@ int LuaScript::luaResult (lua_State* L)
             lua_pushstring(L, result);
             return returnLuaStatus(L, true, 2);
         }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
-        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "engine does not exist");
     }
     catch(const RunTimeException& e)
     {

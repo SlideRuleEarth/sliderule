@@ -62,7 +62,7 @@ class SwotParms: public NetsvcParms
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
+        typedef List<string> string_list_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -86,7 +86,7 @@ class SwotParms: public NetsvcParms
                             SwotParms           (lua_State* L, int index);
                             ~SwotParms          (void);
         void                cleanup             (void);
-        void                get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
+        static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
 };
 
 #endif  /* __swot_parms__ */

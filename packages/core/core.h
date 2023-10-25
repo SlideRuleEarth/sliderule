@@ -76,6 +76,7 @@
 #include "MsgQ.h"
 #include "Ordering.h"
 #include "PublisherDispatch.h"
+#include "PublishMonitor.h"
 #include "RecordObject.h"
 #include "RecordDispatcher.h"
 #include "ReportDispatch.h"

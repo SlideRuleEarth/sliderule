@@ -124,8 +124,8 @@ const RecordObject::fieldDef_t Atl06Dispatch::ancRecDef[] = {
 };
 
 /* Lua Functions */
-const char* Atl06Dispatch::LuaMetaName = "Atl06Dispatch";
-const struct luaL_Reg Atl06Dispatch::LuaMetaTable[] = {
+const char* Atl06Dispatch::LUA_META_NAME = "Atl06Dispatch";
+const struct luaL_Reg Atl06Dispatch::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -144,7 +144,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = (Icesat2Parms*)getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE);
+        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
         return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
@@ -152,7 +152,7 @@ int Atl06Dispatch::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -181,7 +181,7 @@ void Atl06Dispatch::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
-    DispatchObject(L, LuaMetaName, LuaMetaTable),
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     elevationRecord(atRecType, sizeof(atl06_t))
 {
     assert(outq_name);
@@ -195,7 +195,7 @@ Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
      * this extends the memory available past the one elevation provided in the
      * definition.
      */
-    elevationRecordData = (atl06_t*)elevationRecord.getRecordData();
+    elevationRecordData = reinterpret_cast<atl06_t*>(elevationRecord.getRecordData());
     ancillaryTotalSize = 0;
 
     /* Initialize Publisher */
@@ -292,10 +292,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Delete Photon Aray */
-    if(result.photons)
-    {
-        delete [] result.photons;
-    }
+    delete [] result.photons;
 
     /* Bump Statistics */
     stats.h5atl03_rec_cnt++;
@@ -648,7 +645,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        Atl06Dispatch* lua_obj = (Atl06Dispatch*)getLuaSelf(L, 1);
+        Atl06Dispatch* lua_obj = dynamic_cast<Atl06Dispatch*>(getLuaSelf(L, 1));
 
         /* Get Clear Parameter */
         bool with_clear = getLuaBoolean(L, 2, true, false);
@@ -675,7 +672,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error configuring %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error configuring %s: %s", LUA_META_NAME, e.what());
     }
 
     /* Return Status */
@@ -770,17 +767,17 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
     }
     else /* Latitude, Longitude, GPS Time, Across Track Coordinate, Ancillary Fields */
     {
-        double latitude = 0.0;
-        double longitude = 0.0;
-        double time_ns = 0.0;
-        double y_atc = 0.0;
-
         if(size > 0)
         {
+            double latitude = 0.0;
+            double longitude = 0.0;
+            double time_ns = 0.0;
+            double y_atc = 0.0;
+            
             /* Check Need to Shift Longitudes
                assumes that there isn't a set of photons with
                longitudes that extend for more than 30 degrees */
-            double shift_lon = false;
+            bool shift_lon = false;
             double first_lon = extent->photons[array[0].p].longitude;
             if(first_lon < -150.0 || first_lon > 150.0)
             {

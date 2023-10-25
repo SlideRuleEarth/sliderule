@@ -98,7 +98,7 @@ bool MsgProcessor::handleTimeout(void)
 /*----------------------------------------------------------------------------
  * isActive
  *----------------------------------------------------------------------------*/
-bool MsgProcessor::isActive(void)
+bool MsgProcessor::isActive(void) const
 {
     return processorActive;
 }
@@ -106,18 +106,11 @@ bool MsgProcessor::isActive(void)
 /*----------------------------------------------------------------------------
  * isFull
  *----------------------------------------------------------------------------*/
-bool MsgProcessor::isFull(void)
+bool MsgProcessor::isFull(void) const
 {
     int pkts_in_q = inQ->getCount();
     int space_in_q = inQ->getDepth();
-    if (pkts_in_q > 0 && pkts_in_q == space_in_q)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return (pkts_in_q > 0 && pkts_in_q == space_in_q);
 }
 
 /*----------------------------------------------------------------------------
@@ -157,11 +150,11 @@ void* MsgProcessor::processorThread(void* parm)
 {
     assert(parm);
 
-    MsgProcessor* processor = (MsgProcessor*)parm;
+    MsgProcessor* processor = static_cast<MsgProcessor*>(parm);
     bool self_delete = false;
 
     /* Initialize Processing */
-    if(processor->initProcessing() != true)
+    if(!processor->initProcessing())
     {
         self_delete = true;
     }
@@ -219,7 +212,7 @@ int MsgProcessor::luaDrain (lua_State* L)
     try
     {
         /* Get Self */
-        MsgProcessor* lua_obj = (MsgProcessor*)getLuaSelf(L, 1);
+        MsgProcessor* lua_obj = dynamic_cast<MsgProcessor*>(getLuaSelf(L, 1));
 
         /* Drain Queue */
         lua_obj->inQ->drain();

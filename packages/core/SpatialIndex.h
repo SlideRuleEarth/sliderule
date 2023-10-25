@@ -88,8 +88,8 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*              LuaMetaName;
-        static const struct luaL_Reg    LuaMetaTable[];
+        static const char*              LUA_META_NAME;
+        static const struct luaL_Reg    LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods

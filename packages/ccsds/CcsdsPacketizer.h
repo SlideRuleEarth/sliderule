@@ -53,8 +53,8 @@ class CcsdsPacketizer: public MsgProcessor
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const uint16_t DEFAULT_MAX_PACKET_SIZE = 2048;
         static const int TLM_PKT = 0;
@@ -91,7 +91,7 @@ class CcsdsPacketizer: public MsgProcessor
                         CcsdsPacketizer     (lua_State* L, const char* inq_name, const char* outq_name, int _pkttype, uint16_t _apid, uint8_t _fc, uint16_t _len=DEFAULT_MAX_PACKET_SIZE);
                         ~CcsdsPacketizer    (void);
 
-        bool            processMsg          (unsigned char* msg, int bytes); // OVERLOAD
+        bool            processMsg          (unsigned char* msg, int bytes) override;
 };
 
 

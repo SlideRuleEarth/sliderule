@@ -67,7 +67,6 @@ class Asset: public LuaObject
         class IODriver
         {
             public:
-                static const char*  FORMAT;
                 static IODriver*    create      (const Asset* _asset, const char* resource);
                                     IODriver    (void);
                 virtual             ~IODriver   (void);
@@ -90,15 +89,18 @@ class Asset: public LuaObject
             Dictionary<double>  attributes{ASSET_STARTING_ATTRIBUTES_PER_RESOURCE};
         } resource_t;
 
-        typedef IODriver* (*io_driver_t) (const Asset* _asset, const char* resource);
+        typedef IODriver* (*io_driver_f) (const Asset* _asset, const char* resource);
+
+        typedef struct {
+            io_driver_f factory;
+        } io_driver_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int      luaCreate       (lua_State* L);
-        static Asset*   pythonCreate    (const char* name, const char* identity, const char* driver, const char* path, const char* index, const char* region, const char* endpoint);
-        static bool     registerDriver  (const char* _format, io_driver_t driver);
+        static bool     registerDriver  (const char* _format, io_driver_f factory);
 
         IODriver*       createDriver    (const char* resource) const;
 
@@ -122,8 +124,8 @@ class Asset: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*              LuaMetaName;
-        static const struct luaL_Reg    LuaMetaTable[];
+        static const char*              LUA_META_NAME;
+        static const struct luaL_Reg    LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -147,15 +149,15 @@ class Asset: public LuaObject
         static Dictionary<io_driver_t>  ioDrivers;
 
         attributes_t                    attributes;
-        io_driver_t                     io_driver;
+        io_driver_t                     driver;
 
-        List<resource_t,ASSET_STARTING_RESOURCES_PER_INDEX> resources;
+        List<resource_t>                resources;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Asset       (lua_State* L, attributes_t _attributes, io_driver_t _io_driver);
+                        Asset       (lua_State* L, attributes_t _attributes, const io_driver_t& _io_driver);
 
         static int      luaInfo     (lua_State* L);
         static int      luaLoad     (lua_State* L);

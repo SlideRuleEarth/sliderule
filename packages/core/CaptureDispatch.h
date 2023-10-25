@@ -54,8 +54,8 @@ class CaptureDispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -83,14 +83,14 @@ class CaptureDispatch: public DispatchObject
                   field_name = StringLib::duplicate(_field_str);
                   timeout = _timeout; }
             ~capture_t(void)
-                { if(field_name) delete [] field_name; }
+                { delete [] field_name; }
         };
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        MgList<capture_t*>  captures;
+        List<capture_t*>    captures;
         Mutex               capMut;
         Publisher*          outQ;
 

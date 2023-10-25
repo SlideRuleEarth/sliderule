@@ -82,7 +82,8 @@ void Record::addSubRecord(Record* record)
  *----------------------------------------------------------------------------*/
 void Record::addValue(const char* value)
 {
-    subvalues.add(value);
+    SafeString str(value);
+    subvalues.add(str);
 }
 
 /*----------------------------------------------------------------------------
@@ -162,7 +163,7 @@ Record* Record::getSubRecord(int index)
  *----------------------------------------------------------------------------*/
 const char* Record::getSubValue(int index)
 {
-    return subvalues[index];
+    return subvalues[index].str();
 }
 
 /*----------------------------------------------------------------------------
@@ -287,7 +288,8 @@ TypeConversion::~TypeConversion(void)
  *----------------------------------------------------------------------------*/
 void TypeConversion::addEnumLookup(const char* enum_name, const char* value)
 {
-    lookup.add(enum_name, value);
+    SafeString* valstr = new SafeString(value);
+    lookup.add(enum_name, valstr);
 }
 
 /*----------------------------------------------------------------------------
@@ -297,7 +299,7 @@ const char* TypeConversion::getEnumValue(const char* enum_name)
 {
     try
     {
-        return lookup.get(enum_name);
+        return lookup[enum_name]->str();
     }
     catch(RunTimeException& e)
     {

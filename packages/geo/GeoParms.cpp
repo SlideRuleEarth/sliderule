@@ -69,8 +69,8 @@ const char* GeoParms::MODE_ALGO             = "Mode";
 const char* GeoParms::GAUSS_ALGO            = "Gauss";
 
 const char* GeoParms::OBJECT_TYPE           = "GeoParms";
-const char* GeoParms::LuaMetaName           = "GeoParms";
-const struct luaL_Reg GeoParms::LuaMetaTable[] = {
+const char* GeoParms::LUA_META_NAME           = "GeoParms";
+const struct luaL_Reg GeoParms::LUA_META_TABLE[] = {
     {"name",        luaAssetName},
     {"region",      luaAssetRegion},
     {"keyspace",    luaSetKeySpace},
@@ -99,7 +99,7 @@ int GeoParms::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -108,7 +108,7 @@ int GeoParms::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
-    LuaObject           (L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     sampling_algo       (GRIORA_NearestNeighbour),
     sampling_radius     (0),
     zonal_stats         (false),
@@ -120,6 +120,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     proj_pipeline       (NULL),
     aoi_bbox            {0, 0, 0, 0},
     catalog             (NULL),
+    bands               (8),
     asset_name          (NULL),
     asset               (NULL),
     key_space           (0)
@@ -261,7 +262,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL));
             if(asset_name)
             {
-                asset = (Asset*)LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE);
+                asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
                 if(!asset && asset_required) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset_name);
                 mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
             }
@@ -288,7 +289,6 @@ GeoParms::~GeoParms (void)
 {
     cleanup();
 }
-
 
 /*----------------------------------------------------------------------------
  * cleanup
@@ -331,16 +331,16 @@ void GeoParms::cleanup (void)
  *----------------------------------------------------------------------------*/
 GDALRIOResampleAlg GeoParms::str2algo (const char* str)
 {
-         if (!str)                                          return GRIORA_NearestNeighbour;
-    else if (StringLib::match(str, NEARESTNEIGHBOUR_ALGO))  return GRIORA_NearestNeighbour;
-    else if (StringLib::match(str, BILINEAR_ALGO))          return GRIORA_Bilinear;
-    else if (StringLib::match(str, CUBIC_ALGO))             return GRIORA_Cubic;
-    else if (StringLib::match(str, CUBICSPLINE_ALGO))       return GRIORA_CubicSpline;
-    else if (StringLib::match(str, LANCZOS_ALGO))           return GRIORA_Lanczos;
-    else if (StringLib::match(str, AVERAGE_ALGO))           return GRIORA_Average;
-    else if (StringLib::match(str, MODE_ALGO))              return GRIORA_Mode;
-    else if (StringLib::match(str, GAUSS_ALGO))             return GRIORA_Gauss;
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
+    if(!str)                                            return GRIORA_NearestNeighbour;
+    if(StringLib::match(str, NEARESTNEIGHBOUR_ALGO))    return GRIORA_NearestNeighbour;
+    if(StringLib::match(str, BILINEAR_ALGO))            return GRIORA_Bilinear;
+    if(StringLib::match(str, CUBIC_ALGO))               return GRIORA_Cubic;
+    if(StringLib::match(str, CUBICSPLINE_ALGO))         return GRIORA_CubicSpline;
+    if(StringLib::match(str, LANCZOS_ALGO))             return GRIORA_Lanczos;
+    if(StringLib::match(str, AVERAGE_ALGO))             return GRIORA_Average;
+    if(StringLib::match(str, MODE_ALGO))                return GRIORA_Mode;
+    if(StringLib::match(str, GAUSS_ALGO))               return GRIORA_Gauss;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
 }
 
 /*----------------------------------------------------------------------------
@@ -362,7 +362,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
         {
             /* Add band */
             lua_rawgeti(L, index, i+1);
-            const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+            string band_str(LuaObject::getLuaString(L, -1));
             bands.add(band_str);
             lua_pop(L, 1);
         }
@@ -372,7 +372,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
         if(provided) *provided = true;
 
         /* Add band */
-        const char* band_str = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+        string band_str(LuaObject::getLuaString(L, -1));
         bands.add(band_str);
     }
     else if(!lua_isnil(L, index))
@@ -435,7 +435,7 @@ int GeoParms::luaAssetName (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset_name) lua_pushstring(L, lua_obj->asset_name);
         else lua_pushnil(L);
         return 1;
@@ -453,7 +453,7 @@ int GeoParms::luaAssetRegion (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getRegion());
         else lua_pushnil(L);
         return 1;
@@ -471,7 +471,7 @@ int GeoParms::luaSetKeySpace (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = (GeoParms*)getLuaSelf(L, 1);
+        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         uint64_t key_space = (uint64_t)getLuaInteger(L, 2);
 
         lua_obj->key_space = key_space;

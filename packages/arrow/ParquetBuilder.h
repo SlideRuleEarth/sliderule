@@ -71,8 +71,8 @@ class ParquetBuilder: public LuaObject
         static const int QUEUE_BUFFER_FACTOR = 3;
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const char* metaRecType;
         static const RecordObject::fieldDef_t metaRecDef[];
@@ -110,7 +110,7 @@ class ParquetBuilder: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef List<RecordObject::field_t, LIST_BLOCK_SIZE> field_list_t;
+        typedef List<RecordObject::field_t> field_list_t;
         typedef field_list_t::Iterator field_iterator_t;
 
         typedef struct {
@@ -163,7 +163,7 @@ class ParquetBuilder: public LuaObject
 
                             ParquetBuilder          (lua_State* L, ArrowParms* parms,
                                                      const char* outq_name, const char* inq_name,
-                                                     const char* rec_type, const char* id, geo_data_t geo, const char* index_key);
+                                                     const char* rec_type, const char* id, const geo_data_t& geo, const char* index_key);
                             ~ParquetBuilder         (void);
 
         static void*        builderThread           (void* parm);

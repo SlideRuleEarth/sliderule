@@ -56,9 +56,9 @@ class H5File: public LuaObject
 
         static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
 
-        static const char* ObjectType;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const char* recType;
         static const RecordObject::fieldDef_t recDef[];

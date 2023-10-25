@@ -33,67 +33,68 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <pybind11/pybind11.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <dlfcn.h>
-#include "StringLib.h"
-#include "pyPlugin.h"
+#include "PublishMonitor.h"
+#include "Monitor.h"
+#include "EventLib.h"
+#include "TimeLib.h"
+#include "RecordObject.h"
 
 /******************************************************************************
- * NAMESPACES
+ * PUBLIC METHODS
  ******************************************************************************/
 
-namespace py = pybind11;
-
-/******************************************************************************
- * TYPEDEFS
- ******************************************************************************/
-
-typedef void (*init_f) (void);
-
-/******************************************************************************
- * pyPlugin Class
- ******************************************************************************/
-
-/*--------------------------------------------------------------------
- * Constructor
- *--------------------------------------------------------------------*/
-pyPlugin::pyPlugin (const std::string &_plugin)
+/*----------------------------------------------------------------------------
+ * luaCreate - create([<type mask>], [<level>], [<output format>], <outputq>)
+ *----------------------------------------------------------------------------*/
+int PublishMonitor::luaCreate (lua_State* L)
 {
-    /* Get Plugin Name */
-    char plugin_buf[MAX_STR_SIZE];
-    StringLib::copy(plugin_buf, _plugin.c_str(), _plugin.length());
-    char* plugin_name = StringLib::find(plugin_buf, '/', false) + 1;
-    char* plugin_ext = StringLib::find(plugin_buf, '.', true);
-    *plugin_ext = '\0';
+    try
+    {
+        /* Get Parmeters */
+        uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
+        event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
+        format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
+        const char* outq_name = getLuaString(L, 4, true, NULL);
 
-    /* Load Plugin */
-    void* plugin = dlopen(_plugin.c_str(), RTLD_NOW);
-    if(plugin)
-    {
-        /* Call plugin initialization function */
-        char init_func[MAX_STR_SIZE];
-        StringLib::format(init_func, MAX_STR_SIZE, "init%s", plugin_name);
-        init_f init = (init_f)dlsym(plugin, init_func);
-        if(init)
-        {
-            init();
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "cannot find initialization function %s: %s\n", init_func, dlerror());
-        }
+        /* Return Dispatch Object */
+        return createLuaObject(L, new PublishMonitor(L, type_mask, level, format, outq_name));
     }
-    else
+    catch(const RunTimeException& e)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cannot load %s: %s\n", plugin_name, dlerror());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
     }
 }
 
-/*--------------------------------------------------------------------
- * Destructor
- *--------------------------------------------------------------------*/
-pyPlugin::~pyPlugin (void)
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * processEvent
+ *----------------------------------------------------------------------------*/
+void PublishMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
+    outQ->postCopy(event_buf_ptr, event_size, IO_CHECK);
+}
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name):
+    Monitor(L, type_mask, level, format)
+{
+    outQ = new Publisher(outq_name);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+PublishMonitor::~PublishMonitor(void)
+{
+    delete outQ;
 }

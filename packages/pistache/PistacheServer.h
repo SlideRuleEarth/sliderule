@@ -57,8 +57,8 @@ class PistacheServer: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const int REQUEST_ID_LEN = MAX_STR_SIZE;
         static const int MAX_RESPONSE_TIME_MS = 5000;
@@ -68,7 +68,7 @@ class PistacheServer: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        static StringLib::String serverHead;
+        static FString serverHead;
 
         /*--------------------------------------------------------------------
          * Types

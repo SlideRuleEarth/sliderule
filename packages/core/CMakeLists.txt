@@ -48,6 +48,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/MsgQ.cpp
         ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.cpp
@@ -107,6 +108,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/MsgQ.h
         ${CMAKE_CURRENT_LIST_DIR}/Ordering.h
         ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.h
         ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.h
         ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.h

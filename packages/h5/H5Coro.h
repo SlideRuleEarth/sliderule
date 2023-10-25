@@ -326,7 +326,7 @@ class H5FileBuffer
         void                tearDown              (void);
 
         void                ioRequest             (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);
-        bool                ioCheckCache          (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
+        static bool         ioCheckCache          (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
         static uint64_t     ioHashL1              (uint64_t key);
         static uint64_t     ioHashL2              (uint64_t key);
 
@@ -361,11 +361,11 @@ class H5FileBuffer
         int                 readAttributeInfoMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 
         void                parseDataset          (void);
-        const char*         type2str              (data_type_t datatype);
-        const char*         layout2str            (layout_t layout);
-        int                 highestBit            (uint64_t value);
-        int                 inflateChunk          (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
-        int                 shuffleChunk          (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
+        static const char*  type2str              (data_type_t datatype);
+        static const char*  layout2str            (layout_t layout);
+        static int          highestBit            (uint64_t value);
+        static int          inflateChunk          (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_size);
+        static int          shuffleChunk          (const uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size);
 
         static uint64_t     metaGetKey            (const char* url);
         static void         metaGetUrl            (char* url, const char* resource, const char* dataset);
@@ -381,7 +381,7 @@ class H5FileBuffer
         /* Class Data */
         const char*         datasetName;            // holds buffer of dataset name that datasetPath points back into
         const char*         datasetPrint;           // holds untouched dataset name string used for displaying the name
-        List<const char*>   datasetPath;
+        vector<const char*> datasetPath;
         uint64_t            datasetStartRow;
         int                 datasetNumRows;
         bool                errorChecking;

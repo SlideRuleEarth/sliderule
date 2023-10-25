@@ -94,8 +94,8 @@ class MsgQ
          * Methods
          *--------------------------------------------------------------------*/
 
-                        MsgQ            (const char* name, free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
+        explicit        MsgQ            (const char* name, free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
                         ~MsgQ           (void);
 
                 int     getCount        (void);
@@ -119,7 +119,7 @@ class MsgQ
          *--------------------------------------------------------------------*/
 
         static const int MSGQ_DEFAULT_SUBSCRIBERS = 2;
-        static const unsigned int MSGQ_COPYQ_MASK = 1 << ((sizeof(unsigned int) * 8) - 1);
+        static const unsigned int MSGQ_COPYQ_MASK = 1U << ((sizeof(unsigned int) * 8) - 1);
 
         /*--------------------------------------------------------------------
          * Types
@@ -161,12 +161,16 @@ class MsgQ
             int                     free_blocks;                        // current number of blocks of free_block_stack
         } message_queue_t;
 
+        typedef struct {
+            message_queue_t*        queue;
+        } global_queue_t;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         static int                          StandardQueueDepth;
-        static Dictionary<message_queue_t*> queues;
+        static Dictionary<global_queue_t>   queues;
         static Mutex                        listmut;
 
         message_queue_t* msgQ;
@@ -182,21 +186,21 @@ class Publisher: public MsgQ
 
         static const int MAX_POSTED_STR = 1024;
 
-                Publisher       (const char* name, MsgQ::free_func_t free_func=defaultFree, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=defaultFree);
-                ~Publisher      (void);
+        explicit    Publisher       (const char* name, MsgQ::free_func_t free_func=defaultFree, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit    Publisher       (const MsgQ& existing_q, MsgQ::free_func_t free_func=defaultFree);
+                    ~Publisher      (void);
 
 
-        int     postRef         (void* data, int size, int timeout=IO_CHECK);
-        int     postCopy        (const void* data, int size, int timeout=IO_CHECK);
-        int     postCopy        (const void* data, int size, const void* secondary_data, int secondary_size, int timeout=IO_CHECK);
-        int     postString      (const char* format_string, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
+        int         postRef         (void* data, int size, int timeout=IO_CHECK);
+        int         postCopy        (const void* data, int size, int timeout=IO_CHECK);
+        int         postCopy        (const void* data, int size, const void* secondary_data, int secondary_size, int timeout=IO_CHECK);
+        int         postString      (const char* format_string, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
 
-        static void defaultFree (void* obj, void* parm);
+        static void defaultFree     (void* obj, void* parm);
 
     private:
 
-        int     post            (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
+        int         post            (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
 
 };
 
@@ -215,25 +219,25 @@ class Subscriber: public MsgQ
             void*   _handle;
         } msgRef_t;
 
-                Subscriber      (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-                Subscriber      (const MsgQ& existing_q, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE);
-                ~Subscriber     (void);
+        explicit        Subscriber      (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
+        explicit        Subscriber      (const MsgQ& existing_q, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE);
+                        ~Subscriber     (void);
 
-        bool    dereference     (msgRef_t& ref, bool with_delete=true);
-        void    drain           (bool with_delete=true);
-        bool    isEmpty         (void);
-        void*   getData         (void* _handle, int* size=NULL);
+        bool            dereference     (msgRef_t& ref, bool with_delete=true);
+        void            drain           (bool with_delete=true);
+        bool            isEmpty         (void);
+        static void*    getData         (void* _handle, int* size=NULL);
 
-        int     receiveRef      (msgRef_t& ref, int timeout);
-        int     receiveCopy     (void* data, int size, int timeout);
+        int             receiveRef      (msgRef_t& ref, int timeout);
+        int             receiveCopy     (void* data, int size, int timeout);
 
     private:
 
-        int id;                 // index into current node table
+        int id; // index into current node table
 
-        int     receive         (msgRef_t& ref, int size, int timeout, bool copy=false);
-        bool    reclaim_nodes   (bool delete_data);
-        void    init_subscriber (subscriber_type_t type);
+        int             receive         (msgRef_t& ref, int size, int timeout, bool copy=false);
+        bool            reclaim_nodes   (bool delete_data);
+        void            init_subscriber (subscriber_type_t type);
 };
 
 #endif  /* __msgq__ */

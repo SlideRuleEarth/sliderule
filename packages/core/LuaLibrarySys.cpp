@@ -98,7 +98,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
     TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    SafeString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+    FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
     int64_t duration = TimeLib::gpstime() - launch_time_gps;
     const char** pkg_list = LuaEngine::getPkgList();
 
@@ -106,7 +106,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     print2term("SlideRule Version:   %s\n", LIBID);
     print2term("Build Information:   %s\n", BUILDINFO);
     print2term("Environment Version: %s\n", OsApi::getEnvVersion());
-    print2term("Launch Time: %s\n", timestr.str());
+    print2term("Launch Time: %s\n", timestr.c_str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
     print2term("Packages: [ ");
     if(pkg_list)
@@ -125,7 +125,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
     lua_pushstring(L, OsApi::getEnvVersion());
-    lua_pushstring(L, timestr.str());
+    lua_pushstring(L, timestr.c_str());
     lua_pushinteger(L, duration);
     lua_newtable(L);
     if(pkg_list)
@@ -228,47 +228,13 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_metric - .metric(<category>) --> table of metric values
+ * lsys_metric - .metric(<...)
  *----------------------------------------------------------------------------*/
-static void populate_metric_table (const EventLib::metric_t& metric, int32_t index, void* parm)
-{
-    (void)index;
-
-    lua_State* L = (lua_State*)parm;
-    SafeString metric_full_name("%s.%s", metric.category, metric.name);
-
-    lua_pushstring(L, metric_full_name.str());
-    lua_newtable(L);
-    {
-        lua_pushstring(L, "value");
-        lua_pushnumber(L, metric.value);
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "type");
-        lua_pushstring(L, EventLib::subtype2str(metric.subtype));
-        lua_settable(L, -3);
-    }
-    lua_settable(L, -3);
-}
-
 int LuaLibrarySys::lsys_metric (lua_State* L)
+//TODO: need to create a metric like the log function
 {
-    /* Get Category Parameter */
-    const char* category = NULL;
-    if(lua_isstring(L, 1)) // query category
-    {
-        category = lua_tostring(L, 1);
-    }
-    else if(!lua_isnil(L, 1) && lua_gettop(L) > 0)
-    {
-        mlog(CRITICAL, "Invalid parameter supplied to metric, must be nil or string (i.e. metric(\"mycategory\"))");
-        return 0;
-    }
-
-    /* Populate Metric Table */
-    lua_newtable(L);
-    EventLib::iterateMetric(category, populate_metric_table, L);
-    return 1;
+    (void)L;
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -422,11 +388,10 @@ int LuaLibrarySys::lsys_getiosize (lua_State* L)
 int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
 {
     bool status = false;
-    int type_mask = 0;
 
     if(lua_isnumber(L, 1))
     {
-        type_mask = lua_tonumber(L, 1);
+        int type_mask = lua_tonumber(L, 1);
         if(lua_isnumber(L, 2))
         {
             event_level_t lvl = (event_level_t)lua_tonumber(L, 2);
@@ -518,10 +483,8 @@ int LuaLibrarySys::lsys_cwd (lua_State* L)
         lua_pushstring(L, cwd);
         return 1;
     }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------

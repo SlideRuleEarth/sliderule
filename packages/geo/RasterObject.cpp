@@ -50,8 +50,8 @@
  ******************************************************************************/
 
 const char* RasterObject::OBJECT_TYPE  = "RasterObject";
-const char* RasterObject::LuaMetaName  = "RasterObject";
-const struct luaL_Reg RasterObject::LuaMetaTable[] = {
+const char* RasterObject::LUA_META_NAME  = "RasterObject";
+const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -85,22 +85,23 @@ int RasterObject::luaCreate( lua_State* L )
     try
     {
         /* Get Parameters */
-        _parms = (GeoParms*)getLuaObject(L, 1, GeoParms::OBJECT_TYPE);
+        _parms = dynamic_cast<GeoParms*>(getLuaObject(L, 1, GeoParms::OBJECT_TYPE));
         if(_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create GeoParms object");
 
         /* Get Factory */
-        factory_t _create = NULL;
+        factory_t factory;
+        bool found = false;
         factoryMut.lock();
         {
-            factories.find(_parms->asset_name, &_create);
+            found = factories.find(_parms->asset_name, &factory);
         }
         factoryMut.unlock();
 
         /* Check Factory */
-        if(_create == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
+        if(!found) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
 
         /* Create Raster */
-        RasterObject* _raster = _create(L, _parms);
+        RasterObject* _raster = factory.create(L, _parms);
         if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", _parms->asset_name);
 
         /* Return Object */
@@ -109,7 +110,7 @@ int RasterObject::luaCreate( lua_State* L )
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -117,13 +118,14 @@ int RasterObject::luaCreate( lua_State* L )
 /*----------------------------------------------------------------------------
  * registerDriver
  *----------------------------------------------------------------------------*/
-bool RasterObject::registerRaster (const char* _name, factory_t create)
+bool RasterObject::registerRaster (const char* _name, factory_f create)
 {
     bool status;
 
     factoryMut.lock();
     {
-        status = factories.add(_name, create);
+        factory_t factory = { .create = create };
+        status = factories.add(_name, factory);
     }
     factoryMut.unlock();
 
@@ -147,7 +149,7 @@ RasterObject::~RasterObject(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
     /* Add Lua Functions */
@@ -185,7 +187,7 @@ int RasterObject::luaSamples(lua_State *L)
     try
     {
         /* Get Self */
-        lua_obj = (RasterObject*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
 
         /* Get Coordinates */
         double lon    = getLuaFloat(L, 2);
@@ -216,7 +218,7 @@ int RasterObject::luaSamples(lua_State *L)
         num_ret++;
 
         /* Populate samples */
-        if(listvalid && slist.size() > 0)
+        if(listvalid && !slist.empty())
         {
             for(uint32_t i = 0; i < slist.size(); i++)
             {
@@ -267,7 +269,7 @@ int RasterObject::luaSamples(lua_State *L)
 
     /* Free samples */
     for (const RasterSample* sample : slist)
-        if (sample) delete sample;
+        delete sample;
 
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);
@@ -289,7 +291,7 @@ int RasterObject::luaSubset(lua_State *L)
     try
     {
         /* Get Self */
-        lua_obj = (RasterObject*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
 
         /* Get extent */
         double lon_min = getLuaFloat(L, 2);
@@ -327,7 +329,7 @@ int RasterObject::luaSubset(lua_State *L)
         num_ret++;
 
         /* Populate subsets */
-        if(listvalid && slist.size() > 0)
+        if(listvalid && !slist.empty())
         {
             for(uint32_t i = 0; i < slist.size(); i++)
             {
@@ -378,7 +380,7 @@ int RasterObject::luaSubset(lua_State *L)
 
     /* Free subsets */
     for (const RasterSubset* subset : slist)
-        if (subset) delete subset;
+        delete subset;
 
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);

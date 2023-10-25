@@ -133,8 +133,8 @@ class CcsdsPacketProcessor: public CcsdsMsgProcessor
 
         static void*    workerThread            (void* parm);
 
-        bool            processMsg              (unsigned char* msg, int bytes); // OVERLOAD
-        bool            handleTimeout           (void); // OVERLOAD
+        bool            processMsg              (unsigned char* msg, int bytes) override;
+        bool            handleTimeout           (void) override;
         bool            resetProcessing         (void);
 
         static void     freeWorker              (void* obj, void* parm);

@@ -104,7 +104,7 @@ class CcsdsFileWriter: public CcsdsMsgProcessor
         virtual int     writeMsg            (void* msg, int size, bool with_header=false);
         virtual bool    isBinary            (void);
 
-                bool    processMsg          (unsigned char* msg, int bytes); // OVERLOAD
+                bool    processMsg          (unsigned char* msg, int bytes) override;
 
                 int     flushCmd            (int argc, char argv[][MAX_CMD_SIZE]);
 };

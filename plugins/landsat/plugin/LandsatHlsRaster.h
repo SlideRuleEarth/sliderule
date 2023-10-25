@@ -73,7 +73,6 @@ class LandsatHlsRaster: public GeoIndexedRaster
         static RasterObject* create(lua_State* L, GeoParms* _parms)
                           { return new LandsatHlsRaster(L, _parms); }
 
-
     protected:
 
         /*--------------------------------------------------------------------
@@ -84,24 +83,23 @@ class LandsatHlsRaster: public GeoIndexedRaster
        virtual ~LandsatHlsRaster (void);
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
-        bool    findRasters      (const OGRGeometry* geo);
+        bool    findRasters      (const OGRGeometry* geo) override;
         void    getGroupSamples  (const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags) final;
 
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
 
     private:
-        bool validateBand   (band_type_t type, const char* bandName);
 
-        inline bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
-        inline bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
-        inline bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
-        inline bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
+        static bool validateBand   (band_type_t type, const char* bandName);
+
+        static bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
+        static bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
+        static bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
+        static bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
+
         std::string filePath;
         std::string indexFile;
         Dictionary<bool> bandsDict;

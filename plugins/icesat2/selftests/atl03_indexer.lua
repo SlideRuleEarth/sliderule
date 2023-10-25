@@ -6,6 +6,9 @@ local json = require("json")
 
 -- Setup --
 
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
+
 local assets = asset.loaddir()
 local asset_name = "icesat2"
 local nsidc_s3 = core.getbyname(asset_name)
@@ -32,17 +35,17 @@ runner.check(status)
 
 -- setup index file writer
 local asset_index_file = core.file(core.WRITER, core.TEXT, index_filename)
-local writer = core.writer(asset_index_file, "indexq")
+local writer = core.writer(asset_index_file, "indexq"):name("writer")
 
 -- setup csv dispatch
 local indexrecq = msg.subscribe("indexrecq")
-local dispatcher = core.dispatcher("indexrecq")
-local csvdispatch = core.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq")
+local dispatcher = core.dispatcher("indexrecq"):name("dispatcher")
+local csvdispatch = core.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq"):name("csvdispatch")
 dispatcher:attach(csvdispatch, "atl03rec.index")
 dispatcher:run()
 
 -- create and run indexer
-local indexer = icesat2.atl03indexer(nsidc_s3, filelist, "indexrecq", 1)
+local indexer = icesat2.atl03indexer(nsidc_s3, filelist, "indexrecq", 1):name("indexer")
 
 -- read in index list
 local indexlist = {}

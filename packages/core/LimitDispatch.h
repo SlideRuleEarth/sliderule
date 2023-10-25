@@ -57,8 +57,8 @@ class LimitDispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -83,7 +83,7 @@ class LimitDispatch: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    LimitDispatch       (lua_State* L, LimitRecord::limit_t _limit, const char* deepq_name, const char* limitq_name);
+                    LimitDispatch       (lua_State* L, const LimitRecord::limit_t& _limit, const char* deepq_name, const char* limitq_name);
                     ~LimitDispatch      (void);
 
         /* overridden methods */

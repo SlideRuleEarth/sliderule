@@ -55,7 +55,7 @@ class S3CacheIODriver: public S3CurlIODriver
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* FORMAT;
+        static const char* CACHE_FORMAT;
 
         static const char* DEFAULT_CACHE_ROOT;
         static const int DEFAULT_MAX_CACHE_FILES = 16;
@@ -68,7 +68,7 @@ class S3CacheIODriver: public S3CurlIODriver
         static IODriver*    create          (const Asset* _asset, const char* resource);
         static int          luaCreateCache  (lua_State* L);
         static int          createCache     (const char* cache_root=DEFAULT_CACHE_ROOT, int max_files=DEFAULT_MAX_CACHE_FILES);
-        int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos);
+        int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
 
     private:
 
@@ -82,18 +82,23 @@ class S3CacheIODriver: public S3CurlIODriver
         bool    fileGet             (const char* bucket, const char* key, const char** file);
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef Ordering<string*, okey_t> FileOrdering;
+        
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static const char*                              cacheRoot;
-        static int                                      cacheMaxSize;
-        static Mutex                                    cacheMut;
-        static okey_t                                   cacheIndex;
-        static Dictionary<okey_t>                       cacheLookUp;
-        static MgOrdering<const char*, okey_t, true>    cacheFiles;
+        static const char*          cacheRoot;
+        static int                  cacheMaxSize;
+        static Mutex                cacheMut;
+        static okey_t               cacheIndex;
+        static Dictionary<okey_t>   cacheLookUp;
+        static FileOrdering         cacheFiles;
 
-        const Asset*    asset;
-        fileptr_t       ioFile;
+        fileptr_t                   ioFile;
 };
 
 #endif  /* __s3_cache_io_driver__ */

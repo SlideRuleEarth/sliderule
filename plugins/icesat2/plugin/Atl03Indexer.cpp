@@ -53,8 +53,8 @@ const RecordObject::fieldDef_t Atl03Indexer::recDef[] = {
     {"rgt",     RecordObject::UINT32,   offsetof(index_t, rgt),     1,                              NULL, NATIVE_FLAGS},
 };
 const char* Atl03Indexer::OBJECT_TYPE = "Atl03Indexer";
-const char* Atl03Indexer::LuaMetaName = "Atl03Indexer";
-const struct luaL_Reg Atl03Indexer::LuaMetaTable[] = {
+const char* Atl03Indexer::LUA_META_NAME = "Atl03Indexer";
+const struct luaL_Reg Atl03Indexer::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -68,25 +68,25 @@ const struct luaL_Reg Atl03Indexer::LuaMetaTable[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Indexer::luaCreate (lua_State* L)
 {
-    List<const char*>* _resources = NULL;
+    List<string>* _resources = NULL;
     Asset* _asset = NULL;
     try
     {
         /* Get URL */
-                    _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+                    _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         int         tblindex    = 2;
         const char* outq_name   = getLuaString(L, 3);
         int         num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
 
         /* Build Resource Table */
-        _resources = new List<const char*>();
         if(lua_type(L, tblindex) == LUA_TTABLE)
         {
             int size = lua_rawlen(L, tblindex);
+            _resources = new List<string>(size);
             for(int e = 0; e < size; e++)
             {
                 lua_rawgeti(L, tblindex, e + 1);
-                const char* name = StringLib::duplicate(getLuaString(L, -1));
+                string name(getLuaString(L, -1));
                 _resources->add(name);
                 lua_pop(L, 1);
             }
@@ -105,7 +105,7 @@ int Atl03Indexer::luaCreate (lua_State* L)
     }
 
     /* Clean Up Resources Not Used Since Failed to Create Indexer */
-    if(_resources) freeResources(_resources);
+    if(_resources) delete _resources;
 
     /* Release Asset Since Failed to Create Indexer */
     if(_asset) _asset->releaseLuaObject();
@@ -128,8 +128,8 @@ void Atl03Indexer::init (void)
  *  Note:   object takes ownership of _resources list as well as pointers to urls
  *          (const char*) inside the list; responsible for freeing both
  *----------------------------------------------------------------------------*/
-Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<const char*>* _resources, const char* outq_name, int num_threads):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable)
+Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<string>* _resources, const char* outq_name, int num_threads):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(outq_name);
     assert(_resources);
@@ -185,7 +185,7 @@ Atl03Indexer::~Atl03Indexer (void)
     delete outQ;
 
     /* Clean Up Resource List */
-    freeResources(resources);
+    delete resources;
 
     /* Release Asset */
     asset->releaseLuaObject();
@@ -197,8 +197,7 @@ Atl03Indexer::~Atl03Indexer (void)
 void* Atl03Indexer::indexerThread (void* parm)
 {
     /* Get Thread Info */
-    Atl03Indexer* indexer = (Atl03Indexer*)parm;
-    bool complete = false;
+    Atl03Indexer* indexer = reinterpret_cast<Atl03Indexer*>(parm);
 
     /* Start Trace */
     uint32_t trace_id = start_trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
@@ -213,6 +212,7 @@ void* Atl03Indexer::indexerThread (void* parm)
 
     try
     {
+        bool complete = false;
         while(!complete)
         {
             const char* resource_name = NULL;
@@ -222,7 +222,7 @@ void* Atl03Indexer::indexerThread (void* parm)
             {
                 if(indexer->resourceEntry < indexer->resources->length())
                 {
-                    resource_name = indexer->resources->get(indexer->resourceEntry);
+                    resource_name = indexer->resources->get(indexer->resourceEntry).c_str();
                     indexer->resourceEntry++;
                 }
                 else
@@ -298,7 +298,7 @@ void* Atl03Indexer::indexerThread (void* parm)
     }
 
     /* Free Context */
-    if(context) delete context;
+    delete context;
 
     /* Count Completion */
     indexer->threadMut.lock();
@@ -321,18 +321,6 @@ void* Atl03Indexer::indexerThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * freeResources
- *----------------------------------------------------------------------------*/
-void Atl03Indexer::freeResources (List<const char*>* _resources)
-{
-    for(int i = 0; i < _resources->length(); i++)
-    {
-        delete [] _resources->get(i);
-    }
-    delete _resources;
-}
-
-/*----------------------------------------------------------------------------
  * luaStats
  *----------------------------------------------------------------------------*/
 int Atl03Indexer::luaStats (lua_State* L)
@@ -343,7 +331,7 @@ int Atl03Indexer::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        Atl03Indexer* lua_obj = (Atl03Indexer*)getLuaSelf(L, 1);
+        Atl03Indexer* lua_obj = dynamic_cast<Atl03Indexer*>(getLuaSelf(L, 1));
 
         /* Create Statistics Table */
         lua_newtable(L);
@@ -357,7 +345,7 @@ int Atl03Indexer::luaStats (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error configuring %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error configuring %s: %s", LUA_META_NAME, e.what());
     }
 
     /* Return Status */

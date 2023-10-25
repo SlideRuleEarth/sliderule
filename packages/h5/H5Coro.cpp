@@ -87,7 +87,7 @@ H5Future::H5Future (void)
 H5Future::~H5Future (void)
 {
     wait(IO_PEND);
-    if(info.data) delete [] info.data;
+    delete [] info.data;
 }
 
 /*----------------------------------------------------------------------------
@@ -104,8 +104,8 @@ H5Future::rc_t H5Future::wait (int timeout)
             sync.wait(0, timeout);
         }
 
-        if      (!complete) rc = TIMEOUT;
-        else if (!valid)    rc = INVALID;
+        if      (!valid)    rc = INVALID;
+        else if (!complete) rc = TIMEOUT;
         else                rc = COMPLETE;
     }
     sync.unlock();
@@ -293,14 +293,14 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
             }
 
             /* Add Entry to Repository */
-            metaRepo.add(meta_key, metaData, true);
+            metaRepo.add(meta_key, metaData, false);
         }
         metaMutex.unlock();
     }
     catch(const RunTimeException& e)
     {
         /* Clean Up Data Allocations */
-        if(info->data) delete [] info->data;
+        delete [] info->data;
         info->data= NULL;
         info->datasize = 0;
 
@@ -326,15 +326,12 @@ H5FileBuffer::~H5FileBuffer (void)
 void H5FileBuffer::tearDown (void)
 {
     /* Close I/O Resources */
-    if(ioDriver)
-    {
-        delete ioDriver;
-    }
+    delete ioDriver;
 
     /* Delete Local Context */
     if(ioContextLocal)
     {
-        if(ioContext) delete ioContext;
+        delete ioContext;
     }
 
     /* Delete Dataset Strings */
@@ -342,8 +339,8 @@ void H5FileBuffer::tearDown (void)
     delete [] datasetPrint;
 
     /* Delete Chunk Buffer */
-    if(dataChunkBuffer) delete [] dataChunkBuffer;
-    if(dataChunkFilterBuffer) delete [] dataChunkFilterBuffer;
+    delete [] dataChunkBuffer;
+    delete [] dataChunkFilterBuffer;
 }
 
 /*----------------------------------------------------------------------------
@@ -475,7 +472,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                 }
 
                 /* Add Cache Entry */
-                if(!cache->add(file_position, entry))
+                if(!cache->add(file_position, entry, true))
                 {
                     /* Free Previously Allocated Entry
                      *  should only fail to add if the cache line was
@@ -626,7 +623,7 @@ void H5FileBuffer::readDataset (info_t* info)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "missing data type information");
     }
-    else if(metaData.ndims < 0)
+    if(metaData.ndims < 0)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "missing data dimension information");
     }
@@ -713,7 +710,7 @@ void H5FileBuffer::readDataset (info_t* info)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "data not allocated in contiguous layout");
         }
-        else if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
+        if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
         }
@@ -745,7 +742,7 @@ void H5FileBuffer::readDataset (info_t* info)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "chunk element size does not match data element size: %d != %d", metaData.elementsize, metaData.typesize);
                     }
-                    else if(metaData.chunkelements <= 0)
+                    if(metaData.chunkelements == 0)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of chunk elements: %ld", (long)metaData.chunkelements);
                     }
@@ -850,12 +847,12 @@ void H5FileBuffer::readDataset (info_t* info)
                         {
                             dimi[ci--] = 0;
                             if(ci < 0) break;
-                            else dimi[ci]++;
+                            dimi[ci]++;
                         }
 
                         /* Check Exit Condition */
                         if(ci < 0) break;
-                        else ci = FLAT_NDIMS - 1;
+                        ci = FLAT_NDIMS - 1;
                     }
 
                     /* Replace Buffer */
@@ -1069,6 +1066,23 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         print2term("Starting # of Rows in Root Indirect Block:                       %lu\n", (unsigned long)start_num_rows);
         print2term("Address of Root Block:                                           0x%lx\n", (unsigned long)root_blk_addr);
         print2term("Current # of Rows in Root Indirect Block:                        %lu\n", (unsigned long)curr_num_rows);
+    }
+    else
+    {
+        (void)heap_obj_id_len;
+        (void)max_size_mg_obj;
+        (void)next_huge_obj_id;
+        (void)btree_addr_huge_obj;
+        (void)free_space_mg_blks;
+        (void)addr_free_space_mg;
+        (void)mg_space;
+        (void)alloc_mg_space;
+        (void)dblk_alloc_iter;
+        (void)huge_obj_size;
+        (void)huge_objs;
+        (void)tiny_obj_size;
+        (void)tiny_objs;
+        (void)start_num_rows;
     }
 
     /* Read Filter Information */
@@ -1512,7 +1526,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "no bytes of chunk data to read: %ld, %lu", (long)chunk_bytes, (unsigned long)chunk_index);
                 }
-                else if((buffer_index + chunk_bytes) > buffer_size)
+                if((buffer_index + chunk_bytes) > buffer_size)
                 {
                     chunk_bytes = buffer_size - buffer_index;
                 }
@@ -1520,9 +1534,9 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                 /* Display Info */
                 if(H5_VERBOSE && H5_EXTRA_DEBUG)
                 {
-                    print2term("Chunk Offset:                                                    %ld (%ld)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
-                    print2term("Buffer Index:                                                    %ld (%ld)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
-                    print2term("Chunk Bytes:                                                     %ld (%ld)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
+                    print2term("Chunk Offset:                                                    %lu (%lu)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
+                    print2term("Buffer Index:                                                    %lu (%lu)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
+                    print2term("Chunk Bytes:                                                     %lu (%lu)\n", (unsigned long)chunk_bytes, (unsigned long)(chunk_bytes/metaData.typesize));
                 }
 
                 /* Read Chunk */
@@ -1569,7 +1583,7 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "shuffle filter unsupported on uncompressed chunk");
                         }
-                        else if(dataChunkBufferSize != curr_node.chunk_size)
+                        if(dataChunkBufferSize != curr_node.chunk_size)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
                         }
@@ -1613,7 +1627,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "key did not include a trailing zero: %lu", trailing_zero);
         }
-        else if(H5_VERBOSE && H5_EXTRA_DEBUG)
+        if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
             print2term("Trailing Zero:                                                   %d\n", (int)trailing_zero);
         }
@@ -1697,7 +1711,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         }
 
         /* Process Link */
-        if(dlvl < datasetPath.length())
+        if(dlvl < static_cast<int>(datasetPath.size()))
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
@@ -2142,28 +2156,40 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        uint64_t max_create_index = readField(8, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t max_create_index = readField(8, &pos);
             print2term("Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
+        }
+        else
+        {
+            pos += 8;
         }
     }
 
     /* Read Heap and Name Offsets */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    uint64_t name_index = readField(metaData.offsetsize, &pos);
     if(H5_VERBOSE)
     {
+        uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
+    }
+    else
+    {
+        pos += metaData.offsetsize;
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order_index = readField(metaData.offsetsize, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+        }
+        else
+        {
+            pos += metaData.offsetsize;
         }
     }
 
@@ -2484,20 +2510,28 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Creation Order */
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order = readField(8, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t create_order = readField(8, &pos);
             print2term("Creation Order:                                                  %lX\n", (unsigned long)create_order);
+        }
+        else
+        {
+            pos += 8;
         }
     }
 
     /* Read Character Set */
     if(flags & CHAR_SET_PRESENT_BIT)
     {
-        uint8_t char_set = readField(1, &pos);
         if(H5_VERBOSE)
         {
-            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
+            uint8_t char_set = readField(1, &pos);
+            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);            
+        }
+        else
+        {
+            pos += 1;
         }
     }
 
@@ -2531,7 +2565,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             print2term("Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
         }
 
-        if(dlvl < datasetPath.length())
+        if(dlvl < static_cast<int>(datasetPath.size()))
         {
             if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
             {
@@ -2808,7 +2842,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid attribute version: %d", (int)version);
         }
-        else if(reserved0 != 0)
+        if(reserved0 != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved field: %d", (int)reserved0);
         }
@@ -2859,15 +2893,13 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Shortcut Out if Not Desired Attribute */
-    if( ((dlvl + 1) != datasetPath.length()) ||
+    if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
         !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
     {
         return size;
     }
-    else
-    {
-        highestDataLevel = dlvl + 1;
-    }
+
+    highestDataLevel = dlvl + 1;
 
     /* Read Datatype Message */
     int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
@@ -2875,11 +2907,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
-    else
-    {
-        pos += datatype_bytes_read;
-        pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
-    }
+
+    pos += datatype_bytes_read;
+    pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
@@ -2887,11 +2917,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
-    else
-    {
-        pos += dataspace_bytes_read;
-        pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
-    }
+
+    pos += dataspace_bytes_read;
+    pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
 
     /* Calculate Meta Data */
     metaData.layout = CONTIGUOUS_LAYOUT;
@@ -2938,28 +2966,40 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        uint16_t max_create_index = readField(2, &pos);
         if(H5_VERBOSE)
         {
+            uint16_t max_create_index = readField(2, &pos);
             print2term("Maximum Creation Index:                                          %u\n", (unsigned short)max_create_index);
+        }
+        else
+        {
+            pos += 2;
         }
     }
 
     /* Read Heap and Name Offsets */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    uint64_t name_index = readField(metaData.offsetsize, &pos);
     if(H5_VERBOSE)
     {
+        uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
+    }
+    else
+    {
+        pos += metaData.offsetsize;
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        uint64_t create_order_index = readField(metaData.offsetsize, &pos);
         if(H5_VERBOSE)
         {
+            uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+        }
+        else
+        {
+            pos += metaData.offsetsize;
         }
     }
 
@@ -3109,11 +3149,9 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             break;
         }
-        else
-        {
-            pos += 2 + (2 * metaData.offsetsize) + metaData.lengthsize; // skip entries used, sibling addresses, and first key
-            pos = readField(metaData.offsetsize, &pos); // read and go to first child
-        }
+
+        pos += 2 + (2 * metaData.offsetsize) + metaData.lengthsize; // skip entries used, sibling addresses, and first key
+        pos = readField(metaData.offsetsize, &pos); // read and go to first child
     }
 
     /* Traverse Children Left to Right */
@@ -3128,7 +3166,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             print2term("Entries Used:                                                    %d\n", (int)entries_used);
             print2term("Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
             print2term("Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
-            print2term("First Key:                                                       %ld\n", (unsigned long)key0);
+            print2term("First Key:                                                       %lu\n", (unsigned long)key0);
         }
 
         /* Loop Through Entries in Current Node */
@@ -3145,10 +3183,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             break;
         }
-        else
-        {
-            pos = right_sibling;
-        }
+        pos = right_sibling;
 
         /* Read Header Info */
         if(!H5_ERROR_CHECKING)
@@ -3196,7 +3231,7 @@ void H5FileBuffer::parseDataset (void)
     /* Build Path to Dataset */
     while(true)
     {
-        datasetPath.add(gptr);                      // add group to dataset path
+        datasetPath.push_back(gptr);                      // add group to dataset path
         char* nptr = StringLib::find(gptr, '/');    // look for next group marker
         if(nptr == NULL) break;                     // if not found, then exit
         *nptr = '\0';                               // terminate group string
@@ -3207,7 +3242,7 @@ void H5FileBuffer::parseDataset (void)
     {
         print2term("\n----------------\n");
         print2term("Dataset: ");
-        for(int g = 0; g < datasetPath.length(); g++)
+        for(unsigned g = 0; g < datasetPath.size(); g++)
         {
             print2term("/%s", datasetPath[g]);
         }
@@ -3311,7 +3346,7 @@ int H5FileBuffer::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* ou
 /*----------------------------------------------------------------------------
  * shuffleChunk
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::shuffleChunk (uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
+int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
 {
     if(H5_ERROR_CHECKING)
     {
@@ -3434,11 +3469,11 @@ void H5Coro::deinit (void)
         {
             delete readerPids[t];
         }
-        if(readerPids) delete [] readerPids;
-        if(rqstSub) delete rqstSub;
+        delete [] readerPids;
+        delete rqstSub;
     }
 
-    if(rqstPub) delete rqstPub;
+    delete rqstPub;
 }
 
 /*----------------------------------------------------------------------------
@@ -3663,7 +3698,7 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
         H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0);
 
         /* Free Data */
-        if(data_info.data) delete [] data_info.data;
+        delete [] data_info.data;
     }
     catch (const RunTimeException& e)
     {
@@ -3702,10 +3737,8 @@ H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* d
         delete rqst.h5f;
         return NULL;
     }
-    else
-    {
-        return rqst.h5f;
-    }
+
+    return rqst.h5f;
 }
 
 /*----------------------------------------------------------------------------

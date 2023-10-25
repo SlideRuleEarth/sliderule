@@ -58,7 +58,7 @@ class FileIODriver: Asset::IODriver
          *--------------------------------------------------------------------*/
 
         static IODriver*    create  (const Asset* _asset, const char* resource);
-        int64_t             ioRead  (uint8_t* data, int64_t size, uint64_t pos);
+        int64_t             ioRead  (uint8_t* data, int64_t size, uint64_t pos) override;
 
     private:
 

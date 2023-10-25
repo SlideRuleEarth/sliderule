@@ -63,7 +63,7 @@ int H5DatasetDevice::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         int             _role           = (int)getLuaInteger(L, 1);
-                        _asset          = (Asset*)getLuaObject(L, 2, Asset::OBJECT_TYPE);
+                        _asset          = dynamic_cast<Asset*>(getLuaObject(L, 2, Asset::OBJECT_TYPE));
         const char*     _resource       = getLuaString(L, 3);
         const char*     dataset_name    = getLuaString(L, 4);
         long            id              = getLuaInteger(L, 5, true, 0);
@@ -110,7 +110,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
 
     /* Set Record */
     recObj = new RecordObject(recType);
-    recData = (h5dataset_t*)recObj->getRecordData();
+    recData = reinterpret_cast<h5dataset_t*>(recObj->getRecordData());
 
     /* Initialize Attributes to Zero */
     dataBuffer = NULL;
@@ -157,11 +157,11 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
  *----------------------------------------------------------------------------*/
 H5DatasetDevice::~H5DatasetDevice (void)
 {
-    closeConnection();
+    H5DatasetDevice::closeConnection();
     delete recObj;
-    if(config) delete [] config;
-    if(dataName) delete [] dataName;
-    if(resource) delete [] resource;
+    delete [] config;
+    delete [] dataName;
+    delete [] resource;
     asset->releaseLuaObject();
 }
 
@@ -181,7 +181,7 @@ bool H5DatasetDevice::isConnected (int num_open)
 void H5DatasetDevice::closeConnection (void)
 {
     connected = false;
-    if(dataBuffer) delete [] dataBuffer;
+    delete [] dataBuffer;
     dataBuffer = NULL;
 }
 

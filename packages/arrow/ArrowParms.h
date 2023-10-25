@@ -85,8 +85,8 @@ class ArrowParms: public LuaObject
         static const char* CREDENTIALS;
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
         * Data
@@ -117,13 +117,13 @@ class ArrowParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        cleanup             (void);
-        format_t    str2outputformat    (const char* fmt_str);
-        static int  luaIsNative         (lua_State* L);
-        static int  luaIsFeather        (lua_State* L);
-        static int  luaIsParquet        (lua_State* L);
-        static int  luaIsCSV            (lua_State* L);
-        static int  luaPath             (lua_State* L);
+        void            cleanup             (void);
+        static format_t str2outputformat    (const char* fmt_str);
+        static int      luaIsNative         (lua_State* L);
+        static int      luaIsFeather        (lua_State* L);
+        static int      luaIsParquet        (lua_State* L);
+        static int      luaIsCSV            (lua_State* L);
+        static int      luaPath             (lua_State* L);
 };
 
 #endif  /* __arrow_parms__ */

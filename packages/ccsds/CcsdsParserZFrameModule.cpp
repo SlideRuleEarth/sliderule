@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsParserZFrameModule::LuaMetaName = "CcsdsParserZFrameModule";
-const struct luaL_Reg CcsdsParserZFrameModule::LuaMetaTable[] = {
+const char* CcsdsParserZFrameModule::LUA_META_NAME = "CcsdsParserZFrameModule";
+const struct luaL_Reg CcsdsParserZFrameModule::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -64,7 +64,7 @@ int CcsdsParserZFrameModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -86,10 +86,6 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
 
         if(state == FRAME_Z)
         {
-            /* Synchronization Data for Start of Frame */
-            const char* frame_sync = "CCSD3ZA00001";
-            #define FRAME_SYNC_SIZE 12 // size of above string
-
             /* Copy into Frame Buffer */
             int cpylen = MIN(frameZBytes, bytes_left);
             memcpy(&frameBuffer[frameIndex], &parse_buffer[parse_index], cpylen);
@@ -100,6 +96,10 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
             /* Pull off Z header */
             if(frameZBytes == 0)
             {
+                /* Synchronization Data for Start of Frame */
+                const char* frame_sync = "CCSD3ZA00001";
+                #define FRAME_SYNC_SIZE 12 // size of above string
+
                 /* Compare Sync Mark */
                 if(!StringLib::match(frame_sync, frameBuffer, FRAME_SYNC_SIZE))
                 {
@@ -271,10 +271,10 @@ void CcsdsParserZFrameModule::gotoInitState(bool reset)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsParserZFrameModule::CcsdsParserZFrameModule(lua_State* L, bool file):
-    CcsdsParserModule(L, LuaMetaName, LuaMetaTable)
+    CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE)
 {
     frameFile = file;
-    gotoInitState(true);
+    CcsdsParserZFrameModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

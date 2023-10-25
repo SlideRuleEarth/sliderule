@@ -34,19 +34,14 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "Icesat2Parms.h"
-#include "PluginMetrics.h"
+#include "NetsvcParms.h"
+#include "AoiMetrics.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* PluginMetrics::CATEGORY = "icesat2";
-const char* PluginMetrics::REGION_METRIC = "hits";
-
-int32_t PluginMetrics::regionMetricIds[NUM_REGIONS];
-
-PluginMetrics::region_t continental_us = {
+AoiMetrics::region_t continental_us = {
     .name = "continental_us",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -63,7 +58,7 @@ PluginMetrics::region_t continental_us = {
     .num_points = 8
 };
 
-PluginMetrics::region_t alaska = {
+AoiMetrics::region_t alaska = {
     .name = "alaska",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -80,7 +75,7 @@ PluginMetrics::region_t alaska = {
     .num_points = 8
 };
 
-PluginMetrics::region_t canada = {
+AoiMetrics::region_t canada = {
     .name = "canada",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -99,7 +94,7 @@ PluginMetrics::region_t canada = {
     .num_points = 10
 };
 
-PluginMetrics::region_t greenland = {
+AoiMetrics::region_t greenland = {
     .name = "greenland",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -115,7 +110,7 @@ PluginMetrics::region_t greenland = {
     .num_points = 7
 };
 
-PluginMetrics::region_t central_america = {
+AoiMetrics::region_t central_america = {
     .name = "central_america",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -132,7 +127,7 @@ PluginMetrics::region_t central_america = {
     .num_points = 8
 };
 
-PluginMetrics::region_t south_america = {
+AoiMetrics::region_t south_america = {
     .name = "south_america",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -148,7 +143,7 @@ PluginMetrics::region_t south_america = {
     .num_points = 7
 };
 
-PluginMetrics::region_t africa = {
+AoiMetrics::region_t africa = {
     .name = "africa",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -166,7 +161,7 @@ PluginMetrics::region_t africa = {
     .num_points = 9
 };
 
-PluginMetrics::region_t middle_east = {
+AoiMetrics::region_t middle_east = {
     .name = "middle_east",
     .proj = MathLib::PLATE_CARREE,
      .coords = {
@@ -180,7 +175,7 @@ PluginMetrics::region_t middle_east = {
     .num_points = 5
 };
 
-PluginMetrics::region_t europe = {
+AoiMetrics::region_t europe = {
     .name = "europe",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -195,7 +190,7 @@ PluginMetrics::region_t europe = {
     .num_points = 6
 };
 
-PluginMetrics::region_t north_asia = {
+AoiMetrics::region_t north_asia = {
     .name = "north_asia",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -212,7 +207,7 @@ PluginMetrics::region_t north_asia = {
     .num_points = 8
 };
 
-PluginMetrics::region_t south_asia = {
+AoiMetrics::region_t south_asia = {
     .name = "south_asia",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -227,7 +222,7 @@ PluginMetrics::region_t south_asia = {
     .num_points = 6
 };
 
-PluginMetrics::region_t oceania = {
+AoiMetrics::region_t oceania = {
     .name = "oceania",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -243,7 +238,7 @@ PluginMetrics::region_t oceania = {
     .num_points = 7
 };
 
-PluginMetrics::region_t antarctica = {
+AoiMetrics::region_t antarctica = {
     .name = "antarctica",
     .proj = MathLib::SOUTH_POLAR,
     .coords = {
@@ -255,7 +250,7 @@ PluginMetrics::region_t antarctica = {
     .num_points = 3
 };
 
-PluginMetrics::region_t unknown_region = {
+AoiMetrics::region_t unknown_region = {
     .name = "unknown_region",
     .proj = MathLib::PLATE_CARREE,
     .coords = {},
@@ -264,13 +259,13 @@ PluginMetrics::region_t unknown_region = {
 };
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * region2str
  *----------------------------------------------------------------------------*/
-bool PluginMetrics::init (void)
+bool AoiMetrics::init (void)
 {
     bool status = true;
 
@@ -284,23 +279,46 @@ bool PluginMetrics::init (void)
         {
             region->points[p] = MathLib::coord2point(region->coords[p], region->proj);
         }
-
-        /* Register Metric */
-        regionMetricIds[r] = EventLib::registerMetric(CATEGORY, EventLib::COUNTER, "%s.%s", region->name, REGION_METRIC);
-        if(regionMetricIds[r] == EventLib::INVALID_METRIC)
-        {
-            mlog(ERROR, "Registry failed for %s.%s", region->name, REGION_METRIC);
-            status = false;
-        }
     }
 
     return status;
 }
 
+
+/*----------------------------------------------------------------------------
+ * setRegion
+ *----------------------------------------------------------------------------*/
+AoiMetrics::regions_t AoiMetrics::setRegion (NetsvcParms* parms)
+{
+    regions_t region_found = REGION_UNKNOWN;
+    if(parms->polygon.length() > 0)
+    {
+        MathLib::coord_t coord = parms->polygon[0];
+        if(coord.lat > -60)
+        {
+            /* Check Non-Antartica Regions */
+            for(int r = 0; r < REGION_ANTARCTICA; r++)
+            {
+                if(checkRegion(coord, (regions_t)r))
+                {
+                    region_found = (regions_t)r;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            /* Set Region to Antartica */
+            region_found = REGION_ANTARCTICA;
+        }
+    }
+    return region_found;
+}
+
 /*----------------------------------------------------------------------------
  * region2str
  *----------------------------------------------------------------------------*/
-PluginMetrics::region_t* PluginMetrics::region2struct (regions_t region)
+AoiMetrics::region_t* AoiMetrics::region2struct (regions_t region)
 {
     switch(region)
     {
@@ -323,47 +341,9 @@ PluginMetrics::region_t* PluginMetrics::region2struct (regions_t region)
 }
 
 /*----------------------------------------------------------------------------
- * setRegion
- *----------------------------------------------------------------------------*/
-bool PluginMetrics::setRegion (Icesat2Parms* parms)
-{
-    if(parms->polygon.length() > 0)
-    {
-        MathLib::coord_t coord = parms->polygon[0];
-        regions_t region_found = REGION_UNKNOWN;
-
-        if(coord.lat > -60)
-        {
-            /* Check Non-Antartica Regions */
-            for(int r = 0; r < REGION_ANTARCTICA; r++)
-            {
-                if(checkRegion(coord, (regions_t)r))
-                {
-                    region_found = (regions_t)r;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            /* Set Region to Antartica */
-            region_found = REGION_ANTARCTICA;
-        }
-
-        /* Increment Metric for Region */
-        EventLib::incrementMetric(regionMetricIds[region_found]);
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-/*----------------------------------------------------------------------------
  * checkRegion
  *----------------------------------------------------------------------------*/
-bool PluginMetrics::checkRegion (MathLib::coord_t coord, regions_t r)
+bool AoiMetrics::checkRegion (MathLib::coord_t coord, regions_t r)
 {
     region_t* region = region2struct(r);
     MathLib::point_t point = MathLib::coord2point(coord, region->proj);

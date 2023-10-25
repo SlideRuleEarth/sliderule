@@ -108,6 +108,8 @@ html_context = {
             "/",
         )
     ],
+    "build_id": f' {release}',
+    "build_url": "https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.0.1"
 }
 
 # Load the custom CSS files (needs sphinx >= 1.6 for this to work)

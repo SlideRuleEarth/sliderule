@@ -68,19 +68,9 @@ EndpointObject::Request::Request (const char* _id):
  *----------------------------------------------------------------------------*/
 EndpointObject::Request::~Request (void)
 {
-    /* Clear Out Headers */
-    const char* header;
-    const char* key = headers.first(&header);
-    while(key != NULL)
-    {
-        delete [] header;
-        key = headers.next(&header);
-    }
-
-    /* Free Allocate Members */
-    if(body) delete [] body;
-    if(resource) delete [] resource;
-    if(path) delete [] path;
+    delete [] body;
+    delete [] resource;
+    delete [] path;
     delete [] id;
 }
 
@@ -108,16 +98,16 @@ EndpointObject::~EndpointObject (void)
  *----------------------------------------------------------------------------*/
 EndpointObject::verb_t EndpointObject::str2verb (const char* str)
 {
-         if(StringLib::match(str, "GET"))       return GET;
-    else if(StringLib::match(str, "HEAD"))      return HEAD;
-    else if(StringLib::match(str, "POST"))      return POST;
-    else if(StringLib::match(str, "PUT"))       return PUT;
-    else if(StringLib::match(str, "DELETE"))    return DELETE;
-    else if(StringLib::match(str, "TRACE"))     return TRACE;
-    else if(StringLib::match(str, "OPTIONS"))   return OPTIONS;
-    else if(StringLib::match(str, "CONNECT"))   return CONNECT;
-    else if(StringLib::match(str, "RAW"))       return RAW;
-    else                                        return UNRECOGNIZED;
+    if(StringLib::match(str, "GET"))       return GET;
+    if(StringLib::match(str, "HEAD"))      return HEAD;
+    if(StringLib::match(str, "POST"))      return POST;
+    if(StringLib::match(str, "PUT"))       return PUT;
+    if(StringLib::match(str, "DELETE"))    return DELETE;
+    if(StringLib::match(str, "TRACE"))     return TRACE;
+    if(StringLib::match(str, "OPTIONS"))   return OPTIONS;
+    if(StringLib::match(str, "CONNECT"))   return CONNECT;
+    if(StringLib::match(str, "RAW"))       return RAW;
+    return UNRECOGNIZED;
 }
 
 /*----------------------------------------------------------------------------
@@ -145,13 +135,13 @@ const char* EndpointObject::verb2str (verb_t verb)
  *----------------------------------------------------------------------------*/
 EndpointObject::code_t EndpointObject::str2code (const char* str)
 {
-         if(StringLib::match(str, "OK"))                        return OK;
-    else if(StringLib::match(str, "Bad Request"))               return Bad_Request;
-    else if(StringLib::match(str, "Not Found"))                 return Not_Found;
-    else if(StringLib::match(str, "Method Not Allowed"))        return Method_Not_Allowed;
-    else if(StringLib::match(str, "Request Timeout"))           return Request_Timeout;
-    else if(StringLib::match(str, "Method Not Implemented"))    return Method_Not_Implemented;
-    else                                                        return Bad_Request;
+    if(StringLib::match(str, "OK"))                        return OK;
+    if(StringLib::match(str, "Bad Request"))               return Bad_Request;
+    if(StringLib::match(str, "Not Found"))                 return Not_Found;
+    if(StringLib::match(str, "Method Not Allowed"))        return Method_Not_Allowed;
+    if(StringLib::match(str, "Request Timeout"))           return Request_Timeout;
+    if(StringLib::match(str, "Method Not Implemented"))    return Method_Not_Implemented;
+    return Bad_Request;
 }
 
 /*----------------------------------------------------------------------------

@@ -53,8 +53,8 @@
  ******************************************************************************/
 
 const char* SwotL2Reader::OBJECT_TYPE = "SwotL2Reader";
-const char* SwotL2Reader::LuaMetaName = "SwotL2Reader";
-const struct luaL_Reg SwotL2Reader::LuaMetaTable[] = {
+const char* SwotL2Reader::LUA_META_NAME = "SwotL2Reader";
+const struct luaL_Reg SwotL2Reader::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -98,10 +98,10 @@ int SwotL2Reader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        asset = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        parms = (SwotParms*)getLuaObject(L, 4, SwotParms::OBJECT_TYPE);
+        parms = dynamic_cast<SwotParms*>(getLuaObject(L, 4, SwotParms::OBJECT_TYPE));
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
@@ -130,8 +130,7 @@ void SwotL2Reader::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
-    context{},
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     region(_asset, _resource, _parms, &context)
 {
     /* Initialize Reader */
@@ -171,7 +170,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
             {
                 info_t* info = new info_t;
                 info->reader = this;
-                info->variable_name = parms->variables[i].str(true);
+                info->variable_name = StringLib::duplicate(parms->variables[i].c_str());
                 varPid[i] = new Thread(varThread, info);
             }
         }
@@ -195,10 +194,10 @@ SwotL2Reader::~SwotL2Reader (void)
 {
     active = false;
 
-    if(geoPid) delete geoPid;
+    delete geoPid;
     for(int i = 0; i < threadCount - 1; i++)
     {
-        if(varPid[i]) delete varPid[i];
+        delete varPid[i];
     }
 
     delete outQ;
@@ -257,9 +256,9 @@ SwotL2Reader::Region::~Region (void)
 /*----------------------------------------------------------------------------
  * Region::cleanup
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::cleanup (void)
+void SwotL2Reader::Region::cleanup (void) const
 {
-    if(inclusion_mask) delete [] inclusion_mask;
+    delete [] inclusion_mask;
 }
 
 /*----------------------------------------------------------------------------
@@ -286,7 +285,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
     bool first_line_found = false;
     bool last_line_found = false;
     int line = 0;
-    while(line < lat.size)
+    while(line < lat.size && !last_line_found)
     {
         bool inclusion = false;
 
@@ -307,11 +306,10 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
             first_line_found = true;
             first_line = line;
         }
-        else if(first_line_found && !last_line_found && !inclusion)
+        else if(first_line_found && !inclusion)
         {
             /* Set Last Line */
             last_line_found = true;
-            break; // full extent found!
         }
 
         /* Bump Line */
@@ -321,7 +319,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
     /* Set Number of Segments */
     if(first_line_found)
     {
-        num_lines = line - first_line;
+        num_lines = (line - 1) - first_line;
     }
 
     /* Delete Projected Polygon */
@@ -405,7 +403,7 @@ void SwotL2Reader::checkComplete (void)
 void* SwotL2Reader::geoThread (void* parm)
 {
     /* Get Thread Info */
-    SwotL2Reader* reader = (SwotL2Reader*)parm;
+    SwotL2Reader* reader = static_cast<SwotL2Reader*>(parm);
 
     /* Calculate Total Size of Record Data */
     int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
@@ -449,7 +447,7 @@ void* SwotL2Reader::varThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    SwotL2Reader* reader = (SwotL2Reader*)info->reader;
+    SwotL2Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Initialize Results */
@@ -519,7 +517,7 @@ void* SwotL2Reader::varThread (void* parm)
     reader->checkComplete();
 
     /* Clean Up */
-    if(results.data) delete [] results.data;
+    delete [] results.data;
     delete [] info->variable_name;
     delete info;
 
@@ -542,7 +540,7 @@ int SwotL2Reader::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (SwotL2Reader*)getLuaSelf(L, 1);
+        lua_obj = dynamic_cast<SwotL2Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

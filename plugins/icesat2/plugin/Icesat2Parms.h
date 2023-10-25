@@ -204,7 +204,7 @@ class Icesat2Parms: public NetsvcParms
         } phoreal_geoloc_t;
 
         /* List of Strings */
-        typedef List<SafeString, EXPECTED_NUM_FIELDS> string_list_t;
+        typedef List<string> string_list_t;
 
         /* YAPC Settings */
         typedef struct {
@@ -271,12 +271,12 @@ class Icesat2Parms: public NetsvcParms
                                 Icesat2Parms               (lua_State* L, int index);
                                 ~Icesat2Parms              (void);
 
-        void                    cleanup                 (void);
+        void                    cleanup                 (void) const;
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
-        void                    get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
+        static void             get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 

@@ -102,14 +102,14 @@ class GeoParms: public LuaObject
         static const char* ZONALSTATS_ALGO;
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
 
-        typedef MgList<const char*, 8, true> band_list_t;
+        typedef List<string> band_list_t;
 
         typedef struct {
             double lon_min;
@@ -155,14 +155,14 @@ class GeoParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        void                cleanup         (void);
-        GDALRIOResampleAlg  str2algo        (const char* str);
-        void                getLuaBands     (lua_State* L, int index, bool* provided);
-        void                getAoiBbox      (lua_State* L, int index, bool* provided);
+        void                        cleanup         (void);
+        static GDALRIOResampleAlg   str2algo        (const char* str);
+        void                        getLuaBands     (lua_State* L, int index, bool* provided);
+        void                        getAoiBbox      (lua_State* L, int index, bool* provided);
 
-        static int          luaAssetName    (lua_State* L);
-        static int          luaAssetRegion  (lua_State* L);
-        static int          luaSetKeySpace  (lua_State* L);
+        static int                  luaAssetName    (lua_State* L);
+        static int                  luaAssetRegion  (lua_State* L);
+        static int                  luaSetKeySpace  (lua_State* L);
 };
 
 #endif  /* __geo_parms__ */

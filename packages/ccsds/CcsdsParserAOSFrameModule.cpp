@@ -40,8 +40,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CcsdsParserAOSFrameModule::LuaMetaName = "CcsdsParserAOSFrameModule";
-const struct luaL_Reg CcsdsParserAOSFrameModule::LuaMetaTable[] = {
+const char* CcsdsParserAOSFrameModule::LUA_META_NAME = "CcsdsParserAOSFrameModule";
+const struct luaL_Reg CcsdsParserAOSFrameModule::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -110,7 +110,7 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -400,7 +400,7 @@ void CcsdsParserAOSFrameModule::gotoInitState(bool reset)
  * Constructor
  *----------------------------------------------------------------------------*/
 CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int vcid, int strip_size, uint8_t* sync_marker, int sync_size, int sync_offset, int fixed_size, int header_size, int trailer_size):
-    CcsdsParserModule(L, LuaMetaName, LuaMetaTable)
+    CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE)
 {
     SpacecraftId        = scid;
     VirtualChannel      = vcid;
@@ -426,7 +426,10 @@ CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int
 
     inSync = true;
 
-    gotoInitState(true);
+    mpduOffset = 0;
+    frameCRC = 0;
+
+    CcsdsParserAOSFrameModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------

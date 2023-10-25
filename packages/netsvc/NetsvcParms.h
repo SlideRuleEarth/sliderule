@@ -68,8 +68,8 @@ class NetsvcParms: public LuaObject
         static const int DEFAULT_READ_TIMEOUT       = 600; // seconds
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -95,7 +95,7 @@ class NetsvcParms: public LuaObject
 
                                 NetsvcParms             (lua_State* L, int index);
                                 ~NetsvcParms            (void);
-        void                    cleanup                 (void);
+        void                    cleanup                 (void) const;
         void                    get_lua_polygon         (lua_State* L, int index, bool* provided);
         void                    get_lua_raster          (lua_State* L, int index, bool* provided);
 };

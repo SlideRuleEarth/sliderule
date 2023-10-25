@@ -93,6 +93,12 @@ class EndpointObject: public LuaObject
         } rsptype_t;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef Dictionary<string*> HeaderDictionary;
+
+        /*--------------------------------------------------------------------
          * Request Subclass
          *--------------------------------------------------------------------*/
 
@@ -100,16 +106,16 @@ class EndpointObject: public LuaObject
         {
             public:
 
-                const char*                 path;
-                const char*                 resource;
-                verb_t                      verb;
-                Dictionary<const char*>     headers;
-                uint8_t*                    body;
-                long                        length; // of body
-                uint32_t                    trace_id;
-                const char*                 id; // must be unique
+                const char*         path;
+                const char*         resource;
+                verb_t              verb;
+                HeaderDictionary    headers;
+                uint8_t*            body;
+                long                length; // of body
+                uint32_t            trace_id;
+                const char*         id; // must be unique
 
-                Request (const char* _id);
+                explicit Request (const char* _id);
                 ~Request (void);
         };
 

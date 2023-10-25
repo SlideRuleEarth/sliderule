@@ -84,7 +84,7 @@ class Ordering
         class Iterator
         {
             public:
-                                    Iterator    (const Ordering& o);
+                explicit            Iterator    (const Ordering& o);
                                     ~Iterator   (void);
                 kv_t                operator[]  (int index) const;
                 const int           length;
@@ -98,13 +98,13 @@ class Ordering
          *--------------------------------------------------------------------*/
 
                     Ordering    (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
-        virtual     ~Ordering   (void);
+                    ~Ordering   (void);
 
         bool        add         (K key, const T& data, bool unique=false);
         T&          get         (K key, searchMode_t smode=EXACT_MATCH);
         bool        remove      (K key, searchMode_t smode=EXACT_MATCH);
-        long        length      (void);
-        bool        isempty     (void);
+        long        length      (void) const;
+        bool        empty       (void) const;
         void        flush       (void);
         void        clear       (void);
 
@@ -148,21 +148,7 @@ class Ordering
         bool            setMaxListSize  (long _max_list_size);
         bool            addNode         (K key, const T& data, bool unique);
         void            postNode        (sorted_node_t* node);
-        virtual void    freeNode        (sorted_node_t* node);
-};
-
-/******************************************************************************
- * MANAGED ORDERING TEMPLATE
- ******************************************************************************/
-
-template <class T, typename K=unsigned long, bool is_array=false>
-class MgOrdering: public Ordering<T,K>
-{
-    public:
-        MgOrdering (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=Ordering<T,K>::INFINITE_LIST_SIZE);
-        ~MgOrdering (void);
-    private:
-        void freeNode (typename Ordering<T,K>::sorted_node_t* node);
+        void            freeNode        (sorted_node_t* node);
 };
 
 /******************************************************************************
@@ -211,10 +197,8 @@ typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) cons
         Ordering<T,K>::kv_t pair(keys[index], *values[index]);
         return pair;
     }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Ordering::Iterator index out of range");
-    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "Ordering::Iterator index out of range");
 }
 
 /******************************************************************************
@@ -306,8 +290,8 @@ T& Ordering<T,K>::get(K key, searchMode_t smode)
         }
     }
 
-    if (found)  return curr->data;
-    else        throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
+    if(found) return curr->data;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
 }
 
 /*----------------------------------------------------------------------------
@@ -373,26 +357,24 @@ bool Ordering<T,K>::remove(K key, searchMode_t smode)
         /* return success */
         return true;
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-long Ordering<T,K>::length(void)
+long Ordering<T,K>::length(void) const
 {
     return len;
 }
 
 /*----------------------------------------------------------------------------
- * isempty
+ * empty
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Ordering<T,K>::isempty(void)
+bool Ordering<T,K>::empty(void) const
 {
     return (len == 0);
 }
@@ -700,48 +682,22 @@ void Ordering<T,K>::postNode(sorted_node_t* node)
 {
     int status = 0;
     if(postFunc) status = postFunc(&(node->data), sizeof(T), postParm);
-    if (status <= 0) freeNode(node);
+    if(status <= 0) freeNode(node);
 }
 
 /*----------------------------------------------------------------------------
  * freeNode
  *----------------------------------------------------------------------------*/
+template <class T>
+void orderingDeleteIfPointer(const T& t) { (void)t; }
+
+template <class T>
+void orderingDeleteIfPointer(T* t) { delete t; }
+
 template <class T, typename K>
 void Ordering<T,K>::freeNode(sorted_node_t* node)
 {
-    (void)node;
-}
-
-/******************************************************************************
- MANAGED ORDERING METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-MgOrdering<T,K,is_array>::MgOrdering(typename Ordering<T,K>::postFunc_t post_func, void* post_parm, K max_list_size):
-    Ordering<T,K>(post_func, post_parm, max_list_size)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-MgOrdering<T,K,is_array>::~MgOrdering(void)
-{
-    Ordering<T,K>::clear();
-}
-
-/*----------------------------------------------------------------------------
- * freeNode
- *----------------------------------------------------------------------------*/
-template <class T, typename K, bool is_array>
-void MgOrdering<T,K,is_array>::freeNode(typename Ordering<T,K>::sorted_node_t* node)
-{
-    if(!is_array)   delete node->data;
-    else            delete [] node->data;
+    orderingDeleteIfPointer(node->data);
 }
 
 #endif  /* __ordering__ */

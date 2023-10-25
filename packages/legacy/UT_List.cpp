@@ -69,7 +69,8 @@ CommandableObject* UT_List::createObject(CommandProcessor* cmd_proc, const char*
  * Constructor  -
  *----------------------------------------------------------------------------*/
 UT_List::UT_List(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+    CommandableObject(cmd_proc, obj_name, TYPE),
+    failures(0)
 {
     /* Register Commands */
     registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_List::testAddRemove,  0, "");
@@ -136,7 +137,7 @@ int UT_List::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     failures = 0;
-    List<int, 10> mylist;
+    List<int> mylist(10);
 
     // add initial set
     for(int i = 0; i < 75; i++)
@@ -188,7 +189,7 @@ int UT_List::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     failures = 0;
-    List<int, 10> mylist;
+    List<int> mylist(10);
 
     // add initial set
     for(int i = 0; i < 20; i++)
@@ -222,19 +223,19 @@ int UT_List::testSort(int argc, char argv[][MAX_CMD_SIZE])
     failures = 0;
 
     // in order
-    List<int, 10> mylist1;
+    List<int> mylist1(10);
     for(int i = 0; i < 20; i++) mylist1.add(i);
     mylist1.sort();
     for(int i = 0; i < 20; i++) ut_assert(mylist1[i] == i, "failed to sort %d\n", i);
 
     // reverse order
-    List<int, 10> mylist2;
+    List<int> mylist2(10);
     for(int i = 0; i < 20; i++) mylist2.add(20 - i);
     mylist2.sort();
     for(int i = 0; i < 20; i++) ut_assert(mylist2[i] == (i + 1), "failed to sort %d\n", i + 1);
 
     // random order
-    List<int, 10> mylist3;
+    List<int> mylist3(10);
     mylist3.add(19);
     mylist3.add(1);
     mylist3.add(2);

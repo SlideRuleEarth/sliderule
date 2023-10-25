@@ -46,9 +46,6 @@
 #include "Atl03Reader.h"
 #include "Icesat2Parms.h"
 
-#include <vector>
-using std::vector;
-
 /******************************************************************************
  * ATL06 DISPATCH CLASS
  ******************************************************************************/
@@ -84,8 +81,8 @@ class Atl06Dispatch: public DispatchObject
         static const char* ancRecType;
         static const RecordObject::fieldDef_t ancRecDef[];
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types

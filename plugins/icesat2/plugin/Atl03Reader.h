@@ -49,8 +49,6 @@
 #include "H5DArray.h"
 #include "Icesat2Parms.h"
 
-using std::vector;
-
 /******************************************************************************
  * ATL03 READER
  ******************************************************************************/
@@ -76,8 +74,8 @@ class Atl03Reader: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Types
@@ -159,6 +157,8 @@ class Atl03Reader: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef Dictionary<H5DArray*> H5DArrayDictionary;
+
         typedef struct {
             Atl03Reader*    reader;
             char            prefix[7];
@@ -171,7 +171,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Region              (info_t* info);
+                explicit Region     (info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
@@ -200,7 +200,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, Region& region);
+                Atl03Data           (info_t* info, const Region& region);
                 ~Atl03Data          (void);
 
                 /* Read Data */
@@ -221,8 +221,8 @@ class Atl03Reader: public LuaObject
                 H5Array<double>     bckgrd_delta_time;
                 H5Array<float>      bckgrd_rate;
 
-                MgDictionary<H5DArray*> anc_geo_data;
-                MgDictionary<H5DArray*> anc_ph_data;
+                H5DArrayDictionary  anc_geo_data;
+                H5DArrayDictionary  anc_ph_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -235,15 +235,14 @@ class Atl03Reader: public LuaObject
                 static const uint8_t INVALID_FLAG = 0xFF;
 
                 /* Methods */
-                Atl08Class          (info_t* info);
+                explicit Atl08Class (info_t* info);
                 ~Atl08Class         (void);
-                void classify       (info_t* info, Region& region, Atl03Data& atl03);
-                uint8_t operator[]  (int index);
+                void classify       (info_t* info, const Region& region, const Atl03Data& atl03);
+                uint8_t operator[]  (int index) const;
 
                 /* Class Data */
                 bool                enabled;
                 bool                phoreal;
-                SafeString          resource;
 
                 /* Generated Data */
                 uint8_t*            classification; // [num_photons]
@@ -268,13 +267,13 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                YapcScore           (info_t* info, Region& region, Atl03Data& atl03);
+                YapcScore           (info_t* info, const Region& region, const Atl03Data& atl03);
                 ~YapcScore          (void);
 
-                void yapcV2         (info_t* info, Region& region, Atl03Data& atl03);
-                void yapcV3         (info_t* info, Region& region, Atl03Data& atl03);
+                void yapcV2         (info_t* info, const Region& region, const Atl03Data& atl03);
+                void yapcV3         (info_t* info, const Region& region, const Atl03Data& atl03);
 
-                uint8_t operator[]  (int index);
+                uint8_t operator[]  (int index) const;
 
                 /* Generated Data */
                 uint8_t*            score; // [num_photons]
@@ -289,7 +288,7 @@ class Atl03Reader: public LuaObject
                 int32_t         seg_in;             // segment index
                 int32_t         seg_ph;             // current photon index in segment
                 int32_t         start_segment;      // used to set start_distance
-                double          start_distance;     // distance to start of extent
+                double          start_distance;     // distance to start of extent (in meters from equator)
                 double          seg_distance;       // distance to start of atl03 segment
                 double          start_seg_portion;  // portion of segment extent is starting from
                 bool            track_complete;     // flag when track processing has finished
@@ -297,10 +296,10 @@ class Atl03Reader: public LuaObject
                 List<photon_t>  extent_photons;     // list of individual photons in extent
                 int32_t         extent_segment;     // current segment extent is pulling photons from
                 bool            extent_valid;       // flag for validity of extent (atl06 checks)
-                double          extent_length;
+                double          extent_length;      // custom length of the extent (in meters)
 
-                TrackState      (Atl03Data& atl03);
-                ~TrackState     (void);
+                explicit TrackState (const Atl03Data& atl03);
+                ~TrackState         (void);
         };
 
         /*--------------------------------------------------------------------
@@ -320,7 +319,7 @@ class Atl03Reader: public LuaObject
         int                 numComplete;
         Asset*              asset;
         const char*         resource;
-        const char*         resource08;
+        char*               resource08;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
@@ -343,12 +342,12 @@ class Atl03Reader: public LuaObject
 
         static void*        subsettingThread            (void* parm);
 
-        double              calculateBackground         (TrackState& state, Atl03Data& atl03);
-        uint32_t            calculateSegmentId          (TrackState& state, Atl03Data& atl03);
-        void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        void                generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, MgDictionary<H5DArray*>& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
+        uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
+        void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
+        static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
-        void                parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
+        static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 
         static int          luaParms                    (lua_State* L);
         static int          luaStats                    (lua_State* L);

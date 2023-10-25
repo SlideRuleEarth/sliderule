@@ -349,7 +349,7 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
     const char* proc_obj_name = argv[1];
 
     /* Set Processor */
-    CcsdsProcessorModule* processor = (CcsdsProcessorModule*)cmdProc->getObject(proc_obj_name, "CcsdsProcessorModule");
+    CcsdsProcessorModule* processor = dynamic_cast<CcsdsProcessorModule*>(cmdProc->getObject(proc_obj_name, "CcsdsProcessorModule"));
     if(processor == NULL)
     {
         mlog(CRITICAL, "Unable to find processor module %s", proc_obj_name);
@@ -423,10 +423,6 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
         }
 
         /* Delete Packets */
-        for(int s = 0; s < worker->segments->length(); s++)
-        {
-            delete worker->segments->get(s); // deletes malloc'ed CcsdsPacket in processMsg
-        }
         delete worker->segments; // deletes malloc'ed List<CcsdsPacket*> in processMsg
         worker->segments = NULL; // informs resetProcessing() that segments has been freed
 

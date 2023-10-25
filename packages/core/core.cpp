@@ -75,6 +75,7 @@ static int core_open (lua_State *L)
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
         {"monitor",         Monitor::luaCreate},
+        {"pmonitor",        PublishMonitor::luaCreate},
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},
         {"tcp",             TcpSocket::luaCreate},
@@ -171,7 +172,7 @@ void initcore (void)
     ContainerRecord::init();
     
     /* Register IO Drivers */
-    Asset::registerDriver(Asset::IODriver::FORMAT, Asset::IODriver::create);
+    Asset::registerDriver("nil", Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
 
     /* Initialize Modules */

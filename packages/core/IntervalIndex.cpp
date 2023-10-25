@@ -43,8 +43,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* IntervalIndex::LuaMetaName = "IntervalIndex";
-const struct luaL_Reg IntervalIndex::LuaMetaTable[] = {
+const char* IntervalIndex::LUA_META_NAME = "IntervalIndex";
+const struct luaL_Reg IntervalIndex::LUA_META_TABLE[] = {
     {"add",         luaAdd},
     {"query",       luaQuery},
     {"display",     luaDisplay},
@@ -63,7 +63,7 @@ int IntervalIndex::luaCreate (lua_State* L)
     try
     {
         /* Get Asset Directory */
-        Asset*      _asset      = (Asset*)getLuaObject(L, 1, Asset::OBJECT_TYPE);
+        Asset*      _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _fieldname0 = getLuaString(L, 2);
         const char* _fieldname1 = getLuaString(L, 3);
         int         _threshold  = getLuaInteger(L, 4, true, DEFAULT_THRESHOLD);
@@ -73,7 +73,7 @@ int IntervalIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -82,7 +82,7 @@ int IntervalIndex::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 IntervalIndex::IntervalIndex(lua_State* L, Asset*_asset, const char* _fieldname0, const char* _fieldname1, int _threshold):
-    AssetIndex<intervalspan_t>(L, *_asset, LuaMetaName, LuaMetaTable, _threshold)
+    AssetIndex<intervalspan_t>(L, *_asset, LUA_META_NAME, LUA_META_TABLE, _threshold)
 {
     assert(_fieldname0);
     assert(_fieldname1);
@@ -142,8 +142,7 @@ bool IntervalIndex::isleft (node_t* node, const intervalspan_t& span)
     double right_val = node->right->span.t0;
     double split_val = (left_val + right_val) / 2.0;
 
-    if(span.t0 <= split_val)    return true;
-    else                        return false;
+    return (span.t0 <= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -158,8 +157,7 @@ bool IntervalIndex::isright (node_t* node, const intervalspan_t& span)
     double right_val = node->right->span.t0;
     double split_val = (left_val + right_val) / 2.0;
 
-    if(span.t1 >= split_val)    return true;
-    else                        return false;
+    return (span.t1 >= split_val);
 }
 
 /*----------------------------------------------------------------------------
@@ -233,8 +231,8 @@ intervalspan_t IntervalIndex::luatable2span (lua_State* L, int parm)
 
         if(provided)
         {
-                 if(StringLib::match(fieldname0,   key)) span.t0 = value;
-            else if(StringLib::match(fieldname1,   key)) span.t1 = value;
+            if     (StringLib::match(fieldname0, key)) span.t0 = value;
+            else if(StringLib::match(fieldname1, key)) span.t1 = value;
         }
 
         lua_pop(L, 1); // removes 'value'; keeps 'key' for next iteration

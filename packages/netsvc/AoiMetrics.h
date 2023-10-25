@@ -29,21 +29,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __plugin_metrics__
-#define __plugin_metrics__
+#ifndef __aoi_metrics__
+#define __aoi_metrics__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "Icesat2Parms.h"
+#include "MathLib.h"
+#include "NetsvcParms.h"
 
 /******************************************************************************
  * METRICS FOR PLUGIN
  ******************************************************************************/
 
-class PluginMetrics
+class AoiMetrics
 {
     public:
 
@@ -84,28 +85,20 @@ class PluginMetrics
         } region_t;
 
         /*--------------------------------------------------------------------
-         * Constants
+         * Methods
          *--------------------------------------------------------------------*/
 
-        static const char* CATEGORY;
-        static const char* REGION_METRIC;
+        static bool         init            (void);
+        static regions_t    setRegion       (NetsvcParms* parms);
+    
+    private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static bool         init            (void);
         static region_t*    region2struct   (regions_t region);
-        static bool         setRegion       (Icesat2Parms* parms);
         static bool         checkRegion     (MathLib::coord_t coord, regions_t r);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static int32_t regionMetricIds[NUM_REGIONS];
 };
 
-#endif  /* __plugin_metrics__ */
+#endif  /* __aoi_metrics__ */

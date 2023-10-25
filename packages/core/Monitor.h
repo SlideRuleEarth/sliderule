@@ -54,8 +54,8 @@ class Monitor: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -78,7 +78,17 @@ class Monitor: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
+        static int luaCreate (lua_State* L);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size);
+                     Monitor        (lua_State* L, uint8_t type_mask, event_level_t level, format_t format);
+                     ~Monitor       (void);
 
     private:
 
@@ -93,14 +103,12 @@ class Monitor: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Monitor         (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
-                    ~Monitor        (void);
 
         bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
 
-        int         textOutput      (EventLib::event_t* event, char* event_buffer);
-        int         jsonOutput      (EventLib::event_t* event, char* event_buffer);
-        int         cloudOutput     (EventLib::event_t* event, char* event_buffer);
+        static int  textOutput      (EventLib::event_t* event, char* event_buffer);
+        static int  jsonOutput      (EventLib::event_t* event, char* event_buffer);
+        static int  cloudOutput     (EventLib::event_t* event, char* event_buffer);
 
         static int  luaConfig       (lua_State* L);
         static int  luaTail         (lua_State* L);
@@ -113,7 +121,6 @@ class Monitor: public DispatchObject
         uint8_t         eventTypeMask;
         event_level_t   eventLevel;
         format_t        outputFormat;
-        Publisher*      outQ;
         char*           eventTailArray; // [][MAX_EVENT_SIZE]
         int             eventTailSize;
         int             eventTailIndex;

@@ -53,8 +53,8 @@ class UT_Atl06Dispatch: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -69,11 +69,11 @@ class UT_Atl06Dispatch: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        UT_Atl06Dispatch        (lua_State* L);
-                        ~UT_Atl06Dispatch       (void);
+                        explicit UT_Atl06Dispatch   (lua_State* L);
+                        ~UT_Atl06Dispatch           (void);
 
-        static int      luaLsfTest              (lua_State* L);
-        static int      luaSortTest             (lua_State* L);
+        static int      luaLsfTest                  (lua_State* L);
+        static int      luaSortTest                 (lua_State* L);
 };
 
 #endif  /* __ut_atl06dispatch__ */

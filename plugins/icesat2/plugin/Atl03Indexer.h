@@ -79,8 +79,8 @@ class Atl03Indexer: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -95,27 +95,26 @@ class Atl03Indexer: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    active;
-        Thread**                indexerPid;
-        Mutex                   threadMut;
-        int                     threadCount;
-        int                     numComplete;
-        Publisher*              outQ;
-        index_t                 indexRec;
-        List<const char*>*      resources;
-        int                     resourceEntry;
-        Mutex                   resourceMut;
-        Asset*                  asset;
+        bool            active;
+        Thread**        indexerPid;
+        Mutex           threadMut;
+        int             threadCount;
+        int             numComplete;
+        Publisher*      outQ;
+        index_t         indexRec;
+        List<string>*   resources;
+        int             resourceEntry;
+        Mutex           resourceMut;
+        Asset*          asset;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Indexer        (lua_State* L, Asset* _asset, List<const char*>* _resources, const char* outq_name, int num_threads);
+                            Atl03Indexer        (lua_State* L, Asset* _asset, List<string>* _resources, const char* outq_name, int num_threads);
                             ~Atl03Indexer       (void);
 
         static void*        indexerThread       (void* parm);
-        static void         freeResources       (List<const char*>* _resources);
 
         static int          luaStats            (lua_State* L);
 };

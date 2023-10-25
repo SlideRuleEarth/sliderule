@@ -56,6 +56,7 @@
 #include "CmdEchoProcessorModule.h"
 #include "DiagLogProcessorModule.h"
 #include "HstvsSimulator.h"
+#include "SafeString.h"
 
 /******************************************************************************
  * PROTOTYPES

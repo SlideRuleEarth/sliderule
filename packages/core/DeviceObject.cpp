@@ -43,13 +43,13 @@
  * STATIC DATA
  ******************************************************************************/
 
-Ordering<DeviceObject*> DeviceObject::deviceList;
-Mutex                   DeviceObject::deviceListMut;
-okey_t                  DeviceObject::currentListKey = 0;
+Ordering<DeviceObject::device_t>    DeviceObject::deviceList;
+Mutex                               DeviceObject::deviceListMut;
+okey_t                              DeviceObject::currentListKey = 0;
 
 const char* DeviceObject::OBJECT_TYPE = "DeviceObject";
-const char* DeviceObject::LuaMetaName = "DeviceObject";
-const struct luaL_Reg DeviceObject::LuaMetaTable[] = {
+const char* DeviceObject::LUA_META_NAME = "DeviceObject";
+const struct luaL_Reg DeviceObject::LUA_META_TABLE[] = {
     {"send",        luaSend},
     {"receive",     luaReceive},
     {"config",      luaConfig},
@@ -66,14 +66,14 @@ const struct luaL_Reg DeviceObject::LuaMetaTable[] = {
  * Constructor
  *----------------------------------------------------------------------------*/
 DeviceObject::DeviceObject (lua_State* L, role_t _role):
-    LuaObject(L, OBJECT_TYPE, LuaMetaName, LuaMetaTable),
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     role(_role)
 {
     /* Add Device to List */
     deviceListMut.lock();
     {
-        DeviceObject* this_device = this;
-        deviceList.add(currentListKey, this_device);
+        device_t device = { .device_obj = this };
+        deviceList.add(currentListKey, device);
         deviceListKey = currentListKey++;
     }
     deviceListMut.unlock();
@@ -99,20 +99,20 @@ DeviceObject::~DeviceObject (void)
 char* DeviceObject::getDeviceList(void)
 {
     #define DEV_STR_SIZE 64
-    char devstr[DEV_STR_SIZE];
     char* liststr;
 
     deviceListMut.lock();
     {
+        char devstr[DEV_STR_SIZE];
         int liststrlen = DEV_STR_SIZE * deviceList.length() + 1;
         liststr = new char[liststrlen];
         liststr[0] = '\0';
 
-        DeviceObject* dev;
+        device_t dev;
         okey_t key = deviceList.first(&dev);
         while(key != INVALID_KEY)
         {
-            StringLib::format(devstr, DEV_STR_SIZE, "%c %s\n", dev->isConnected(0) ? 'C' : 'D', dev->getConfig());
+            StringLib::format(devstr, DEV_STR_SIZE, "%c %s\n", dev.device_obj->isConnected(0) ? 'C' : 'D', dev.device_obj->getConfig());
             StringLib::concat(liststr, devstr, liststrlen);
             key = deviceList.next(&dev);
         }
@@ -144,7 +144,7 @@ int DeviceObject::luaSend (lua_State* L)
     try
     {
         /* Get Self */
-        DeviceObject* dev = (DeviceObject*)getLuaSelf(L, 1);
+        DeviceObject* dev = dynamic_cast<DeviceObject*>(getLuaSelf(L, 1));
 
         /* Send Data */
         size_t str_len = 0;
@@ -173,7 +173,7 @@ int DeviceObject::luaReceive (lua_State* L)
     try
     {
         /* Get Self */
-        DeviceObject* dev = (DeviceObject*)getLuaSelf(L, 1);
+        DeviceObject* dev = dynamic_cast<DeviceObject*>(getLuaSelf(L, 1));
 
         /* Receive Data */
         int io_maxsize = OsApi::getIOMaxsize();
@@ -204,7 +204,7 @@ int DeviceObject::luaConfig (lua_State* L)
     try
     {
         /* Get Self */
-        DeviceObject* dev = (DeviceObject*)getLuaSelf(L, 1);
+        DeviceObject* dev = dynamic_cast<DeviceObject*>(getLuaSelf(L, 1));
 
         /* Get Configuration */
         const char* config = dev->getConfig();
@@ -232,7 +232,7 @@ int DeviceObject::luaIsConnected (lua_State* L)
     try
     {
         /* Get Self */
-        DeviceObject* dev = (DeviceObject*)getLuaSelf(L, 1);
+        DeviceObject* dev = dynamic_cast<DeviceObject*>(getLuaSelf(L, 1));
 
         /* Set Status */
         status = dev->isConnected(1);
@@ -256,7 +256,7 @@ int DeviceObject::luaClose (lua_State* L)
     try
     {
         /* Get Self */
-        DeviceObject* dev = (DeviceObject*)getLuaSelf(L, 1);
+        DeviceObject* dev = dynamic_cast<DeviceObject*>(getLuaSelf(L, 1));
 
         /* Close Connection */
         dev->closeConnection();

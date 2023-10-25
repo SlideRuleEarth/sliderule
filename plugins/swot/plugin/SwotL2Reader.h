@@ -61,8 +61,8 @@ class SwotL2Reader: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         static const char* varRecType;
         static const RecordObject::fieldDef_t varRecDef[];
@@ -133,7 +133,7 @@ class SwotL2Reader: public LuaObject
             Region              (Asset* asset, const char* resource, SwotParms* _parms, H5Coro::context_t* context);
             ~Region             (void);
 
-            void cleanup        (void);
+            void cleanup        (void) const;
             void polyregion     (SwotParms* _parms);
             void rasterregion   (SwotParms* _parms);
 

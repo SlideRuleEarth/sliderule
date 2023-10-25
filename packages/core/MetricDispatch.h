@@ -54,8 +54,8 @@ class MetricDispatch: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
@@ -97,7 +97,7 @@ class MetricDispatch: public DispatchObject
 
             ~fieldValue_t(void)
             {
-                if(svalue) delete [] svalue;
+                delete [] svalue;
             }
         };
 
@@ -105,19 +105,19 @@ class MetricDispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*                     dataField;      // value of metric
-        List<long>*                     idFilter;       // id of record, not data or key
-        MgDictionary<fieldValue_t*>*    fieldFilter;    // more computationally intensive filter, matches field to value
-        Publisher*                      outQ;           // output queue metrics are posted to
+        const char*                 dataField;      // value of metric
+        List<long>*                 idFilter;       // id of record, not data or key
+        Dictionary<fieldValue_t*>*  fieldFilter;   // more computationally intensive filter, matches field to value
+        Publisher*                  outQ;           // output queue metrics are posted to
 
-        bool                            playbackSource;
-        bool                            playbackText;
-        bool                            playbackName;
-        okey_t                          keyOffset;
-        okey_t                          minKey;
-        okey_t                          maxKey;
+        bool                        playbackSource;
+        bool                        playbackText;
+        bool                        playbackName;
+        okey_t                      keyOffset;
+        okey_t                      minKey;
+        okey_t                      maxKey;
 
-        Mutex                           metricMutex;
+        Mutex                       metricMutex;
 
         /*--------------------------------------------------------------------
          * Methods

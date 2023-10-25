@@ -16,7 +16,10 @@ publish: ## publish package to npm registry
 login: ## login to npm registry
 	npm login --scope sliderule --auth-type legacy
 
-install: ## install project (installs dependencies in package.json file)
+update: ## update project (updates dependencies in package-lock.json file)
+	cd sliderule; npm install
+
+install: ## install project (installs dependencies in package-lock.json file)
 	cd sliderule; npm install
 
 init: ## initialize project

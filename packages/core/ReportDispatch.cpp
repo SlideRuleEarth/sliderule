@@ -47,8 +47,8 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* ReportDispatch::LuaMetaName = "ReportDispatch";
-const struct luaL_Reg ReportDispatch::LuaMetaTable[] = {
+const char* ReportDispatch::LUA_META_NAME = "ReportDispatch";
+const struct luaL_Reg ReportDispatch::LUA_META_TABLE[] = {
     {"idxdisplay",  luaSetIndexDisplay},
     {"flushrow",    luaFlushRow},
     {NULL,          NULL}
@@ -115,12 +115,12 @@ int ReportDispatch::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating %s: %s", LuaMetaName, e.what());
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         num_results = returnLuaStatus(L, false);
     }
 
     /* Clean Up and Return */
-    if(columns) delete [] columns;
+    delete [] columns;
     return num_results;
 }
 
@@ -133,9 +133,9 @@ int ReportDispatch::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 ReportDispatch::format_t ReportDispatch::str2format (const char* str)
 {
-         if(StringLib::match(str, "CSV"))   return CSV;
-    else if(StringLib::match(str, "JSON"))  return JSON;
-    else                                    return INVALID_FORMAT;
+    if(StringLib::match(str, "CSV"))    return CSV;
+    if(StringLib::match(str, "JSON"))   return JSON;
+    return INVALID_FORMAT;
 }
 
 /*----------------------------------------------------------------------------
@@ -143,9 +143,9 @@ ReportDispatch::format_t ReportDispatch::str2format (const char* str)
  *----------------------------------------------------------------------------*/
 const char* ReportDispatch::format2str (format_t _format)
 {
-         if(_format == CSV)     return "CSV";
-    else if(_format == JSON)    return "JSON";
-    else                        return "INVALID";
+    if(_format == CSV)  return "CSV";
+    if(_format == JSON) return "JSON";
+    return "INVALID";
 }
 
 /*----------------------------------------------------------------------------
@@ -153,9 +153,9 @@ const char* ReportDispatch::format2str (format_t _format)
  *----------------------------------------------------------------------------*/
 ReportDispatch::indexDisplay_t ReportDispatch::str2display(const char* str)
 {
-         if(StringLib::match(str, "INT"))   return INT_DISPLAY;
-    else if(StringLib::match(str, "GMT"))   return GMT_DISPLAY;
-    else                                    return INVALID_DISPLAY;
+    if(StringLib::match(str, "INT"))    return INT_DISPLAY;
+    if(StringLib::match(str, "GMT"))    return GMT_DISPLAY;
+    return INVALID_DISPLAY;
 }
 
 /*----------------------------------------------------------------------------
@@ -163,9 +163,9 @@ ReportDispatch::indexDisplay_t ReportDispatch::str2display(const char* str)
  *----------------------------------------------------------------------------*/
 const char* ReportDispatch::display2str(indexDisplay_t _display)
 {
-         if(_display == INT_DISPLAY)    return "INT";
-    else if(_display == GMT_DISPLAY)    return "GMT";
-    else                                return "INVALID";
+    if(_display == INT_DISPLAY) return "INT";
+    if(_display == GMT_DISPLAY) return "GMT";
+    return "INVALID";
 }
 
 /******************************************************************************
@@ -178,7 +178,7 @@ const char* ReportDispatch::display2str(indexDisplay_t _display)
 ReportDispatch::ReportFile::ReportFile(lua_State* L, const char* _filename, format_t _format):
     File(L, _filename, File::TEXT, File::WRITER, File::FLUSHED),
     format(_format),
-    values(Dictionary<char*>::DEFAULT_HASH_TABLE_SIZE, Dictionary<char*>::DEFAULT_HASH_TABLE_LOAD)
+    index(0)
 {
     headerInProgress = false;
     indexDisplay = INT_DISPLAY;
@@ -194,7 +194,7 @@ int ReportDispatch::ReportFile::writeFileHeader (void)
     if(format == CSV)
     {
         /* Build Header String */
-        SafeString header("Index");
+        string header("Index");
         const char* column = values.first(NULL);
         while(column)
         {
@@ -206,7 +206,7 @@ int ReportDispatch::ReportFile::writeFileHeader (void)
 
         /* Write Header String */
         headerInProgress = true;
-        int status = File::writeBuffer(header.str(false), header.length());
+        int status = File::writeBuffer(header.c_str(), header.length());
         headerInProgress = false;
         return status;
     }
@@ -238,45 +238,46 @@ int ReportDispatch::ReportFile::writeFileData (void)
         }
 
         /* Build Row String and Clear Values */
-        SafeString row;
+        string row;
         row += index_str;
-        const char* value = NULL;
+        string* value;
         const char* column = values.first(&value);
         while(column)
         {
             row += ",";
-            if(value)   row += value;
-            const char* space = StringLib::duplicate(REPORT_SPACE);
-            values.add(column, space);
+            if(value) row += *value;
+            string* space = new string(REPORT_SPACE);
+            if(!values.add(column, space)) delete space;
             column = values.next(&value);
         }
         row += "\n";
 
         /* Write Row String */
-        return File::writeBuffer(row.str(false), row.length());
+        return File::writeBuffer(row.c_str(), row.length());
     }
-    else if(format == JSON)
+    
+    if(format == JSON)
     {
         /* Build JSON String */
-        SafeString json("{\n");
-        const char* value = NULL;
+        string json("{\n");
+        string* value;
         const char* column = values.first(&value);
         while(column)
         {
             json += "\t\"";
             json += column;
             json += "\": \"";
-            if(value) json += value;
+            if(value) json += *value;
             json += "\"";
-            const char* space = StringLib::duplicate(REPORT_SPACE);
-            values.add(column, space);
+            string* space = new string(REPORT_SPACE);
+            if(!values.add(column, space)) delete space;
             column = values.next(&value);
             if(column)  json += ",\n";
             else        json += "\n}";
         }
 
         /* Write Row String */
-        return File::writeBuffer(json.str(false), json.length());
+        return File::writeBuffer(json.c_str(), json.length());
     }
 
     return 0;
@@ -290,7 +291,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
  * Constructor - ReportDispatch
  *----------------------------------------------------------------------------*/
 ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _format, int buffer, const char** columns, int num_columns):
-    DispatchObject(L, LuaMetaName, LuaMetaTable),
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     report(L ,_filename, _format)
 {
     /* Define Metric Record */
@@ -303,7 +304,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
     reportError = true;
 
     /* Initialize Entry Ordering */
-    if(buffer > 0)  entries = new MgOrdering<entry_t*>(ReportDispatch::postEntry, this, buffer);
+    if(buffer > 0)  entries = new EntryOrdering(ReportDispatch::postEntry, this, buffer);
     else            entries = NULL;
 
     /* Populate Fixed Header If Provided */
@@ -312,7 +313,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
         fixedHeader = true;
         for(int i = 0; i < num_columns; i++)
         {
-            const char* space = StringLib::duplicate(REPORT_SPACE);
+            string* space = new string(REPORT_SPACE);
             report.values.add(columns[i], space);
         }
     }
@@ -323,7 +324,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
  *----------------------------------------------------------------------------*/
 ReportDispatch::~ReportDispatch (void)
 {
-    if(entries) delete entries;
+    delete entries;
 }
 
 /*----------------------------------------------------------------------------
@@ -381,12 +382,12 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
  *----------------------------------------------------------------------------*/
 int ReportDispatch::postEntry(void* data, int size, void* parm)
 {
-    ReportDispatch* dispatch = (ReportDispatch*)parm;
+    ReportDispatch* dispatch = static_cast<ReportDispatch*>(parm);
     int status = size;
     entry_t* entry = *(entry_t**)data;
     okey_t index = entry->index;
     const char* name = entry->name;
-    const char* value = StringLib::duplicate(entry->value);
+    string* value = new string(entry->value);
 
     /* Flush Row on New Index */
     if(dispatch->lastIndex != index && dispatch->lastIndex != INVALID_KEY)
@@ -399,17 +400,18 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
     dispatch->report.index = index;
 
     /* Update Value */
+    bool value_added = false;
     if(dispatch->fixedHeader)
     {
         if(dispatch->report.values.find(name))
         {
-            dispatch->report.values.add(name, value);
+            value_added = dispatch->report.values.add(name, value);
         }
     }
     else // dynamic header
     {
         int prev_num_values = dispatch->report.values.length();
-        dispatch->report.values.add(name, value);
+        value_added = dispatch->report.values.add(name, value);
         if(dispatch->report.values.length() != prev_num_values)
         {
             dispatch->writeHeader = true;
@@ -418,6 +420,9 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
 
     /* Set Error Reporting Back to True */
     dispatch->reportError = true;
+
+    /* Remove Dangling Value */
+    if(!value_added) delete value;
 
     /* Free Entry and Return Status */
     if(status > 0) delete entry;
@@ -467,7 +472,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
     try
     {
         /* Get Self */
-        ReportDispatch* lua_obj = (ReportDispatch*)getLuaSelf(L, 1);
+        ReportDispatch* lua_obj = dynamic_cast<ReportDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* display_str = getLuaString(L, 2);
@@ -506,7 +511,7 @@ int ReportDispatch::luaFlushRow(lua_State* L)
     try
     {
         /* Get Self */
-        ReportDispatch* lua_obj = (ReportDispatch*)getLuaSelf(L, 1);
+        ReportDispatch* lua_obj = dynamic_cast<ReportDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* scope_str = getLuaString(L, 2, true, "ROW", &flush_all);

@@ -56,14 +56,18 @@ class RasterObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const char* OBJECT_TYPE;
-        static const char* LuaMetaName;
-        static const struct luaL_Reg LuaMetaTable[];
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef RasterObject* (*factory_t) (lua_State* L, GeoParms* _parms);
+        typedef RasterObject* (*factory_f) (lua_State* L, GeoParms* _parms);
+
+        typedef struct {
+            factory_f   create;
+        } factory_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -72,7 +76,7 @@ class RasterObject: public LuaObject
         static void      init            (void);
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
-        static bool      registerRaster  (const char* _name, factory_t create);
+        static bool      registerRaster  (const char* _name, factory_f create);
         virtual uint32_t getSamples      (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) = 0;
         virtual uint32_t getSubsets      (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual         ~RasterObject    (void);
