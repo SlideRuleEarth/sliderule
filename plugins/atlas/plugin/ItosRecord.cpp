@@ -74,7 +74,7 @@ Record::~Record(void)
  *----------------------------------------------------------------------------*/
 void Record::addSubRecord(Record* record)
 {
-    subrecords.add(record);
+    subrecords.push_back(record);
 }
 
 /*----------------------------------------------------------------------------
@@ -83,7 +83,7 @@ void Record::addSubRecord(Record* record)
 void Record::addValue(const char* value)
 {
     SafeString str(value);
-    subvalues.add(str);
+    subvalues.push_back(str);
 }
 
 /*----------------------------------------------------------------------------
@@ -139,7 +139,7 @@ void Record::setComment(const char* _comment)
  *----------------------------------------------------------------------------*/
 int Record::getNumSubRecords(void)
 {
-    return subrecords.length();
+    return subrecords.size();
 }
 
 /*----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ int Record::getNumSubRecords(void)
  *----------------------------------------------------------------------------*/
 int Record::getNumSubValues(void)
 {
-    return subvalues.length();
+    return subvalues.size();
 }
 
 /*----------------------------------------------------------------------------
@@ -201,7 +201,7 @@ const char* Record::getDisplayName(void)
 const char* Record::getUndottedName (void)
 {
     if(name == NULL) return NULL;
-    SafeString s("%s", name);
+    SafeString s(0, "%s", name);
     s.replace(".", "_");
     s.replace("[", "_");
     s.replace("]", "_");
@@ -289,7 +289,10 @@ TypeConversion::~TypeConversion(void)
 void TypeConversion::addEnumLookup(const char* enum_name, const char* value)
 {
     SafeString* valstr = new SafeString(value);
-    lookup.add(enum_name, valstr);
+    if(!lookup.add(enum_name, valstr))
+    {
+        delete valstr;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1316,9 +1319,8 @@ Field* FloatField::duplicate(void)
 unsigned long FloatField::getRawValue (int element)
 {
     assert(element < numElements);
-    double val = value[element];
-    unsigned long* raw_ptr = (unsigned long*)&val;
-    return *raw_ptr;
+    cast_t* cast = reinterpret_cast<cast_t*>(&value[element]);
+    return cast->ival;
 }
 
 /*----------------------------------------------------------------------------
@@ -1408,23 +1410,23 @@ bool FloatField::populate (unsigned char* pkt)
         {
             /* Decompose Packet */
             int i = 0;
-            unsigned long _value = 0;
+            cast_t _value;
+            _value.ival = 0;
             while(bits_left > 0)
             {
                 int byte_mask = (1 << MIN(8, bits_left)) - 1;
-                _value += (pkt[byte_index--] & byte_mask) * (unsigned long)pow(2, bits_to_shift + (i++ * 8));
+                _value.ival += (pkt[byte_index--] & byte_mask) * (unsigned long)pow(2, bits_to_shift + (i++ * 8));
                 bits_left -= 8;
             }
 
             /* Set Value */
-            double* candidate = (double*)&_value;
-            if(!rangeChecking || (*candidate >= minRange && *candidate <= maxRange))
+            if(!rangeChecking || (_value.dval >= minRange && _value.dval <= maxRange))
             {
-                value[n] = *candidate;
+                value[n] = _value.dval;
             }
             else
             {
-                mlog(ERROR, "Failed to populate field %s from packet %04X due to out of bounds input %lf [%lf, %lf]", record->getName(), CCSDS_GET_SID(pkt), *candidate, minRange, maxRange);
+                mlog(ERROR, "Failed to populate field %s from packet %04X due to out of bounds input %lf [%lf, %lf]", record->getName(), CCSDS_GET_SID(pkt), _value.dval, minRange, maxRange);
                 status = false;
             }
         }
@@ -1618,8 +1620,8 @@ Filter::Filter (    int          _q,
         int s = 0;
         while(_sources[s] != NULL)
         {
-            SafeString ss("%s", _sources[s]);
-            source.add(ss);
+            SafeString ss(0, "%s", _sources[s]);
+            source.push_back(ss);
             s++;
         }
     }
@@ -1654,7 +1656,7 @@ const char* Filter::getProperty (const char* name)
     else if (strcmp(name, "task") == 0)         snprintf(str, MAX_STR_LEN, "%s", task);
     else if (strcmp(name, "source") == 0)
     {
-        for(int s = 0; s < source.length(); s++)
+        for(int s = 0; s < source.size(); s++)
         {
            StringLib::concat(str, source[s].str(), MAX_STR_LEN);
            StringLib::concat(str, " ", MAX_STR_LEN);
@@ -1733,13 +1735,13 @@ Packet::Packet(packet_type_t _packet_type, bool _populate, const char* _apid_des
         fields.add(sequenceCountFld);
         fields.add(lengthFld);
 
-        orphanRecs.add(ccsdsVersion);
-        orphanRecs.add(ccsdsCmdTlm);
-        orphanRecs.add(secondaryHeader);
-        orphanRecs.add(applicationId);
-        orphanRecs.add(segmentationFlags);
-        orphanRecs.add(sequenceCount);
-        orphanRecs.add(length);
+        orphanRecs.push_back(ccsdsVersion);
+        orphanRecs.push_back(ccsdsCmdTlm);
+        orphanRecs.push_back(secondaryHeader);
+        orphanRecs.push_back(applicationId);
+        orphanRecs.push_back(segmentationFlags);
+        orphanRecs.push_back(sequenceCount);
+        orphanRecs.push_back(length);
 
         currBitOffset   = 48;
         currByteOffset  = 6;
@@ -1751,7 +1753,7 @@ Packet::Packet(packet_type_t _packet_type, bool _populate, const char* _apid_des
  *----------------------------------------------------------------------------*/
 Packet::~Packet(void)
 {
-    for(int i = 0; i < orphanRecs.length(); i++) orphanFree(orphanRecs[i]);
+    for(int i = 0; i < orphanRecs.size(); i++) orphanFree(orphanRecs[i]);
     if(name) delete [] name;
     if(packetApidDesignation) delete [] packetApidDesignation;
 }
@@ -2081,6 +2083,7 @@ void Packet::calcAttributes (void)
 Packet* Packet::duplicate(void)
 {
     Packet* pkt = _duplicate();
+    if(!pkt) return NULL;
 
     pkt->packetType = packetType;
     pkt->declaration = declaration;
@@ -2090,7 +2093,7 @@ Packet* Packet::duplicate(void)
     pkt->currByteOffset = currByteOffset;
 
     int _apid_designation_len = (int)strlen(packetApidDesignation) + 1;
-    if(pkt->packetApidDesignation != NULL) delete [] pkt->packetApidDesignation;
+    delete [] pkt->packetApidDesignation;
     pkt->packetApidDesignation = new char[_apid_designation_len];
     memset(pkt->packetApidDesignation, 0, _apid_designation_len);
     StringLib::copy(pkt->packetApidDesignation, packetApidDesignation, _apid_designation_len);
@@ -2402,8 +2405,8 @@ CommandPacket::CommandPacket(command_packet_type_t _type, bool _populate): Packe
             fields.add(fc_f);
             fields.add(cs_f);
 
-            orphanRecs.add(fc);
-            orphanRecs.add(cs);
+            orphanRecs.push_back(fc);
+            orphanRecs.push_back(cs);
 
             numBytes        += 2;
             currBitOffset   += 16;
@@ -2502,7 +2505,10 @@ const char* TelemetryPacket::apidDesignation = RECORD_DEFAULT_APID_DESIGNATION;
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-TelemetryPacket::TelemetryPacket(telemetry_packet_type_t _type, bool _populate): Packet(TELEMETRY, _populate, TelemetryPacket::apidDesignation)
+TelemetryPacket::TelemetryPacket(telemetry_packet_type_t _type, bool _populate): 
+    Packet(TELEMETRY, _populate, TelemetryPacket::apidDesignation),
+    filter(NULL),
+    timeout(0)
 {
     if(_populate)
     {
@@ -2519,8 +2525,8 @@ TelemetryPacket::TelemetryPacket(telemetry_packet_type_t _type, bool _populate):
             fields.add(ts_days_f);
             fields.add(ts_ms_f);
 
-            orphanRecs.add(ts_days);
-            orphanRecs.add(ts_ms);
+            orphanRecs.push_back(ts_days);
+            orphanRecs.push_back(ts_ms);
 
             numBytes        += 6;
             currBitOffset   += 48;
@@ -2548,8 +2554,8 @@ bool TelemetryPacket::setPktProperty (const char* property_name, const char* val
 
     if(strcmp(property_name, "applyWhen") == 0)
     {
-        SafeString valstr("%s", value);
-        applyWhen.add(valstr);
+        SafeString valstr(0, "%s", value);
+        applyWhen.push_back(valstr);
     }
     else if(strcmp(property_name, "timeout") == 0)
     {
@@ -2603,7 +2609,7 @@ Packet* TelemetryPacket::_duplicate (void)
 {
     Packet* tpkt = new TelemetryPacket(STANDARD, false);
 
-    for(int i = 0; i < applyWhen.length(); i++)
+    for(int i = 0; i < applyWhen.size(); i++)
     {
         tpkt->setPktProperty("applyWhen", applyWhen[i].str());
     }

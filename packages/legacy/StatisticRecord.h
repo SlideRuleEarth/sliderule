@@ -153,7 +153,7 @@ StatisticRecord<T>::StatisticRecord(CommandProcessor* cmd_proc, const char* cmd_
     RecordObject(rec_name)
 {
     /* Set Record to Data Allocated by RecordObject */
-    rec = (T*)recordData;
+    rec = reinterpret_cast<T*>(recordData);
 
     /* Initialize Parameters */
     statClear = CLEAR_NEVER;

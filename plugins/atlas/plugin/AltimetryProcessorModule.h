@@ -86,7 +86,7 @@ class AltimetryProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool    processSegments     (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments     (List<CcsdsSpacePacket*>& segments, int numpkts) override;
         bool    parseAltHist        (List<CcsdsSpacePacket*>& segments, int numpkts);
         bool    parseAtmHist        (List<CcsdsSpacePacket*>& segments, int numpkts);
 

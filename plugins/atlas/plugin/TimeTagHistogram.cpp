@@ -101,7 +101,7 @@ TimeTagHistogram::TimeTagHistogram( AtlasHistogram::type_t _type, int _intperiod
 
     /* Initialize Internal Data */
     memset(tags, 0, sizeof(tags));
-    deepFree = _deep_free;
+    (void)_deep_free; // no longer used
 
     /* Initialize Serializable Data */
     memset(tt->channelBiases, 0, sizeof(tt->channelBiases));
@@ -124,18 +124,7 @@ TimeTagHistogram::~TimeTagHistogram(void)
 {
     for(int i = 0; i < tt->hist.size; i++)
     {
-        if(tags[i] != NULL)
-        {
-            if(deepFree)
-            {
-                for(int k = 0; k < tags[i]->length(); k++)
-                {
-                    delete tags[i]->get(k);
-                }
-            }
-            delete tags[i];
-            tags[i] = NULL;
-        }
+        delete tags[i];
     }
 }
 

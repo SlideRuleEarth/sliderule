@@ -61,7 +61,7 @@ AltimetryHistogram::AltimetryHistogram(AtlasHistogram::type_t _type, int _intper
                                        double _gps, double _rws, double _rww):
     AtlasHistogram(rec_type, _type, _intperiod, _binsize, _pcenum, _mfc, _mfdata, _gps, _rws, _rww)
 {
-    alt = (altHist_t*)recordData;
+    alt = reinterpret_cast<altHist_t*>(recordData);
 }
 
 /*----------------------------------------------------------------------------

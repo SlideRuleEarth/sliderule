@@ -100,7 +100,7 @@ class TimeTagHistogram: public AtlasHistogram
         const stat_t*           getPktStats         (void);
         static recordDefErr_t   defineHistogram     (void);
 
-        bool                    calcAttributes      (double sigwidth, double bincal); // returns if signal is found
+        bool                    calcAttributes      (double sigwidth, double bincal) override; // returns if signal is found
 
     private:
 
@@ -112,7 +112,6 @@ class TimeTagHistogram: public AtlasHistogram
         static int rec_elem;
 
         List<tag_t*>*   tags[MAX_HIST_SIZE];
-        bool            deepFree;
 
         ttHist_t*       tt;
 };

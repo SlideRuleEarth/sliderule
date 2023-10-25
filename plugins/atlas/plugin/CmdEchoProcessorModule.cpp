@@ -98,7 +98,7 @@ CommandableObject* CmdEchoProcessorModule::createObject(CommandProcessor* cmd_pr
     ItosRecordParser* itos = NULL;
     if(itos_name != NULL)
     {
-        itos = (ItosRecordParser*)cmd_proc->getObject(itos_name, ItosRecordParser::TYPE);
+        itos = dynamic_cast<ItosRecordParser*>(cmd_proc->getObject(itos_name, ItosRecordParser::TYPE));
         if(itos == NULL)
         {
             mlog(CRITICAL, "Unable to locate ITOS record parser: %s", itos_name);
@@ -120,10 +120,8 @@ bool CmdEchoProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 {
     (void)numpkts;
 
-    char                    echo_msg[ECHO_MSG_STR_SIZE];
-    char                    task_prefix[8];
-    bool                    status;
-    unsigned char*          cmd_pkt;
+    char echo_msg[ECHO_MSG_STR_SIZE];
+    char task_prefix[8];
 
     /* Process Segments */
     int numsegs = segments.length();
@@ -136,8 +134,8 @@ bool CmdEchoProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         /* Pull Out Fields */
         memset(task_prefix, 0, 8);
         memcpy(task_prefix, pktbuf + 12, 7);
-        status = pktbuf[19] == 0 ? false : true;
-        cmd_pkt = &pktbuf[20];
+        bool status = pktbuf[19] == 0 ? false : true;
+        unsigned char* cmd_pkt = &pktbuf[20];
 
         /* Print Prolog */
         if(pce == NOT_PCE)

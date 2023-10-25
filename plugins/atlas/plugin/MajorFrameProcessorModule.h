@@ -176,7 +176,7 @@ class MajorFrameProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool processSegments (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool processSegments (List<CcsdsSpacePacket*>& segments, int numpkts) override;
 };
 
 typedef MajorFrameProcessorModule::majorFrameData_t mfdata_t; // short cut

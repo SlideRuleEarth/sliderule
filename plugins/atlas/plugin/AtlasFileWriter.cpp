@@ -52,10 +52,10 @@
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-AtlasFileWriter::AtlasFileWriter(CommandProcessor* cmd_proc, const char* obj_name, fmt_t _fmt, const char* _prefix, const char* inq_name, unsigned int _max_file_size):
+AtlasFileWriter::AtlasFileWriter(CommandProcessor* cmd_proc, const char* obj_name, atlas_fmt_t _fmt, const char* _prefix, const char* inq_name, unsigned int _max_file_size):
     CcsdsFileWriter(cmd_proc, obj_name, CcsdsFileWriter::USER_DEFINED, _prefix, inq_name, _max_file_size)
 {
-    fmt = _fmt;
+    atlas_fmt = _fmt;
 }
 
 /*----------------------------------------------------------------------------
@@ -72,7 +72,7 @@ AtlasFileWriter::~AtlasFileWriter(void)
  *----------------------------------------------------------------------------*/
 CommandableObject* AtlasFileWriter::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
 {
-    fmt_t       format = str2fmt(argv[0]);
+    atlas_fmt_t format = str2fmt(argv[0]);
     const char* prefix = argv[1];
     const char* stream = StringLib::checkNullStr(argv[2]);
 
@@ -95,7 +95,7 @@ CommandableObject* AtlasFileWriter::createObject(CommandProcessor* cmd_proc, con
 /*----------------------------------------------------------------------------
  * str2fmt  -
  *----------------------------------------------------------------------------*/
-AtlasFileWriter::fmt_t AtlasFileWriter::str2fmt(const char* str)
+AtlasFileWriter::atlas_fmt_t AtlasFileWriter::str2fmt(const char* str)
 {
          if(strcmp(str, "SCI_PKT") == 0)    return SCI_PKT;
     else if(strcmp(str, "SCI_CH") == 0)     return SCI_CH;
@@ -114,7 +114,7 @@ AtlasFileWriter::fmt_t AtlasFileWriter::str2fmt(const char* str)
 /*----------------------------------------------------------------------------
  * str2fmt  -
  *----------------------------------------------------------------------------*/
-const char* AtlasFileWriter::fmt2str(AtlasFileWriter::fmt_t _fmt)
+const char* AtlasFileWriter::fmt2str(AtlasFileWriter::atlas_fmt_t _fmt)
 {
          if(_fmt == SCI_PKT)    return "SCI_PKT";
     else if(_fmt == SCI_CH)     return "SCI_CH";
@@ -139,7 +139,7 @@ const char* AtlasFileWriter::fmt2str(AtlasFileWriter::fmt_t _fmt)
  *----------------------------------------------------------------------------*/
 int AtlasFileWriter::writeMsg(void* msg, int size, bool with_header)
 {
-    switch(fmt)
+    switch(atlas_fmt)
     {
         case SCI_PKT:       return writeSciPkt(msg, size, with_header);
         case SCI_CH:        return writeSciCh(msg, size, with_header);
@@ -162,7 +162,7 @@ int AtlasFileWriter::writeMsg(void* msg, int size, bool with_header)
  *----------------------------------------------------------------------------*/
 bool AtlasFileWriter::isBinary(void)
 {
-    switch(fmt)
+    switch(atlas_fmt)
     {
         case SCI_PKT:       return false;
         case SCI_CH:        return false;
@@ -198,18 +198,18 @@ int AtlasFileWriter::writeSciPkt (void* msg, int size, bool with_header)
     if(!data) return 0;
 
     pktStat_t* stat = (pktStat_t*)data;
-    cnt += fprintf(outfp, "%6d,   ",  stat->pce);
-    cnt += fprintf(outfp, "%6d,   ",  stat->segcnt);
-    cnt += fprintf(outfp, "%6d,   ",  stat->pktcnt);
-    cnt += fprintf(outfp, "%3d,   ",  stat->mfc_errors);
-    cnt += fprintf(outfp, "%3d,   ",  stat->hdr_errors);
-    cnt += fprintf(outfp, "%3d,   ",  stat->fmt_errors);
-    cnt += fprintf(outfp, "%3d,   ",  stat->dlb_errors);
-    cnt += fprintf(outfp, "%3d,   ",  stat->tag_errors);
-    cnt += fprintf(outfp, "%3d,   ",  stat->pkt_errors);
-    cnt += fprintf(outfp, "%4d,   ",  stat->warnings);
-    cnt += fprintf(outfp, "%7d,   ",  stat->min_tags);
-    cnt += fprintf(outfp, "%7d,   ",  stat->max_tags);
+    cnt += fprintf(outfp, "%6u,   ",  stat->pce);
+    cnt += fprintf(outfp, "%6u,   ",  stat->segcnt);
+    cnt += fprintf(outfp, "%6u,   ",  stat->pktcnt);
+    cnt += fprintf(outfp, "%3u,   ",  stat->mfc_errors);
+    cnt += fprintf(outfp, "%3u,   ",  stat->hdr_errors);
+    cnt += fprintf(outfp, "%3u,   ",  stat->fmt_errors);
+    cnt += fprintf(outfp, "%3u,   ",  stat->dlb_errors);
+    cnt += fprintf(outfp, "%3u,   ",  stat->tag_errors);
+    cnt += fprintf(outfp, "%3u,   ",  stat->pkt_errors);
+    cnt += fprintf(outfp, "%4u,   ",  stat->warnings);
+    cnt += fprintf(outfp, "%7u,   ",  stat->min_tags);
+    cnt += fprintf(outfp, "%7u,   ",  stat->max_tags);
     cnt += fprintf(outfp, "%.1lf,   ", stat->avg_tags);
     cnt += fprintf(outfp, "\n");
 
@@ -237,16 +237,16 @@ int AtlasFileWriter::writeSciCh (void* msg, int size, bool with_header)
     chStat_t* chstat = (chStat_t*)data;
     for(int channel = 0; channel < NUM_CHANNELS; channel++)
     {
-        cnt += fprintf(outfp, "%2d,   ",     chstat->pce + 1);
+        cnt += fprintf(outfp, "%2u,   ",     chstat->pce + 1);
         cnt += fprintf(outfp, "%2d,   ",     channel + 1);
-        cnt += fprintf(outfp, "%7d,   ",     chstat->statcnt);
-        cnt += fprintf(outfp, "%7d,   ",     chstat->rx_cnt[channel]);
-        cnt += fprintf(outfp, "%7d,   ",     chstat->num_dupr[channel]);
+        cnt += fprintf(outfp, "%7u,   ",     chstat->statcnt);
+        cnt += fprintf(outfp, "%7u,   ",     chstat->rx_cnt[channel]);
+        cnt += fprintf(outfp, "%7u,   ",     chstat->num_dupr[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->tdc_calr[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->min_calr[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->max_calr[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->avg_calr[channel]);
-        cnt += fprintf(outfp, "%7d,   ",     chstat->num_dupf[channel]);
+        cnt += fprintf(outfp, "%7u,   ",     chstat->num_dupf[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->tdc_calf[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->min_calf[channel]);
         cnt += fprintf(outfp, "%7.1lf,   ",  chstat->max_calf[channel]);
@@ -276,15 +276,15 @@ int AtlasFileWriter::writeSciTx (void* msg, int size, bool with_header)
     if(!data) return 0;
 
     txStat_t* stat = (txStat_t*)data;
-    cnt += fprintf(outfp, "%7d,   ",     stat->pce + 1);
-    cnt += fprintf(outfp, "%7d,   ",     stat->statcnt);
-    cnt += fprintf(outfp, "%5d,   ",     stat->txcnt);
-    cnt += fprintf(outfp, "%6d,   ",     stat->min_tags[STRONG_SPOT]);
-    cnt += fprintf(outfp, "%7d,   ",     stat->max_tags[STRONG_SPOT]);
+    cnt += fprintf(outfp, "%7u,   ",     stat->pce + 1);
+    cnt += fprintf(outfp, "%7u,   ",     stat->statcnt);
+    cnt += fprintf(outfp, "%5u,   ",     stat->txcnt);
+    cnt += fprintf(outfp, "%6u,   ",     stat->min_tags[STRONG_SPOT]);
+    cnt += fprintf(outfp, "%7u,   ",     stat->max_tags[STRONG_SPOT]);
     cnt += fprintf(outfp, "%7.1lf,   ",  stat->avg_tags[STRONG_SPOT]);
     cnt += fprintf(outfp, "%7.1lf,   ",  stat->std_tags[STRONG_SPOT]);
-    cnt += fprintf(outfp, "%6d,   ",     stat->min_tags[WEAK_SPOT]);
-    cnt += fprintf(outfp, "%7d,   ",     stat->max_tags[WEAK_SPOT]);
+    cnt += fprintf(outfp, "%6u,   ",     stat->min_tags[WEAK_SPOT]);
+    cnt += fprintf(outfp, "%7u,   ",     stat->max_tags[WEAK_SPOT]);
     cnt += fprintf(outfp, "%7.1lf,   ",  stat->avg_tags[WEAK_SPOT]);
     cnt += fprintf(outfp, "%7.1lf,   ",  stat->std_tags[WEAK_SPOT]);
     cnt += fprintf(outfp, "%8.5lf,   ",  stat->min_delta);
@@ -338,11 +338,11 @@ int AtlasFileWriter::writeCcsdsStat (void* msg, int size, bool with_header)
     CcsdsPacketParser::pktStats_t* stat = (CcsdsPacketParser::pktStats_t*)data;
     if((size - typelen) == sizeof(CcsdsPacketParser::pktStats_t))
     {
-        cnt += fprintf(outfp, "%6d,   ",  stat->total_pkts);
-        cnt += fprintf(outfp, "%6d,   ",  stat->total_bytes);
-        cnt += fprintf(outfp, "%6d,   ",  stat->pkts_dropped);
-        cnt += fprintf(outfp, "%3d,   ",  stat->curr_pkts);
-        cnt += fprintf(outfp, "%3d,   ",  stat->curr_bytes);
+        cnt += fprintf(outfp, "%6u,   ",  stat->total_pkts);
+        cnt += fprintf(outfp, "%6u,   ",  stat->total_bytes);
+        cnt += fprintf(outfp, "%6u,   ",  stat->pkts_dropped);
+        cnt += fprintf(outfp, "%3u,   ",  stat->curr_pkts);
+        cnt += fprintf(outfp, "%3u,   ",  stat->curr_bytes);
         cnt += fprintf(outfp, "%.1lf,   ",  stat->max_bps);
         cnt += fprintf(outfp, "%.1lf,   ",  stat->min_bps);
         cnt += fprintf(outfp, "%.1lf,   ",  stat->avg_bps);
@@ -519,9 +519,6 @@ int AtlasFileWriter::writeTimeDiag (void* msg, int size, bool with_header)
 {
     int cnt = 0;
 
-    const int num_sxp_status = 11;
-    const char* sxp_status[num_sxp_status] = { "Unknown", "Good", "Not_Enabled", "Could_Not_Run", "Spot_At_TQ_Failed", "Spot_Velocity_Failed", "Range_Velocity_Failed", "Off_Nadir_Velocity_Failed", "Params_Failed", "Failed", "Timeout" };
-
     if(with_header)
     {
         cnt += fprintf(outfp, "%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s,%12s\n", "REF", "TIME_REF", "SC_1PPS", "SC_TAT_RX", "SC_ATT_RX", "SC_POS_RX", "SC_ATT_SOL", "SC_POS_SOL", "SXP_PCE1_TIME_RX", "SXP_PCE2_TIME_RX", "SXP_PCE3_TIME_RX", "SXP_1ST_MF1_EXTRAP", "SXP_1ST_MF2_EXTRAP", "SXP_1ST_MF3_EXTRAP", "PCE1_1ST_MF_AFTER_1PPS", "PCE2_1ST_MF_AFTER_1PPS", "PCE3_1ST_MF_AFTER_1PPS", "SXP_STATUS");
@@ -551,8 +548,10 @@ int AtlasFileWriter::writeTimeDiag (void* msg, int size, bool with_header)
         cnt += fprintf(outfp, "%12lf,",  timediag->pce_1st_mf_1pps_delta[0]);
         cnt += fprintf(outfp, "%12lf,",  timediag->pce_1st_mf_1pps_delta[1]);
         cnt += fprintf(outfp, "%12lf,",   timediag->pce_1st_mf_1pps_delta[2]);
+        const int num_sxp_status = 11;
         if(timediag->sxp_status[0] >= 0 && timediag->sxp_status[0] < num_sxp_status)
         {
+            const char* sxp_status[num_sxp_status] = { "Unknown", "Good", "Not_Enabled", "Could_Not_Run", "Spot_At_TQ_Failed", "Spot_Velocity_Failed", "Range_Velocity_Failed", "Off_Nadir_Velocity_Failed", "Params_Failed", "Failed", "Timeout" };
             cnt += fprintf(outfp, "%12s\n",  sxp_status[timediag->sxp_status[0]]);
         }
         else

@@ -54,8 +54,8 @@ class ItosRecordParser: public CommandableObject
 
         static CommandableObject*       createObject    (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
 
-        MgDictionary<Itos::Record*>*    getDictionary   (void);
-        MgList<Itos::Packet*>*          getPackets      (void);
+        Dictionary<Itos::Record*>*      getDictionary   (void);
+        List<Itos::Packet*>*            getPackets      (void);
         const char*                     pkt2str         (unsigned char* packet);
 
     private:
@@ -66,26 +66,25 @@ class ItosRecordParser: public CommandableObject
 
         List<SafeString> tokens;    // all tokens in rec files
 
-        MgList<Itos::Filter*> filters; // all filter entries in filter table
+        List<Itos::Filter*> filters; // all filter entries in filter table
 
-        MgDictionary<Itos::Record*> dictionary; // key'ed database of all records
+        Dictionary<Itos::Record*> dictionary; // key'ed database of all records
 
-        Dictionary<List<Itos::Record*>*, false> instantiations; // given a system prototype name, gives list of instantiated system records
+        Dictionary<vector<Itos::Record*>*> instantiations; // given a system prototype name, gives list of instantiated system records
 
-        MgList<Itos::Record*> declarations;         // zero-depth records in rec files
-        MgList<Itos::Packet*> packets;              // list of all the packet definitions: commands, telemetry
-        List<Itos::Record*> mnemonics;              // zero-depth list of all the mnemonics definitions
-        MgList<Itos::TypeConversion*> conversions;  // zero-depth list of all discrete conversions
-        List<Itos::Record*> aliases;                // zero-depth list of all aliases
+        List<Itos::Record*> declarations;         // zero-depth records in rec files
+        List<Itos::Packet*> packets;              // list of all the packet definitions: commands, telemetry
+        vector<Itos::Record*> mnemonics;          // zero-depth list of all the mnemonics definitions
+        List<Itos::TypeConversion*> conversions;  // zero-depth list of all discrete conversions
+        vector<Itos::Record*> aliases;            // zero-depth list of all aliases
 
         bool optFullPktDetails;     // option to show all fields in a packet when generating a report
         bool optUserEditable;       // option to provide edit buttons interactively via mod_python
         bool optRemoteContent;      // option to use local content vs remote iframe content for packet display
 
-        List<Itos::Packet*> cmdPackets[CCSDS_NUM_APIDS];
-        List<Itos::Packet*> tlmPackets[CCSDS_NUM_APIDS];
-        List<Itos::Mnemonic*> mneDefinitions;
-
+        vector<Itos::Packet*> cmdPackets[CCSDS_NUM_APIDS];
+        vector<Itos::Packet*> tlmPackets[CCSDS_NUM_APIDS];
+        vector<Itos::Mnemonic*> mneDefinitions;
 
         /*--------------------------------------------------------------------
          * Methods

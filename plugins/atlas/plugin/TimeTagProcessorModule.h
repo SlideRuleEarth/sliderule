@@ -305,7 +305,7 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool    processSegments         (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments         (List<CcsdsSpacePacket*>& segments, int numpkts) override;
 
         int     removeDuplicatesCmd     (int argc, char argv[][MAX_CMD_SIZE]);
         int     setClkPeriodCmd         (int argc, char argv[][MAX_CMD_SIZE]);

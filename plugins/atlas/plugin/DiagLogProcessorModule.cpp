@@ -75,11 +75,10 @@ CommandableObject* DiagLogProcessorModule::createObject(CommandProcessor* cmd_pr
 {
     const char* diagq_name = StringLib::checkNullStr(argv[0]);
     const char* prefix     = StringLib::checkNullStr(argv[1]);
-    int         pcenum     = NOT_PCE;
 
     if(argc > 2)
     {
-        pcenum = (int)strtol(argv[2], NULL, 0);
+        int pcenum = (int)strtol(argv[2], NULL, 0);
         if(pcenum < 1 || pcenum > NUM_PCES)
         {
             mlog(CRITICAL, "Invalid PCE specified: %d, must be between 1 and %d", pcenum, NUM_PCES);
@@ -115,7 +114,6 @@ bool DiagLogProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
     char diagmsg[DIAG_LOG_STR_SIZE + 2];
     int msgindex = 0;
-    int msgsize = 0;
 
     /* Populate Prefix */
     if(prefix)
@@ -134,7 +132,7 @@ bool DiagLogProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
         /* Copy Out Log Message */
         int diagmsg_len = strnlen((const char*)&pktbuf[DIAG_LOG_START], DIAG_LOG_STR_SIZE - (DIAG_LOG_START + msgindex));
         memcpy(&diagmsg[msgindex], &pktbuf[DIAG_LOG_START], diagmsg_len);
-        msgsize = diagmsg_len + msgindex;
+        int msgsize = diagmsg_len + msgindex;
 
         /* Decide on New Line */
         if(diagmsg_len < (DIAG_LOG_STR_SIZE - DIAG_LOG_START))

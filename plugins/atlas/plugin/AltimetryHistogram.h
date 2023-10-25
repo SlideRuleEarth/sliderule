@@ -72,7 +72,7 @@ class AltimetryHistogram: public AtlasHistogram
                                                      double                 _rww    );
         virtual                 ~AltimetryHistogram (void);
         static recordDefErr_t   defineHistogram     (void);
-        bool                    calcAttributes      (double sigwidth, double bincal); // returns if signal is found
+        bool                    calcAttributes      (double sigwidth, double bincal) override; // returns if signal is found
 
     private:
 
