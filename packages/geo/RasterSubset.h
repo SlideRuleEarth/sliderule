@@ -38,6 +38,7 @@
 
 #include "OsApi.h"
 #include "RecordObject.h"
+#include "GeoParms.h"
 
 /******************************************************************************
  * RASTER SUBSET CLASS
@@ -55,6 +56,7 @@ class RasterSubset
         double                      map_ulx;
         double                      map_uly;
         double                      cellsize;
+        GeoParms::bbox_t            bbox;
         std::string                 wkt;
         double                      time;     // gps seconds
         uint64_t                    fileId;
@@ -66,7 +68,7 @@ class RasterSubset
         static Mutex                mutex;
 
         RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                     double ulx, double uly, double _cellsize, const char* _wkt,
+                     double ulx, double uly, double _cellsize, GeoParms::bbox_t& _bbox, const char* _wkt,
                      double _time, double _fileId);
         ~RasterSubset(void);
 };

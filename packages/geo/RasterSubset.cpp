@@ -52,7 +52,7 @@ Mutex RasterSubset::mutex;
  * Constructor
  *----------------------------------------------------------------------------*/
 RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                           double ulx, double uly, double _cellsize, const char* _wkt,
+                           double ulx, double uly, double _cellsize, GeoParms::bbox_t& _bbox, const char* _wkt,
                            double _time, double _fileId):
     data(NULL),
     size(0),
@@ -62,6 +62,7 @@ RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldTy
     map_ulx(ulx),
     map_uly(uly),
     cellsize(_cellsize),
+    bbox(_bbox),
     wkt(_wkt),
     time(_time),
     fileId(_fileId)

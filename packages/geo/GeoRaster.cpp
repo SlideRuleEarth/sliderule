@@ -63,7 +63,7 @@ uint32_t GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<Raster
 }
 
 /*----------------------------------------------------------------------------
- * getSubset
+ * getSubsets
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
 {
@@ -94,6 +94,38 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
     return raster.getSSerror();
 }
 
+
+/*----------------------------------------------------------------------------
+ * getSubset
+ *----------------------------------------------------------------------------*/
+RasterSubset* GeoRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
+{
+    std::ignore = param;
+    RasterSubset* subset = NULL;
+
+    samplingMutex.lock();
+
+    /* Enable multi-threaded decompression in Gtiff driver */
+    CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
+
+    try
+    {
+        subset = raster.subsetAOI(ulx, uly, xsize, ysize);
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error subsetting raster: %s", e.what());
+        delete subset;
+        subset = NULL;
+    }
+
+    /* Disable multi-threaded decompression in Gtiff driver */
+    CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");
+
+    samplingMutex.unlock();
+
+    return subset;
+}
 
 /*----------------------------------------------------------------------------
  * Destructor

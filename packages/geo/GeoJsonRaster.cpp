@@ -81,7 +81,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 
     /* Get cellsize */
     lua_getfield(L, index, CELLSIZE_KEY);
-    double _cellsize = getLuaFloat(L, -1);
+    double cellsize = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
     /* Get Geo Parameters */
@@ -91,7 +91,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
     lua_pop(L, 1);
 
     /* Create GeoJsonRaster */
-    return new GeoJsonRaster(L, _parms, geojstr, _cellsize);
+    return new GeoJsonRaster(L, _parms, geojstr, cellsize);
 }
 
 
@@ -100,18 +100,29 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    std::vector<RasterSample*> slist;
+    std::ignore = height;
+    bool pixel_on = false;
 
-    OGRPoint poi(lon, lat, height);
-    getSamples(&poi, 0, slist);
-    int sampleCnt = slist.size();
+    /*
+     * Skip transforming POI since geojsons should be in geographic coordinates.
+     * Raster created from geojson is also in geo.
+     *
+     * Don't need a mutex, multiple threads can read the same data.
+     */
 
-    if( sampleCnt == 0 ) return false; // no need to delete anything
-    if( sampleCnt > 1  ) mlog(ERROR, "Multiple samples returned for lon: %.2lf, lat: %.2lf, using first sample", lon, lat);
+    const GdalRaster::bbox_t& bbox = subset->bbox;
 
-    bool pixel_on = static_cast<int>(slist[0]->value) == RASTER_PIXEL_ON;
+    if((lon >= bbox.lon_min) && (lon <= bbox.lon_max) &&
+       (lat >= bbox.lat_min) && (lat <= bbox.lat_max))
+    {
+        uint32_t row = (bbox.lat_max - lat) / subset->cellsize;
+        uint32_t col = (lon - bbox.lon_min) / subset->cellsize;
 
-    for(auto sample: slist) delete sample;
+        if((row < subset->rows) && (col < subset->cols))
+        {
+            pixel_on = rawPixel(row, col);
+        }
+    }
 
     return pixel_on;
 }
@@ -121,6 +132,7 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
+    delete subset;
     VSIUnlink(rasterFileName.c_str());
 }
 
@@ -132,8 +144,9 @@ GeoJsonRaster::~GeoJsonRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double _cellsize):
- GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/)
+GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double cellsize):
+ GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/),
+ subset(NULL)
 {
     bool rasterCreated = false;
     GDALDataset* rasterDset = NULL;
@@ -144,8 +157,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr
     if (geojstr == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
 
-    if (_cellsize <= 0.0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", _cellsize);
+    if (cellsize <= 0.0)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", cellsize);
 
     try
     {
@@ -164,9 +177,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr
         OGRErr ogrerr = srcLayer->GetExtent(&e);
         CHECK_GDALERR(ogrerr);
 
-        double cellsize = _cellsize;
-        int cols = int((e.MaxX - e.MinX) / cellsize);
-        int rows = int((e.MaxY - e.MinY) / cellsize);
+        int cols = static_cast<int>((e.MaxX - e.MinX) / cellsize);
+        int rows = static_cast<int>((e.MaxY - e.MinY) / cellsize);
 
         char **options = NULL;
         options = CSLSetNameValue(options, "COMPRESS", "DEFLATE");
@@ -216,6 +228,11 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
         rasterCreated = true;
+
+        /* Subset newly created raster, get all pixels */
+        subset = getSubset();
+        CHECKPTR(subset);
+        CHECKPTR(subset->data);
     }
     catch(const RunTimeException& e)
     {
