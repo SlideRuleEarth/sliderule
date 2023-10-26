@@ -69,25 +69,30 @@ class OrchestratorLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init                (void);
-        static void         deinit              (void);
+        static void                 init                (void);
+        static void                 deinit              (void);
 
-        static bool         registerService     (const char* service, int lifetime, const char* address, bool verbose=false);
-        static vector<Node*>* lock              (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
-        static bool         unlock              (long transactions[], int num_transactions, bool verbose=false);
-        static bool         health              (void);
+        static HttpClient::rsps_t   request             (EndpointObject::verb_t verb, const char* resource, const char* data);
 
-        static int          luaUrl              (lua_State* L);
-        static int          luaRegisterService  (lua_State* L);
-        static int          luaLock             (lua_State* L);
-        static int          luaUnlock           (lua_State* L);
-        static int          luaHealth           (lua_State* L);
+        static bool                 registerService     (const char* service, int lifetime, const char* address, bool verbose=false);
+        static vector<Node*>*       lock                (const char* service, int nodes_needed, int timeout_secs, bool verbose=false);
+        static bool                 unlock              (long transactions[], int num_transactions, bool verbose=false);
+        static bool                 health              (void);
+        static bool                 metric              (const unsigned char* metric_buf, int buf_size);
+
+        static int                  luaUrl              (lua_State* L);
+        static int                  luaRegisterService  (lua_State* L);
+        static int                  luaLock             (lua_State* L);
+        static int                  luaUnlock           (lua_State* L);
+        static int                  luaHealth           (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static const char* URL;
+        static const char*  URL;
+        static HttpClient*  client;
+        static Mutex        rqstMutex;
 };
 
 #endif  /* __orchestrator_lib__ */

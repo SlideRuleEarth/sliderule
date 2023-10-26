@@ -47,7 +47,9 @@
  * Static Data
  *----------------------------------------------------------------------------*/
 
-const char* OrchestratorLib::URL = NULL;
+const char*     OrchestratorLib::URL = NULL;
+HttpClient*     OrchestratorLib::client = NULL;
+Mutex           OrchestratorLib::rqstMutex;
 
 /*----------------------------------------------------------------------------
  * init
@@ -63,6 +65,37 @@ void OrchestratorLib::init (void)
 void OrchestratorLib::deinit (void)
 {
     delete [] URL;
+    delete client;
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+HttpClient::rsps_t OrchestratorLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
+{
+    /* enter mutual exclusion zone */
+    rqstMutex.lock();
+
+    /* create client if it doesn't exist */
+    if(!client)
+    {
+        client = new HttpClient(NULL, URL);
+    }
+
+    /* perform request */
+    HttpClient::rsps_t rsps = client->request(verb, resource, data, true, NULL);
+    if(rsps.code == EndpointObject::Service_Unavailable)
+    {
+        mlog(CRITICAL, "Failed request to orchestrator at %s, recreating client", URL);
+        delete client;
+        client = NULL;
+    }
+
+    /* exit mutual exclusion zone */
+    rqstMutex.unlock();
+
+    /* return response */
+    return rsps;
 }
 
 /*----------------------------------------------------------------------------
@@ -72,10 +105,8 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 {
     bool status = true;
 
-    HttpClient orchestrator(NULL, URL);
     FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
-
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/register", rqst.c_str(), false, NULL);
+    HttpClient::rsps_t rsps = request(EndpointObject::POST, "/discovery/register", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -118,10 +149,9 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
 {
     vector<Node*>* nodes = NULL;
-    HttpClient orchestrator(NULL, URL);
-    FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/lock", rqst.c_str(), false, NULL);
+    FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
+    HttpClient::rsps_t rsps = request(EndpointObject::POST, "/discovery/lock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -188,14 +218,13 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
 
     bool status = true;
 
-    HttpClient orchestrator(NULL, URL);
     char strbuf[64];
     string rqst;
     rqst += StringLib::format(strbuf, 64, "{\"transactions\": [%ld", transactions[0]);
     for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(strbuf, 64, ",%ld", transactions[t]);
     rqst += "]}";
 
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::POST, "/discovery/unlock", rqst.c_str(), false, NULL);
+    HttpClient::rsps_t rsps = request(EndpointObject::POST, "/discovery/unlock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -234,9 +263,7 @@ bool OrchestratorLib::health (void)
 {
     bool status = false;
 
-    HttpClient orchestrator(NULL, URL);
-
-    HttpClient::rsps_t rsps = orchestrator.request(EndpointObject::GET, "/discovery/health", NULL, false, NULL);
+    HttpClient::rsps_t rsps = request(EndpointObject::GET, "/discovery/health", NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -251,6 +278,26 @@ bool OrchestratorLib::health (void)
         {
             mlog(CRITICAL, "Failed process response to health: %s", rsps.response);
         }
+    }
+
+    delete [] rsps.response;
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * metric
+ *----------------------------------------------------------------------------*/
+bool OrchestratorLib::metric (const unsigned char* metric_buf, int buf_size)
+{
+    (void)buf_size;
+
+    bool status = false;
+
+    HttpClient::rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", reinterpret_cast<const char*>(metric_buf));
+    if(rsps.code == EndpointObject::OK)
+    {
+        status = true;
     }
 
     delete [] rsps.response;

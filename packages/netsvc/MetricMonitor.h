@@ -29,30 +29,49 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __netsvcpkg__
-#define __netsvcpkg__
+#ifndef __metric_monitor__
+#define __metric_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "AoiMetrics.h"
-#include "CurlLib.h"
-#include "EndpointProxy.h"
-#include "OrchestratorLib.h"
-#include "ProvisioningSystemLib.h"
-#include "MetricMonitor.h"
-#include "NetsvcParms.h"
+#include "MsgQ.h"
+#include "Monitor.h"
+#include "RecordObject.h"
+#include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * METRIC MONITOR CLASS
  ******************************************************************************/
 
-extern "C" {
-void initnetsvc (void);
-void deinitnetsvc (void);
-}
+class MetricMonitor: public Monitor
+{
+    public:
 
-#endif  /* __netsvcpkg__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
+        static int luaCreate (lua_State* L);
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        MetricMonitor  (lua_State* L, event_level_t level);
+        ~MetricMonitor (void);
+};
+
+#endif  /* __publish_monitor__ */

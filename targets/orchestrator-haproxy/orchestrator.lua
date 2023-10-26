@@ -142,7 +142,9 @@ StatData = {
     numFailures = 0,
     numTimeouts = 0,
     numActiveLocks = 0,
-    memberCounts = {}
+    memberCounts = {},
+    gaugeAppMetrics = {},
+    countAppMetrics = {}
 }
 
 --
@@ -387,7 +389,11 @@ num_timeouts %d
 
 # TYPE num_active_locks counter
 num_active_locks %d
-]], StatData["numRequests"], StatData["numComplete"], StatData["numFailures"], StatData["numTimeouts"], StatData["numActiveLocks"])
+]], StatData["numRequests"], 
+    StatData["numComplete"], 
+    StatData["numFailures"], 
+    StatData["numTimeouts"], 
+    StatData["numActiveLocks"])
 
     -- add member counts to response
     for member_metric,_ in pairs(StatData["memberCounts"]) do
@@ -395,7 +401,9 @@ num_active_locks %d
 
 # TYPE %s counter
 %s %d
-]], member_metric, member_metric, StatData["memberCounts"][member_metric])
+]], member_metric, 
+    member_metric, 
+    StatData["memberCounts"][member_metric])
     end
 
     -- send response
@@ -411,6 +419,30 @@ end
 --
 local function api_health(applet)
 
+    local response = string.format([[{"health":true}]])
+    applet:set_status(200)
+    applet:add_header("content-length", string.len(response))
+    applet:add_header("content-type", "application/json")
+    applet:start_response()
+    applet:send(response)
+
+end
+
+--
+-- API: /discovery/metric
+--
+local function api_metric(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local metric_type = request["transactions"]
+
+    -- store metrics
+    for i,m in ipairs(request) do
+        
+    end
+    -- send response
     local response = string.format([[{"health":true}]])
     applet:set_status(200)
     applet:add_header("content-length", string.len(response))
@@ -586,6 +618,7 @@ core.register_service("orchestrator_lock", "http", api_lock)
 core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
+core.register_service("orchestrator_metric", "http", api_metric)
 core.register_service("orchestrator_status", "http", api_status)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)

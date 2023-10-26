@@ -42,7 +42,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         clang-tidy;
         -header-filter=.;
         -checks=${CLANG_TIDY_CHECKS_PARM};
-#        -checks=clang-analyzer-*,concurrency-*,misc-*,performance-*,portability-*,readability-*,-readability-braces-around-statements,-readability-implicit-bool-conversion,-readability-magic-numbers,-misc-non-private-member-variables-in-classes;
         -warnings-as-errors=*;
     )
 

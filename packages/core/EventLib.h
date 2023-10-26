@@ -56,6 +56,9 @@
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
+#define count_metric(lvl,name,value) EventLib::generateMetric(lvl,name,EventLib::COUNTER,value)
+#define gauge_metric(lvl,name,value) EventLib::generateMetric(lvl,name,EventLib::GAUGE,value)
+
 /******************************************************************************
  * EVENT LIBRARY CLASS
  ******************************************************************************/

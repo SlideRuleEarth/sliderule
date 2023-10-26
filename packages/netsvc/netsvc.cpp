@@ -65,6 +65,7 @@ int netsvc_open (lua_State* L)
         {"pslogin",     ProvisioningSystemLib::luaLogin},
         {"psvalidate",  ProvisioningSystemLib::luaValidate},
         {"psauth",      ProvisioningSystemLib::Authenticator::luaCreate},
+        {"mmonitor",    MetricMonitor::luaCreate},
         {"parms",       NetsvcParms::luaCreate},
         {NULL,          NULL}
     };
