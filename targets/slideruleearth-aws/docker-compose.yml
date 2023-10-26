@@ -11,6 +11,7 @@ services:
     ulimits:
       nofile:
         soft: "8192"
+        hard: "8192"
     volumes:
       - /etc/ssl/certs:/etc/ssl/certs
       - /data:/data

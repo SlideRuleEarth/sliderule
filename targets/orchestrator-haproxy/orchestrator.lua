@@ -373,7 +373,43 @@ end
 --
 local function api_prometheus(applet)
 
-    -- build initial response
+    -- create application count metrics
+    local application_count_metric = ""
+    for name,value in pairs(StatData.countAppMetrics) do
+        application_count_metric = application_count_metric .. string.format([[
+
+# TYPE %s counter
+%s %d
+]], name, 
+    name, 
+    value)        
+    end
+
+    -- create application gauge metrics
+    local application_gauge_metric = ""
+    for name,value in pairs(StatData.gaugeAppMetrics) do
+        application_gauge_metric = application_gauge_metric .. string.format([[
+
+# TYPE %s gauge
+%s %d
+]], name, 
+    name, 
+    value)        
+    end
+
+    -- create member count metrics
+    local member_count_metric = ""
+    for member_metric,_ in pairs(StatData["memberCounts"]) do
+        member_count_metric = member_count_metric .. string.format([[
+
+# TYPE %s counter
+%s %d
+]], member_metric, 
+    member_metric, 
+    StatData["memberCounts"][member_metric])
+    end
+
+    -- build full response
     local response = string.format([[
 # TYPE num_requests counter
 num_requests %d
@@ -388,23 +424,15 @@ num_failures %d
 num_timeouts %d
 
 # TYPE num_active_locks counter
-num_active_locks %d
+num_active_locks %d%s%s%s
 ]], StatData["numRequests"], 
     StatData["numComplete"], 
     StatData["numFailures"], 
     StatData["numTimeouts"], 
-    StatData["numActiveLocks"])
-
-    -- add member counts to response
-    for member_metric,_ in pairs(StatData["memberCounts"]) do
-        response = response .. string.format([[
-
-# TYPE %s counter
-%s %d
-]], member_metric, 
-    member_metric, 
-    StatData["memberCounts"][member_metric])
-    end
+    StatData["numActiveLocks"],
+    member_count_metric,
+    application_count_metric,
+    application_gauge_metric)
 
     -- send response
     applet:set_status(200)
@@ -436,19 +464,20 @@ local function api_metric(applet)
     -- process request
     local body = applet:receive()
     local request = json.decode(body)
-    local metric_type = request["transactions"]
+    local metric_name = request["name"]
+    local metric_value = tonumber(request["attr"])
+    local metric_type = request["flags"]
 
     -- store metrics
-    for i,m in ipairs(request) do
-        
+    if metric_type == 0 then
+        StatData.countAppMetrics[metric_name] =  StatData.countAppMetrics[metric_name] + metric_value
+        applet:set_status(200)
+    elseif metric_type == 1 then
+        StatData.gaugeAppMetrics[metric_name] = metric_value
+        applet:set_status(200)
+    else
+        applet:set_status(400)
     end
-    -- send response
-    local response = string.format([[{"health":true}]])
-    applet:set_status(200)
-    applet:add_header("content-length", string.len(response))
-    applet:add_header("content-type", "application/json")
-    applet:start_response()
-    applet:send(response)
 
 end
 
