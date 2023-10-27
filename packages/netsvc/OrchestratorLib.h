@@ -91,8 +91,6 @@ class OrchestratorLib
          *--------------------------------------------------------------------*/
 
         static const char*  URL;
-        static HttpClient*  client;
-        static Mutex        rqstMutex;
 };
 
 #endif  /* __orchestrator_lib__ */

@@ -459,6 +459,15 @@ end
 --
 -- API: /discovery/metric
 --
+--  Updates metric data
+--
+--  INPUT:
+--  {
+--      "name": "<metric name>"
+--      "value": "<metric value>"
+--      "flags": "<metric type; 0: COUNTER, 1: GAUGE>"
+--  }
+--
 local function api_metric(applet)
 
     -- process request
@@ -470,15 +479,18 @@ local function api_metric(applet)
 
     -- store metrics
     if metric_type == 0 then
-        StatData.countAppMetrics[metric_name] =  StatData.countAppMetrics[metric_name] + metric_value
+        StatData.countAppMetrics[metric_name] = (StatData.countAppMetrics[metric_name] or 0) + metric_value
         applet:set_status(200)
     elseif metric_type == 1 then
         StatData.gaugeAppMetrics[metric_name] = metric_value
+        StatData.countAppMetrics[metric_name .. ".count"] = (StatData.countAppMetrics[metric_name .. ".count"] or 0) + 1
         applet:set_status(200)
     else
         applet:set_status(400)
     end
 
+    -- send response
+    applet:start_response()
 end
 
 --
