@@ -396,8 +396,8 @@ for i, v in ipairs(tbl) do
 
     runner.check(cols == 7344)
     runner.check(rows == 4464)
-    runner.check(math.abs(ulx - -108.34120000) < sigma)
-    runner.check(math.abs(uly - 39.19560000) < sigma)
+    runner.check(math.abs(ulx - gm_llx) < sigma)
+    runner.check(math.abs(uly - gm_ury) < sigma)
     runner.check(msg.datatype(datatype) == "UINT8")
     runner.check(math.abs(cellsize - 0.000083333) < sigma)
     runner.check(wkt ~= "")
