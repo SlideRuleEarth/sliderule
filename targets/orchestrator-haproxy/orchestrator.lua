@@ -391,7 +391,7 @@ local function api_prometheus(applet)
         application_gauge_metric = application_gauge_metric .. string.format([[
 
 # TYPE %s gauge
-%s %d
+%s %f
 ]], name, 
     name, 
     value)        
@@ -424,7 +424,8 @@ num_failures %d
 num_timeouts %d
 
 # TYPE num_active_locks counter
-num_active_locks %d%s%s%s
+num_active_locks %d
+%s%s%s
 ]], StatData["numRequests"], 
     StatData["numComplete"], 
     StatData["numFailures"], 
