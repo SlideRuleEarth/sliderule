@@ -47,6 +47,32 @@ class CurlLib
     public:
 
         /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void         init            (void);
+        static void         deinit          (void);
+
+        static long         get             (const char* url, const char* data, const char** response, int* size=NULL, bool verify_peer=false, bool verify_hostname=false);
+        static long         post            (const char* url, const char* data, const char** response, int* size=NULL, bool verify_peer=false, bool verify_hostname=false);
+        static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
+        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active=NULL);
+        static int          luaGet          (lua_State* L);
+        static int          luaPost         (lua_State* L);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int EXPECTED_RESPONSE_SEGMENTS = 16;
+        static const int CONNECTION_TIMEOUT = 10L; // seconds
+        static const int DATA_TIMEOUT = 60L; // seconds
+
+        static const int RECOBJ_HDR_SIZE = 8; // bytes
+
+        /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
@@ -55,24 +81,26 @@ class CurlLib
             size_t size;
         } data_t;
 
+        typedef struct {
+            uint8_t     hdr_buf[RECOBJ_HDR_SIZE];
+            uint32_t    hdr_index;
+            uint32_t    rec_size;
+            uint32_t    rec_index;
+            uint8_t*    rec_buf;
+            Publisher*  outq;
+            const char* url;
+            bool*       active;
+        } parser_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init            (void);
-        static void         deinit          (void);
-
-        static int          luaGet          (lua_State* L);
-        static int          luaPost         (lua_State* L);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static size_t       writeData       (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t       readData        (void* buffer, size_t size, size_t nmemb, void *userp);
+        static void     combineResponse (List<data_t>* rsps_set, const char** response, int* size);
+        static size_t   postRecords     (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   postData        (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   writeData       (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   readData        (void* buffer, size_t size, size_t nmemb, void *userp);
 };
 
 #endif  /* __curl_lib__ */

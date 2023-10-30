@@ -150,6 +150,12 @@ class RecordObject
             double      double_val;
         } type_cast_t;
 
+        typedef struct {
+            uint16_t                version;
+            uint16_t                type_size;
+            uint32_t                data_size;
+        } rec_hdr_t;
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -273,12 +279,6 @@ class RecordObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint16_t                version;
-            uint16_t                type_size;
-            uint32_t                data_size;
-        } rec_hdr_t;
 
         struct definition_t
         {
