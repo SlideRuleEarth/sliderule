@@ -46,10 +46,7 @@
  ******************************************************************************/
 
 #define _USE_MATH_DEFINES
-
-#ifdef __gnu__
 #include <math.h>
-#endif
 
 #include "AltimetryHistogram.h"
 #include "HstvsSimulator.h"
@@ -65,7 +62,12 @@
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-PedProbabilityEncoder::PedProbabilityEncoder() {}
+PedProbabilityEncoder::PedProbabilityEncoder():
+    iNumberInternalPedBits(0),
+    iNumberModes(0),
+    NumberValues(0),
+    MaxValue(0)
+ {}
 
 /*----------------------------------------------------------------------------
  * Destructor  -
@@ -210,14 +212,10 @@ void PedProbabilityEncoder::generateHighestBitSet()
     if( int(HighestBitSet.size()) != NumberValues )
         HighestBitSet.resize( NumberValues );
 
-    int index;
-    int bitNumber;
-    int nextBitMask;
-
-    index = 0;
-    for( bitNumber = -1; bitNumber<iNumberInternalPedBits; bitNumber++ )
+    int index = 0;
+    for(int bitNumber = -1; bitNumber<iNumberInternalPedBits; bitNumber++ )
     {
-        nextBitMask = 1 << (bitNumber + 1);
+        int nextBitMask = 1 << (bitNumber + 1);
         while( index < nextBitMask )
         {
             HighestBitSet[index] = bitNumber;
@@ -308,19 +306,17 @@ unsigned int PedProbabilityEncoder::decodeProbabiltyValue( int mode, uint8_t Enc
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-TestInputList::TestInputList(void) {}
+TestInputList::TestInputList(void):
+    isValid(false)
+{}
 
 /*----------------------------------------------------------------------------
  * loadInputs  -
  *----------------------------------------------------------------------------*/
 bool TestInputList::loadInputs(const char* strong_input_filename, const char* weak_input_filename)
 {
-    FILE*           strong_fp = NULL;
-    FILE*           weak_fp = NULL;
-    char            line[MAX_TOKEN_SIZE];
-    char            tokens[TEST_DATA_ATOMS][MAX_TOKEN_SIZE];
-
-    int i;
+    FILE* strong_fp = NULL;
+    FILE* weak_fp = NULL;
 
     // Open Strong File //
     if(strong_input_filename != NULL)
@@ -356,6 +352,7 @@ bool TestInputList::loadInputs(const char* strong_input_filename, const char* we
     //      FSW/BCE Embedded Sim Data for ATLAS Spot # 1
     if( strong_fp != NULL )
     {
+        char line[MAX_TOKEN_SIZE];
         readTextLine(strong_fp, NULL, MAX_TOKEN_SIZE); //toss line
         readTextLine(strong_fp, line, MAX_TOKEN_SIZE);
         // get the MJD out of it
@@ -365,7 +362,8 @@ bool TestInputList::loadInputs(const char* strong_input_filename, const char* we
             mlog(CRITICAL, "No system time found on 2nd line of file: %s", strong_input_filename);
             return false;
         }
-        i = tokenizeTextLine(pColon, MAX_TOKEN_SIZE, ' ', TEST_DATA_ATOMS, tokens);
+        char tokens[TEST_DATA_ATOMS][MAX_TOKEN_SIZE];
+        int i = tokenizeTextLine(pColon, MAX_TOKEN_SIZE, ' ', TEST_DATA_ATOMS, tokens);
         if( i != 4)
         {
             mlog(CRITICAL, "Error parsing system time. Saw %d : %s", i, pColon);
@@ -388,16 +386,16 @@ bool TestInputList::loadInputs(const char* strong_input_filename, const char* we
 
         // Determine Which Spot is Next //
         if(!weak_input && strong_input)                 spot = STRONG_SPOT;
-        else if(!strong_input && weak_input)            spot = WEAK_SPOT;
+        else if(!strong_input) /*&& weak_input*/        spot = WEAK_SPOT;
         else if(strong_input->met <= weak_input->met)   spot = STRONG_SPOT;
-        else if(weak_input->met < strong_input->met)    spot = WEAK_SPOT;
+        else /*if(weak_input->met < strong_input->met)*/spot = WEAK_SPOT;
 
         // Insert Spot's Test Data //
         if(spot == INVALID_SPOT)
         {
             mlog(CRITICAL, "Unable to determine spot for current input");
-            if(weak_input) delete weak_input;
-            if(strong_input) delete strong_input;
+            delete weak_input;
+            delete strong_input;
             break;
         }
         else if(spot == STRONG_SPOT)
@@ -568,7 +566,9 @@ const unsigned long HstvsSimulator::WeakChannelOutMask[NUM_WEAK_RX_CHANNELS + 1]
  * Constructor  -
  *----------------------------------------------------------------------------*/
 HstvsSimulator::HstvsSimulator(CommandProcessor* cmd_proc, const char* obj_name, const char* histq_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+    CommandableObject(cmd_proc, obj_name, TYPE),
+    enableSimulation(false),
+    channelEnableOverride(0)
 {
     /* Initialize Streams */
     histQ = NULL;
@@ -826,7 +826,6 @@ void HstvsSimulator::generateSimulatedOutput14(ped_command_output_t* cmdout, int
 void HstvsSimulator::writeCommandOutput(int64_t met, double prob_curve[NUM_SPOTS][NUM_PROB_BINS_IN_15KM], int32_t start_bin, int32_t num_bins)
 {
     ped_command_output_t cmdout;
-    uint16_t decodeProbabiltyModeBits;
 
     mlog(INFO, "Writing Command Output at met %lld for %d bins", (unsigned long long)met, num_bins);
 
@@ -850,7 +849,7 @@ void HstvsSimulator::writeCommandOutput(int64_t met, double prob_curve[NUM_SPOTS
 
         // Write Rx Probabilities //
         int decodeProbabiltyMode = PedEncoder.determineModeToUse( &prob_curve[0][0], NUM_PROB_BINS_IN_15KM * NUM_SPOTS );
-        decodeProbabiltyModeBits = PedEncoder.getModeCommandBits( decodeProbabiltyMode );
+        uint16_t decodeProbabiltyModeBits = PedEncoder.getModeCommandBits( decodeProbabiltyMode );
 
         for(int32_t i = 0; i < NUM_PROB_BINS_IN_15KM; i++)
         {
@@ -1001,26 +1000,30 @@ void HstvsSimulator::populateProbCurve(test_input_t* input, double prob_curve[NU
 
             if(return_index == (NUM_RX_PER_TESTINPUT - 1)) // cloud return goes into last slot and is square
             {
-                double          width_bins  = ((input->signal_return[return_index].width / 1000000000.0) / PROB_BIN_PERIOD);
-                double          cloud_start_bin = range_bins - (0.5 * width_bins);
-                double          cloud_stop_bin = range_bins + (0.5 * width_bins);
-                double          step_energy = step_bin * (input->signal_return[return_index].energy_pe / width_bins);
-                for(double sigbin = cloud_start_bin; sigbin <= cloud_stop_bin; sigbin+=step_bin)
+                double  width_bins      = ((input->signal_return[return_index].width / 1000000000.0) / PROB_BIN_PERIOD);
+                double  cloud_start_bin = range_bins - (0.5 * width_bins);
+                double  cloud_stop_bin  = range_bins + (0.5 * width_bins);
+                double  step_energy     = step_bin * (input->signal_return[return_index].energy_pe / width_bins);
+                double  sigbin          = cloud_start_bin;
+                while(sigbin <= cloud_stop_bin)
                 {
                     event_buffer[((int)sigbin) % NUM_PROB_BINS_IN_15KM] += step_energy;
+                    sigbin+=step_bin;
                 }
             }
             else // gaussian return for ground and canopy
             {
-                double          std_bins    = (((input->signal_return[return_index].width * 0.5887) / 1000000000.0) / PROB_BIN_PERIOD) / 2.3548200;
-                double          gnd_start_bin   = range_bins - (4 * std_bins);
-                double          gnd_stop_bin    = range_bins + (4 * std_bins);
-                for(double sigbin = gnd_start_bin; sigbin <= gnd_stop_bin; sigbin+=step_bin)
+                double std_bins        = (((input->signal_return[return_index].width * 0.5887) / 1000000000.0) / PROB_BIN_PERIOD) / 2.3548200;
+                double gnd_start_bin   = range_bins - (4 * std_bins);
+                double gnd_stop_bin    = range_bins + (4 * std_bins);
+                double sigbin          = gnd_start_bin;
+                while(sigbin <= gnd_stop_bin)
                 {
                     double scalar = 1.0 / (std_bins * sqrt(2.0 * M_PI));
                     double exponent = pow(sigbin - range_bins, 2.0) / (2.0 * pow(std_bins, 2.0));
                     double pdf = scalar * exp(-exponent);
                     event_buffer[((int)sigbin) % NUM_PROB_BINS_IN_15KM] += pdf * input->signal_return[return_index].energy_pe * step_bin;
+                    sigbin+=step_bin;
                 }
             }
         }

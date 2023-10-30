@@ -71,7 +71,7 @@ class CmdEchoProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool    processSegments (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments (List<CcsdsSpacePacket*>& segments, int numpkts) override;
 };
 
 #endif  /* __cmd_echo_processor_module__ */

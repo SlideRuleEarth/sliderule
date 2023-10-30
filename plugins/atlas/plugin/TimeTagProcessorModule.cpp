@@ -361,7 +361,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     int                 intperiod                   = numpkts;
     double              cvr                         = 0.0;      // calibration value rising
     double              cvf                         = 0.0;      // calibration value falling
-    uint64_t            amet                        = 0;
     long                mfc                         = 0;
     double              rws[NUM_SPOTS]              = { 0.0, 0.0 };
     double              rww[NUM_SPOTS]              = { 0.0, 0.0 };
@@ -377,6 +376,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     TimeTagHistogram*   hist[NUM_SPOTS]             = { NULL, NULL };
 
     /* Uninitialized Data */
+    uint64_t            amet;
     mfdata_t            mfdata;
     pktStat_t           pkt_stat;
     chStat_t            mf_ch_stat;
@@ -1192,7 +1192,7 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
 
     if(resultFile)
     {
-        fprintf(resultFile, "%ld, %d, %d, %u, %d, %d, %d, %d, %d, %d, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %ld, %04X, %d, %d, %04X, %d, %d, %04X, %d, %d, %04X, %d, %d\n",
+        fprintf(resultFile, "%ld, %d, %d, %u, %d, %d, %u, %u, %u, %u, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %ld, %04X, %u, %u, %04X, %u, %u, %04X, %u, %u, %04X, %u, %u\n",
                 mfc, intperiod, num_shots, pkt_stat.sum_tags, hist[STRONG_SPOT]->getSum(), hist[WEAK_SPOT]->getSum(),
                 tx_min_tags[STRONG_SPOT], tx_max_tags[STRONG_SPOT],
                 tx_min_tags[WEAK_SPOT], tx_max_tags[WEAK_SPOT],
@@ -1216,11 +1216,6 @@ bool TimeTagProcessorModule::processSegments(List<CcsdsSpacePacket*>& segments, 
     for(int s = 0; s < NUM_SPOTS; s++)
     {
         delete hist[s];
-    }
-
-    for(int i = 0; i < shot_data_list.length(); i++)
-    {
-        delete shot_data_list[i];
     }
 
     if( pkt_stat.mfc_errors +

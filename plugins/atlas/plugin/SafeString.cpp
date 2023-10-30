@@ -63,11 +63,12 @@ SafeString::SafeString(long _maxlen)
  *----------------------------------------------------------------------------*/
 SafeString::SafeString(long _maxlen, const char* _str, ...)
 {
+    (void)_maxlen;
     if(_str != NULL)
     {
         va_list args;
         va_start(args, _str);
-        len = vsnprintf(NULL, _maxlen, _str, args) + 1; // get length
+        len = vsnprintf(NULL, 0, _str, args) + 1; // get length
         va_end(args);
         carray = new char[len]; // allocate memory
         maxlen = len;
@@ -549,6 +550,8 @@ SafeString& SafeString::operator+=(const char* rstr)
  *----------------------------------------------------------------------------*/
 SafeString& SafeString::operator=(const SafeString& rhs)
 {
+    if(&rhs == this) return *this;
+
     if(maxlen < rhs.len)
     {
         delete [] carray;

@@ -71,7 +71,7 @@ class DiagLogProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool    processSegments (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments (List<CcsdsSpacePacket*>& segments, int numpkts) override;
 };
 
 #endif  /* __diag_log_processor_module__ */

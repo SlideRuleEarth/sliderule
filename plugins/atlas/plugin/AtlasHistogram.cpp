@@ -66,7 +66,7 @@ AtlasHistogram::AtlasHistogram(const char* _rec_type, type_t _type,
     RecordObject(_rec_type)
 {
     /* Set Histogram Pointer */
-    hist = (hist_t*)recordData;
+    hist = reinterpret_cast<hist_t*>(recordData);
 
     /* Initialize Histogram Fields */
     hist->type              = _type;

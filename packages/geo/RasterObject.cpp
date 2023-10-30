@@ -368,6 +368,10 @@ int RasterObject::luaSubset(lua_State *L)
                 LuaEngine::setAttrNum(L, "ulx", subset->map_ulx);
                 LuaEngine::setAttrNum(L, "uly", subset->map_uly);
                 LuaEngine::setAttrNum(L, "cellsize", subset->cellsize);
+                LuaEngine::setAttrNum(L, "bbox.lonmin", subset->bbox.lon_min);
+                LuaEngine::setAttrNum(L, "bbox.latmin", subset->bbox.lat_min);
+                LuaEngine::setAttrNum(L, "bbox.lonmax", subset->bbox.lon_max);
+                LuaEngine::setAttrNum(L, "bbox.latmax", subset->bbox.lat_max);
                 LuaEngine::setAttrStr(L, "wkt", subset->wkt.c_str());
                 lua_rawseti(L, -2, i+1);
             }

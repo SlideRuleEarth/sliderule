@@ -204,7 +204,7 @@ class TimeProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool    processSegments          (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments          (List<CcsdsSpacePacket*>& segments, int numpkts) override;
 
         bool    parseSimHkPkt            (unsigned char* pktbuf);
         bool    parseSxpHkPkt            (unsigned char* pktbuf);

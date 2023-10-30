@@ -93,8 +93,8 @@ runner.check(samplesCnt == maxLoopCnt * #arr)
 
 print(string.format("all samples %d, nans: %d, ones: %d, zeros: %d", samplesCnt, nansCnt, onesCnt, zerosCnt))
 print(string.format("duration: %.6f", dtime))
--- sys.quit()
 
-runner.report()
+local errors = runner.report()
 
-
+-- Cleanup and Exit --
+sys.quit( errors )

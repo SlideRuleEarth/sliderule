@@ -91,7 +91,7 @@ CommandableObject* ItosRecordParser::createObject(CommandProcessor* cmd_proc, co
 /*----------------------------------------------------------------------------
  * getDictionary  -
  *----------------------------------------------------------------------------*/
-MgDictionary<Record*>* ItosRecordParser::getDictionary(void)
+Dictionary<Record*>* ItosRecordParser::getDictionary(void)
 {
     return &dictionary;
 }
@@ -99,7 +99,7 @@ MgDictionary<Record*>* ItosRecordParser::getDictionary(void)
 /*----------------------------------------------------------------------------
  * etPackets  -
  *----------------------------------------------------------------------------*/
-MgList<Packet*>* ItosRecordParser::getPackets(void)
+List<Packet*>* ItosRecordParser::getPackets(void)
 {
     return &packets;
 }
@@ -115,7 +115,7 @@ const char* ItosRecordParser::pkt2str(unsigned char* packet)
     if(CCSDS_IS_CMD(packet))
     {
         int fc = CCSDS_GET_FC(packet);
-        for(int p = 0; p < cmdPackets[apid].length(); p++)
+        for(int p = 0; p < cmdPackets[apid].size(); p++)
         {
             CommandPacket* command_packet = (CommandPacket*)cmdPackets[apid][p];
             const char* fc_str = command_packet->getProperty(CommandPacket::fcDesignation, "value", 0);
@@ -133,7 +133,7 @@ const char* ItosRecordParser::pkt2str(unsigned char* packet)
     }
     else if(CCSDS_IS_TLM(packet))
     {
-        for(int p = 0; p < tlmPackets[apid].length(); p++)
+        for(int p = 0; p < tlmPackets[apid].size(); p++)
         {
             TelemetryPacket* telemetry_packet = (TelemetryPacket*)tlmPackets[apid][p];
             if(telemetry_packet->populate(packet))
@@ -233,16 +233,16 @@ bool ItosRecordParser::parseFilterTbl(SafeString* fcontents)
 {
     if(fcontents == NULL) return false;
 
-    List<SafeString>* dynlines = fcontents->split('\n');
-    List<SafeString>& lines = *dynlines; // alias
+    List<string*>* dynlines = StringLib::split(fcontents->str(), fcontents->length(), '\n');
+    List<string*>& lines = *dynlines; // alias
     for(int l = 0; l < lines.length(); l++)
     {
-        mlog(DEBUG, "PARSING: %s", lines[l].str());
-        SafeString line("%s", lines[l].str());
-        List<SafeString>* dynatoms = line.split(' ');
-        List<SafeString>& atoms = *dynatoms;
+        mlog(DEBUG, "PARSING: %s", lines[l]->c_str());
+        SafeString line(0, "%s", lines[l]->c_str());
+        List<string*>* dynatoms = StringLib::split(line.str(), line.length(), ' ');
+        List<string*>& atoms = *dynatoms;
 
-        const char* start_str = atoms[0].str();
+        const char* start_str = atoms[0]->c_str();
         if(start_str[0] == '!')
         {
             continue;
@@ -250,18 +250,18 @@ bool ItosRecordParser::parseFilterTbl(SafeString* fcontents)
 
         long            q           = 0; // atoms[0]
         long            spw         = 0; // atoms[1]
-        const char*     fsw_define  = atoms[3].str();
+        const char*     fsw_define  = atoms[3]->c_str();
         long            sid         = 0; // atoms[4]
         double          rate        = 0; // atoms[5]
-        const char*     type        = atoms[6].str();
-        const char*     sender      = atoms[7].str();
-        const char*     task        = atoms[8].str();
+        const char*     type        = atoms[6]->c_str();
+        const char*     sender      = atoms[7]->c_str();
+        const char*     task        = atoms[8]->c_str();
         const char**    sources     = NULL;
 
-        StringLib::str2long(atoms[0].str(),   &q);
-        StringLib::str2long(atoms[1].str(),   &spw);
-        StringLib::str2long(atoms[4].str(),   &sid);
-        StringLib::str2double(atoms[5].str(), &rate);
+        StringLib::str2long(atoms[0]->c_str(),   &q);
+        StringLib::str2long(atoms[1]->c_str(),   &spw);
+        StringLib::str2long(atoms[4]->c_str(),   &sid);
+        StringLib::str2double(atoms[5]->c_str(), &rate);
 
         int num_sources = atoms.length() - 9;
         if(num_sources > 0)
@@ -269,7 +269,7 @@ bool ItosRecordParser::parseFilterTbl(SafeString* fcontents)
             sources = new const char * [num_sources + 1];
             for(int a = 0; a < num_sources; a++)
             {
-                sources[a] = atoms[a + 9].str(true);
+                sources[a] = StringLib::duplicate(atoms[a + 9]->c_str());
             }
             sources[num_sources] = NULL;
         }
@@ -302,7 +302,7 @@ bool ItosRecordParser::parseRecTokens(SafeString* fcontents)
     if(fcontents == NULL) return false;
 
     char token[Record::MAX_TOKEN_SIZE];
-    long tindex = 0;
+    long tindex;
     long findex = 0;
     long fsize = fcontents->bytes();
     bool offset_hack = false;
@@ -334,7 +334,7 @@ bool ItosRecordParser::parseRecTokens(SafeString* fcontents)
                         token[tindex++] = (*fcontents)[findex++];
                     }
                 }
-                SafeString ss("%s", token);
+                SafeString ss(0, "%s", token);
                 if(ss.length() > 0) tokens.add(ss);
             }
             else
@@ -431,7 +431,7 @@ bool ItosRecordParser::parseRecTokens(SafeString* fcontents)
                     offset_hack = true;
                 }
 
-                SafeString ss("%s", token);
+                SafeString ss(0, "%s", token);
                 if(ss.length() > 0) tokens.add(ss);
             }
             else
@@ -488,7 +488,6 @@ bool ItosRecordParser::checkComment (int* c_index, Record* c_record, int* index)
         if(c_record != NULL)
         {
             c_record->setComment(tokens[*index].str());
-            c_record = NULL;
         }
         else
         {
@@ -768,7 +767,7 @@ void ItosRecordParser::populatePacket (Record* subrec, Packet* pkt, Record* conr
                  subrec->isType("F") ||
                  subrec->isType("S"))
         {
-            mnemonics.add(subrec);
+            mnemonics.push_back(subrec);
         }
         else
         {
@@ -819,12 +818,13 @@ Packet* ItosRecordParser::createPacket (Record* declaration, Packet* pkt, Record
         for(int s = 0; s < declaration->getNumSubRecords(); s++)
         {
             Record* srec = declaration->getSubRecord(s);
-            if(srec->isType("Structure") == false)
+            if(!srec->isType("Structure"))
             {
                 srec->setPrototype((*system_declaration)->isPrototype());
 
                 mlog(DEBUG, "SYSTEM DECLARATION: %d, %s, %s", srec->isPrototype(), srec->getType(), srec->getName());
-                assert(srec->isValue() == false);
+                bool is_value = srec->isValue();
+                assert(!is_value);
 
                 Packet* syspkt = createPacket(srec, NULL, system_declaration, struct_declaration, 0);
                 if(syspkt != NULL) packets.add(syspkt);
@@ -864,7 +864,7 @@ Packet* ItosRecordParser::createPacket (Record* declaration, Packet* pkt, Record
     }
     else if(declaration->isType("Alias"))
     {
-        aliases.add(declaration);
+        aliases.push_back(declaration);
         return NULL; // do no additional work for Alias at the moment
     }
     else if(declaration->isType("U") ||
@@ -874,7 +874,7 @@ Packet* ItosRecordParser::createPacket (Record* declaration, Packet* pkt, Record
     {
         if(!declaration->isPrototype())
         {
-            mnemonics.add(declaration);
+            mnemonics.push_back(declaration);
         }
         return NULL;
     }
@@ -954,14 +954,14 @@ Packet* ItosRecordParser::createPacket (Record* declaration, Packet* pkt, Record
         if(!instantiations.find(sysname))
         {
             declaration->getName();
-            List<Record*>* instlist = new List<Record*>();
-            instlist->add(declaration);
+            vector<Record*>* instlist = new vector<Record*>();
+            instlist->push_back(declaration);
             instantiations.add(sysname, instlist);
         }
         else
         {
-            List<Record*>* instlist = instantiations[sysname];
-            instlist->add(declaration);
+            vector<Record*>* instlist = instantiations[sysname];
+            instlist->push_back(declaration);
         }
 
         /* Process Sub Records */
@@ -1017,7 +1017,8 @@ void ItosRecordParser::createPackets (void)
     {
         Record* declaration = declarations[r];
         mlog(DEBUG, "DECLARATION: %d, %s, %s", declaration->isPrototype(), declaration->getType(), declaration->getName());
-        assert(declaration->isValue() == false);
+        bool is_value = declaration->isValue();
+        assert(!is_value);
         Record* system = NULL;
         Record* structure = NULL;
         Packet* packet = createPacket(declaration, NULL, &system, &structure, 0);
@@ -1049,7 +1050,7 @@ void ItosRecordParser::createPackets (void)
 void ItosRecordParser::createMnemonics (void)
 {
     /* Transverse through Mnemonics */
-    for(int u = 0; u < mnemonics.length(); u++)
+    for(int u = 0; u < mnemonics.size(); u++)
     {
         Record* mnem = mnemonics[u];
         mlog(INFO, "Generating definition for mnemonic: %s", mnem->getName());
@@ -1065,10 +1066,10 @@ void ItosRecordParser::createMnemonics (void)
             if(instantiations.find(tmpname))
             {
                 instantiated = true;
-                List<Record*>* instlist = instantiations[tmpname];
-                for(int i = 0; i < instlist->length(); i++)
+                vector<Record*>* instlist = instantiations[tmpname];
+                for(int i = 0; i < instlist->size(); i++)
                 {
-                    Record* instrec = instlist->get(i);
+                    Record* instrec = instlist->at(i);
                     char newname[Record::MAX_TOKEN_SIZE];
                     snprintf(newname, Record::MAX_TOKEN_SIZE, "%s.%s", instrec->getName(), dotptr + 1);
                     SafeString instname(newname);
@@ -1161,10 +1162,10 @@ void ItosRecordParser::createMnemonics (void)
                 int l = strnlen(def->source, MAX_STR_SIZE);
                 while(l > 0)
                 {
-                    char pkt_name[MAX_STR_SIZE];
                     while(l > 0 && def->source[l] != '.') l--;
                     if(l > 0)
                     {
+                        char pkt_name[MAX_STR_SIZE];
                         memcpy(pkt_name, def->source, l);
                         pkt_name[l] = '\0';
                         l--; // move to next character
@@ -1192,10 +1193,10 @@ void ItosRecordParser::createMnemonics (void)
                 int l = strnlen(def->name, MAX_STR_SIZE);
                 while(l > 0)
                 {
-                    char pkt_name[MAX_STR_SIZE];
                     while(l > 0 && def->name[l] != '.') l--;
                     if(l > 0)
                     {
+                        char pkt_name[MAX_STR_SIZE];
                         memcpy(pkt_name, def->name, l);
                         pkt_name[l] = '\0';
                         l--; // move to next character
@@ -1217,12 +1218,12 @@ void ItosRecordParser::createMnemonics (void)
             }
 
             /* Add Mnemonic to Definition List */
-            mneDefinitions.add(def);
+            mneDefinitions.push_back(def);
         }
     }
 
     /* Sort Mnemonic Definitions */
-    for(int i = 1; i < mneDefinitions.length(); i++)
+    for(int i = 1; i < mneDefinitions.size(); i++)
     {
         Mnemonic* tmp1 = mneDefinitions[i];
         int j = i;
@@ -1233,10 +1234,10 @@ void ItosRecordParser::createMnemonics (void)
             {
                 break;
             }
-            mneDefinitions.set(j, tmp2);
+            mneDefinitions[j] = tmp2;
             j--;
         }
-        mneDefinitions.set(j, tmp1);
+        mneDefinitions[j] = tmp1;
     }
 }
 
@@ -1248,7 +1249,7 @@ void ItosRecordParser::createMnemonics (void)
 void ItosRecordParser::createCmdTlmLists(void)
 {
     /* Get Packets */
-    MgList<Packet*>* pkts = getPackets();
+    List<Packet*>* pkts = getPackets();
     for(int p = 0; p < pkts->length(); p++)
     {
         Packet* pkt = (Packet*)pkts->get(p);
@@ -1257,11 +1258,11 @@ void ItosRecordParser::createCmdTlmLists(void)
         {
             if(pkt->isType(Packet::COMMAND))
             {
-                cmdPackets[apid].add(pkt);
+                cmdPackets[apid].push_back(pkt);
             }
             else if(pkt->isType(Packet::TELEMETRY))
             {
-                tlmPackets[apid].add(pkt);
+                tlmPackets[apid].push_back(pkt);
             }
         }
         else
@@ -1440,18 +1441,23 @@ const char* ItosRecordParser::createCTSummary (const char* pkttype, bool local)
 const char* ItosRecordParser::createPacketDetails (Packet* packet)
 {
     #define MAX_CT_DETIALS_STRING_SIZE  5000
-    char        tmp[MAX_CT_DETIALS_STRING_SIZE];
- 	SafeString  html = SafeString(1000);
+ 	SafeString html = SafeString(1000);
 
     if(packet->isPrototype() == false)
     {
+        char tmp[MAX_CT_DETIALS_STRING_SIZE];
         mlog(INFO, "Generating detailed report for packet: %s", packet->getName());
 
         if(optUserEditable) { snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<form action=\"pyedit.py/pktedit\" method=\"POST\" onSubmit=\"popupform(this, 'EDIT')\">"); html += tmp; }
         snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<h3><a id=\"%s\">%s</a> ", packet->getName(), packet->getName()); html += tmp;
-        if(optUserEditable) { html += "<input type=\"submit\" value=\"EDIT\">"; }
-        if(optUserEditable) { snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<input type=\"hidden\" name=\"packet\" value=\"%s\">", packet->getUndottedName()); html += tmp; }
-        if(optUserEditable) { snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<input type=\"hidden\" name=\"selection\" value=\"%s\">", packet->isType(Packet::COMMAND) ? "command" : "telemetry"); html += tmp; }
+        if(optUserEditable)
+        { 
+            html += "<input type=\"submit\" value=\"EDIT\">";
+            snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<input type=\"hidden\" name=\"packet\" value=\"%s\">", packet->getUndottedName()); 
+            html += tmp;
+            snprintf(tmp, MAX_CT_DETIALS_STRING_SIZE, "<input type=\"hidden\" name=\"selection\" value=\"%s\">", packet->isType(Packet::COMMAND) ? "command" : "telemetry"); 
+            html += tmp; 
+        }
         html += "</h3>";
         if(optUserEditable) { html += "</form>"; }
 
@@ -1506,7 +1512,7 @@ const char* ItosRecordParser::createPacketDetails (Packet* packet)
         const char* comment = packet->getComment();
         if(comment != NULL)
         {
-            SafeString safe_comment("%s", comment + 3);
+            SafeString safe_comment(0, "%s", comment + 3);
             safe_comment.replace("\n", "</br>");
             html += "<table id=\"table-description\">\n";
             html += "	<tr><td><b>Database Comments:</b></td><td></td></tr>\n";
@@ -1733,7 +1739,7 @@ const char* ItosRecordParser::createMNSummary (bool local)
     html += "	</thead>\n";
     html += "	<tbody>\n";
 
-    for(int u = 0; u < mneDefinitions.length(); u++)
+    for(int u = 0; u < mneDefinitions.size(); u++)
     {
         Mnemonic* mnem = mneDefinitions[u];
 
@@ -1844,8 +1850,6 @@ bool ItosRecordParser::writeFile (const char* fname, const char* fcontents, long
  *----------------------------------------------------------------------------*/
 void ItosRecordParser::generateReport(const char* reporttemplate, const char* summarytemplate, const char* outputpath)
 {
-    char fullreportname[256], cmdreportname[256], tlmreportname[256], mnereportname[256], pktreportname[512];
-
     /* Get Time String */
     char timestr[25] = {'\0'};
     TimeLib::gmt_time_t timeinfo = TimeLib::gmttime();
@@ -1870,6 +1874,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
     }
     else
     {
+        char fullreportname[256];
         report->replace("$DATE", timestr);
         report->replace("$APPENDIX_A1", createCTSummary("cmd"));
         report->replace("$APPENDIX_A2", createCTSummary("tlm"));
@@ -1888,6 +1893,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
     }
     else
     {
+        char cmdreportname[256];
         cmdsummary->replace("$DATE", timestr);
         cmdsummary->replace("$APPENDIX_CONTENT", createCTSummary("cmd", false));
         snprintf(cmdreportname, 256, "%s_cmd.html", outputpath);
@@ -1903,6 +1909,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
     }
     else
     {
+        char tlmreportname[256];
         tlmsummary->replace("$DATE", timestr);
         tlmsummary->replace("$APPENDIX_CONTENT", createCTSummary("tlm", false));
         snprintf(tlmreportname, 256, "%s_tlm.html", outputpath);
@@ -1918,6 +1925,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
     }
     else
     {
+        char mnereportname[256];
         mnesummary->replace("$DATE", timestr);
         mnesummary->replace("$APPENDIX_CONTENT", createMNSummary(false));
         sprintf(mnereportname, "%s_mne.html", outputpath);
@@ -1937,6 +1945,7 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
         }
         else
         {
+            char pktreportname[512];
             pktsummary->replace("$DATE", timestr);
             pktsummary->replace("$APPENDIX_CONTENT", pkthtml);
             snprintf(pktreportname, 256, "%s_%s.html", outputpath, pktname);
@@ -1953,8 +1962,6 @@ void ItosRecordParser::generateReport(const char* reporttemplate, const char* su
  *----------------------------------------------------------------------------*/
 void ItosRecordParser::generateDocuments(const char* documenttemplate, const char* outputpath)
 {
-    char cmddocname[256], tlmdocname[256], mnedocname[256];
-
     /* Get Time String */
     char timestr[25] = {'\0'};
     TimeLib::gmt_time_t timeinfo = TimeLib::gmttime();
@@ -1984,6 +1991,7 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
     }
     else
     {
+        char cmddocname[256];
         cmddoc->replace("$DATE", timestr);
         cmddoc->replace("$SUMMARY", createCTSummary("cmd", true));
         cmddoc->replace("$DESCRIPTIONS", cmdpktdoc.str(true));
@@ -2000,6 +2008,7 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
     }
     else
     {
+        char tlmdocname[256];
         tlmdoc->replace("$DATE", timestr);
         tlmdoc->replace("$SUMMARY", createCTSummary("tlm", true));
         tlmdoc->replace("$DESCRIPTIONS", tlmpktdoc.str(true));
@@ -2016,6 +2025,7 @@ void ItosRecordParser::generateDocuments(const char* documenttemplate, const cha
     }
     else
     {
+        char mnedocname[256];
         mnedoc->replace("$DATE", timestr);
         mnedoc->replace("$SUMMARY", createMNSummary(true));
         mnedoc->replace("$DESCRIPTIONS", "");
@@ -2196,7 +2206,7 @@ int ItosRecordParser::buildDatabaseCmd(int argc, char argv[][MAX_CMD_SIZE])
     createCmdTlmLists();
 
     /* Populate Mnemonics */
-    mlog(CRITICAL, "Populating list of mnemonics... from %d records", mnemonics.length());
+    mlog(CRITICAL, "Populating list of mnemonics... from %lu records", mnemonics.size());
     createMnemonics();
 
     return 0;
@@ -2215,7 +2225,7 @@ int ItosRecordParser::buildRecordsCmd(int argc, char argv[][MAX_CMD_SIZE])
     char namebuf[Itos::Record::MAX_TOKEN_SIZE];
 
     /* Get Packets */
-    MgList<Packet*>* pkts = getPackets();
+    List<Packet*>* pkts = getPackets();
     for(int p = 0; p < pkts->length(); p++)
     {
         Packet* pkt = (Packet*)pkts->get(p);
@@ -2415,7 +2425,7 @@ int ItosRecordParser::datasrvExportCmd(int argc, char argv[][MAX_CMD_SIZE])
 
     /* Get Packets */
     long data_key = 0;
-    MgList<Packet*>* pkts = getPackets();
+    List<Packet*>* pkts = getPackets();
     for(int p = 0; p < pkts->length(); p++)
     {
         Packet* pkt = (Packet*)pkts->get(p);

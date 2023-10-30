@@ -170,7 +170,7 @@ class PedProbabilityEncoder
  * TEST INPUT LIST
  ******************************************************************************/
 
-class TestInputList: public MgList<test_input_t*>
+class TestInputList: public List<test_input_t*>
 {
     public:
 

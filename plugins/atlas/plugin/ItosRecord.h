@@ -35,6 +35,7 @@
 #include "core.h"
 #include "ccsds.h"
 #include "legacy.h"
+#include "SafeString.h"
 
 /*************************************************
  * DEFINES
@@ -99,8 +100,8 @@ namespace Itos
             bool                prototype;
             const char*         type;
             const char*         name;
-            List<Record*>       subrecords;
-            List<SafeString>    subvalues;
+            vector<Record*>     subrecords;
+            vector<SafeString>  subvalues;
             const char*         comment;
     };
 
@@ -285,12 +286,12 @@ namespace Itos
                                                 bool    _big_endian );
                             ~IntegerField   (void);
 
-            Field*          duplicate       (void);
-            unsigned long   getRawValue     (int element);
-            const char*     getStrValue     (int element);
-            bool            _setProperty    (const char* property, const char* _value, int index);
-            const char*     _getProperty    (const char* property, int index);
-            bool            populate        (unsigned char* pkt);
+            Field*          duplicate       (void) override;
+            unsigned long   getRawValue     (int element) override;
+            const char*     getStrValue     (int element) override;
+            bool            _setProperty    (const char* property, const char* _value, int index) override;
+            const char*     _getProperty    (const char* property, int index) override;
+            bool            populate        (unsigned char* pkt) override;
 
         private:
 
@@ -330,12 +331,12 @@ namespace Itos
                                                 bool            _big_endian );
                             ~UnsignedField  (void);
 
-            Field*          duplicate       (void);
-            unsigned long   getRawValue     (int element);
-            const char*     getStrValue     (int element);
-            bool            _setProperty    (const char* property, const char* _value, int index);
-            const char*     _getProperty    (const char* property, int index);
-            bool            populate        (unsigned char* pkt);
+            Field*          duplicate       (void) override;
+            unsigned long   getRawValue     (int element) override;
+            const char*     getStrValue     (int element) override;
+            bool            _setProperty    (const char* property, const char* _value, int index) override;
+            const char*     _getProperty    (const char* property, int index) override;
+            bool            populate        (unsigned char* pkt) override;
 
         private:
 
@@ -375,12 +376,12 @@ namespace Itos
                                                 bool    _big_endian );
                             ~FloatField     (void);
 
-            Field*          duplicate       (void);
-            unsigned long   getRawValue     (int element);
-            const char*     getStrValue     (int element);
-            bool            _setProperty    (const char* property, const char* _value, int index);
-            const char*     _getProperty    (const char* property, int index);
-            bool            populate        (unsigned char* pkt);
+            Field*          duplicate       (void) override;
+            unsigned long   getRawValue     (int element) override;
+            const char*     getStrValue     (int element) override;
+            bool            _setProperty    (const char* property, const char* _value, int index) override;
+            const char*     _getProperty    (const char* property, int index) override;
+            bool            populate        (unsigned char* pkt) override;
 
         private:
 
@@ -418,12 +419,12 @@ namespace Itos
                                                 bool        _big_endian );
                             ~StringField    (void);
 
-            Field*          duplicate       (void);
-            unsigned long   getRawValue     (int element);
-            const char*     getStrValue     (int element);
-            bool            _setProperty    (const char* property, const char* _value, int index);
-            const char*     _getProperty    (const char* property, int index);
-            bool            populate        (unsigned char* pkt);
+            Field*          duplicate       (void) override;
+            unsigned long   getRawValue     (int element) override;
+            const char*     getStrValue     (int element) override;
+            bool            _setProperty    (const char* property, const char* _value, int index) override;
+            const char*     _getProperty    (const char* property, int index) override;
+            bool            populate        (unsigned char* pkt) override;
 
         private:
 
@@ -480,7 +481,7 @@ namespace Itos
             char                type[MAX_STR_LEN];
             char                sender[MAX_STR_LEN];
             char                task[MAX_STR_LEN];
-            List<SafeString>    source;
+            vector<SafeString>  source;
     };
 
     /*************************************************
@@ -512,7 +513,7 @@ namespace Itos
             /* Methods                    */
             /* -------------------------- */
 
-                                Packet              (packet_type_t _packet_type, bool populate=true, const char* _apid_designation=RECORD_DEFAULT_APID_DESIGNATION);
+                    explicit    Packet              (packet_type_t _packet_type, bool populate=true, const char* _apid_designation=RECORD_DEFAULT_APID_DESIGNATION);
                     virtual     ~Packet             (void);
 
                     void        addField            (   Record*             record,
@@ -570,8 +571,8 @@ namespace Itos
 
             packet_type_t           packetType;
             Record*                 declaration;        // allocated externally
-            List<Record*>           orphanRecs;         // records that need to be cleaned up if packet is deleted
-            MgList<Field*>          fields;
+            vector<Record*>         orphanRecs;         // records that need to be cleaned up if packet is deleted
+            List<Field*>            fields;
             int                     numBytes;
             char*                   name;               // allocated locally
 
@@ -608,12 +609,12 @@ namespace Itos
             /* Methods                    */
             /* -------------------------- */
 
-                            CommandPacket       (command_packet_type_t _type, bool populate=true);
+            explicit        CommandPacket       (command_packet_type_t _type, bool populate=true);
                             ~CommandPacket      (void);
 
-            bool            setPktProperty      (const char* property_name, const char* value); // for setting packet properties
-            const char*     getPktProperty      (const char* property_name);                    // for getting packet properties
-            Packet*         _duplicate          (void);
+            bool            setPktProperty      (const char* property_name, const char* value) override; // for setting packet properties
+            const char*     getPktProperty      (const char* property_name) override; // for getting packet properties
+            Packet*         _duplicate          (void) override;
 
             static void     setDesignations     (const char* _apid_str, const char* _fc_str);
 
@@ -657,9 +658,9 @@ namespace Itos
                             TelemetryPacket     (telemetry_packet_type_t _type = STANDARD, bool populate=true);
                             ~TelemetryPacket    (void);
 
-            bool            setPktProperty      (const char* property_name, const char* value); // for setting packet properties
-            const char*     getPktProperty      (const char* property_name);                    // for getting packet properties
-            Packet*         _duplicate          (void);
+            bool            setPktProperty      (const char* property_name, const char* value) override; // for setting packet properties
+            const char*     getPktProperty      (const char* property_name) override; // for getting packet properties
+            Packet*         _duplicate          (void) override;
             void            setFilter           (Filter* _filter);
             const char*     getFilterProperty   (const char* property_name);
 
@@ -677,7 +678,7 @@ namespace Itos
             /* Data                       */
             /* -------------------------- */
 
-            List<SafeString>    applyWhen;
+            vector<SafeString>  applyWhen;
             Filter*             filter;
             long                timeout;
             SafeString          source;
@@ -698,6 +699,15 @@ namespace Itos
             const char* initial_value;
             TypeConversion* conversion;
     };
+
+    /*************************************************
+     * Types
+     *************************************************/
+    
+    typedef union {
+        double dval;
+        uint64_t ival;
+    } cast_t;
 
 } /* namespace Itos */
 

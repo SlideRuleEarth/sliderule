@@ -51,9 +51,10 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual ~GeoRaster  (void);
-        uint32_t getSamples (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
-        uint32_t getSubsets (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
+        virtual      ~GeoRaster  (void);
+        uint32_t      getSamples (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
+        uint32_t      getSubsets (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
+        RasterSubset* getSubset  (uint32_t ulx=0, uint32_t uly=0, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
 
     protected:
 

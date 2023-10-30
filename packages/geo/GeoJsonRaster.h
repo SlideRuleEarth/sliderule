@@ -68,13 +68,22 @@ class GeoJsonRaster: public GeoRaster
         bool                  includes       (double lon, double lat, double height=0);
         virtual              ~GeoJsonRaster  (void);
 
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+
+        bool rawPixel (const uint32_t row, const uint32_t col)
+        {
+            return static_cast<int>(subset->data[(row * subset->cols) + col]) == RASTER_PIXEL_ON;
+        }
+
     protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double _cellsize);
+        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double cellsize);
 
     private:
 
@@ -82,7 +91,8 @@ class GeoJsonRaster: public GeoRaster
          * Data
          *--------------------------------------------------------------------*/
 
-         std::string rasterFileName;
+         std::string   rasterFileName;
+         RasterSubset* subset;
 };
 
 #endif  /* __geojson_raster__ */

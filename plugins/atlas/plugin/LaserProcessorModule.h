@@ -90,7 +90,7 @@ class LaserProcessorModule: public CcsdsProcessorModule
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool    processSegments (List<CcsdsSpacePacket*>& segments, int numpkts);
+        bool    processSegments (List<CcsdsSpacePacket*>& segments, int numpkts) override;
         double  laserConv       (const laserConv_t* c, double temp, long raw);
         double  tempConv        (const double c[NUM_POLY_COEFFS], long raw);
         int     attachApidsCmd  (int argc, char argv[][MAX_CMD_SIZE]);

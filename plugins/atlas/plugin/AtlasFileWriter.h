@@ -53,24 +53,24 @@ class AtlasFileWriter: public CcsdsFileWriter
             TIMEDIAG,
             TIMESTAT,
             INVALID
-        } fmt_t;
+        } atlas_fmt_t;
 
-                                    AtlasFileWriter     (CommandProcessor* cmd_proc, const char* name, fmt_t _fmt, const char* _prefix, const char* inq_name, unsigned int _max_file_size=FILE_MAX_SIZE);
+                                    AtlasFileWriter     (CommandProcessor* cmd_proc, const char* name, atlas_fmt_t _fmt, const char* _prefix, const char* inq_name, unsigned int _max_file_size=FILE_MAX_SIZE);
         virtual                     ~AtlasFileWriter    (void);
 
         static CommandableObject*   createObject        (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
 
-        static fmt_t                str2fmt             (const char* str);
-        static const char*          fmt2str             (fmt_t _fmt);
+        static atlas_fmt_t          str2fmt             (const char* str);
+        static const char*          fmt2str             (atlas_fmt_t _fmt);
 
     protected:
 
-        int     writeMsg        (void* msg, int size, bool with_header=false);
-        bool    isBinary        (void);
+        int     writeMsg        (void* msg, int size, bool with_header=false) override;
+        bool    isBinary        (void) override;
 
     private:
 
-        fmt_t   fmt;
+        atlas_fmt_t   atlas_fmt;
 
         int writeSciPkt         (void* record, int size, bool with_header=false);
         int writeSciCh          (void* record, int size, bool with_header=false);
