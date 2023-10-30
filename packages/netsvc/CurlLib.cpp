@@ -357,6 +357,12 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 
         /* Always Cleanup */
         curl_easy_cleanup(curl);
+
+        /* Free Left-Over Response (if present) */
+        if(parser.rec_size > 0)
+        {
+            delete [] parser.rec_buf;
+        }
     }
 
     /* Terminate Stream */
@@ -500,9 +506,19 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
             // check header complete
             if(parser->hdr_index == RECOBJ_HDR_SIZE)
             {
-                // allocate record and copy header
+                // parser header
                 RecordObject::rec_hdr_t* rec_hdr = reinterpret_cast<RecordObject::rec_hdr_t*>(parser->hdr_buf);
-                parser->rec_size = sizeof(RecordObject::rec_hdr_t) + rec_hdr->type_size + rec_hdr->data_size;
+                uint16_t version = OsApi::swaps(rec_hdr->version);
+                uint16_t type_size = OsApi::swaps(rec_hdr->type_size);
+                uint32_t data_size = OsApi::swapl(rec_hdr->data_size);
+                if(version != RecordObject::RECORD_FORMAT_VERSION)
+                {
+                    mlog(CRITICAL, "Invalid record version in response from %s: %d", parser->url, version);
+                    return 0;
+                }
+
+                // allocate record and copy header
+                parser->rec_size = sizeof(RecordObject::rec_hdr_t) + type_size + data_size;
                 parser->rec_buf = new uint8_t [parser->rec_size];
                 memcpy(&parser->rec_buf[0], &parser->hdr_buf[0], sizeof(RecordObject::rec_hdr_t));
                 parser->rec_index = sizeof(RecordObject::rec_hdr_t);
