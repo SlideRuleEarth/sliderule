@@ -247,7 +247,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             /* Catalog */
             lua_getfield(L, index, CATALOG);
             const char* catalog_str = LuaObject::getLuaString(L, -1, true, NULL);
-            catalog = StringLib::duplicate(catalog_str, 0);
+            catalog = StringLib::duplicate(catalog_str);
             if(catalog) mlog(DEBUG, "Setting %s to user provided geojson", CATALOG);
             lua_pop(L, 1);
 

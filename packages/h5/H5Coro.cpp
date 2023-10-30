@@ -244,7 +244,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         {
             if(metaRepo.find(meta_key, meta_repo_t::MATCH_EXACTLY, &metaData, true))
             {
-                meta_found = StringLib::match(metaData.url, meta_url, MAX_META_NAME_SIZE);
+                meta_found = StringLib::match(metaData.url, meta_url);
             }
         }
         metaMutex.unlock();

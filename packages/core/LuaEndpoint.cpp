@@ -289,7 +289,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             const char* result = engine->getResult();
             if(result)
             {
-                int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
+                int result_length = StringLib::size(result);
                 int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length);
                 rspq->postCopy(result, result_length);

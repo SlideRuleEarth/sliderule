@@ -133,12 +133,11 @@ long StringLib::FormattedString::size(void) const
 /*----------------------------------------------------------------------------
  * duplicate
  *----------------------------------------------------------------------------*/
-char* StringLib::duplicate(const char* str1, int size)
+char* StringLib::duplicate(const char* str1)
 {
     int len;
     if(str1 == NULL) return NULL;
-    if(size > 0) len = (int)strnlen(str1, size - 1) + 1;
-    else len = (int)strlen(str1) + 1;
+    len = (int)strlen(str1) + 1;
     if(len < 1) return NULL;
     char* dup = new char[len];
     StringLib::copy(dup, str1, len);
@@ -243,16 +242,16 @@ char* StringLib::copy(char* dst, const char* src, int _size)
  *
  *  returns -1 if string not found
  *----------------------------------------------------------------------------*/
-char* StringLib::find(const char* big, const char* little, int len)
+char* StringLib::find(const char* big, const char* little)
 {
-    int little_len = strnlen(little, len);
-    int big_len = strnlen(big, len);
+    int little_len = strlen(little);
+    int big_len = strlen(big);
 
     if(little_len > 0)
     {
         for(int i=0; i<=(big_len - little_len); i++)
         {
-            if((big[i] == little[0]) && StringLib::match(&big[i], little, little_len))
+            if((big[i] == little[0]) && StringLib::match(&big[i], little))
             {
                 return (char*)&big[i];
             }
@@ -276,9 +275,17 @@ char* StringLib::find(const char* str, char c, bool first)
 /*----------------------------------------------------------------------------
  * size
  *----------------------------------------------------------------------------*/
-int StringLib::size(const char* str, int len)
+int StringLib::size(const char* str)
 {
-    return strnlen(str, len);
+    return strlen(str);
+}
+
+/*----------------------------------------------------------------------------
+ * nsize
+ *----------------------------------------------------------------------------*/
+int StringLib::nsize(const char* str, int size)
+{
+    return strnlen(str, size);
 }
 
 /*----------------------------------------------------------------------------
@@ -286,9 +293,9 @@ int StringLib::size(const char* str, int len)
  *
  *  exact match only
  *----------------------------------------------------------------------------*/
-bool StringLib::match(const char* str1, const char* str2, int len)
+bool StringLib::match(const char* str1, const char* str2)
 {
-    return strncmp(str1, str2, len) == 0;
+    return strcmp(str1, str2) == 0;
 }
 
 /*----------------------------------------------------------------------------

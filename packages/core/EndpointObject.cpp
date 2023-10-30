@@ -178,5 +178,5 @@ int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const 
 
     StringLib::concat(hdr_str, "\r\n",  MAX_HDR_SIZE);
 
-    return StringLib::size(hdr_str, MAX_HDR_SIZE);
+    return StringLib::size(hdr_str);
 }

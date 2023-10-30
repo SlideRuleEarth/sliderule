@@ -495,7 +495,7 @@ bool RecordObject::populate (const char* populate_string)
 
     char(*toks)[MAX_STR_SIZE] = new (char[MAX_INITIALIZERS][MAX_STR_SIZE]);
 
-    int numtoks = StringLib::tokenizeLine(populate_string, (int)StringLib::size(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
+    int numtoks = StringLib::tokenizeLine(populate_string, (int)StringLib::nsize(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
 
     for(int i = 0; i < numtoks; i++)
     {
@@ -588,7 +588,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
     }
     else if(val_type == TEXT)
     {
-        int val_len = (int)StringLib::size(val, MAX_VAL_STR_SIZE) + 1;
+        int val_len = (int)StringLib::nsize(val, MAX_VAL_STR_SIZE) + 1;
         if(val_len <= f.elements)
         {
             memcpy(recordData + TOBYTES(f.offset), (unsigned char*)val, val_len);

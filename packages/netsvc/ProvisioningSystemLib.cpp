@@ -378,7 +378,7 @@ ProvisioningSystemLib::Authenticator::~Authenticator (void)
  *----------------------------------------------------------------------------*/
 bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
 {
-    if(StringLib::match(ProvisioningSystemLib::Organization, DEFAULT_ORGANIZATION_NAME, MAX_STR_SIZE))
+    if(StringLib::match(ProvisioningSystemLib::Organization, DEFAULT_ORGANIZATION_NAME))
     {
         return true; // no authentication used for default organization name
     }

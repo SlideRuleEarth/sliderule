@@ -162,7 +162,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
 
     /* Allocate Data Members */
     endpoint    = StringLib::duplicate(_endpoint);
-    parameters  = StringLib::duplicate(_parameters, MAX_REQUEST_PARAMETER_SIZE);
+    parameters  = StringLib::duplicate(_parameters);
     outQ        = new Publisher(_outq_name, Publisher::defaultFree, numProxyThreads);
 
     /* Populate Resources Array */

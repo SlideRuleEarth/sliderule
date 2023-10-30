@@ -125,7 +125,7 @@ CsvDispatch::CsvDispatch (lua_State* L, const char* outq_name, const char** _col
     }
 
     /* Send Out Header Row */
-    int len = StringLib::size(hdrrow, MAX_STR_SIZE) + 1;
+    int len = StringLib::size(hdrrow) + 1;
     outQ->postCopy(hdrrow, len, SYS_TIMEOUT);
 }
 
@@ -172,7 +172,7 @@ bool CsvDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* rec
     }
 
     /* Send Out Row */
-    int len = StringLib::size(valrow, MAX_STR_SIZE) + 1;
+    int len = StringLib::size(valrow) + 1;
     int status = outQ->postCopy(valrow, len, SYS_TIMEOUT);
 
     /* Check and Return Status */

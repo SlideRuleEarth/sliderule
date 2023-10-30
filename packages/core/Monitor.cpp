@@ -387,7 +387,7 @@ int Monitor::luaCat (lua_State* L)
                 }
                 else if(mode == MSGQ)
                 {
-                    int msg_size = StringLib::size(event_msg, MAX_EVENT_SIZE - 1) + 1;
+                    int msg_size = StringLib::nsize(event_msg, MAX_EVENT_SIZE - 1) + 1;
                     outq->postCopy(event_msg, msg_size, IO_CHECK);
                 }
             }
