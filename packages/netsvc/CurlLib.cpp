@@ -312,6 +312,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 
     /* Initialize Response (only used if as_record is true) */
     parser_t parser = {
+        .hdr_buf = {0, 0, 0, 0, 0, 0, 0, 0},
         .hdr_index = 0,
         .rec_size = 0,
         .rec_index = 0,
