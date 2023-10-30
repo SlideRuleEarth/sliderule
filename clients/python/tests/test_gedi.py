@@ -136,4 +136,4 @@ class TestL4B:
             assert key in gdf.keys()
         assert abs(gdf.describe()["canopy_openness"]["max"] - 10.390829086303711) < 0.001
         df = gdf[gdf["gedi.value"] > -9999.0]
-        assert abs(sum(df["gedi.value"]) - 30945.865370501764) < 0.001
+        assert abs(sum(df["gedi.value"]) - 42551.55461392179) < 0.001

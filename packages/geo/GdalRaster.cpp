@@ -96,7 +96,7 @@ void GdalRaster::open(void)
 
     dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
     if(dset == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to opened raster: %s:", fileName.c_str());
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", fileName.c_str());
 
     mlog(DEBUG, "Opened %s", fileName.c_str());
 
