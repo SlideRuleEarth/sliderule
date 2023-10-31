@@ -995,12 +995,12 @@ def scaleout(desired_nodes, time_to_live, bypass_dns):
 #
 # authenticate
 #
-def authenticate (ps_organization, ps_username=None, ps_password=None):
+def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None):
     '''
     Authenticate to SlideRule Provisioning System
     The username and password can be provided the following way in order of priority:
-    (1) The passed in arguments `ps_username' and 'ps_password';
-    (2) The O.S. environment variables 'PS_USERNAME' and 'PS_PASSWORD';
+    (1) The passed in arguments `github_token` or `ps_username` and `ps_password`;
+    (2) The O.S. environment variables `PS_GITHUB_TOKEN` or `PS_USERNAME` and `PS_PASSWORD`;
     (3) The `ps.<url>` entry in the .netrc file in your home directory
 
     Parameters
@@ -1013,6 +1013,10 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
 
         ps_password:        str
                             SlideRule provisioning system account password
+
+        github_token:       str
+                            GitHub access token (minimum scope/permissions require)
+
     Returns
     -------
     status
@@ -1036,12 +1040,13 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
         return True
 
     # attempt retrieving from environment
-    if not ps_username or not ps_password:
+    if not github_token and not ps_username and not ps_password:
+        github_token = os.environ.get("PS_GITHUB_TOKEN")
         ps_username = os.environ.get("PS_USERNAME")
         ps_password = os.environ.get("PS_PASSWORD")
 
     # attempt retrieving from netrc file
-    if not ps_username or not ps_password:
+    if not github_token and not ps_username and not ps_password:
         try:
             netrc_file = netrc.netrc()
             login_credentials = netrc_file.hosts[ps_url]
@@ -1051,12 +1056,22 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             if ps_organization != PUBLIC_ORG:
                 logger.warning("Unable to retrieve username and password from netrc file for machine: {}".format(e))
 
-    # authenticate to provisioning system
-    if ps_username and ps_password:
+    # build authentication request
+    user = None
+    if github_token:
+        user = "github"
+        rqst = {"org_name": ps_organization, "access_token": github_token}
+        headers = {'Content-Type': 'application/json'}
+        api = "https://" + ps_url + "/api/org_token_github/"
+    elif ps_username or ps_password:
+        user = "local"
         rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
         headers = {'Content-Type': 'application/json'}
+        api = "https://" + ps_url + "/api/org_token/"
+
+    # authenticate to provisioning system
+    if user:
         try:
-            api = "https://" + ps_url + "/api/org_token/"
             rsps = session.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
             rsps.raise_for_status()
             rsps = rsps.json()
@@ -1066,7 +1081,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None):
             login_status = True
         except:
             if ps_organization != PUBLIC_ORG:
-                logger.error("Unable to authenticate user %s to %s" % (ps_username, api))
+                logger.error("Unable to authenticate %s user to %s" % (user, api))
 
     # return login status
     return login_status
