@@ -484,7 +484,8 @@ local function api_metric(applet)
         applet:set_status(200)
     elseif metric_type == 1 then
         StatData.gaugeAppMetrics[metric_name] = metric_value
-        StatData.countAppMetrics[metric_name .. ".count"] = (StatData.countAppMetrics[metric_name .. ".count"] or 0) + 1
+        StatData.gaugeAppMetrics[metric_name .. "_sum"] = (StatData.countAppMetrics[metric_name .. "_sum"] or 0.0) + metric_value
+        StatData.countAppMetrics[metric_name .. "_count"] = (StatData.countAppMetrics[metric_name .. "_count"] or 0) + 1
         applet:set_status(200)
     else
         applet:set_status(400)

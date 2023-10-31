@@ -231,7 +231,7 @@ int LuaLibrarySys::lsys_log (lua_State* L)
  * lsys_metric - .metric(<...)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_metric (lua_State* L)
-//TODO: need to create a metric like the log function
+//TODO: need to populate with metrics...
 {
     (void)L;
     return 0;
