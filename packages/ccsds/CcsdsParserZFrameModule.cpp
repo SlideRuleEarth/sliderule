@@ -101,7 +101,7 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
                 #define FRAME_SYNC_SIZE 12 // size of above string
 
                 /* Compare Sync Mark */
-                if(!StringLib::match(frame_sync, frameBuffer, FRAME_SYNC_SIZE))
+                if(!StringLib::match(frame_sync, frameBuffer))
                 {
                     return PARSE_ERROR;
                 }

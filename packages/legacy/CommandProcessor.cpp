@@ -557,7 +557,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
         /* Get Object and Command */
         #define OBJ_CMD_TOKS 2
         char objtoks[OBJ_CMD_TOKS][MAX_CMD_SIZE];
-        int numobjtoks = StringLib::tokenizeLine(cp_cmd_str, (int)StringLib::size(cp_cmd_str, MAX_CMD_SIZE), OBJ_DELIMETER[0], OBJ_CMD_TOKS, objtoks);
+        int numobjtoks = StringLib::tokenizeLine(cp_cmd_str, (int)StringLib::size(cp_cmd_str), OBJ_DELIMETER[0], OBJ_CMD_TOKS, objtoks);
         if(numobjtoks > 1) // <object name>::<command name>
         {
             try
