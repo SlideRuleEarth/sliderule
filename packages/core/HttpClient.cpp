@@ -113,7 +113,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     // Parse URL
     char url_buf[MAX_URL_LEN];
     StringLib::copy(url_buf, url, MAX_URL_LEN);
-    char* proto_term = StringLib::find(url_buf, "://", MAX_URL_LEN);
+    char* proto_term = StringLib::find(url_buf, "://");
     if(proto_term)
     {
         char* proto = url_buf;
@@ -121,7 +121,7 @@ HttpClient::HttpClient(lua_State* L, const char* url):
         *proto_term = '\0';
         if((_ip_addr - proto) < MAX_URL_LEN)
         {
-            char* ip_addr_term = StringLib::find(_ip_addr, ":", MAX_URL_LEN);
+            char* ip_addr_term = StringLib::find(_ip_addr, ":");
             if(ip_addr_term)
             {
                 char* _port_str = ip_addr_term + 1;
@@ -232,8 +232,8 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         int content_length = 0;
         if(data)
         {
-            content_length = StringLib::size(data, MAX_RQST_BUF_LEN);
-            if(content_length == MAX_RQST_BUF_LEN)
+            content_length = StringLib::size(data);
+            if(content_length >= MAX_RQST_BUF_LEN)
             {
                 throw RunTimeException(ERROR, RTE_ERROR, "data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_BUF_LEN);
             }

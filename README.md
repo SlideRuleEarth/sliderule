@@ -34,6 +34,11 @@ If you are a science data user interested in using SlideRule to process Earth sc
 
 3. For dependencies associated with a specific package, see the package readme at `packages/{package}/README.md` for additional installation instructions.
 
+4. For debug builds, there are additional tools that are needed for static analysis:
+
+   ```bash
+   $ sudo apt install clang clang-tidy cppcheck
+   ```
 
 ## II. Building with CMake
 

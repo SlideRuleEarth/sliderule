@@ -42,7 +42,6 @@
 /******************************************************************************
  * STRING LIBRARY CLASS
  ******************************************************************************/
-
 class StringLib
 {
     public:
@@ -68,16 +67,17 @@ class StringLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static char*            duplicate       (const char* str, int size=MAX_STR_SIZE);
+        static char*            duplicate       (const char* str);
         static char*            concat          (const char* str1, const char* str2, const char* str3=NULL);
         static void             concat          (char* str1, const char* str2, int size);
         static char*            format          (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static int              formats         (char* dststr, int size, const char* _format, ...) VARG_CHECK(printf, 3, 4);
         static char*            copy            (char* dst, const char* src, int _size);
-        static char*            find            (const char* big, const char* little, int len=MAX_STR_SIZE);
+        static char*            find            (const char* big, const char* little);
         static char*            find            (const char* str, char c, bool first=true);
-        static int              size            (const char* str, int len=MAX_STR_SIZE);
-        static bool             match           (const char* str1, const char* str2, int len=MAX_STR_SIZE);
+        static int              size            (const char* str);
+        static int              nsize           (const char* str, int size);
+        static bool             match           (const char* str1, const char* str2);
         static List<string*>*   split           (const char* str, int len, char separator, bool strip=true);
         static void             convertUpper    (char* str);
         static char*            convertUpper    (char* dst, char* src);

@@ -286,9 +286,9 @@ bool AoiMetrics::init (void)
 
 
 /*----------------------------------------------------------------------------
- * setRegion
+ * getRegion
  *----------------------------------------------------------------------------*/
-AoiMetrics::regions_t AoiMetrics::setRegion (NetsvcParms* parms)
+AoiMetrics::regions_t AoiMetrics::getRegion (NetsvcParms* parms)
 {
     regions_t region_found = REGION_UNKNOWN;
     if(parms->polygon.length() > 0)

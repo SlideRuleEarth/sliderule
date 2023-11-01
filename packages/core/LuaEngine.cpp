@@ -113,7 +113,7 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
     dInfo = new directThread_t;
     dInfo->engine = this;
     dInfo->script = StringLib::duplicate(script);
-    dInfo->arg    = StringLib::duplicate(arg, 0);
+    dInfo->arg    = StringLib::duplicate(arg);
 
     /* Start Script Thread */
     engineActive = false;

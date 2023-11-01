@@ -26,6 +26,1038 @@
   "liveNow": false,
   "panels": [
     {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 22,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(atl03s{job=\"orchestrator_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "max atl03s",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 21,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(atl06{job=\"orchestrator_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "max atl06",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 24,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(atl08{job=\"orchestrator_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "max atl08",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 19,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(atl03sp{job=\"orchestrator_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "max atl03sp",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 20,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(atl06p{job=\"orchestrator_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "max atl06p",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 23,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max_over_time(atl08p{job=\"orchestrator_app\"}[1y])",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "max atl08p",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 0,
+        "y": 3
+      },
+      "hideTimeOverride": true,
+      "id": 25,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl03s_count{job=\"orchestrator_app\"} + atl06_count{job=\"orchestrator_app\"} + atl08_count{job=\"orchestrator_app\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "total atl03 granules",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 3
+      },
+      "hideTimeOverride": true,
+      "id": 26,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl03sp_count{job=\"orchestrator_app\"} + atl06p_count{job=\"orchestrator_app\"} + atl08p_count{job=\"orchestrator_app\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "total icesat2 proxied requests",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 8,
+        "y": 3
+      },
+      "hideTimeOverride": true,
+      "id": 27,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "gedi01bp_count{job=\"orchestrator_app\"} + gedi02ap_count{job=\"orchestrator_app\"} + gedi04ap_count{job=\"orchestrator_app\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "total gedi proxied requests",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 12,
+        "y": 3
+      },
+      "hideTimeOverride": true,
+      "id": 28,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "gedi01b_count{job=\"orchestrator_app\"} + gedi02a_count{job=\"orchestrator_app\"} + gedi04a_count{job=\"orchestrator_app\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "total gedi granules",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 16,
+        "y": 3
+      },
+      "hideTimeOverride": true,
+      "id": 29,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "version_count{job=\"orchestrator_app\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "total version requests",
+      "type": "stat"
+    },
+    {
+      "cacheTimeout": null,
+      "datasource": "Prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 20,
+        "y": 3
+      },
+      "hideTimeOverride": true,
+      "id": 30,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "samples_count{job=\"orchestrator_app\"} + subsets_count{job=\"orchestrator_app\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "total raster requests",
+      "type": "stat"
+    },
+    {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
@@ -79,9 +1111,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 0
+        "y": 6
       },
       "id": 2,
       "options": {
@@ -97,14 +1129,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (job) (rate(SourceEndpoint_atl03s_hits{}[1m]))",
+          "expr": "atl03s_count{job=\"orchestrator_app\"}",
           "interval": "",
           "legendFormat": "atl03s",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (rate(SourceEndpoint_atl06_hits{}[1m]))",
+          "expr": "atl06_count{job=\"orchestrator_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06",
@@ -112,27 +1144,301 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (rate(SourceEndpoint_definition_hits{}[1m]))",
+          "expr": "atl08_count{job=\"orchestrator_app\"}",
           "hide": false,
           "interval": "",
-          "legendFormat": "definition",
+          "legendFormat": "atl08",
           "refId": "C"
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (rate(SourceEndpoint_h5_hits{}[1m]))",
+          "expr": "gedi01b_count{job=\"orchestrator_app\"}",
           "hide": false,
           "interval": "",
-          "legendFormat": "h5",
+          "legendFormat": "gedi01b",
           "refId": "D"
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (rate(SourceEndpoint_h5p_hits{}[1m]))",
+          "expr": "gedi02a_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02a",
+          "refId": "E"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi04a_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04a",
+          "refId": "F"
+        },
+        {
+          "exemplar": true,
+          "expr": "h5_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "h5",
+          "refId": "G"
+        }
+      ],
+      "title": "Endpoint Counts",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl03sp_count{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "atl03sp",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl06p_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl06p",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl08p_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl08p",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi01bp_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi01bp",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi02ap_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02ap",
+          "refId": "E"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi04ap_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04ap",
+          "refId": "F"
+        },
+        {
+          "exemplar": true,
+          "expr": "h5p_count{job=\"orchestrator_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "h5p",
+          "refId": "G"
+        }
+      ],
+      "title": "Proxied Endpoint Counts",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "rate(atl03s_count{job=\"orchestrator_app\"}[1m])",
+          "interval": "",
+          "legendFormat": "atl03s",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl06_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl06",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl08_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl08",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(gedi01b_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi01b",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(gedi02a_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02a",
           "refId": "E"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(gedi04a_count{job=\"orchestrator_app\"}[1m])  ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04a",
+          "refId": "F"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(h5_count{job=\"orchestrator_app\"}[1m])  ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "h5",
+          "refId": "G"
         }
       ],
       "title": "Endpoint Rates",
@@ -191,12 +1497,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 8
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
       },
-      "id": 4,
+      "id": 8,
       "options": {
         "legend": {
           "calcs": [],
@@ -210,38 +1516,102 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(AppServer_duration{job=\"sliderule_node_app\"}[1m])",
+          "expr": "rate(atl03sp_count{job=\"orchestrator_app\"}[1m])",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "atl03sp",
           "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl06p_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl06p",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl08p_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl08p",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(gedi01bp_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi01bp",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(gedi02ap_count{job=\"orchestrator_app\"}[1m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02ap",
+          "refId": "E"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(gedi04ap_count{job=\"orchestrator_app\"}[1m])  ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04ap",
+          "refId": "F"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(h5p_count{job=\"orchestrator_app\"}[1m]) ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "h5p",
+          "refId": "G"
         }
       ],
-      "title": "Request Processing Rate",
+      "title": "Proxied Endpoint Rates",
       "type": "timeseries"
     },
     {
       "datasource": null,
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
-            "axisSoftMin": 0,
-            "fillOpacity": 80,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "lineWidth": 1
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
-            "mode": "percentage",
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -258,23 +1628,17 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 15
+        "y": 22
       },
-      "id": 6,
+      "id": 4,
       "options": {
-        "barWidth": 0.97,
-        "groupWidth": 0.7,
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom"
         },
-        "orientation": "auto",
-        "showValue": "auto",
-        "stacking": "none",
-        "text": {},
         "tooltip": {
           "mode": "single"
         }
@@ -282,129 +1646,716 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_alaska_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
+          "expr": "atl03s{job=\"orchestrator_app\"}",
           "interval": "",
-          "legendFormat": "Alaska",
-          "refId": "B"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_canada_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Canada",
-          "refId": "C"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_greenland_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Greenland",
-          "refId": "D"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_continental_us_hits{job=\"sliderule_node_app\"})",
-          "interval": "",
-          "legendFormat": "Continental US",
+          "legendFormat": "atl03s-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_central_america_hits{job=\"sliderule_node_app\"})",
+          "expr": "atl03s_sum{job=\"orchestrator_app\"} / atl03s_count{job=\"orchestrator_app\"}",
           "hide": false,
           "interval": "",
-          "legendFormat": "Central America",
+          "legendFormat": "atl03s-average",
+          "refId": "B"
+        }
+      ],
+      "title": "atl03s durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl03sp{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "atl03sp-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl03sp_sum{job=\"orchestrator_app\"} / atl03sp_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl03sp-average",
+          "refId": "B"
+        }
+      ],
+      "title": "atl03sp durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl06{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "atl06-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl06_sum{job=\"orchestrator_app\"} / atl06_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl06-average",
+          "refId": "B"
+        }
+      ],
+      "title": "atl06 durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl06p{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "atl06p-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl06p_sum{job=\"orchestrator_app\"} / atl06p_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl06p-average",
+          "refId": "B"
+        }
+      ],
+      "title": "atl06p durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl08{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "atl08-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl08_sum{job=\"orchestrator_app\"} / atl08_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl08-average",
+          "refId": "B"
+        }
+      ],
+      "title": "atl08 durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "atl08p{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "atl08p-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "atl08p_sum{job=\"orchestrator_app\"} / atl08p_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl08p-average",
+          "refId": "B"
+        }
+      ],
+      "title": "atl08p durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "gedi01b{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "gedi01b-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi01b_sum{job=\"orchestrator_app\"} / gedi01b_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi01b-average",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi02a{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02a-sampled",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi02a_sum{job=\"orchestrator_app\"} / gedi02a_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02a-average",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi04a{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04a-sampled",
           "refId": "E"
         },
         {
           "exemplar": true,
-          "expr": "sum by (job) (icesat2_south_america_hits{job=\"sliderule_node_app\"})",
+          "expr": "gedi04a_sum{job=\"orchestrator_app\"} / gedi04a_count{job=\"orchestrator_app\"}",
           "hide": false,
           "interval": "",
-          "legendFormat": "South America",
+          "legendFormat": "gedi04a-average",
           "refId": "F"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_africa_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Africa",
-          "refId": "G"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_middle_east_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Middle East",
-          "refId": "H"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_europe_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Europe",
-          "refId": "I"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_north_asia_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "North Asia",
-          "refId": "J"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_south_asia_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "South Asia",
-          "refId": "K"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_oceania_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Oceania",
-          "refId": "L"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_antarctica_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Antarctica",
-          "refId": "M"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (job) (icesat2_unknown_region_hits{job=\"sliderule_node_app\"})",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "Unknown",
-          "refId": "N"
         }
       ],
-      "title": "Request Regions",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "labelsToFields": false,
-            "reducers": [
-              "max"
+      "title": "gedi durations (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
             ]
           }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "gedi01bp{job=\"orchestrator_app\"}",
+          "interval": "",
+          "legendFormat": "gedi01bp-sampled",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi01bp_sum{job=\"orchestrator_app\"} / gedi01bp_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi01bp-average",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi02ap{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02ap-sampled",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi02ap_sum{job=\"orchestrator_app\"} / gedi02ap_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi02ap-average",
+          "refId": "D"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi04ap{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04ap-sampled",
+          "refId": "E"
+        },
+        {
+          "exemplar": true,
+          "expr": "gedi04ap_sum{job=\"orchestrator_app\"} / gedi04ap_count{job=\"orchestrator_app\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "gedi04ap-average",
+          "refId": "F"
         }
       ],
-      "type": "barchart"
+      "title": "gedi[p] durations (seconds)",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 31,
@@ -414,7 +2365,7 @@
     "list": []
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},

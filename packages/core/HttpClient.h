@@ -46,7 +46,7 @@
 #include "EndpointObject.h"
 
 /******************************************************************************
- * HTTP SERVER CLASS
+ * HTTP CLIENT CLASS
  ******************************************************************************/
 
 class HttpClient: public LuaObject

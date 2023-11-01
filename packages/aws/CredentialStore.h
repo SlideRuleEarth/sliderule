@@ -55,7 +55,6 @@ class CredentialStore
          *--------------------------------------------------------------------*/
 
         static const int STARTING_STORE_SIZE = 8;
-        static const int MAX_KEY_SIZE = 2048;
 
         static const char* LIBRARY_NAME;
         static const char* EXPIRATION_GPS_METRIC;
@@ -132,7 +131,7 @@ class CredentialStore
                             }
                         }
                         const char* access_key_id_str = LuaObject::getLuaString(L, -1);
-                        accessKeyId = StringLib::duplicate(access_key_id_str, MAX_KEY_SIZE);
+                        accessKeyId = StringLib::duplicate(access_key_id_str);
                         lua_pop(L, 1);
 
                         /* Get Secret Access Key */
@@ -146,7 +145,7 @@ class CredentialStore
                             }
                         }
                         const char* secret_access_key_str = LuaObject::getLuaString(L, -1);
-                        secretAccessKey = StringLib::duplicate(secret_access_key_str, MAX_KEY_SIZE);
+                        secretAccessKey = StringLib::duplicate(secret_access_key_str);
                         lua_pop(L, 1);
 
                         /* Get Session Token */
@@ -160,7 +159,7 @@ class CredentialStore
                             }
                         }
                         const char* session_token_str = LuaObject::getLuaString(L, -1);
-                        sessionToken = StringLib::duplicate(session_token_str, MAX_KEY_SIZE);
+                        sessionToken = StringLib::duplicate(session_token_str);
                         lua_pop(L, 1);
 
                         /* Get Expiration Date */
@@ -170,7 +169,7 @@ class CredentialStore
                             lua_getfield(L, index, EXPIRATION_STR1);
                         }
                         const char* expiration_str  = LuaObject::getLuaString(L, -1, true, NULL);
-                        expiration = StringLib::duplicate(expiration_str, MAX_KEY_SIZE);
+                        expiration = StringLib::duplicate(expiration_str);
                         if(expiration)  expirationGps = TimeLib::str2gpstime(expiration);
                         else            expirationGps = 0;
                         lua_pop(L, 1);
@@ -226,10 +225,10 @@ class CredentialStore
 
                 void copy (const Credential& c) {
                     provided = c.provided;
-                    accessKeyId = StringLib::duplicate(c.accessKeyId, MAX_KEY_SIZE);
-                    secretAccessKey = StringLib::duplicate(c.secretAccessKey, MAX_KEY_SIZE);
-                    sessionToken = StringLib::duplicate(c.sessionToken, MAX_KEY_SIZE);
-                    expiration = StringLib::duplicate(c.expiration, MAX_KEY_SIZE);
+                    accessKeyId = StringLib::duplicate(c.accessKeyId);
+                    secretAccessKey = StringLib::duplicate(c.secretAccessKey);
+                    sessionToken = StringLib::duplicate(c.sessionToken);
+                    expiration = StringLib::duplicate(c.expiration);
                     expirationGps = c.expirationGps;
                 }
         };

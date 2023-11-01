@@ -10,7 +10,8 @@ services:
     tty: true # docker run -t
     ulimits:
       nofile:
-        soft: "8192"
+        soft: 8192
+        hard: 8192
     volumes:
       - /etc/ssl/certs:/etc/ssl/certs
       - /data:/data

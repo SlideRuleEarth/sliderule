@@ -10,6 +10,13 @@ class TestProvisioning:
         status = sliderule.authenticate(organization)
         assert status
 
+    def test_refresh(self, domain, organization):
+        sliderule.set_url(domain)
+        status = sliderule.authenticate(organization)
+        headers = sliderule.buildauthheader(force_refresh=True)
+        assert status
+        assert len(headers['Authorization']) > 8
+
     def test_num_nodes_update(self, domain, organization):
         sliderule.set_url(domain)
         status = sliderule.authenticate(organization)

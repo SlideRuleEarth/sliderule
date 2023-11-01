@@ -142,7 +142,9 @@ StatData = {
     numFailures = 0,
     numTimeouts = 0,
     numActiveLocks = 0,
-    memberCounts = {}
+    memberCounts = {},
+    gaugeAppMetrics = {},
+    countAppMetrics = {}
 }
 
 --
@@ -371,7 +373,43 @@ end
 --
 local function api_prometheus(applet)
 
-    -- build initial response
+    -- create application count metrics
+    local application_count_metric = ""
+    for name,value in pairs(StatData.countAppMetrics) do
+        application_count_metric = application_count_metric .. string.format([[
+
+# TYPE %s counter
+%s %d
+]], name, 
+    name, 
+    value)        
+    end
+
+    -- create application gauge metrics
+    local application_gauge_metric = ""
+    for name,value in pairs(StatData.gaugeAppMetrics) do
+        application_gauge_metric = application_gauge_metric .. string.format([[
+
+# TYPE %s gauge
+%s %f
+]], name, 
+    name, 
+    value)        
+    end
+
+    -- create member count metrics
+    local member_count_metric = ""
+    for member_metric,_ in pairs(StatData["memberCounts"]) do
+        member_count_metric = member_count_metric .. string.format([[
+
+# TYPE %s counter
+%s %d
+]], member_metric, 
+    member_metric, 
+    StatData["memberCounts"][member_metric])
+    end
+
+    -- build full response
     local response = string.format([[
 # TYPE num_requests counter
 num_requests %d
@@ -387,16 +425,15 @@ num_timeouts %d
 
 # TYPE num_active_locks counter
 num_active_locks %d
-]], StatData["numRequests"], StatData["numComplete"], StatData["numFailures"], StatData["numTimeouts"], StatData["numActiveLocks"])
-
-    -- add member counts to response
-    for member_metric,_ in pairs(StatData["memberCounts"]) do
-        response = response .. string.format([[
-
-# TYPE %s counter
-%s %d
-]], member_metric, member_metric, StatData["memberCounts"][member_metric])
-    end
+%s%s%s
+]], StatData["numRequests"], 
+    StatData["numComplete"], 
+    StatData["numFailures"], 
+    StatData["numTimeouts"], 
+    StatData["numActiveLocks"],
+    member_count_metric,
+    application_count_metric,
+    application_gauge_metric)
 
     -- send response
     applet:set_status(200)
@@ -418,6 +455,44 @@ local function api_health(applet)
     applet:start_response()
     applet:send(response)
 
+end
+
+--
+-- API: /discovery/metric
+--
+--  Updates metric data
+--
+--  INPUT:
+--  {
+--      "name": "<metric name>"
+--      "value": "<metric value>"
+--      "flags": "<metric type; 0: COUNTER, 1: GAUGE>"
+--  }
+--
+local function api_metric(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local metric_name = request["name"]
+    local metric_value = tonumber(request["attr"])
+    local metric_type = request["flags"]
+
+    -- store metrics
+    if metric_type == 0 then
+        StatData.countAppMetrics[metric_name] = (StatData.countAppMetrics[metric_name] or 0) + metric_value
+        applet:set_status(200)
+    elseif metric_type == 1 then
+        StatData.gaugeAppMetrics[metric_name] = metric_value
+        StatData.gaugeAppMetrics[metric_name .. "_sum"] = (StatData.gaugeAppMetrics[metric_name .. "_sum"] or 0.0) + metric_value
+        StatData.countAppMetrics[metric_name .. "_count"] = (StatData.countAppMetrics[metric_name .. "_count"] or 0) + 1
+        applet:set_status(200)
+    else
+        applet:set_status(400)
+    end
+
+    -- send response
+    applet:start_response()
 end
 
 --
@@ -586,6 +661,7 @@ core.register_service("orchestrator_lock", "http", api_lock)
 core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
+core.register_service("orchestrator_metric", "http", api_metric)
 core.register_service("orchestrator_status", "http", api_status)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)

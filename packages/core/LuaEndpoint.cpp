@@ -175,6 +175,7 @@ void* LuaEndpoint::requestThread (void* parm)
     EndpointObject::info_t* info = (EndpointObject::info_t*)parm;
     EndpointObject::Request* request = info->request;
     LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
+    double start = TimeLib::latchtime();
 
     /* Get Request Script */
     const char* script_pathname = LuaEngine::sanitize(request->resource);
@@ -230,6 +231,10 @@ void* LuaEndpoint::requestThread (void* parm)
     /* End Response */
     rspq->postCopy("", 0);
 
+    /* Generate Metric for Endpoint */
+    double duration = TimeLib::latchtime() - start;
+    gauge_metric(INFO, request->resource, duration);
+
     /* Clean Up */
     delete rspq;
     delete [] script_pathname;
@@ -238,7 +243,7 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
-
+    
     /* Return */
     return NULL;
 }
@@ -284,7 +289,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             const char* result = engine->getResult();
             if(result)
             {
-                int result_length = StringLib::size(result, MAX_SOURCED_RESPONSE_SIZE);
+                int result_length = StringLib::size(result);
                 int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length);
                 rspq->postCopy(result, result_length);

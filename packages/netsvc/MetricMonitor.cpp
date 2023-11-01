@@ -29,30 +29,68 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __netsvcpkg__
-#define __netsvcpkg__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "AoiMetrics.h"
-#include "CurlLib.h"
-#include "EndpointProxy.h"
-#include "OrchestratorLib.h"
-#include "ProvisioningSystemLib.h"
 #include "MetricMonitor.h"
-#include "NetsvcParms.h"
+#include "Monitor.h"
+#include "EventLib.h"
+#include "TimeLib.h"
+#include "RecordObject.h"
+#include "OrchestratorLib.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * PUBLIC METHODS
  ******************************************************************************/
 
-extern "C" {
-void initnetsvc (void);
-void deinitnetsvc (void);
+/*----------------------------------------------------------------------------
+ * luaCreate - create(<level>)
+ *----------------------------------------------------------------------------*/
+int MetricMonitor::luaCreate (lua_State* L)
+{
+    try
+    {
+        /* Get Parmeters */
+        event_level_t level = (event_level_t)getLuaInteger(L, 1);
+
+        /* Return Dispatch Object */
+        return createLuaObject(L, new MetricMonitor(L, level));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
-#endif  /* __netsvcpkg__ */
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
 
+/*----------------------------------------------------------------------------
+ * processEvent
+ *----------------------------------------------------------------------------*/
+void MetricMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
+{
+    OrchestratorLib::metric(event_buf_ptr, event_size);
+}
 
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+MetricMonitor::MetricMonitor(lua_State* L, event_level_t level):
+    Monitor(L, EventLib::METRIC, level, Monitor::JSON)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+MetricMonitor::~MetricMonitor(void)
+{
+}

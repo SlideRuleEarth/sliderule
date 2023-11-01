@@ -342,9 +342,9 @@ void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subty
     /* Initialize Log Message */
     event.systime   = TimeLib::gpstime();
     event.tid       = Thread::getId();
-    event.id        = subtype;
+    event.id        = ORIGIN;
     event.parent    = ORIGIN;
-    event.flags     = 0;
+    event.flags     = subtype;
     event.type      = METRIC;
     event.level     = lvl;
 

@@ -89,7 +89,7 @@ class AoiMetrics
          *--------------------------------------------------------------------*/
 
         static bool         init            (void);
-        static regions_t    setRegion       (NetsvcParms* parms);
+        static regions_t    getRegion       (NetsvcParms* parms);
     
     private:
 

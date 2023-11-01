@@ -29,20 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __curl_lib__
-#define __curl_lib__
+#ifndef __metric_monitor__
+#define __metric_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "MsgQ.h"
+#include "Monitor.h"
+#include "RecordObject.h"
+#include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
- * cURL LIBRARY CLASS
+ * METRIC MONITOR CLASS
  ******************************************************************************/
 
-class CurlLib
+class MetricMonitor: public Monitor
 {
     public:
 
@@ -50,57 +54,24 @@ class CurlLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init            (void);
-        static void         deinit          (void);
+        static int luaCreate (lua_State* L);
 
-        static long         get             (const char* url, const char* data, const char** response, int* size=NULL, bool verify_peer=false, bool verify_hostname=false);
-        static long         post            (const char* url, const char* data, const char** response, int* size=NULL, bool verify_peer=false, bool verify_hostname=false);
-        static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
-        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active=NULL);
-        static int          luaGet          (lua_State* L);
-        static int          luaPost         (lua_State* L);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int EXPECTED_RESPONSE_SEGMENTS = 16;
-        static const int CONNECTION_TIMEOUT = 10L; // seconds
-        static const int DATA_TIMEOUT = 60L; // seconds
-
-        static const int RECOBJ_HDR_SIZE = 8; // bytes
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            char* data;
-            size_t size;
-        } data_t;
-
-        typedef struct {
-            uint8_t     hdr_buf[RECOBJ_HDR_SIZE];
-            uint32_t    hdr_index;
-            uint32_t    rec_size;
-            uint32_t    rec_index;
-            uint8_t*    rec_buf;
-            Publisher*  outq;
-            const char* url;
-            bool*       active;
-        } parser_t;
+    protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     combineResponse (List<data_t>* rsps_set, const char** response, int* size);
-        static size_t   postRecords     (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t   postData        (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t   writeData       (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t   readData        (void* buffer, size_t size, size_t nmemb, void *userp);
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        MetricMonitor  (lua_State* L, event_level_t level);
+        ~MetricMonitor (void);
 };
 
-#endif  /* __curl_lib__ */
+#endif  /* __publish_monitor__ */
