@@ -79,6 +79,7 @@ class RasterObject: public LuaObject
         static bool      registerRaster  (const char* _name, factory_f create);
         virtual uint32_t getSamples      (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) = 0;
         virtual uint32_t getSubsets      (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) = 0;
+        virtual uint32_t getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param=NULL);
         virtual         ~RasterObject    (void);
 
         bool hasZonalStats (void)
@@ -101,6 +102,7 @@ class RasterObject: public LuaObject
         uint64_t    fileDictAdd     (const std::string& fileName);
         static int  luaSamples      (lua_State* L);
         static int  luaSubset       (lua_State* L);
+        static int  luaPixels       (lua_State *L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -109,6 +111,12 @@ class RasterObject: public LuaObject
         GeoParms* parms;
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        int slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L);
 
         /*--------------------------------------------------------------------
          * Data
