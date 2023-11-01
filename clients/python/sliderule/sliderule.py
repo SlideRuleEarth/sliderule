@@ -377,29 +377,6 @@ def __parse_native(data, callbacks):
 
     return recs
 
-#
-#  __build_auth_header
-#
-def __build_auth_header():
-    """
-    Build authentication header for use with provisioning system
-    """
-    global service_url, ps_access_token, ps_refresh_token, ps_token_exp
-    headers = None
-    if ps_access_token:
-        # Check if Refresh Needed
-        if time.time() > ps_token_exp:
-            host = "https://ps." + service_url + "/api/org_token/refresh/"
-            rqst = {"refresh": ps_refresh_token}
-            hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
-            rsps = session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
-            ps_refresh_token = rsps["refresh"]
-            ps_access_token = rsps["access"]
-            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
-        # Build Authentication Header
-        headers = {'Authorization': 'Bearer ' + ps_access_token}
-    return headers
-
 
 ###############################################################################
 # Overriding DNS
@@ -430,7 +407,7 @@ def __dnsoverridden():
 def __jamdns():
     global service_url, service_org, request_timeout
     url = service_org + "." + service_url
-    headers = __build_auth_header()
+    headers = buildauthheader()
     host = "https://ps." + service_url + "/api/org_ip_adr/" + service_org + "/"
     rsps = session.get(host, headers=headers, timeout=request_timeout).json()
     if rsps["status"] == "SUCCESS":
@@ -504,6 +481,29 @@ __callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.me
 ###############################################################################
 # INTERNAL APIs
 ###############################################################################
+
+#
+#  buildauthheader
+#
+def buildauthheader(force_refresh=False):
+    """
+    Build authentication header for use with provisioning system
+    """
+    global service_url, ps_access_token, ps_refresh_token, ps_token_exp
+    headers = None
+    if ps_access_token:
+        # Check if Refresh Needed
+        if time.time() > ps_token_exp or force_refresh:
+            host = "https://ps." + service_url + "/api/org_token/refresh/"
+            rqst = {"refresh": ps_refresh_token}
+            hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
+            rsps = session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
+            ps_refresh_token = rsps["refresh"]
+            ps_access_token = rsps["access"]
+            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+        # Build Authentication Header
+        headers = {'Authorization': 'Bearer ' + ps_access_token}
+    return headers
 
 #
 # GeoDataFrame to Polygon
@@ -734,7 +734,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
             # Construct Request URL and Authorization
             if service_org:
                 url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
-                headers = __build_auth_header()
+                headers = buildauthheader()
             else:
                 url = 'http://%s%s/%s' % (service_url, path, api)
             # Perform Request
@@ -903,7 +903,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
     if type(desired_nodes) == int:
         rsps_body = {}
         requested_nodes = desired_nodes
-        headers = __build_auth_header()
+        headers = buildauthheader()
 
         # Get boundaries of cluster and calculate nodes to request
         try:
