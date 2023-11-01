@@ -165,6 +165,7 @@ class GdalRaster
         int         radius2pixels       (int _radius) const;
         static inline bool containsWindow (int x, int y, int maxx, int maxy, int windowSize);
         inline void readRasterWithRetry (int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
+        RasterSubset* getRasterSubset   (uint32_t ulx, uint32_t uly, double map_ulx, double map_uly, uint32_t _xsize, uint32_t _ysize);
 
         void        map2pixel           (double mapx, double mapy, int& x, int& y);
         void        map2pixel           (const OGRPoint* poi, int& x, int& y) { map2pixel(poi->getX(), poi->getY(), x, y); }
