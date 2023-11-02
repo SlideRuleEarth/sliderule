@@ -18,18 +18,35 @@ For users of SlideRule that have access to their own funding, private clusters p
 
 ## Getting Started with Private Clusters
 
-1. Create an account on the [SlideRule Provisioning System](https://ps.slideruleearth.io).
+#### 1. Creating an Account
 
-2. If you are already associated with an organization that has a private cluster on slideruleearth.io, then request membership to your organization using the Provisioning System.  If you want to create your own organization, please reach out to the SlideRule science team via one of the methods described on our [Contact Us](https://slideruleearth.io/contact/) page.
+Create an account on the [SlideRule Provisioning System](https://ps.slideruleearth.io).  Both local and GitHub social accounts are supported.
 
-3. Set up a __.netrc__ file in your home directory with the following entry:
+#### 2. Joining a Private Cluster
+
+Log into the provisioning system.  If you are already affiliated with an organization that has a private cluster on slideruleearth.io, then request membership to that organization using the "Request Membership" button under the organization's dropdown view.  If you want to create your own organization, please reach out to the SlideRule science team via one of the methods described on our [Contact Us](https://slideruleearth.io/contact/) page.
+
+#### 3. Authenticating
+
+For local accounts, there are three ways to provide your credentials to the Python client:
+1. Set up a __.netrc__ file in your home directory with the following entry:
 ```
-machine ps.slideruleearth.io login {your_username} password {your_password}
+machine ps.slideruleearth.io login <your_username> password <your_password>
 ```
+2. Set environment variables with your username and password:
+```bash
+export PS_USERNAME=<your_username>
+export PS_PASSWORD=<your_password>
+```
+3. Provide your credentials directly to the Python client:
+```Python
+sliderule.authenticate("<your_organization>", ps_username="<your_username>", ps_password="<your_password>")
+```
+
 
 4. Modify your Python scripts to supply your organization in the call to initialize the client, like so:
 ```Python
-icesat2.init("slideruleearth.io", organization="{your_organization}")
+icesat2.init("slideruleearth.io", organization="<your_organization>", desired_nodes=<>)
 ```
 
 ## Starting and Scaling a Private Cluster
