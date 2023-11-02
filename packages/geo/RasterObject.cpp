@@ -170,6 +170,7 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
     LuaEngine::setAttrFunc(L, "subset", luaSubset);
+    LuaEngine::setAttrFunc(L, "pixels", luaPixels);
 }
 
 /*----------------------------------------------------------------------------
