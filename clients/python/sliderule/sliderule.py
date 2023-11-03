@@ -1196,7 +1196,7 @@ def check_version (plugins=[]):
     else:
         for pkg in plugins:
             if versions[pkg][0] != versions['client'][0]:
-                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions['icesat2']))
+                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions[pkg]))
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
         logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['client'], versions['server']))
