@@ -98,17 +98,18 @@ int EndpointProxy::luaCreate (lua_State* L)
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 3); // get request parameters
         int         _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
-        const char* _outq_name          = getLuaString(L, 5); // get output queue
-        bool        _send_terminator    = getLuaBoolean(L, 6, true, false); // get send terminator flag
-        long        _num_threads        = getLuaInteger(L, 7, true, OsApi::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
-        long        _rqst_queue_depth   = getLuaInteger(L, 8, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
+        int         _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request 
+        const char* _outq_name          = getLuaString(L, 6); // get output queue
+        bool        _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
+        long        _num_threads        = getLuaInteger(L, 8, true, OsApi::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
+        long        _rqst_queue_depth   = getLuaInteger(L, 9, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
 
         /* Check Parameters */
         if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
         if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
 
         /* Return Endpoint Proxy Object */
-        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
+        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _locks_per_node, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
         int retcnt = createLuaObject(L, ep);
         delete [] _resources;
         return retcnt;
@@ -131,8 +132,8 @@ int EndpointProxy::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
-                              const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
-                              int _num_threads, int _rqst_queue_depth):
+                              const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
+                              bool _send_terminator, int _num_threads, int _rqst_queue_depth):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_resources);
@@ -141,6 +142,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
 
     numResources = _num_resources;
     timeout = _timeout_secs;
+    locksPerNode = _locks_per_node;
     numProxyThreads = _num_threads;
     rqstQDepth = _rqst_queue_depth;
     sendTerminator = _send_terminator;
@@ -231,7 +233,7 @@ void* EndpointProxy::collatorThread (void* parm)
         /* Get Available Nodes */
         int resources_to_process = proxy->numResources - current_resource;
         int num_nodes_to_request = MIN(resources_to_process, proxy->numProxyThreads);
-        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout);
+        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout, proxy->locksPerNode);
         if(nodes)
         {
             for(unsigned i = 0; i < nodes->size(); i++)

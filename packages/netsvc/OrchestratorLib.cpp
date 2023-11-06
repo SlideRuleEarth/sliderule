@@ -142,11 +142,11 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 /*----------------------------------------------------------------------------
  * lock
  *----------------------------------------------------------------------------*/
-vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, bool verbose)
+vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, int locks_per_node, bool verbose)
 {
     vector<Node*>* nodes = NULL;
 
-    FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d}", service, nodes_needed, timeout_secs);
+    FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d, \"locksPerNode\": %d}", service, nodes_needed, timeout_secs, locks_per_node);
     rsps_t rsps = request(EndpointObject::POST, "/discovery/lock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {

@@ -150,7 +150,7 @@ StatData = {
 --
 -- Constants
 --
-MaxLocksPerNode = 3
+MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
 ScrubInterval = 1 -- second(s)
 MaxTimeout = 600 -- second(s)
 
@@ -233,6 +233,7 @@ local function api_lock(applet)
     local service = request["service"]
     local nodesNeeded = request["nodesNeeded"]
     local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
+    local locksPerNode = request["locksPerNode"]
     local expiration = os.time() + timeout
 
     -- initialize error count
@@ -253,7 +254,7 @@ local function api_lock(applet)
                 local address = sorted_addresses[i]
                 local member = service_registry[address]
                 -- check if number of locks exceeds max
-                if member["locks"] >= MaxLocksPerNode then
+                if (member["locks"] + locksPerNode) > MaxLocksPerNode then
                     if i == 1 then break -- full capacity
                     else i = 0 end -- go back to beginning of sorted list (goes to 1 below)
                 else
@@ -261,11 +262,12 @@ local function api_lock(applet)
                     local transaction = {
                         service_registry,
                         address,
-                        expiration
+                        expiration,
+                        locksPerNode
                     }
                     -- lock member
                     nodesNeeded = nodesNeeded - 1 -- need one less node now
-                    member["locks"] = member["locks"] + 1 -- member has one more lock
+                    member["locks"] = member["locks"] + locksPerNode -- add new locks to member
                     table.insert(member_list, string.format('"%s"', member["address"])) -- populate member list that gets returned
                     table.insert(transaction_list, TransactionId) -- populate list of transaction ids that get returned
                     TransactionTable[TransactionId] = transaction -- register transaction
@@ -331,14 +333,20 @@ local function api_unlock(applet)
         if transaction ~= nil then
             local service_registry = transaction[1]
             local address = transaction[2]
+            local locksPerNode = transaction[4]
             local member = service_registry[address]
             if member ~= nil then
                 -- unlock member
-                if member["locks"] > 0 then
-                    member["locks"] = member["locks"] - 1
-                else
-                    core.log(core.err, string.format("Transaction %d unlocked on address %s with no locks", id, address))
+                if locksPerNode <= 0 or locksPerNode > MaxLocksPerNode then
+                    member["locks"] = 0
                     error_count = error_count + 1
+                    core.log(core.err, string.format("Transaction %d unlocked on address %s with invalid locks per node: %d", id, address, locksPerNode))
+                elseif member["locks"] < locksPerNode then
+                    member["locks"] = 0
+                    error_count = error_count + 1
+                    core.log(core.err, string.format("Transaction %d unlocked on address %s with insufficient locks: %d < %d", id, address, member["locks"], locksPerNode))                    
+                else
+                    member["locks"] = member["locks"] - locksPerNode
                 end
             else
                 core.log(core.err, string.format("Address %s is not registered to service", address))
