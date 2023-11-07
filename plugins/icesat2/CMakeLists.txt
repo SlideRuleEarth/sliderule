@@ -66,10 +66,12 @@ target_include_directories (icesat2
 # Script Installation #
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03sp.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06p.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06s.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06sp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
