@@ -66,6 +66,7 @@ const char* Icesat2Parms::PASS_INVALID                 = "pass_invalid";
 const char* Icesat2Parms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* Icesat2Parms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* Icesat2Parms::ATL03_PH_FIELDS              = "atl03_ph_fields";
+const char* Icesat2Parms::ATL06_FIELDS                 = "atl06_fields";
 const char* Icesat2Parms::PHOREAL                      = "phoreal";
 const char* Icesat2Parms::PHOREAL_BINSIZE              = "binsize";
 const char* Icesat2Parms::PHOREAL_GEOLOC               = "geoloc";
@@ -241,14 +242,6 @@ Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
     return PHOREAL_UNSUPPORTED;
 }
 
-/*----------------------------------------------------------------------------
- * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
- *----------------------------------------------------------------------------*/
-int64_t Icesat2Parms::deltatime2timestamp (double delta_time)
-{
-    return TimeLib::gps2systimeex(delta_time + (double)ATLAS_SDP_EPOCH_GPS);
-}
-
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -281,6 +274,7 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     extent_step                 (20.0),
     atl03_geo_fields            (NULL),
     atl03_ph_fields             (NULL),
+    atl06_fields                (NULL),
     phoreal                     { .binsize          = 1.0,
                                   .geoloc           = PHOREAL_MEDIAN,
                                   .use_abs_h        = false,
@@ -391,6 +385,12 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
         lua_pop(L, 1);
 
+        /* ATL06 Fields */
+        lua_getfield(L, index, Icesat2Parms::ATL06_FIELDS);
+        get_lua_string_list (L, -1, &atl06_fields, &provided);
+        if(provided) mlog(DEBUG, "ATL06 field array supplied");
+        lua_pop(L, 1);
+
         /* PhoREAL */
         lua_getfield(L, index, Icesat2Parms::PHOREAL);
         get_lua_phoreal(L, -1, &provided);
@@ -431,6 +431,7 @@ void Icesat2Parms::cleanup (void) const
 {
     delete atl03_geo_fields;
     delete atl03_ph_fields;
+    delete atl06_fields;
 }
 
 /*----------------------------------------------------------------------------

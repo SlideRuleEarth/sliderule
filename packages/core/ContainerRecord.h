@@ -69,7 +69,7 @@ class ContainerRecord: public RecordObject
         ContainerRecord(int rec_cnt, int size);
         ~ContainerRecord(void);
 
-        bool addRecord(RecordObject& record, int size=0);
+        int addRecord(RecordObject& record, int size=0);
 
     private:
 

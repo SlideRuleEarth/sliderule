@@ -101,6 +101,9 @@ const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
  * ATL03 READER CLASS
  ******************************************************************************/
 
+/*----------------------------------------------------------------------------
+ * extractAncillary
+ *----------------------------------------------------------------------------*/
 double* Atl03Reader::anc_t::extractAncillary (void)
 {
     double* dst = NULL;
@@ -1525,13 +1528,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             if(state.extent_valid || parms->pass_invalid)
             {
                 /* Generate Extent ID */
-                uint64_t extent_id = ((uint64_t)reader->start_rgt << 52) |
-                                        ((uint64_t)reader->start_cycle << 36) |
-                                        ((uint64_t)reader->start_region << 32) |
-                                        ((uint64_t)info->track << 30) |
-                                        (((uint64_t)extent_counter & 0xFFFFFFF) << 2) |
-                                        Icesat2Parms::EXTENT_ID_PHOTONS |
-                                        info->pair;
+                uint64_t extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
 
                 /* Build Extent and Ancillary Records */
                 vector<RecordObject*> rec_list;

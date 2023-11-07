@@ -81,6 +81,7 @@ class Icesat2Parms: public NetsvcParms
         static const char* DISTANCE_IN_SEGMENTS;
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
+        static const char* ATL06_FIELDS;
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
         static const char* PHOREAL_GEOLOC;
@@ -236,7 +237,29 @@ class Icesat2Parms: public NetsvcParms
         static quality_ph_t             str2atl03quality        (const char* quality_ph_str);
         static atl08_classification_t   str2atl08class          (const char* classifiction_str);
         static phoreal_geoloc_t         str2geoloc              (const char* fmt_str);
-        static int64_t                  deltatime2timestamp     (double delta_time);
+
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+        
+        // returns nanoseconds since Unix epoch, no leap seconds
+        static int64_t deltatime2timestamp (double delta_time)
+        {
+            return TimeLib::gps2systimeex(delta_time + (double)ATLAS_SDP_EPOCH_GPS);
+        }
+
+        // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
+        static uint64_t generateExtentId (int32_t rgt, int32_t cycle, int32_t region, int track, int pair, uint32_t counter)
+        {
+            uint64_t extent_id = ((uint64_t)rgt << 52) |
+                                ((uint64_t)cycle << 36) |
+                                ((uint64_t)region << 32) |
+                                ((uint64_t)track << 30) |
+                                (((uint64_t)counter & 0xFFFFFFF) << 2) |
+                                EXTENT_ID_PHOTONS |
+                                pair;
+            return extent_id;
+        }
 
         /*--------------------------------------------------------------------
          * Data
@@ -260,6 +283,7 @@ class Icesat2Parms: public NetsvcParms
         double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
         string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
+        string_list_t*          atl06_fields;                   // list of per-photon fields to associate with a segment
         phoreal_t               phoreal;                        // phoreal algorithm settings
 
     private:

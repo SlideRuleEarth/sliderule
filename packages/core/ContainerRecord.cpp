@@ -95,7 +95,7 @@ ContainerRecord::~ContainerRecord()
 /*----------------------------------------------------------------------------
  * addRecord
  *----------------------------------------------------------------------------*/
-bool ContainerRecord::addRecord(RecordObject& record, int size)
+int ContainerRecord::addRecord(RecordObject& record, int size)
 {
     if(recsContained < container->rec_cnt)
     {
@@ -114,8 +114,8 @@ bool ContainerRecord::addRecord(RecordObject& record, int size)
         /* bump number of records contained */
         recsContained++;
 
-        return true;
+        return rec_bytes;
     }
 
-    return false;
+    return 0;
 }

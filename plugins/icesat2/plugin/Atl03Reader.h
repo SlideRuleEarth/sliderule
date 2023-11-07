@@ -113,7 +113,7 @@ class Atl03Reader: public LuaObject
             double          segment_distance;
             double          extent_length; // meters
             double          background_rate; // PE per second
-            uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
+            uint64_t        extent_id;
             photon_t        photons[]; // zero length field
         } extent_t;
 
