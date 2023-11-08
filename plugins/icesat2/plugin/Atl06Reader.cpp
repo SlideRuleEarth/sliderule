@@ -34,14 +34,15 @@
  ******************************************************************************/
 
 #include <math.h>
-#include <float.h>
-#include <stdarg.h>
+#include <limits>
 
 #include "core.h"
 #include "h5.h"
 
 #include "Atl06Reader.h"
 #include "Icesat2Parms.h"
+
+using std::numeric_limits;
 
 /******************************************************************************
  * STATIC DATA
@@ -50,6 +51,10 @@
 const char* Atl06Reader::elRecType = "atl06srec.elevation";
 const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
     {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS},
+    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                     1,  NULL, NATIVE_FLAGS},
+    {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),                   1,  NULL, NATIVE_FLAGS},
+    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                    1,  NULL, NATIVE_FLAGS},
+    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS},
 // land_ice_segments
     {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
     {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS},
@@ -61,7 +66,7 @@ const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
     {"sigma_geo_h",             RecordObject::FLOAT,    offsetof(elevation_t, sigma_geo_h),             1,  NULL, NATIVE_FLAGS},
 // ground track
     {"x_atc",                   RecordObject::DOUBLE,   offsetof(elevation_t, x_atc),                   1,  NULL, NATIVE_FLAGS},
-    {"y_atc",                   RecordObject::DOUBLE,   offsetof(elevation_t, y_atc),                   1,  NULL, NATIVE_FLAGS},
+    {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),                   1,  NULL, NATIVE_FLAGS},
     {"seg_azimuth",             RecordObject::FLOAT,    offsetof(elevation_t, seg_azimuth),             1,  NULL, NATIVE_FLAGS},
 // fit_statistics
     {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),               1,  NULL, NATIVE_FLAGS},
@@ -594,21 +599,21 @@ void* Atl06Reader::subsettingThread (void* parm)
             entry->gt                       = Icesat2Parms::getGroundTrack((Icesat2Parms::sc_orient_t)atl06.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
             entry->atl06_quality_summary    = atl06.atl06_quality_summary[segment];
             entry->bsnow_conf               = atl06.bsnow_conf[segment];
-            entry->n_fit_photons            = atl06.n_fit_photons[segment];
+            entry->n_fit_photons            = atl06.n_fit_photons[segment]          != numeric_limits<int32_t>::max() ? atl06.n_fit_photons[segment]            : 0;
             entry->latitude                 = region.latitude[segment];
             entry->longitude                = region.longitude[segment];
-            entry->x_atc                    = atl06.x_atc[segment];
-            entry->y_atc                    = atl06.y_atc[segment];
-            entry->h_li                     = atl06.h_li[segment];
-            entry->h_li_sigma               = atl06.h_li_sigma[segment];
-            entry->sigma_geo_h              = atl06.sigma_geo_h[segment];
-            entry->seg_azimuth              = atl06.seg_azimuth[segment];
-            entry->dh_fit_dx                = atl06.dh_fit_dx[segment];
-            entry->h_robust_sprd            = atl06.h_robust_sprd[segment];
-            entry->w_surface_window_final   = atl06.w_surface_window_final[segment];
-            entry->bsnow_h                  = atl06.bsnow_h[segment];
-            entry->r_eff                    = atl06.r_eff[segment];
-            entry->tide_ocean               = atl06.tide_ocean[segment];
+            entry->x_atc                    = atl06.x_atc[segment]                  != numeric_limits<double>::max()  ? atl06.x_atc[segment]                    : numeric_limits<double>::quiet_NaN();
+            entry->y_atc                    = atl06.y_atc[segment]                  != numeric_limits<float>::max()   ? atl06.y_atc[segment]                    : numeric_limits<float>::quiet_NaN();
+            entry->h_li                     = atl06.h_li[segment]                   != numeric_limits<float>::max()   ? atl06.h_li[segment]                     : numeric_limits<float>::quiet_NaN();
+            entry->h_li_sigma               = atl06.h_li_sigma[segment]             != numeric_limits<float>::max()   ? atl06.h_li_sigma[segment]               : numeric_limits<float>::quiet_NaN();
+            entry->sigma_geo_h              = atl06.sigma_geo_h[segment]            != numeric_limits<float>::max()   ? atl06.sigma_geo_h[segment]              : numeric_limits<float>::quiet_NaN();
+            entry->seg_azimuth              = atl06.seg_azimuth[segment]            != numeric_limits<float>::max()   ? atl06.seg_azimuth[segment]              : numeric_limits<float>::quiet_NaN();
+            entry->dh_fit_dx                = atl06.dh_fit_dx[segment]              != numeric_limits<float>::max()   ? atl06.dh_fit_dx[segment]                : numeric_limits<float>::quiet_NaN();
+            entry->h_robust_sprd            = atl06.h_robust_sprd[segment]          != numeric_limits<float>::max()   ? atl06.h_robust_sprd[segment]            : numeric_limits<float>::quiet_NaN();
+            entry->w_surface_window_final   = atl06.w_surface_window_final[segment] != numeric_limits<float>::max()   ? atl06.w_surface_window_final[segment]   : numeric_limits<float>::quiet_NaN();
+            entry->bsnow_h                  = atl06.bsnow_h[segment]                != numeric_limits<float>::max()   ? atl06.bsnow_h[segment]                  : numeric_limits<float>::quiet_NaN();
+            entry->r_eff                    = atl06.r_eff[segment]                  != numeric_limits<float>::max()   ? atl06.r_eff[segment]                    : numeric_limits<float>::quiet_NaN();
+            entry->tide_ocean               = atl06.tide_ocean[segment]             != numeric_limits<float>::max()   ? atl06.tide_ocean[segment]               : numeric_limits<float>::quiet_NaN(); 
 
             /* Populate Ancillary Data */
             if(parms->atl06_fields)
