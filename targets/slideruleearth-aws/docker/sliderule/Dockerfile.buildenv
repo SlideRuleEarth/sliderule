@@ -9,6 +9,7 @@ RUN apt-get update && \
   pkg-config \
   cmake \
   git \
+  curl \
   libreadline-dev \
   liblua5.3-dev \
   libcurl4-openssl-dev \
@@ -18,6 +19,11 @@ RUN apt-get update && \
   libtiff-dev \
   libsqlite3-dev \
   sqlite3 \
+  meson \
+  llvm \
+  clang-12 \
+  clang-tidy \
+  cppcheck \
   && rm -rf /var/lib/apt/lists/*
 
 # install rapidjson dependency
@@ -87,6 +93,13 @@ RUN cmake /PDAL -DCMAKE_BUILD_TYPE=Release
 RUN make -j8
 RUN make install
 RUN ldconfig
+
+# install pistache dependency
+WORKDIR /
+RUN git clone https://github.com/pistacheio/pistache.git
+WORKDIR /pistache
+RUN meson setup build
+RUN meson install -C build
 
 # support interactive mode
 WORKDIR /
