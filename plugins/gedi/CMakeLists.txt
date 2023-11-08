@@ -12,6 +12,7 @@ add_library (gedi MODULE "")
 
 set_target_properties (gedi PROPERTIES OUTPUT_NAME gedi)
 set_target_properties (gedi PROPERTIES PREFIX "")
+set_target_properties (gedi PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")

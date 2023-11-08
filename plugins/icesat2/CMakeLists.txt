@@ -12,6 +12,7 @@ add_library (icesat2 MODULE "")
 
 set_target_properties (icesat2 PROPERTIES OUTPUT_NAME icesat2)
 set_target_properties (icesat2 PROPERTIES PREFIX "")
+set_target_properties (icesat2 PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")
