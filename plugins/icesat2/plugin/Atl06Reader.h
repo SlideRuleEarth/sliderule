@@ -100,7 +100,7 @@ class Atl06Reader: public LuaObject
             double          latitude;
             double          longitude;
             double          x_atc;
-            double          y_atc;
+            float           y_atc;
             float           h_li;
             float           h_li_sigma;
             float           sigma_geo_h;
@@ -205,7 +205,7 @@ class Atl06Reader: public LuaObject
                 H5Array<uint32_t>   segment_id;
                 H5Array<float>      sigma_geo_h;
                 H5Array<double>     x_atc;
-                H5Array<double>     y_atc;
+                H5Array<float>      y_atc;
                 H5Array<float>      seg_azimuth;
                 H5Array<float>      dh_fit_dx;
                 H5Array<float>      h_robust_sprd;
