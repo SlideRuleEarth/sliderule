@@ -103,7 +103,7 @@ PistacheServer::verb_t PistacheServer::str2verb (const char* str)
 const char* PistacheServer::sanitize (const char* filename)
 {
     const char* safe_filename = StringLib::replace(filename, PATH_DELIMETER_STR, "_");
-    FString safe_pathname(0, "%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename);
+    FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename);
     delete [] safe_filename;
     return safe_pathname.c_str(true);
 }
