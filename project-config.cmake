@@ -80,7 +80,6 @@ option (SERVER_APP "Create sliderule server binary" ON)
 
 # Library Options #
 
-option (ENABLE_COMPAT "Use C++11 for compatibility with older compilers" OFF)
 option (ENABLE_ADDRESS_SANITIZER "Instrument code with AddressSanitizer for memory error detection" OFF)
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
@@ -111,11 +110,7 @@ string(REPLACE "v" "" LIBVER ${TGTVER})
 
 # C++ Version #
 
-if(${ENABLE_COMPAT})
-    set(CXX_VERSION 11)
-else()
-    set(CXX_VERSION 17) # required if using pistache package
-endif()
+set(CXX_VERSION 17) # required if using pistache package
 
 # Platform #
 

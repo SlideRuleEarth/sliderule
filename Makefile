@@ -1,241 +1,59 @@
 ROOT = $(shell pwd)
-BUILD ?= $(ROOT)/build
-STAGE ?= $(ROOT)/stage
-SLIDERULE_BUILD = $(BUILD)/sliderule
-PGC_BUILD = $(BUILD)/pgc
-ATLAS_BUILD = $(BUILD)/atlas
-ICESAT2_BUILD = $(BUILD)/icesat2
-GEDI_BUILD = $(BUILD)/gedi
-LANDSAT_BUILD = $(BUILD)/landsat
-USGS3DEP_BUILD = $(BUILD)/usgs3dep
-OPENDATA_BUILD = $(BUILD)/opendata
-SWOT_BUILD = $(BUILD)/swot
+BUILD = $(ROOT)/build
 
 ########################
-# Core Framework Targets
+# Application Targets
 ########################
 
-default-build: ## default build of sliderule
-	make -j4 -C $(SLIDERULE_BUILD)
+CFG  = -DUSE_ARROW_PACKAGE=ON
+CFG += -DUSE_AWS_PACKAGE=ON
+CFG += -DUSE_CCSDS_PACKAGE=ON
+CFG += -DUSE_GEO_PACKAGE=ON
+CFG += -DUSE_H5_PACKAGE=ON
+CFG += -DUSE_LEGACY_PACKAGE=ON
+CFG += -DUSE_NETSVC_PACKAGE=ON
+CFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-all: default-build atlas pgc gedi icesat2 landsat usgs3dep opendata swot ## build everything
+all: ## build code
+	make -j4 -C $(BUILD)
 
-config: config-release ## configure make for default build
-
-config-release: prep ## configure make for release version of sliderule binary
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(ROOT)
-
-config-debug: prep ## configure make for debug version of sliderule binary
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(ROOT)
-
-DEVCFG  = -DUSE_ARROW_PACKAGE=ON
-DEVCFG += -DUSE_AWS_PACKAGE=ON
-DEVCFG += -DUSE_CCSDS_PACKAGE=ON
-DEVCFG += -DUSE_GEO_PACKAGE=ON
-DEVCFG += -DUSE_H5_PACKAGE=ON
-DEVCFG += -DUSE_LEGACY_PACKAGE=ON
-DEVCFG += -DUSE_NETSVC_PACKAGE=ON
-DEVCFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-config-development: prep ## configure make for development version of sliderule binary
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(DEVCFG) $(ROOT)
-
-config-development-debug: prep ## configure make for debug version of sliderule binary
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(DEVCFG) -DENABLE_TRACING=ON $(ROOT)
-
-config-all: config-development config-atlas config-pgc config-gedi config-icesat2 config-landsat config-usgs3dep config-opendata config-swot ctags ## configure everything
-config-all-debug: config-development-debug config-atlas-debug config-pgc-debug config-gedi-debug config-icesat2-debug config-landsat-debug config-usgs3dep-debug config-opendata-debug config-swot-debug ctags ## configure everything for debug
-
-install: ## install sliderule to system
-	make -C $(SLIDERULE_BUILD) install
-
-install-all: install install-atlas install-pgc install-gedi install-icesat2 install-landsat install-usgs3dep install-opendata install-swot ## install everything
-
-uninstall: ## uninstall most recent install of sliderule from system
-	xargs rm < $(SLIDERULE_BUILD)/install_manifest.txt
-
-########################
-# Shared Library Targets
-########################
+config: prep ## configure make for release version of sliderule
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(CFG) $(ROOT)
 
 config-library: prep ## configure make for shared library libsliderule.so
-	cd $(SLIDERULE_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(ROOT)
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(CFG) $(ROOT)
 
-#####################
-# PGC Plugin Targets
-#####################
+install: ## install sliderule to system
+	make -C $(BUILD) install
 
-config-pgc-debug: prep ## configure make for pgc plugin
-	cd $(PGC_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/pgc
-
-config-pgc: prep ## configure make for pgc plugin
-	cd $(PGC_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/pgc
-
-pgc: ## build pgc plugin
-	make -j4 -C $(PGC_BUILD)
-
-install-pgc: ## install pgc plugin to system
-	make -C $(PGC_BUILD) install
-
-uninstall-pgc: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(PGC_BUILD)/install_manifest.txt
-
-########################
-# ATLAS Plugin Targets
-########################
-
-config-atlas: prep ## configure make for atlas plugin
-	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/atlas
-
-config-atlas-debug: prep ## configure make for atlas plugin
-	cd $(ATLAS_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/atlas
-
-atlas: ## build atlas plugin
-	make -j4 -C $(ATLAS_BUILD)
-
-install-atlas: ## install altas plugin to system
-	make -C $(ATLAS_BUILD) install
-
-uninstall-atlas: ## uninstall most recent install of atlas plugin from system
-	xargs rm < $(ATLAS_BUILD)/install_manifest.txt
-
-########################
-# ICESat-2 Plugin Targets
-########################
-
-config-icesat2: prep ## configure make for icesat2 plugin
-	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/icesat2
-
-config-icesat2-debug: prep ## configure make for icesat2 plugin
-	cd $(ICESAT2_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/icesat2
-
-icesat2: ## build icesat2 plugin
-	make -j4 -C $(ICESAT2_BUILD)
-
-install-icesat2: ## install icesat2 plugin to system
-	make -C $(ICESAT2_BUILD) install
-
-uninstall-icesat2: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(ICESAT2_BUILD)/install_manifest.txt
-
-########################
-# GEDI Plugin Targets
-########################
-
-config-gedi: prep ## configure make for gedi plugin
-	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/gedi
-
-config-gedi-debug: prep ## configure make for gedi plugin
-	cd $(GEDI_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/gedi
-
-gedi: ## build gedi plugin
-	make -j4 -C $(GEDI_BUILD)
-
-install-gedi: ## install gedi plugin to system
-	make -C $(GEDI_BUILD) install
-
-uninstall-gedi: ## uninstall most recent install of gedi plugin from system
-	xargs rm < $(GEDI_BUILD)/install_manifest.txt
-
-##########################
-# Landsat Plugin Targets
-##########################
-
-config-landsat-debug: prep ## configure make for landsat plugin
-	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/landsat
-
-config-landsat: prep ## configure make for landsat plugin
-	cd $(LANDSAT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/landsat
-
-landsat: ## build icesat2 plugin
-	make -j4 -C $(LANDSAT_BUILD)
-
-install-landsat: ## install icesat2 plugin to system
-	make -C $(LANDSAT_BUILD) install
-
-uninstall-landsat: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(LANDSAT_BUILD)/install_manifest.txt
-
-##########################
-# USGS3DEP Plugin Targets
-##########################
-
-config-usgs3dep-debug: prep ## configure make for usgs3dep plugin
-	cd $(USGS3DEP_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/usgs3dep
-
-config-usgs3dep: prep ## configure make for usgs3dep plugin
-	cd $(USGS3DEP_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/usgs3dep
-
-usgs3dep: ## build usgs3dep plugin
-	make -j4 -C $(USGS3DEP_BUILD)
-
-install-usgs3dep: ## install icesat2 plugin to system
-	make -C $(USGS3DEP_BUILD) install
-
-uninstall-usgs3dep: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(USGS3DEP_BUILD)/install_manifest.txt
-
-##########################
-# OPENDATA Plugin Targets
-##########################
-
-config-opendata-debug: prep ## configure make for opendata plugin
-	cd $(OPENDATA_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/opendata
-
-config-opendata: prep ## configure make for opendata plugin
-	cd $(OPENDATA_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/opendata
-
-opendata: ## build opendata plugin
-	make -j4 -C $(OPENDATA_BUILD)
-
-install-opendata: ## install icesat2 plugin to system
-	make -C $(OPENDATA_BUILD) install
-
-uninstall-opendata: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(OPENDATA_BUILD)/install_manifest.txt
-
-##########################
-# SWOT Plugin Targets
-##########################
-
-config-swot-debug: prep ## configure make for swot plugin
-	cd $(SWOT_BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/swot
-
-config-swot: prep ## configure make for swot plugin
-	cd $(SWOT_BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON $(ROOT)/plugins/swot
-
-swot: ## build swot plugin
-	make -j4 -C $(SWOT_BUILD)
-
-install-swot: ## install icesat2 plugin to system
-	make -C $(SWOT_BUILD) install
-
-uninstall-swot: ## uninstall most recent install of icesat2 plugin from system
-	xargs rm < $(SWOT_BUILD)/install_manifest.txt
+uninstall: ## uninstall most recent install of sliderule from system
+	xargs rm < $(BUILD)/install_manifest.txt
 
 ########################
 # Development Targets
 ########################
 
+TEST ?=
+
 testmem: ## run memory test on sliderule
-	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(testcase)
+	valgrind --leak-check=full --track-origins=yes --track-fds=yes sliderule $(TEST)
 
 testcpu: ## run cpu test on sliderule
-	valgrind --tool=callgrind sliderule $(testcase)
+	valgrind --tool=callgrind sliderule $(TEST)
 	# kcachegrind callgrind.out.<pid>
 
 testheap: ## run heap test on sliderule
-	valgrind --tool=massif --time-unit=B --pages-as-heap=yes sliderule $(testcase)
+	valgrind --tool=massif --time-unit=B --pages-as-heap=yes sliderule $(TEST)
 	# ms_print massif.out.<pid>
 
 testheaptrack: ## analyze results of heap test
-	# heaptrack sliderule $(testcase)
+	# heaptrack sliderule $(TEST)
 	# heaptrack_gui heaptrack.sliderule.<pid>.gz
 
 testcov: ## analyze results of test coverage report
-	lcov -c --directory $(SLIDERULE_BUILD) --output-file $(SLIDERULE_BUILD)/coverage.info
-	genhtml $(SLIDERULE_BUILD)/coverage.info --output-directory $(SLIDERULE_BUILD)/coverage_html
-	# firefox $(SLIDERULE_BUILD)/coverage_html/index.html
+	lcov -c --directory $(BUILD) --output-file $(BUILD)/coverage.info
+	genhtml $(BUILD)/coverage.info --output-directory $(BUILD)/coverage_html
+	# firefox $(BUILD)/coverage_html/index.html
 
 ########################
 # Global Targets
@@ -247,34 +65,13 @@ ctags: ## generate ctags
 	/usr/bin/jq -s 'add' $(SLIDERULE_BUILD)/compile_commands.json $(PGC_BUILD)/compile_commands.json $(ICESAT2_BUILD)/compile_commands.json $(GEDI_BUILD)/compile_commands.json $(LANDSAT_BUILD)/compile_commands.json $(USGS3DEP_BUILD)/compile_commands.json $(OPENDATA_BUILD)/compile_commands.json $(SWOT_BUILD)/compile_commands.json > compile_commands.json
 
 prep: ## create necessary build directories
-	mkdir -p $(SLIDERULE_BUILD)
-	mkdir -p $(PGC_BUILD)
-	mkdir -p $(ATLAS_BUILD)
-	mkdir -p $(ICESAT2_BUILD)
-	mkdir -p $(GEDI_BUILD)
-	mkdir -p $(LANDSAT_BUILD)
-	mkdir -p $(USGS3DEP_BUILD)
-	mkdir -p $(OPENDATA_BUILD)
-	mkdir -p $(SWOT_BUILD)
+	mkdir -p $(BUILD)
 
 clean: ## clean last build
-	- make -C $(SLIDERULE_BUILD) clean
-	- make -C $(PGC_BUILD) clean
-	- make -C $(ATLAS_BUILD) clean
-	- make -C $(ICESAT2_BUILD) clean
-	- make -C $(GEDI_BUILD) clean
-	- make -C $(LANDSAT_BUILD) clean
-	- make -C $(USGS3DEP_BUILD) clean
-	- make -C $(OPENDATA_BUILD) clean
-	- make -C $(SWOT_BUILD) clean
+	- make -C $(BUILD) clean
 
 distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
-	- rm -Rf $(STAGE)
-	- cd $(ROOT)/docs && ./clean.sh
-	- cd $(ROOT)/clients/python && ./clean.sh
-	- find -name ".cookies" -exec rm {} \;
-	- rm -f compile_commands.json
 
 help: ## that's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

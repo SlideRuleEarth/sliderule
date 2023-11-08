@@ -32,7 +32,6 @@ ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
-SLIDERULE_SOURCE_DIR = $(ROOT)
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 TARGET_BUILD_DIR = $(BUILD)/target
 ICESAT2_BUILD_DIR = $(BUILD)/icesat2
@@ -69,18 +68,18 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
 
-TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
-MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
-STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
-SUBSET_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/scripts/systests/subset_perf_test.lua
+TEST ?= $(ROOT)/scripts/selftests/test_runner.lua
+MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
+STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
+SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
 
 CLANG_VER = "-12"
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
 DEBUG_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
-DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
 DEBUG_CFG += -DUSE_AWS_PACKAGE=ON
@@ -118,26 +117,26 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(SWOT_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
-	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(SLIDERULE_SOURCE_DIR)
-	cd $(TARGET_BUILD_DIR)    && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/targets/slideruleearth-aws
-	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
+	cd $(TARGET_BUILD_DIR)    && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/targets/slideruleearth-aws
+	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/icesat2
+	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/landsat
+	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gedi
+	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/opendata
+	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/swot
 
 config-release: prep ## configure server to run a release version locally
-	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(SLIDERULE_SOURCE_DIR)
-	cd $(TARGET_BUILD_DIR)    && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/targets/slideruleearth-aws
-	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
+	cd $(TARGET_BUILD_DIR)    && cmake $(RELEASE_CFG) $(ROOT)/targets/slideruleearth-aws
+	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/icesat2
+	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(ROOT)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/landsat
+	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/gedi
+	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/opendata
+	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
 
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
@@ -160,7 +159,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(SWOT_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
 selftest: ## run the self test on the server code
 	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
@@ -192,7 +191,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
 	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
@@ -239,7 +238,7 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image for
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
 	mkdir -p $(SERVER_STAGE_DIR)/etc
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
 	cd $(SERVER_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
@@ -250,9 +249,9 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
 	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
@@ -337,11 +336,14 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
 
-clean: ## remove build artifacts
-	make -C $(SLIDERULE_SOURCE_DIR) clean
-
 distclean: ## fully remove all non-version controlled files and directories
-	make -C $(SLIDERULE_SOURCE_DIR) distclean
+	- rm -Rf $(BUILD)
+	- rm -Rf $(STAGE)
+	- cd $(ROOT)/docs && ./clean.sh
+	- cd $(ROOT)/clients/python && ./clean.sh
+	- find $(ROOT) -name ".cookies" -exec rm {} \;
+	- rm -f report.pdf
+	- rm -f report.xml
 
 help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
