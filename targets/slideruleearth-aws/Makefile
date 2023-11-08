@@ -34,6 +34,7 @@ STAGE = $(ROOT)/stage
 
 SLIDERULE_SOURCE_DIR = $(ROOT)
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
+TARGET_BUILD_DIR = $(BUILD)/target
 ICESAT2_BUILD_DIR = $(BUILD)/icesat2
 PGC_BUILD_DIR = $(BUILD)/pgc
 LANDSAT_BUILD_DIR = $(BUILD)/landsat
@@ -107,6 +108,7 @@ all: sliderule
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
+	mkdir -p $(TARGET_BUILD_DIR)
 	mkdir -p $(ICESAT2_BUILD_DIR)
 	mkdir -p $(PGC_BUILD_DIR)
 	mkdir -p $(LANDSAT_BUILD_DIR)
@@ -117,6 +119,7 @@ prep: ## create temporary directories needed for build
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
 	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(SLIDERULE_SOURCE_DIR)
+	cd $(TARGET_BUILD_DIR)    && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/targets/slideruleearth-aws
 	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
@@ -127,6 +130,7 @@ config-debug: prep ## configure the server for running locally with debug symbol
 
 config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(SLIDERULE_SOURCE_DIR)
+	cd $(TARGET_BUILD_DIR)    && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/targets/slideruleearth-aws
 	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
 	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
 	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
@@ -138,6 +142,8 @@ config-release: prep ## configure server to run a release version locally
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
+	make -j4 -C $(TARGET_BUILD_DIR)
+	make -C $(TARGET_BUILD_DIR) install
 	make -j4 -C $(ICESAT2_BUILD_DIR)
 	make -C $(ICESAT2_BUILD_DIR) install
 	make -j4 -C $(PGC_BUILD_DIR)

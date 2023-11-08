@@ -90,6 +90,8 @@ ASSETS_TO_DATASETS = {
     "usgs3dep-1meter-dem": "Digital Elevation Model (DEM) 1 meter",
     "landsat-hls": "HLS",
     "icesat2": "ATL03",
+    "icesat2-atl06": "ATL06",
+    "icesat2-atl08": "ATL08",
     "atlas-local": "ATL03",
     "nsidc-s3": "ATL03"
 }

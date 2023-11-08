@@ -63,7 +63,7 @@ int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
         {"parms",               Icesat2Parms::luaCreate},
-        {"atl03",               Atl03Reader::luaCreate},
+        {"atl03s",              Atl03Reader::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},

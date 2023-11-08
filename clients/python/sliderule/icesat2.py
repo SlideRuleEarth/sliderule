@@ -260,19 +260,20 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
 #
 # Build Request
 #
-def __build_request(parm, resources):
+def __build_request(parm, resources, default_asset='icesat2'):
 
     # Default the Asset
-    if "asset" not in parm:
-        parm["asset"] = "icesat2"
+    rqst_parm = parm.copy()
+    if "asset" not in rqst_parm:
+        rqst_parm["asset"] = default_asset
 
     # Get List of Resources
-    resources = earthdata.search(parm, resources)
+    resources = earthdata.search(rqst_parm, resources)
 
     # Build Request
     return {
         "resources": resources,
-        "parms": parm
+        "parms": rqst_parm
     }
 
 
@@ -463,7 +464,7 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
         tstart = time.perf_counter()
 
         # Build Request
-        rqst = __build_request(parm, resources)
+        rqst = __build_request(parm, resources, default_asset="icesat2-atl06")
 
         # Make API Processing Request
         rsps = sliderule.source("atl06sp", rqst, stream=True, callbacks=callbacks)

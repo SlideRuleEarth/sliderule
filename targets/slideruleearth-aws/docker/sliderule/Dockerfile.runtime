@@ -20,6 +20,14 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release \
 RUN make -j8
 RUN make install
 
+# build and install target configuration into staging
+RUN mkdir -p /build/target
+WORKDIR /build/target
+RUN cmake -DCMAKE_BUILD_TYPE=Release \
+          /sliderule/targets/slideruleearth-aws
+RUN make -j8
+RUN make install
+
 # build and install gedi plugin into staging
 RUN mkdir -p /build/gedi
 WORKDIR /build/gedi

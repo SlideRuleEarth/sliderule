@@ -49,6 +49,8 @@
 
 const char* Atl06Reader::elRecType = "atl06srec.elevation";
 const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS},
+// land_ice_segments
     {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
     {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS},
     {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS},
