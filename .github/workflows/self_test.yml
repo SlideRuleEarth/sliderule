@@ -44,4 +44,6 @@ jobs:
        make
 
     - name: Run test
-      run: make selftest
+      run: |
+       cd targets/slideruleearth-aws
+       make selftest

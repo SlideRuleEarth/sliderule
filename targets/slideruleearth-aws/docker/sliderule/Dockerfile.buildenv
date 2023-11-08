@@ -89,4 +89,5 @@ RUN make install
 RUN ldconfig
 
 # support interactive mode
+WORKDIR /
 CMD ["/bin/bash"]
