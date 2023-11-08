@@ -532,7 +532,6 @@ void* Atl06Reader::subsettingThread (void* parm)
     Atl06Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
-    uint32_t extent_counter = 0;
     RecordObject** ancillary = NULL;
     long* ancillary_index = NULL;
 
@@ -575,6 +574,9 @@ void* Atl06Reader::subsettingThread (void* parm)
 
         /* Increment Read Statistics */
         local_stats.segments_read = region.latitude.size;
+
+        /* Initialize Extent Counter */
+        uint32_t extent_counter = 0;
 
         /* Loop Through Each Segment */
         for(long segment = 0; reader->active && segment < region.num_segments; segment++)
