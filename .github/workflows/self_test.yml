@@ -40,10 +40,10 @@ jobs:
     - name: Build sliderule
       run: |
        cd targets/slideruleearth-aws
-       make config-release
+       make config-debug
        make
 
     - name: Run test
       run: |
        cd targets/slideruleearth-aws
-       make selftest
+       make selftest TEST=../../scripts/selftests/test_runner.lua

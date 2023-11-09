@@ -1,6 +1,6 @@
 # Notes:
 #
-# (1) In order to complete the release process, the following must be installed and configured in your environment:
+# In order to complete the release process, the following must be installed and configured in your environment:
 #     * GitHub command line client (gh)
 #           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
 #           The user must authenticate to GitHub via `gh auth login`
@@ -15,17 +15,23 @@
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
 #
-# (2) To release a version of SlideRule:
+# To release a version of SlideRule:
 #     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
 #        $ aws --profile={profile} sts get-session-token --serial-number arn:aws:iam::742127912612:mfa/{username} --token-code={code}
 #     2. Login to AWS Elastic Container Registry
 #        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-#     3. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
-#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
-#     4. Login to GitHub
+#     3. Login to GitHub
 #        $ gh auth login
-#     5. Execute the makefile target to release the code; X.Y.Z is the version
+#     4. Execute the makefile target to release the code; X.Y.Z is the version
 #        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#
+# To update the build environment for GitHub actions
+#     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
+#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
+#     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
+#        $ make sliderule-buildenv-docker
+#     3. Push to GitHub container registry
+#        $ docker push ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
 #
 
 ROOT = $(shell pwd)/../..
@@ -215,25 +221,14 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-github-buildenv-docker: ## build sliderule build environment docker image for github actions
-	-rm -Rf $(BUILDENV_STAGE_DIR)
-	mkdir -p $(BUILDENV_STAGE_DIR)
-	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(GHCR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
-
-github-buildenv-docker-push: ## push sliderule build environment docker image (must be x86 arch) to github container registry
-	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
-
-sliderule-buildenv-docker: ## build sliderule build environment docker image for github actions
+sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
+	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
@@ -276,6 +271,7 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-docker: ## build all cluster docker images
+	make sliderule-buildenv-docker
 	make sliderule-docker
 	make ilb-docker
 	make proxy-docker
@@ -330,6 +326,7 @@ release: ## release a version of sliderule; needs VERSION
 
 docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
+	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
