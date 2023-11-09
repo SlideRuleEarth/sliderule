@@ -25,6 +25,7 @@ target_compile_definitions (icesat2 PUBLIC BUILDINFO="${BUILDINFO}")
 
 # Compile Definitions #
 target_compile_definitions (icesat2 PUBLIC BINID="${TGTVER}")
+target_compile_options (icesat2 PUBLIC "$<$<CONFIG:Debug>:-DWITH_UNITTESTS>")
 target_compile_options (icesat2 PUBLIC -Wall) # turn on "all" warnings
 target_compile_options (icesat2 PUBLIC -Wextra) # turn on "extra" warnings
 target_compile_options (icesat2 PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
@@ -51,9 +52,8 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/MeritRaster.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp
-)
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp>)
 
 # Include Directories #
 target_include_directories (icesat2
@@ -96,8 +96,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/MeritRaster.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h>
     DESTINATION
         ${INSTALLDIR}/include/sliderule/icesat2
 )

@@ -47,8 +47,11 @@
 #include "GTDArray.h"
 #include "MeritRaster.h"
 #include "Icesat2Parms.h"
+
+#ifdef WITH_UNITTESTS
 #include "UT_Atl03Reader.h"
 #include "UT_Atl06Dispatch.h"
+#endif
 
 /******************************************************************************
  * PROTOTYPES
