@@ -74,11 +74,6 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
 
-TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
-MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
-STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
-SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
-
 CLANG_VER = "-12"
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -108,6 +103,10 @@ RELEASE_CFG += -DUSE_CCSDS_PACKAGE=OFF
 RELEASE_CFG += -DUSE_LEGACY_PACKAGE=OFF
 RELEASE_CFG += -DUSE_PISTACHE_PACKAGE=OFF
 RELEASE_CFG += $(USERCFG)
+
+########################
+# Build Targets
+########################
 
 all: sliderule
 
@@ -167,17 +166,8 @@ sliderule: ## build the server using the local configuration
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
-selftest: ## run the self test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
-
-perfmtest: ## run mosaics performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
-
-perfstest: ## run strips performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
-
-perfsubsetest: ## run subset performance test
-	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+run-buildenv: ## run the build environment docker container
+	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
 manager-package: ## create the lambda python package for the manager
 	cd terraform/manager/python && ./package.sh
@@ -342,6 +332,31 @@ distclean: ## fully remove all non-version controlled files and directories
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f report.pdf
 	- rm -f report.xml
+
+########################
+# Test Targets
+########################
+
+TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
+MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
+STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
+SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
+
+selftest: ## run the self test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
+
+perfmtest: ## run mosaics performance test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
+
+perfstest: ## run strips performance test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
+
+perfsubsetest: ## run subset performance test
+	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+
+########################
+# Help Target
+########################
 
 help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

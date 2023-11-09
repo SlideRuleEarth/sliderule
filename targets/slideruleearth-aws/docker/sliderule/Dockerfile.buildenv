@@ -100,6 +100,7 @@ RUN git clone https://github.com/pistacheio/pistache.git
 WORKDIR /pistache
 RUN meson setup build
 RUN meson install -C build
+RUN ldconfig
 
 # support interactive mode
 WORKDIR /
