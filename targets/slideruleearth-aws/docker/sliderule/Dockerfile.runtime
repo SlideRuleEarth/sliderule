@@ -4,85 +4,9 @@ FROM $repo/sliderule-buildenv:latest AS buildenv
 # copy sliderule source repository
 COPY sliderule /sliderule
 
-# build and install sliderule into staging
-RUN mkdir -p /build/sliderule
-WORKDIR /build/sliderule
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          -DMAX_FREE_STACK_SIZE=1 \
-          -DUSE_ARROW_PACKAGE=ON \
-          -DUSE_AWS_PACKAGE=ON \
-          -DUSE_H5_PACKAGE=ON \
-          -DUSE_NETSVC_PACKAGE=ON \
-          -DUSE_GEO_PACKAGE=ON \
-          -DUSE_LEGACY_PACKAGE=OFF \
-          -DUSE_CCSDS_PACKAGE=OFF \
-          /sliderule
-RUN make -j8
-RUN make install
-
-# build and install target configuration into staging
-RUN mkdir -p /build/target
-WORKDIR /build/target
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/targets/slideruleearth-aws
-RUN make -j8
-RUN make install
-
-# build and install gedi plugin into staging
-RUN mkdir -p /build/gedi
-WORKDIR /build/gedi
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/gedi
-RUN make -j8
-RUN make install
-
-# build and install icesat2 plugin into staging
-RUN mkdir -p /build/icesat2
-WORKDIR /build/icesat2
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/icesat2
-RUN make -j8
-RUN make install
-
-# build and install landsat plugin into staging
-RUN mkdir -p /build/landsat
-WORKDIR /build/landsat
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/landsat
-RUN make -j8
-RUN make install
-
-# build and install opendata plugin into staging
-RUN mkdir -p /build/opendata
-WORKDIR /build/opendata
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/opendata
-RUN make -j8
-RUN make install
-
-# build and install pgc plugin into staging
-RUN mkdir -p /build/pgc
-WORKDIR /build/pgc
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/pgc
-RUN make -j8
-RUN make install
-
-# build and install swot plugin into staging
-RUN mkdir -p /build/swot
-WORKDIR /build/swot
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/swot
-RUN make -j8
-RUN make install
-
-# build and install usgs3dep plugin into staging
-RUN mkdir -p /build/usgs3dep
-WORKDIR /build/usgs3dep
-RUN cmake -DCMAKE_BUILD_TYPE=Release \
-          /sliderule/plugins/usgs3dep
-RUN make -j8
-RUN make install
+# build and install sliderule application
+WORKDIR /sliderule/targets/slideruleearth-aws
+RUN make config-release INSTALL_DIR=/usr/local && make
 
 # install project specific files
 COPY etc/* /usr/local/etc/sliderule/

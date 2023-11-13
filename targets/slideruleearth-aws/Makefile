@@ -58,6 +58,7 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -79,7 +80,7 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverri
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
+DEBUG_CFG += -DINSTALLDIR=$(INSTALL_DIR)
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
@@ -93,7 +94,7 @@ DEBUG_CFG += -DUSE_PISTACHE_PACKAGE=ON
 DEBUG_CFG += $(USERCFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
-RELEASE_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
+RELEASE_CFG += -DINSTALLDIR=$(INSTALL_DIR)
 RELEASE_CFG += -DUSE_ARROW_PACKAGE=ON
 RELEASE_CFG += -DUSE_AWS_PACKAGE=ON
 RELEASE_CFG += -DUSE_GEO_PACKAGE=ON
@@ -164,7 +165,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(SWOT_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
