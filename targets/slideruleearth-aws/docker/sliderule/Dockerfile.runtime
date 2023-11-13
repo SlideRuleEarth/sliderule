@@ -9,7 +9,7 @@ WORKDIR /sliderule/targets/slideruleearth-aws
 RUN make config-release INSTALL_DIR=/usr/local && make
 
 # install project specific files
-COPY etc/* /usr/local/etc/sliderule/
+COPY config.json /usr/local/etc/sliderule/
 
 # install runtime dependencies
 FROM ubuntu:20.04 AS runtime

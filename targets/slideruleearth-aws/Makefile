@@ -224,10 +224,10 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
-	mkdir -p $(SERVER_STAGE_DIR)/etc
+	mkdir -p $(SERVER_STAGE_DIR)
 	rsync -a $(ROOT) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
-	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
+	cp docker/sliderule/config.json $(SERVER_STAGE_DIR)
 	cd $(SERVER_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
