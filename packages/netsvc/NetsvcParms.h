@@ -58,6 +58,7 @@ class NetsvcParms: public LuaObject
         static const char* RASTER;
         static const char* LATITUDE;
         static const char* LONGITUDE;
+        static const char* PROJECTION;
         static const char* RQST_TIMEOUT;
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
@@ -87,6 +88,10 @@ class NetsvcParms: public LuaObject
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
 
+        MathLib::proj_t         projection;                     // which projection to use for the polygon
+        MathLib::point_t*       projected_poly;                 // array of points that hold the projected polygon
+        int                     points_in_poly;                 // number of points in the projected polygon
+
     protected:
 
         /*--------------------------------------------------------------------
@@ -98,6 +103,7 @@ class NetsvcParms: public LuaObject
         void                    cleanup                 (void) const;
         void                    get_lua_polygon         (lua_State* L, int index, bool* provided);
         void                    get_lua_raster          (lua_State* L, int index, bool* provided);
+        void                    get_lua_projection      (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __netsvc_parms__ */

@@ -175,16 +175,12 @@ class Atl03Reader: public LuaObject
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (void);
+                void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
                 H5Array<int32_t>    segment_ph_cnt;
-
-                MathLib::point_t*   projected_poly;
-                MathLib::proj_t     projection;
-                int                 points_in_polygon;
 
                 bool*               inclusion_mask;
                 bool*               inclusion_ptr;

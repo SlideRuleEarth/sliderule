@@ -62,7 +62,8 @@ class MathLib
         typedef enum {
             NORTH_POLAR,
             SOUTH_POLAR,
-            PLATE_CARREE
+            PLATE_CARREE,
+            AUTOMATIC
         } proj_t;
 
         /* Geospatial Coordinate */

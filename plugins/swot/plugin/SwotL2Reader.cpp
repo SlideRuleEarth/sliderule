@@ -266,21 +266,6 @@ void SwotL2Reader::Region::cleanup (void) const
  *----------------------------------------------------------------------------*/
 void SwotL2Reader::Region::polyregion (SwotParms* _parms)
 {
-    int points_in_polygon = _parms->polygon.length();
-
-    /* Determine Best Projection To Use */
-    MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(lat[0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(lat[0] < -70.0) projection = MathLib::SOUTH_POLAR;
-
-    /* Project Polygon */
-    List<MathLib::coord_t>::Iterator poly_iterator(_parms->polygon);
-    MathLib::point_t* projected_poly = new MathLib::point_t [points_in_polygon];
-    for(int i = 0; i < points_in_polygon; i++)
-    {
-        projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
-    }
-
     /* Find First and Last Lines in Polygon */
     bool first_line_found = false;
     bool last_line_found = false;
@@ -291,10 +276,10 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
 
         /* Project Line Coordinate */
         MathLib::coord_t line_coord = {CONVERT_LON(lon[line]), CONVERT_LAT(lat[line])};
-        MathLib::point_t line_point = MathLib::coord2point(line_coord, projection);
+        MathLib::point_t line_point = MathLib::coord2point(line_coord, _parms->projection);
 
         /* Test Inclusion */
-        if(MathLib::inpoly(projected_poly, points_in_polygon, line_point))
+        if(MathLib::inpoly(_parms->projected_poly, _parms->points_in_poly, line_point))
         {
             inclusion = true;
         }
@@ -321,9 +306,6 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
     {
         num_lines = (line - 1) - first_line;
     }
-
-    /* Delete Projected Polygon */
-    delete [] projected_poly;
 }
 
 /*----------------------------------------------------------------------------

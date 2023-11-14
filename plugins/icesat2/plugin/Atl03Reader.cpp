@@ -344,25 +344,6 @@ Atl03Reader::Region::Region (info_t* info):
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
-    /* Process Area of Interest */
-    projected_poly = NULL;
-    projection = MathLib::PLATE_CARREE;
-    points_in_polygon = info->reader->parms->polygon.length();
-    if(points_in_polygon > 0)
-    {
-        /* Determine Best Projection To Use */
-        if(info->reader->parms->polygon[0].lat > 70.0) projection = MathLib::NORTH_POLAR;
-        else if(info->reader->parms->polygon[0].lat < -70.0) projection = MathLib::SOUTH_POLAR;
-
-        /* Project Polygon */
-        List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
-        projected_poly = new MathLib::point_t [points_in_polygon];
-        for(int i = 0; i < points_in_polygon; i++)
-        {
-            projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
-        }
-    }
-
     try
     {
         /* Join Reads */
@@ -381,9 +362,9 @@ Atl03Reader::Region::Region (info_t* info):
         {
             rasterregion(info);
         }
-        else if(points_in_polygon > 0)
+        else if(info->reader->parms->points_in_poly > 0)
         {
-            polyregion();
+            polyregion(info);
         }
         else
         {
@@ -422,23 +403,14 @@ Atl03Reader::Region::~Region (void)
  *----------------------------------------------------------------------------*/
 void Atl03Reader::Region::cleanup (void)
 {
-    if(projected_poly)
-    {
-        delete [] projected_poly;
-        projected_poly = NULL;
-    }
-    
-    if(inclusion_mask)
-    {
-        delete [] inclusion_mask;
-        inclusion_mask = NULL;
-    }
+    delete [] inclusion_mask;
+    inclusion_mask = NULL;
 }
 
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Region::polyregion (void)
+void Atl03Reader::Region::polyregion (info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -449,10 +421,10 @@ void Atl03Reader::Region::polyregion (void)
 
         /* Project Segment Coordinate */
         MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
-        MathLib::point_t segment_point = MathLib::coord2point(segment_coord, projection);
+        MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
-        if(MathLib::inpoly(projected_poly, points_in_polygon, segment_point))
+        if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, segment_point))
         {
             inclusion = true;
         }
