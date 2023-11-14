@@ -212,6 +212,10 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
+static-website-docker-push: ## push static-website docker image to registry
+	docker push $(ECR)/static-website:$(VERSION)
+	docker push $(ECR)/static-website:$(MAJOR_VERSION)
+
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
@@ -221,6 +225,10 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
+
+sliderule-buildenv-docker-push: ## push build environment docker image to registry
+	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
@@ -262,7 +270,6 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-docker: ## build all cluster docker images
-	make sliderule-buildenv-docker
 	make sliderule-docker
 	make ilb-docker
 	make proxy-docker
@@ -304,14 +311,12 @@ tag: ## create version tag in this repository and release it on GitHub
 
 release: ## release a version of sliderule; needs VERSION
 	make tag
+	make sliderule-buildenv-docker
+	make sliderule-buildenv-docker-push
 	make cluster-docker
 	make cluster-docker-push
-	make sliderule-buildenv-docker
-	docker push $(ECR)/sliderule-buildenv:$(VERSION)
-	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 	make static-website-docker
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/static-website:$(MAJOR_VERSION)
+	make static-website-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
 
