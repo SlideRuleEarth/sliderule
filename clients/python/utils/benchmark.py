@@ -241,7 +241,7 @@ def atl06_no_sample_arcticdem():
 def atl03_rasterized_subset():
     parms = { 
         "poly": region['poly'],
-        "raster": region['raster'], # TODO: this is very slow!
+        "raster": region['raster'],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_LOW,
         "ats": 20.0,
