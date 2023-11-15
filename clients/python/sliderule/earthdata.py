@@ -790,10 +790,11 @@ def search(parm, resources=None):
     cmr_kwargs = {}
 
     # Pull Out Polygon
-    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
-        cmr_kwargs['polygon'] = parm["clusters"]
-    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
-        cmr_kwargs['polygon'] = parm["poly"]
+    if "use_poly_for_cmr" not in parm or parm["use_poly_for_cmr"]:
+        if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
+            cmr_kwargs['polygon'] = parm["clusters"]
+        elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
+            cmr_kwargs['polygon'] = parm["poly"]
 
     # Pull Out Time Period
     if "t0" in parm:

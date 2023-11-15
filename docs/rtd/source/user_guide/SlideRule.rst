@@ -128,6 +128,10 @@ Parameters are passed to the SlideRule endpoints as JSON data structures (or as 
 
 All polygons provided to SlideRule must be provided as a list of dictionaries containing longitudes and latitudes in counter-clockwise order with the first and last point matching.
 
+* ``"poly"``: polygon of region of interest
+* ``"proj"``: projection used when subsetting data ("north_polar", "south_polar", "plate_carree"). In most cases, do not specify and code will do the right thing.
+* ``"use_poly_for_cmr"``: boolean for whether to use the polygon as a part of the request to CMR for obtaining the list of resources to process. By default the polygon is used and this is only here for unusual cases where SlideRule is able to handle a polygon for subsetting that CMR cannot, and the list of resources to process is obtained some other way.
+
 For example:
 
 .. code-block:: python
@@ -137,6 +141,9 @@ For example:
                {"lon": -107.7818591266989, "lat": 39.26613714985466},
                {"lon": -108.3605610678553, "lat": 39.25086131372244},
                {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+    parms = {
+        "poly": region['poly']
+    }
 
 In order to facilitate other formats, the ``sliderule.toregion`` function can be used to convert polygons from the GeoJSON and Shapefile formats into this format accepted by `SlideRule`.
 
@@ -146,6 +153,8 @@ There is no limit to the number of points in the polygon, but note that as the n
 -------------
 
 One of the outputs of the ``sliderule.toregion`` function is a GeoJSON object that describes the region of interest.  It is available under the ``"raster"`` element of the returned dictionary.
+
+* ``"raster"``: geojson describing region of interest, enables use of rasterized region for subsetting
 
 When supplied in the parameters sent in the request, the server side software forgoes using the polygon for subsetting operations, and instead builds a raster of the GeoJSON object using the specified cellsize, and then uses that raster image as a mask to determine which points in the source datasets are included in the region of interest.
 
@@ -292,6 +301,12 @@ The default set of parameters used by SlideRule are set to match anticipated use
    * - ``"poly"``
      - String, JSON
      -
+   * - ``"proj"``
+     - String
+     -
+   * - ``"use_poly_for_cmr"``
+     - Boolean
+     - True
    * - ``"raster"``
      - String, JSON
      -

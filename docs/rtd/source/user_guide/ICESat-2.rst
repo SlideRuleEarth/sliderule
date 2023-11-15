@@ -117,6 +117,7 @@ The ancillary field parameters allow the user to request additional fields from 
 
 * ``"atl03_geo_fields"``: fields in the "geolocation" and "geophys_corr" groups of the ATL03 granule
 * ``"atl03_ph_fields"``: fields in the "heights" group of the ATL03 granule
+* ``"atl06_fields"``: fields in the "land_ice_segments" group of the ATL06 granule
 
 For example:
 
@@ -124,7 +125,8 @@ For example:
 
     parms = {
         "atl03_geo_fields":     ["solar_elevation"],
-        "atl03_ph_fields":      ["pce_mframe_cnt"]
+        "atl03_ph_fields":      ["pce_mframe_cnt"],
+        "atl06_fields":         ["ground_track/ref_azimuth"]
     }
 
 2.6 PhoREAL parameters
