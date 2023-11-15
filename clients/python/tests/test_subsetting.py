@@ -49,6 +49,28 @@ class TestSubsetting:
         assert abs(gdf["h_mean"].describe()["mean"] - 1963.3553175453283) < 0.01
         assert abs(gdf["y_atc"].describe()["mean"] - 1.438330888748169) < 0.01
 
+    def test_180_edge_plate_carree(self, init):
+        resource = "ATL03_20221012073759_03291712_005_01.h5"
+        poly = [ { "lat": -73.0, "lon": -180.00 },
+                 { "lat": -74.0, "lon": -180.00 },
+                 { "lat": -74.0, "lon": 180.00 },
+                 { "lat": -73.0, "lon": 180.00 },
+                 { "lat": -73.0, "lon": -180.00 } ]
+        parms = { 
+            "poly": poly,
+            "proj": "plate_carree",
+            "srt": icesat2.SRT_LAND,
+            "cnf": icesat2.CNF_SURFACE_LOW,
+            "ats": 20.0,
+            "cnt": 10,
+            "len": 40.0,
+            "res": 20.0 }
+        gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
+        assert len(gdf) == 33973
+        assert abs(gdf["h_mean"].describe()["mean"] - 2105.1968807146873) < 0.01
+        assert abs(gdf["y_atc"].describe()["mean"] - -0.3240036070346832) < 0.01
+
     def test_150_translation(self, init):
         resource = "ATL03_20221009072040_02831712_005_01.h5"
         poly = [ { "lat": -73.0, "lon": 160.00 },
