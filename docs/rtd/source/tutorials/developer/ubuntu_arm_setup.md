@@ -65,55 +65,11 @@ sudo systemctl enable apport.service
 - create a key on the server, while logged into your account: `ssh-keygen -t rsa -b 4096 -C "your_email@example.com"`
 - add the key as an ssh key to your github account
 
-### 6. Update and Install OS Packages
+### 6. Install and Configure Git
 
-The following OS dependencies are needed to build the SlideRule server.
 ```bash
-sudo apt install build-essential libreadline-dev liblua5.3-dev
-sudo apt install git cmake
-sudo apt install curl libcurl4-openssl-dev
-sudo apt install zlib1g-dev
-sudo apt install libgdal-dev
+sudo apt install git
 ```
-
-Note: starting with release v2.1.0, SlideRule requires a >=3.6.0 version of GDAL.  This can require building GDAL from source.  See the SlideRule cluster Dockerfile for details on how that could be accomplished.
-
-### 7. Install RapidJson
-
-RapidJson is used by SlideRule for parsing JSON in the C++ server-side code.
-```bash
-git clone https://github.com/Tencent/rapidjson.git
-cd rapidjson
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
-```
-
-### 8. Install Apache Arrow
-
-Apache Arrow is used by SlideRule for its GeoParquet support.
-```bash
-git clone https://github.com/apache/arrow.git
-cd arrow
-mkdir build
-cd build
-cmake .. -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON
-make -j8
-sudo make install
-```
-
-### 9. Install Pistache
-
-SlideRule supports running either a native HTTP server, or the Pistache HTTP server which requires the Pistache library to be installed.
-```bash
-$ sudo add-apt-repository ppa:pistache+team/unstable
-$ sudo apt update
-$ sudo apt install libpistache-dev
-```
-
-### 10. Configure Git
 
 Create the local file `~/.gitconfig` in the user's home directory with the following contents:
 ```yml
@@ -151,18 +107,16 @@ Create the local file `~/.gitconfig` in the user's home directory with the follo
 	helper = !/usr/bin/gh auth git-credential
 ```
 
-### 11. Clone Projects
+### 7. Clone Projects
 
 ```bash
 mkdir meta
 cd meta
 git clone git@github.com:ICESat2-SlideRule/sliderule.git
 git clone git@github.com:ICESat2-SlideRule/sliderule-python.git
-git clone git@github.com:ICESat2-SlideRule/sliderule-docs.git
-git clone git@github.com:ICESat2-SlideRule/sliderule-build-and-deploy.git
 ```
 
-### 12. Installing and Configuring Docker
+### 8. Installing and Configuring Docker
 
 ```bash
 sudo apt-get install ca-certificates curl gnupg lsb-release
@@ -175,34 +129,19 @@ sudo usermod -aG docker <username>
 newgrp docker
 ```
 
-### 13. Installing Docker-Compose
+### 9. Install Dependencies got Local Build
 
+The most reliable way to install all of the dependencies needed to build sliderule is to follow the steps outlined in the [Dockerfile](https://github.com/ICESat2-SlideRule/sliderule/blob/main/targets/slideruleearth-aws/docker/sliderule/Dockerfile.buildenv) for building the development environment.  Some translation of the steps from the Dockerfile format is needed, but all of the dependencies and the configuration options needed for those dependencies are explicitly called out in that file.
+
+Alternatively, the `sliderule-buildenv` Docker image can be built and used as your development environment.  To do so, run the following commands from the root of the sliderule repository.
 ```bash
-wget https://github.com/docker/compose/releases/download/v2.11.2/docker-compose-linux-aarch64
-sudo mv docker-compose-linux-aarch64 /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+cd targets/slideruleearth-aws
+make sliderule-buildenv-docker
+make run-buildenv
 ```
+Then, inside the container, you'll find the sliderule repository at `/host/sliderule`.  Change directory there and you will then be able to build the sliderule code however you'd like use the provided makefiles under the root and `targets` directory.
 
-### 14. Installing NGINX
-
-Install NGINX which is used for running the containers locally.
-```bash
-sudo apt install nginx
-```
-Copy over the nginx configuration and restart nginx
-```bash
-sudo cp nginx.service /etc/nginx/sites-available/sliderule
-sudo ln -s /etc/nginx/sites-available/sliderule /etc/nginx/sites-enabled/sliderule
-sudo unlink /etc/nginx/sites-enabled/default
-```
-
-Create the self-signed certs
-```bash
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
-sudo systemctl restart nginx
-```
-
-### 15. Install and Configure Miniconda
+### 10. Install and Configure Miniconda
 
 ```bash
 wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-aarch64.sh
@@ -212,7 +151,9 @@ conda config --set changeps1 False
 conda config --set auto_activate_base false
 ```
 
-### 16. Install GitHub Command Line Client
+Once you have miniconda setup, you can navigate to the `sliderule-python` repository and run `conda env create -f environment.yml` to create a `sliderule_env` environment with everything you will need for the SlideRule Python client.
+
+### 11. Install GitHub Command Line Client
 
 ```bash
 type -p curl >/dev/null || sudo apt install curl -y
@@ -223,7 +164,7 @@ curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo 
 && sudo apt install gh -y
 ```
 
-### 17. Install and Configure AWS Command Line Client
+### 12. Install and Configure AWS Command Line Client
 
 ```bash
 sudo apt install awscli
@@ -251,7 +192,7 @@ To login to the AWS Elastic Container Registry, run:
 aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $account_number.dkr.ecr.$region.amazonaws.com
 ```
 
-### 18. Install Terraform & Packer
+### 13. Install Terraform & Packer
 
 ```bash
 sudo apt install unzip

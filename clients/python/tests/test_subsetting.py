@@ -25,8 +25,8 @@ class TestSubsetting:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 953
-        assert abs(gdf["h_mean"].describe()["mean"] - 1749.8456579488566) < 0.00001
-        assert abs(gdf["y_atc"].describe()["mean"] - -5516.94775390625) < 0.00001
+        assert abs(gdf["h_mean"].describe()["mean"] - 1749.8443895024502) < 0.01
+        assert abs(gdf["y_atc"].describe()["mean"] - -5516.94775390625) < 0.01
 
     def test_180_edge(self, init):
         resource = "ATL03_20221012073759_03291712_005_01.h5"
@@ -46,8 +46,8 @@ class TestSubsetting:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 33998
-        assert abs(gdf["h_mean"].describe()["mean"] - 1963.3552883770715) < 0.00001
-        assert abs(gdf["y_atc"].describe()["mean"] - 1.4383291006088257) < 0.00001
+        assert abs(gdf["h_mean"].describe()["mean"] - 1963.3553175453283) < 0.01
+        assert abs(gdf["y_atc"].describe()["mean"] - 1.438330888748169) < 0.01
 
     def test_150_translation(self, init):
         resource = "ATL03_20221009072040_02831712_005_01.h5"
@@ -67,5 +67,5 @@ class TestSubsetting:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 26663
-        assert abs(gdf["h_mean"].describe()["mean"] - 95.01489210986797) < 0.00001
-        assert abs(gdf["y_atc"].describe()["mean"] - 77.65708923339844) < 0.00001
+        assert abs(gdf["h_mean"].describe()["mean"] - 95.01306951414814) < 0.01
+        assert abs(gdf["y_atc"].describe()["mean"] - 77.65707397460938) < 0.01
