@@ -33,7 +33,7 @@ The client will have four main views:
 3. A ***record*** view - a list of recent SlideRule requests along with the results available to replot and interrogate
 4. A ***profile*** view - a scatter plot of along track data associated with one of the SlideRule processing requests
 
-
+![Figure 2](https://raw.githubusercontent.com/ICESat2-SlideRule/assets/main/web-client-view1.png "Beginner View")
 
 ## Implementation Considerations
 
