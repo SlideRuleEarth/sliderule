@@ -28,17 +28,17 @@ The web client runs in a docker container inside a provisioned SlideRule cluster
 ![Figure 1](../assets/web-client-context.png "SlideRule Web Client Context")
 
 A typical workflow for a user interacting with the web client is:
-(1) An area of interest is drawn on the map
-(2) An processing request type (i.e. API or endpoint) is selected, along with any associated parameters
-(3) The "Run SlideRule" button is clicked and a progress indication is given to the user
-(4) The results of the processing run are displayed onto the map; the user interacts with the map to analyze the data
-(5) The user selects a data point on the map and uses it to prepopulate an additional request to an along-track API for that data
-(6) The user finishes populating the along-track request and clicks "Run SlideRule" again; they are immediately taken to another view where there see both the previous run, and this current run which is in progress
-(7) When the current run completes, they see a scatter plot of the along-track data, zooming in and out to get a better understanding of it.
-(8) The user then uses the request record for the previous run to show that plot of the data again on a map view, they select a different ground track, but this time instead of using it to populate the parameters for an along-track request, they just directly plot the data into a scatter plot.
-(9) The user then starts plotting diffrent columns in the returned data set in that scatter plot to get a better understanding of the data.
-(10) Once satisfied, the user saves all of the data from the original processing run into a GeoParquet file on their computer; they do the same thing for the along-track processing run.
-(11) The user exits all browser tabs running the client, and the client clears all records and memory within the browser associated with what the user did. 
+1. An area of interest is drawn on the map
+2. An processing request type (i.e. API or endpoint) is selected, along with any associated parameters
+3. The "Run SlideRule" button is clicked and a progress indication is given to the user
+4. The results of the processing run are displayed onto the map; the user interacts with the map to analyze the data
+5. The user selects a data point on the map and uses it to prepopulate an additional request to an along-track API for that data
+6. The user finishes populating the along-track request and clicks "Run SlideRule" again; they are immediately taken to another view where there see both the previous run, and this current run which is in progress
+7. When the current run completes, they see a scatter plot of the along-track data, zooming in and out to get a better understanding of it.
+8. The user then uses the request record for the previous run to show that plot of the data again on a map view, they select a different ground track, but this time instead of using it to populate the parameters for an along-track request, they just directly plot the data into a scatter plot.
+9. The user then starts plotting diffrent columns in the returned data set in that scatter plot to get a better understanding of the data.
+10. Once satisfied, the user saves all of the data from the original processing run into a GeoParquet file on their computer; they do the same thing for the along-track processing run.
+11. The user exits all browser tabs running the client, and the client clears all records and memory within the browser associated with what the user did. 
 
 The client will have four main views:
 1. A ***beginner*** view - a simple map interface that is intuitive and allows users to quickly access basic features of SlideRule
@@ -116,8 +116,8 @@ A difference between two columns in the returned data can be plotted onto the ma
 
 #### SRWC-2.4: Profile Axis
 
-(1) The X-Axis of the profile plot shall user selectable between either distance or time; the default is time.
-(2) The Y-Axis of the profile plot shall be selectable from a drop-down list of all available columns; the client will maintain a list of default columns to use for each endpoint which is initially displayed.
+1. The X-Axis of the profile plot shall user selectable between either distance or time; the default is time.
+2. The Y-Axis of the profile plot shall be selectable from a drop-down list of all available columns; the client will maintain a list of default columns to use for each endpoint which is initially displayed.
 
 #### SRWC-2.5: Plot Performance
 
@@ -125,11 +125,11 @@ The performance goal for the client is to plot 10M points onto the map and profi
 
 #### SRWC-2.6: Area of Interest Selection
 
-(1) The user shall be able to draw a *polygon* on the map to define their area of interest
-(2) The user shall be able to draw a *bounding box* on the map to define their area of interest
-(3) The user shall be able to upload a *shapefile* on the map to define their area of interest
-(4) The user shall be able to upload a *geojson* on the map to define their area of interest
-(5) The user shall be able to type/paste a *geojson* string into an input box to define their area of interest
+1. The user shall be able to draw a *polygon* on the map to define their area of interest
+2. The user shall be able to draw a *bounding box* on the map to define their area of interest
+3. The user shall be able to upload a *shapefile* on the map to define their area of interest
+4. The user shall be able to upload a *geojson* on the map to define their area of interest
+5. The user shall be able to type/paste a *geojson* string into an input box to define their area of interest
 
 #### SRWC-2.7: Area of Interest Manipulation
 
@@ -178,27 +178,27 @@ The UI shall maintain a set of results and request parameters for the processing
 #### SRWC-3.2: Basic Mode
 
 In basic mode, the control panel shall display the following controls: 
-(1) A selection-type button for each supported API, to select which SlideRule request to make
-(2) A "Run SlideRule" button that executes the request
-(3) A "Manage Runs" button that navigates the user to the **request records** UI management view
-(4) A "Clear All Runs" button that deletes all runs from memory and resets the display 
+1. A selection-type button for each supported API, to select which SlideRule request to make
+2. A "Run SlideRule" button that executes the request
+3. A "Manage Runs" button that navigates the user to the **request records** UI management view
+4. A "Clear All Runs" button that deletes all runs from memory and resets the display 
 
 #### SRWC-3.3: Advanced Mode
 
 In advanced mode, the control panel shall display the following controls
-(1) All control elements present in basic mode
-(2) Resource query parameter controls specific to the API that has been selected that allow a user to make a processing request without an area of interest
-(3) A list of parameter controls specific to the API that has been selected; the parameter controls are grouped into exandable category sets (e.g. there might be a "Photon Classification" category with a expansion carrot next to it that once expanded displays a list of selection boxes for each of the photon classifiers supported by SlideRule)
-(4) A list of selection controls for the different raster datasets that can be sampled as a part of the current processing request.
-(5) A list of sampling parameter controls used to sample the selected rasters; only displayed once at least one raster is selected for sampling
-(6) S3 output parameter controls to support the user requesting that the output be written to an S3 bucket' to include their AWS S3 write credentials, S3 bucket, and output format information
+1. All control elements present in basic mode
+2. Resource query parameter controls specific to the API that has been selected that allow a user to make a processing request without an area of interest
+3. A list of parameter controls specific to the API that has been selected; the parameter controls are grouped into exandable category sets (e.g. there might be a "Photon Classification" category with a expansion carrot next to it that once expanded displays a list of selection boxes for each of the photon classifiers supported by SlideRule)
+4. A list of selection controls for the different raster datasets that can be sampled as a part of the current processing request.
+5. A list of sampling parameter controls used to sample the selected rasters; only displayed once at least one raster is selected for sampling
+6. S3 output parameter controls to support the user requesting that the output be written to an S3 bucket' to include their AWS S3 write credentials, S3 bucket, and output format information
 
 #### SRWC-3.4: Request Validation
 
 When a user clicks the "Run SlideRule" button, prior to the request being sent to the SlideRule service, the parameters of the request shall be heuristically validated, with three possible outcomes:
-(1) the request is valid and immediately passed to the SlideRule service
-(2) the request is valid but contains suspicious settings; a pop up prompt is presented to the user with the concerns, and the user is allowed to cancel the request or continue on to make the request; a "do not show again" selection button is also presented to the user with this pop up.
-(3) the request is invalid; a pop up is presented to the user stating the reason that the request is invalid, and no request is sent to the SlideRule service
+1. the request is valid and immediately passed to the SlideRule service
+2. the request is valid but contains suspicious settings; a pop up prompt is presented to the user with the concerns, and the user is allowed to cancel the request or continue on to make the request; a "do not show again" selection button is also presented to the user with this pop up.
+3. the request is invalid; a pop up is presented to the user stating the reason that the request is invalid, and no request is sent to the SlideRule service
 
 #### SRWC-3.5: Run SlideRule
 
@@ -223,8 +223,8 @@ If a user makes a processing request that does not contain any geospatial data t
 #### SRWC-3.9: Ground Track Selection
 
 When a user selects a data point in the map view, if that data point is a part of a ground track, then entire ground track shall be highlighted (in addition to the hover information for the data point being displayed).  With the ground track highlighted, the user shall be presented a set of options:
-(1) use ground track to prepopulate the appropriate track-based processing request (e.g. an ATL03 subsetting request) - this takes the user to the advanced mode control panel with the corresponding parameters populated for them
-(2) plot the ground track directly - this takes the user to the records view for the processing request and displayed the profile plot for the seleted ground track
+1. use ground track to prepopulate the appropriate track-based processing request (e.g. an ATL03 subsetting request) - this takes the user to the advanced mode control panel with the corresponding parameters populated for them
+2. plot the ground track directly - this takes the user to the records view for the processing request and displayed the profile plot for the seleted ground track
 
 
 ## 4. User Assistance
@@ -251,37 +251,37 @@ The UI shall provide a tutorial that guides a user through a series of steps nec
 #### SRWC-5.0: APIs
 
 The following APIs shall be supported:
-(1) `atl03sp`
-(2) `atl06sp`
-(3) `atl06p`
-(4) `atl08sp` - future
-(5) `atl08p`
-(6) `atl024sp` - future
-(7) `atl024p` - future
-(8) `gedi04ap`
-(9) `gedi02ap`
-(10) `gedi01bp`
-(11) `samples`
-(12) `subsets`
+1. `atl03sp`
+2. `atl06sp`
+3. `atl06p`
+4. `atl08sp` - future
+5. `atl08p`
+6. `atl024sp` - future
+7. `atl024p` - future
+8. `gedi04ap`
+9. `gedi02ap`
+10. `gedi01bp`
+11. `samples`
+12. `subsets`
 
 #### SRWC-5.1: Raster Sampling
 
 The following raster datasets shall be supported for sampling:
-(1) GEDI L3 gridded ground elevation
-(2) GEDI L3 gridded canopy height
-(3) GEDI L3 gridded ground elevation-standard deviation
-(4) GEDI L3 gridded canopy heigh-standard deviation
-(5) GEDI L3 gridded counts of valid laser footprints
-(6) MERIT Digital Elevation Model
-(7) Simulated SWOT Data
-(8) Simulated SWOT Data
-(9) USGS 3DEP 1m Digital Elevation Model
-(10) Worldwide land cover mapping
-(11) Harmonized LandSat Sentinal-2
-(12) PGC Arctic Digital Elevation Model Mosaic
-(13) PGC Arctic Digital Elevation Model Strips
-(14) PGC Reference Elevation Model of Antarctica Mosaic
-(15) PGC Reference Elevation Model of Antarctica Strips
+1. GEDI L3 gridded ground elevation
+2. GEDI L3 gridded canopy height
+3. GEDI L3 gridded ground elevation-standard deviation
+4. GEDI L3 gridded canopy heigh-standard deviation
+5. GEDI L3 gridded counts of valid laser footprints
+6. MERIT Digital Elevation Model
+7. Simulated SWOT Data
+8. Simulated SWOT Data
+9. USGS 3DEP 1m Digital Elevation Model
+10. Worldwide land cover mapping
+11. Harmonized LandSat Sentinal-2
+12. PGC Arctic Digital Elevation Model Mosaic
+13. PGC Arctic Digital Elevation Model Strips
+14. PGC Reference Elevation Model of Antarctica Mosaic
+15. PGC Reference Elevation Model of Antarctica Strips
 
 #### SRWC-5.2: Request Parameters
 
