@@ -36,7 +36,7 @@ A typical workflow for a user interacting with the web client is:
 6. The user finishes populating the along-track request and clicks "Run SlideRule" again; they are immediately taken to another view where there see both the previous run, and this current run which is in progress
 7. When the current run completes, they see a scatter plot of the along-track data, zooming in and out to get a better understanding of it.
 8. The user then uses the request record for the previous run to show that plot of the data again on a map view, they select a different ground track, but this time instead of using it to populate the parameters for an along-track request, they just directly plot the data into a scatter plot.
-9. The user then starts plotting diffrent columns in the returned data set in that scatter plot to get a better understanding of the data.
+9. The user then starts plotting different columns in the returned data set in that scatter plot to get a better understanding of the data.
 10. Once satisfied, the user saves all of the data from the original processing run into a GeoParquet file on their computer; they do the same thing for the along-track processing run.
 11. The user exits all browser tabs running the client, and the client clears all records and memory within the browser associated with what the user did. 
 
@@ -72,7 +72,7 @@ The Software should use a robust geospatial library for map functions: OpenLayer
 >
 > **UI** - the user interface taken as a whole, without specifying a particular component
 >
-> **Map** - the user interface component showing a gobal map
+> **Map** - the user interface component showing a global map
 >
 > **Profile** - the user interface component showing an along track scatter plot the data
 >
@@ -93,7 +93,7 @@ The client application shall run on Chrome, Firefox, and Safari.
 
 #### SRWC-1.2: Persistence
 
-When a user executes the client in their browser, no matter how many tabs they have open with the client running, there should only be a single execution environment for the application.  In other words, opening a new tab in the browser to display some other UI element of the application should have the same view as if that UI element was opened in the current tabl.  Once all tabs running the client have been closed, all data associated with the client should be deleted from memory.
+When a user executes the client in their browser, no matter how many tabs they have open with the client running, there should only be a single execution environment for the application.  In other words, opening a new tab in the browser to display some other UI element of the application should have the same view as if that UI element was opened in the current table.  Once all tabs running the client have been closed, all data associated with the client should be deleted from memory.
 
 
 ### 2. Plotting
@@ -210,7 +210,7 @@ When the results of a processing request are returned to the client, those resul
 
 #### SRWC-3.7: Concurrent Requests
 
-When a processing request is sent to the SlideRule service while another processing request is in progress, the first processing request should continue in the background with its data displayed on the map being cleared; the data for the superceding second processing request should then take over the map display with any returned data from it being displayed on the map.
+When a processing request is sent to the SlideRule service while another processing request is in progress, the first processing request should continue in the background with its data displayed on the map being cleared; the data for the superseding second processing request should then take over the map display with any returned data from it being displayed on the map.
 
 #### SRWC-3.7: Records View Plot Display
 
@@ -224,7 +224,7 @@ If a user makes a processing request that does not contain any geospatial data t
 
 When a user selects a data point in the map view, if that data point is a part of a ground track, then entire ground track shall be highlighted (in addition to the hover information for the data point being displayed).  With the ground track highlighted, the user shall be presented a set of options:
 1. use ground track to prepopulate the appropriate track-based processing request (e.g. an ATL03 subsetting request) - this takes the user to the advanced mode control panel with the corresponding parameters populated for them
-2. plot the ground track directly - this takes the user to the records view for the processing request and displayed the profile plot for the seleted ground track
+2. plot the ground track directly - this takes the user to the records view for the processing request and displayed the profile plot for the selected ground track
 
 
 ## 4. User Assistance
