@@ -67,6 +67,7 @@ const char* Icesat2Parms::DISTANCE_IN_SEGMENTS         = "dist_in_seg";
 const char* Icesat2Parms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* Icesat2Parms::ATL03_PH_FIELDS              = "atl03_ph_fields";
 const char* Icesat2Parms::ATL06_FIELDS                 = "atl06_fields";
+const char* Icesat2Parms::ATL08_FIELDS                 = "atl08_fields";
 const char* Icesat2Parms::PHOREAL                      = "phoreal";
 const char* Icesat2Parms::PHOREAL_BINSIZE              = "binsize";
 const char* Icesat2Parms::PHOREAL_GEOLOC               = "geoloc";
@@ -375,20 +376,26 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
 
         /* ATL03 Geolocaiont and Physical Correction Fields */
         lua_getfield(L, index, Icesat2Parms::ATL03_GEO_FIELDS);
-        get_lua_string_list (L, -1, &atl03_geo_fields, &provided);
+        get_lua_field_list (L, -1, &atl03_geo_fields, &provided);
         if(provided) mlog(DEBUG, "ATL03 geo field array supplied");
         lua_pop(L, 1);
 
         /* ATL03 Photon Fields */
         lua_getfield(L, index, Icesat2Parms::ATL03_PH_FIELDS);
-        get_lua_string_list (L, -1, &atl03_ph_fields, &provided);
+        get_lua_field_list (L, -1, &atl03_ph_fields, &provided);
         if(provided) mlog(DEBUG, "ATL03 photon field array supplied");
         lua_pop(L, 1);
 
         /* ATL06 Fields */
         lua_getfield(L, index, Icesat2Parms::ATL06_FIELDS);
-        get_lua_string_list (L, -1, &atl06_fields, &provided);
+        get_lua_field_list (L, -1, &atl06_fields, &provided);
         if(provided) mlog(DEBUG, "ATL06 field array supplied");
+        lua_pop(L, 1);
+
+        /* ATL08 Fields */
+        lua_getfield(L, index, Icesat2Parms::ATL08_FIELDS);
+        get_lua_field_list (L, -1, &atl08_fields, &provided);
+        if(provided) mlog(DEBUG, "ATL08 field array supplied");
         lua_pop(L, 1);
 
         /* PhoREAL */
@@ -794,9 +801,9 @@ void Icesat2Parms::get_lua_yapc (lua_State* L, int index, bool* provided)
 }
 
 /*----------------------------------------------------------------------------
- * get_lua_string_list
+ * get_lua_field_list
  *----------------------------------------------------------------------------*/
-void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t** string_list, bool* provided)
+void Icesat2Parms::get_lua_field_list (lua_State* L, int index, field_list_t** string_list, bool* provided)
 {
     /* Reset provided */
     if(provided) *provided = false;
@@ -809,7 +816,7 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
         if(num_strings > 0 && provided)
         {
             /* Allocate string list */
-            *string_list = new string_list_t(EXPECTED_NUM_FIELDS);
+            *string_list = new field_list_t(EXPECTED_NUM_FIELDS);
             *provided = true;
         }
 
@@ -818,11 +825,20 @@ void Icesat2Parms::get_lua_string_list (lua_State* L, int index, string_list_t**
         {
             /* Get item */
             lua_rawgeti(L, index, i+1);
-
             if(lua_isstring(L, -1))
             {
                 const char* item_str = LuaObject::getLuaString(L, -1);
-                string item(item_str);
+                anc_field_t item = {
+                    .field = item_str,
+                    .estimation = NEAREST_NEIGHBOR
+                };
+                /* Check Modifiers */
+                if(item.field.back() == '%')
+                {
+                    item.estimation = INTERPOLATION;
+                    item.field.pop_back();
+                }
+                /* Add Field to List */
                 (*string_list)->add(item);
                 mlog(DEBUG, "Adding %s to list of strings", item_str);
             }

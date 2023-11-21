@@ -82,6 +82,7 @@ class Icesat2Parms: public NetsvcParms
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
         static const char* ATL06_FIELDS;
+        static const char* ATL08_FIELDS;
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
         static const char* PHOREAL_GEOLOC;
@@ -204,8 +205,17 @@ class Icesat2Parms: public NetsvcParms
             PHOREAL_UNSUPPORTED = 3
         } phoreal_geoloc_t;
 
-        /* List of Strings */
-        typedef List<string> string_list_t;
+        /* Estimation Modes */
+        typedef enum {
+            NEAREST_NEIGHBOR = 0,
+            INTERPOLATION = 1
+        } estimation_t;
+
+        /* Ancillary Field Entry */
+        typedef struct {
+            string          field;
+            estimation_t    estimation;
+        } anc_field_t;
 
         /* YAPC Settings */
         typedef struct {
@@ -225,6 +235,9 @@ class Icesat2Parms: public NetsvcParms
             bool                send_waveform;                  // include the waveform in the results
             bool                above_classifier;               // use the ABoVE classification algorithm
         } phoreal_t;
+
+        /* List of Fields */
+        typedef List<anc_field_t> field_list_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -281,9 +294,10 @@ class Icesat2Parms: public NetsvcParms
         double                  maximum_robust_dispersion;      // sigma_r
         double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
         double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-        string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
-        string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
-        string_list_t*          atl06_fields;                   // list of per-photon fields to associate with a segment
+        field_list_t*           atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
+        field_list_t*           atl03_ph_fields;                // list of per-photon fields to associate with an extent
+        field_list_t*           atl06_fields;                   // list of ATL06 fields to associate with an ATL06 subsetting request
+        field_list_t*           atl08_fields;                   // list of ATL08 fields to associate with an extent
         phoreal_t               phoreal;                        // phoreal algorithm settings
 
     private:
@@ -300,7 +314,7 @@ class Icesat2Parms: public NetsvcParms
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
-        static void             get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
+        static void             get_lua_field_list      (lua_State* L, int index, field_list_t** string_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 

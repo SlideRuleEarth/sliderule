@@ -217,8 +217,8 @@ class Atl03Reader: public LuaObject
                 H5Array<double>     bckgrd_delta_time;
                 H5Array<float>      bckgrd_rate;
 
-                H5DArrayDictionary  anc_geo_data;
-                H5DArrayDictionary  anc_ph_data;
+                H5DArrayDictionary* anc_geo_data;
+                H5DArrayDictionary* anc_ph_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -256,6 +256,10 @@ class Atl03Reader: public LuaObject
                 H5Array<int32_t>    segment_id_beg;
                 H5Array<int16_t>    segment_landcover;
                 H5Array<int8_t>     segment_snowcover;
+
+                /* Ancillary Data */
+                H5DArrayDictionary* anc_seg_data;
+                Dictionary<bool>*   anc_seg_est;
         };
 
         /* YAPC Score Subclass */
@@ -341,7 +345,7 @@ class Atl03Reader: public LuaObject
         static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
         uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::field_list_t* field_list, H5DArrayDictionary* field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

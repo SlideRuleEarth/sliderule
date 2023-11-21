@@ -113,11 +113,15 @@ The ATL06-SR algorithm fits a line segment to the photons in each extent, using 
 2.5 Ancillary field parameters
 ------------------------------
 
-The ancillary field parameters allow the user to request additional fields from the ATL03 granule to be returned with the photon extent and ATL06-SR elevation responses.  Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.
+The ancillary field parameters allow the user to request additional fields from the source datasets being subsetted.
+The ``"atl03_geo_fields"``, ``"atl03_ph_fields"``, and ``"atl08_fields"`` are used to specify additional fields in the ATL03 and ATL08 granules to be returned with the photon extent and ATL06-SR elevation responses.  
+The ``"atl06_fields"`` is used to specify additional fields in the ATL06 granule for ATL06 subsetting requests.
+Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.
 
 * ``"atl03_geo_fields"``: fields in the "geolocation" and "geophys_corr" groups of the ATL03 granule
 * ``"atl03_ph_fields"``: fields in the "heights" group of the ATL03 granule
 * ``"atl06_fields"``: fields in the "land_ice_segments" group of the ATL06 granule
+* ``"atl08_fields"``: fields in the "land_segments" group of the ATL08 granule
 
 For example:
 
@@ -126,7 +130,8 @@ For example:
     parms = {
         "atl03_geo_fields":     ["solar_elevation"],
         "atl03_ph_fields":      ["pce_mframe_cnt"],
-        "atl06_fields":         ["ground_track/ref_azimuth"]
+        "atl06_fields":         ["ground_track/ref_azimuth"],
+        "atl08_fields":         ["asr"]
     }
 
 2.6 PhoREAL parameters

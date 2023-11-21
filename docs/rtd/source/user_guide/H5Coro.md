@@ -136,7 +136,8 @@ The H5Coro C++ API supports a two very similar functions:
 #### H5Coro::read
 
 ```cpp
-info_t H5Coro::read (const char* url,
+info_t H5Coro::read (Asset* asset,
+                     const char* resource,
                      const char* datasetname,
                      RecordObject::valType_t valtype,
                      long col,
@@ -146,8 +147,11 @@ info_t H5Coro::read (const char* url,
                      bool _meta_only)
 ```
 
-url
-:    the fully qualified path to the H5 file (i.e. s3:///mybucket/folder/myfile.h5)
+asset
+:    a pointer to an asset object that describes the driver to use and any authentication information if necessary
+
+resource
+:    the path to the H5 file appended to the asset's base path (e.g. folder/myfile.h5)
 
 datasetname
 :    the full path to the name of the dataset within the H5 file
@@ -190,7 +194,8 @@ The `H5Coro::read` call is thread-safe and concurrent, allowing any number of th
 #### H5Coro::read
 
 ```cpp
-H5Future* H5Coro::readp (const char* url,
+H5Future* H5Coro::readp (const char* asset,
+                         const char* resource,
                          const char* datasetname,
                          RecordObject::valType_t valtype,
                          long col,

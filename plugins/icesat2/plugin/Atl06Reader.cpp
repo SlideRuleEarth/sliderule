@@ -445,14 +445,14 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
     r_eff                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/r_eff").c_str(),                    &info->reader->context, 0, region.first_segment, region.num_segments),
     tide_ocean              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/tide_ocean").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments)
 {
-    Icesat2Parms::string_list_t* anc_fields = info->reader->parms->atl06_fields;
+    Icesat2Parms::field_list_t* anc_fields = info->reader->parms->atl06_fields;
 
     /* Read Ancillary Fields */
     if(anc_fields)
     {
         for(int i = 0; i < anc_fields->length(); i++)
         {
-            const char* field_name = (*anc_fields)[i].c_str();
+            const char* field_name = (*anc_fields)[i].field.c_str();
             FString dataset_name("%s/land_ice_segments/%s", info->prefix, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
             bool status = anc_data.add(field_name, array);
@@ -594,7 +594,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                 {
                     anc_t* rec = reinterpret_cast<anc_t*>(ancillary[i]->getRecordData());
                     rec->data[segment].extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
-                    const char* field_name = parms->atl06_fields->get(i).c_str();
+                    const char* field_name = parms->atl06_fields->get(i).field.c_str();
                     rec->data_type = atl06.anc_data[field_name]->elementType();
                     atl06.anc_data[field_name]->serialize(&rec->data[segment].value[0], segment, 1);
                 }

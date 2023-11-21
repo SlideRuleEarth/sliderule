@@ -574,18 +574,19 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     delta_time          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
     bckgrd_delta_time   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str(),     &info->reader->context),
     bckgrd_rate         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str(),    &info->reader->context),
-    anc_geo_data        (Icesat2Parms::EXPECTED_NUM_FIELDS),
-    anc_ph_data         (Icesat2Parms::EXPECTED_NUM_FIELDS)
+    anc_geo_data        (NULL),
+    anc_ph_data         (NULL)
 {
-    Icesat2Parms::string_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    Icesat2Parms::string_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
+    Icesat2Parms::field_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    Icesat2Parms::field_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
     {
+        anc_geo_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
         for(int i = 0; i < geo_fields->length(); i++)
         {
-            const char* field_name = (*geo_fields)[i].c_str();
+            const char* field_name = (*geo_fields)[i].field.c_str();
             const char* group_name = "geolocation";
             if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
                 (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
@@ -596,7 +597,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
             }
             FString dataset_name("%s/%s", group_name, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
-            bool status = anc_geo_data.add(field_name, array);
+            bool status = anc_geo_data->add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -605,12 +606,13 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     /* Read Ancillary Photon Fields */
     if(photon_fields)
     {
+        anc_ph_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
         for(int i = 0; i < photon_fields->length(); i++)
         {
-            const char* field_name = (*photon_fields)[i].c_str();
+            const char* field_name = (*photon_fields)[i].field.c_str();
             FString dataset_name("heights/%s", field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
-            bool status = anc_ph_data.add(field_name, array);
+            bool status = anc_ph_data->add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -635,26 +637,26 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     bckgrd_rate.join(info->reader->read_timeout_ms, true);
 
     /* Join Ancillary Geolocation Reads */
-    if(geo_fields)
+    if(anc_geo_data)
     {
         H5DArray* array = NULL;
-        const char* dataset_name = anc_geo_data.first(&array);
+        const char* dataset_name = anc_geo_data->first(&array);
         while(dataset_name != NULL)
         {
             array->join(info->reader->read_timeout_ms, true);
-            dataset_name = anc_geo_data.next(&array);
+            dataset_name = anc_geo_data->next(&array);
         }
     }
 
     /* Join Ancillary Photon Reads */
-    if(photon_fields)
+    if(anc_ph_data)
     {
         H5DArray* array = NULL;
-        const char* dataset_name = anc_ph_data.first(&array);
+        const char* dataset_name = anc_ph_data->first(&array);
         while(dataset_name != NULL)
         {
             array->join(info->reader->read_timeout_ms, true);
-            dataset_name = anc_ph_data.next(&array);
+            dataset_name = anc_ph_data->next(&array);
         }
     }
 }
@@ -664,6 +666,8 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::~Atl03Data (void)
 {
+    delete anc_geo_data;
+    delete anc_ph_data;
 }
 
 /*----------------------------------------------------------------------------
@@ -682,8 +686,38 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/ph_h").c_str(),                &info->reader->context08),
     segment_id_beg      (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_id_beg").c_str(),       &info->reader->context08),
     segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_landcover").c_str(),    &info->reader->context08),
-    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str(),    &info->reader->context08)
+    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str(),    &info->reader->context08),
+    anc_seg_data        (NULL),
+    anc_seg_est         (NULL)
 {
+    Icesat2Parms::field_list_t* atl08_fields = info->reader->parms->atl08_fields;
+
+    if(atl08_fields)
+    {
+        anc_seg_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
+        anc_seg_est = new Dictionary<bool>(Icesat2Parms::EXPECTED_NUM_FIELDS);
+    
+        /* Read Ancillary Fields */
+        for(int i = 0; i < atl08_fields->length(); i++)
+        {
+            const char* field_name = (*atl08_fields)[i].field.c_str();
+            anc_seg_est->add(field_name, (*atl08_fields)[i].estimation);
+            FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
+            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context08);
+            bool status = anc_seg_data->add(field_name, array);
+            if(!status) delete array;
+            assert(status); // the dictionary add should never fail
+        }
+
+        /* Join Ancillary Reads */
+        H5DArray* array = NULL;
+        const char* dataset_name = anc_seg_data->first(&array);
+        while(dataset_name != NULL)
+        {
+            array->join(info->reader->read_timeout_ms, true);
+            dataset_name = anc_seg_data->next(&array);
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -695,6 +729,8 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
     delete [] relief;
     delete [] landcover;
     delete [] snowcover;
+    delete anc_seg_data;
+    delete anc_seg_est;
 }
 
 /*----------------------------------------------------------------------------
@@ -1273,14 +1309,14 @@ void* Atl03Reader::subsettingThread (void* parm)
             state.extent_photons.clear();
 
             /* Ancillary Extent Fields */
-            if(parms->atl03_geo_fields)
+            if(atl03.anc_geo_data)
             {
                 if(segment_indices) segment_indices->clear();
                 else                segment_indices = new List<int32_t>;
             }
 
             /* Ancillary Photon Fields */
-            if(parms->atl03_ph_fields)
+            if(atl03.anc_ph_data)
             {
                 if(photon_indices) photon_indices->clear();
                 else               photon_indices = new List<int32_t>;
@@ -1699,14 +1735,14 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::field_list_t* field_list, H5DArrayDictionary* field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
-    if(field_list && indices->length() > 0)
+    if(field_list && field_dict && indices)
     {
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            H5DArray* array = field_dict[(*field_list)[i].c_str()];
+            H5DArray* array = (*field_dict)[(*field_list)[i].field.c_str()];
 
             /* Create Ancillary Record */
             int record_size =   offsetof(anc_t, data) +
