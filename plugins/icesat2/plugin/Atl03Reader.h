@@ -120,7 +120,8 @@ class Atl03Reader: public LuaObject
         /* Ancillary Field Types */
         typedef enum {
             PHOTON_ANC_TYPE = 0,
-            EXTENT_ANC_TYPE = 1
+            EXTENT_ANC_TYPE = 1,
+            ATL08_ANC_TYPE = 2
         } anc_type_t;
 
         /* Ancillary Record */
@@ -259,7 +260,7 @@ class Atl03Reader: public LuaObject
 
                 /* Ancillary Data */
                 H5DArrayDictionary* anc_seg_data;
-                Dictionary<bool>*   anc_seg_est;
+                Dictionary<List<int32_t>*>* anc_seg_indices;
         };
 
         /* YAPC Score Subclass */
@@ -306,6 +307,7 @@ class Atl03Reader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int32_t INVALID_INDEX = -1;
         static const double ATL03_SEGMENT_LENGTH;
 
         /*--------------------------------------------------------------------

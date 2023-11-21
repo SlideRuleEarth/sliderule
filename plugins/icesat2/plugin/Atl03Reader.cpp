@@ -688,24 +688,27 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_landcover").c_str(),    &info->reader->context08),
     segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str(),    &info->reader->context08),
     anc_seg_data        (NULL),
-    anc_seg_est         (NULL)
+    anc_seg_indices     (NULL)
 {
     Icesat2Parms::field_list_t* atl08_fields = info->reader->parms->atl08_fields;
 
     if(atl08_fields)
     {
         anc_seg_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
-        anc_seg_est = new Dictionary<bool>(Icesat2Parms::EXPECTED_NUM_FIELDS);
+        anc_seg_indices = new Dictionary<List<int32_t>*>(Icesat2Parms::EXPECTED_NUM_FIELDS);
     
         /* Read Ancillary Fields */
         for(int i = 0; i < atl08_fields->length(); i++)
         {
             const char* field_name = (*atl08_fields)[i].field.c_str();
-            anc_seg_est->add(field_name, (*atl08_fields)[i].estimation);
             FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context08);
             bool status = anc_seg_data->add(field_name, array);
             if(!status) delete array;
+            assert(status); // the dictionary add should never fail
+            List<int32_t>* indices = new List<int32_t>;
+            status = anc_seg_indices->add(field_name, indices);
+            if(!status) delete indices;
             assert(status); // the dictionary add should never fail
         }
 
@@ -730,7 +733,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
     delete [] landcover;
     delete [] snowcover;
     delete anc_seg_data;
-    delete anc_seg_est;
+    delete anc_seg_indices;
 }
 
 /*----------------------------------------------------------------------------
@@ -777,21 +780,12 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
         int32_t atl03_segment = atl03.segment_id[atl03_segment_index];
 
         /* Get Land and Snow Flags */
-        uint8_t landcover_flag = INVALID_FLAG;
-        uint8_t snowcover_flag = INVALID_FLAG;
         if(phoreal)
         {
             while( (atl08_segment_index < segment_id_beg.size) &&
-                    ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
+                   ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
             {
                 atl08_segment_index++;
-            }
-
-            if( (segment_id_beg[atl08_segment_index] <= atl03_segment) &&
-                ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) > atl03_segment) )
-            {
-                landcover_flag = (uint8_t)segment_landcover[atl08_segment_index];
-                snowcover_flag = (uint8_t)segment_snowcover[atl08_segment_index];
             }
         }
 
@@ -801,14 +795,14 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
         {
             /* Go To Segment */
             while( (atl08_photon < atl08_segment_id.size) && // atl08 photon is valid
-                    (atl08_segment_id[atl08_photon] < atl03_segment) )
+                   (atl08_segment_id[atl08_photon] < atl03_segment) )
             {
                 atl08_photon++;
             }
 
             while( (atl08_photon < atl08_segment_id.size) && // atl08 photon is valid
-                    (atl08_segment_id[atl08_photon] == atl03_segment) &&
-                    (atl08_pc_indx[atl08_photon] < atl03_count))
+                   (atl08_segment_id[atl08_photon] == atl03_segment) &&
+                   (atl08_pc_indx[atl08_photon] < atl03_count))
             {
                 atl08_photon++;
             }
@@ -821,10 +815,12 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                 /* Assign Classification */
                 classification[atl03_photon] = (uint8_t)atl08_pc_flag[atl08_photon];
 
-                /* Populate ATL08 Relief */
+                /* Populate PhoREAL Fields */
                 if(phoreal)
                 {
                     relief[atl03_photon] = atl08_ph_h[atl08_photon];
+                    landcover[atl03_photon] = (uint8_t)segment_landcover[atl08_segment_index];
+                    snowcover[atl03_photon] = (uint8_t)segment_snowcover[atl08_segment_index];
 
                     /* Run ABoVE Classifier (if specified) */
                     if(info->reader->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
@@ -842,6 +838,18 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                     }
                 }
 
+                /* Populate Ancillary Indices */
+                if(anc_seg_indices)
+                {
+                    List<int32_t>* indices = NULL;
+                    const char* dataset_name = anc_seg_indices->first(&indices);
+                    while(dataset_name != NULL)
+                    {
+                        indices->add(atl08_segment_index);
+                        dataset_name = anc_seg_indices->next(&indices);
+                    }
+                }
+
                 /* Go To Next ATL08 Photon */
                 atl08_photon++;
             }
@@ -850,15 +858,26 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                 /* Unclassified */
                 classification[atl03_photon] = Icesat2Parms::ATL08_UNCLASSIFIED;
 
-                /* Set ATL08 Relief to Zero */
-                if(phoreal) relief[atl03_photon] = 0.0;
-            }
+                /* Set PhoREAL Fields to Invalid */
+                if(phoreal)
+                {
+                    relief[atl03_photon] = 0.0;
+                    landcover[atl03_photon] = INVALID_FLAG;
+                    snowcover[atl03_photon] = INVALID_FLAG;
+                }
 
-            /* Populate ATL08 Flags */
-            if(phoreal)
-            {
-                landcover[atl03_photon] = landcover_flag;
-                snowcover[atl03_photon] = snowcover_flag;
+                /* Set Ancillary Indices to Invalid */
+                if(anc_seg_indices)
+                {
+                    List<int32_t>* indices = NULL;
+                    const char* dataset_name = anc_seg_indices->first(&indices);
+                    while(dataset_name != NULL)
+                    {
+                        indices->add(INVALID_INDEX);
+                        dataset_name = anc_seg_indices->next(&indices);
+                    }
+                }
+
             }
 
             /* Go To Next ATL03 Photon */
@@ -1546,6 +1565,16 @@ void* Atl03Reader::subsettingThread (void* parm)
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
                     Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
                     Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                    if(atl08.anc_seg_indices)
+                    {
+                        List<int32_t>* indices = NULL;
+                        const char* dataset_name = atl08.anc_seg_indices->first(&indices);
+                        while(dataset_name != NULL)
+                        {
+                            Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, EXTENT_ANC_TYPE, indices, rec_list, rec_total_size);
+                            dataset_name = atl08.anc_seg_indices->next(&indices);
+                        }
+                    }
 
                     /* Send Records */
                     if(rec_list.size() == 1)
