@@ -873,11 +873,11 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                     const char* dataset_name = anc_seg_indices->first(&indices);
                     while(dataset_name != NULL)
                     {
-                        indices->add(INVALID_INDEX);
+                        int32_t tmp_invalid = Atl03Reader::INVALID_INDICE;
+                        indices->add(tmp_invalid);
                         dataset_name = anc_seg_indices->next(&indices);
                     }
                 }
-
             }
 
             /* Go To Next ATL03 Photon */

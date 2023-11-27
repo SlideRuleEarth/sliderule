@@ -61,7 +61,6 @@ class Atl06Reader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
         static const int BATCH_SIZE = 256;
 
         static const char* elRecType;

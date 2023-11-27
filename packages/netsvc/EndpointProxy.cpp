@@ -38,7 +38,6 @@
 #include <stdarg.h>
 
 #include "core.h"
-#include "h5.h"
 #include "netsvc.h"
 
 /******************************************************************************

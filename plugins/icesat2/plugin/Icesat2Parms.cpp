@@ -276,6 +276,7 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     atl03_geo_fields            (NULL),
     atl03_ph_fields             (NULL),
     atl06_fields                (NULL),
+    atl08_fields                (NULL),
     phoreal                     { .binsize          = 1.0,
                                   .geoloc           = PHOREAL_MEDIAN,
                                   .use_abs_h        = false,

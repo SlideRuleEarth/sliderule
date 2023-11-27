@@ -61,7 +61,7 @@ class Atl03Reader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
+        static const int32_t INVALID_INDICE = -1;
 
         static const char* phRecType;
         static const RecordObject::fieldDef_t phRecDef[];
@@ -307,7 +307,6 @@ class Atl03Reader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int32_t INVALID_INDEX = -1;
         static const double ATL03_SEGMENT_LENGTH;
 
         /*--------------------------------------------------------------------
