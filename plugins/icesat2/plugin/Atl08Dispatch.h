@@ -70,6 +70,11 @@ class Atl08Dispatch: public DispatchObject
         static const char* batchRecType;
         static const RecordObject::fieldDef_t batchRecDef[];
 
+        static const char* ancFieldRecType;
+        static const RecordObject::fieldDef_t ancFieldRecDef[];
+        static const char* ancRecType;
+        static const RecordObject::fieldDef_t ancRecDef[];
+
         static const char* waveRecType;
         static const RecordObject::fieldDef_t waveRecDef[];
 
@@ -123,6 +128,20 @@ class Atl08Dispatch: public DispatchObject
             float               waveform[MAX_BINS];     // normalized waveform (1.0 == photon_count)
         } waveform_t;
 
+        /* Ancillary Field Record */
+        typedef struct {
+            uint8_t             anc_type;       // Atl03Reader::anc_type_t
+            uint8_t             field_index;    // position in request parameter list
+            uint8_t             data_type;      // RecordObject::fieldType_t
+            uint8_t             value[8];
+        } anc_field_t;
+
+        /* Ancillary Record */
+        typedef struct {
+            uint64_t            extent_id;
+            anc_field_t         fields[];
+        } anc_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -136,14 +155,15 @@ class Atl08Dispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject*       recObj;
-        atl08_t*            recData;
-        Publisher*          outQ;
+        RecordObject*           recObj;
+        atl08_t*                recData;
+        vector<RecordObject*>   ancVec; // because there are variable number of fields, this cannot be predefined
+        Publisher*              outQ;
 
-        Mutex               batchMutex;
-        int                 batchIndex;
+        Mutex                   batchMutex;
+        int                     batchIndex;
 
-        Icesat2Parms*       parms;
+        Icesat2Parms*           parms;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -156,9 +176,10 @@ class Atl08Dispatch: public DispatchObject
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
+        RecordObject*   buildAncillaryRecord            (Atl03Reader::extent_t* extent, recVec_t* records);
         void            geolocateResult                 (Atl03Reader::extent_t* extent, vegetation_t& result);
         void            phorealAlgorithm                (Atl03Reader::extent_t* extent, vegetation_t& result);
-        void            postResult                      (vegetation_t* result);
+        void            postResult                      (vegetation_t* result, RecordObject* ancrec);
         static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
         static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
 

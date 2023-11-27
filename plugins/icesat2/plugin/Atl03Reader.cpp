@@ -102,9 +102,9 @@ const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * extractAncillary
+ * extractAncillaryAsDoubles
  *----------------------------------------------------------------------------*/
-double* Atl03Reader::anc_t::extractAncillary (void)
+double* Atl03Reader::anc_t::extractAncillaryAsDoubles (void)
 {
     double* dst = NULL;
     if(num_elements > 0) dst = new double[num_elements];
@@ -175,6 +175,91 @@ double* Atl03Reader::anc_t::extractAncillary (void)
         {
             int64_t* src = (int64_t*)&data;
             for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
+            break;
+        }
+        default:        
+        {
+            break; // unable to extract
+        }
+    }
+
+    return dst;
+}
+
+/*----------------------------------------------------------------------------
+ * extractAncillaryAsIntegers
+ *----------------------------------------------------------------------------*/
+int64_t* Atl03Reader::anc_t::extractAncillaryAsIntegers (void)
+{
+    int64_t* dst = NULL;
+    if(num_elements > 0) dst = new int64_t[num_elements];
+
+    switch(data_type)
+    {
+        case RecordObject::INT8:
+        {
+            int8_t* src = (int8_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::INT16:
+        {
+            int16_t* src = (int16_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::INT32:     
+        {
+            int32_t* src = (int32_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::INT64:     
+        {
+            int64_t* src = (int64_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::UINT8:     
+        {
+            uint8_t* src = (uint8_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::UINT16:    
+        {
+            uint16_t* src = (uint16_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::UINT32:    
+        {
+            uint32_t* src = (uint32_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::UINT64:    
+        {
+            uint64_t* src = (uint64_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::FLOAT:    
+        {
+            float* src = (float*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::DOUBLE:    
+        {
+            double* src = (double*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
+            break;
+        }
+        case RecordObject::TIME8:     
+        {
+            int64_t* src = (int64_t*)&data;
+            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
         default:        

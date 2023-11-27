@@ -35,6 +35,7 @@
 
 #include <math.h>
 #include <float.h>
+#include <map>
 
 #include "core.h"
 #include "icesat2.h"
@@ -83,6 +84,19 @@ const RecordObject::fieldDef_t Atl08Dispatch::waveRecDef[] = {
     {"num_bins",                RecordObject::UINT16,   offsetof(waveform_t, num_bins),             1, NULL, NATIVE_FLAGS},
     {"binsize",                 RecordObject::FLOAT,    offsetof(waveform_t, binsize),              1, NULL, NATIVE_FLAGS},
     {"waveform",                RecordObject::FLOAT,    offsetof(waveform_t, waveform),             0, NULL, NATIVE_FLAGS}
+};
+
+const char* Atl08Dispatch::ancFieldRecType = "atl06anc.field";
+const RecordObject::fieldDef_t Atl08Dispatch::ancFieldRecDef[] = {
+    {"anc_type",                RecordObject::UINT8,    offsetof(anc_field_t, anc_type),            1,  NULL, NATIVE_FLAGS},
+    {"field_index",             RecordObject::UINT8,    offsetof(anc_field_t, field_index),         1,  NULL, NATIVE_FLAGS},
+    {"value",                   RecordObject::DOUBLE,   offsetof(anc_field_t, value),               1,  NULL, NATIVE_FLAGS}
+};
+
+const char* Atl08Dispatch::ancRecType = "atl06anc";
+const RecordObject::fieldDef_t Atl08Dispatch::ancRecDef[] = {
+    {"extent_id",               RecordObject::UINT64,   offsetof(anc_t, extent_id),                 1,  NULL, NATIVE_FLAGS},
+    {"fields",                  RecordObject::USER,     offsetof(anc_t, fields),                    0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 /* Lua Functions */
@@ -196,6 +210,9 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         return true;
     }
 
+    /* Build Ancillary Inputs */
+    RecordObject* atl08_anc_rec = buildAncillaryRecord(extent, records);
+
     /* Initialize Results */
     vegetation_t result;
     result.pflags = 0;
@@ -208,7 +225,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Post Results */
-    postResult(&result);
+    postResult(&result, atl08_anc_rec);
 
     /* Return Status */
     return true;
@@ -229,8 +246,124 @@ bool Atl08Dispatch::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool Atl08Dispatch::processTermination (void)
 {
-    postResult(NULL);
+    postResult(NULL, NULL);
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * geolocateResult
+ *----------------------------------------------------------------------------*/
+RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent, recVec_t* records)
+{
+    /* Check for Need */
+    if(!records) return NULL;
+
+    /* Allocate Ancillary Record and Initialize */
+    int atl08_anc_rec_size = offsetof(anc_t, fields) + (sizeof(anc_field_t) * records->size());
+    RecordObject* atl08_anc_rec = new RecordObject(ancRecType, atl08_anc_rec_size);
+    Atl08Dispatch::anc_t* atl08_anc_data = reinterpret_cast<Atl08Dispatch::anc_t*>(atl08_anc_rec->getRecordData());
+    atl08_anc_data->extent_id = extent->extent_id;
+
+    /* Populate Ancillary Fields */
+    for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
+    {
+        Atl03Reader::anc_t* atl03_anc_rec = (Atl03Reader::anc_t*)records->at(i)->getRecordData();
+
+        /* Find Ancillary Field in Parameters */
+        Icesat2Parms::anc_field_t& field = parms->atl08_fields->get(atl03_anc_rec->field_index);
+        
+        /* Calculate Estimation */
+        memset(atl08_anc_data->fields[i].value, 0, 8);
+        if((atl03_anc_rec->data_type == (uint8_t)RecordObject::DOUBLE) || (atl03_anc_rec->data_type == (uint8_t)RecordObject::FLOAT))
+        {
+            double* values = atl03_anc_rec->extractAncillaryAsDoubles(); // `new` memory allocated here
+            union {
+                double* dval;
+                uint64_t* uval;
+            } cast;
+            cast.uval = reinterpret_cast<uint64_t*>(&atl08_anc_data->fields[i].value[0]);
+            double* valptr = cast.dval;
+            if(field.estimation == Icesat2Parms::NEAREST_NEIGHBOR)
+            {
+                std::map<double, int> counts;
+                for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
+                {
+                    if(counts.count(values[j])) counts[values[j]] += 1;
+                    else counts[values[j]] = 1;                        
+                }
+                double nearest = 0.0;
+                int nearest_count = 0;
+                for (auto itr = counts.begin(); itr != counts.end(); ++itr) 
+                {
+                    if(itr->second > nearest_count)
+                    {
+                        nearest_count = itr->second;
+                        nearest = itr->first;
+                    }
+                }
+                *valptr = nearest;
+            }
+            else if(field.estimation == Icesat2Parms::INTERPOLATION)
+            {
+                *valptr = 0.0;
+                for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
+                {
+                    *valptr += values[j];
+                }
+                if(atl03_anc_rec->num_elements)
+                {
+                    *valptr = *valptr / atl03_anc_rec->num_elements;
+                }
+            }
+            delete [] values;
+        }
+        else // integer type
+        {
+            int64_t* values = atl03_anc_rec->extractAncillaryAsIntegers(); // `new` memory allocated here
+            int64_t* valptr = (int64_t*)&atl08_anc_data->fields[i].value[0];
+            if(field.estimation == Icesat2Parms::NEAREST_NEIGHBOR)
+            {
+                std::map<int64_t, int> counts;
+                for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
+                {
+                    if(counts.count(values[j])) counts[values[j]] += 1;
+                    else counts[values[j]] = 1;                        
+                }
+                int64_t nearest = 0.0;
+                int nearest_count = 0;
+                for (auto itr = counts.begin(); itr != counts.end(); ++itr) 
+                {
+                    if(itr->second > nearest_count)
+                    {
+                        nearest_count = itr->second;
+                        nearest = itr->first;
+                    }
+                }
+                *valptr = nearest;
+            }
+            else if(field.estimation == Icesat2Parms::INTERPOLATION)
+            {
+                *valptr = 0.0;
+                for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
+                {
+                    *valptr += values[j];
+                }
+                if(atl03_anc_rec->num_elements)
+                {
+                    *valptr = *valptr / atl03_anc_rec->num_elements;
+                }
+            }
+            delete [] values;
+        }
+
+        /* Populate Rest Of Ancillary Record */
+        atl08_anc_data->fields[i].anc_type      = atl03_anc_rec->anc_type;
+        atl08_anc_data->fields[i].field_index   = atl03_anc_rec->field_index;
+        atl08_anc_data->fields[i].data_type     = atl03_anc_rec->data_type;
+    }
+
+    /* Return Ancillary Record */
+    return atl08_anc_rec;
 }
 
 /*----------------------------------------------------------------------------
@@ -340,7 +473,6 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
         result.longitude = 0.0;
         result.x_atc = extent->segment_distance;
     }
-
 
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
@@ -563,25 +695,48 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::postResult (vegetation_t* result)
+void Atl08Dispatch::postResult (vegetation_t* result, RecordObject* ancrec)
 {
     batchMutex.lock();
     {
         /* Populate Batch Record */
-        if(result) recData->vegetation[batchIndex++] = *result;
+        if(result)
+        {
+            recData->vegetation[batchIndex] = *result;
+            if(ancrec) ancVec.push_back(ancrec);
+            batchIndex++;
+        }
 
         /* Check If Batch Record Should Be Posted*/
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)
         {
             /* Calculate Record Size */
             int size = batchIndex * sizeof(vegetation_t);
+            recObj->setUsedData(size);
 
-            /* Serialize Record */
-            unsigned char* buffer;
-            int bufsize = recObj->serialize(&buffer, RecordObject::REFERENCE, size);
+            if(ancVec.size() == 0)
+            {
+                /* Post Serialized Record */
+                unsigned char* buffer = NULL;
+                int bufsize = recObj->serialize(&buffer, RecordObject::REFERENCE);
+                while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
+            }
+            else
+            {
+                /* Post Serialized Container Record */
+                ancVec.insert(ancVec.begin(), recObj);
+                ContainerRecord container(ancVec);
+                unsigned char* buffer = NULL;
+                int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
+                while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
 
-            /* Post Record */
-            while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
+                /* Free and Reset Ancillary Records */
+                for(RecordObject* rec: ancVec)
+                {
+                    delete rec;
+                }
+                ancVec.clear();
+            }
 
             /* Reset Batch Index */
             batchIndex = 0;

@@ -133,7 +133,8 @@ class Atl03Reader: public LuaObject
             uint8_t         data_type; // RecordObject::fieldType_t
             uint8_t         data[];
             
-            double* extractAncillary (void);
+            double* extractAncillaryAsDoubles (void);
+            int64_t* extractAncillaryAsIntegers (void);
         } anc_t;
 
         /* Statistics */

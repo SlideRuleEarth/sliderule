@@ -225,6 +225,8 @@ class RecordObject
         int                     getRecordDataSize   (void) const;
         int                     getAllocatedMemory  (void) const;
         int                     getAllocatedDataSize(void) const;
+        int                     getUsedMemory       (void) const;
+        int                     getUsedDataSize     (void) const;
         Field*                  createRecordField   (const char* field_name);
 
         /* Get/Set Methods */
@@ -240,6 +242,7 @@ class RecordObject
         const char*             getValueText        (const field_t& field, char* valbuf=NULL, int element=0);
         double                  getValueReal        (const field_t& field, int element=0);
         long                    getValueInteger     (const field_t& field, int element=0);
+        bool                    setUsedData         (int size);
 
         /* Definition Static Methods */
         static field_t          getDefinedField     (const char* rec_type, const char* field_name);
@@ -312,6 +315,7 @@ class RecordObject
         unsigned char*  recordMemory;       // block of allocated memory <record type as null terminated string><record data as binary>
         unsigned char*  recordData;         // pointer to binary data in recordMemory
         int             memoryAllocated;    // number of bytes allocated by object and pointed to by recordMemory
+        int             memoryUsed;         // number of bytes used from the memory allocated
         bool            memoryOwner;        // true if object owns (and therefore must free) memory allocated
 
         /*--------------------------------------------------------------------

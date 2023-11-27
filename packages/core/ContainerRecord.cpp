@@ -65,11 +65,24 @@ void ContainerRecord::init (void)
 }
 
 /*----------------------------------------------------------------------------
- * init
+ * hdrSize
  *----------------------------------------------------------------------------*/
 int ContainerRecord::hdrSize (int cnt)
 {
     return (sizeof(entry_t) * cnt) + offsetof(rec_t, entries);
+}
+
+/*----------------------------------------------------------------------------
+ * recSize
+ *----------------------------------------------------------------------------*/
+int ContainerRecord::recSize (vector<RecordObject*> rec_vec)
+{
+    int total_size = hdrSize(rec_vec.size());
+    for(RecordObject* rec: rec_vec)
+    {
+        total_size += rec->getUsedMemory();
+    }
+    return total_size;
 }
 
 /*----------------------------------------------------------------------------
@@ -83,6 +96,20 @@ ContainerRecord::ContainerRecord(int rec_cnt, int size):
     container = reinterpret_cast<rec_t*>(recordData);
     container->rec_cnt = rec_cnt;
     container->start_of_recs = recsOffset;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+ContainerRecord::ContainerRecord(vector<RecordObject*> rec_vec):
+    RecordObject(recType, recSize(rec_vec))
+{
+    recsContained = 0;
+    recsOffset = hdrSize(rec_vec.size());
+    container = reinterpret_cast<rec_t*>(recordData);
+    container->rec_cnt = rec_vec.size();
+    container->start_of_recs = recsOffset;
+    for(RecordObject* rec: rec_vec) addRecord(*rec);
 }
 
 /*----------------------------------------------------------------------------

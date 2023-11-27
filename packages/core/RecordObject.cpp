@@ -206,11 +206,13 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
         if(allocated_memory == 0)
         {
             memoryAllocated = recordDefinition->record_size;
+            memoryUsed = memoryAllocated;
             data_size = recordDefinition->data_size;
         }
         else if(allocated_memory + (int)sizeof(rec_hdr_t) + recordDefinition->type_size >= recordDefinition->record_size)
         {
             memoryAllocated = allocated_memory + sizeof(rec_hdr_t) + recordDefinition->type_size;
+            memoryUsed = memoryAllocated;
             data_size = allocated_memory;
         }
         else
@@ -259,6 +261,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
             /* Set Record Memory */
             memoryOwner = true;
             memoryAllocated = size;
+            memoryUsed = memoryAllocated;
             recordMemory = new unsigned char[memoryAllocated];
             memcpy(recordMemory, buffer, memoryAllocated);
 
@@ -301,7 +304,7 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
     }
 
     /* Check Size */
-    if(size > memoryAllocated)
+    if(size > memoryUsed)
     {
         return false; // buffer passed in too large
     }
@@ -322,7 +325,7 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
 int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 {
     assert(buffer);
-    int bufsize = memoryAllocated;
+    int bufsize = memoryUsed;
     uint32_t datasize = 0;
 
     /* Determine Buffer Size */
@@ -338,7 +341,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     if (mode == ALLOCATE)
     {
         *buffer = new unsigned char[bufsize];
-        int bytes_to_copy = MIN(bufsize, memoryAllocated);
+        int bytes_to_copy = MIN(bufsize, memoryUsed);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
     else if (mode == REFERENCE)
@@ -353,7 +356,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     else // if (mode == COPY)
     {
         assert(*buffer);
-        int bytes_to_copy = MIN(bufsize, memoryAllocated);
+        int bytes_to_copy = MIN(bufsize, memoryUsed);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
 
@@ -467,6 +470,22 @@ int RecordObject::getAllocatedMemory(void) const
 int RecordObject::getAllocatedDataSize(void) const
 {
     return memoryAllocated - (sizeof(rec_hdr_t) + recordDefinition->type_size);
+}
+
+/*----------------------------------------------------------------------------
+ * getUsedMemory
+ *----------------------------------------------------------------------------*/
+int RecordObject::getUsedMemory (void) const
+{
+    return memoryUsed;
+}
+
+/*----------------------------------------------------------------------------
+ * getUsedDataSize
+ *----------------------------------------------------------------------------*/
+int RecordObject::getUsedDataSize (void) const
+{
+    return memoryUsed - (sizeof(rec_hdr_t) + recordDefinition->type_size);
 }
 
 /*----------------------------------------------------------------------------
@@ -907,6 +926,23 @@ long RecordObject::getValueInteger(const field_t& f, int element)
         case TIME8:     return (long)OsApi::swapll(cast->int64_val);
         default:        return 0;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * getValueType
+ *----------------------------------------------------------------------------*/
+bool RecordObject::setUsedData (int size)
+{
+    rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
+    int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
+    int bufsize = hdrsize + size;
+    if(bufsize <= memoryAllocated)
+    {
+        memoryUsed = bufsize;
+        return true;
+    }
+
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -1415,6 +1451,7 @@ RecordObject::RecordObject(void)
     recordMemory = NULL;
     recordData = NULL;
     memoryAllocated = 0;
+    memoryUsed = 0;
     memoryOwner = false;
 }
 
@@ -1708,6 +1745,7 @@ RecordInterface::RecordInterface(unsigned char* buffer, int size): RecordObject(
             {
                 memoryOwner = false;
                 memoryAllocated = size;
+                memoryUsed = memoryAllocated;
             }
             else throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to differentiate the record type from record data");
         }

@@ -244,7 +244,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
             /* Build Array of Values 
                 * to be used by iterativeFitStage..lsf */
-            double* values = anc_rec->extractAncillary(); // `new` memory allocated here
+            double* values = anc_rec->extractAncillaryAsDoubles(); // `new` memory allocated here
             result.anc_values.push_back(values);
 
             /* Prepopulate Ancillary Field Structure
