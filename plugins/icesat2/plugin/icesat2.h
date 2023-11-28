@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "Icesat2Parms.h"
+#include "AncillaryFields.h"
 #include "Atl03Reader.h"
 #include "Atl03Indexer.h"
 #include "Atl06Dispatch.h"
@@ -45,8 +45,8 @@
 #include "CumulusIODriver.h"
 #include "GTArray.h"
 #include "GTDArray.h"
-#include "MeritRaster.h"
 #include "Icesat2Parms.h"
+#include "MeritRaster.h"
 
 #ifdef WITH_UNITTESTS
 #include "UT_Atl03Reader.h"

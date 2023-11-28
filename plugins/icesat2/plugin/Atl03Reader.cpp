@@ -77,16 +77,6 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
-const char* Atl03Reader::ancRecType = "atl03anc"; // ancillary atl03 record
-const RecordObject::fieldDef_t Atl03Reader::ancRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(anc_t, extent_id),     1,  NULL, NATIVE_FLAGS},
-    {"anc_type",    RecordObject::UINT8,    offsetof(anc_t, anc_type),      1,  NULL, NATIVE_FLAGS},
-    {"field_index", RecordObject::UINT8,    offsetof(anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
-    {"num_elements",RecordObject::UINT32,   offsetof(anc_t, num_elements),  2,  NULL, NATIVE_FLAGS},
-    {"datatype",    RecordObject::UINT8,    offsetof(anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(anc_t, data),          0,  NULL, NATIVE_FLAGS} // variable length
-};
-
 const double Atl03Reader::ATL03_SEGMENT_LENGTH = 20.0; // meters
 
 const char* Atl03Reader::OBJECT_TYPE = "Atl03Reader";
@@ -100,176 +90,6 @@ const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
 /******************************************************************************
  * ATL03 READER CLASS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * extractAncillaryAsDoubles
- *----------------------------------------------------------------------------*/
-double* Atl03Reader::anc_t::extractAncillaryAsDoubles (void)
-{
-    double* dst = NULL;
-    if(num_elements > 0) dst = new double[num_elements];
-
-    switch(data_type)
-    {
-        case RecordObject::INT8:
-        {
-            int8_t* src = (int8_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::INT16:
-        {
-            int16_t* src = (int16_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::INT32:     
-        {
-            int32_t* src = (int32_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::INT64:     
-        {
-            int64_t* src = (int64_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::UINT8:     
-        {
-            uint8_t* src = (uint8_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::UINT16:    
-        {
-            uint16_t* src = (uint16_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::UINT32:    
-        {
-            uint32_t* src = (uint32_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::UINT64:    
-        {
-            uint64_t* src = (uint64_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::FLOAT:    
-        {
-            float* src = (float*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::DOUBLE:    
-        {
-            double* src = (double*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        case RecordObject::TIME8:     
-        {
-            int64_t* src = (int64_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (double)src[i];
-            break;
-        }
-        default:        
-        {
-            break; // unable to extract
-        }
-    }
-
-    return dst;
-}
-
-/*----------------------------------------------------------------------------
- * extractAncillaryAsIntegers
- *----------------------------------------------------------------------------*/
-int64_t* Atl03Reader::anc_t::extractAncillaryAsIntegers (void)
-{
-    int64_t* dst = NULL;
-    if(num_elements > 0) dst = new int64_t[num_elements];
-
-    switch(data_type)
-    {
-        case RecordObject::INT8:
-        {
-            int8_t* src = (int8_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::INT16:
-        {
-            int16_t* src = (int16_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::INT32:     
-        {
-            int32_t* src = (int32_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::INT64:     
-        {
-            int64_t* src = (int64_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::UINT8:     
-        {
-            uint8_t* src = (uint8_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::UINT16:    
-        {
-            uint16_t* src = (uint16_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::UINT32:    
-        {
-            uint32_t* src = (uint32_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::UINT64:    
-        {
-            uint64_t* src = (uint64_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::FLOAT:    
-        {
-            float* src = (float*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::DOUBLE:    
-        {
-            double* src = (double*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        case RecordObject::TIME8:     
-        {
-            int64_t* src = (int64_t*)&data;
-            for(uint32_t i = 0; i < num_elements; i++) dst[i] = (int64_t)src[i];
-            break;
-        }
-        default:        
-        {
-            break; // unable to extract
-        }
-    }
-
-    return dst;
-}
 
 /*----------------------------------------------------------------------------
  * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
@@ -307,7 +127,6 @@ void Atl03Reader::init (void)
 {
     RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
     RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
-    RECDEF(ancRecType,      ancRecDef,      sizeof(anc_t),          NULL /* "extent_id" */);
 }
 
 /*----------------------------------------------------------------------------
@@ -662,8 +481,8 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     anc_geo_data        (NULL),
     anc_ph_data         (NULL)
 {
-    Icesat2Parms::field_list_t* geo_fields = info->reader->parms->atl03_geo_fields;
-    Icesat2Parms::field_list_t* photon_fields = info->reader->parms->atl03_ph_fields;
+    AncillaryFields::list_t* geo_fields = info->reader->parms->atl03_geo_fields;
+    AncillaryFields::list_t* photon_fields = info->reader->parms->atl03_ph_fields;
 
     /* Read Ancillary Geolocation Fields */
     if(geo_fields)
@@ -775,7 +594,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     anc_seg_data        (NULL),
     anc_seg_indices     (NULL)
 {
-    Icesat2Parms::field_list_t* atl08_fields = info->reader->parms->atl08_fields;
+    AncillaryFields::list_t* atl08_fields = info->reader->parms->atl08_fields;
 
     if(atl08_fields)
     {
@@ -1648,15 +1467,15 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     int rec_total_size = 0;
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, AncillaryFields::PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, AncillaryFields::EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
                     if(atl08.anc_seg_indices)
                     {
                         List<int32_t>* indices = NULL;
                         const char* dataset_name = atl08.anc_seg_indices->first(&indices);
                         while(dataset_name != NULL)
                         {
-                            Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, EXTENT_ANC_TYPE, indices, rec_list, rec_total_size);
+                            Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, AncillaryFields::EXTENT_ANC_TYPE, indices, rec_list, rec_total_size);
                             dataset_name = atl08.anc_seg_indices->next(&indices);
                         }
                     }
@@ -1849,7 +1668,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::field_list_t* field_list, H5DArrayDictionary* field_dict, anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, AncillaryFields::type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list && field_dict && indices)
     {
@@ -1859,10 +1678,10 @@ void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, Icesat2Parms::fi
             H5DArray* array = (*field_dict)[(*field_list)[i].field.c_str()];
 
             /* Create Ancillary Record */
-            int record_size =   offsetof(anc_t, data) +
+            int record_size =   offsetof(AncillaryFields::element_array_t, data) +
                                 (array->elementSize() * indices->length());
             RecordObject* record = new RecordObject(ancRecType, record_size);
-            anc_t* data = (anc_t*)record->getRecordData();
+            AncillaryFields::element_array_t* data = (AncillaryFields::element_array_t*)record->getRecordData();
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;

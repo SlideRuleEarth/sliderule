@@ -86,19 +86,6 @@ const RecordObject::fieldDef_t Atl08Dispatch::waveRecDef[] = {
     {"waveform",                RecordObject::FLOAT,    offsetof(waveform_t, waveform),             0, NULL, NATIVE_FLAGS}
 };
 
-const char* Atl08Dispatch::ancFieldRecType = "atl06anc.field";
-const RecordObject::fieldDef_t Atl08Dispatch::ancFieldRecDef[] = {
-    {"anc_type",                RecordObject::UINT8,    offsetof(anc_field_t, anc_type),            1,  NULL, NATIVE_FLAGS},
-    {"field_index",             RecordObject::UINT8,    offsetof(anc_field_t, field_index),         1,  NULL, NATIVE_FLAGS},
-    {"value",                   RecordObject::DOUBLE,   offsetof(anc_field_t, value),               1,  NULL, NATIVE_FLAGS}
-};
-
-const char* Atl08Dispatch::ancRecType = "atl06anc";
-const RecordObject::fieldDef_t Atl08Dispatch::ancRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(anc_t, extent_id),                 1,  NULL, NATIVE_FLAGS},
-    {"fields",                  RecordObject::USER,     offsetof(anc_t, fields),                    0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
-};
-
 /* Lua Functions */
 
 const char* Atl08Dispatch::LUA_META_NAME = "Atl08Dispatch";
@@ -267,23 +254,23 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
     /* Populate Ancillary Fields */
     for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
     {
-        Atl03Reader::anc_t* atl03_anc_rec = (Atl03Reader::anc_t*)records->at(i)->getRecordData();
+        AncillaryFields::element_array_t* atl03_anc_rec = (AncillaryFields::element_array_t*)records->at(i)->getRecordData();
 
         /* Find Ancillary Field in Parameters */
-        Icesat2Parms::anc_field_t& field = parms->atl08_fields->get(atl03_anc_rec->field_index);
+        AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
         
         /* Calculate Estimation */
         memset(atl08_anc_data->fields[i].value, 0, 8);
         if((atl03_anc_rec->data_type == (uint8_t)RecordObject::DOUBLE) || (atl03_anc_rec->data_type == (uint8_t)RecordObject::FLOAT))
         {
-            double* values = atl03_anc_rec->extractAncillaryAsDoubles(); // `new` memory allocated here
+            double* values = AncillaryFields::extractAsDoubles(atl03_anc_rec); // `new` memory allocated here
             union {
                 double* dval;
                 uint64_t* uval;
             } cast;
             cast.uval = reinterpret_cast<uint64_t*>(&atl08_anc_data->fields[i].value[0]);
             double* valptr = cast.dval;
-            if(field.estimation == Icesat2Parms::NEAREST_NEIGHBOR)
+            if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<double, int> counts;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
@@ -303,7 +290,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                 }
                 *valptr = nearest;
             }
-            else if(field.estimation == Icesat2Parms::INTERPOLATION)
+            else if(entry.estimation == AncillaryFields::INTERPOLATION)
             {
                 *valptr = 0.0;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
@@ -319,9 +306,9 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
         }
         else // integer type
         {
-            int64_t* values = atl03_anc_rec->extractAncillaryAsIntegers(); // `new` memory allocated here
+            int64_t* values = AncillaryFields::extractAsIntegers(atl03_anc_rec); // `new` memory allocated here
             int64_t* valptr = (int64_t*)&atl08_anc_data->fields[i].value[0];
-            if(field.estimation == Icesat2Parms::NEAREST_NEIGHBOR)
+            if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<int64_t, int> counts;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
@@ -341,7 +328,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                 }
                 *valptr = nearest;
             }
-            else if(field.estimation == Icesat2Parms::INTERPOLATION)
+            else if(entry.estimation == AncillaryFields::INTERPOLATION)
             {
                 *valptr = 0.0;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)

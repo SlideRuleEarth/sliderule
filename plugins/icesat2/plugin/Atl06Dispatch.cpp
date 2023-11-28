@@ -110,19 +110,6 @@ const RecordObject::fieldDef_t Atl06Dispatch::atRecDef[] = {
     {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
-const char* Atl06Dispatch::ancFieldRecType = "atl06anc.field";
-const RecordObject::fieldDef_t Atl06Dispatch::ancFieldRecDef[] = {
-    {"anc_type",                RecordObject::UINT8,    offsetof(anc_field_t, anc_type),            1,  NULL, NATIVE_FLAGS},
-    {"field_index",             RecordObject::UINT8,    offsetof(anc_field_t, field_index),         1,  NULL, NATIVE_FLAGS},
-    {"value",                   RecordObject::DOUBLE,   offsetof(anc_field_t, value),               1,  NULL, NATIVE_FLAGS}
-};
-
-const char* Atl06Dispatch::ancRecType = "atl06anc";
-const RecordObject::fieldDef_t Atl06Dispatch::ancRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(anc_t, extent_id),                 1,  NULL, NATIVE_FLAGS},
-    {"fields",                  RecordObject::USER,     offsetof(anc_t, fields),                    0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
-};
-
 /* Lua Functions */
 const char* Atl06Dispatch::LUA_META_NAME = "Atl06Dispatch";
 const struct luaL_Reg Atl06Dispatch::LUA_META_TABLE[] = {
@@ -169,8 +156,6 @@ void Atl06Dispatch::init (void)
      */
     RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),                NULL);
     RECDEF(atRecType,       atRecDef,       offsetof(atl06_t, elevation),       NULL);
-    RECDEF(ancFieldRecType, ancFieldRecDef, sizeof(anc_field_t),                NULL);
-    RECDEF(ancRecType,      ancRecDef,      offsetof(anc_t, fields),            NULL);
 }
 
 /******************************************************************************
@@ -240,19 +225,20 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
         {
             RecordObject* rec = records->at(i);
-            Atl03Reader::anc_t* anc_rec = (Atl03Reader::anc_t*)rec->getRecordData();
+            AncillaryFields::element_array_t* anc_rec = (AncillaryFields::element_array_t*)rec->getRecordData();
 
             /* Build Array of Values 
                 * to be used by iterativeFitStage..lsf */
-            double* values = anc_rec->extractAncillaryAsDoubles(); // `new` memory allocated here
+            double* values = AncillaryFields::extractAsDoubles(anc_rec); // `new` memory allocated here
             result.anc_values.push_back(values);
 
             /* Prepopulate Ancillary Field Structure
                 * `value` is populated below in iterativeFitStage..lsf
                 * using the value vector above */
-            anc_field_t anc_field;
+            AncillaryFields::field_t anc_field;
             anc_field.anc_type = anc_rec->anc_type;
             anc_field.field_index = anc_rec->field_index;
+            anc_field.data_type = RecordObject::DOUBLE;
             result.anc_fields.push_back(anc_field);
         }
     }
@@ -552,20 +538,8 @@ void Atl06Dispatch::postResult (result_t* result)
             elevationRecordData->elevation[elevationIndex++] = result->elevation;
 
             /* Ancillary */
-            int num_anc_fields = result->anc_fields.size();
-            if(num_anc_fields > 0)
-            {
-                int anc_rec_size = offsetof(anc_t, fields) + (sizeof(anc_field_t) * num_anc_fields);
-                ancillaryRecords[ancillaryIndex] = new RecordObject(ancRecType, anc_rec_size);
-                ancillaryTotalSize += ancillaryRecords[ancillaryIndex]->getAllocatedMemory();
-                anc_t* anc_rec = (anc_t*)ancillaryRecords[ancillaryIndex]->getRecordData();
-                anc_rec->extent_id = result->elevation.extent_id;
-                for(int f = 0; f < num_anc_fields; f++)
-                {
-                    anc_rec->fields[f] = result->anc_fields[f];
-                }
-                ancillaryIndex++;
-            }
+            ancillaryRecords[ancillaryIndex] = AncillaryFields::createFieldArrayRecord(result->elevation.extent_id, result->anc_fields);
+            if(ancillaryRecords[ancillaryIndex]) ancillaryIndex++;
         }
         else
         {
@@ -816,13 +790,14 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             for(size_t a = 0; a < result.anc_values.size(); a++)
             {
                 double* values = result.anc_values[a];
-                result.anc_fields[a].value = 0;
+                double value = 0;
                 for(int p = 0; p < size; p++)
                 {
                     Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
                     double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
-                    result.anc_fields[a].value += gig_1 * values[p];
+                    value += gig_1 * values[p];
                 }
+                AncillaryFields::insertAsDouble(&result.anc_fields[a], value);
             }
         }
     }

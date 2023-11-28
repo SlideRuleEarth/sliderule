@@ -804,7 +804,7 @@ void Icesat2Parms::get_lua_yapc (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_field_list
  *----------------------------------------------------------------------------*/
-void Icesat2Parms::get_lua_field_list (lua_State* L, int index, field_list_t** string_list, bool* provided)
+void Icesat2Parms::get_lua_field_list (lua_State* L, int index, AncillaryFields::list_t** string_list, bool* provided)
 {
     /* Reset provided */
     if(provided) *provided = false;
@@ -817,7 +817,7 @@ void Icesat2Parms::get_lua_field_list (lua_State* L, int index, field_list_t** s
         if(num_strings > 0 && provided)
         {
             /* Allocate string list */
-            *string_list = new field_list_t(EXPECTED_NUM_FIELDS);
+            *string_list = new AncillaryFields::list_t(EXPECTED_NUM_FIELDS);
             *provided = true;
         }
 
@@ -829,14 +829,14 @@ void Icesat2Parms::get_lua_field_list (lua_State* L, int index, field_list_t** s
             if(lua_isstring(L, -1))
             {
                 const char* item_str = LuaObject::getLuaString(L, -1);
-                anc_field_t item = {
+                AncillaryFields::entry_t item = {
                     .field = item_str,
-                    .estimation = NEAREST_NEIGHBOR
+                    .estimation = AncillaryFields::NEAREST_NEIGHBOR
                 };
                 /* Check Modifiers */
                 if(item.field.back() == '%')
                 {
-                    item.estimation = INTERPOLATION;
+                    item.estimation = AncillaryFields::INTERPOLATION;
                     item.field.pop_back();
                 }
                 /* Add Field to List */

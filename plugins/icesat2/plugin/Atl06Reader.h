@@ -69,12 +69,6 @@ class Atl06Reader: public LuaObject
         static const char* atRecType;
         static const RecordObject::fieldDef_t atRecDef[];
 
-        static const char* ancFieldRecType;
-        static const RecordObject::fieldDef_t ancFieldRecDef[];
-
-        static const char* ancRecType;
-        static const RecordObject::fieldDef_t ancRecDef[];
-
         static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
@@ -116,19 +110,6 @@ class Atl06Reader: public LuaObject
         typedef struct {
             elevation_t     elevation[BATCH_SIZE];
         } atl06_t;
-
-        /* Ancillary Record */
-        typedef struct {
-            uint64_t        extent_id;
-            uint8_t         value[8];
-        } anc_field_t;
-
-        /* Ancillary Record */
-        typedef struct {
-            uint8_t         field_index; // position in request parameter list
-            uint8_t         data_type; // RecordObject::fieldType_t
-            anc_field_t     data[BATCH_SIZE];
-        } anc_t;
 
         /* Statistics */
         typedef struct {

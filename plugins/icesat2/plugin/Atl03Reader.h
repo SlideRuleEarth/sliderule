@@ -117,26 +117,6 @@ class Atl03Reader: public LuaObject
             photon_t        photons[]; // zero length field
         } extent_t;
 
-        /* Ancillary Field Types */
-        typedef enum {
-            PHOTON_ANC_TYPE = 0,
-            EXTENT_ANC_TYPE = 1,
-            ATL08_ANC_TYPE = 2
-        } anc_type_t;
-
-        /* Ancillary Record */
-        typedef struct anc {
-            uint64_t        extent_id;
-            uint32_t        num_elements;
-            uint8_t         anc_type; // anc_type_t
-            uint8_t         field_index; // position in request parameter list
-            uint8_t         data_type; // RecordObject::fieldType_t
-            uint8_t         data[];
-            
-            double* extractAncillaryAsDoubles (void);
-            int64_t* extractAncillaryAsIntegers (void);
-        } anc_t;
-
         /* Statistics */
         typedef struct {
             uint32_t        segments_read;
@@ -347,7 +327,7 @@ class Atl03Reader: public LuaObject
         static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
         uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::field_list_t* field_list, H5DArrayDictionary* field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        static void         generateAncillaryRecords    (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, AncillaryFields::type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

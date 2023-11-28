@@ -43,6 +43,7 @@ endif()
 target_sources(icesat2
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/AncillaryFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
@@ -86,6 +87,7 @@ install (TARGETS icesat2 LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/AncillaryFields.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.h

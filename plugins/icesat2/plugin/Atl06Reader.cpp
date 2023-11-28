@@ -41,6 +41,7 @@
 
 #include "Atl06Reader.h"
 #include "Icesat2Parms.h"
+#include "AncillaryFields.h"
 
 using std::numeric_limits;
 
@@ -83,19 +84,6 @@ const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
 const char* Atl06Reader::atRecType = "atl06srec";
 const RecordObject::fieldDef_t Atl06Reader::atRecDef[] = {
     {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
-};
-
-const char* Atl06Reader::ancFieldRecType = "atl06sanc.field"; // ancillary atl06s record
-const RecordObject::fieldDef_t Atl06Reader::ancFieldRecDef[] = {
-    {"extent_id",   RecordObject::UINT64,   offsetof(anc_field_t, extent_id),   1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::UINT8,    offsetof(anc_field_t, value),       8,  NULL, NATIVE_FLAGS}
-};
-
-const char* Atl06Reader::ancRecType = "atl06sanc"; // ancillary atl06s record
-const RecordObject::fieldDef_t Atl06Reader::ancRecDef[] = {
-    {"field_index", RecordObject::UINT8,    offsetof(anc_t, field_index),   1,  NULL, NATIVE_FLAGS},
-    {"datatype",    RecordObject::UINT8,    offsetof(anc_t, data_type),     1,  NULL, NATIVE_FLAGS},
-    {"data",        RecordObject::USER,     offsetof(anc_t, data),          0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
 const char* Atl06Reader::OBJECT_TYPE = "Atl06Reader";
@@ -145,8 +133,6 @@ void Atl06Reader::init (void)
 {
     RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),    NULL /* "extent_id" */);
     RECDEF(atRecType,       atRecDef,       sizeof(atl06_t),        NULL);
-    RECDEF(ancFieldRecType, ancFieldRecDef, sizeof(anc_field_t),    NULL /* "extent_id" */);
-    RECDEF(ancRecType,      ancRecDef,      sizeof(anc_t),          NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -445,7 +431,7 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
     r_eff                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/r_eff").c_str(),                    &info->reader->context, 0, region.first_segment, region.num_segments),
     tide_ocean              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/tide_ocean").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments)
 {
-    Icesat2Parms::field_list_t* anc_fields = info->reader->parms->atl06_fields;
+    AncillaryFields::list_t* anc_fields = info->reader->parms->atl06_fields;
 
     /* Read Ancillary Fields */
     if(anc_fields)
@@ -511,8 +497,7 @@ void* Atl06Reader::subsettingThread (void* parm)
     Atl06Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
-    RecordObject** ancillary = NULL;
-    long* ancillary_index = NULL;
+    vector<RecordObject*> rec_vec;
 
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, reader->traceId, "atl06_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -526,40 +511,26 @@ void* Atl06Reader::subsettingThread (void* parm)
         /* Read ATL06 Datasets */
         Atl06Data atl06(info, region);
 
-        /* Create Elevation Batch Record */
-        RecordObject atl06Batch(atRecType);
-        atl06_t* record = reinterpret_cast<atl06_t*>(atl06Batch.getRecordData());
-        int batch_index = 0;
-
-        /* (Optionally) Create Ancillary Batch Record */
-        if(parms->atl06_fields)
-        {
-            int num_anc_fields = parms->atl06_fields->length();
-            if(num_anc_fields > 0)
-            {
-                ancillary = new RecordObject* [num_anc_fields];
-                ancillary_index = new long [num_anc_fields];
-                for(int i = 0; i < num_anc_fields; i++)
-                {
-                    ancillary[i] = new RecordObject(ancRecType);
-                    ancillary_index[i] = 0;
-
-                    /* Populate Field Indexes */
-                    anc_t* rec = reinterpret_cast<anc_t*>(ancillary[i]->getRecordData());
-                    rec->field_index = i;
-                }
-            }
-        }
-
         /* Increment Read Statistics */
         local_stats.segments_read = region.latitude.size;
 
-        /* Initialize Extent Counter */
+        /* Initialize Loop Variables */
+        RecordObject* atl06Batch = NULL;
+        atl06_t* record = NULL;
         uint32_t extent_counter = 0;
+        int batch_index = 0;
 
         /* Loop Through Each Segment */
         for(long segment = 0; reader->active && segment < region.num_segments; segment++)
         {
+            /* Create Elevation Batch Record */
+            if(!atl06Batch)
+            {
+                atl06Batch = new RecordObject(atRecType);
+                record = reinterpret_cast<atl06_t*>(atl06Batch->getRecordData());
+                rec_vec.push_back(atl06Batch);
+            }
+
             /* Populate Elevation */
             elevation_t* entry = &record->elevation[batch_index++];
             entry->extent_id                = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
@@ -590,14 +561,24 @@ void* Atl06Reader::subsettingThread (void* parm)
             /* Populate Ancillary Data */
             if(parms->atl06_fields)
             {
+                /* Populate Each Field in Array */
+                vector<AncillaryFields::field_t> field_vec;
                 for(int i = 0; i < parms->atl06_fields->length(); i++)
                 {
-                    anc_t* rec = reinterpret_cast<anc_t*>(ancillary[i]->getRecordData());
-                    rec->data[segment].extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
                     const char* field_name = parms->atl06_fields->get(i).field.c_str();
-                    rec->data_type = atl06.anc_data[field_name]->elementType();
-                    atl06.anc_data[field_name]->serialize(&rec->data[segment].value[0], segment, 1);
+
+                    AncillaryFields::field_t field;
+                    field.anc_type = AncillaryFields::ATL06_ANC_TYPE;
+                    field.field_index = i;
+                    field.data_type = atl06.anc_data[field_name]->elementType();
+                    atl06.anc_data[field_name]->serialize(&field.value[0], segment, 1);
+
+                    field_vec.push_back(field);
                 }
+
+                /* Create Field Array Record */
+                RecordObject* field_array_rec = AncillaryFields::createFieldArrayRecord(entry->extent_id, field_vec); // memory allocation
+                rec_vec.push_back(field_array_rec);
             }
 
             /* Post Records */
@@ -605,52 +586,50 @@ void* Atl06Reader::subsettingThread (void* parm)
             {
                 int post_status = MsgQ::STATE_TIMEOUT;
                 unsigned char* buffer = NULL;
-                int recsize = 0;
                 int bufsize = 0;
 
-                if(parms->atl06_fields)
+                /* Calculate Batch Record Size */
+                int recsize = batch_index * sizeof(elevation_t);
+                atl06Batch->setUsedData(recsize);
+
+                if(rec_vec.size() > 1) // elevation and ancillary field records
                 {
-                    /* Create Container Record */
-                    int max_con_rec_size = (sizeof(atl06_t) + sizeof(anc_t) + 256 /* record overhead */) * batch_index;
-                    int num_recs = 1 + parms->atl06_fields->length();
-                    ContainerRecord container(num_recs, max_con_rec_size);
-
-                    /* Add Records to Container */
-                    recsize += container.addRecord(atl06Batch, batch_index * sizeof(elevation_t));
-                    for(int i = 0; i < parms->atl06_fields->length(); i++)
-                    {
-                        recsize += container.addRecord(*ancillary[i], offsetof(anc_t, data) + (batch_index * sizeof(anc_field_t)));
-                    }
-
-                    /* Serialize Container Record */
-                    bufsize = container.serialize(&buffer, RecordObject::REFERENCE, recsize);
-
+                    /* Create and Serialize Container Record */
+                    ContainerRecord container(rec_vec);
+                    bufsize = container.serialize(&buffer, RecordObject::TAKE_OWNERSHIP);
                 }
                 else // only an elevation record
                 {
                     /* Serialize Elevation Batch Record */
-                    recsize = batch_index * sizeof(elevation_t);
-                    bufsize = atl06Batch.serialize(&buffer, RecordObject::REFERENCE, recsize);
+                    bufsize = rec_vec[0]->serialize(&buffer, RecordObject::TAKE_OWNERSHIP);
                 }
 
                 /* Post Record */
-                while(reader->active && (post_status = reader->outQ->postCopy(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+                while(reader->active && (post_status = reader->outQ->postRef(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
                 {
                     local_stats.extents_retried++;
                 }
 
-                /* Bumpst Statistics */
+                /* Handle Success/Failure of Post */
                 if(post_status > 0)
                 {
                     local_stats.extents_sent += batch_index;
                 }
                 else
                 {
+                    delete [] buffer; // delete buffer we now own and never was posted
                     local_stats.extents_dropped += batch_index;
                 }
 
                 /* Reset Batch Index */
                 batch_index = 0;
+
+                /* Free and Reset Records */
+                for(RecordObject* rec: rec_vec)
+                {
+                    delete rec;
+                }
+                rec_vec.clear();
             }
 
             /* Bump Extent Counter */
@@ -688,15 +667,6 @@ void* Atl06Reader::subsettingThread (void* parm)
 
     /* Clean Up */
     delete info;
-    if(parms->atl06_fields)
-    {
-        for(int i = 0; i < parms->atl06_fields->length(); i++)
-        {
-            delete ancillary[i];        
-        }
-        delete [] ancillary;
-        delete [] ancillary_index;
-    }
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
