@@ -139,13 +139,13 @@ double* AncillaryFields::extractAsDoubles (element_array_t* elements)
         }
         case RecordObject::FLOAT:    
         {
-            float* src = getAsFloat(&elements->data[0]);
+            float* src = getValueAsFloat(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
         case RecordObject::DOUBLE:    
         {
-            double* src = getAsDouble(&elements->data[0]);
+            double* src = getValueAsDouble(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
@@ -224,13 +224,13 @@ int64_t* AncillaryFields::extractAsIntegers (element_array_t* elements)
         }
         case RecordObject::FLOAT:    
         {
-            float* src = getAsFloat(&elements->data[0]);
+            float* src = getValueAsFloat(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
         case RecordObject::DOUBLE:    
         {
-            double* src = getAsDouble(&elements->data[0]);
+            double* src = getValueAsDouble(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
@@ -250,19 +250,19 @@ int64_t* AncillaryFields::extractAsIntegers (element_array_t* elements)
 }
 
 /*----------------------------------------------------------------------------
- * insertAsDouble
+ * setValueAsDouble
  *----------------------------------------------------------------------------*/
-void AncillaryFields::insertAsDouble (field_t* field, double value)
+void AncillaryFields::setValueAsDouble (field_t* field, double value)
 {
     field->data_type = RecordObject::DOUBLE;
-    double* valptr = getAsDouble(&field->value[0]);
+    double* valptr = getValueAsDouble(&field->value[0]);
     *valptr = value;
 }
 
 /*----------------------------------------------------------------------------
- * insertAsInteger
+ * setValueAsInteger
  *----------------------------------------------------------------------------*/
-void AncillaryFields::insertAsInteger (field_t* field, int64_t value)
+void AncillaryFields::setValueAsInteger (field_t* field, int64_t value)
 {
     field->data_type = RecordObject::INT64;
     int64_t* valptr = (int64_t*)&field->value[0];
@@ -270,9 +270,9 @@ void AncillaryFields::insertAsInteger (field_t* field, int64_t value)
 }
 
 /*----------------------------------------------------------------------------
- * getAsDouble
+ * getValueAsDouble
  *----------------------------------------------------------------------------*/
-double* AncillaryFields::getAsDouble (uint8_t* buffer)
+double* AncillaryFields::getValueAsDouble (uint8_t* buffer)
 {
     union {
         double* dptr;
@@ -283,9 +283,9 @@ double* AncillaryFields::getAsDouble (uint8_t* buffer)
 }
 
 /*----------------------------------------------------------------------------
- * getAsFloat
+ * getValueAsFloat
  *----------------------------------------------------------------------------*/
-float* AncillaryFields::getAsFloat (uint8_t* buffer)
+float* AncillaryFields::getValueAsFloat (uint8_t* buffer)
 {
     union {
         float* fptr;

@@ -124,10 +124,10 @@ struct AncillaryFields
     static void             init                    (void);
     static double*          extractAsDoubles        (element_array_t* elements);
     static int64_t*         extractAsIntegers       (element_array_t* elements);
-    static void             insertAsDouble          (field_t* field, double value);
-    static void             insertAsInteger         (field_t* field, int64_t value);
-    static double*          getAsDouble             (uint8_t* buffer);
-    static float*           getAsFloat              (uint8_t* buffer);
+    static void             setValueAsDouble        (field_t* field, double value);
+    static void             setValueAsInteger       (field_t* field, int64_t value);
+    static double*          getValueAsDouble        (uint8_t* buffer);
+    static float*           getValueAsFloat         (uint8_t* buffer);
     static RecordObject*    createFieldArrayRecord  (uint64_t extent_id, vector<field_t>& field_vec);
 };
 

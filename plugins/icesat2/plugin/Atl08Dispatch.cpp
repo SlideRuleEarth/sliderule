@@ -150,7 +150,10 @@ void Atl08Dispatch::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
-    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
+    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
+    batchData(NULL),
+    batchIndex(0),
+    atl08Record(NULL)
 {
     assert(outq_name);
     assert(_parms);
@@ -158,17 +161,8 @@ Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
     /* Initialize Parameters */
     parms = _parms;
 
-    /*
-     * Note: when allocating memory for this record, the full record size is used;
-     * this extends the memory available past the one set of stats provided in the
-     * definition.
-     */
-    recObj = new RecordObject(batchRecType, sizeof(atl08_t));
-    recData = reinterpret_cast<atl08_t*>(recObj->getRecordData());
-
     /* Initialize Publisher */
     outQ = new Publisher(outq_name);
-    batchIndex = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -177,7 +171,6 @@ Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms*
 Atl08Dispatch::~Atl08Dispatch(void)
 {
     delete outQ;
-    delete recObj;
     parms->releaseLuaObject();
 }
 
@@ -245,31 +238,29 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
     /* Check for Need */
     if(!records) return NULL;
 
-    /* Allocate Ancillary Record and Initialize */
-    int atl08_anc_rec_size = offsetof(anc_t, fields) + (sizeof(anc_field_t) * records->size());
-    RecordObject* atl08_anc_rec = new RecordObject(ancRecType, atl08_anc_rec_size);
-    Atl08Dispatch::anc_t* atl08_anc_data = reinterpret_cast<Atl08Dispatch::anc_t*>(atl08_anc_rec->getRecordData());
-    atl08_anc_data->extent_id = extent->extent_id;
+    /* Initialize Field Vector */
+    vector<AncillaryFields::field_t> field_vec;
 
     /* Populate Ancillary Fields */
     for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
     {
+        /* Get ATL03 Ancillary Record's Element Array */
         AncillaryFields::element_array_t* atl03_anc_rec = (AncillaryFields::element_array_t*)records->at(i)->getRecordData();
 
         /* Find Ancillary Field in Parameters */
         AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
         
+        /* Initialize Field */
+        AncillaryFields::field_t field;
+        field.anc_type      = atl03_anc_rec->anc_type;
+        field.field_index   = atl03_anc_rec->field_index;
+        field.data_type     = atl03_anc_rec->data_type;
+
         /* Calculate Estimation */
-        memset(atl08_anc_data->fields[i].value, 0, 8);
+        AncillaryFields::setValueAsInteger(&field, 0.0);
         if((atl03_anc_rec->data_type == (uint8_t)RecordObject::DOUBLE) || (atl03_anc_rec->data_type == (uint8_t)RecordObject::FLOAT))
         {
             double* values = AncillaryFields::extractAsDoubles(atl03_anc_rec); // `new` memory allocated here
-            union {
-                double* dval;
-                uint64_t* uval;
-            } cast;
-            cast.uval = reinterpret_cast<uint64_t*>(&atl08_anc_data->fields[i].value[0]);
-            double* valptr = cast.dval;
             if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<double, int> counts;
@@ -288,26 +279,26 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                         nearest = itr->first;
                     }
                 }
-                *valptr = nearest;
+                AncillaryFields::setValueAsDouble(&field, nearest);
             }
             else if(entry.estimation == AncillaryFields::INTERPOLATION)
             {
-                *valptr = 0.0;
+                double average = 0.0;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
-                    *valptr += values[j];
+                    average += values[j];
                 }
                 if(atl03_anc_rec->num_elements)
                 {
-                    *valptr = *valptr / atl03_anc_rec->num_elements;
+                    average /=  atl03_anc_rec->num_elements;
                 }
+                AncillaryFields::setValueAsDouble(&field, average);
             }
             delete [] values;
         }
         else // integer type
         {
             int64_t* values = AncillaryFields::extractAsIntegers(atl03_anc_rec); // `new` memory allocated here
-            int64_t* valptr = (int64_t*)&atl08_anc_data->fields[i].value[0];
             if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<int64_t, int> counts;
@@ -326,31 +317,30 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                         nearest = itr->first;
                     }
                 }
-                *valptr = nearest;
+                AncillaryFields::setValueAsInteger(&field, nearest);
             }
             else if(entry.estimation == AncillaryFields::INTERPOLATION)
             {
-                *valptr = 0.0;
+                int64_t average = 0;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
-                    *valptr += values[j];
+                    average += values[j];
                 }
                 if(atl03_anc_rec->num_elements)
                 {
-                    *valptr = *valptr / atl03_anc_rec->num_elements;
+                    average /= atl03_anc_rec->num_elements;
                 }
+                AncillaryFields::setValueAsInteger(&field, average);
             }
             delete [] values;
         }
 
-        /* Populate Rest Of Ancillary Record */
-        atl08_anc_data->fields[i].anc_type      = atl03_anc_rec->anc_type;
-        atl08_anc_data->fields[i].field_index   = atl03_anc_rec->field_index;
-        atl08_anc_data->fields[i].data_type     = atl03_anc_rec->data_type;
+        /* Push ATL08 Ancillary Field */
+        field_vec.push_back(field);
     }
 
     /* Return Ancillary Record */
-    return atl08_anc_rec;
+    return AncillaryFields::createFieldArrayRecord(extent->extent_id, field_vec);
 }
 
 /*----------------------------------------------------------------------------
@@ -689,51 +679,57 @@ void Atl08Dispatch::postResult (vegetation_t* result, RecordObject* ancrec)
         /* Populate Batch Record */
         if(result)
         {
-            recData->vegetation[batchIndex] = *result;
-            if(ancrec) ancVec.push_back(ancrec);
-            batchIndex++;
+            /* Create ATL08 Record When Needed */
+            if(recVec.empty())
+            {
+                atl08Record = new RecordObject(batchRecType, sizeof(atl08_t));
+                batchData = reinterpret_cast<atl08_t*>(atl08Record->getRecordData());
+                batchIndex = 0;
+                recVec.push_back(atl08Record);
+            }
+            batchData->vegetation[batchIndex++] = *result;
+            if(ancrec) recVec.push_back(ancrec);
         }
 
         /* Check If Batch Record Should Be Posted*/
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)
         {
-            /* Calculate Record Size */
+            /* Calculate ATL08 Record Size */
             int size = batchIndex * sizeof(vegetation_t);
-            recObj->setUsedData(size);
+            atl08Record->setUsedData(size);
 
-            if(ancVec.size() == 0)
+            /* Post Record */
+            if(recVec.size() == 1)
             {
                 /* Post Serialized Record */
                 unsigned char* buffer = NULL;
-                int bufsize = recObj->serialize(&buffer, RecordObject::REFERENCE);
+                int bufsize = atl08Record->serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
             }
             else
             {
                 /* Post Serialized Container Record */
-                ancVec.insert(ancVec.begin(), recObj);
-                ContainerRecord container(ancVec);
+                ContainerRecord container(recVec);
                 unsigned char* buffer = NULL;
                 int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
-
-                /* Free and Reset Ancillary Records */
-                for(RecordObject* rec: ancVec)
-                {
-                    delete rec;
-                }
-                ancVec.clear();
             }
 
-            /* Reset Batch Index */
-            batchIndex = 0;
+            /* Free Records */
+            for(RecordObject* rec: recVec)
+            {
+                delete rec;
+            }
+
+            /* Reset Vector of Records */
+            recVec.clear();
         }
     }
     batchMutex.unlock();
 }
 
 /*----------------------------------------------------------------------------
- * postResult
+ * quicksort
  *----------------------------------------------------------------------------*/
 void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
 {
@@ -746,7 +742,7 @@ void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_arra
 }
 
 /*----------------------------------------------------------------------------
- * postResult
+ * quicksortpartition
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
 {

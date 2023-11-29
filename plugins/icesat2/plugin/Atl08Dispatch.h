@@ -70,11 +70,6 @@ class Atl08Dispatch: public DispatchObject
         static const char* batchRecType;
         static const RecordObject::fieldDef_t batchRecDef[];
 
-        static const char* ancFieldRecType;
-        static const RecordObject::fieldDef_t ancFieldRecDef[];
-        static const char* ancRecType;
-        static const RecordObject::fieldDef_t ancRecDef[];
-
         static const char* waveRecType;
         static const RecordObject::fieldDef_t waveRecDef[];
 
@@ -128,20 +123,6 @@ class Atl08Dispatch: public DispatchObject
             float               waveform[MAX_BINS];     // normalized waveform (1.0 == photon_count)
         } waveform_t;
 
-        /* Ancillary Field Record */
-        typedef struct {
-            uint8_t             anc_type;       // Atl03Reader::anc_type_t
-            uint8_t             field_index;    // position in request parameter list
-            uint8_t             data_type;      // RecordObject::fieldType_t
-            uint8_t             value[8];
-        } anc_field_t;
-
-        /* Ancillary Record */
-        typedef struct {
-            uint64_t            extent_id;
-            anc_field_t         fields[];
-        } anc_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -155,13 +136,14 @@ class Atl08Dispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject*           recObj;
-        atl08_t*                recData;
-        vector<RecordObject*>   ancVec; // because there are variable number of fields, this cannot be predefined
-        Publisher*              outQ;
-
+        atl08_t*                batchData;
         Mutex                   batchMutex;
         int                     batchIndex;
+
+        RecordObject*           atl08Record;
+        vector<RecordObject*>   recVec; // because there are variable number of fields, this cannot be predefined
+
+        Publisher*              outQ;
 
         Icesat2Parms*           parms;
 

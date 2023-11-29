@@ -539,7 +539,11 @@ void Atl06Dispatch::postResult (result_t* result)
 
             /* Ancillary */
             ancillaryRecords[ancillaryIndex] = AncillaryFields::createFieldArrayRecord(result->elevation.extent_id, result->anc_fields);
-            if(ancillaryRecords[ancillaryIndex]) ancillaryIndex++;
+            if(ancillaryRecords[ancillaryIndex])
+            {
+                ancillaryTotalSize += ancillaryRecords[ancillaryIndex]->getAllocatedMemory();
+                ancillaryIndex++;
+            }
         }
         else
         {
@@ -549,13 +553,15 @@ void Atl06Dispatch::postResult (result_t* result)
         /* Check If ATL06 Record Should Be Posted*/
         if((!result && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
         {
+            /* Adjust Size of Elevation Record */
             int elevation_rec_size = elevationIndex * sizeof(elevation_t);
+            elevationRecord.setUsedData(elevation_rec_size);
 
             if(ancillaryIndex == 0)
             {
                 /* Serialize Elevation Batch Record */
                 unsigned char* buffer = NULL;
-                int bufsize = elevationRecord.serialize(&buffer, RecordObject::REFERENCE, elevation_rec_size);
+                int bufsize = elevationRecord.serialize(&buffer, RecordObject::REFERENCE);
 
                 /* Post Record */
                 if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
@@ -569,14 +575,8 @@ void Atl06Dispatch::postResult (result_t* result)
             }
             else // send container record
             {
-                /* Get Size of Elevation Batch Record */
-                unsigned char* er_buffer = NULL;
-                int er_bufsize = elevationRecord.serialize(&er_buffer, RecordObject::REFERENCE, elevation_rec_size);
-                ancillaryTotalSize += er_bufsize;
-
-                /* Build Container Record */
-                int num_recs = ancillaryIndex + 1;
-                ContainerRecord container(num_recs, ancillaryTotalSize);
+                /* Build Container Record: num anc rec + one elev rec, total anc size + elev rec size */
+                ContainerRecord container(ancillaryIndex + 1, ancillaryTotalSize + elevationRecord.getAllocatedMemory());
                 container.addRecord(elevationRecord, elevation_rec_size);
                 for(int i = 0; i < ancillaryIndex; i++)
                 {
@@ -797,7 +797,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
                     double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
                     value += gig_1 * values[p];
                 }
-                AncillaryFields::insertAsDouble(&result.anc_fields[a], value);
+                AncillaryFields::setValueAsDouble(&result.anc_fields[a], value);
             }
         }
     }

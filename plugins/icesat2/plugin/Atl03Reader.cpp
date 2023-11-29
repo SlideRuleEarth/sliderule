@@ -1680,7 +1680,7 @@ void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields:
             /* Create Ancillary Record */
             int record_size =   offsetof(AncillaryFields::element_array_t, data) +
                                 (array->elementSize() * indices->length());
-            RecordObject* record = new RecordObject(ancRecType, record_size);
+            RecordObject* record = new RecordObject(AncillaryFields::ancElementRecType, record_size);
             AncillaryFields::element_array_t* data = (AncillaryFields::element_array_t*)record->getRecordData();
 
             /* Populate Ancillary Record */

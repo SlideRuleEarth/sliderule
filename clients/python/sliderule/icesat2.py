@@ -153,24 +153,17 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
             if rectype in rsp['__rectype']:
                 records += rsp,
                 num_records += len(rsp[batch_column])
-            elif 'atl06anc' == rsp['__rectype']:
+            elif 'ancfrec' == rsp['__rectype']:
                 for field_rec in rsp['fields']:
+                    extent_id = numpy.uint64(rsp['extent_id'])
                     if field_rec['anc_type'] == 0:
                         field_name = parm['atl03_ph_fields'][field_rec['field_index']]
                     elif field_rec['anc_type'] == 1:
                         field_name = parm['atl03_geo_fields'][field_rec['field_index']]
                     if field_name not in field_dictionary:
                         field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                    field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']),
-                    field_dictionary[field_name][field_name] += field_rec['value'],
-            elif 'atl06sanc' == rsp['__rectype']:
-                for field_rec in rsp['fields']:
-                    field_name = parm['atl06_fields'][field_rec['field_index']]
-                    if field_name not in field_dictionary:
-                        field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                    for entry in field_rec["data"]:
-                        field_dictionary[field_name]['extent_id'] += numpy.uint64(entry['extent_id']),
-                        field_dictionary[field_name][field_name] += sliderule.getvalues(entry['value'], field_rec['datatype'], len(entry['value'])),
+                    field_dictionary[field_name]['extent_id'] += extent_id,
+                    field_dictionary[field_name][field_name] += sliderule.getvalues(rsp['value'], field_rec['datatype'], len(rsp['value'])),
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue
@@ -565,7 +558,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
                         num_photons += len(rsp['photons'])
                         if sample_photon_record == None and len(rsp['photons']) > 0:
                             sample_photon_record = rsp
-                    elif 'atl03anc' == rsp['__rectype']:
+                    elif 'ancerec' == rsp['__rectype']:
                         # Get Field Name and Type
                         if rsp['anc_type'] == 0:
                             field_name = parm['atl03_ph_fields'][rsp['field_index']]

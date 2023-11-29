@@ -69,9 +69,6 @@ class Atl03Reader: public LuaObject
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
-        static const char* ancRecType;
-        static const RecordObject::fieldDef_t ancRecDef[];
-
         static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
