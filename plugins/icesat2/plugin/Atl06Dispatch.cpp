@@ -580,9 +580,6 @@ void Atl06Dispatch::postResult (result_t* result)
 
                 /* Serialize Elevation Batch Record */
                 bufsize = container->serialize(&buffer, RecordObject::REFERENCE);
-//printf("CONTAINER [%d]: ", bufsize);
-//for(int i = 0; i < bufsize; i++) printf("%02X", buffer[i]);
-//printf("\n");
             }
 
             /* Post Record */
