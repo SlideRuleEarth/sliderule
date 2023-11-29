@@ -541,7 +541,7 @@ void Atl06Dispatch::postResult (result_t* result)
             ancillaryRecords[ancillaryIndex] = AncillaryFields::createFieldArrayRecord(result->elevation.extent_id, result->anc_fields);
             if(ancillaryRecords[ancillaryIndex])
             {
-                ancillaryTotalSize += ancillaryRecords[ancillaryIndex]->getAllocatedMemory();
+                ancillaryTotalSize += ancillaryRecords[ancillaryIndex]->getUsedMemory();
                 ancillaryIndex++;
             }
         }
@@ -557,47 +557,48 @@ void Atl06Dispatch::postResult (result_t* result)
             int elevation_rec_size = elevationIndex * sizeof(elevation_t);
             elevationRecord.setUsedData(elevation_rec_size);
 
+            /* Serialize Record(s) */
+            ContainerRecord* container = NULL;
+            unsigned char* buffer = NULL;
+            int bufsize = 0;
+
             if(ancillaryIndex == 0)
             {
                 /* Serialize Elevation Batch Record */
-                unsigned char* buffer = NULL;
-                int bufsize = elevationRecord.serialize(&buffer, RecordObject::REFERENCE);
-
-                /* Post Record */
-                if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
-                {
-                    stats.post_success_cnt += elevationIndex;
-                }
-                else
-                {
-                    stats.post_dropped_cnt += elevationIndex;
-                }
+                bufsize = elevationRecord.serialize(&buffer, RecordObject::REFERENCE);
             }
             else // send container record
             {
                 /* Build Container Record: num anc rec + one elev rec, total anc size + elev rec size */
-                ContainerRecord container(ancillaryIndex + 1, ancillaryTotalSize + elevationRecord.getAllocatedMemory());
-                container.addRecord(elevationRecord, elevation_rec_size);
+                container = new ContainerRecord(ancillaryIndex + 1, ancillaryTotalSize + elevationRecord.getUsedMemory());
+                container->addRecord(elevationRecord, elevation_rec_size);
                 for(int i = 0; i < ancillaryIndex; i++)
                 {
-                    container.addRecord(*ancillaryRecords[i]);
+                    container->addRecord(*ancillaryRecords[i]);
                     delete ancillaryRecords[i];
                 }
 
                 /* Serialize Elevation Batch Record */
-                unsigned char* buffer = NULL;
-                int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
-                
-                /* Post Record */
-                if(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) > 0)
-                {
-                    stats.post_success_cnt += elevationIndex + ancillaryIndex;
-                }
-                else
-                {
-                    stats.post_dropped_cnt += elevationIndex + ancillaryIndex;
-                }
+                bufsize = container->serialize(&buffer, RecordObject::REFERENCE);
+//printf("CONTAINER [%d]: ", bufsize);
+//for(int i = 0; i < bufsize; i++) printf("%02X", buffer[i]);
+//printf("\n");
             }
+
+            /* Post Record */
+            int post_status = MsgQ::STATE_TIMEOUT;
+            while((post_status = outQ->postCopy(buffer, bufsize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+            if(post_status > 0)
+            {
+                stats.post_success_cnt += elevationIndex;
+            }
+            else
+            {
+                stats.post_dropped_cnt += elevationIndex;
+            }
+
+            /* Clean Up Container (if necessary) */
+            delete container;
 
             /* Reset Indices */
             elevationIndex = 0;
