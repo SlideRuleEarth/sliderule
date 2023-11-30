@@ -128,6 +128,20 @@ def __calcspot(sc_orient, track, pair):
     return 0
 
 #
+# Get Ancillary Field Name
+#
+def __getancillaryfield(parm, field_rec):
+    if field_rec['anc_type'] == 0:
+        return parm['atl03_ph_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 1:
+        return parm['atl03_geo_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 2:
+        return parm['atl08_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 3:
+        return parm['atl06_fields'][field_rec['field_index']]
+    raise sliderule.FatalError(f'Invalid ancillary field type {field_rec["anc_type"]}')
+
+#
 # Flatten Batches
 #
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
@@ -156,10 +170,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
             elif 'ancfrec' == rsp['__rectype']:
                 for field_rec in rsp['fields']:
                     extent_id = numpy.uint64(rsp['extent_id'])
-                    if field_rec['anc_type'] == 0:
-                        field_name = parm['atl03_ph_fields'][field_rec['field_index']]
-                    elif field_rec['anc_type'] == 1:
-                        field_name = parm['atl03_geo_fields'][field_rec['field_index']]
+                    field_name = __getancillaryfield(parm, field_rec)
                     if field_name not in field_dictionary:
                         field_dictionary[field_name] = {'extent_id': [], field_name: []}
                     field_dictionary[field_name]['extent_id'] += extent_id,
@@ -560,10 +571,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
                             sample_photon_record = rsp
                     elif 'ancerec' == rsp['__rectype']:
                         # Get Field Name and Type
-                        if rsp['anc_type'] == 0:
-                            field_name = parm['atl03_ph_fields'][rsp['field_index']]
-                        elif rsp['anc_type'] == 1:
-                            field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                        field_name = __getancillaryfield(parm, rsp)
                         if field_name not in photon_field_types:
                             photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry

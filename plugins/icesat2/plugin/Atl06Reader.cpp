@@ -512,11 +512,11 @@ void* Atl06Reader::subsettingThread (void* parm)
         Atl06Data atl06(info, region);
 
         /* Increment Read Statistics */
-        local_stats.segments_read = region.latitude.size;
+        local_stats.segments_read = region.num_segments;
 
         /* Initialize Loop Variables */
-        RecordObject* atl06Batch = NULL;
-        atl06_t* record = NULL;
+        RecordObject* batch_record = NULL;
+        atl06_t* atl06_data = NULL;
         uint32_t extent_counter = 0;
         int batch_index = 0;
 
@@ -524,15 +524,15 @@ void* Atl06Reader::subsettingThread (void* parm)
         for(long segment = 0; reader->active && segment < region.num_segments; segment++)
         {
             /* Create Elevation Batch Record */
-            if(!atl06Batch)
+            if(!batch_record)
             {
-                atl06Batch = new RecordObject(atRecType);
-                record = reinterpret_cast<atl06_t*>(atl06Batch->getRecordData());
-                rec_vec.push_back(atl06Batch);
+                batch_record = new RecordObject(atRecType);
+                atl06_data = reinterpret_cast<atl06_t*>(batch_record->getRecordData());
+                rec_vec.push_back(batch_record);
             }
 
             /* Populate Elevation */
-            elevation_t* entry = &record->elevation[batch_index++];
+            elevation_t* entry = &atl06_data->elevation[batch_index++];
             entry->extent_id                = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
             entry->time_ns                  = Icesat2Parms::deltatime2timestamp(atl06.delta_time[segment]);
             entry->segment_id               = atl06.segment_id[segment];
@@ -590,7 +590,7 @@ void* Atl06Reader::subsettingThread (void* parm)
 
                 /* Calculate Batch Record Size */
                 int recsize = batch_index * sizeof(elevation_t);
-                atl06Batch->setUsedData(recsize);
+                batch_record->setUsedData(recsize);
 
                 if(rec_vec.size() > 1) // elevation and ancillary field records
                 {
@@ -601,7 +601,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                 else // only an elevation record
                 {
                     /* Serialize Elevation Batch Record */
-                    bufsize = rec_vec[0]->serialize(&buffer, RecordObject::TAKE_OWNERSHIP);
+                    bufsize = batch_record->serialize(&buffer, RecordObject::TAKE_OWNERSHIP);
                 }
 
                 /* Post Record */
@@ -621,7 +621,8 @@ void* Atl06Reader::subsettingThread (void* parm)
                     local_stats.extents_dropped += batch_index;
                 }
 
-                /* Reset Batch Index */
+                /* Reset Batch Record */
+                batch_record = NULL;
                 batch_index = 0;
 
                 /* Free and Reset Records */

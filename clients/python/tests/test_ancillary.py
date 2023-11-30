@@ -33,3 +33,15 @@ class TestAncillary:
         assert init
         assert sum(gdf["ph_id_count"]) == 626032
         assert len(gdf["ph_id_count"]) == 403462
+
+    def test_atl06(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "poly":             region["poly"],
+            "srt":              icesat2.SRT_LAND,
+            "atl06_fields":     ["fit_statistics/n_seg_pulses"]
+        }
+        gdf = icesat2.atl06s(parms, "ATL06_20181017222812_02950102_006_02.h5")
+        assert init
+        assert len(gdf) == 1029
+        assert abs(gdf["fit_statistics/n_seg_pulses"].quantile(q=.75) - 56.234378814697266) < 0.000001
