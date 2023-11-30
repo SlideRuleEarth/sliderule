@@ -2475,8 +2475,8 @@ class LeafletMap:
         kwargs.setdefault('colorbar', True)
         kwargs.setdefault('position', 'topright')
         # set map and map coordinate reference system
-        self.map = m.map
-        self.crs = m.crs
+        self.map = m
+        self.crs = m.crs['name']
         # remove any prior instances of a data layer
         if self.geojson is not None:
             self.map.remove(self.geojson)
@@ -2649,15 +2649,12 @@ class LeafletMap:
         self.map.add(self.colorbar)
         plt.close()
 
-@gpd.pd.api.extensions.register_dataframe_accessor("transect")
-class Transect:
-    """A geopandas GeoDataFrame extension for transect plotting
+@gpd.pd.api.extensions.register_dataframe_accessor("icesat2")
+class ICESat2:
+    """A geopandas GeoDataFrame extension for plotting ICESat-2 transects
     """
 
     def __init__(self, gdf):
-        # initialize map
-        self.map = None
-        self.crs = None
         # initialize geodataframe
         self._gdf = gdf
         # initialize data for time series plot
