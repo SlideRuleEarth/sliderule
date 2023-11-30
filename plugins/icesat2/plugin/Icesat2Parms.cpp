@@ -396,7 +396,21 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         /* ATL08 Fields */
         lua_getfield(L, index, Icesat2Parms::ATL08_FIELDS);
         get_lua_field_list (L, -1, &atl08_fields, &provided);
-        if(provided) mlog(DEBUG, "ATL08 field array supplied");
+        if(provided)
+        {
+            mlog(DEBUG, "ATL08 field array supplied");
+            if(!stages[STAGE_ATL08])
+            {
+                /* If atl08 processing not enabled, then enable it 
+                   and default all photons to on (i.e. no filtering) */
+                stages[STAGE_ATL08] = true;
+                atl08_class[ATL08_NOISE] = true;
+                atl08_class[ATL08_GROUND] = true;
+                atl08_class[ATL08_CANOPY] = true;
+                atl08_class[ATL08_TOP_OF_CANOPY] = true;
+                atl08_class[ATL08_UNCLASSIFIED] = true;
+            }
+        }
         lua_pop(L, 1);
 
         /* PhoREAL */
@@ -407,6 +421,8 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
             stages[STAGE_PHOREAL] = true;
             if(!stages[STAGE_ATL08])
             {
+                /* If atl08 processing not enabled, then enable it 
+                   and default photon classes to a reasonable request */
                 stages[STAGE_ATL08] = true;
                 atl08_class[ATL08_NOISE] = false;
                 atl08_class[ATL08_GROUND] = true;

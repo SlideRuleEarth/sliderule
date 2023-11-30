@@ -45,3 +45,30 @@ class TestAncillary:
         assert init
         assert len(gdf) == 1029
         assert abs(gdf["fit_statistics/n_seg_pulses"].quantile(q=.75) - 56.234378814697266) < 0.000001
+
+#
+# This test takes too long currently.  Need to get GeoParquet support for ATL03 and ancillary data.
+#
+#    def test_atl08_ph(self, init):
+#        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+#        parms = {
+#            "poly":             region["poly"],
+#            "srt":              icesat2.SRT_LAND,
+#            "atl08_fields":     ["cloud_flag_atm"]
+#        }
+#        gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_006_02.h5")
+#        assert init
+#        assert len(gdf) == 1029
+#        assert abs(gdf["cloud_flag_atm"].quantile(q=.75) - 56.234378814697266) < 0.000001
+
+    def test_atl08_phoreal(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "poly":             region["poly"],
+            "srt":              icesat2.SRT_LAND,
+            "atl08_fields":     ["cloud_flag_atm"]
+        }
+        gdf = icesat2.atl08(parms, "ATL03_20181017222812_02950102_006_02.h5")
+        assert init
+        assert len(gdf) == 1029
+        assert abs(gdf["cloud_flag_atm"].quantile(q=.75) - 56.234378814697266) < 0.000001

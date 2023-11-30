@@ -238,7 +238,7 @@ class Atl03Reader: public LuaObject
 
                 /* Ancillary Data */
                 H5DArrayDictionary* anc_seg_data;
-                Dictionary<List<int32_t>*>* anc_seg_indices;
+                List<int32_t>*      anc_seg_indices;
         };
 
         /* YAPC Score Subclass */

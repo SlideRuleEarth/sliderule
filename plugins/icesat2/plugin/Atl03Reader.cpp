@@ -599,20 +599,16 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
     if(atl08_fields)
     {
         anc_seg_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
-        anc_seg_indices = new Dictionary<List<int32_t>*>(Icesat2Parms::EXPECTED_NUM_FIELDS);
+        anc_seg_indices = new List<int32_t>;
     
         /* Read Ancillary Fields */
         for(int i = 0; i < atl08_fields->length(); i++)
         {
             const char* field_name = (*atl08_fields)[i].field.c_str();
             FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context08);
+            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource08, dataset_name.c_str(), &info->reader->context08);
             bool status = anc_seg_data->add(field_name, array);
             if(!status) delete array;
-            assert(status); // the dictionary add should never fail
-            List<int32_t>* indices = new List<int32_t>;
-            status = anc_seg_indices->add(field_name, indices);
-            if(!status) delete indices;
             assert(status); // the dictionary add should never fail
         }
 
@@ -711,6 +707,12 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                 atl08_photon++;
             }
 
+            /* Populate Ancillary Indices */
+            if(anc_seg_indices)
+            {
+                anc_seg_indices->add(atl08_segment_index);
+            }
+
             /* Check Match */
             if( (atl08_photon < atl08_segment_id.size) &&
                 (atl08_segment_id[atl08_photon] == atl03_segment) &&
@@ -742,18 +744,6 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                     }
                 }
 
-                /* Populate Ancillary Indices */
-                if(anc_seg_indices)
-                {
-                    List<int32_t>* indices = NULL;
-                    const char* dataset_name = anc_seg_indices->first(&indices);
-                    while(dataset_name != NULL)
-                    {
-                        indices->add(atl08_segment_index);
-                        dataset_name = anc_seg_indices->next(&indices);
-                    }
-                }
-
                 /* Go To Next ATL08 Photon */
                 atl08_photon++;
             }
@@ -773,14 +763,8 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                 /* Set Ancillary Indices to Invalid */
                 if(anc_seg_indices)
                 {
-                    List<int32_t>* indices = NULL;
-                    const char* dataset_name = anc_seg_indices->first(&indices);
-                    while(dataset_name != NULL)
-                    {
-                        int32_t tmp_invalid = Atl03Reader::INVALID_INDICE;
-                        indices->add(tmp_invalid);
-                        dataset_name = anc_seg_indices->next(&indices);
-                    }
+                    int32_t tmp_invalid = Atl03Reader::INVALID_INDICE;
+                    anc_seg_indices->add(tmp_invalid);
                 }
             }
 
@@ -1469,16 +1453,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
                     Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, AncillaryFields::PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
                     Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, AncillaryFields::EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
-                    if(atl08.anc_seg_indices)
-                    {
-                        List<int32_t>* indices = NULL;
-                        const char* dataset_name = atl08.anc_seg_indices->first(&indices);
-                        while(dataset_name != NULL)
-                        {
-                            Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, AncillaryFields::EXTENT_ANC_TYPE, indices, rec_list, rec_total_size);
-                            dataset_name = atl08.anc_seg_indices->next(&indices);
-                        }
-                    }
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, AncillaryFields::ATL08_ANC_TYPE, atl08.anc_seg_indices, rec_list, rec_total_size);
 
                     /* Send Records */
                     if(rec_list.size() == 1)
@@ -1694,7 +1669,18 @@ void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields:
             uint64_t bytes_written = 0;
             for(int p = 0; p < indices->length(); p++)
             {
-                bytes_written += array->serialize(&data->data[bytes_written], indices->get(p), 1);
+                int index = indices->get(p);
+                if(index != Atl03Reader::INVALID_INDICE)
+                {
+                    bytes_written += array->serialize(&data->data[bytes_written], index, 1);
+                }
+                else
+                {
+                    for(int b = 0; b < array->elementSize(); b++)
+                    {
+                        data->data[bytes_written++] = 0xFF;
+                    }
+                }
             }
 
             /* Add Ancillary Record */
