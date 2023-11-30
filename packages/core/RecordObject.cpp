@@ -939,6 +939,7 @@ bool RecordObject::setUsedData (int size)
     if(bufsize <= memoryAllocated)
     {
         memoryUsed = bufsize;
+        rechdr->data_size = OsApi::swapl(size);
         return true;
     }
 
