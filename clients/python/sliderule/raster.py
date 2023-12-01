@@ -87,7 +87,7 @@ def sample(asset, coordinates, parms={}):
     '''
     # Massage Arguments
     if type(coordinates[0]) != list:
-        coorindates = [coorindates]
+        coordinates = [coordinates]
 
     # Perform Request
     rqst = {"samples": {"asset": asset, **parms}, "coordinates": coordinates}
@@ -194,7 +194,7 @@ def subset(asset, extents, parms={}):
     '''
     # Massage Arguments
     if type(extents[0]) != list:
-        coorindates = [coorindates]
+        extents = [extents]
 
     # Perform Request
     rqst = {"samples": {"asset": asset, **parms}, "extents": extents}

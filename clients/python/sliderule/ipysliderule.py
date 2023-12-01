@@ -78,6 +78,9 @@ class widgets:
         kwargs.setdefault('style', {})
         # set style
         self.style = copy.copy(kwargs['style'])
+        # pass through some ipywidgets objects
+        self.HBox = ipywidgets.HBox
+        self.VBox = ipywidgets.VBox
 
         # dropdown menu for setting asset
         self.asset = ipywidgets.Dropdown(
@@ -91,7 +94,7 @@ class widgets:
 
         # dropdown menu for ICESat-2 product
         self.product = ipywidgets.Dropdown(
-            options=['ATL03','ATL06','ATL08'],
+            options=['ATL03', 'ATL06', 'ATL08'],
             value='ATL03',
             description='Product:',
             description_tooltip=("Product: ICESat-2 data product "
@@ -127,7 +130,7 @@ class widgets:
         )
 
         # multiple select for photon classification
-        class_options = ['atl03','quality','atl08','yapc']
+        class_options = ['atl03', 'quality', 'atl08', 'yapc']
         self.classification = ipywidgets.SelectMultiple(
             options=class_options,
             value=['atl03','atl08'],
@@ -316,6 +319,69 @@ class widgets:
         )
         self.yapc_weight.layout.display = 'none'
 
+        # ATL08 PhoREAL parameters
+        # slider for setting PhoREAL histogram bin size
+        self.phoreal_binsize = ipywidgets.FloatSlider(
+            value=1,
+            min=0.25,
+            max=10,
+            step=0.25,
+            description='PhoREAL Bin Size:',
+            description_tooltip="PhoREAL Bin Size: size of the vertical photon bin in meters",
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='0.2f',
+            style=self.style,
+        )
+
+        # dropdown menu for setting PhoREAL geolocation algorithm
+        # mean - takes the average value across all photons in the segment
+        # median - takes the median value across all photons in the segment
+        # center - takes the halfway value calculated by the average of the first and last photon in the segment
+        phoreal_geolocation_list = ['mean','median','center']
+        self.phoreal_geolocation = ipywidgets.Dropdown(
+            options=phoreal_geolocation_list,
+            value='center',
+            description='PhoREAL Geolocation:',
+            description_tooltip=("PhoREAL Geolocation: method for calculating segment geolocation variables\n\t"
+                "mean: average value across all photons in the segment\n\t"
+                "median: median value across all photons in the segment\n\t"
+                "center: center of first and last photons in the segment"),
+            disabled=False,
+            style=self.style,
+        )
+
+        # checkbox for using PhoREAL absolute elevation
+        self.phoreal_abs_h = ipywidgets.Checkbox(
+            value=False,
+            description='PhoREAL use abs h',
+            description_tooltip=("PhoREAL use abs h: use absolute photon heights "
+                "instead of the normalized heights"),
+            disabled=False,
+            style=self.style,
+        )
+
+        # checkbox for using the PhoREAL ABoVE classifier
+        self.phoreal_above = ipywidgets.Checkbox(
+            value=False,
+            description='PhoREAL use ABoVE',
+            description_tooltip="PhoREAL use ABoVE: use the ABoVE photon classifier",
+            disabled=False,
+            style=self.style,
+        )
+
+        # checkbox for sending PhoREAL waveform
+        self.phoreal_waveform = ipywidgets.Checkbox(
+            value=False,
+            description='PhoREAL waveform',
+            description_tooltip=("PhoREAL waveform: send the photon height "
+                "histograms in addition to the vegetation statistics"),
+            disabled=False,
+            style=self.style,
+        )
+
         # slider for setting length of ATL06-SR segment in meters
         self.length = ipywidgets.IntSlider(
             value=40,
@@ -446,7 +512,7 @@ class widgets:
             description='Projection:',
             description_tooltip=("Projection: leaflet map projection\n\t"
                 "Global: Web Mercator (EPSG:3857)\n\t"
-                "Alaska Polar Stereographic (EPSG:5936)\n\t"
+                "North: Alaska Polar Stereographic (EPSG:5936)\n\t"
                 "South: Polar Stereographic South (EPSG:3031)"),
             disabled=False,
             style=self.style,
@@ -676,10 +742,11 @@ class widgets:
         """sets the default widget parameters for ATL03 requests
         """
         # default photon classifications
-        class_options = ['atl03','atl08','yapc']
-        self.classification.value = class_options
+        class_options = ['atl03', 'quality', 'atl08', 'yapc']
+        self.classification.options = class_options
+        self.classification.value = ['atl03', 'atl08', 'yapc']
         # default ATL03 confidence
-        self.confidence.value = -2
+        self.confidence.value = -1
         # set land class options
         land_options = [
             'atl08_noise',
@@ -705,8 +772,9 @@ class widgets:
         """sets the default widget parameters for ATL06 requests
         """
         # default photon classifications
-        class_options = ['atl03','atl08']
-        self.classification.value = class_options
+        class_options = ['atl03', 'quality', 'atl08', 'yapc']
+        self.classification.options = class_options
+        self.classification.value = ['atl03', 'atl08']
         # default ATL06-SR confidence
         self.confidence.value = 4
         # set land class options
@@ -722,6 +790,124 @@ class widgets:
         # set default filename
         self.file = copy.copy(self.atl06_filename)
         self.savelabel.value = self.file
+
+    def set_atl08_defaults(self):
+        """sets the default widget parameters for ATL08 requests
+        """
+        # default photon classifications
+        class_options = ['atl03', 'quality', 'atl08']
+        self.classification.options = class_options
+        self.classification.value = ['atl08']
+        # default ATL08-SR confidence
+        self.confidence.value = -1
+        # set land class options
+        land_options = [
+            'atl08_ground',
+            'atl08_canopy',
+            'atl08_top_of_canopy',
+        ]
+        self.land_class.value = land_options
+        # set default ATL08-SR length
+        self.length.value = 30
+        # set PhoREAL parameters
+        self.phoreal_binsize.value = 1.0
+        self.phoreal_geolocation.value = 'center'
+        self.phoreal_abs_h.value = False
+        self.phoreal_above.value = False
+        self.phoreal_waveform.value = False
+        # update variable list for ATL08-SR variables
+        variable_list = ['h_canopy', 'h_min_canopy', 'h_mean_canopy',
+            'h_max_canopy', 'canopy_openness', 'h_te_median',
+            'landcover', 'snowcover', 'solar_elevation', 'cycle', 'rgt']
+        self.variable.options = variable_list
+        self.variable.value = 'h_canopy'
+        # set default filename
+        self.file = copy.copy(self.atl08_filename)
+        self.savelabel.value = self.file
+
+    def atl03(self, **kwargs):
+        """returns a list of widgets for SlideRule ATL03 requests
+        """
+        kwargs.setdefault('display', 'advanced')
+        assert str(kwargs['display']).lower() in ['advanced','basic']
+        if (str(kwargs['display']).lower() == 'basic'):
+            return [
+                self.start_date,
+                self.end_date,
+                self.surface_type,
+            ]
+        else:
+            return [
+                self.start_date,
+                self.end_date,
+                self.classification,
+                self.surface_type,
+                self.confidence,
+                self.quality,
+                self.land_class,
+                self.yapc_knn,
+                self.yapc_win_h,
+                self.yapc_win_x,
+                self.yapc_min_ph,
+            ]
+
+    def atl06(self, **kwargs):
+        """returns a list of widgets for SlideRule ATL06 requests
+        """
+        kwargs.setdefault('display', 'advanced')
+        assert str(kwargs['display']).lower() in ['advanced','basic']
+        if (str(kwargs['display']).lower() == 'basic'):
+            return [
+                self.surface_type,
+                self.length,
+            ]
+        else:
+            return [
+                self.classification,
+                self.surface_type,
+                self.confidence,
+                self.quality,
+                self.land_class,
+                self.yapc_knn,
+                self.yapc_win_h,
+                self.yapc_win_x,
+                self.yapc_min_ph,
+                self.yapc_weight,
+                self.length,
+                self.step,
+                self.iteration,
+                self.spread,
+                self.count,
+                self.window,
+                self.sigma,
+            ]
+
+    def atl08(self, **kwargs):
+        """returns a list of widgets for SlideRule ATL08 requests
+        """
+        kwargs.setdefault('display', 'advanced')
+        assert str(kwargs['display']).lower() in ['advanced','basic']
+        if (str(kwargs['display']).lower() == 'basic'):
+            return [
+                self.surface_type,
+                self.length,
+                self.phoreal_binsize,
+            ]
+        else:
+            return [
+                self.classification,
+                self.surface_type,
+                self.confidence,
+                self.quality,
+                self.land_class,
+                self.phoreal_binsize,
+                self.phoreal_geolocation,
+                self.phoreal_abs_h,
+                self.phoreal_above,
+                self.phoreal_waveform,
+                self.length,
+                self.step,
+            ]
 
     @property
     def time_start(self):
@@ -856,7 +1042,7 @@ class widgets:
 
     @property
     def atl03_filename(self):
-        """default input and output file string
+        """default input and output file string for ATL03 requests
         """
         # get sliderule submission time
         now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
@@ -865,12 +1051,21 @@ class widgets:
 
     @property
     def atl06_filename(self):
-        """default input and output file string
+        """default input and output file string for ATL06 requests
         """
         # get sliderule submission time
         now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         args = (now, self.release.value)
         return "ATL06-SR_{0}_{1}.h5".format(*args)
+
+    @property
+    def atl08_filename(self):
+        """default input and output file string for ATL08 requests
+        """
+        # get sliderule submission time
+        now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        args = (now, self.release.value)
+        return "ATL08-SR_{0}_{1}.h5".format(*args)
 
     @property
     def format(self):
@@ -1014,6 +1209,46 @@ class widgets:
         # return the parameter dictionary
         return parms
 
+    # build sliderule ATL08 parameters using latest values from widget
+    def build_atl08(self, **parms):
+        """Build a SlideRule parameters dictionary for making ATL08 requests
+
+        Parameters
+        ----------
+        parms : dict, dictionary of SlideRule parameters to update
+        """
+        # default parameters for all cases
+        # still return photon segments that fail checks
+        parms["pass_invalid"] = True
+        # length of ATL06-SR segment in meters
+        parms["len"] = self.length.value
+        # step distance for successive ATL06-SR segments in meters
+        parms["res"] = self.step.value
+        # PhoREAL parameters
+        parms["phoreal"] = {}
+        parms["phoreal"]["binsize"] = self.phoreal_binsize.value
+        parms["phoreal"]["geoloc"] = self.phoreal_geolocation.value
+        parms["phoreal"]["use_abs_h"] = self.phoreal_abs_h.value
+        parms["phoreal"]["send_waveform"] = self.phoreal_waveform.value
+        parms["phoreal"]["above_classifier"] = self.phoreal_above.value
+        # photon classification
+        # atl03 photon confidence level
+        if ('atl03' in self.classification.value):
+            # surface type: 0-land, 1-ocean, 2-sea ice, 3-land ice, 4-inland water
+            parms["srt"] = self.surface_type.index
+            # confidence level for PE selection
+            parms["cnf"] = self.confidence.value
+        # atl03 photon quality flags
+        if ('quality' in self.classification.value):
+            # confidence level for PE selection
+            parms["quality_ph"] = list(self.quality.value)
+        # atl08 land classification flags
+        if ('atl08' in self.classification.value):
+            # ATL08 land surface classifications
+            parms["atl08_class"] = list(self.land_class.value)
+        # return the parameter dictionary
+        return parms
+
     # update values from widget using sliderule parameters dictionary
     def set_values(self, parms):
         """Set widget values using a SlideRule parameters dictionary
@@ -1071,8 +1306,25 @@ class widgets:
             self.yapc_win_h.value = parms["yapc"]["win_h"]
         if ('yapc' in parms.keys()) and ('win_x' in parms['yapc'].keys()):
             self.yapc_win_x.value = parms["yapc"]["win_x"]
+        # PhoREAL parameters
+        if ('phoreal' in parms.keys()) and ('binsize' in parms['phoreal'].keys()):
+            self.phoreal_binsize.value = parms["phoreal"]["binsize"]
+        if ('phoreal' in parms.keys()) and ('geoloc' in parms['phoreal'].keys()):
+            self.phoreal_geolocation.value = parms["phoreal"]["geoloc"]
+        if ('phoreal' in parms.keys()) and ('use_abs_h' in parms['phoreal'].keys()):
+            self.phoreal_abs_h.value = parms["yapc"]["use_abs_h"]
+        if ('phoreal' in parms.keys()) and ('send_waveform' in parms['phoreal'].keys()):
+            self.phoreal_waveform.value = parms["phoreal"]["send_waveform"]
+        if ('phoreal' in parms.keys()) and ('above_classifier' in parms['phoreal'].keys()):
+            self.phoreal_above.value = parms["phoreal"]["above_classifier"]
         # update values
         return self
+
+    @property
+    def column_name(self):
+        """Column name from variable
+        """
+        return self.variable.value
 
     @property
     def RGT(self):
@@ -1134,6 +1386,13 @@ class widgets:
         else:
             logging.critical(f"Cycle {self.cycle.value} is outside available range")
             return "0"
+
+    @property
+    def plot_kwargs(self):
+        """return the plot keywords
+        """
+        return dict(column_name=self.column_name, cycle=self.orbital_cycle,
+            RGT=self.RGT, GT=self.GT, LR=self.LR, PT=self.PT)
 
     def plot(self, gdf=None, **kwargs):
         """Creates plots of SlideRule outputs
@@ -1632,25 +1891,29 @@ class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
         kwargs.setdefault('map',None)
-        kwargs.setdefault('prefer_canvas',False)
-        kwargs.setdefault('attribution',False)
-        kwargs.setdefault('zoom_control',False)
-        kwargs.setdefault('scale_control',False)
-        kwargs.setdefault('cursor_control',True)
-        kwargs.setdefault('layer_control',True)
-        kwargs.setdefault('center',(39,-108))
-        kwargs.setdefault('color','green')
+        kwargs.setdefault('prefer_canvas', False)
+        kwargs.setdefault('attribution', False)
+        kwargs.setdefault('zoom_control', False)
+        kwargs.setdefault('scale_control', False)
+        kwargs.setdefault('full_screen_control', False)
+        kwargs.setdefault('cursor_control', True)
+        kwargs.setdefault('layer_control', True)
+        kwargs.setdefault('color', 'green')
         # create basemap in projection
         if (projection == 'Global'):
+            kwargs.setdefault('center', (39,-108))
+            kwargs.setdefault('zoom', 9)
             self.map = ipyleaflet.Map(center=kwargs['center'],
-                zoom=9, max_zoom=15, world_copy_jump=True,
+                zoom=kwargs['zoom'], max_zoom=15, world_copy_jump=True,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
                 basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
             self.crs = 'EPSG:3857'
         elif (projection == 'North'):
-            self.map = ipyleaflet.Map(center=(90,0),
-                zoom=5, max_zoom=24,
+            kwargs.setdefault('center', (90,0))
+            kwargs.setdefault('zoom', 5)
+            self.map = ipyleaflet.Map(center=kwargs['center'],
+                zoom=kwargs['zoom'], max_zoom=24,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
                 basemap=basemaps.Esri.ArcticOceanBase,
@@ -1660,8 +1923,10 @@ class leaflet:
             self.map.add(ipyleaflet.basemap_to_tiles(reference))
             self.crs = 'EPSG:5936'
         elif (projection == 'South'):
-            self.map = ipyleaflet.Map(center=(-90,0),
-                zoom=2, max_zoom=9,
+            kwargs.setdefault('center', (-90,0))
+            kwargs.setdefault('zoom', 2)
+            self.map = ipyleaflet.Map(center=kwargs['center'],
+                zoom=kwargs['zoom'], max_zoom=9,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
                 basemap=basemaps.Esri.AntarcticBasemap,
@@ -1669,8 +1934,13 @@ class leaflet:
             self.crs = 'EPSG:3031'
         else:
             # use a predefined ipyleaflet map
+            assert kwargs['map'], 'Leaflet map needs to be defined'
             self.map = kwargs['map']
             self.crs = self.map.crs['name']
+        # add control for full screen
+        if kwargs['full_screen_control']:
+            self.full_screen_control = ipyleaflet.FullScreenControl()
+            self.map.add(self.full_screen_control)
         # add control for layers
         if kwargs['layer_control']:
             self.layer_control = ipyleaflet.LayersControl(position='topleft')
@@ -1715,8 +1985,9 @@ class leaflet:
         self.colorbar = None
         # initialize hover control
         self.hover_control = None
-        # initialize selected feature
+        # initialize feature callbacks
         self.selected_callback = None
+        self.region_callback = None
 
     # add sliderule regions to map
     def add_region(self, regions, **kwargs):
@@ -1895,6 +2166,8 @@ class leaflet:
             self.regions.append(region)
         elif (action == 'deleted'):
             self.regions.remove(region)
+        if self.region_callback is not None:
+            self.region_callback(action)
         # remove any prior instances of a data layer
         if (action == 'deleted') and self.geojson is not None:
             self.map.remove(self.geojson)
@@ -1940,6 +2213,8 @@ class leaflet:
         kwargs.setdefault('fields', self.default_atl06_fields())
         kwargs.setdefault('colorbar', True)
         kwargs.setdefault('position', 'topright')
+        # add warning that function is deprecated
+        logging.critical(f"Deprecated. Will be removed in a future release")
         # remove any prior instances of a data layer
         if self.geojson is not None:
             self.map.remove(self.geojson)
@@ -2049,6 +2324,11 @@ class leaflet:
         """
         self.selected_callback = callback
 
+    def add_region_callback(self, callback):
+        """set callback for handling region actions
+        """
+        self.region_callback = callback
+
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
         """Creates colorbars on leaflet maps
@@ -2110,3 +2390,485 @@ class leaflet:
         """
         return ['cycle', 'dh_fit_dx', 'gt', 'h_mean',
             'h_sigma', 'rgt', 'rms_misfit', 'w_surface_window_final']
+
+    @staticmethod
+    def default_atl08_fields():
+        """List of ATL08-SR tooltip fields
+        """
+        return ['canopy_openness', 'cycle', 'gt', 'h_canopy',
+            'h_min_canopy', 'h_mean_canopy',
+            'h_max_canopy', 'h_te_median', 'rgt']
+
+    @staticmethod
+    def default_mosaic_fields(**kwargs):
+        kwargs.setdefault('with_flags', False)
+        kwargs.setdefault('zonal_stats', False)
+        """List of mosaic tooltip fields
+        """
+        columns = ['time','value']
+        if kwargs['with_flags']:
+            columns += ['flags']
+        if kwargs['zonal_stats']:
+            columns += ['count','min','max','mean','median','stdev','mad']
+        return [f'mosaic.{c}' for c in columns]
+
+@gpd.pd.api.extensions.register_dataframe_accessor("leaflet")
+class LeafletMap:
+    """A geopandas GeoDataFrame extension for interactive map plotting,
+    based on ipyleaflet
+    """
+
+    def __init__(self, gdf):
+        # initialize map
+        self.map = None
+        self.crs = None
+        # initialize geodataframe
+        self._gdf = gdf
+        # initialize data and colorbars
+        self.geojson = None
+        self.tooltip = None
+        self.tooltip_width = None
+        self.tooltip_height = None
+        self.fields = []
+        self.colorbar = None
+        # initialize hover control
+        self.hover_control = None
+        # initialize selected feature
+        self.selected_callback = None
+
+    # add geodataframe data to leaflet map
+    def GeoData(self, m, **kwargs):
+        """Creates scatter plots of GeoDataFrames on leaflet maps
+
+        Parameters
+        ----------
+        m : obj, leaflet object
+        column_name : str, GeoDataFrame column to plot
+        cmap : str, matplotlib colormap
+        vmin : float, minimum value for normalization
+        vmax : float, maximum value for normalization
+        norm : obj, matplotlib color normalization object
+        radius : float, radius of scatter plot markers
+        fillOpacity : float, opacity of scatter plot markers
+        weight : float, weight of scatter plot markers
+        stride : int, number between successive array elements
+        max_plot_points : int, total number of plot markers to render
+        tooltip : bool, show hover tooltips
+        fields : list, GeoDataFrame fields to show in hover tooltips
+        colorbar : bool, show colorbar for rendered variable
+        position : str, position of colorbar on leaflet map
+        """
+        kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('vmin', None)
+        kwargs.setdefault('vmax', None)
+        kwargs.setdefault('norm', None)
+        kwargs.setdefault('radius', 1.0)
+        kwargs.setdefault('fillOpacity', 0.5)
+        kwargs.setdefault('weight', 3.0)
+        kwargs.setdefault('stride', None)
+        kwargs.setdefault('max_plot_points', 10000)
+        kwargs.setdefault('tooltip', True)
+        kwargs.setdefault('tooltip_height', "300px")
+        kwargs.setdefault('tooltip_width', "220px")
+        kwargs.setdefault('fields', [])
+        kwargs.setdefault('colorbar', True)
+        kwargs.setdefault('position', 'topright')
+        # set map and map coordinate reference system
+        self.map = m
+        self.crs = m.crs['name']
+        # remove any prior instances of a data layer
+        if self.geojson is not None:
+            self.map.remove(self.geojson)
+        if kwargs['stride'] is not None:
+            stride = np.copy(kwargs['stride'])
+        elif (self._gdf.shape[0] > kwargs['max_plot_points']):
+            stride = int(self._gdf.shape[0]//kwargs['max_plot_points'])
+        else:
+            stride = 1
+        # sliced geodataframe for plotting
+        geodataframe = self._gdf[slice(None,None,stride)]
+        self.column_name = copy.copy(kwargs['column_name'])
+        geodataframe['data'] = geodataframe[self.column_name]
+        # set colorbar limits to 2-98 percentile
+        # if not using a defined plot range
+        clim = geodataframe['data'].quantile((0.02, 0.98)).values
+        if kwargs['vmin'] is None:
+            vmin = clim[0]
+        else:
+            vmin = np.copy(kwargs['vmin'])
+        if kwargs['vmax'] is None:
+            vmax = clim[-1]
+        else:
+            vmax = np.copy(kwargs['vmax'])
+        # create matplotlib normalization
+        if kwargs['norm'] is None:
+            norm = colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
+        else:
+            norm = copy.copy(kwargs['norm'])
+        # normalize data to be within vmin and vmax
+        normalized = norm(geodataframe['data'])
+        # create HEX colors for each point in the dataframe
+        geodataframe["color"] = np.apply_along_axis(colors.to_hex, 1,
+            cm.get_cmap(kwargs['cmap'], 256)(normalized))
+        # leaflet map point style
+        point_style = {key:kwargs[key] for key in ['radius','fillOpacity','weight']}
+        # convert to GeoJSON object
+        self.geojson = ipyleaflet.GeoJSON(data=geodataframe.__geo_interface__,
+            point_style=point_style, style_callback=self.style_callback)
+        # add GeoJSON object to map
+        self.map.add(self.geojson)
+        # fields for tooltip views
+        if kwargs['fields'] is None:
+            self.fields = geodataframe.columns.drop(
+                [geodataframe.geometry.name, "data", "color"])
+        else:
+            self.fields = copy.copy(kwargs['fields'])
+        # add hover tooltips
+        if kwargs['tooltip']:
+            self.tooltip = ipywidgets.HTML()
+            self.tooltip.layout.margin = "0px 20px 20px 20px"
+            self.tooltip.layout.visibility = 'hidden'
+            self.tooltip_height = kwargs['tooltip_height']
+            self.tooltip_width = kwargs['tooltip_width']
+            # create widget for hover tooltips
+            self.hover_control = ipyleaflet.WidgetControl(
+                widget=self.tooltip,
+                position='bottomright')
+            self.geojson.on_hover(self.handle_hover)
+            self.geojson.on_msg(self.handle_mouseout)
+            self.geojson.on_click(self.handle_click)
+        # add colorbar
+        if kwargs['colorbar']:
+            self.add_colorbar(column_name=self.column_name,
+                cmap=kwargs['cmap'], norm=norm,
+                position=kwargs['position'])
+
+    # functional call for setting colors of each point
+    def style_callback(self, feature):
+        """callback for setting marker colors
+        """
+        return {
+            "fillColor": feature["properties"]["color"],
+            "color": feature["properties"]["color"],
+        }
+
+    # functional calls for hover events
+    def handle_hover(self, feature, **kwargs):
+        """callback for creating hover tooltips
+        """
+        # combine html strings for hover tooltip
+        self.tooltip.value = '<b>{0}:</b> {1}<br>'.format('id',feature['id'])
+        self.tooltip.value += '<br>'.join(['<b>{0}:</b> {1}'.format(field,
+            feature["properties"][field]) for field in self.fields])
+        self.tooltip.layout.width = self.tooltip_width
+        self.tooltip.layout.height = self.tooltip_height
+        self.tooltip.layout.visibility = 'visible'
+        self.map.add(self.hover_control)
+
+    def handle_mouseout(self, _, content, buffers):
+        """callback for removing hover tooltips upon mouseout
+        """
+        event_type = content.get('type', '')
+        if event_type == 'mouseout':
+            self.tooltip.value = ''
+            self.tooltip.layout.width = "0px"
+            self.tooltip.layout.height = "0px"
+            self.tooltip.layout.visibility = 'hidden'
+            self.map.remove(self.hover_control)
+
+    # functional calls for click events
+    def handle_click(self, feature, **kwargs):
+        """callback for handling mouse clicks
+        """
+        if self.selected_callback != None:
+            self.selected_callback(feature)
+
+    def add_selected_callback(self, callback):
+        """set callback for handling mouse clicks
+        """
+        self.selected_callback = callback
+
+    def handle_region(self, action, **kwargs):
+        """callback for handling region deletions
+        """
+        # remove any prior instances of a data layer
+        if (action == 'deleted') and self.geojson is not None:
+            self.remove(self.geojson)
+            self.geojson = None
+        # remove any prior instances of a colorbar
+        if (action == 'deleted') and self.colorbar is not None:
+            self.remove(self.colorbar)
+            self.colorbar = None
+
+    # remove map layers
+    def remove(self, layer):
+        """wrapper function for removing layers from leaflet maps
+        """
+        # try to remove layer from map
+        try:
+            self.map.remove(layer)
+        except ipyleaflet.LayerException as e:
+            logging.info(f"Layer {layer} already removed from map")
+            pass
+        except ipyleaflet.ControlException as e:
+            logging.info(f"Control {layer} already removed from map")
+            pass
+        except Exception as e:
+            logging.critical(f"Could not remove layer {layer}")
+            logging.error(traceback.format_exc())
+            pass
+
+    # add colorbar widget to leaflet map
+    def add_colorbar(self, **kwargs):
+        """Creates colorbars on leaflet maps
+
+        Parameters
+        ----------
+        column_name : str, GeoDataFrame column to plot
+        cmap : str, matplotlib colormap
+        norm : obj, matplotlib color normalization object
+        alpha : float, opacity of colormap
+        orientation : str, orientation of colorbar
+        position : str, position of colorbar on leaflet map
+        width : float, width of colorbar
+        height : float, height of colorbar
+        """
+        kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('norm', None)
+        kwargs.setdefault('alpha', 1.0)
+        kwargs.setdefault('orientation', 'horizontal')
+        kwargs.setdefault('position', 'topright')
+        kwargs.setdefault('width', 6.0)
+        kwargs.setdefault('height', 0.4)
+        # remove any prior instances of a colorbar
+        if self.colorbar is not None:
+            self.map.remove(self.colorbar)
+        # colormap for colorbar
+        cmap = cm.get_cmap(kwargs['cmap'])
+        # create matplotlib colorbar
+        _, ax = plt.subplots(figsize=(kwargs['width'], kwargs['height']))
+        cbar = matplotlib.colorbar.ColorbarBase(ax, cmap=cmap,
+            norm=kwargs['norm'], alpha=kwargs['alpha'],
+            orientation=kwargs['orientation'],
+            label=kwargs['column_name'])
+        cbar.solids.set_rasterized(True)
+        cbar.ax.tick_params(which='both', width=1, direction='in')
+        # save colorbar to in-memory png object
+        png = io.BytesIO()
+        plt.savefig(png, bbox_inches='tight', format='png')
+        png.seek(0)
+        # create output widget
+        output = ipywidgets.Image(value=png.getvalue(), format='png')
+        self.colorbar = ipyleaflet.WidgetControl(widget=output,
+            transparent_bg=True, position=kwargs['position'])
+        # add colorbar
+        self.map.add(self.colorbar)
+        plt.close()
+
+@gpd.pd.api.extensions.register_dataframe_accessor("icesat2")
+class ICESat2:
+    """A geopandas GeoDataFrame extension for plotting ICESat-2 transects
+    """
+
+    def __init__(self, gdf):
+        # initialize geodataframe
+        self._gdf = gdf
+        # initialize data for time series plot
+        self._data = None
+        self._dist = None
+        self._units = None
+        self._longname = None
+        self._line = None
+
+    def plot(self, **kwargs):
+        """Creates plots of SlideRule outputs
+
+        Parameters
+        ----------
+        ax : obj, matplotlib axes object
+        kind : str, kind of plot to produce
+
+            - 'scatter' : scatter plot of along-track heights
+            - 'cycles' : time series plot for each orbital cycle
+        cmap : str, matplotlib colormap
+        title: str, title to use for the plot
+        legend: bool, title to use for the plot
+        legend_label: str, legend label type for 'cycles' plot
+        legend_frameon: bool, use a background patch for legend
+        column_name: str, GeoDataFrame column for 'cycles' plot
+        atl03: obj, ATL03 GeoDataFrame for 'scatter' plot
+        classification: str, ATL03 photon classification for scatter plot
+
+            - 'atl03' : ATL03 photon confidence
+            - 'atl08' : ATL08 photon-level land classification
+            - 'yapc' : Yet Another Photon Classification photon-density
+            - 'none' : no classification of photons
+        cycle_start: int, beginning cycle for 'cycles' plot
+        """
+        # default keyword arguments
+        kwargs.setdefault('ax', None)
+        kwargs.setdefault('kind', 'cycles')
+        kwargs.setdefault('cmap', 'viridis')
+        kwargs.setdefault('title', None)
+        kwargs.setdefault('legend', False)
+        kwargs.setdefault('legend_label','date')
+        kwargs.setdefault('legend_frameon',True)
+        kwargs.setdefault('column_name', 'h_mean')
+        kwargs.setdefault('atl03', None)
+        kwargs.setdefault('classification', None)
+        kwargs.setdefault('segments', True)
+        kwargs.setdefault('cycle_start', 3)
+        kwargs.setdefault('cycle', 0)
+        kwargs.setdefault('RGT', 0)
+        kwargs.setdefault('GT', 0)
+        # variable to plot
+        column = kwargs['column_name']
+        RGT = int(kwargs['RGT'])
+        GT = int(kwargs['GT'])
+        # skip plot creation if no values are entered
+        if (RGT == 0) or (GT == 0):
+            return
+        # create figure axis
+        if kwargs['ax'] is None:
+            fig,ax = plt.subplots(num=1, figsize=(8,6))
+            fig.set_facecolor('white')
+            fig.canvas.header_visible = False
+        else:
+            ax = kwargs['ax']
+        # list of legend elements
+        legend_elements = []
+        # different plot types
+        # cycles: along-track plot showing all available cycles
+        # scatter: plot showing a single cycle possibly with ATL03
+        if (kwargs['kind'] == 'cycles'):
+            # for each unique cycles
+            for cycle in self._gdf['cycle'].unique():
+                # skip cycles with significant off pointing
+                if (cycle < kwargs['cycle_start']):
+                    continue
+                # reduce data frame to RGT, ground track and cycle
+                geodataframe = self._gdf[
+                    (self._gdf['rgt'] == RGT) &
+                    (self._gdf['gt'] == GT) &
+                    (self._gdf['cycle'] == cycle)]
+                if not any(geodataframe[column].values):
+                    continue
+                # plot reduced data frame
+                l, = ax.plot(geodataframe['x_atc'].values,
+                    geodataframe[column].values,
+                    marker='.', lw=0, ms=1.5)
+                # create legend element for cycle
+                if (kwargs['legend_label'] == 'date'):
+                    label = geodataframe.index[0].strftime('%Y-%m-%d')
+                elif (kwargs['legend_label'] == 'cycle'):
+                    label = f'Cycle {cycle:0.0f}'
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color=l.get_color(), lw=6, label=label))
+            # add axes labels
+            ax.set_xlabel('Along-Track Distance [m]')
+            ax.set_ylabel(f'SlideRule {column}')
+        elif (kwargs['kind'] == 'scatter'):
+            # extract orbital cycle parameters
+            cycle = int(kwargs['cycle'])
+            if (kwargs['atl03'] == 'dataframe'):
+                # reduce entered data frame to RGT, ground track and cycle
+                atl03 = self._gdf[(self._gdf['rgt'] == RGT) &
+                    (self._gdf['track'] == self.PT(GT)) &
+                    (self._gdf['pair'] == self.LR(GT)) &
+                    (self._gdf['cycle'] == cycle)]
+            elif (kwargs['atl03'] is not None):
+                # reduce ATL03 data frame to RGT, ground track and cycle
+                atl03 = kwargs['atl03'][(kwargs['atl03']['rgt'] == RGT) &
+                    (kwargs['atl03']['track'] == self.PT(GT)) &
+                    (kwargs['atl03']['pair'] == self.LR(GT)) &
+                    (kwargs['atl03']['cycle'] == cycle)]
+            if (kwargs['classification'] == 'atl08'):
+                # noise, ground, canopy, top of canopy, unclassified
+                colormap = np.array(['c','b','g','g','y'])
+                classes = ['noise','ground','canopy','toc','unclassified']
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                    c=colormap[atl03["atl08_class"].values.astype('i')],
+                    s=1.5, rasterized=True)
+                for i,lab in enumerate(classes):
+                    element = matplotlib.lines.Line2D([0], [0],
+                        color=colormap[i], lw=6, label=lab)
+                    legend_elements.append(element)
+            elif (kwargs['classification'] == 'yapc'):
+                sc = ax.scatter(atl03.index.values,
+                    atl03["height"].values,
+                    c=atl03["yapc_score"],
+                    cmap=kwargs['cmap'],
+                    s=1.5, rasterized=True)
+                plt.colorbar(sc)
+            elif (kwargs['classification'] == 'atl03'):
+                # background, buffer, low, medium, high
+                colormap = np.array(['y','c','b','g','m'])
+                confidences = ['background','buffer','low','medium','high']
+                # reduce data frame to photon classified for surface
+                atl03 = atl03[atl03["atl03_cnf"] >= 0]
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                    c=colormap[atl03["atl03_cnf"].values.astype('i')],
+                    s=1.5, rasterized=True)
+                for i,lab in enumerate(confidences):
+                    element = matplotlib.lines.Line2D([0], [0],
+                        color=colormap[i], lw=6, label=lab)
+                    legend_elements.append(element)
+            elif (kwargs['atl03'] is not None):
+                # plot all available ATL03 points as gray
+                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                    c='0.4', s=0.5, rasterized=True)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color='0.4', lw=6, label='ATL03'))
+            if kwargs['segments']:
+                geodataframe = self._gdf[
+                    (self._gdf['rgt'] == RGT) &
+                    (self._gdf['gt'] == GT) &
+                    (self._gdf['cycle'] == cycle)]
+                # plot reduced data frame
+                sc = ax.scatter(geodataframe.index.values,
+                    geodataframe["h_mean"].values,
+                    c='red', s=2.5, rasterized=True)
+                legend_elements.append(matplotlib.lines.Line2D([0], [0],
+                    color='red', lw=6, label='ATL06-SR'))
+            # add axes labels
+            ax.set_xlabel('UTC')
+            ax.set_ylabel('Height (m)')
+        # add title
+        if kwargs['title']:
+            ax.set_title(kwargs['title'])
+        # create legend
+        if kwargs['legend']:
+            lgd = ax.legend(handles=legend_elements, loc=3,
+                frameon=kwargs['legend_frameon'])
+        # set legend frame to solid white
+        if kwargs['legend'] and kwargs['legend_frameon']:
+            lgd.get_frame().set_alpha(1.0)
+            lgd.get_frame().set_edgecolor('white')
+        if kwargs['ax'] is None:
+            # show the figure
+            plt.tight_layout()
+
+    def ground_track(self, GT):
+        """extract the ground track name for a given Ground Track (GT) index
+        """
+        ground_track_list = ['gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r']
+        return ground_track_list[GT//10 - 1]
+
+    def PT(self, GT):
+        """extract Pair Track (PT) index for a given Ground Track (GT) index
+        """
+        # mapping between ground tracks and sliderule tracks
+        ground_track = self.ground_track(GT)
+        pair_track_dict = dict(gt1l=1,gt1r=1,gt2l=2,gt2r=2,gt3l=3,gt3r=3)
+        return pair_track_dict[ground_track]
+
+    def LR(self, GT):
+        """extract Left-Right (LR) index for a given Ground Track (GT) index
+        """
+        # mapping between ground tracks and sliderule tracks
+        ground_track = self.ground_track(GT)
+        lr_track_dict = dict(gt1l=0,gt1r=1,gt2l=0,gt2r=1,gt3l=0,gt3r=1)
+        return lr_track_dict[ground_track]
+
