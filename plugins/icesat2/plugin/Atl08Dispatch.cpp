@@ -36,9 +36,12 @@
 #include <math.h>
 #include <float.h>
 #include <map>
+#include <limits>
 
 #include "core.h"
 #include "icesat2.h"
+
+using std::numeric_limits;
 
 /******************************************************************************
  * STATIC DATA
@@ -190,9 +193,6 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         return true;
     }
 
-    /* Build Ancillary Inputs */
-    RecordObject* atl08_anc_rec = buildAncillaryRecord(extent, records);
-
     /* Initialize Results */
     vegetation_t result;
     result.pflags = 0;
@@ -203,6 +203,9 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     {
         phorealAlgorithm(extent, result);
     }
+
+    /* Build Ancillary Inputs */
+    RecordObject* atl08_anc_rec = buildAncillaryRecord(extent, records);
 
     /* Post Results */
     postResult(&result, atl08_anc_rec);
@@ -254,29 +257,31 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
         AncillaryFields::field_t field;
         field.anc_type      = atl03_anc_rec->anc_type;
         field.field_index   = atl03_anc_rec->field_index;
-        field.data_type     = atl03_anc_rec->data_type;
 
         /* Calculate Estimation */
-        AncillaryFields::setValueAsInteger(&field, 0.0);
         if((atl03_anc_rec->data_type == (uint8_t)RecordObject::DOUBLE) || (atl03_anc_rec->data_type == (uint8_t)RecordObject::FLOAT))
         {
+            AncillaryFields::setValueAsDouble(&field, 0.0);
             double* values = AncillaryFields::extractAsDoubles(atl03_anc_rec); // `new` memory allocated here
             if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<double, int> counts;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
-                    if(counts.count(values[j])) counts[values[j]] += 1;
-                    else counts[values[j]] = 1;                        
+                    if(values[j] < numeric_limits<float>::max())
+                    {
+                        if(counts.count(values[j])) counts[values[j]] += 1;
+                        else counts[values[j]] = 1;
+                    }
                 }
                 double nearest = 0.0;
                 int nearest_count = 0;
-                for (auto itr = counts.begin(); itr != counts.end(); ++itr) 
+                for (auto itr: counts) 
                 {
-                    if(itr->second > nearest_count)
+                    if(itr.second > nearest_count)
                     {
-                        nearest_count = itr->second;
-                        nearest = itr->first;
+                        nearest_count = itr.second;
+                        nearest = itr.first;
                     }
                 }
                 AncillaryFields::setValueAsDouble(&field, nearest);
@@ -284,13 +289,18 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
             else if(entry.estimation == AncillaryFields::INTERPOLATION)
             {
                 double average = 0.0;
+                int samples = 0;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
-                    average += values[j];
+                    if(values[j] < numeric_limits<float>::max())
+                    {
+                        average += values[j];
+                        samples++;
+                    }
                 }
-                if(atl03_anc_rec->num_elements)
+                if(samples)
                 {
-                    average /=  atl03_anc_rec->num_elements;
+                    average /= samples;
                 }
                 AncillaryFields::setValueAsDouble(&field, average);
             }
@@ -298,6 +308,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
         }
         else // integer type
         {
+            AncillaryFields::setValueAsInteger(&field, 0);
             int64_t* values = AncillaryFields::extractAsIntegers(atl03_anc_rec); // `new` memory allocated here
             if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
@@ -340,7 +351,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
     }
 
     /* Return Ancillary Record */
-    return AncillaryFields::createFieldArrayRecord(extent->extent_id, field_vec);
+    return AncillaryFields::createFieldArrayRecord(extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION, field_vec);
 }
 
 /*----------------------------------------------------------------------------

@@ -402,13 +402,13 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
             if(!stages[STAGE_ATL08])
             {
                 /* If atl08 processing not enabled, then enable it 
-                   and default all photons to on (i.e. no filtering) */
+                   and default all classified photons to on */
                 stages[STAGE_ATL08] = true;
                 atl08_class[ATL08_NOISE] = true;
                 atl08_class[ATL08_GROUND] = true;
                 atl08_class[ATL08_CANOPY] = true;
                 atl08_class[ATL08_TOP_OF_CANOPY] = true;
-                atl08_class[ATL08_UNCLASSIFIED] = true;
+                atl08_class[ATL08_UNCLASSIFIED] = false;
             }
         }
         lua_pop(L, 1);
@@ -844,9 +844,8 @@ void Icesat2Parms::get_lua_field_list (lua_State* L, int index, AncillaryFields:
             lua_rawgeti(L, index, i+1);
             if(lua_isstring(L, -1))
             {
-                const char* item_str = LuaObject::getLuaString(L, -1);
                 AncillaryFields::entry_t item = {
-                    .field = item_str,
+                    .field = LuaObject::getLuaString(L, -1),
                     .estimation = AncillaryFields::NEAREST_NEIGHBOR
                 };
                 /* Check Modifiers */
@@ -857,7 +856,7 @@ void Icesat2Parms::get_lua_field_list (lua_State* L, int index, AncillaryFields:
                 }
                 /* Add Field to List */
                 (*string_list)->add(item);
-                mlog(DEBUG, "Adding %s to list of strings", item_str);
+                mlog(DEBUG, "Adding %s to list of strings", item.field.c_str());
             }
             else
             {

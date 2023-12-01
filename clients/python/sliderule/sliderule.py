@@ -561,7 +561,7 @@ def procoutputfile(parm):
 #
 #  Get Values from Raw Buffer
 #
-def getvalues(data, dtype, size):
+def getvalues(data, dtype, size, num_elements=0):
     """
     data:   tuple of bytes
     dtype:  element of codedtype
@@ -570,7 +570,8 @@ def getvalues(data, dtype, size):
 
     raw = bytes(data)
     datatype = basictypes[codedtype2str[dtype]]["nptype"]
-    num_elements = int(size / numpy.dtype(datatype).itemsize)
+    if num_elements == 0: # dynamically determine number of elements
+        num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
 

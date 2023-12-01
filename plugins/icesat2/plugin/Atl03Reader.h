@@ -218,6 +218,7 @@ class Atl03Reader: public LuaObject
                 /* Class Data */
                 bool                enabled;
                 bool                phoreal;
+                bool                ancillary;
 
                 /* Generated Data */
                 uint8_t*            classification; // [num_photons]
@@ -238,7 +239,7 @@ class Atl03Reader: public LuaObject
 
                 /* Ancillary Data */
                 H5DArrayDictionary* anc_seg_data;
-                List<int32_t>*      anc_seg_indices;
+                int32_t*            anc_seg_indices;
         };
 
         /* YAPC Score Subclass */
