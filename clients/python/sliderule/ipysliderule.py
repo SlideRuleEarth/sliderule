@@ -2594,12 +2594,30 @@ class LeafletMap:
         """
         # remove any prior instances of a data layer
         if (action == 'deleted') and self.geojson is not None:
-            self.map.remove(self.geojson)
+            self.remove(self.geojson)
             self.geojson = None
         # remove any prior instances of a colorbar
         if (action == 'deleted') and self.colorbar is not None:
-            self.map.remove(self.colorbar)
+            self.remove(self.colorbar)
             self.colorbar = None
+
+    # remove map layers
+    def remove(self, layer):
+        """wrapper function for removing layers from leaflet maps
+        """
+        # try to remove layer from map
+        try:
+            self.map.remove(layer)
+        except ipyleaflet.LayerException as e:
+            logging.info(f"Layer {layer} already removed from map")
+            pass
+        except ipyleaflet.ControlException as e:
+            logging.info(f"Control {layer} already removed from map")
+            pass
+        except Exception as e:
+            logging.critical(f"Could not remove layer {layer}")
+            logging.error(traceback.format_exc())
+            pass
 
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
