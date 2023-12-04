@@ -116,7 +116,7 @@ The ATL06-SR algorithm fits a line segment to the photons in each extent, using 
 The ancillary field parameters allow the user to request additional fields from the source datasets being subsetted.
 The ``"atl03_geo_fields"``, ``"atl03_ph_fields"``, and ``"atl08_fields"`` are used to specify additional fields in the ATL03 and ATL08 granules to be returned with the photon extent and ATL06-SR elevation responses.  
 The ``"atl06_fields"`` is used to specify additional fields in the ATL06 granule for ATL06 subsetting requests.
-Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.
+Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.  Note: if a field is requested that is already present in the default GeoDataFrame, then the name of both fields will be changed to include a _x suffix for the default incusion of the field, and a _y for the ancillary inclusion of the field.  In general, they should have the same value, but in some cases the ancillary field goes through different processing steps and may possibly contain a different value.
 
 * ``"atl03_geo_fields"``: fields in the "geolocation" and "geophys_corr" groups of the ATL03 granule
 * ``"atl03_ph_fields"``: fields in the "heights" group of the ATL03 granule
@@ -133,6 +133,32 @@ For example:
         "atl06_fields":         ["ground_track/ref_azimuth"],
         "atl08_fields":         ["asr"]
     }
+
+2.5.1 ATL03 Subsetted Ancillary Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Ancillary data returned from the ``"atl03s"`` and ``"atl03sp"`` APIs are per-photon values that are read from the ATL03 granules.  No processing is performed on the data read out of the ATL03 granule.  The fields must come from either a per-photon variable (atl03_ph_fields), or a per-segment variable (atl03_geo_fields).
+
+2.5.2 ATL06-SR Ancillary Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Ancillary data returned from the ``"atl06"`` and ``"atl06p"`` APIs come from the ancillary fields specified for ATL03, but instead of being returned as-is, they are processed using the ATL06 least-squares-fit algorithm, and only the result is returned.  In other words, ancillary data points from ATL03 to be included in an ATL06-SR result are treated just like the h_mean, latitude, and longitude variables, and returned as a fitted double-precision floating point value.
+
+2.5.3 ATL06 Subsetted Ancillary Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Ancillary data returned from the ``"atl06s"`` and ``"atl06sp"`` APIs come from the land_ice_segments group of the ATL06 granules. The data is mostly returned as-is, with one exception.  Double-precision and single-precision floating point variables are checked to see if they contain the maximum value of their respective encodings, and if so, a floating point NaN (not-a-number) is returned instead.  This check is not performed for integer variables because the maximum value of an encoded integer can sometimes be a valid value (e.g. bit masks).
+
+2.5.4 ATL08-PhoREAL Ancillary Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Ancillary data returned from the ``"atl08"`` and ``"atl08p"`` APIs come from the land_segments group of the ATL08 granules.  The data goes through a series of processing steps before being returned back to the user as per-extent (i.e. variable-length segment) result values.
+* When a user requests an ATL08 ancillary field, the ATL08 classifications are automatically enabled with all unclassified photons filtered out (i.e. noise, ground, canopy, and top of canopy are included; unclassified photons are excluded).  If the user is also requesting PhoREAL processing, then noise photons are automatically filtered out as well.  Lastly, if the user manually specifies which ATL08 photon classifications to use, then that manual specification takes precedence and is used.
+* If a user manually specifies that unclassified photons are to be included, the value used for an ancillary field for that photon has all 1's in the binary encoding of that value.  For example, if it is an 8-bit unsigned integer, the value would be 255.  If it is a double-precision floating point, the value would be -nan.
+* Since the ATL08 APIs return per-extent values and not per-photon values, the set of per-photon ancillary field values must be reduced in some way to a single per-extent value to be returned back to the user.  There are currently two options available for how this reduction occurs.
+1. Nearest Neighbor (Mode): the value that appears most often in the extent is selected.  This is the default method.  For example, if a user specifies ``"atl08_fields": ["asr"]`` in their parameters, and the PhoREAL extent consists of mostly two-thirds of one ATL08 segment, and a third of the next ATL08 segment (and if the photons rate is consistent across those two ATL08 segments), then the value returned by the nearest neighbor processing will be the ATL08 land_segment value from the first ATL08 segment.
+2. Interpolation (Average): the value that is the average of all the per-photon values provided.  This is only performed when the user appends a "%" to the end of the field's name in the field list parameter.  For example, if a user specifies ``"atl08_fields": ["asr%"]`` in their parameters, then the returned result is the average of all of the "asr" values in the PhoREAL extent.  Note that the GeoDataFrame returned to the user will include the "%" in the column name for this particular field - that is so a user can request both nearest neighbor and interpolated values for the same field in a single request.
+
 
 2.6 PhoREAL parameters
 -----------------------

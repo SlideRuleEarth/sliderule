@@ -245,6 +245,10 @@ The UI shall provide the current load of the target SlideRule cluster as a perce
 
 The UI shall provide a tutorial that guides a user through a series of steps necessary to make a basic SlideRule request and interact with the data.
 
+#### SRWC-4.4: Featured Processing Runs
+
+The UI shall provide a set of attractively presented example processing runs that illustrate different aspects of SlideRule's functionality while also targeting interesting locations on the Earth.
+
 
 ## 5. APIs and Parameters
 
