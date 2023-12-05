@@ -249,6 +249,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     result.elevation.rgt = extent->reference_ground_track;
     result.elevation.cycle = extent->cycle;
     result.elevation.x_atc = extent->segment_distance;
+    result.elevation.pflags = 0;
 
     /* Copy In Initial Set of Photons */
     result.elevation.photon_count = extent->photon_count;
