@@ -651,6 +651,7 @@ void H5FileBuffer::readDataset (info_t* info)
         buffer = new uint8_t [buffer_size];
 
         /* Fill Buffer with Fill Value (if provided) */
+        #if 0
         if(metaData.fillsize > 0)
         {
             for(int64_t i = 0; i < buffer_size; i += metaData.fillsize)
@@ -658,6 +659,7 @@ void H5FileBuffer::readDataset (info_t* info)
                 memcpy(&buffer[i], &metaData.fill.fill_ll, metaData.fillsize);
             }
         }
+        #endif
     }
 
     /* Populate Rest of Info Struct */
