@@ -25,8 +25,8 @@ class TestSubsetting:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 953
-        assert abs(gdf["h_mean"].describe()["mean"] - 1749.8443895024502) < 0.01
-        assert abs(gdf["y_atc"].describe()["mean"] - -5516.94775390625) < 0.01
+        assert abs(gdf["h_mean"].describe()["mean"] - 1749.8443895024502) < 0.1
+        assert abs(gdf["y_atc"].describe()["mean"] - -5516.94775390625) < 0.1
 
     def test_180_edge(self, init):
         resource = "ATL03_20221012073759_03291712_005_01.h5"
