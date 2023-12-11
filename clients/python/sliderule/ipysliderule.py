@@ -31,7 +31,6 @@ import os
 import io
 import sys
 import copy
-import logging
 import datetime
 import traceback
 import numpy as np
@@ -43,6 +42,7 @@ import matplotlib.colorbar
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from traitlets.utils.bunch import Bunch
+from sliderule import logger
 import sliderule.io
 
 # imports with warnings if not present
@@ -1334,13 +1334,13 @@ class widgets:
         try:
             rgt = int(self.rgt.value)
         except:
-            logging.critical(f"RGT {self.rgt.value} is invalid")
+            logger.critical(f"RGT {self.rgt.value} is invalid")
             return "0"
         # verify ground track values
         if (rgt >= 1) and (rgt <= 1387):
             return self.rgt.value
         else:
-            logging.critical(f"RGT {self.rgt.value} is outside available range")
+            logger.critical(f"RGT {self.rgt.value} is outside available range")
             return "0"
 
     @property
@@ -1384,7 +1384,7 @@ class widgets:
         if (self.cycle.value in all_cycles):
             return self.cycle.value
         else:
-            logging.critical(f"Cycle {self.cycle.value} is outside available range")
+            logger.critical(f"Cycle {self.cycle.value} is outside available range")
             return "0"
 
     @property
@@ -2071,14 +2071,14 @@ class leaflet:
                     # simply attempt to add the layer or control
                     self.map.add(layer)
             except ipyleaflet.LayerException as e:
-                logging.info(f"Layer {layer} already on map")
+                logger.info(f"Layer {layer} already on map")
                 pass
             except ipyleaflet.ControlException as e:
-                logging.info(f"Control {layer} already on map")
+                logger.info(f"Control {layer} already on map")
                 pass
             except Exception as e:
-                logging.critical(f"Could add layer {layer}")
-                logging.error(traceback.format_exc())
+                logger.critical(f"Could add layer {layer}")
+                logger.error(traceback.format_exc())
                 pass
 
     # remove map layers
@@ -2126,14 +2126,14 @@ class leaflet:
                     # simply attempt to remove the layer or control
                     self.map.remove(layer)
             except ipyleaflet.LayerException as e:
-                logging.info(f"Layer {layer} already removed from map")
+                logger.info(f"Layer {layer} already removed from map")
                 pass
             except ipyleaflet.ControlException as e:
-                logging.info(f"Control {layer} already removed from map")
+                logger.info(f"Control {layer} already removed from map")
                 pass
             except Exception as e:
-                logging.critical(f"Could not remove layer {layer}")
-                logging.error(traceback.format_exc())
+                logger.critical(f"Could not remove layer {layer}")
+                logger.error(traceback.format_exc())
                 pass
 
     # handle cursor movements for label
@@ -2214,7 +2214,7 @@ class leaflet:
         kwargs.setdefault('colorbar', True)
         kwargs.setdefault('position', 'topright')
         # add warning that function is deprecated
-        logging.critical(f"Deprecated. Will be removed in a future release")
+        logger.critical(f"Deprecated. Will be removed in a future release")
         # remove any prior instances of a data layer
         if self.geojson is not None:
             self.map.remove(self.geojson)
@@ -2609,14 +2609,14 @@ class LeafletMap:
         try:
             self.map.remove(layer)
         except ipyleaflet.LayerException as e:
-            logging.info(f"Layer {layer} already removed from map")
+            logger.info(f"Layer {layer} already removed from map")
             pass
         except ipyleaflet.ControlException as e:
-            logging.info(f"Control {layer} already removed from map")
+            logger.info(f"Control {layer} already removed from map")
             pass
         except Exception as e:
-            logging.critical(f"Could not remove layer {layer}")
-            logging.error(traceback.format_exc())
+            logger.critical(f"Could not remove layer {layer}")
+            logger.error(traceback.format_exc())
             pass
 
     # add colorbar widget to leaflet map

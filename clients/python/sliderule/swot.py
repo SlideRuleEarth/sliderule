@@ -30,16 +30,12 @@
 import time
 import logging
 import numpy
-import geopandas
 import sliderule
-from sliderule import earthdata
+from sliderule import earthdata, logger
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
 
 # profiling times for each major function
 profiles = {}

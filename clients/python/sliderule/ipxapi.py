@@ -27,15 +27,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sliderule import icesat2, sliderule
-import logging
-
-###############################################################################
-# GLOBALS
-###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
+from sliderule import icesat2, sliderule, logger
 
 ###############################################################################
 # APIs
