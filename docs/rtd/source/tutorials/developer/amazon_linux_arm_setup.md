@@ -109,6 +109,14 @@ sudo usermod -aG docker <username>
 newgrp docker
 ```
 
+Then install Docker Compose plugin
+```bash
+DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+mkdir -p $DOCKER_CONFIG/cli-plugins
+curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-aarch64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+```
+
 ### 9. Install Dependencies got Local Build
 
 ```bash
@@ -130,7 +138,14 @@ sudo dnf install \
   cppcheck
 ```
 
-#### install rapidjson dependency
+In an editor (e.g. vi), create a file in the `/etc/ld.so.conf.d/` directory called `local.conf` and in it put the one line below, and run `sudo ldconfig` afterwards. This allows any applications that are linked to libraries installed in `/usr/local/lib64` to be found.
+```bash
+/usr/local/lib64
+```
+
+Go through and install all of the dependencies for SlideRule/
+```bash
+# install rapidjson dependency
 git clone https://github.com/Tencent/rapidjson.git
 cd rapidjson
 mkdir build
@@ -140,7 +155,7 @@ make -j8
 sudo make install
 sudo ldconfig
 
-#### install arrow dependency
+# install arrow dependency
 git clone https://github.com/apache/arrow.git
 cd arrow
 mkdir build
@@ -150,7 +165,7 @@ make -j8
 sudo make install
 sudo ldconfig
 
-#### install proj9 gdal/pdal dependency
+# install proj9 gdal/pdal dependency
 git clone https://github.com/OSGeo/PROJ.git
 cd PROJ
 mkdir build
@@ -160,7 +175,7 @@ make -j8
 sudo make install
 sudo ldconfig
 
-#### install geotiff gdal/pdal dependency
+# install geotiff gdal/pdal dependency
 git clone https://github.com/OSGeo/libgeotiff.git
 cd libgeotiff
 mkdir build
@@ -170,7 +185,7 @@ make -j8
 sudo make install
 sudo ldconfig
 
-#### install geos gdal dependency
+# install geos gdal dependency
 git clone https://github.com/libgeos/geos.git
 cd geos
 mkdir build
@@ -180,7 +195,7 @@ make -j8
 sudo make install
 sudo ldconfig
 
-#### install gdal dependency
+# install gdal dependency
 git clone https://github.com/OSGeo/gdal.git
 cd gdal
 mkdir build
@@ -190,13 +205,13 @@ make -j8
 sudo make install
 sudo ldconfig
 
-#### install pistache dependency
+# install pistache dependency
 git clone https://github.com/pistacheio/pistache.git
 cd pistache
 meson setup build
 sudo meson install -C build
 sudo ldconfig
-
+```
 
 ### 10. Install and Configure Miniconda
 

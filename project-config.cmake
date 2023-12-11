@@ -120,7 +120,7 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
     # Prefer libraries installed in /usr/local
     INCLUDE_DIRECTORIES(/usr/local/include)
-    LINK_DIRECTORIES(/usr/local/lib)
+    LINK_DIRECTORIES(/usr/local/lib /usr/local/lib64)
 
     # Set Environment Variables
     set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
