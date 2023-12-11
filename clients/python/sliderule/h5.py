@@ -28,15 +28,13 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
-import logging
 import numpy
 import sliderule
+from sliderule import logger
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-logger = logging.getLogger(__name__)
 
 profiles = {}
 

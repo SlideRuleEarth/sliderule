@@ -34,21 +34,18 @@ import json
 import ssl
 import urllib.request
 import requests
-import logging
 import numpy
 import geopandas
 from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
+from sliderule import logger
 import sliderule
 
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
 
 # profiling times for each major function
 profiles = {}
