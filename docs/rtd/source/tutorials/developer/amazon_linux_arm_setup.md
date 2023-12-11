@@ -1,4 +1,4 @@
-# Setting Up Development Environment
+# Setting Up Amazon Linux Development Environment
 
 2023-12-11
 
@@ -249,8 +249,6 @@ aws ecr get-login-password --region $region | docker login --username AWS --pass
 ### 13. Install Terraform & Packer
 
 ```bash
-sudo apt install unzip
-
 wget https://releases.hashicorp.com/terraform/1.3.1/terraform_1.3.1_linux_arm64.zip
 unzip terraform_1.3.1_linux_arm64.zip
 sudo mv terraform /usr/local/bin/
