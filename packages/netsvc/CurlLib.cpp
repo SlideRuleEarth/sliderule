@@ -62,7 +62,7 @@ void CurlLib::deinit (void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<const char*>* headers)
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<string*>* headers)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -127,7 +127,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         {
             for(int i = 0; i < headers->length(); i++)
             {
-                hdr_slist = curl_slist_append(hdr_slist, headers->get(i));
+                hdr_slist = curl_slist_append(hdr_slist, headers->get(i)->c_str());
             }
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdr_slist);
         }
@@ -328,7 +328,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 /*----------------------------------------------------------------------------
  * getHeaders
  *----------------------------------------------------------------------------*/
-int CurlLib::getHeaders (lua_State* L, int index, List<const char*>& header_list)
+int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
 {
     int num_hdrs = 0;
 
@@ -343,7 +343,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<const char*>& header_list
             lua_rawgeti(L, index, i+1);
             if(lua_isstring(L, -1))
             {
-                const char* header = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+                string* header = new string(LuaObject::getLuaString(L, -1));
                 header_list.add(header);
                 num_hdrs++;
             }
@@ -362,7 +362,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<const char*>& header_list
 int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
-    List<const char*> header_list(EXPECTED_MAX_HEADERS);
+    List<string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
@@ -405,7 +405,7 @@ int CurlLib::luaGet (lua_State* L)
 int CurlLib::luaPut (lua_State* L)
 {
     bool status = false;
-    List<const char*> header_list(EXPECTED_MAX_HEADERS);
+    List<string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
@@ -448,7 +448,7 @@ int CurlLib::luaPut (lua_State* L)
 int CurlLib::luaPost (lua_State* L)
 {
     bool status = false;
-    List<const char*> header_list(EXPECTED_MAX_HEADERS);
+    List<string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
