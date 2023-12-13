@@ -86,7 +86,7 @@ class LuaEngine
          *--------------------------------------------------------------------*/
 
                             LuaEngine       (const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG], uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // protected mode
-                            LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
+        explicit            LuaEngine       (const char* script, const char* arg, uint32_t trace_id=ORIGIN, luaStepHook hook=NULL, bool paused=false); // direct mode
                             ~LuaEngine      (void);
 
         static void         init            (void);

@@ -156,6 +156,11 @@ MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)
         p.x = EARTHRADIUS * lonrad;
         p.y = EARTHRADIUS * latrad;
     }
+    else
+    {
+        p.x = NAN;
+        p.y = NAN;
+    }
 
     return p;
 }

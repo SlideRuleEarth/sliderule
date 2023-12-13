@@ -100,9 +100,9 @@ class CosmosInterface: public CommandableObject
                 pid = NULL; }
 
             ~tlm_t(void)
-            {   if(sub) delete sub;
-                if(sock) delete sock;
-                if(pid) delete pid; }
+            {   delete sub;
+                delete sock;
+                delete pid; }
         };
 
         struct cmd_t
@@ -119,13 +119,10 @@ class CosmosInterface: public CommandableObject
                 pid = NULL; }
 
             ~cmd_t(void)
-            {   if(pub) delete pub;
-                if(sock) delete sock;
-                if(pid) delete pid; }
+            {   delete pub;
+                delete sock;
+                delete pid; }
         };
-
-        typedef Ordering<tlm_t*, unsigned long> TlmOrdering;
-        typedef Ordering<cmd_t*, unsigned long> CmdOrdering;
 
         /*--------------------------------------------------------------------
          * Data
@@ -137,15 +134,11 @@ class CosmosInterface: public CommandableObject
         // telemetry connections
         Thread*                 tlmListenerPid;
         listener_t              tlmListener;
-        TlmOrdering             tlmConnections;
-        Mutex                   tlmConnMut;
         const char*             tlmQName;
 
         // command connections
         Thread*                 cmdListenerPid;
         listener_t              cmdListener;
-        CmdOrdering             cmdConnections;
-        Mutex                   cmdConnMut;
         const char*             cmdQName;
 
         /*--------------------------------------------------------------------

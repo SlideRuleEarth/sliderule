@@ -580,10 +580,6 @@ bool CcsdsPacketProcessor::resetProcessing (void)
         {
             if(pktProcessor[apid].enable && pktProcessor[apid].segments)
             {
-                for(int seg=0; seg < pktProcessor[apid].segments->length(); seg++)
-                {
-                    delete pktProcessor[apid].segments->get(seg);
-                }
                 pktProcessor[apid].segments->clear();
                 delete pktProcessor[apid].segments;
             }

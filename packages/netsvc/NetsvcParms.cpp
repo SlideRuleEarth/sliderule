@@ -207,7 +207,7 @@ void NetsvcParms::cleanup (void) const
 void NetsvcParms::get_lua_polygon (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of coordinates */
     if(lua_istable(L, index))

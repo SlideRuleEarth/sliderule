@@ -300,7 +300,7 @@ float* AncillaryFields::getValueAsFloat (uint8_t* buffer)
  *----------------------------------------------------------------------------*/
 RecordObject* AncillaryFields::createFieldArrayRecord (uint64_t extent_id, vector<field_t>& field_vec)
 {
-    if(field_vec.size() <= 0) return NULL;
+    if(field_vec.empty()) return NULL;
 
     int rec_size = offsetof(field_array_t, fields) + (sizeof(field_t) * field_vec.size());
     RecordObject* rec = new RecordObject(ancFieldArrayRecType, rec_size);

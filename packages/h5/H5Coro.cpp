@@ -3352,7 +3352,7 @@ int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8
 {
     if(H5_ERROR_CHECKING)
     {
-        if(type_size < 0 || type_size > 8)
+        if(type_size <= 0 || type_size > 8)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data size to perform shuffle on: %d", type_size);
         }

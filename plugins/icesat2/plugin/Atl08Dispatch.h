@@ -161,7 +161,7 @@ class Atl08Dispatch: public DispatchObject
         RecordObject*   buildAncillaryRecord            (Atl03Reader::extent_t* extent, recVec_t* records);
         void            geolocateResult                 (Atl03Reader::extent_t* extent, vegetation_t& result);
         void            phorealAlgorithm                (Atl03Reader::extent_t* extent, vegetation_t& result);
-        void            postResult                      (vegetation_t* result, RecordObject* ancrec);
+        void            postResult                      (const vegetation_t* result, RecordObject* ancrec);
         static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
         static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
 

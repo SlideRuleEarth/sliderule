@@ -396,7 +396,7 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
  *----------------------------------------------------------------------------*/
 size_t ProvisioningSystemLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    List<data_t>* rsps_set = (List<data_t>*)userp;
+    List<data_t>* rsps_set = reinterpret_cast<List<data_t>*>(userp);
 
     data_t rsps;
     rsps.size = size * nmemb;

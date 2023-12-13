@@ -426,7 +426,6 @@ int64_t TimeLib::str2gpstime (const char* time_str)
     int token_count = 1;
     int colon_count = 0;
     int dash_count = 0;
-    int space_count = 0;
     int tz_count = 0;
     int zulu_count = 0;
     token_ptr[0] = &time_buf[0];
@@ -442,7 +441,6 @@ int64_t TimeLib::str2gpstime (const char* time_str)
         }
         else if(time_str[i] == ' ')
         {
-            space_count++;
             is_delim = true;
         }
         else if(time_str[i] == '-')

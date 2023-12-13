@@ -79,7 +79,7 @@ UT_Dictionary::~UT_Dictionary(void)
 /*----------------------------------------------------------------------------
  * functionalUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 
@@ -284,7 +284,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * iteratorUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 
@@ -408,7 +408,7 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * addWordSetCmd  -
  *----------------------------------------------------------------------------*/
-int UT_Dictionary::addWordSetCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::addWordSetCmd (int argc, const char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 

@@ -261,7 +261,7 @@ int AssetIndex<T>::luaAdd (lua_State* L)
     try
     {
         /* Get Self */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+        AssetIndex<T>* lua_obj = reinterpret_cast<AssetIndex<T>*>(getLuaSelf(L, 1));
 
         /* Create Resource Attributes */
         T span = lua_obj->luatable2span(L, 2);
@@ -289,7 +289,7 @@ int AssetIndex<T>::luaQuery (lua_State* L)
     try
     {
         /* Get Self */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+        AssetIndex<T>* lua_obj = reinterpret_cast<AssetIndex<T>*>(getLuaSelf(L, 1));
 
         /* Create Query Attributes */
         T span = lua_obj->luatable2span(L, 2);
@@ -334,7 +334,7 @@ int AssetIndex<T>::luaDisplay (lua_State* L)
     try
     {
         /* Get Parameters */
-        AssetIndex<T>* lua_obj = (AssetIndex<T>*)getLuaSelf(L, 1);
+        AssetIndex<T>* lua_obj = reinterpret_cast<AssetIndex<T>*>(getLuaSelf(L, 1));
 
         /* Display Tree */
         lua_obj->display();

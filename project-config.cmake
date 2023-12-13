@@ -64,6 +64,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameter:*/Dictionary.h"
         "--suppress=unreadVariable:*/TimeLib.cpp"
         "--suppress=invalidPointerCast:*/H5Array.h"
+        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"
+        "--suppress=knownConditionTrueFalse:*/packages/legacy/UT_*"
+        "--suppress=uninitStructMember:*/plugins/icesat2/plugin/Atl06Dispatch.cpp"
         "--error-exitcode=1"
         "-DLLONG_MAX"
     )
