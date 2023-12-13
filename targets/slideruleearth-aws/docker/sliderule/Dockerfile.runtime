@@ -12,7 +12,7 @@ RUN make config-release INSTALL_DIR=/usr/local && make
 COPY config.json /usr/local/etc/sliderule/
 
 # install runtime dependencies
-FROM ubuntu:20.04 AS runtime
+FROM amazonlinux:2023 AS runtime
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive \
   apt-get install -y --no-install-recommends \
