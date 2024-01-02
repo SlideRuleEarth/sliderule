@@ -162,15 +162,15 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
       case INT8:      return buffer.readInt8(byte_offset);
       case INT16:     return buffer.readInt16BE(byte_offset);
       case INT32:     return buffer.readInt32BE(byte_offset);
-      case INT64:     return buffer.readInt64BE(byte_offset);
+      case INT64:     return buffer.readBigInt64BE(byte_offset);
       case UINT8:     return buffer.readUInt8(byte_offset);
       case UINT16:    return buffer.readUInt16BE(byte_offset);
       case UINT32:    return buffer.readUInt32BE(byte_offset);
-      case UINT64:    return buffer.readUInt64BE(byte_offset);
+      case UINT64:    return buffer.readBigUInt64BE(byte_offset);
       case BITFIELD:  throw new Error(`Bit fields are unsupported`);
       case FLOAT:     return buffer.readFloatBE(byte_offset);
       case DOUBLE:    return buffer.readDoubleBE(byte_offset);
-      case TIME8:     return new Date(buffer.readInt64BE(byte_offset) / 1000000);
+      case TIME8:     return new Date(buffer.readBigInt64BE(byte_offset) / 1000000);
       case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
       case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
       default:        throw new Error(`Invalid field type ${type_code}`);
@@ -181,15 +181,15 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
       case INT8:      return buffer.readInt8(byte_offset);
       case INT16:     return buffer.readInt16LE(byte_offset);
       case INT32:     return buffer.readInt32LE(byte_offset);
-      case INT64:     return buffer.readInt64LE(byte_offset);
+      case INT64:     return buffer.readBigInt64LE(byte_offset);
       case UINT8:     return buffer.readUInt8(byte_offset);
       case UINT16:    return buffer.readUInt16LE(byte_offset);
       case UINT32:    return buffer.readUInt32LE(byte_offset);
-      case UINT64:    return buffer.readUInt64LE(byte_offset);
+      case UINT64:    return buffer.readBigUInt64LE(byte_offset);
       case BITFIELD:  throw new Error(`Bit fields are unsupported`);
       case FLOAT:     return buffer.readFloatLE(byte_offset);
       case DOUBLE:    return buffer.readDoubleLE(byte_offset);
-      case TIME8:     return new Date(buffer.readInt64LE(byte_offset) / 1000000);
+      case TIME8:     return new Date(buffer.readBigInt64LE(byte_offset) / 1000000);
       case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
       case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
       default:        throw new Error(`Invalid field type ${type_code}`);
@@ -311,7 +311,7 @@ function parseResponse (response, resolve, reject) {
           rec_type_size = buffer.readUInt16BE(2);
           let rec_data_size = buffer.readUInt32BE(4);
           if (rec_version != REC_VERSION) {
-            reject(new Error(`invalid record format: ${rec_verison}`))
+            reject(new Error(`invalid record format: ${rec_version}`))
           }
           // Set record attributes
           rec_size = rec_type_size + rec_data_size;
