@@ -168,7 +168,7 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
       case BITFIELD:  throw new Error(`Bit fields are unsupported`);
       case FLOAT:     return buffer.readFloatBE(byte_offset);
       case DOUBLE:    return buffer.readDoubleBE(byte_offset);
-      case TIME8:     return new Date(buffer.readBigInt64BE(byte_offset) / 1000000);
+      case TIME8:     return new Date(Number(buffer.readBigInt64BE(byte_offset) / BigInt(1000000)));
       case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
       case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
       default:        throw new Error(`Invalid field type ${type_code}`);
@@ -187,7 +187,7 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
       case BITFIELD:  throw new Error(`Bit fields are unsupported`);
       case FLOAT:     return buffer.readFloatLE(byte_offset);
       case DOUBLE:    return buffer.readDoubleLE(byte_offset);
-      case TIME8:     return new Date(buffer.readBigInt64LE(byte_offset) / 1000000);
+      case TIME8:     return new Date(Number(buffer.readBigInt64LE(byte_offset) / BigInt(1000000)));
       case STRING:    return String.fromCharCode(buffer.readUInt8(byte_offset));
       case USER:      throw new Error(`User fields cannot be decoded as a primitive`);
       default:        throw new Error(`Invalid field type ${type_code}`);
@@ -198,8 +198,7 @@ function decodeElement(type_code, big_endian, buffer, byte_offset) {
 //
 // decodeField
 //
-async function decodeField(field_def, buffer, offset) {
-
+async function decodeField(field_def, buffer, offset, rec_size) {
   let value = []; // ultimately returned
 
   // Pull out field attributes
@@ -216,7 +215,7 @@ async function decodeField(field_def, buffer, offset) {
 
   // For variable length fields, recalculate number of elements using size of record
   if (num_elements == 0) {
-    num_elements = (buffer.length - byte_offset) / field_size;
+    num_elements = (rec_size - byte_offset) / field_size;
   }
 
   // Decode elements
@@ -225,7 +224,7 @@ async function decodeField(field_def, buffer, offset) {
       value.push(decodeElement(type_code, big_endian, buffer, byte_offset));
     }
     else {
-      value.push(decodeRecord(field_def.type, buffer, byte_offset));
+      value.push(decodeRecord(field_def.type, buffer, byte_offset, rec_size));
     }
     byte_offset += field_size;
   }
@@ -249,14 +248,14 @@ async function decodeField(field_def, buffer, offset) {
 //
 // decodeRecord
 //
-async function decodeRecord(rec_type, buffer, offset) {
+async function decodeRecord(rec_type, buffer, offset, rec_size) {
   let rec_obj = {}
   let rec_def = await populateDefinition(rec_type);
   // For each field defined in record
   for (let field in rec_def) {
     // Check if not property
     if (field.match(/^__/) == null) {
-      rec_obj[field] = await decodeField(rec_def[field], buffer, offset);
+      rec_obj[field] = await decodeField(rec_def[field], buffer, offset, rec_size);
     }
   }
   // Return decoded record
@@ -328,7 +327,7 @@ function parseResponse (response, resolve, reject) {
           bytes_processed += rec_size;
           let buffer = Buffer.concat(chunks);
           let rec_type = buffer.toString('utf8', 0, rec_type_size);
-          decodeRecord(rec_type, buffer, rec_type_size).then(
+          decodeRecord(rec_type, buffer, rec_type_size, rec_size).then(
             result => {
               recs.push(result);
             }
