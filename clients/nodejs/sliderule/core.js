@@ -72,7 +72,6 @@ const datatypes = {
   DYNAMIC:  3
 };
 
-
 //
 // SlideRule Constants
 //
@@ -143,13 +142,12 @@ async function populateDefinition(rec_type) {
 // getFieldSize
 //
 async function getFieldSize(type) {
-  let type_code = fieldtypes[type].code;
-  if (type_code == USER) {
-    let rec_def = await populateDefinition(type);
-    return rec_def.__datasize;
+  if (type in fieldtypes) {
+    return fieldtypes[type].size;
   }
   else {
-    return fieldtypes[type].size;
+    let rec_def = await populateDefinition(type);
+    return rec_def.__datasize;
   }
 }
 
@@ -205,11 +203,16 @@ async function decodeField(field_def, buffer, offset) {
   let value = []; // ultimately returned
 
   // Pull out field attributes
-  let type_code = fieldtypes[field_def.type].code;
   let big_endian = (field_def.flags.match('BE') != null);
   let byte_offset = offset + (field_def.offset / 8);
   let num_elements = field_def.elements;
   let field_size = await getFieldSize(field_def.type);
+
+  // Get type code
+  let type_code = USER;
+  if (field_def.type in fieldtypes) {
+     type_code = fieldtypes[field_def.type].code;
+  }
 
   // For variable length fields, recalculate number of elements using size of record
   if (num_elements == 0) {
@@ -218,11 +221,11 @@ async function decodeField(field_def, buffer, offset) {
 
   // Decode elements
   for (let i = 0; i < num_elements; i++) {
-    if (type_code == USER) {
-      value.push(decodeRecord(field_def.type, buffer, byte_offset));
+    if (field_def.type in fieldtypes) {
+      value.push(decodeElement(type_code, big_endian, buffer, byte_offset));
     }
     else {
-      value.push(decodeElement(type_code, big_endian, buffer, byte_offset));
+      value.push(decodeRecord(field_def.type, buffer, byte_offset));
     }
     byte_offset += field_size;
   }
@@ -300,7 +303,7 @@ function parseResponse (response, resolve, reject) {
       bytes_to_process += chunk.length;
       while (bytes_to_process > 0) {
         // State: Accumulating Header
-        if (!got_header && bytes_read > REC_HDR_SIZE) {
+        if (!got_header && bytes_to_process > REC_HDR_SIZE) {
           // Process header
           got_header = true;
           bytes_processed += REC_HDR_SIZE;
@@ -318,24 +321,24 @@ function parseResponse (response, resolve, reject) {
           chunks = [buffer.subarray(REC_HDR_SIZE)];
         }
         // State: Accumulating Record
-        else if (got_header && bytes_read >= rec_size) {
+        else if (got_header && bytes_to_process >= rec_size) {
           // Process record
           got_header = false;
           bytes_to_process -= rec_size;
+          bytes_processed += rec_size;
           let buffer = Buffer.concat(chunks);
           let rec_type = buffer.toString('utf8', 0, rec_type_size);
           decodeRecord(rec_type, buffer, rec_type_size).then(
             result => {
-              bytes_processed += rec_size;
               recs.push(result);
-              // Check complete
-              if (total_bytes != null && bytes_processed == total_bytes) {
-                resolve(recs);
-              }
             }
           );
+          // Check complete
+          if (total_bytes != null && bytes_processed == total_bytes) {
+            resolve(recs);
+          }
           // Restore unused bytes that have been read
-          if(bytes_read > rec_size) {
+          if(bytes_to_process > 0) {
             chunks = [buffer.subarray(rec_size)];
           }
           else {
@@ -348,12 +351,10 @@ function parseResponse (response, resolve, reject) {
         }
       }
     }).on('close', () => {
+      total_bytes = bytes_read;
       // Check complete
-      if (bytes_processed == bytes_read) {
+      if (bytes_processed == total_bytes) {
         resolve(recs);
-      }
-      else {
-        total_bytes = bytes_read;
       }
     });
   }
@@ -372,7 +373,7 @@ function httpRequest(options, body) {
 
     // On Errors
     request.on('error', (err) => {
-      reject(new Error(err.message));
+      reject(new Error(`failed to make request: ${err.message}`));
     });
 
     // Populate Body of Request (if provided)
@@ -415,8 +416,19 @@ exports.source = (api, parm=null, stream=false) => {
     options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
   }
 
-  // Make API Request
-  return httpRequest(options, body);
+  // Make API Request    
+  return httpRequest(options, body).then(
+    result => { return result; },
+    error => {
+      console.log(`retrying http request: ${error}`);
+      return httpRequest(options, body).then(
+        result => { return result; },
+        error => {
+          throw new Error(`request to ${api} failed: ${error}`);
+        }  
+      );
+    }
+  );
 }
 
 //
