@@ -88,7 +88,5 @@ exports.atl06p = (parm, resources) => {
         "resources": resources,
         "parms": parm
     }
-    return core.source('atl06p', rqst, true).then(
-        result => result
-    );
+    return core.source('atl06p', rqst, true);
 }

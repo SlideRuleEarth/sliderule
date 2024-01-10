@@ -119,11 +119,11 @@ const fieldtypes = {
 // populateDefinition
 //
 async function populateDefinition(rec_type) {
-  let promise = new Promise((resolve, reject) => {
-    if (rec_type in recordDefinitions) {
-      resolve(recordDefinitions[rec_type]);
-    }
-    else {
+  if (rec_type in recordDefinitions) {
+    return recordDefinitions[rec_type];
+  }
+  else {
+    return await new Promise((resolve, reject) => {
       exports.source("definition", {"rectype" : rec_type}).then(
         result => {
           recordDefinitions[rec_type] = result;
@@ -133,9 +133,8 @@ async function populateDefinition(rec_type) {
           reject(new Error(`failed to retrieve definition for ${rec_type}: ${error}`));
         }
       );
-    }
-  });
-  return promise;
+    });
+  }
 }
 
 //
@@ -224,7 +223,7 @@ async function decodeField(field_def, buffer, offset, rec_size) {
       value.push(decodeElement(type_code, big_endian, buffer, byte_offset));
     }
     else {
-      value.push(decodeRecord(field_def.type, buffer, byte_offset, rec_size));
+      value.push(await decodeRecord(field_def.type, buffer, byte_offset, rec_size));
     }
     byte_offset += field_size;
   }
@@ -292,7 +291,6 @@ function parseResponse (response, resolve, reject) {
     let bytes_read = 0;
     let bytes_processed = 0;
     let bytes_to_process = 0;
-    let total_bytes = null;
     let got_header = false;
     let rec_size = 0;
     let rec_type_size = 0;
@@ -327,15 +325,7 @@ function parseResponse (response, resolve, reject) {
           bytes_processed += rec_size;
           let buffer = Buffer.concat(chunks);
           let rec_type = buffer.toString('utf8', 0, rec_type_size);
-          decodeRecord(rec_type, buffer, rec_type_size, rec_size).then(
-            result => {
-              recs.push(result);
-            }
-          );
-          // Check complete
-          if (total_bytes != null && bytes_processed == total_bytes) {
-            resolve(recs);
-          }
+          recs.push(decodeRecord(rec_type, buffer, rec_type_size, rec_size));
           // Restore unused bytes that have been read
           if(bytes_to_process > 0) {
             chunks = [buffer.subarray(rec_size)];
@@ -350,11 +340,10 @@ function parseResponse (response, resolve, reject) {
         }
       }
     }).on('close', () => {
-      total_bytes = bytes_read;
-      // Check complete
-      if (bytes_processed == total_bytes) {
-        resolve(recs);
+      if (bytes_processed != bytes_read) {
+        console.log(`warning: bytes left unprocessed (${bytes_processed} != ${bytes_read})`)
       }
+      resolve(recs);
     });
   }
 }
@@ -362,27 +351,32 @@ function parseResponse (response, resolve, reject) {
 //
 // httpRequest
 //
-function httpRequest(options, body) {
-  return new Promise((resolve, reject) => {
-
-    // On Response
-    let request = sysConfig.protocol.request(options, (res) =>
-      parseResponse(res, resolve, reject)
-    );
-
-    // On Errors
-    request.on('error', (err) => {
-      reject(new Error(`failed to make request: ${err.message}`));
+async function httpRequest(options, body) {
+  let attempts = 3;
+  while (--attempts > 0) {
+    let response = new Promise((resolve, reject) => {
+      // On Response
+      let request = sysConfig.protocol.request(options, (response) =>
+        parseResponse(response, resolve, reject)
+      );
+      // On Errors
+      request.on('error', (err) => {
+        reject(new Error(`failed to make request: ${err.message}`));
+      });
+      // Populate Body of Request (if provided)
+      if (body != null) {
+        request.write(body);
+      }
+      // Terminate Request
+      request.end();
     });
-
-    // Populate Body of Request (if provided)
-    if (body != null) {
-      request.write(body);
+    try {
+      return await response;
     }
-
-    // Terminate Request
-    request.end();
-  });
+    catch (error) {
+      console.log(`retrying http request: ${error}`);
+    }
+  }
 };
 
 //------------------------------------
@@ -399,7 +393,7 @@ exports.init = (config) => {
 //
 // Source Endpoint
 //
-exports.source = (api, parm=null, stream=false) => {
+exports.source = (api, callbacks={}, parm=null, stream=false) => {
 
   // Setup Request Options
   const options = {
@@ -415,19 +409,8 @@ exports.source = (api, parm=null, stream=false) => {
     options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
   }
 
-  // Make API Request    
-  return httpRequest(options, body).then(
-    result => { return result; },
-    error => {
-      console.log(`retrying http request: ${error}`);
-      return httpRequest(options, body).then(
-        result => { return result; },
-        error => {
-          throw new Error(`request to ${api} failed: ${error}`);
-        }  
-      );
-    }
-  );
+  // Make API Request
+  return httpRequest(options, body);
 }
 
 //
