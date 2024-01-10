@@ -29,6 +29,7 @@
 
 const https = require('https');
 const core = require('./core.js')
+const events = require('events');
 
 //------------------------------------
 // File Data
@@ -73,15 +74,6 @@ const ATL08_ICE = 3;
 P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
       '55': 10, '60': 11, '65': 12, '70': 13, '75': 14, '80': 15, '85': 16, '90': 17, '95': 18 };
 
-//
-// Default Callbacks
-//
-DEFAULT_CALLBACKS = {
-    atl06rec: (result) => {
-        console.log('CB', result);
-    }
-}
-
 //------------------------------------
 // Exported Functions
 //------------------------------------
@@ -89,13 +81,41 @@ DEFAULT_CALLBACKS = {
 //
 // ATL06P
 //
-exports.atl06p = (parm, resources, callbacks=DEFAULT_CALLBACKS) => {
+exports.atl06p = (parm, resources, callbacks=null) => {
     if ('asset' in parm === false) {
         parm['asset'] = 'icesat2';
     }
-    rqst = {
+    let rqst = {
         "resources": resources,
         "parms": parm
     }
-    return core.source('atl06p', rqst, true, callbacks);
+    if (callbacks != null) {
+        return core.source('atl06p', rqst, true, callbacks);
+    }
+    else {
+        var event = new events.EventEmitter();
+        total_recs = null;
+        recs = [];
+        callbacks = {
+            atl06rec: (result) => {
+                recs.push(result["elevation"]);
+                if ((total_recs != null) && (recs.length == total_recs)) {
+                    event.emit('complete');
+                }
+            },
+        };
+        return new Promise(resolve => {
+            core.source('atl06p', rqst, true, callbacks).then(
+                result => {
+                    event.once('complete', () => {
+                        resolve(recs.flat(1));
+                    });
+                    total_recs = result["atl06rec"] ?? 0;
+                    if (recs.length == total_recs) {
+                        event.emit('complete');
+                    }
+                }
+            );
+        });
+    }
 }

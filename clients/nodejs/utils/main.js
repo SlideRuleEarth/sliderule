@@ -13,7 +13,7 @@ sliderule.icesat2.atl06p(
       "maxi": 1 }, 
     resources=["ATL03_20181019065445_03150111_005_01.h5"]
 ).then(
-    result => console.log('Results = ', result),
+    result => console.log('Results = ', result.length, result[0]),
     error => console.error('Error = ', error)
 );
 
