@@ -75,7 +75,6 @@ const datatypes = {
 //
 // SlideRule Constants
 //
-const H5CORO_ALL_ROWS = -1;
 const INT8            = 0;
 const INT16           = 1;
 const INT32           = 2;
@@ -118,12 +117,12 @@ const fieldtypes = {
 //
 // populateDefinition
 //
-async function populateDefinition(rec_type) {
+function populateDefinition(rec_type) {
   if (rec_type in recordDefinitions) {
     return recordDefinitions[rec_type];
   }
   else {
-    return await new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       exports.source("definition", {"rectype" : rec_type}).then(
         result => {
           recordDefinitions[rec_type] = result;
@@ -288,6 +287,7 @@ function parseResponse (response, resolve, reject, callbacks) {
     const REC_VERSION = 2;
     let results = {};
     let chunks = [];
+    let total_bytes_read = null;
     let bytes_read = 0;
     let bytes_processed = 0;
     let bytes_to_process = 0;
@@ -332,11 +332,16 @@ function parseResponse (response, resolve, reject, callbacks) {
               }
             }
           );
-          // update stats
+          // Update stats
           if (!(rec_type in results)) {
             results[rec_type] = 0;
           }
           results[rec_type]++;
+          // Check if complete
+          if ((total_bytes_read != null) && (bytes_processed == total_bytes_read)) {
+            results["bytes_processed"] = bytes_processed;
+            resolve(results);
+          }
           // Restore unused bytes that have been read
           if(bytes_to_process > 0) {
             chunks = [buffer.subarray(rec_size)];
@@ -351,12 +356,14 @@ function parseResponse (response, resolve, reject, callbacks) {
         }
       }
     }).on('close', () => {
-      if (bytes_processed != bytes_read) {
-        console.log(`warning: bytes left unprocessed (${bytes_processed} != ${bytes_read})`)
+      // Establish total bytes read
+      total_bytes_read = bytes_read;
+      results["bytes_read"] = total_bytes_read;
+      // Check if complete
+      if (bytes_processed == total_bytes_read) {
+        results["bytes_processed"] = bytes_processed;
+        resolve(results);
       }
-      // build final results
-      results["bytes_processed"] = bytes_processed;
-      resolve(results);
     });
   }
 }
@@ -515,18 +522,4 @@ exports.get_values = (bytearray, fieldtype) => {
     default: break;
   }
   return values;
-}
-
-//
-// H5
-//
-exports.h5 = (dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, startrow=0, numrows=H5CORO_ALL_ROWS) => {
-  let parm = {
-    asset: asset,
-    resource: resource,
-    datasets: [ { dataset: dataset, datatype: datatype, col: col, startrow: startrow, numrows: numrows } ]
-  };
-  return exports.source('h5p', parm, true).then(
-    result => exports.get_values(result[0].data, result[0].datatype)
-  );
 }

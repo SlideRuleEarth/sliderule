@@ -34,68 +34,23 @@ const core = require('./core.js')
 // File Data
 //------------------------------------
 
-//
-// ICESat-2 Parameters
-//
-const CNF_POSSIBLE_TEP = -2;
-const CNF_NOT_CONSIDERED = -1;
-const CNF_BACKGROUND = 0;
-const CNF_WITHIN_10M = 1;
-const CNF_SURFACE_LOW = 2;
-const CNF_SURFACE_MEDIUM = 3;
-const CNF_SURFACE_HIGH = 4;
-const SRT_LAND = 0;
-const SRT_OCEAN = 1;
-const SRT_SEA_ICE = 2;
-const SRT_LAND_ICE = 3;
-const SRT_INLAND_WATER = 4;
-const MAX_COORDS_IN_POLYGON = 16384;
-const GT1L = 10;
-const GT1R = 20;
-const GT2L = 30;
-const GT2R = 40;
-const GT3L = 50;
-const GT3R = 60;
-const STRONG_SPOTS = [1, 3, 5];
-const WEAK_SPOTS = [2, 4, 6];
-const LEFT_PAIR = 0;
-const RIGHT_PAIR = 1;
-const SC_BACKWARD = 0;
-const SC_FORWARD = 1;
-const ATL08_WATER = 0;
-const ATL08_LAND = 1;
-const ATL08_SNOW = 2;
-const ATL08_ICE = 3;
-
-//
-// PhoREAL Percentiles
-//
-P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
-      '55': 10, '60': 11, '65': 12, '70': 13, '75': 14, '80': 15, '85': 16, '90': 17, '95': 18 };
-
-//
-// Default Callbacks
-//
-DEFAULT_CALLBACKS = {
-    atl06rec: (result) => {
-        console.log('CB', result);
-    }
-}
+const ALL_ROWS = -1;
 
 //------------------------------------
 // Exported Functions
 //------------------------------------
 
 //
-// ATL06P
+// h5p
 //
-exports.atl06p = (parm, resources, callbacks=DEFAULT_CALLBACKS) => {
-    if ('asset' in parm === false) {
-        parm['asset'] = 'icesat2';
-    }
-    rqst = {
-        "resources": resources,
-        "parms": parm
-    }
-    return core.source('atl06p', rqst, true, callbacks);
-}
+exports.h5p = (dataset, resource, asset, datatype=core.datatypes.DYNAMIC, col=0, startrow=0, numrows=ALL_ROWS) => {
+    let parm = {
+      asset: asset,
+      resource: resource,
+      datasets: [ { dataset: dataset, datatype: datatype, col: col, startrow: startrow, numrows: numrows } ]
+    };
+    return core.source('h5p', parm, true).then(
+      result => core.get_values(result[0].data, result[0].datatype)
+    );
+  }
+  
