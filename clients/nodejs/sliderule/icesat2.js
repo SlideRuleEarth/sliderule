@@ -94,9 +94,9 @@ exports.atl06p = (parm, resources, callbacks=null) => {
     }
     else {
         var event = new events.EventEmitter();
-        total_recs = null;
-        recs = [];
-        callbacks = {
+        var total_recs = null;
+        var recs = [];
+        var callbacks = {
             atl06rec: (result) => {
                 recs.push(result["elevation"]);
                 if ((total_recs != null) && (recs.length == total_recs)) {

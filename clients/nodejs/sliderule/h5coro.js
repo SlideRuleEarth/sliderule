@@ -29,6 +29,7 @@
 
 const https = require('https');
 const core = require('./core.js')
+const events = require('events');
 
 //------------------------------------
 // File Data
@@ -36,21 +37,47 @@ const core = require('./core.js')
 
 const ALL_ROWS = -1;
 
+const datatypes = {
+    TEXT:     0,
+    REAL:     1,
+    INTEGER:  2,
+    DYNAMIC:  3
+};
+  
 //------------------------------------
 // Exported Functions
 //------------------------------------
 
 //
-// h5p
+// h5
 //
-exports.h5p = (dataset, resource, asset, datatype=core.datatypes.DYNAMIC, col=0, startrow=0, numrows=ALL_ROWS) => {
+exports.h5 = (dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, startrow=0, numrows=ALL_ROWS, callbacks=null) => {
     let parm = {
       asset: asset,
       resource: resource,
       datasets: [ { dataset: dataset, datatype: datatype, col: col, startrow: startrow, numrows: numrows } ]
     };
-    return core.source('h5p', parm, true).then(
-      result => core.get_values(result[0].data, result[0].datatype)
-    );
+    if (callbacks != null) {
+        return core.source('h5p', parm, true);
+    }
+    else {
+        var event = new events.EventEmitter();
+        var values = null;
+        var callbacks = {
+            h5file: (result) => {
+                values = core.get_values(result.data, result.datatype);
+                event.emit('complete');
+            },
+        };
+        return new Promise(resolve => {
+            core.source('h5p', parm, true, callbacks).then(
+                result => {
+                    event.once('complete', () => {
+                        resolve(values);
+                    });
+                }
+            );
+        });
+    }
   }
   

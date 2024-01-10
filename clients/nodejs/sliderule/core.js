@@ -63,16 +63,6 @@ let sysConfig = {
 let recordDefinitions = {}
 
 //
-// SlideRule Data Types
-//
-const datatypes = {
-  TEXT:     0,
-  REAL:     1,
-  INTEGER:  2,
-  DYNAMIC:  3
-};
-
-//
 // SlideRule Constants
 //
 const INT8            = 0;
