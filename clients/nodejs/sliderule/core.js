@@ -264,7 +264,7 @@ async function decodeRecord(rec_type, buffer, offset, rec_size) {
 //
 // parseResponse
 //
-function parseResponse (response, resolve, reject) {
+function parseResponse (response, resolve, reject, callbacks) {
   // Check Response Code
   if (response.statusCode !== 200) {
     response.resume();
@@ -286,7 +286,7 @@ function parseResponse (response, resolve, reject) {
   else if (response.headers['content-type'] == 'application/octet-stream') {
     const REC_HDR_SIZE = 8;
     const REC_VERSION = 2;
-    let recs = [];
+    let results = {};
     let chunks = [];
     let bytes_read = 0;
     let bytes_processed = 0;
@@ -324,8 +324,19 @@ function parseResponse (response, resolve, reject) {
           bytes_to_process -= rec_size;
           bytes_processed += rec_size;
           let buffer = Buffer.concat(chunks);
-          let rec_type = buffer.toString('utf8', 0, rec_type_size);
-          recs.push(decodeRecord(rec_type, buffer, rec_type_size, rec_size));
+          let rec_type = buffer.toString('utf8', 0, rec_type_size - 1);
+          decodeRecord(rec_type, buffer, rec_type_size, rec_size).then(
+            result => {
+              if (rec_type in callbacks) {
+                callbacks[rec_type](result);
+              }
+            }
+          );
+          // update stats
+          if (!(rec_type in results)) {
+            results[rec_type] = 0;
+          }
+          results[rec_type]++;
           // Restore unused bytes that have been read
           if(bytes_to_process > 0) {
             chunks = [buffer.subarray(rec_size)];
@@ -343,7 +354,9 @@ function parseResponse (response, resolve, reject) {
       if (bytes_processed != bytes_read) {
         console.log(`warning: bytes left unprocessed (${bytes_processed} != ${bytes_read})`)
       }
-      resolve(recs);
+      // build final results
+      results["bytes_processed"] = bytes_processed;
+      resolve(results);
     });
   }
 }
@@ -351,13 +364,13 @@ function parseResponse (response, resolve, reject) {
 //
 // httpRequest
 //
-async function httpRequest(options, body) {
+async function httpRequest(options, body, callbacks) {
   let attempts = 3;
   while (--attempts > 0) {
     let response = new Promise((resolve, reject) => {
       // On Response
       let request = sysConfig.protocol.request(options, (response) =>
-        parseResponse(response, resolve, reject)
+        parseResponse(response, resolve, reject, callbacks)
       );
       // On Errors
       request.on('error', (err) => {
@@ -393,7 +406,7 @@ exports.init = (config) => {
 //
 // Source Endpoint
 //
-exports.source = (api, callbacks={}, parm=null, stream=false) => {
+exports.source = (api, parm=null, stream=false, callbacks={}) => {
 
   // Setup Request Options
   const options = {
@@ -403,14 +416,14 @@ exports.source = (api, callbacks={}, parm=null, stream=false) => {
   };
 
   // Build Body
-  let body = null
+  let body = null;
   if (parm != null) {
     body = JSON.stringify(parm);
     options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
   }
 
   // Make API Request
-  return httpRequest(options, body);
+  return httpRequest(options, body, callbacks);
 }
 
 //
