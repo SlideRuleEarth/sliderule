@@ -21,7 +21,7 @@ source "amazon-ebs" "base-image" {
   region                = var.region
   source_ami_filter {
     filters = {
-      name                = "amazon/al2023-ami-2023.3.-*"
+      name                = "al2023-ami-2023.3*-arm64"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
@@ -30,7 +30,7 @@ source "amazon-ebs" "base-image" {
   }
   force_deregister = true
 #  force_delete_snapshot = true
-  ssh_username = "ubuntu"
+  ssh_username = "ec2-user"
 }
 
 # a build block invokes sources and runs provisioning steps on them.
