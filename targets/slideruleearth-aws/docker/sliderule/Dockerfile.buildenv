@@ -97,6 +97,9 @@ RUN meson setup build
 RUN meson install -C build
 RUN ldconfig
 
+# configure any new shared libraries
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
+
 # support interactive mode
 WORKDIR /
 CMD ["/bin/bash"]
