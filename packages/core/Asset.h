@@ -100,6 +100,7 @@ class Asset: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int      luaCreate       (lua_State* L);
+        static const Asset* assetFactory(lua_State* L, std::vector<const char*> attrs);
         static bool     registerDriver  (const char* _format, io_driver_f factory);
 
         IODriver*       createDriver    (const char* resource) const;
