@@ -74,20 +74,20 @@ WORKDIR /
 RUN git clone https://github.com/OSGeo/gdal.git
 RUN mkdir -p /build/gdal
 WORKDIR /build/gdal
-RUN cmake /gdal -DCMAKE_BUILD_TYPE=Release
+RUN cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF
 RUN make -j8
 RUN make install
 RUN ldconfig
 
 # install pdal dependency
-WORKDIR /
-RUN git clone https://github.com/PDAL/PDAL.git
-RUN mkdir -p /build/pdal
-WORKDIR /build/pdal
-RUN cmake /PDAL -DCMAKE_BUILD_TYPE=Release
-RUN make -j8
-RUN make install
-RUN ldconfig
+#WORKDIR /
+#RUN git clone https://github.com/PDAL/PDAL.git
+#RUN mkdir -p /build/pdal
+#WORKDIR /build/pdal
+#RUN cmake /PDAL -DCMAKE_BUILD_TYPE=Release
+#RUN make -j8
+#RUN make install
+#RUN ldconfig
 
 # install pistache dependency
 WORKDIR /
