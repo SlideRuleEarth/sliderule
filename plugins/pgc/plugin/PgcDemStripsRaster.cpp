@@ -217,6 +217,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                     else fileName.clear();
 
                     raster_info_t flagsRinfo;
+                    flagsRinfo.dataIsElevation = false;
                     flagsRinfo.tag = FLAGS_TAG;
                     flagsRinfo.fileName = fileName;
 

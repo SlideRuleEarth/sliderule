@@ -73,9 +73,9 @@ class UT_Dictionary: public CommandableObject
         UT_Dictionary (CommandProcessor* cmd_proc, const char* obj_name);
         ~UT_Dictionary (void);
 
-        int functionalUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
-        int iteratorUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
-        int addWordSetCmd (int argc, char argv[][MAX_CMD_SIZE]);
+        int functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE]);
+        int iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE]);
+        int addWordSetCmd (int argc, const char argv[][MAX_CMD_SIZE]);
         int createWordSet (const char* name, const char* filename);
 };
 

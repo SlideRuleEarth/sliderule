@@ -1,19 +1,18 @@
-# Setting Up Ubuntu Development Environment
+# Setting Up Amazon Linux Development Environment
 
-2022-10-07
+2023-12-11
 
 ## Overview
 
-These steps setup a development environment for SlideRule.  The target platform is a Graviton3 processor running Ubuntu 20.04 in AWS.
+These steps setup a development environment for SlideRule.  The target platform is a Graviton3 processor running Amazon Linux 2023 in AWS.
 
 ## Steps
 
 ### 1. Logging in the first time
 
 ```bash
-ssh -i .ssh/<mykey>.pem ubuntu@<ip address>
-sudo apt update
-sudo apt upgrade
+ssh -i .ssh/<mykey>.pem ec2-user@<ip address>
+sudo dnf upgrade --refresh
 ```
 
 ### 2. Creating Users
@@ -21,7 +20,7 @@ sudo apt upgrade
 ```bash
 sudo useradd -m -s /usr/bin/bash <username>
 sudo passwd <username>
-sudo usermod -aG sudo <username>
+sudo usermod -aG wheel <username>
 su - <username>
 ```
 
@@ -29,29 +28,15 @@ su - <username>
 
 Replace the appropriate section in the .bashrc file with the contents below
 ```bash
-force_color_prompt=yes
-
 parse_git_branch() {
      git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
 }
-
-if [ "$color_prompt" = yes ]; then
-    PS1="\n${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]\[\033[33m\] [\$CONDA_DEFAULT_ENV]\$(parse_git_branch):\[\033[01;34m\]\w\[\033[00m\]\n\$ "
-else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
-fi
-
-unset color_prompt force_color_prompt
+PS1="\n\[\033[01;32m\]\u@\h\[\033[00m\]\[\033[33m\] [\$CONDA_DEFAULT_ENV]\$(parse_git_branch):\[\033[01;34m\]\w\[\033[00m\]\n\$ "
 ```
 
 Setup core dumps by adding the following to the end of the .bashrc file
 ```bash
 ulimit -c unlimited
-```
-
-In order to get core dumps, make sure the apport service is enabled and running, and then look for them in `/var/lib/apport/coredump/`
-```bash
-sudo systemctl enable apport.service
 ```
 
 ### 4. Managing Keys for Remote Login
@@ -68,7 +53,7 @@ sudo systemctl enable apport.service
 ### 6. Install and Configure Git
 
 ```bash
-sudo apt install git
+sudo dnf install git
 ```
 
 Create the local file `~/.gitconfig` in the user's home directory with the following contents:
@@ -119,27 +104,114 @@ git clone git@github.com:ICESat2-SlideRule/sliderule-python.git
 ### 8. Installing and Configuring Docker
 
 ```bash
-sudo apt-get install ca-certificates curl gnupg lsb-release
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo dnf install docker
 sudo usermod -aG docker <username>
 newgrp docker
 ```
 
+Then install Docker Compose plugin
+```bash
+DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+mkdir -p $DOCKER_CONFIG/cli-plugins
+curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-aarch64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+```
+
 ### 9. Install Dependencies got Local Build
 
-The most reliable way to install all of the dependencies needed to build sliderule is to follow the steps outlined in the [Dockerfile](https://github.com/ICESat2-SlideRule/sliderule/blob/main/targets/slideruleearth-aws/docker/sliderule/Dockerfile.buildenv) for building the development environment.  Some translation of the steps from the Dockerfile format is needed, but all of the dependencies and the configuration options needed for those dependencies are explicitly called out in that file.
-
-Alternatively, the `sliderule-buildenv` Docker image can be built and used as your development environment.  To do so, run the following commands from the root of the sliderule repository.
 ```bash
-cd targets/slideruleearth-aws
-make sliderule-buildenv-docker
-make run-buildenv
+sudo dnf groupinstall "Development Tools"
+sudo dnf install \
+  cmake \
+  readline-devel \
+  lua-devel \
+  openssl-devel
+  libuuid-devel \
+  libtiff-devel \
+  sqlite-devel \
+  curl-devel \
+  python-devel \
+  meson \
+  llvm \
+  clang \
+  clang-tools-extra \
+  cppcheck
 ```
-Then, inside the container, you'll find the sliderule repository at `/host/sliderule`.  Change directory there and you will then be able to build the sliderule code however you'd like use the provided makefiles under the root and `targets` directory.
+
+In an editor (e.g. vi), create a file in the `/etc/ld.so.conf.d/` directory called `local.conf` and in it put the one line below, and run `sudo ldconfig` afterwards. This allows any applications that are linked to libraries installed in `/usr/local/lib64` to be found.
+```bash
+/usr/local/lib64
+```
+
+Go through and install all of the dependencies for SlideRule/
+```bash
+# install rapidjson dependency
+git clone https://github.com/Tencent/rapidjson.git
+cd rapidjson
+mkdir build
+cd build
+cmake ..
+make -j8
+sudo make install
+sudo ldconfig
+
+# install arrow dependency
+git clone https://github.com/apache/arrow.git
+cd arrow
+mkdir build
+cd build
+cmake ../cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON
+make -j8
+sudo make install
+sudo ldconfig
+
+# install proj9 gdal/pdal dependency
+git clone https://github.com/OSGeo/PROJ.git
+cd PROJ
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j8
+sudo make install
+sudo ldconfig
+
+# install geotiff gdal/pdal dependency
+git clone https://github.com/OSGeo/libgeotiff.git
+cd libgeotiff
+mkdir build
+cd build
+cmake ../libgeotiff -DCMAKE_BUILD_TYPE=Release
+make -j8
+sudo make install
+sudo ldconfig
+
+# install geos gdal dependency
+git clone https://github.com/libgeos/geos.git
+cd geos
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j8
+sudo make install
+sudo ldconfig
+
+# install gdal dependency
+git clone https://github.com/OSGeo/gdal.git
+cd gdal
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j8
+sudo make install
+sudo ldconfig
+
+# install pistache dependency
+git clone https://github.com/pistacheio/pistache.git
+cd pistache
+meson setup build
+sudo meson install -C build
+sudo ldconfig
+```
 
 ### 10. Install and Configure Miniconda
 
@@ -156,18 +228,15 @@ Once you have miniconda setup, you can navigate to the `sliderule-python` reposi
 ### 11. Install GitHub Command Line Client
 
 ```bash
-type -p curl >/dev/null || sudo apt install curl -y
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-&& sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-&& sudo apt update \
-&& sudo apt install gh -y
+sudo dnf install 'dnf-command(config-manager)'
+sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+sudo dnf install gh
 ```
 
 ### 12. Install and Configure AWS Command Line Client
 
 ```bash
-sudo apt install awscli
+sudo dnf install awscli
 ```
 
 Make sure to setup an initial .aws/credentials file so that it has the sliderule profile access key and secret access key.  The credentials file will look something like:
@@ -195,8 +264,6 @@ aws ecr get-login-password --region $region | docker login --username AWS --pass
 ### 13. Install Terraform & Packer
 
 ```bash
-sudo apt install unzip
-
 wget https://releases.hashicorp.com/terraform/1.3.1/terraform_1.3.1_linux_arm64.zip
 unzip terraform_1.3.1_linux_arm64.zip
 sudo mv terraform /usr/local/bin/

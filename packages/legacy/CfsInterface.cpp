@@ -548,7 +548,7 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
  *
  *   Notes: assumes primary header is present
  *----------------------------------------------------------------------------*/
-void CfsInterface::measurePkt (unsigned char* pktbuf, int bytes)
+void CfsInterface::measurePkt (const unsigned char* pktbuf, int bytes)
 {
     if(pktbuf == NULL || bytes < 6) return;
 

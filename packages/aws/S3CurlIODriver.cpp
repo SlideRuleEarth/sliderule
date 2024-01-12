@@ -109,7 +109,7 @@ static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *user
  *----------------------------------------------------------------------------*/
 static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    List<streaming_data_t>* rsps_set = (List<streaming_data_t>*)userp;
+    List<streaming_data_t>* rsps_set = reinterpret_cast<List<streaming_data_t>*>(userp);
     streaming_data_t rsps;
     rsps.size = size * nmemb;
     rsps.data = new char [rsps.size];

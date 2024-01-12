@@ -241,7 +241,7 @@ class CredentialStore
         static void         deinit  (void);
 
         static Credential   get     (const char* host);
-        static bool         put     (const char* host, Credential& credential);
+        static bool         put     (const char* host, const Credential& credential);
 
         static int          luaGet  (lua_State* L);
         static int          luaPut  (lua_State* L);

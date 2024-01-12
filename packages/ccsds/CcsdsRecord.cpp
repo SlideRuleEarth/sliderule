@@ -333,7 +333,7 @@ void CcsdsRecord::populateHeader(void)
 /*----------------------------------------------------------------------------
  * getPacketDefinition
  *----------------------------------------------------------------------------*/
-CcsdsRecord::pktDef_t* CcsdsRecord::getPacketDefinition(unsigned char* buffer, int size)
+CcsdsRecord::pktDef_t* CcsdsRecord::getPacketDefinition(const unsigned char* buffer, int size)
 {
     if(size < 6) return NULL;
 

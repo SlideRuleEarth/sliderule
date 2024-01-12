@@ -8,7 +8,7 @@ SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 SLIDERULE_STAGE_DIR = $(STAGE)/atlas
 ATLAS_BUILD_DIR = $(BUILD)/altas
 
-CLANG_VER = "-12"
+CLANG_VER = ""
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 

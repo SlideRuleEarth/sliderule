@@ -444,7 +444,7 @@ CcsdsParserAOSFrameModule::~CcsdsParserAOSFrameModule(void)
 /*----------------------------------------------------------------------------
  * crc16
  *----------------------------------------------------------------------------*/
-uint16_t CcsdsParserAOSFrameModule::crc16(uint8_t* data, uint32_t len, uint16_t crc)
+uint16_t CcsdsParserAOSFrameModule::crc16(const uint8_t* data, uint32_t len, uint16_t crc)
 {
     static const uint16_t CrcTable[256]=
     {

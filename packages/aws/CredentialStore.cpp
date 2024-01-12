@@ -107,7 +107,7 @@ CredentialStore::Credential CredentialStore::get (const char* host)
 /*----------------------------------------------------------------------------
  * put
  *----------------------------------------------------------------------------*/
-bool CredentialStore::put (const char* host, Credential& credential)
+bool CredentialStore::put (const char* host, const Credential& credential)
 {
     bool status = false;
 

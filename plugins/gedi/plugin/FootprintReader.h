@@ -370,7 +370,6 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
 {
     /* Find First and Last Footprints in Polygon */
     bool first_footprint_found = false;
-    bool last_footprint_found = false;
     int footprint = 0;
     while(footprint < lat.size)
     {
@@ -393,10 +392,8 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
             first_footprint_found = true;
             first_footprint = footprint;
         }
-        else if(first_footprint_found && !last_footprint_found && !inclusion)
+        else if(first_footprint_found && !inclusion)
         {
-            /* Set Last Segment */
-            last_footprint_found = true;
             break; // full extent found!
         }
 
@@ -496,7 +493,7 @@ int FootprintReader<footprint_t>::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (FootprintReader*)getLuaSelf(L, 1);
+        lua_obj = reinterpret_cast<FootprintReader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

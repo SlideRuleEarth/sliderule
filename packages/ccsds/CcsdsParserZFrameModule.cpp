@@ -245,20 +245,16 @@ void CcsdsParserZFrameModule::gotoInitState(bool reset)
     }
     else
     {
-        /* Check if Frame Complete */
-        if(state == FRAME_Z)
+        /* Check if Frame is Not Complete - Stay in FANN */
+        if(frameIndex < frameSize)
         {
-            /* Check if Frame is Not Complete - Stay in FANN */
-            if(frameIndex < frameSize)
-            {
-                state = FRAME_FANN;
-            }
-            /* Check if Frame is Complete - Reset Indices */
-            else
-            {
-                frameIndex = 0;
-                frameSize = 0;
-            }
+            state = FRAME_FANN;
+        }
+        /* Check if Frame is Complete - Reset Indices */
+        else
+        {
+            frameIndex = 0;
+            frameSize = 0;
         }
     }
 }

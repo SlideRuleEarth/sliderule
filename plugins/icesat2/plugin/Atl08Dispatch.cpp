@@ -683,7 +683,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
 /*----------------------------------------------------------------------------
  * postResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::postResult (vegetation_t* result, RecordObject* ancrec)
+void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec)
 {
     batchMutex.lock();
     {

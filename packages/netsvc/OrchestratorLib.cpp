@@ -71,27 +71,10 @@ void OrchestratorLib::deinit (void)
  *----------------------------------------------------------------------------*/
 OrchestratorLib::rsps_t OrchestratorLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
 {
+    rsps_t rsps;
     FString path("%s%s", URL, resource);
-    if(verb == EndpointObject::GET)
-    {
-        rsps_t rsps;
-        rsps.code = CurlLib::get(path.c_str(), data, &rsps.response, &rsps.size);
-        return rsps;
-    }
-    
-    if(verb == EndpointObject::POST)
-    {
-        rsps_t rsps;
-        rsps.code = CurlLib::post(path.c_str(), data, &rsps.response, &rsps.size);
-        return rsps;
-    }
-
-    rsps_t err_rsps = {
-        .code = static_cast<long>(EndpointObject::Bad_Request),
-        .response = NULL,
-        .size = 0
-    };
-    return err_rsps;
+    rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size);
+    return rsps;
 }
 
 /*----------------------------------------------------------------------------

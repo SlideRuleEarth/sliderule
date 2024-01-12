@@ -12,23 +12,22 @@ RUN make config-release INSTALL_DIR=/usr/local && make
 COPY config.json /usr/local/etc/sliderule/
 
 # install runtime dependencies
-FROM ubuntu:20.04 AS runtime
-RUN apt-get update && \
-  DEBIAN_FRONTEND=noninteractive \
-  apt-get install -y --no-install-recommends \
-  libreadline8 \
-  liblua5.3 \
-  libssl1.1 \
-  libtiff5 \
-  zlib1g \
-  curl \
-  && rm -rf /var/lib/apt/lists/*
+FROM amazonlinux:2023 AS runtime
+RUN dnf update \
+  && dnf install -y \
+  readline \
+  lua \
+  openssl \
+  libtiff \
+  zlib \
+  && dnf clean all \
+  && rm -rf /var/cache/yum
 
 # copy sliderule installation from buildenv
 COPY --from=buildenv /usr/local /usr/local
 
 # configure any new shared libraries
-RUN ldconfig
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
 
 # set entrypoint to bash shell (expect it to be overridden)
 ENTRYPOINT ["/bin/sh"]

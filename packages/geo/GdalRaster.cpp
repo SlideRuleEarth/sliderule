@@ -985,11 +985,8 @@ RasterSubset* GdalRaster::getRasterSubset(uint32_t ulx, uint32_t uly, double map
     }
     catch (const RunTimeException &e)
     {
-        if(subset)
-        {
-            delete subset;
-            subset = NULL;
-        }
+        delete subset;
+        subset = NULL;
         mlog(e.level(), "Error subsetting: %s", e.what());
     }
 

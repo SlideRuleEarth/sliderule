@@ -1,30 +1,25 @@
-FROM ubuntu:20.04
+FROM amazonlinux:2023
 
 # install build dependencies
-RUN apt-get update && \
-  DEBIAN_FRONTEND=noninteractive \
-  apt-get install -y --no-install-recommends \
-  build-essential \
-  ca-certificates \
-  pkg-config \
+RUN dnf update \
+  && dnf groupinstall -y "Development Tools" \
+  && dnf install -y \
   cmake \
-  git \
-  curl \
-  libreadline-dev \
-  liblua5.3-dev \
-  libcurl4-openssl-dev \
-  libssl-dev \
-  uuid-dev \
-  zlib1g-dev \
-  libtiff-dev \
-  libsqlite3-dev \
-  sqlite3 \
+  readline-devel \
+  lua-devel \
+  openssl-devel \
+  libuuid-devel \
+  libtiff-devel \
+  sqlite-devel \
+  curl-devel \
+  python-devel \
   meson \
   llvm \
-  clang-12 \
-  clang-tidy \
+  clang \
+  clang-tools-extra \
   cppcheck \
-  && rm -rf /var/lib/apt/lists/*
+  && dnf clean all \
+  && rm -rf /var/cache/yum
 
 # install rapidjson dependency
 WORKDIR /
@@ -79,20 +74,20 @@ WORKDIR /
 RUN git clone https://github.com/OSGeo/gdal.git
 RUN mkdir -p /build/gdal
 WORKDIR /build/gdal
-RUN cmake /gdal -DCMAKE_BUILD_TYPE=Release
+RUN cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF
 RUN make -j8
 RUN make install
 RUN ldconfig
 
 # install pdal dependency
-WORKDIR /
-RUN git clone https://github.com/PDAL/PDAL.git
-RUN mkdir -p /build/pdal
-WORKDIR /build/pdal
-RUN cmake /PDAL -DCMAKE_BUILD_TYPE=Release
-RUN make -j8
-RUN make install
-RUN ldconfig
+#WORKDIR /
+#RUN git clone https://github.com/PDAL/PDAL.git
+#RUN mkdir -p /build/pdal
+#WORKDIR /build/pdal
+#RUN cmake /PDAL -DCMAKE_BUILD_TYPE=Release
+#RUN make -j8
+#RUN make install
+#RUN ldconfig
 
 # install pistache dependency
 WORKDIR /
@@ -101,6 +96,9 @@ WORKDIR /pistache
 RUN meson setup build
 RUN meson install -C build
 RUN ldconfig
+
+# configure any new shared libraries
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
 
 # support interactive mode
 WORKDIR /

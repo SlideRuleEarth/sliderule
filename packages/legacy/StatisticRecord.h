@@ -294,7 +294,7 @@ typename StatisticRecord<T>::clear_t StatisticRecord<T>::str2clear(const char* s
 template <class T>
 void* StatisticRecord<T>::telemetryThread(void* parm)
 {
-    StatisticRecord<T>* procstat = (StatisticRecord<T>*)parm;
+    StatisticRecord<T>* procstat = reinterpret_cast<StatisticRecord<T>*>(parm);
 
     int wait_counter = procstat->telemetryWaitSeconds;
 

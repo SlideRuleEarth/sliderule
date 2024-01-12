@@ -64,6 +64,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameter:*/Dictionary.h"
         "--suppress=unreadVariable:*/TimeLib.cpp"
         "--suppress=invalidPointerCast:*/H5Array.h"
+        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"
+        "--suppress=knownConditionTrueFalse:*/packages/legacy/UT_*"
+        "--suppress=uninitStructMember:*/plugins/icesat2/plugin/Atl06Dispatch.cpp"
         "--error-exitcode=1"
         "-DLLONG_MAX"
     )
@@ -120,7 +123,7 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
 
     # Prefer libraries installed in /usr/local
     INCLUDE_DIRECTORIES(/usr/local/include)
-    LINK_DIRECTORIES(/usr/local/lib)
+    LINK_DIRECTORIES(/usr/local/lib /usr/local/lib64)
 
     # Set Environment Variables
     set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")

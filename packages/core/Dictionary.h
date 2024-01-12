@@ -686,21 +686,21 @@ unsigned int Dictionary<T>::getNode(const char* key) const
         while(index != NULL_INDEX && hashTable[index].chain != EMPTY_ENTRY)
         {
             /* Compare Hash Key to Key */
-            for(int i = 0; i < MAX_STR_SIZE; i++)
+            int i = 0;
+            while(hashTable[index].key[i] == key[i])
             {
-                if(hashTable[index].key[i] != key[i])
+                /* If there is no difference AND key is at null, return match */
+                if(key[i] == '\0') 
                 {
-                    /* As soon as there is a difference, go to next */
-                    index = hashTable[index].next;
-                    break;
-                }
-                
-                if(key[i] == '\0')
-                {
-                    /* If there is no difference AND key is at null, return match */
                     return index;
                 }
+
+                /* Goto next character */
+                i++;
             }
+
+            /* As soon as there is a difference, go to next */
+            index = hashTable[index].next;
         }
     }
 
