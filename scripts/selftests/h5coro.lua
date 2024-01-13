@@ -61,8 +61,8 @@ rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 
 -- Arguments & Call --
 
-local resource_path = "../OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc"
-local dataset_name = "/Area"
+local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc"
+local dataset_name = "/DQF"
 local id = 0
 local raw = true
 local dtype = core.INTEGER
@@ -72,7 +72,7 @@ local numrows = core.ALL_ROWS
 
 f2 = h5.dataset(core.READER, 
                 asset, 
-                resource_path_path, 
+                resource_path, 
                 dataset_name, 
                 id, 
                 raw, 

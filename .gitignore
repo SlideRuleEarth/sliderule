@@ -1,5 +1,8 @@
 .vscode/
 
+# excces nc file
+*.nc
+
 # Prerequisites
 *.d
 
