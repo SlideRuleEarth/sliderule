@@ -15,15 +15,13 @@ CFG += -DUSE_NETSVC_PACKAGE=ON
 CFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 CFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 
-## reflect changes
-
 all: ## build code
 	make -j4 -C $(BUILD)
 
 config: prep ## configure make for release version of sliderule
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(CFG) $(ROOT)
 
-config-debug: prep 
+config-debug: prep ## $(eval CXXFLAGS += -g)
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(CFG) $(ROOT)
 	$(eval CXXFLAGS += -g)
 	

@@ -62,7 +62,7 @@ rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 -- Arguments & Call --
 
 local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc"
-local dataset_name = "/DQF"
+local dataset_name = "/Power"
 local id = 0
 local raw = true
 local dtype = core.INTEGER

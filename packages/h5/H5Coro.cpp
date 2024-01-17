@@ -2840,7 +2840,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         uint64_t reserved0 = readField(1, &pos);
 
-        if(version != 1)
+        if(version != 1 && version != 3)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid attribute version: %d", (int)version);
         }
@@ -2865,7 +2865,19 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
     }
     uint8_t attr_name[STR_BUFF_SIZE];
-    readByteArray(attr_name, name_size, &pos);
+
+    /* Set attr_name: version 3 bumps by 4 bytes*/
+    if (version == 1) {
+        readByteArray(attr_name, name_size, &pos);
+    }
+    if (version == 3) {
+        pos += 8;
+        // UTF-8 encoding
+        readByteArray(attr_name, name_size, &pos);
+    }
+
+    mlog(CRITICAL, "received attr_name: %s", attr_name);
+
     pos += (8 - (name_size % 8)) % 8; // align to next 8-byte boundary
 
     if(H5_ERROR_CHECKING)
