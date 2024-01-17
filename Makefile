@@ -15,6 +15,8 @@ CFG += -DUSE_NETSVC_PACKAGE=ON
 CFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 CFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 
+## reflect changes
+
 all: ## build code
 	make -j4 -C $(BUILD)
 
