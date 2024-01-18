@@ -44,7 +44,7 @@ local function proxy(resources, parms, endpoint, rec, lon, lat)
 
     -- Determine Locks per Node --
     local MaxNodesPerLock = 3
-    local locks_per_node = parms["poly"] and 1 or MaxNodesPerLock
+    local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or MaxNodesPerLock
     
     -- Proxy Request --
     local proxy = netsvc.proxy(endpoint, resources, json.encode(parms), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream)

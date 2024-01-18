@@ -233,8 +233,9 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 int LuaLibrarySys::lsys_metric (lua_State* L)
 //TODO: need to populate with metrics...
 {
-    (void)L;
-    return 0;
+    lua_newtable(L);
+    LuaEngine::setAttrInt(L, "alive", 1);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
