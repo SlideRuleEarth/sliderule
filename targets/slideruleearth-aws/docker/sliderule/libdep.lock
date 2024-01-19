@@ -1,8 +1,8 @@
-PDAL: 2.6.0-37-g7d3ec480e
-PROJ: 9.0.0-1040-gdecf6afd
-arrow: apache-arrow-15.0.0.dev-226-g081b4022f
-gdal: v3.8.0RC1-531-gf014e7bda2
-geos: 3.12.0-100-g1d1ad6b21
+PDAL: 2.6.0-52-g211ad884a
+PROJ: 9.0.0-1098-g078eaa4d
+arrow: apache-arrow-15.0.0.dev-444-gf55c0d75c
+gdal: v3.8.0RC1-907-g3a9541d19f
+geos: 3.12.0-112-g8d87edcd5
 libgeotiff: 1.7.1-44-g1f3e10b
 rapidjson: v1.1.0-745-g6089180e
-pistache: 0.0.5-65-g31bc54d
+pistache: 0.0.5-75-g1c733a1

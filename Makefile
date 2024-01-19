@@ -21,9 +21,8 @@ all: ## build code
 config: prep ## configure make for release version of sliderule
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(CFG) $(ROOT)
 
-config-debug: prep ## $(eval CXXFLAGS += -g)
+config-debug: prep 
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug $(CFG) $(ROOT)
-	$(eval CXXFLAGS += -g)
 	
 config-library: prep ## configure make for shared library libsliderule.so
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(CFG) $(ROOT)

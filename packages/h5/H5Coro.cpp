@@ -43,7 +43,7 @@
  ******************************************************************************/
 
 #ifndef H5_VERBOSE
-#define H5_VERBOSE false
+#define H5_VERBOSE true
 #endif
 
 #ifndef H5_EXTRA_DEBUG
@@ -2880,6 +2880,8 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Get Sizes */
+
+    // TODO, fix padding issue
     uint64_t name_size = readField(2, &pos);
     uint64_t datatype_size = readField(2, &pos);
     uint64_t dataspace_size = readField(2, &pos);
@@ -2898,7 +2900,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     if (version == 3) {
         // TODO: integrate encoding functionality 
         // H5T_cset_t name_encoding;
-        pos += 8;
+        pos += 1;
         readByteArray(attr_name, name_size, &pos);
     }
 
