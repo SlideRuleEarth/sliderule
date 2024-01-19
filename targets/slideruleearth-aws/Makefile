@@ -22,7 +22,9 @@
 #        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
 #     3. Login to GitHub
 #        $ gh auth login
-#     4. Execute the makefile target to release the code; X.Y.Z is the version
+#     4. Login to NPMJS
+#        $ cd sliderule/clients/nodejs && make login
+#     5. Execute the makefile target to release the code; X.Y.Z is the version
 #        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
 #
 # To update the build environment for GitHub actions
