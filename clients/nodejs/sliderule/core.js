@@ -27,9 +27,9 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-const https = require('https');
-const netrc = require('netrc');
-const pkg = require('./package.json')
+import https from 'https';
+import netrc from 'netrc';
+import pkg from './package.json' assert { type: 'json' };
 
 //------------------------------------
 // File Data
@@ -113,7 +113,7 @@ function populateDefinition(rec_type) {
   }
   else {
     return new Promise((resolve, reject) => {
-      exports.source("definition", {"rectype" : rec_type}).then(
+      source("definition", {"rectype" : rec_type}).then(
         result => {
           recordDefinitions[rec_type] = result;
           resolve(recordDefinitions[rec_type]);
@@ -253,7 +253,7 @@ async function decodeRecord(rec_type, buffer, offset, rec_size) {
 //
 // parseResponse
 //
-function parseResponse (response, resolve, reject, callbacks) {
+function parseResponse(response, resolve, reject, callbacks) {
   // Check Response Code
   if (response.statusCode !== 200) {
     response.resume();
@@ -396,14 +396,14 @@ async function httpRequest(options, body, callbacks) {
 //
 // Initialize Client
 //
-exports.init = (config) => {
+export function init(config) {
   sysConfig = Object.assign(sysConfig, config)
 }
 
 //
 // Source Endpoint
 //
-exports.source = (api, parm=null, stream=false, callbacks={}) => {
+export function source(api, parm=null, stream=false, callbacks={}) {
 
   // Setup Request Options
   const options = {
@@ -426,7 +426,7 @@ exports.source = (api, parm=null, stream=false, callbacks={}) => {
 //
 // Authenticate User
 //
-exports.authenticate = (ps_username=null, ps_password=null) => {
+export function authenticate(ps_username=null, ps_password=null) {
 
     // Build Provisioning System URL
     let psHost = 'ps.' + sysConfig.domain;
@@ -480,8 +480,8 @@ exports.authenticate = (ps_username=null, ps_password=null) => {
 //
 // Get Version
 //
-exports.get_version = () => {
-  return exports.source('version').then(
+export function get_version() {
+  return source('version').then(
     result => {
       result['client'] = {version: pkg['version']};
       result['organization'] = sysConfig.organization;
@@ -493,7 +493,7 @@ exports.get_version = () => {
 //
 // Get Values
 //
-exports.get_values = (bytearray, fieldtype) => {
+export function get_values(bytearray, fieldtype) {
   let values = [];
   let buffer = Buffer.from(bytearray);
   switch (fieldtype) {

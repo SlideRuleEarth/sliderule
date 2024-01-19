@@ -1,8 +1,9 @@
-const core = require("./core.js");
-const icesat2 = require("./icesat2.js");
-const h5coro = require("./h5coro.js");
-module.exports = {
-    core: core,
-    h5coro: h5coro,
-    icesat2: icesat2,
+import * as core from './core.js';
+import * as icesat2 from './icesat2.js';
+import * as h5coro from './h5coro.js';
+
+export {
+    core,
+    h5coro,
+    icesat2,
 };

@@ -1,5 +1,6 @@
 {
   "name": "@sliderule/sliderule",
+  "type": "module",
   "description": "client for the SlideRule on-demand science data processing service",
   "version": "4.1.0",
   "keywords": [
