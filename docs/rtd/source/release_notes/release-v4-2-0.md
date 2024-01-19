@@ -20,6 +20,8 @@ Version description of the v4.2.0 release of ICESat-2 SlideRule.
 
 * [287](https://github.com/ICESat2-SlideRule/sliderule/issues/287) - dependencies in the build environment are captured in a lock file
 
+* Sphinx version 5.0 supported when building documentation
+
 ## Getting This Release
 
 [https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.2.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.2.0)
