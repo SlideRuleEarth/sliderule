@@ -27,9 +27,7 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//const https = require('https');
 import * as core from './core.js';
-//import { EventEmitter } from 'events';
 
 //------------------------------------
 // File Data

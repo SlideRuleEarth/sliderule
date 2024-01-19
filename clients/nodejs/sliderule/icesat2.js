@@ -27,7 +27,7 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import { EventEmitter } from 'events';
+import mitt from 'mitt';
 import {core} from '../sliderule/index.js';
 //------------------------------------
 // File Data
@@ -91,26 +91,30 @@ export function atl06p(parm, resources, callbacks = null){
     if (callbacks != null) {
         return core.source('atl06p', rqst, true, callbacks);
     } else {
-        let event = new EventEmitter();
+        let emitter = mitt();
+
         let total_recs = null;
         let recs = [];
         callbacks = {
             atl06rec: (result) => {
                 recs.push(result["elevation"]);
                 if (total_recs != null && recs.length == total_recs) {
-                    event.emit('complete');
+                    emitter.emit('complete');
                 }
             },
         };
         return new Promise(resolve => {
             core.source('atl06p', rqst, true, callbacks).then(
                 result => {
-                    event.once('complete', () => {
+                    const onComplete = () => {
                         resolve(recs.flat(1));
-                    });
+                        emitter.off('complete', onComplete); // Remove the event listener after it's called
+                    };
+                    emitter.on('complete', onComplete);
+
                     total_recs = result["atl06rec"] ?? 0;
                     if (recs.length == total_recs) {
-                        event.emit('complete');
+                        emitter.emit('complete');
                     }
                 }
             );
