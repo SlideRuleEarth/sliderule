@@ -2881,7 +2881,6 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Get Sizes */
 
-    // TODO, fix padding issue
     uint64_t name_size = readField(2, &pos);
     uint64_t datatype_size = readField(2, &pos);
     uint64_t dataspace_size = readField(2, &pos);
@@ -2898,15 +2897,17 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         readByteArray(attr_name, name_size, &pos);
     }
     if (version == 3) {
-        // TODO: integrate encoding functionality 
-        // H5T_cset_t name_encoding;
+        /* NOTE: did not extract encoding, assume ASCII; H5T_cset_t name_encoding; */
         pos += 1;
         readByteArray(attr_name, name_size, &pos);
     }
 
     mlog(CRITICAL, "received attr_name: %s", attr_name);
 
-    pos += (8 - (name_size % 8)) % 8; // align to next 8-byte boundary
+    if (version == 1) {
+        // name padding, align to next 8-byte boundary
+        pos += (8 - (name_size % 8)) % 8; 
+    }
 
     if(H5_ERROR_CHECKING)
     {
@@ -2950,8 +2951,13 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
 
+    mlog(CRITICAL, "received datatype message: %x", datatype_bytes_read);
+
     pos += datatype_bytes_read;
-    pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
+    if (version == 1) {
+        // datatype padding align to next 8-byte boundary
+        pos += (8 - (datatype_bytes_read % 8)) % 8;
+    }
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
@@ -2960,8 +2966,13 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
 
+    mlog(CRITICAL, "received dataspace message: %x", dataspace_bytes_read);
+    
     pos += dataspace_bytes_read;
-    pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
+    if (version == 1) {
+        // dataspace padding, align to next 8-byte boundary
+        pos += (8 - (dataspace_bytes_read % 8)) % 8;
+    }
 
     /* Calculate Meta Data */
     metaData.layout = CONTIGUOUS_LAYOUT;
