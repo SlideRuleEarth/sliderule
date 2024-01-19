@@ -1,6 +1,9 @@
 local runner = require("test_executive")
 local console = require("console")
 
+-- Check If Present --
+if not icesat2.UNITTEST then return end
+
 -- Setup --
 
 atl06_dispatch = icesat2.ut_atl06()

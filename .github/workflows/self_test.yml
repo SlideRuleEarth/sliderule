@@ -29,19 +29,16 @@ jobs:
     container: ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
 
     steps:
-    - name: Install dependencies
-      run: |
-        apt-get update -y
-        apt-get install -y curl
-
     - name: Checkout sliderule repository
       uses: actions/checkout@v3
 
     - name: Build sliderule
       run: |
-       make config-development
+       cd targets/slideruleearth-aws
+       make config-debug
        make
-       make install
 
     - name: Run test
-      run: sliderule ./scripts/selftests/test_runner.lua
+      run: |
+       cd targets/slideruleearth-aws
+       make selftest TEST=../../scripts/selftests/test_runner.lua

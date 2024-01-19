@@ -82,7 +82,6 @@ int LuaObject::getLuaNumParms (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaObject::luaGetByName(lua_State* L)
 {
-    bool verbose = true;
     try
     {
         LuaObject* lua_obj = NULL;
@@ -90,7 +89,6 @@ int LuaObject::luaGetByName(lua_State* L)
         {
             /* Get Parameters */
             const char* name = getLuaString(L, 1);
-            verbose = getLuaBoolean(L, 2, true, true);
 
             /* Get Self */
             lua_obj = globalObjects.get(name).lua_obj;
@@ -104,7 +102,7 @@ int LuaObject::luaGetByName(lua_State* L)
     catch(const RunTimeException& e)
     {
         globalMut.unlock();
-        if(verbose) mlog(e.level(), "Failed to get Lua object by name: %s", e.what());
+        mlog(DEBUG, "Failed to get Lua object by name: %s", e.what());
         lua_pushnil(L);
     }
 

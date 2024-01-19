@@ -164,13 +164,6 @@ CosmosInterface::~CosmosInterface(void)
 
     delete [] tlmQName;
     delete [] cmdQName;
-
-    tlmConnMut.lock();
-    {
-        tlmConnections.flush();
-        cmdConnections.flush();
-    }
-    tlmConnMut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -224,13 +217,8 @@ int CosmosInterface::tlmActiveHandler(int fd, int flags, void* parm)
         rqst->sock = new TcpSocket(NULL, fd);
         mlog(INFO, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
 
-        /* Register and Start Connection */
-        ci->tlmConnMut.lock();
-        {
-            ci->tlmConnections.add(rqst->sock->getUniqueId(), rqst);
-            rqst->pid = new Thread(telemetryThread, rqst, false);
-        }
-        ci->tlmConnMut.unlock();
+        /* Start Connection */
+        rqst->pid = new Thread(telemetryThread, rqst, false);
     }
 
     return 0; // return success
@@ -254,13 +242,8 @@ int CosmosInterface::cmdActiveHandler(int fd, int flags, void* parm)
         rqst->sock = new TcpSocket(NULL, fd);
         mlog(INFO, "Establishing new connection to %s:%d in %s", rqst->sock->getIpAddr() ? rqst->sock->getIpAddr() : "UNKNOWN", rqst->sock->getPort(), ci->getName());
 
-        /* Register and Start Connection */
-        ci->cmdConnMut.lock();
-        {
-            ci->cmdConnections.add(rqst->sock->getUniqueId(), rqst);
-            rqst->pid = new Thread(commandThread, rqst, false);
-        }
-        ci->cmdConnMut.unlock();
+        /* Start Connection */
+        rqst->pid = new Thread(commandThread, rqst, false);
     }
 
     return 0; // return success
@@ -300,16 +283,10 @@ void* CosmosInterface::telemetryThread (void* parm)
     }
 
     mlog(DEBUG, "Terminating connection to %s in %s", rqst->sock->getIpAddr(), ci->getName());
-    ci->tlmConnMut.lock();
-    {
-        // !!! CANNOT access request values after this call !!!
-        // this will call freeConnectionEntry which
-        // closes the socket and deletes objects
-        ci->tlmConnections.remove(rqst->sock->getUniqueId());
-    }
-    ci->tlmConnMut.unlock();
 
-    delete[] buffer;
+    /* Clean Up */
+    delete rqst;
+    delete [] buffer;
 
     return NULL;
 }
@@ -319,7 +296,7 @@ void* CosmosInterface::telemetryThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* CosmosInterface::commandThread (void* parm)
 {
-    cmd_t* c = static_cast<cmd_t*>(parm);
+    cmd_t* rqst = static_cast<cmd_t*>(parm);
     unsigned char header_buf[HEADER_SIZE];
     int header_index = 0;
     int packet_index = 0;
@@ -327,12 +304,12 @@ void* CosmosInterface::commandThread (void* parm)
 
     unsigned char* packet_buf = new unsigned char[MAX_PACKET_SIZE];
 
-    while(c->ci->interfaceActive)
+    while(rqst->ci->interfaceActive)
     {
         /* Read Header */
         if(header_index != HEADER_SIZE)
         {
-            int bytes = c->sock->readBuffer(&header_buf[header_index], HEADER_SIZE - header_index);
+            int bytes = rqst->sock->readBuffer(&header_buf[header_index], HEADER_SIZE - header_index);
             if(bytes > 0)
             {
                 header_index += bytes;
@@ -361,26 +338,26 @@ void* CosmosInterface::commandThread (void* parm)
                     /* Handle Loss of Synchronization */
                     if(!in_sync)
                     {
-                        mlog(CRITICAL, "Lost synchronization to COSMOS command interface in %s", c->ci->getName());
+                        mlog(CRITICAL, "Lost synchronization to COSMOS command interface in %s", rqst->ci->getName());
                         memmove(&header_buf[0], &header_buf[1], HEADER_SIZE - 1);
                         header_index--;  // shift down
                     }
                 }
             }
-            else if(!c->sock->isConnected())
+            else if(!rqst->sock->isConnected())
             {
                 OsApi::sleep(1);
             }
             else if(bytes != TIMEOUT_RC)
             {
-                mlog(CRITICAL, "Failed to read header (%d) on %s command socket... fatal error, exiting command thread", bytes, c->ci->getName());
+                mlog(CRITICAL, "Failed to read header (%d) on %s command socket... fatal error, exiting command thread", bytes, rqst->ci->getName());
                 break;
             }
         }
         /* Read Packet */
         else if(packet_index < packet_size)
         {
-            int bytes = c->sock->readBuffer(&packet_buf[packet_index], packet_size - packet_index);
+            int bytes = rqst->sock->readBuffer(&packet_buf[packet_index], packet_size - packet_index);
             if(bytes > 0)
             {
                 packet_index += bytes;
@@ -388,12 +365,12 @@ void* CosmosInterface::commandThread (void* parm)
                 {
                     /* Post Packet */
                     int status = MsgQ::STATE_TIMEOUT;
-                    while(c->ci->interfaceActive && status == MsgQ::STATE_TIMEOUT)
+                    while(rqst->ci->interfaceActive && status == MsgQ::STATE_TIMEOUT)
                     {
-                        status = c->pub->postCopy(&packet_buf[0], packet_size, SYS_TIMEOUT);
-                        if(status < 0 && status != MsgQ::STATE_TIMEOUT)
+                        status = rqst->pub->postCopy(&packet_buf[0], packet_size, SYS_TIMEOUT);
+                        if(status < 0)
                         {
-                            mlog(CRITICAL, "Message of size %d unable to be posted (%d) to output stream %s", bytes, status, c->pub->getName());
+                            mlog(CRITICAL, "Message of size %d unable to be posted (%d) to output stream %s", bytes, status, rqst->pub->getName());
                             break;
                         }
                     }
@@ -404,19 +381,21 @@ void* CosmosInterface::commandThread (void* parm)
                     packet_size = 0;
                 }
             }
-            else if(!c->sock->isConnected())
+            else if(!rqst->sock->isConnected())
             {
                 OsApi::sleep(1);
             }
             else if(bytes != TIMEOUT_RC)
             {
-                mlog(CRITICAL, "Failed to read packet (%d) on %s command socket... fatal error, exiting command thread", bytes, c->ci->getName());
+                mlog(CRITICAL, "Failed to read packet (%d) on %s command socket... fatal error, exiting command thread", bytes, rqst->ci->getName());
                 break;
             }
         }
     }
 
-    delete[] packet_buf;
+    /* Clean Up */
+    delete rqst;
+    delete [] packet_buf;
 
     return NULL;
 }

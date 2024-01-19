@@ -43,7 +43,7 @@ This plugin supplies the following record types:
 * `waverec`: return waveform built from ATL03 photons
 
 The plugin supplies the following lua user data types:
-* `icesat2.atl03(<url>, <outq_name>, [<parms>])`: ATL03 reader base object
+* `icesat2.atl03s(<url>, <outq_name>, [<parms>])`: ATL03 reader base object
 * `icesat2.atl03indexer(<asset>, <resource table>, <outq_name>, [<num threads>])`: ATL03 indexer base object
 * `icesat2.atl06(<outq name>)`: ATL06 dispatch object
 * `icesat2.atl08(<outq name>)`: ATL08 dispatch object

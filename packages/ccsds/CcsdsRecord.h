@@ -120,7 +120,7 @@ class CcsdsRecord: public RecordObject
 
                     CcsdsRecord         (void);
         void        populateHeader      (void);
-        pktDef_t*   getPacketDefinition (unsigned char* buffer, int size); // overloaded RecordObject method
+        pktDef_t*   getPacketDefinition (const unsigned char* buffer, int size); // overloaded RecordObject method
 };
 
 /******************************************************************************

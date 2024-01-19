@@ -136,14 +136,16 @@ class Atl08Dispatch: public DispatchObject
          * Data
          *--------------------------------------------------------------------*/
 
-        RecordObject*       recObj;
-        atl08_t*            recData;
-        Publisher*          outQ;
+        atl08_t*                batchData;
+        Mutex                   batchMutex;
+        int                     batchIndex;
 
-        Mutex               batchMutex;
-        int                 batchIndex;
+        RecordObject*           atl08Record;
+        vector<RecordObject*>   recVec; // because there are variable number of fields, this cannot be predefined
 
-        Icesat2Parms*       parms;
+        Publisher*              outQ;
+
+        Icesat2Parms*           parms;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -156,9 +158,10 @@ class Atl08Dispatch: public DispatchObject
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
+        RecordObject*   buildAncillaryRecord            (Atl03Reader::extent_t* extent, recVec_t* records);
         void            geolocateResult                 (Atl03Reader::extent_t* extent, vegetation_t& result);
         void            phorealAlgorithm                (Atl03Reader::extent_t* extent, vegetation_t& result);
-        void            postResult                      (vegetation_t* result);
+        void            postResult                      (const vegetation_t* result, RecordObject* ancrec);
         static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
         static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
 

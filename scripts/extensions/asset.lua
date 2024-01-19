@@ -128,7 +128,7 @@ local function loaddir(file)
     for k,v in pairs(directory) do
 
         -- see if asset already exists
-        local asset = core.getbyname(k, false)
+        local asset = core.getbyname(k)
 
         -- populate asset table
         if  asset then

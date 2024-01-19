@@ -27,6 +27,6 @@ local algo          = icesat2.atl08(args.result_q, rqst_parms)
 local proc          = georesource.initialize(resource, parms, algo, args)
 
 if proc then
-    local reader    = icesat2.atl03(proc.asset, resource, proc.source_q, rqst_parms, true)
+    local reader    = icesat2.atl03s(proc.asset, resource, proc.source_q, rqst_parms, true)
     local status    = georesource.waiton(resource, parms, algo, reader, proc.algo_disp, proc.sampler_disp, proc.userlog, false)
 end

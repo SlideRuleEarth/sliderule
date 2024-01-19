@@ -1,6 +1,6 @@
 # Release v4.0.4
 
-2023-09-26
+2023-11-01
 
 Version description of the v4.0.4 release of ICESat-2 SlideRule.  This document also captures functionality added in versions v4.0.1, v4.0.2, and v4.0.3.
 

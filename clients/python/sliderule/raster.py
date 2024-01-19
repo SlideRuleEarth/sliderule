@@ -27,7 +27,6 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
 import numpy
 import base64
 import sliderule
@@ -37,8 +36,6 @@ from shapely.geometry import Polygon
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-logger = logging.getLogger(__name__)
 
 profiles = {}
 
@@ -87,7 +84,7 @@ def sample(asset, coordinates, parms={}):
     '''
     # Massage Arguments
     if type(coordinates[0]) != list:
-        coorindates = [coorindates]
+        coordinates = [coordinates]
 
     # Perform Request
     rqst = {"samples": {"asset": asset, **parms}, "coordinates": coordinates}
@@ -194,7 +191,7 @@ def subset(asset, extents, parms={}):
     '''
     # Massage Arguments
     if type(extents[0]) != list:
-        coorindates = [coorindates]
+        extents = [extents]
 
     # Perform Request
     rqst = {"samples": {"asset": asset, **parms}, "extents": extents}

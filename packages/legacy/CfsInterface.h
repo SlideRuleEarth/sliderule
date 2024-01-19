@@ -141,7 +141,7 @@ class CfsInterface: public CommandableObject
 
         PktStats*       createPktStat       (uint16_t apid);
         bool            validatePkt         (unsigned char* pktbuf, int bytes);
-        void            measurePkt          (unsigned char* pktbuf, int bytes);
+        void            measurePkt          (const unsigned char* pktbuf, int bytes);
 };
 
 

@@ -60,17 +60,25 @@ void CurlLib::deinit (void)
 }
 
 /*----------------------------------------------------------------------------
- * get
+ * request
  *----------------------------------------------------------------------------*/
-long CurlLib::get (const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname)
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<string*>* headers)
 {
     long http_code = 0;
     CURL* curl = NULL;
 
     /* Initialize Request */
     data_t rqst;
-    rqst.data = (char*)data;
-    rqst.size = StringLib::size(data);
+    if(data)
+    {
+        rqst.data = (char*)data;
+        rqst.size = StringLib::size(data);
+    }
+    else
+    {
+        rqst.data = NULL;
+        rqst.size = 0;
+    }
 
     /* Initialize Response */
     List<data_t> rsps_set(EXPECTED_RESPONSE_SEGMENTS);
@@ -91,11 +99,37 @@ long CurlLib::get (const char* url, const char* data, const char** response, int
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        if(rqst.size > 0)
+
+        if(verb == EndpointObject::GET && rqst.size > 0)
         {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, rqst.data);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
+        }
+        else if(verb == EndpointObject::POST)
+        {
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+            curl_easy_setopt(curl, CURLOPT_READFUNCTION, CurlLib::readData);
+            curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
+        }
+        else if(verb == EndpointObject::PUT)
+        {
+            curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+            curl_easy_setopt(curl, CURLOPT_READFUNCTION, CurlLib::readData);
+            curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
+        }
+
+        /* Add Headers */
+        struct curl_slist* hdr_slist = NULL;
+        if(headers && headers->length() > 0)
+        {
+            for(int i = 0; i < headers->length(); i++)
+            {
+                hdr_slist = curl_slist_append(hdr_slist, headers->get(i)->c_str());
+            }
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdr_slist);
         }
 
         /*
@@ -140,97 +174,13 @@ long CurlLib::get (const char* url, const char* data, const char** response, int
         {
             /* Unable to Perform cURL Call */
             FString error_msg("%s", curl_easy_strerror(res));
-            *response = error_msg.c_str(true);
+            if(response) *response = error_msg.c_str(true);
             http_code = EndpointObject::Service_Unavailable;
         }
 
         /* Always Cleanup */
         curl_easy_cleanup(curl);
-    }
-
-    /* Return HTTP Code */
-    return http_code;
-}
-
-/*----------------------------------------------------------------------------
- * post
- *----------------------------------------------------------------------------*/
-long CurlLib::post (const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname)
-{
-    long http_code = 0;
-    CURL* curl = NULL;
-
-    /* Initialize Request */
-    data_t rqst;
-    rqst.data = (char*)data;
-    rqst.size = StringLib::size(data);
-
-    /* Initialize Response */
-    List<data_t> rsps_set;
-    if(response) *response = NULL;
-    if(size) *size = 0;
-
-    /* Initialize cURL */
-    curl = curl_easy_init();
-    if(curl)
-    {
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECTION_TIMEOUT); // seconds
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DATA_TIMEOUT); // seconds
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, CurlLib::readData);
-        curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::writeData);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
-
-        /*
-        * If you want to connect to a site who isn't using a certificate that is
-        * signed by one of the certs in the CA bundle you have, you can skip the
-        * verification of the server's certificate. This makes the connection
-        * A LOT LESS SECURE.
-        *
-        * If you have a CA cert for the server stored someplace else than in the
-        * default bundle, then the CURLOPT_CAPATH option might come handy for
-        * you.
-        */
-        if(!verify_peer)
-        {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        }
-
-        /*
-        * If the site you're connecting to uses a different host name that what
-        * they have mentioned in their server certificate's commonName (or
-        * subjectAltName) fields, libcurl will refuse to connect. You can skip
-        * this check, but this will make the connection less secure.
-        */
-        if(!verify_hostname)
-        {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        }
-
-        /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
-
-        /* Check for Success */
-        if(res == CURLE_OK)
-        {
-            /* Get HTTP Code */
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-
-            /* Get Response */
-            CurlLib::combineResponse(&rsps_set, response, size);
-        }
-        else
-        {
-            /* Unable to Perform cURL Call */
-            mlog(ERROR, "Unable to perform cRUL call on %s: %s", url, curl_easy_strerror(res));
-            http_code = EndpointObject::Service_Unavailable;
-        }
-
-        /* Always Cleanup */
-        curl_easy_cleanup(curl);
+        curl_slist_free_all(hdr_slist);
     }
 
     /* Return HTTP Code */
@@ -376,24 +326,100 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 }
 
 /*----------------------------------------------------------------------------
+ * getHeaders
+ *----------------------------------------------------------------------------*/
+int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
+{
+    int num_hdrs = 0;
+
+    /* Must be table of strings */
+    if((lua_gettop(L) >= index) && lua_istable(L, index))
+    {
+        /* Iterate through each item in table */
+        int num_strings = lua_rawlen(L, index);
+        for(int i = 0; i < num_strings; i++)
+        {
+            /* Get item */
+            lua_rawgeti(L, index, i+1);
+            if(lua_isstring(L, -1))
+            {
+                string* header = new string(LuaObject::getLuaString(L, -1));
+                header_list.add(header);
+                num_hdrs++;
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+
+    return num_hdrs;
+}
+
+/*----------------------------------------------------------------------------
  * luaGet
  *----------------------------------------------------------------------------*/
 int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
+    List<string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
         /* Get Parameters */
         const char* url             = LuaObject::getLuaString(L, 1);
-        bool        verify_peer     = LuaObject::getLuaBoolean(L, 2, true, false);
-        bool        verify_hostname = LuaObject::getLuaBoolean(L, 3, true, false);
-        const char* data            = LuaObject::getLuaString(L, 4, true, "");
+        const char* data            = LuaObject::getLuaString(L, 2, true, NULL);
+        int         num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
+        bool        verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
+        bool        verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::get(url, data, &response, &size, verify_peer, verify_hostname);
+        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, &header_list);
+        if(response)
+        {
+            status = (http_code >= 200 && http_code < 300);
+            lua_pushlstring(L, response, size);
+            delete [] response;
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error performing netsvc GET: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 2;
+}
+
+/*----------------------------------------------------------------------------
+ * luaPut
+ *----------------------------------------------------------------------------*/
+int CurlLib::luaPut (lua_State* L)
+{
+    bool status = false;
+    List<string*> header_list(EXPECTED_MAX_HEADERS);
+
+    try
+    {
+        /* Get Parameters */
+        const char* url             = LuaObject::getLuaString(L, 1);
+        const char* data            = LuaObject::getLuaString(L, 2, true, NULL);
+        int         num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
+        bool        verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
+        bool        verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
+
+        /* Perform Request */
+        const char* response = NULL;
+        int size = 0;
+        long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size, verify_peer, verify_hostname, &header_list);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);
@@ -422,17 +448,19 @@ int CurlLib::luaGet (lua_State* L)
 int CurlLib::luaPost (lua_State* L)
 {
     bool status = false;
+    List<string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
         /* Get Parameters */
-        const char* url             = LuaObject::getLuaString(L, 1);
-        const char* data            = LuaObject::getLuaString(L, 2, true, "{}");
+        const char* url         = LuaObject::getLuaString(L, 1);
+        const char* data        = LuaObject::getLuaString(L, 2, true, "{}");
+        int         num_hdrs    = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::post(url, data, &response, &size);
+        long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size, false, false, &header_list);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);

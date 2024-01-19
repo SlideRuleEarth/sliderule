@@ -107,7 +107,7 @@ void OsApi::dupstr (char** dst, const char* src)
     assert(dst);
     if(*dst) delete [] *dst;
     int len = 0;
-    while( (len < (MAX_STR_SIZE - 1)) && (src[len] != '\0') ) len++;
+    while(src[len] != '\0') len++;
     *dst = new char[len + 1];
     for(int k = 0; k < len; k++) (*dst)[k] = src[k];
     (*dst)[len] = '\0';

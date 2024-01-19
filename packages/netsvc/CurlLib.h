@@ -36,7 +36,10 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "LuaObject.h"
+#include "EndpointObject.h"
+#include "OsApi.h"
+#include "MsgQ.h"
 
 /******************************************************************************
  * cURL LIBRARY CLASS
@@ -53,11 +56,15 @@ class CurlLib
         static void         init            (void);
         static void         deinit          (void);
 
-        static long         get             (const char* url, const char* data, const char** response, int* size=NULL, bool verify_peer=false, bool verify_hostname=false);
-        static long         post            (const char* url, const char* data, const char** response, int* size=NULL, bool verify_peer=false, bool verify_hostname=false);
+        static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false, List<string*>* headers=NULL);
+        static long         get             (const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false);
+        static long         put             (const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false);
+        static long         post            (const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
         static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active=NULL);
+        static int          getHeaders      (lua_State* L, int index, List<string*>& header_list);
         static int          luaGet          (lua_State* L);
+        static int          luaPut          (lua_State* L);
         static int          luaPost         (lua_State* L);
 
     private:
@@ -69,6 +76,7 @@ class CurlLib
         static const int EXPECTED_RESPONSE_SEGMENTS = 16;
         static const int CONNECTION_TIMEOUT = 10L; // seconds
         static const int DATA_TIMEOUT = 60L; // seconds
+        static const int EXPECTED_MAX_HEADERS = 8;
 
         static const int RECOBJ_HDR_SIZE = 8; // bytes
 

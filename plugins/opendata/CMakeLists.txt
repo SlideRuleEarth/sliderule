@@ -12,6 +12,7 @@ add_library (opendata MODULE "")
 
 set_target_properties (opendata PROPERTIES OUTPUT_NAME opendata)
 set_target_properties (opendata PROPERTIES PREFIX "")
+set_target_properties (opendata PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")

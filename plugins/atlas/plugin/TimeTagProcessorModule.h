@@ -172,7 +172,6 @@ class TimeTagProcessorModule: public CcsdsProcessorModule
          *--------------------------------------------------------------------*/
 
         static const int    INVALID_MFC_OFFSET              = -1;
-        static const int    INVALID_INDEX                   = -1;
         static const int    NUM_ALT_BINS_PER_PKT            = 500;
         static const int    NUM_ATM_BINS_PER_PKT            = 467;
         static const int    NUM_ALT_SEGS_PER_PKT            = 4;

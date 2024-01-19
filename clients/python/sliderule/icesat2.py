@@ -32,14 +32,11 @@ import logging
 import numpy
 import geopandas
 import sliderule
-from sliderule import earthdata
+from sliderule import earthdata, logger
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
 
 # profiling times for each major function
 profiles = {}
@@ -128,6 +125,20 @@ def __calcspot(sc_orient, track, pair):
     return 0
 
 #
+# Get Ancillary Field Name
+#
+def __getancillaryfield(parm, field_rec):
+    if field_rec['anc_type'] == 0:
+        return parm['atl03_ph_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 1:
+        return parm['atl03_geo_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 2:
+        return parm['atl08_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 3:
+        return parm['atl06_fields'][field_rec['field_index']]
+    raise sliderule.FatalError(f'Invalid ancillary field type {field_rec["anc_type"]}')
+
+#
 # Flatten Batches
 #
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
@@ -153,16 +164,14 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
             if rectype in rsp['__rectype']:
                 records += rsp,
                 num_records += len(rsp[batch_column])
-            elif 'atl06anc' == rsp['__rectype']:
+            elif 'ancfrec' == rsp['__rectype']:
                 for field_rec in rsp['fields']:
-                    if field_rec['anc_type'] == 0:
-                        field_name = parm['atl03_ph_fields'][field_rec['field_index']]
-                    elif field_rec['anc_type'] == 1:
-                        field_name = parm['atl03_geo_fields'][field_rec['field_index']]
+                    extent_id = numpy.uint64(rsp['extent_id'])
+                    field_name = __getancillaryfield(parm, field_rec)
                     if field_name not in field_dictionary:
                         field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                    field_dictionary[field_name]['extent_id'] += numpy.uint64(rsp['extent_id']),
-                    field_dictionary[field_name][field_name] += field_rec['value'],
+                    field_dictionary[field_name]['extent_id'] += extent_id,
+                    field_dictionary[field_name][field_name] += sliderule.getvalues(field_rec['value'], field_rec['datatype'], len(field_rec['value']), num_elements=1)[0],
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue
@@ -252,19 +261,20 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
 #
 # Build Request
 #
-def __build_request(parm, resources):
+def __build_request(parm, resources, default_asset='icesat2'):
 
     # Default the Asset
-    if "asset" not in parm:
-        parm["asset"] = "icesat2"
+    rqst_parm = parm.copy()
+    if "asset" not in rqst_parm:
+        rqst_parm["asset"] = default_asset
 
     # Get List of Resources
-    resources = earthdata.search(parm, resources)
+    resources = earthdata.search(rqst_parm, resources)
 
     # Build Request
     return {
         "resources": resources,
-        "parms": parm
+        "parms": rqst_parm
     }
 
 
@@ -396,6 +406,83 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
         return sliderule.emptyframe()
 
 #
+#  Subsetted ATL06
+#
+def atl06s (parm, resource):
+    '''
+    Subsets ATL06 data given the polygon and time range provided and returns elevations
+
+    Parameters
+    ----------
+        parms:      dict
+                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        resource:   str
+                    ATL06 HDF5 filename
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL06 elevations
+    '''
+    return atl06sp(parm, resources=[resource])
+
+#
+#  Parallel Subsetted ATL06
+#
+def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+    '''
+    Performs ATL06 subsetting in parallel on ATL06 data and returns elevation data.  Unlike the `atl06s <#atl06s>`_ function,
+    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
+    is used to fetch all available resources from the CMR system automatically.
+
+    Warnings
+    --------
+        Note, it is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
+        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
+        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement to that effect; this can be ignored and indicates no issue with the data processing.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
+        as_numpy_array: bool
+                        whether to provide all sampled values as numpy arrays even if there is only a single value
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL06 elevations
+    '''
+    try:
+        tstart = time.perf_counter()
+
+        # Build Request
+        rqst = __build_request(parm, resources, default_asset="icesat2-atl06")
+
+        # Make API Processing Request
+        rsps = sliderule.source("atl06sp", rqst, stream=True, callbacks=callbacks)
+
+        # Flatten Responses
+        gdf = __flattenbatches(rsps, 'atl06srec', 'elevation', parm, keep_id, as_numpy_array, height_key)
+
+        # Return Response
+        profiles[atl06sp.__name__] = time.perf_counter() - tstart
+        return gdf
+
+    # Handle Runtime Errorss
+    except RuntimeError as e:
+        logger.critical(e)
+        return sliderule.emptyframe()
+
+#
 #  Subsetted ATL03
 #
 def atl03s (parm, resource):
@@ -479,12 +566,9 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
                         num_photons += len(rsp['photons'])
                         if sample_photon_record == None and len(rsp['photons']) > 0:
                             sample_photon_record = rsp
-                    elif 'atl03anc' == rsp['__rectype']:
+                    elif 'ancerec' == rsp['__rectype']:
                         # Get Field Name and Type
-                        if rsp['anc_type'] == 0:
-                            field_name = parm['atl03_ph_fields'][rsp['field_index']]
-                        elif rsp['anc_type'] == 1:
-                            field_name = parm['atl03_geo_fields'][rsp['field_index']]
+                        field_name = __getancillaryfield(parm, rsp)
                         if field_name not in photon_field_types:
                             photon_field_types[field_name] = sliderule.basictypes[sliderule.codedtype2str[rsp['datatype']]]["nptype"]
                         # Initialize Extent Dictionary Entry

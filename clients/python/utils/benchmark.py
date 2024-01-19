@@ -56,18 +56,8 @@ if args.organization == "None":
     args.desired_nodes = None
     args.time_to_live = None
 
-# Initialize Log Level
-loglevel = logging.CRITICAL
-if args.loglvl == "ERROR":
-    loglevel = logging.ERROR
-elif args.loglvl == "INFO":
-    loglevel = logging.INFO
-elif args.loglvl == "DEBUG":
-    loglevel = logging.DEBUG
-logging.basicConfig(level=loglevel)
-
 # Initialize SlideRule Client
-sliderule.init(args.domain, verbose=args.verbose, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
+sliderule.init(args.domain, verbose=args.verbose, loglevel=args.loglvl, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
 
 # Generate Region Polygon
 region = sliderule.toregion(args.aoi)
@@ -241,7 +231,7 @@ def atl06_no_sample_arcticdem():
 def atl03_rasterized_subset():
     parms = { 
         "poly": region['poly'],
-        "raster": region['raster'], # TODO: this is very slow!
+        "raster": region['raster'],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_LOW,
         "ats": 20.0,

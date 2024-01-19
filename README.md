@@ -74,9 +74,6 @@ Options include:
    -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets)
                                        default: OFF
 
-   -DENABLE_COMPAT=[ON|OFF]            configure build for older tool chains (needed to build on CentOS 7)
-                                       default: OFF
-
    -DENABLE_ADDRESS_SANITIZER=[ON|OFF] instrument code with for detecting memory errors
                                        default: OFF
 

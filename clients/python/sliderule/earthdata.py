@@ -34,21 +34,18 @@ import json
 import ssl
 import urllib.request
 import requests
-import logging
 import numpy
 import geopandas
 from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
+from sliderule import logger
 import sliderule
 
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
 
 # profiling times for each major function
 profiles = {}
@@ -90,6 +87,8 @@ ASSETS_TO_DATASETS = {
     "usgs3dep-1meter-dem": "Digital Elevation Model (DEM) 1 meter",
     "landsat-hls": "HLS",
     "icesat2": "ATL03",
+    "icesat2-atl06": "ATL06",
+    "icesat2-atl08": "ATL08",
     "atlas-local": "ATL03",
     "nsidc-s3": "ATL03"
 }
@@ -788,10 +787,11 @@ def search(parm, resources=None):
     cmr_kwargs = {}
 
     # Pull Out Polygon
-    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
-        cmr_kwargs['polygon'] = parm["clusters"]
-    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
-        cmr_kwargs['polygon'] = parm["poly"]
+    if "ignore_poly_for_cmr" not in parm or not parm["ignore_poly_for_cmr"]:
+        if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
+            cmr_kwargs['polygon'] = parm["clusters"]
+        elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
+            cmr_kwargs['polygon'] = parm["poly"]
 
     # Pull Out Time Period
     if "t0" in parm:

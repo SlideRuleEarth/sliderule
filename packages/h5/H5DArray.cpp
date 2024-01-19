@@ -180,7 +180,6 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
 
     /* Return Number of Bytes Serialized */
     int64_t elements_available = h5f->info.elements - start_element;
-    if(elements_available < 0) elements_available = 0;
-    uint64_t elements_copied = MIN(elements_available, num_elements);
+    int64_t elements_copied = MAX(MIN(elements_available, num_elements), 0);
     return elements_copied * h5f->info.typesize;
 }

@@ -61,16 +61,13 @@ class Atl03Reader: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
+        static const int32_t INVALID_INDICE = -1;
 
         static const char* phRecType;
         static const RecordObject::fieldDef_t phRecDef[];
 
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
-
-        static const char* ancRecType;
-        static const RecordObject::fieldDef_t ancRecDef[];
 
         static const char* OBJECT_TYPE;
 
@@ -113,27 +110,9 @@ class Atl03Reader: public LuaObject
             double          segment_distance;
             double          extent_length; // meters
             double          background_rate; // PE per second
-            uint64_t        extent_id; // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
+            uint64_t        extent_id;
             photon_t        photons[]; // zero length field
         } extent_t;
-
-        /* Ancillary Field Types */
-        typedef enum {
-            PHOTON_ANC_TYPE = 0,
-            EXTENT_ANC_TYPE = 1
-        } anc_type_t;
-
-        /* Ancillary Record */
-        typedef struct anc {
-            uint64_t        extent_id;
-            uint32_t        num_elements;
-            uint8_t         anc_type; // anc_type_t
-            uint8_t         field_index; // position in request parameter list
-            uint8_t         data_type; // RecordObject::fieldType_t
-            uint8_t         data[];
-            
-            double* extractAncillary (void);
-        } anc_t;
 
         /* Statistics */
         typedef struct {
@@ -175,16 +154,12 @@ class Atl03Reader: public LuaObject
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (void);
+                void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
                 H5Array<int32_t>    segment_ph_cnt;
-
-                MathLib::point_t*   projected_poly;
-                MathLib::proj_t     projection;
-                int                 points_in_polygon;
 
                 bool*               inclusion_mask;
                 bool*               inclusion_ptr;
@@ -221,8 +196,8 @@ class Atl03Reader: public LuaObject
                 H5Array<double>     bckgrd_delta_time;
                 H5Array<float>      bckgrd_rate;
 
-                H5DArrayDictionary  anc_geo_data;
-                H5DArrayDictionary  anc_ph_data;
+                H5DArrayDictionary* anc_geo_data;
+                H5DArrayDictionary* anc_ph_data;
         };
 
         /* Atl08 Classification Subclass */
@@ -243,6 +218,7 @@ class Atl03Reader: public LuaObject
                 /* Class Data */
                 bool                enabled;
                 bool                phoreal;
+                bool                ancillary;
 
                 /* Generated Data */
                 uint8_t*            classification; // [num_photons]
@@ -260,6 +236,10 @@ class Atl03Reader: public LuaObject
                 H5Array<int32_t>    segment_id_beg;
                 H5Array<int16_t>    segment_landcover;
                 H5Array<int8_t>     segment_snowcover;
+
+                /* Ancillary Data */
+                H5DArrayDictionary* anc_seg_data;
+                int32_t*            anc_seg_indices;
         };
 
         /* YAPC Score Subclass */
@@ -345,7 +325,7 @@ class Atl03Reader: public LuaObject
         static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
         uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        static void         generateAncillaryRecords    (uint64_t extent_id, Icesat2Parms::string_list_t* field_list, H5DArrayDictionary& field_dict, anc_type_t type,  List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        static void         generateAncillaryRecords    (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, AncillaryFields::type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 

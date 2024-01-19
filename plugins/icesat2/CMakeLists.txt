@@ -12,6 +12,7 @@ add_library (icesat2 MODULE "")
 
 set_target_properties (icesat2 PROPERTIES OUTPUT_NAME icesat2)
 set_target_properties (icesat2 PROPERTIES PREFIX "")
+set_target_properties (icesat2 PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")
@@ -24,6 +25,7 @@ target_compile_definitions (icesat2 PUBLIC BUILDINFO="${BUILDINFO}")
 
 # Compile Definitions #
 target_compile_definitions (icesat2 PUBLIC BINID="${TGTVER}")
+target_compile_options (icesat2 PUBLIC "$<$<CONFIG:Debug>:-DWITH_UNITTESTS>")
 target_compile_options (icesat2 PUBLIC -Wall) # turn on "all" warnings
 target_compile_options (icesat2 PUBLIC -Wextra) # turn on "extra" warnings
 target_compile_options (icesat2 PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
@@ -41,17 +43,18 @@ endif()
 target_sources(icesat2
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/AncillaryFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl08Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/MeritRaster.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp
-)
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.cpp>)
 
 # Include Directories #
 target_include_directories (icesat2
@@ -65,10 +68,12 @@ target_include_directories (icesat2
 # Script Installation #
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03sp.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06p.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06s.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06sp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
@@ -82,17 +87,19 @@ install (TARGETS icesat2 LIBRARY DESTINATION ${CONFDIR})
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/AncillaryFields.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl08Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/MeritRaster.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl03Reader.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_Atl06Dispatch.h>
     DESTINATION
         ${INSTALLDIR}/include/sliderule/icesat2
 )

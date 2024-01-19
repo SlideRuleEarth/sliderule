@@ -468,11 +468,8 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         }
 
                         /* Populate Response */
-                        if(rsps_bytes > 0)
-                        {
-                            memcpy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
-                            rsps.response[rsps_index + rsps_bytes] = '\0'; // ensure termination
-                        }
+                        memcpy(&rsps.response[rsps_index], &rspsBuf[line_start], rsps_bytes);
+                        rsps.response[rsps_index + rsps_bytes] = '\0'; // ensure termination
 
                         /* Update Indices */
                         rsps_index += rsps_bytes;

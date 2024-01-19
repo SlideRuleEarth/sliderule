@@ -12,6 +12,7 @@ add_library (pgc MODULE "")
 
 set_target_properties (pgc PROPERTIES OUTPUT_NAME pgc)
 set_target_properties (pgc PROPERTIES PREFIX "")
+set_target_properties (pgc PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")

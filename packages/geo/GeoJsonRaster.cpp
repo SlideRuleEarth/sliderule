@@ -230,7 +230,11 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr
         rasterCreated = true;
 
         /* Subset newly created raster, get all pixels */
-        subset = getSubset();
+        std::vector<RasterSubset*> slist;
+        getPixels(0, 0, 0, 0, slist, NULL);
+        assert(slist.size() == 1);
+
+        subset = slist[0];
         CHECKPTR(subset);
         CHECKPTR(subset->data);
     }

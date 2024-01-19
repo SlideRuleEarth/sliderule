@@ -32,14 +32,11 @@ import logging
 import numpy
 import geopandas
 import sliderule
-from sliderule import earthdata
+from sliderule import earthdata, logger
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
 
 # profiling times for each major function
 profiles = {}
@@ -156,16 +153,17 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_ar
         tstart = time.perf_counter()
 
         # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = asset
+        rqst_parm = parm.copy()
+        if "asset" not in rqst_parm:
+            rqst_parm["asset"] = asset
 
         # Get List of Resources from CMR (if not supplied)
-        resources = earthdata.search(parm, resources)
+        resources = earthdata.search(rqst_parm, resources)
 
         # Build GEDI Request
         rqst = {
             "resources": resources,
-            "parms": parm
+            "parms": rqst_parm
         }
 
         # Make API Processing Request

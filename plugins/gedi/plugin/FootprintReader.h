@@ -368,24 +368,8 @@ void FootprintReader<footprint_t>::Region::cleanup (void)
 template <class footprint_t>
 void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
 {
-    int points_in_polygon = info->reader->parms->polygon.length();
-
-    /* Determine Best Projection To Use */
-    MathLib::proj_t projection = MathLib::PLATE_CARREE;
-    if(lat[0] > 70.0) projection = MathLib::NORTH_POLAR;
-    else if(lat[0] < -70.0) projection = MathLib::SOUTH_POLAR;
-
-    /* Project Polygon */
-    List<MathLib::coord_t>::Iterator poly_iterator(info->reader->parms->polygon);
-    MathLib::point_t* projected_poly = new MathLib::point_t [points_in_polygon];
-    for(int i = 0; i < points_in_polygon; i++)
-    {
-        projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
-    }
-
     /* Find First and Last Footprints in Polygon */
     bool first_footprint_found = false;
-    bool last_footprint_found = false;
     int footprint = 0;
     while(footprint < lat.size)
     {
@@ -393,10 +377,10 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
 
         /* Project Segment Coordinate */
         MathLib::coord_t footprint_coord = {lon[footprint], lat[footprint]};
-        MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, projection);
+        MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
-        if(MathLib::inpoly(projected_poly, points_in_polygon, footprint_point))
+        if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, footprint_point))
         {
             inclusion = true;
         }
@@ -408,10 +392,8 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
             first_footprint_found = true;
             first_footprint = footprint;
         }
-        else if(first_footprint_found && !last_footprint_found && !inclusion)
+        else if(first_footprint_found && !inclusion)
         {
-            /* Set Last Segment */
-            last_footprint_found = true;
             break; // full extent found!
         }
 
@@ -424,9 +406,6 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
     {
         num_footprints = footprint - first_footprint;
     }
-
-    /* Delete Projected Polygon */
-    delete [] projected_poly;
 }
 
 /*----------------------------------------------------------------------------
@@ -514,7 +493,7 @@ int FootprintReader<footprint_t>::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        lua_obj = (FootprintReader*)getLuaSelf(L, 1);
+        lua_obj = reinterpret_cast<FootprintReader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

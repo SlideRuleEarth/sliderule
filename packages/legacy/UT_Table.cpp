@@ -183,7 +183,7 @@ int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
     int key, data;
     int size = 8;
     Table<int,int> mytable(size);
-    int test_data[8] = {0,1,2,3,8,9,10,11};
+    const int test_data[8] = {0,1,2,3,8,9,10,11};
 
     failures = 0;
 
@@ -222,9 +222,9 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     int data;
     int size = 16;
     Table<int,int> mytable(size);
-    int test_data[16]    = {0, 16, 32,  1, 17, 33,  2, 18, 34,  3,  4,  5,  6,  7,  8,  9};
-    int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
-    int check_order[16]  = {0, 16, 32,  1,  1,  1,  2,  2,   2,  3,  4,  5,  6,  7,  8,  9};
+    const int test_data[16]    = {0, 16, 32,  1, 17, 33,  2, 18, 34,  3,  4,  5,  6,  7,  8,  9};
+    const int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
+    const int check_order[16]  = {0, 16, 32,  1,  1,  1,  2,  2,   2,  3,  4,  5,  6,  7,  8,  9};
 
     failures = 0;
 
@@ -262,7 +262,7 @@ int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     int key;
     int size = 16;
     Table<int,int> mytable(size);
-    int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
+    const int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
 
     failures = 0;
 
@@ -322,7 +322,7 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
     int key;
     int size = 8;
     Table<int,int> mytable(size);
-    int test_data[8] = {0,1,2,3,4,5,6,7};
+    const int test_data[8] = {0,1,2,3,4,5,6,7};
 
     failures = 0;
 
@@ -382,9 +382,9 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     int key, data;
     int size = 16;
     Table<int,int> mytable(size);
-    int test_data[16]    =  {0,16,32, 1,17,33, 2,18,34,40,50,66,48,35, 8, 9};
-    int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
-    int check_order[16]  =  {0,16,32, 1, 1, 1, 2, 2, 2,40,50,66,48,35, 8, 9};
+    const int test_data[16]    =  {0,16,32, 1,17,33, 2,18,34,40,50,66,48,35, 8, 9};
+    const int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
+    const int check_order[16]  =  {0,16,32, 1, 1, 1, 2, 2, 2,40,50,66,48,35, 8, 9};
 
     failures = 0;
 

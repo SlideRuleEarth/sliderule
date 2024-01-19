@@ -65,11 +65,24 @@ void ContainerRecord::init (void)
 }
 
 /*----------------------------------------------------------------------------
- * init
+ * hdrSize
  *----------------------------------------------------------------------------*/
 int ContainerRecord::hdrSize (int cnt)
 {
     return (sizeof(entry_t) * cnt) + offsetof(rec_t, entries);
+}
+
+/*----------------------------------------------------------------------------
+ * recSize
+ *----------------------------------------------------------------------------*/
+int ContainerRecord::recSize (vector<RecordObject*> rec_vec)
+{
+    int total_size = hdrSize(rec_vec.size());
+    for(RecordObject* rec: rec_vec)
+    {
+        total_size += rec->getUsedMemory();
+    }
+    return total_size;
 }
 
 /*----------------------------------------------------------------------------
@@ -86,6 +99,20 @@ ContainerRecord::ContainerRecord(int rec_cnt, int size):
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+ContainerRecord::ContainerRecord(vector<RecordObject*> rec_vec):
+    RecordObject(recType, recSize(rec_vec))
+{
+    recsContained = 0;
+    recsOffset = hdrSize(rec_vec.size());
+    container = reinterpret_cast<rec_t*>(recordData);
+    container->rec_cnt = rec_vec.size();
+    container->start_of_recs = recsOffset;
+    for(RecordObject* rec: rec_vec) addRecord(*rec);
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 ContainerRecord::~ContainerRecord()
@@ -95,7 +122,7 @@ ContainerRecord::~ContainerRecord()
 /*----------------------------------------------------------------------------
  * addRecord
  *----------------------------------------------------------------------------*/
-bool ContainerRecord::addRecord(RecordObject& record, int size)
+int ContainerRecord::addRecord(RecordObject& record, int size)
 {
     if(recsContained < container->rec_cnt)
     {
@@ -114,8 +141,8 @@ bool ContainerRecord::addRecord(RecordObject& record, int size)
         /* bump number of records contained */
         recsContained++;
 
-        return true;
+        return rec_bytes;
     }
 
-    return false;
+    return 0;
 }

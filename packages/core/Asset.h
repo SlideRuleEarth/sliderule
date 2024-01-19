@@ -106,7 +106,7 @@ class Asset: public LuaObject
 
         virtual         ~Asset          (void);
 
-        int             load            (resource_t& resource);
+        int             load            (const resource_t& resource);
         resource_t&     operator[]      (int i);
 
         int             size            (void) const;

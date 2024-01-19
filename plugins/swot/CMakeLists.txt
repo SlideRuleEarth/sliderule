@@ -12,6 +12,7 @@ add_library (swot MODULE "")
 
 set_target_properties (swot PROPERTIES OUTPUT_NAME swot)
 set_target_properties (swot PROPERTIES PREFIX "")
+set_target_properties (swot PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")

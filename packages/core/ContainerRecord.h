@@ -65,11 +65,13 @@ class ContainerRecord: public RecordObject
         
         static void init (void);
         static int hdrSize (int cnt);
+        static int recSize (vector<RecordObject*> rec_vec);
 
         ContainerRecord(int rec_cnt, int size);
+        explicit ContainerRecord(vector<RecordObject*> rec_vec);
         ~ContainerRecord(void);
 
-        bool addRecord(RecordObject& record, int size=0);
+        int addRecord(RecordObject& record, int size=0);
 
     private:
 

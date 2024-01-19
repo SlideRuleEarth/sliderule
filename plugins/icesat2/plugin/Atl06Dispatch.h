@@ -76,11 +76,6 @@ class Atl06Dispatch: public DispatchObject
         static const char* atRecType;
         static const RecordObject::fieldDef_t atRecDef[];
 
-        static const char* ancFieldRecType;
-        static const RecordObject::fieldDef_t ancFieldRecDef[];
-        static const char* ancRecType;
-        static const RecordObject::fieldDef_t ancRecDef[];
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -123,19 +118,6 @@ class Atl06Dispatch: public DispatchObject
             elevation_t         elevation[BATCH_SIZE];
         } atl06_t;
 
-        /* Ancillary Field Record */
-        typedef struct {
-            uint8_t             anc_type;       // Atl03Reader::anc_type_t
-            uint8_t             field_index;    // position in request parameter list
-            double              value;
-        } anc_field_t;
-
-        /* Ancillary Record */
-        typedef struct {
-            uint64_t            extent_id;
-            anc_field_t         fields[];
-        } anc_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -162,11 +144,11 @@ class Atl06Dispatch: public DispatchObject
 
        /* Algorithm Result */
         typedef struct {
-            bool                provided;
-            elevation_t         elevation;
-            point_t*            photons;
-            vector<anc_field_t> anc_fields;
-            vector<double*>     anc_values;
+            bool                                provided;
+            elevation_t                         elevation;
+            point_t*                            photons;
+            vector<AncillaryFields::field_t>    anc_fields;
+            vector<double*>                     anc_values;
         } result_t;
 
         /*--------------------------------------------------------------------

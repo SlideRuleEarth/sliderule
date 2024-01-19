@@ -1,6 +1,6 @@
 # Notes:
 #
-# (1) In order to complete the release process, the following must be installed and configured in your environment:
+# In order to complete the release process, the following must be installed and configured in your environment:
 #     * GitHub command line client (gh)
 #           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
 #           The user must authenticate to GitHub via `gh auth login`
@@ -15,25 +15,33 @@
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
 #
-# (2) To release a version of SlideRule:
+# To release a version of SlideRule:
 #     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
 #        $ aws --profile={profile} sts get-session-token --serial-number arn:aws:iam::742127912612:mfa/{username} --token-code={code}
 #     2. Login to AWS Elastic Container Registry
 #        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-#     3. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
-#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
-#     4. Login to GitHub
+#     3. Login to GitHub
 #        $ gh auth login
+#     4. Login to NPMJS
+#        $ cd sliderule/clients/nodejs && make login
 #     5. Execute the makefile target to release the code; X.Y.Z is the version
 #        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#
+# To update the build environment for GitHub actions
+#     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
+#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
+#     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
+#        $ make sliderule-buildenv-docker
+#     3. Push to GitHub container registry
+#        $ docker push ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
 #
 
 ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
-SLIDERULE_SOURCE_DIR = $(ROOT)
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
+TARGET_BUILD_DIR = $(BUILD)/target
 ICESAT2_BUILD_DIR = $(BUILD)/icesat2
 PGC_BUILD_DIR = $(BUILD)/pgc
 LANDSAT_BUILD_DIR = $(BUILD)/landsat
@@ -53,6 +61,7 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -69,18 +78,13 @@ MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
 
-TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
-MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
-STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
-SUBSET_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/scripts/systests/subset_perf_test.lua
-
-CLANG_VER = "-12"
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+CLANG_VER ?= ""
+CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
-DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+DEBUG_CFG += -DINSTALLDIR=$(INSTALL_DIR)
+DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
 DEBUG_CFG += -DUSE_AWS_PACKAGE=ON
@@ -93,7 +97,7 @@ DEBUG_CFG += -DUSE_PISTACHE_PACKAGE=ON
 DEBUG_CFG += $(USERCFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
-RELEASE_CFG += -DINSTALLDIR=$(SERVER_STAGE_DIR)
+RELEASE_CFG += -DINSTALLDIR=$(INSTALL_DIR)
 RELEASE_CFG += -DUSE_ARROW_PACKAGE=ON
 RELEASE_CFG += -DUSE_AWS_PACKAGE=ON
 RELEASE_CFG += -DUSE_GEO_PACKAGE=ON
@@ -104,10 +108,15 @@ RELEASE_CFG += -DUSE_LEGACY_PACKAGE=OFF
 RELEASE_CFG += -DUSE_PISTACHE_PACKAGE=OFF
 RELEASE_CFG += $(USERCFG)
 
+########################
+# Build Targets
+########################
+
 all: sliderule
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
+	mkdir -p $(TARGET_BUILD_DIR)
 	mkdir -p $(ICESAT2_BUILD_DIR)
 	mkdir -p $(PGC_BUILD_DIR)
 	mkdir -p $(LANDSAT_BUILD_DIR)
@@ -118,30 +127,34 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(BATHY_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
-	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
-	cd $(BATHY_BUILD_DIR)     && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(SLIDERULE_SOURCE_DIR)/../sliderule-bathy
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
+	cd $(TARGET_BUILD_DIR)    && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/targets/slideruleearth-aws
+	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/icesat2
+	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/landsat
+	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gedi
+	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/opendata
+	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/swot
+	cd $(BATHY_BUILD_DIR)     && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/../sliderule-bathy
 
 config-release: prep ## configure server to run a release version locally
-	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/plugins/swot
-	cd $(BATHY_BUILD_DIR)     && cmake $(RELEASE_CFG) $(SLIDERULE_SOURCE_DIR)/../sliderule-bathy
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
+	cd $(TARGET_BUILD_DIR)    && cmake $(RELEASE_CFG) $(ROOT)/targets/slideruleearth-aws
+	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/icesat2
+	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(ROOT)/plugins/pgc
+	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/landsat
+	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/gedi
+	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/usgs3dep
+	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/opendata
+	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
+	cd $(BATHY_BUILD_DIR)     && cmake $(RELEASE_CFG) $(ROOT)/../sliderule-bathy
 
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
+	make -j4 -C $(TARGET_BUILD_DIR)
+	make -C $(TARGET_BUILD_DIR) install
 	make -j4 -C $(ICESAT2_BUILD_DIR)
 	make -C $(ICESAT2_BUILD_DIR) install
 	make -j4 -C $(PGC_BUILD_DIR)
@@ -160,19 +173,10 @@ sliderule: ## build the server using the local configuration
 	make -C $(BATHY_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
-selftest: ## run the self test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
-
-perfmtest: ## run mosaics performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
-
-perfstest: ## run strips performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
-
-perfsubsetest: ## run subset performance test
-	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+run-buildenv: ## run the build environment docker container
+	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
 manager-package: ## create the lambda python package for the manager
 	cd terraform/manager/python && ./package.sh
@@ -192,7 +196,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
 	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
@@ -216,32 +220,30 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-github-buildenv-docker: ## build sliderule build environment docker image for github actions
-	-rm -Rf $(BUILDENV_STAGE_DIR)
-	mkdir -p $(BUILDENV_STAGE_DIR)
-	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(GHCR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
+static-website-docker-push: ## push static-website docker image to registry
+	docker push $(ECR)/static-website:$(VERSION)
+	docker push $(ECR)/static-website:$(MAJOR_VERSION)
 
-github-buildenv-docker-push: ## push sliderule build environment docker image (must be x86 arch) to github container registry
-	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
-
-sliderule-buildenv-docker: ## build sliderule build environment docker image for github actions
+sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
+	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
+
+sliderule-buildenv-docker-push: ## push build environment docker image to registry
+	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SERVER_STAGE_DIR)
-	mkdir -p $(SERVER_STAGE_DIR)/etc
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
+	mkdir -p $(SERVER_STAGE_DIR)
+	rsync -a $(ROOT) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
-	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
+	cp docker/sliderule/config.json $(SERVER_STAGE_DIR)
 	cd $(SERVER_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
@@ -250,9 +252,9 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
 	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
@@ -317,19 +319,18 @@ tag: ## create version tag in this repository and release it on GitHub
 
 release: ## release a version of sliderule; needs VERSION
 	make tag
+	make sliderule-buildenv-docker
+	make sliderule-buildenv-docker-push
 	make cluster-docker
 	make cluster-docker-push
-	make sliderule-buildenv-docker
-	docker push $(ECR)/sliderule-buildenv:$(VERSION)
-	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 	make static-website-docker
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/static-website:$(MAJOR_VERSION)
+	make static-website-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
 
 docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
+	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
@@ -337,11 +338,39 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
 
-clean: ## remove build artifacts
-	make -C $(SLIDERULE_SOURCE_DIR) clean
-
 distclean: ## fully remove all non-version controlled files and directories
-	make -C $(SLIDERULE_SOURCE_DIR) distclean
+	- rm -Rf $(BUILD)
+	- rm -Rf $(STAGE)
+	- cd $(ROOT)/docs && ./clean.sh
+	- cd $(ROOT)/clients/python && ./clean.sh
+	- find $(ROOT) -name ".cookies" -exec rm {} \;
+	- rm -f report.pdf
+	- rm -f report.xml
+
+########################
+# Test Targets
+########################
+
+TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
+MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
+STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
+SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
+
+selftest: ## run the self test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
+
+perfmtest: ## run mosaics performance test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
+
+perfstest: ## run strips performance test on the server code
+	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
+
+perfsubsetest: ## run subset performance test
+	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+
+########################
+# Help Target
+########################
 
 help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"

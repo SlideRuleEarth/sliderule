@@ -186,7 +186,7 @@ Asset::~Asset (void)
 /*----------------------------------------------------------------------------
  * load
  *----------------------------------------------------------------------------*/
-int Asset::load (resource_t& resource)
+int Asset::load (const resource_t& resource)
 {
     return resources.add(resource);
 }

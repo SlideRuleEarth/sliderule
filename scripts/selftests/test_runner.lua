@@ -1,17 +1,8 @@
 local runner = require("test_executive")
-local console = require("console")
-local global = require("global")
 local td = runner.rootdir(arg[0]) -- root directory
-local loglvl = global.eval(arg[1]) or core.INFO
+local incloud = arg[1] == "cloud"
 
--- Initial Configuration --
--- console.monitor:config(core.LOG, loglvl)
--- sys.setlvl(core.LOG, loglvl)
-
-local maxRuns = 1
-for runNum = 1, maxRuns do
-
-    -- Run Core Self Tests --
+-- Run Core Self Tests --
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")
@@ -63,7 +54,7 @@ if __legacy__ then
 end
 
 -- Run ICESat-2 Plugin Self Tests
-if __icesat2__ then
+if __icesat2__ and incloud then
     local icesat2_td = td .. "../../plugins/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
     runner.script(icesat2_td .. "atl03_reader.lua")
@@ -75,13 +66,13 @@ if __icesat2__ then
 end
 
 -- Run opendata Plugin Self Tests
-if __opendata__ then
+if __opendata__ and incloud then
     local opendata_td = td .. "../../plugins/opendata/selftests/"
     runner.script(opendata_td .. "worldcover_reader.lua")
 end
 
 -- Run PGC Plugin Self Tests
-if __pgc__ then
+if __pgc__ and incloud then
     local pgc_td = td .. "../../plugins/pgc/selftests/"
     runner.script(pgc_td .. "arcticdem_reader.lua")
     runner.script(pgc_td .. "temporal_filter_test.lua")
@@ -95,24 +86,16 @@ if __pgc__ then
 end
 
 -- Run Landsat Plugin Self Tests
-if __landsat__ then
+if __landsat__ and incloud then
     local landsat_td = td .. "../../plugins/landsat/selftests/"
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 
 -- Run usgs3dep Plugin Self Tests
-if __usgs3dep__ then
+if __usgs3dep__ and incloud then
     local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
-
-
-if maxRuns > 1 then
-    print(string.format("\n--------------------------------\nTest Repeat Run: %d of %d finished\n--------------------------------", runNum, maxRuns))
-    sys.wait(3)
-end
-
-end  -- test repeat loop end
 
 -- Report Results --
 local errors = runner.report()

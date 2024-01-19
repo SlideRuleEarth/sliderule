@@ -40,7 +40,7 @@ import warnings
 import numpy
 import geopandas
 from shapely.geometry import Polygon
-from datetime import datetime, timedelta
+from datetime import datetime
 from sliderule import version
 
 ###############################################################################
@@ -70,11 +70,10 @@ ps_token_exp = None
 
 MAX_PS_CLUSTER_WAIT_SECS = 600
 
-verbose = False
-
 request_timeout = (10, 120) # (connection, read) in seconds
 
 logger = logging.getLogger(__name__)
+console = None
 
 clustering_enabled = False
 try:
@@ -437,18 +436,16 @@ socket.getaddrinfo = __override_getaddrinfo
 #  __logeventrec
 #
 def __logeventrec(rec):
-    if verbose:
-        eventlogger[rec['level']]('%s' % (rec["attr"]))
+    eventlogger[rec['level']]('%s' % (rec["attr"]))
 
 #
 #  __exceptrec
 #
 def __exceptrec(rec):
-    if verbose:
-        if rec["code"] >= 0:
-            eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
-        else:
-            eventlogger[rec["level"]]("%s", rec["text"])
+    if rec["code"] >= 0:
+        eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
+    else:
+        eventlogger[rec["level"]]("%s", rec["text"])
 
 #
 #  _arrowrec
@@ -561,7 +558,7 @@ def procoutputfile(parm):
 #
 #  Get Values from Raw Buffer
 #
-def getvalues(data, dtype, size):
+def getvalues(data, dtype, size, num_elements=0):
     """
     data:   tuple of bytes
     dtype:  element of codedtype
@@ -570,7 +567,8 @@ def getvalues(data, dtype, size):
 
     raw = bytes(data)
     datatype = basictypes[codedtype2str[dtype]]["nptype"]
-    num_elements = int(size / numpy.dtype(datatype).itemsize)
+    if num_elements == 0: # dynamically determine number of elements
+        num_elements = int(size / numpy.dtype(datatype).itemsize)
     slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
     values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
 
@@ -644,7 +642,7 @@ def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, 
         url:            str
                         the IP address or hostname of the SlideRule service (slidereearth.io by default)
         verbose:        bool
-                        whether or not user level log messages received from SlideRule generate a Python log message
+                        sets up console logger as a convenience to user so all logs are printed to screen
         loglevel:       int
                         minimum severity of log message to output
         organization:   str
@@ -668,11 +666,12 @@ def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, 
         >>> import sliderule
         >>> sliderule.init()
     '''
-    set_verbose(verbose)
-    logger.setLevel(loglevel)
-    set_url(url) # configure domain
+    #  massage function parameters
     if organization == 0:
         organization = PUBLIC_ORG
+    # configure client
+    set_verbose(verbose, loglevel)
+    set_url(url) # configure domain
     authenticate(organization) # configure credentials (if any) for organization
     scaleout(desired_nodes, time_to_live, bypass_dns) # set cluster to desired number of nodes (if permitted based on credentials)
     return check_version(plugins=plugins) # verify compatibility between client and server versions
@@ -811,36 +810,53 @@ def set_url (url):
 #
 #  set_verbose
 #
-def set_verbose (enable):
+def set_verbose (enable, loglevel=logging.INFO):
     '''
-    Configure sliderule package for verbose logging
+    Sets up a console logger to print log messages to screen
+
+    If you want more control over the behavior of the log messages being captured, do not call this function but instead 
+    create and configure a Python log handler of your own and attach it to `sliderule.logger`.
 
     Parameters
     ----------
         enable:     bool
-                    whether or not user level log messages received from SlideRule generate a Python log message
+                    True: creates console logger if it doesn't exist, False: destroys console logger if it does exist
+
+        loglevel:       int
+                        minimum severity of log message to output
 
     Examples
     --------
         >>> import sliderule
-        >>> sliderule.set_verbose(True)
-
-        The default behavior of Python log messages is for them to be displayed to standard output.
-        If you want more control over the behavior of the log messages being display, create and configure a Python log handler as shown below:
-
-        >>> # import packages
-        >>> import logging
-        >>> from sliderule import sliderule
-        >>> # Configure Logging
-        >>> sliderule_logger = logging.getLogger("sliderule.sliderule")
-        >>> sliderule_logger.setLevel(logging.INFO)
-        >>> # Create Console Output
-        >>> ch = logging.StreamHandler()
-        >>> ch.setLevel(logging.INFO)
-        >>> sliderule_logger.addHandler(ch)
+        >>> sliderule.set_verbose(True, loglevel=logging.INFO)
     '''
-    global verbose
-    verbose = (enable == True)
+    global console, logger
+    # massage loglevel parameter if passed in as a string
+    if loglevel == "DEBUG":
+        loglevel = logging.DEBUG
+    elif loglevel == "INFO":
+        loglevel = logging.INFO
+    elif loglevel == "WARNING":
+        loglevel = logging.WARNING
+    elif loglevel == "WARN":
+        loglevel = logging.WARN
+    elif loglevel == "ERROR":
+        loglevel = logging.ERROR
+    elif loglevel == "FATAL":
+        loglevel = logging.FATAL
+    elif loglevel == "CRITICAL":
+        loglevel = logging.CRITICAL
+    # enable/disable logging to console
+    if (enable == True) and (console == None):
+        console = logging.StreamHandler()
+        logger.addHandler(console)
+    elif (enable == False) and (console != None):
+        logger.removeHandler(console)
+        console = None
+    # always set level to requested
+    logger.setLevel(loglevel)
+    if console != None:
+        console.setLevel(loglevel)
 
 #
 # set_rqst_timeout

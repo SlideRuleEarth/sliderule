@@ -12,6 +12,7 @@ add_library (usgs3dep MODULE "")
 
 set_target_properties (usgs3dep PROPERTIES OUTPUT_NAME usgs3dep)
 set_target_properties (usgs3dep PROPERTIES PREFIX "")
+set_target_properties (usgs3dep PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")

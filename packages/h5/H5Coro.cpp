@@ -651,6 +651,7 @@ void H5FileBuffer::readDataset (info_t* info)
         buffer = new uint8_t [buffer_size];
 
         /* Fill Buffer with Fill Value (if provided) */
+        #if 0
         if(metaData.fillsize > 0)
         {
             for(int64_t i = 0; i < buffer_size; i += metaData.fillsize)
@@ -658,6 +659,7 @@ void H5FileBuffer::readDataset (info_t* info)
                 memcpy(&buffer[i], &metaData.fill.fill_ll, metaData.fillsize);
             }
         }
+        #endif
     }
 
     /* Populate Rest of Info Struct */
@@ -3350,7 +3352,7 @@ int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8
 {
     if(H5_ERROR_CHECKING)
     {
-        if(type_size < 0 || type_size > 8)
+        if(type_size <= 0 || type_size > 8)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data size to perform shuffle on: %d", type_size);
         }

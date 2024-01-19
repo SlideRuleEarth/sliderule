@@ -12,6 +12,7 @@ add_library (landsat MODULE "")
 
 set_target_properties (landsat PROPERTIES OUTPUT_NAME landsat)
 set_target_properties (landsat PROPERTIES PREFIX "")
+set_target_properties (landsat PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Prerequisites #
 find_package (Lua "5.3")

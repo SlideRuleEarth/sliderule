@@ -30,16 +30,12 @@
 import time
 import logging
 import numpy
-import geopandas
 import sliderule
-from sliderule import earthdata
+from sliderule import earthdata, logger
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
-
-# create logger
-logger = logging.getLogger(__name__)
 
 # profiling times for each major function
 profiles = {}
@@ -130,16 +126,17 @@ def swotl2p(parm, callbacks={}, resources=None):
         tstart = time.perf_counter()
 
         # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = "swot-sim-ecco-llc4320"
+        rqst_parm = parm.copy()
+        if "asset" not in rqst_parm:
+            rqst_parm["asset"] = "swot-sim-ecco-llc4320"
 
         # Get List of Resources from CMR (if not supplied)
-        resources = earthdata.search(parm, resources)
+        resources = earthdata.search(rqst_parm, resources)
 
         # Build GEDI Request
         rqst = {
             "resources": resources,
-            "parms": parm
+            "parms": rqst_parm
         }
 
         # Make API Processing Request

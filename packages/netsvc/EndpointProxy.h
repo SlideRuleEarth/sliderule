@@ -90,6 +90,7 @@ class EndpointProxy: public LuaObject
         const char*             endpoint;
         const char*             parameters;
         int                     timeout;
+        int                     locksPerNode;
         Publisher*              outQ;
         int                     numProxyThreads;
         int                     rqstQDepth;
@@ -100,8 +101,8 @@ class EndpointProxy: public LuaObject
          *--------------------------------------------------------------------*/
 
                             EndpointProxy           (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
-                                                     const char* _parameters, int _timeout_secs, const char* _outq_name, bool _send_terminator,
-                                                     int _num_threads, int _rqst_queue_depth);
+                                                     const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
+                                                     bool _send_terminator, int _num_threads, int _rqst_queue_depth);
                             ~EndpointProxy          (void);
 
         static void*        collatorThread          (void* parm);

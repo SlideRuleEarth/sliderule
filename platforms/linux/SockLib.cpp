@@ -373,7 +373,7 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     /* Populate Local IP Address */
     if(local_ipaddr)
     {
-        *local_ipaddr = new char[16];
+        *local_ipaddr = new char[17];
         strncpy(*local_ipaddr, inet_ntoa(local_addr.sin_addr), 16);
         (*local_ipaddr)[15] = '\0';
     }
@@ -387,7 +387,7 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     /* Populate Remote IP Address */
     if(remote_ipaddr)
     {
-        *remote_ipaddr = new char[16];
+        *remote_ipaddr = new char[17];
         strncpy(*remote_ipaddr, inet_ntoa(remote_addr.sin_addr), 16);
         (*remote_ipaddr)[15] = '\0';
     }

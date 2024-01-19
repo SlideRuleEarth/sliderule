@@ -46,6 +46,7 @@ const char* NetsvcParms::POLYGON        = "poly";
 const char* NetsvcParms::RASTER         = "raster";
 const char* NetsvcParms::LATITUDE       = "lat";
 const char* NetsvcParms::LONGITUDE      = "lon";
+const char* NetsvcParms::PROJECTION     = "proj";
 const char* NetsvcParms::RQST_TIMEOUT   = "rqst-timeout";
 const char* NetsvcParms::NODE_TIMEOUT   = "node-timeout";
 const char* NetsvcParms::READ_TIMEOUT   = "read-timeout";
@@ -85,7 +86,7 @@ int NetsvcParms::luaCreate (lua_State* L)
 }
 
 /******************************************************************************
- * PRIVATE METHODS
+ * PROTECTED METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -96,7 +97,10 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
     raster                      (NULL),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
-    read_timeout                (DEFAULT_READ_TIMEOUT)
+    read_timeout                (DEFAULT_READ_TIMEOUT),
+    projection                  (MathLib::AUTOMATIC),
+    projected_poly              (NULL),
+    points_in_poly              (0)
 {
     bool provided = false;
 
@@ -112,6 +116,12 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
         lua_getfield(L, index, NetsvcParms::RASTER);
         get_lua_raster(L, -1, &provided);
         if(provided) mlog(DEBUG, "Setting %s file for use", NetsvcParms::RASTER);
+        lua_pop(L, 1);
+
+        /* Projection */
+        lua_getfield(L, index, NetsvcParms::PROJECTION);
+        get_lua_projection(L, -1, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::PROJECTION, projection);
         lua_pop(L, 1);
 
         /* Global Timeout */
@@ -145,6 +155,27 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
         read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::READ_TIMEOUT, read_timeout);
         lua_pop(L, 1);
+
+        /* Process Area of Interest */
+        points_in_poly = polygon.length();
+        if(points_in_poly > 0)
+        {
+            /* Determine Best Projection To Use */
+            if(projection == MathLib::AUTOMATIC)
+            {
+                if(polygon[0].lat > 70.0) projection = MathLib::NORTH_POLAR;
+                else if(polygon[0].lat < -70.0) projection = MathLib::SOUTH_POLAR;
+                else projection = MathLib::PLATE_CARREE;
+            }
+
+            /* Project Polygon */
+            List<MathLib::coord_t>::Iterator poly_iterator(polygon);
+            projected_poly = new MathLib::point_t [points_in_poly];
+            for(int i = 0; i < points_in_poly; i++)
+            {
+                projected_poly[i] = MathLib::coord2point(poly_iterator[i], projection);
+            }
+        }
     }
     catch(const RunTimeException& e)
     {
@@ -167,6 +198,7 @@ NetsvcParms::~NetsvcParms (void)
 void NetsvcParms::cleanup (void) const
 {
     delete raster;
+    delete [] projected_poly;
 }
 
 /*----------------------------------------------------------------------------
@@ -175,7 +207,7 @@ void NetsvcParms::cleanup (void) const
 void NetsvcParms::get_lua_polygon (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
-    *provided = false;
+    if(provided) *provided = false;
 
     /* Must be table of coordinates */
     if(lua_istable(L, index))
@@ -230,6 +262,29 @@ void NetsvcParms::get_lua_raster (lua_State* L, int index, bool* provided)
         catch(const RunTimeException& e)
         {
             mlog(e.level(), "Error creating GeoJsonRaster file: %s", e.what());
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_lua_projection
+ *----------------------------------------------------------------------------*/
+void NetsvcParms::get_lua_projection (lua_State* L, int index, bool* provided)
+{
+    *provided = false;
+    if(lua_isnumber(L, index))
+    {
+        projection = static_cast<MathLib::proj_t>(LuaObject::getLuaInteger(L, index, true, projection, provided));
+    }
+    else if(lua_isstring(L, index))
+    {
+        const char* proj_str = LuaObject::getLuaString(L, index, true, "auto", provided);
+        if(*provided)
+        {
+            if(StringLib::match(proj_str, "auto")) projection = MathLib::AUTOMATIC;
+            else if(StringLib::match(proj_str, "plate_carree")) projection = MathLib::PLATE_CARREE;
+            else if(StringLib::match(proj_str, "north_polar")) projection = MathLib::NORTH_POLAR;
+            else if(StringLib::match(proj_str, "south_polar")) projection = MathLib::SOUTH_POLAR;
         }
     }
 }

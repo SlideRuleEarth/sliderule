@@ -43,6 +43,7 @@
 #include "List.h"
 #include "MathLib.h"
 #include "NetsvcParms.h"
+#include "AncillaryFields.h"
 
 /******************************************************************************
  * REQUEST PARAMETERS
@@ -81,6 +82,8 @@ class Icesat2Parms: public NetsvcParms
         static const char* DISTANCE_IN_SEGMENTS;
         static const char* ATL03_GEO_FIELDS;
         static const char* ATL03_PH_FIELDS;
+        static const char* ATL06_FIELDS;
+        static const char* ATL08_FIELDS;
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
         static const char* PHOREAL_GEOLOC;
@@ -203,9 +206,6 @@ class Icesat2Parms: public NetsvcParms
             PHOREAL_UNSUPPORTED = 3
         } phoreal_geoloc_t;
 
-        /* List of Strings */
-        typedef List<string> string_list_t;
-
         /* YAPC Settings */
         typedef struct {
             uint8_t             score;                          // minimum allowed weight of photon using yapc algorithm
@@ -236,31 +236,55 @@ class Icesat2Parms: public NetsvcParms
         static quality_ph_t             str2atl03quality        (const char* quality_ph_str);
         static atl08_classification_t   str2atl08class          (const char* classifiction_str);
         static phoreal_geoloc_t         str2geoloc              (const char* fmt_str);
-        static int64_t                  deltatime2timestamp     (double delta_time);
+
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+        
+        // returns nanoseconds since Unix epoch, no leap seconds
+        static int64_t deltatime2timestamp (double delta_time)
+        {
+            return TimeLib::gps2systimeex(delta_time + (double)ATLAS_SDP_EPOCH_GPS);
+        }
+
+        // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
+        static uint64_t generateExtentId (int32_t rgt, int32_t cycle, int32_t region, int track, int pair, uint32_t counter)
+        {
+            uint64_t extent_id = ((uint64_t)rgt << 52) |
+                                ((uint64_t)cycle << 36) |
+                                ((uint64_t)region << 32) |
+                                ((uint64_t)track << 30) |
+                                (((uint64_t)counter & 0xFFFFFFF) << 2) |
+                                EXTENT_ID_PHOTONS |
+                                pair;
+            return extent_id;
+        }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        surface_type_t          surface_type;                   // surface reference type (used to select signal confidence column)
-        bool                    pass_invalid;                   // post extent even if each pair is invalid
-        bool                    dist_in_seg;                    // the extent length and step are expressed in segments, not meters
-        bool                    atl03_cnf[NUM_SIGNAL_CONF];     // list of desired signal confidences of photons from atl03 classification
-        bool                    quality_ph[NUM_PHOTON_QUALITY]; // list of desired photon quality levels from atl03
-        bool                    atl08_class[NUM_ATL08_CLASSES]; // list of surface classifications to use (leave empty to skip)
-        bool                    stages[NUM_STAGES];             // algorithm iterations
-        yapc_t                  yapc;                           // settings used in YAPC algorithm
-        int                     track;                          // reference pair track number (1, 2, 3, or 0 for all tracks)
-        int                     max_iterations;                 // least squares fit iterations
-        int                     minimum_photon_count;           // PE
-        double                  along_track_spread;             // meters
-        double                  minimum_window;                 // H_win minimum
-        double                  maximum_robust_dispersion;      // sigma_r
-        double                  extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
-        double                  extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-        string_list_t*          atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
-        string_list_t*          atl03_ph_fields;                // list of per-photon fields to associate with an extent
-        phoreal_t               phoreal;                        // phoreal algorithm settings
+        surface_type_t              surface_type;                   // surface reference type (used to select signal confidence column)
+        bool                        pass_invalid;                   // post extent even if each pair is invalid
+        bool                        dist_in_seg;                    // the extent length and step are expressed in segments, not meters
+        bool                        atl03_cnf[NUM_SIGNAL_CONF];     // list of desired signal confidences of photons from atl03 classification
+        bool                        quality_ph[NUM_PHOTON_QUALITY]; // list of desired photon quality levels from atl03
+        bool                        atl08_class[NUM_ATL08_CLASSES]; // list of surface classifications to use (leave empty to skip)
+        bool                        stages[NUM_STAGES];             // algorithm iterations
+        yapc_t                      yapc;                           // settings used in YAPC algorithm
+        int                         track;                          // reference pair track number (1, 2, 3, or 0 for all tracks)
+        int                         max_iterations;                 // least squares fit iterations
+        int                         minimum_photon_count;           // PE
+        double                      along_track_spread;             // meters
+        double                      minimum_window;                 // H_win minimum
+        double                      maximum_robust_dispersion;      // sigma_r
+        double                      extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
+        double                      extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
+        AncillaryFields::list_t*    atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
+        AncillaryFields::list_t*    atl03_ph_fields;                // list of per-photon fields to associate with an extent
+        AncillaryFields::list_t*    atl06_fields;                   // list of ATL06 fields to associate with an ATL06 subsetting request
+        AncillaryFields::list_t*    atl08_fields;                   // list of ATL08 fields to associate with an extent
+        phoreal_t                   phoreal;                        // phoreal algorithm settings
 
     private:
 
@@ -276,7 +300,7 @@ class Icesat2Parms: public NetsvcParms
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
-        static void             get_lua_string_list     (lua_State* L, int index, string_list_t** string_list, bool* provided);
+        static void             get_lua_field_list      (lua_State* L, int index, AncillaryFields::list_t** string_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
 };
 
