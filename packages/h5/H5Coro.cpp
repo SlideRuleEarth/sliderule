@@ -2246,6 +2246,8 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
+    mlog(CRITICAL, "datamessage databits: %lld", (long long) databits);
+
     if(H5_ERROR_CHECKING)
     {
         if(version != 1)
@@ -2324,8 +2326,9 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 print2term("Exponent Location:                                               %d\n", (int)exp_location);
                 print2term("Exponent Size:                                                   %d\n", (int)exp_size);
                 print2term("Mantissa Location:                                               %d\n", (int)mant_location);
-                print2term("Mantissa Size:                                                   %d\n", (int)mant_size);
+                print2term("Mantissa Size:                                                   %u\n", (unsigned int)mant_size);
                 print2term("Exponent Bias:                                                   %d\n", (int)exp_bias);
+
             }
             break;
         }
@@ -2951,7 +2954,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
 
-    mlog(CRITICAL, "received datatype message: %x", datatype_bytes_read);
+    // mlog(CRITICAL, "received datatype message: %x", datatype_bytes_read);
 
     pos += datatype_bytes_read;
     if (version == 1) {
@@ -2966,7 +2969,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
 
-    mlog(CRITICAL, "received dataspace message: %x", dataspace_bytes_read);
+    // mlog(CRITICAL, "received dataspace message: %x", dataspace_bytes_read);
     
     pos += dataspace_bytes_read;
     if (version == 1) {
