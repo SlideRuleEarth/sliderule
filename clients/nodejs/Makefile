@@ -10,6 +10,9 @@ test-local: ## run unit tests against local running sliderule server
 test-developer: ## run unit tests against developers cluster
 	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/developer.config.js
 
+test-uofmdtest: ## run unit tests against UofMDTest cluster in testsliderule.org domain
+	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/uofmdtest.config.js
+
 publish: ## publish package to npm registry
 	cd sliderule; npm publish --access public
 
@@ -30,4 +33,4 @@ distclean: ## fully remove all non-version controlled files and directories
 
 help: ## That's me!
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@echo ENVVER:$(ENVVER)
+	@echo ROOT:$(ROOT)
