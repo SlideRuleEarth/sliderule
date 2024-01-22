@@ -74,7 +74,7 @@ ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
+ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
 
 CLANG_VER ?= ""
