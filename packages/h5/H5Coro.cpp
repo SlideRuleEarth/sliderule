@@ -84,6 +84,7 @@ typedef enum H5T_cset_t {
  ******************************************************************************/
 
 #define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
+#define NC_FILLVAL_NAME "_FillValue"
 
 /******************************************************************************
  * H5 FUTURE CLASS
@@ -2495,6 +2496,25 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 }
 
 /*----------------------------------------------------------------------------
+ * replaceFillVal
+ *----------------------------------------------------------------------------*/
+
+void H5FileBuffer::replaceFillVal (uint64_t sub_fill) {
+    // TODO
+
+    // write in substitude value
+
+    // write in sizing
+
+    if(H5_VERBOSE) 
+    {
+        print2term("_FillValue written into Fill Value: 0x%llX\n", (unsigned long long) sub_fill);
+    }
+
+    return;
+}
+
+/*----------------------------------------------------------------------------
  * readLinkMsg
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
@@ -2938,6 +2958,16 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         print2term("Dataspace Message Bytes:                                         %d\n", (int)dataspace_size);
     }
 
+    /* _FillAtribute ID for NetCDF */
+    if (strcmp(attr_name, NC_FILLVAL_NAME) == 0)
+    {
+        // TODO 
+        // extract size for type
+        // type and casting for set
+        replaceFillVal();
+
+    }
+
     /* Shortcut Out if Not Desired Attribute */
     if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
         !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
@@ -2953,8 +2983,6 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
     }
-
-    // mlog(CRITICAL, "received datatype message: %x", datatype_bytes_read);
 
     pos += datatype_bytes_read;
     if (version == 1) {

@@ -62,10 +62,10 @@ rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 -- Arguments & Call --
 
 local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc" -- "h5ex_d_gzip.h5" -- 
-local dataset_name =  "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
+local dataset_name = "/Power/_FillValue" -- "/Power/standard_name" -- "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
 local id = 0
 local raw = true
-local dtype = core.INTEGER
+local dtype = core.INTEGER -- core.TEXT --core.INTEGER
 local col = 0
 local startrow = 0
 local numrows = core.ALL_ROWS
@@ -87,14 +87,16 @@ r2 = core.reader(f2, dataq) -- actually reads
 
 vals = rsps2:recvstring(3000) -- read out from listner
 
-print("\n vals recieved with type: ".. type(vals))
+print("vals recieved with type: ".. type(vals))
+print("len of vals:", #vals)
+print("received string as:", vals)
 
-e1, e2, e3, e4 = string.unpack('iiii', vals) -- unpack as ints and check
+e1 = string.unpack('f', vals) -- unpack values with float for FillRange
 
-print("\n e1 val: " .. e1)
-print("e2 val: " ..e2)
-print("e3 val: " ..e3)
-print("e4 val: " ..e4)
+print("e1 val: " .. e1)
+-- print("e2 val: " ..e2)
+-- print("e3 val: " ..e3)
+-- print("e4 val: " ..e4)
 
 -- runner.check(-2 == e1, "failed dataset read")
 -- runner.check( 0 == e2, "failed dataset read")
