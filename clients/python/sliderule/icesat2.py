@@ -313,7 +313,7 @@ def atl06 (parm, resource):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtds/user_guide/ICESat-2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
 
@@ -653,7 +653,7 @@ def atl08 (parm, resource):
     Parameters
     ----------
     parms:      dict
-                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtds/user_guide/ICESat-2.html#parameters>`_)
+                parameters used to configure ATL06-SR algorithm processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
     resource:   str
                 ATL03 HDF5 filename
 
