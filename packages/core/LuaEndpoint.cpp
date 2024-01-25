@@ -197,7 +197,8 @@ void* LuaEndpoint::requestThread (void* parm)
 
         /* Extract Bearer Token */
         string* auth_hdr;
-        if(request->headers.find("Authorization", &auth_hdr))
+        if(request->headers.find("Authorization", &auth_hdr) || 
+           request->headers.find("authorization", &auth_hdr) )
         {
             bearer_token = StringLib::find(auth_hdr->c_str(), ' ');
             if(bearer_token) bearer_token += 1;
@@ -214,15 +215,13 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Dispatch Handle Request */
     if(authorized)
     {
-        switch(request->verb)
-        {
-            case GET:   lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id); break;
-            case POST:  lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id); break;
-            default:    break;
-        }
+        /* Handle Response */
+        if(info->streaming) lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
+        else                lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
     }
     else
     {
+        /* Respond with Unauthorized Error */
         char header[MAX_HDR_SIZE];
         int header_length = buildheader(header, Unauthorized);
         rspq->postCopy(header, header_length);
@@ -256,12 +255,30 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
     EndpointObject::info_t* info = new EndpointObject::info_t;
     info->endpoint = this;
     info->request = request;
+    info->streaming = true;
+
+    /* Determine Streaming */
+    if(request->verb == GET)
+    {
+        info->streaming = false;
+    }
+    else // check header
+    {
+        string* hdr_str;
+        if(request->headers.find("x-sliderule-streaming", &hdr_str))
+        {
+            if(hdr_str->compare("0") == 0)
+            {
+                info->streaming = false;
+            }
+        }
+    }
 
     /* Start Thread */
     Thread pid(requestThread, info, false);
 
     /* Return Response Type */
-    if(request->verb == POST) return STREAMING;
+    if(info->streaming) return STREAMING;
     return NORMAL;
 }
 
