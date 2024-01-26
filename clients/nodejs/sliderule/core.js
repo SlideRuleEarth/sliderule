@@ -409,14 +409,14 @@ export function source(api, parm=null, stream=false, callbacks={}) {
   const options = {
     host: sysConfig.organization && (sysConfig.organization + '.' + sysConfig.domain) || sysConfig.domain,
     path: '/source/' + api,
-    method: stream && 'POST' || 'GET',
+    method: 'POST',
   };
 
   // Build Body
   let body = null;
   if (parm != null) {
     body = JSON.stringify(parm);
-    options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
+    options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length, 'x-sliderule-streaming': stream && 1 || 0};
   }
 
   // Make API Request

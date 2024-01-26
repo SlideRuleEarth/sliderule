@@ -126,6 +126,7 @@ class EndpointObject: public LuaObject
         typedef struct {
             EndpointObject*     endpoint;
             Request*            request;
+            bool                streaming;
         } info_t;
 
         /*--------------------------------------------------------------------

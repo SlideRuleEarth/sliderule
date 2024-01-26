@@ -1,6 +1,9 @@
 import {core,h5coro,icesat2} from '../sliderule/index.js';
 
-core.init({});
+import http from 'http'
+core.init({domain:"localhost", organization: null, protocol: http});
+
+//core.init({});
 
 icesat2.atl06p(
     { "cnf": "atl03_high",
