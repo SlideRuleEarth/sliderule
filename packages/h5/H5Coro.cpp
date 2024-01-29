@@ -2604,9 +2604,9 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 readObjHdr(object_header_addr, highestDataLevel);
 
                 /* Continue attribute search */
-                #ifdef H5CORO_ATTRIBUTE_SUPPORT
-                    highestDataLevel--; 
-                #endif
+                // #ifdef H5CORO_ATTRIBUTE_SUPPORT
+                //     highestDataLevel--; 
+                // #endif
 
             }
         }
@@ -3042,13 +3042,14 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         }
     }
 
-    /* Read Heap and Name Offsets */
+    /* Read Heap and BTree Values */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
+    uint64_t attrname_v2btree_addy = readField(metaData.offsetsize, &pos);
+    
     if(H5_VERBOSE)
     {
-        uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
-        print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
+        print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)attrname_v2btree_addy);
     }
     else
     {
@@ -3072,6 +3073,15 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     if((int)heap_address != -1)
     {
         readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl);
+    }
+
+    /* Follow v2 Btree if provided */
+    if((int)attrname_v2btree_addy != -1) 
+    {
+        print2term("WARNING: Unused Attribute Name v2 B-tree Address \n");
+        // TODO: v2 reading to enable mapping onto fractal
+        // readBTreeV1(attrname_v2btree_addy, buffer, buffer_size, buffer_offset);
+
     }
 
     /* Return Bytes Read */
