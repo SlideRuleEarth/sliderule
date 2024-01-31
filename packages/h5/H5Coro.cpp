@@ -2603,11 +2603,6 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 highestDataLevel = dlvl + 1;
                 readObjHdr(object_header_addr, highestDataLevel);
 
-                /* Continue attribute search */
-                // #ifdef H5CORO_ATTRIBUTE_SUPPORT
-                //     highestDataLevel--; 
-                // #endif
-
             }
         }
     }
@@ -3044,12 +3039,12 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 
     /* Read Heap and BTree Values */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    uint64_t attrname_v2btree_addy = readField(metaData.offsetsize, &pos);
+    uint64_t name_bt2_address = readField(metaData.offsetsize, &pos);
     
     if(H5_VERBOSE)
     {
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
-        print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)attrname_v2btree_addy);
+        print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)name_bt2_address);
     }
     else
     {
@@ -3070,23 +3065,92 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     }
 
     /* Follow Heap Address if Provided */
+
+    uint64_t address_snapshot = metaData.address;
+
     if((int)heap_address != -1)
     {
         readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl);
     }
 
-    /* Follow v2 Btree if provided */
-    if((int)attrname_v2btree_addy != -1) 
-    {
-        print2term("WARNING: Unused Attribute Name v2 B-tree Address \n");
-        // TODO: v2 reading to enable mapping onto fractal
-        // readBTreeV1(attrname_v2btree_addy, buffer, buffer_size, buffer_offset);
-
-    }
+    /* Check if Attribute Located Non-Dense, Else Init Dense Search */
+    #ifdef H5CORO_ATTRIBUTE_SUPPORT
+        if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
+        {
+            print2term("Entering dense attribute search; No main attribute message match. \n");
+            // TODO
+            // readDenseAttrs(heap_address, name_bt2_address)
+        }
+    #endif
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
     return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
+ * readDenseAttributes
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr) {
+    /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
+    
+    // TODO: REPLACE PSEUDO PLACEHOLDERS
+    // define btree header type for info
+    uint64_t header_addr; 
+    // define return struct/var for B2 find algorithm
+    uint64_t pos_final;
+    bool attr_exists = false;
+
+    bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
+
+    if (shared_attributes)
+    {
+        print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
+
+        // haddr_t shared_fheap_addr; /* Address of fractal heap to use */
+
+        // /* Retrieve the address of the shared message's fractal heap */
+        // if (H5SM_get_fheap_addr(f, H5O_ATTR_ID, &shared_fheap_addr) < 0)
+        //     HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, NULL, "can't get shared message heap address");
+
+        // /* Check if there are any shared messages currently */
+        // if (H5_addr_defined(shared_fheap_addr)) {
+        //     /* Open the fractal heap for shared header messages */
+        //     if (NULL == (shared_fheap = H5HF_open(f, shared_fheap_addr)))
+        //         HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, NULL, "unable to open fractal heap");
+    }
+
+    header_addr = openBTreeV2(name_bt2_addr);
+    pos_final = findBTreeV2(header_addr, fheap_addr, name_bt2_addr, &attr_exists);
+
+    return pos_final;
+}
+
+bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
+    /* Equiv to H5SM_type_shared of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/develop/src/H5SM.c#L328 */
+    print2term("TODO: isTypeSharedAttrs\n");
+
+    return false;
+}
+
+ /*----------------------------------------------------------------------------
+ * openBTreeV2
+ *----------------------------------------------------------------------------*/
+int H5FileBuffer::openBTreeV2 (uint64_t name_bt2_addr) {
+
+    print2term("TODO: openBTreeV2 \n");
+
+    return 0;
+}
+
+ /*----------------------------------------------------------------------------
+ * findBTreeV2
+ *----------------------------------------------------------------------------*/
+ int H5FileBuffer::findBTreeV2 (uint64_t header_opened, uint64_t fheap_addr, uint64_t bt2_addr, bool *attr_exists) {
+
+    print2term("TODO: findBTreeV2 \n");
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------

@@ -62,7 +62,7 @@ rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 -- Arguments & Call --
 
 local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc" -- "h5ex_d_gzip.h5" -- 
-local dataset_name =  "/Power/standard_name"  -- "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
+local dataset_name = "/Power/_FillValue" -- "/Temp/add_offset" -- "/geospatial_lat_lon_extent/geospatial_lat_center"  -- "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
 local id = 0
 local raw = true
 local dtype = core.TEXT -- core.TEXT --core.INTEGER
