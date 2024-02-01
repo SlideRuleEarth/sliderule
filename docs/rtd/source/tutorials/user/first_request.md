@@ -64,8 +64,7 @@ __Step 4__: Create a dictionary of processing parameters specifying how the elev
     "srt": icesat2.SRT_LAND,
     "cnf": icesat2.CNF_SURFACE_HIGH,
     "len": 40.0,
-    "res": 20.0,
-    "maxi": 1
+    "res": 20.0
 }
 ```
 For a full description of the different processing parameters that are accepted by SlideRule, see [parameters](../../user_guide/ICESat-2.html#parameters).  The parameters of interest here are _len_ which specifies the total along-track length of the segment used to calculate an elevation, and _res_ which specifies the along-track posting interval of the calculation.

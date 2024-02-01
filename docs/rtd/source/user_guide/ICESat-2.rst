@@ -82,8 +82,7 @@ To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here i
         "ats": 10.0,
         "cnt": 5,
         "len": 20.0,
-        "res": 20.0,
-        "maxi": 1
+        "res": 20.0
     }
 
 2.3 Photon-extent parameters
@@ -464,8 +463,7 @@ atl06
             "ats": 20.0,
             "cnt": 10,
             "len": 40.0,
-            "res": 20.0,
-            "maxi": 1
+            "res": 20.0
         }
 
         # Build ATL06 Request

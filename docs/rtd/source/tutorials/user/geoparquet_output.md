@@ -38,8 +38,7 @@ __Step 2__: Create parameters for a typical `atl06p` processing request (it coul
     "srt": icesat2.SRT_LAND,
     "cnf": icesat2.CNF_SURFACE_HIGH,
     "len": 40.0,
-    "res": 20.0,
-    "maxi": 6
+    "res": 20.0
 }
 ```
 The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).

@@ -364,7 +364,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     --------
         >>> from sliderule import icesat2
         >>> icesat2.init("slideruleearth.io", True)
-        >>> parms = { "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1 }
+        >>> parms = { "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0 }
         >>> resources = ["ATL03_20181019065445_03150111_003_01.h5"]
         >>> atl03_asset = "atlas-local"
         >>> rsps = icesat2.atl06p(parms, asset=atl03_asset, resources=resources)
