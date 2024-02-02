@@ -55,27 +55,9 @@
 #endif
 
 /******************************************************************************
- * KAT-CUSTOM ENUM MAPPING
+ * B-TREE STRUCTS
  ******************************************************************************/
-typedef enum H5T_cset_t {
-    H5T_CSET_ERROR       = -1, /**< error                           */
-    H5T_CSET_ASCII       = 0,  /**< US ASCII                        */
-    H5T_CSET_UTF8        = 1,  /**< UTF-8 Unicode encoding		     */
-    H5T_CSET_RESERVED_2  = 2,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_3  = 3,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_4  = 4,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_5  = 5,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_6  = 6,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_7  = 7,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_8  = 8,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_9  = 9,  /**< reserved for later use		     */
-    H5T_CSET_RESERVED_10 = 10, /**< reserved for later use		     */
-    H5T_CSET_RESERVED_11 = 11, /**< reserved for later use		     */
-    H5T_CSET_RESERVED_12 = 12, /**< reserved for later use		     */
-    H5T_CSET_RESERVED_13 = 13, /**< reserved for later use		     */
-    H5T_CSET_RESERVED_14 = 14, /**< reserved for later use		     */
-    H5T_CSET_RESERVED_15 = 15  /**< reserved for later use		     */
-} H5T_cset_t;
+
 
 #define H5T_NCSET H5T_CSET_RESERVED_2 /*Number of character sets actually defined  */
 
@@ -1013,7 +995,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl, *heap_info_t heap_info_ptr)
 {
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS = 0x02;
 
@@ -1130,7 +1112,12 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     (void)check_sum; // unused
 
     /* Build Heap Info Structure */
-    heap_info_t heap_info = {
+    heap_info_t heap_info;
+
+    // if not expected to return out ingo
+    if (heap_info_ptr == NULL) 
+    {
+        heap_info = {
         .table_width        = table_width,
         .curr_num_rows      = curr_num_rows,
         .starting_blk_size  = (int)starting_blk_size,
@@ -1140,7 +1127,21 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .msg_type           = msg_type,
         .num_objects        = (int)mg_objs,
         .cur_objects        = 0 // updated as objects are read
-    };
+        };
+
+    } 
+    else // populate passed struct
+    {
+        heap_info_ptr->table_width        = table_width,
+        heap_info_ptr->curr_num_rows      = curr_num_rows,
+        heap_info_ptr->starting_blk_size  = (int)starting_blk_size,
+        heap_info_ptr->max_dblk_size      = (int)max_dblk_size,
+        heap_info_ptr->blk_offset_size    = ((max_heap_size + 7) / 8),
+        heap_info_ptr->dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0),
+        heap_info_ptr->msg_type           = msg_type,
+        heap_info_ptr->num_objects        = (int)mg_objs,
+        heap_info_ptr->cur_objects        = 0 // updated as objects are read
+    }
 
     /* Process Blocks */
     if(heap_info.curr_num_rows == 0)
@@ -2224,7 +2225,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Follow Heap Address if Provided */
     if((int)heap_address != -1)
     {
-        readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl);
+        readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl, NULL);
     }
 
     /* Return Bytes Read */
@@ -3067,21 +3068,29 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Follow Heap Address if Provided */
 
     uint64_t address_snapshot = metaData.address;
+    uint64_t heap_addr_snapshot = heap_address;
+    heap_info_t *heap_info = malloc(sizeof(heap_info_t));
 
-    if((int)heap_address != -1)
-    {
-        readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl);
-    }
-
-    /* Check if Attribute Located Non-Dense, Else Init Dense Search */
-    #ifdef H5CORO_ATTRIBUTE_SUPPORT
-        if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
+    /* Wrap with general exceptions to avoid memory leaks */
+    try {
+        if((int)heap_address != -1)
         {
-            print2term("Entering dense attribute search; No main attribute message match. \n");
-            // TODO
-            // readDenseAttrs(heap_address, name_bt2_address)
+            readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, heap_info);
         }
-    #endif
+
+        /* Check if Attribute Located Non-Dense, Else Init Dense Search */
+        #ifdef H5CORO_ATTRIBUTE_SUPPORT
+            if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
+            {
+                print2term("Entering dense attribute search; No main attribute message match. \n");
+                // TODO - finish dense call
+                // TODO - check on dlvl modifications for the call with datasetPath 
+                // readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], heap_info)
+            }
+        #endif
+    } catch (...) {
+        free(heap_info);
+    }
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
@@ -3091,39 +3100,23 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 /*----------------------------------------------------------------------------
  * readDenseAttributes
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr) {
+int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
     /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
-    // TODO: REPLACE PSEUDO PLACEHOLDERS
+
     // define btree header type for info
-    uint64_t header_addr; 
-    // define return struct/var for B2 find algorithm
-    uint64_t pos_final;
-    bool attr_exists = false;
-
-    bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
-
-    if (shared_attributes)
-    {
-        print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
-
-        // haddr_t shared_fheap_addr; /* Address of fractal heap to use */
-
-        // /* Retrieve the address of the shared message's fractal heap */
-        // if (H5SM_get_fheap_addr(f, H5O_ATTR_ID, &shared_fheap_addr) < 0)
-        //     HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, NULL, "can't get shared message heap address");
-
-        // /* Check if there are any shared messages currently */
-        // if (H5_addr_defined(shared_fheap_addr)) {
-        //     /* Open the fractal heap for shared header messages */
-        //     if (NULL == (shared_fheap = H5HF_open(f, shared_fheap_addr)))
-        //         HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, NULL, "unable to open fractal heap");
-    }
-
-    header_addr = openBTreeV2(name_bt2_addr);
-    pos_final = findBTreeV2(header_addr, fheap_addr, name_bt2_addr, &attr_exists);
-
-    return pos_final;
+    // uint64_t header_addr; 
+    // // define return struct/var for B2 find algorithm
+    // uint64_t pos_final;
+    // bool attr_exists = false;
+    // bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
+    // if (shared_attributes)
+    // {
+    //     print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
+    // }
+    // header_addr = openBTreeV2(name_bt2_addr);
+    // pos_final = findBTreeV2(header_addr, fheap_addr, name_bt2_addr, &attr_exists);
+    // return pos_final;
 }
 
 bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
