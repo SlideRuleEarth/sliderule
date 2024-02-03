@@ -3103,6 +3103,20 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
     /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
+    // TODO H5B2 Equiv construct
+    // btree2_hdr_t *bt2_name     = NULL;
+
+    // TODO: build search, low priority (not hit by ex)
+    // https://github.com/HDFGroup/hdf5/blob/develop/src/H5SM.c#L328
+    bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
+    if (shared_attributes)
+    {
+        print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
+        return 0;
+    }
+
+    // TODO finish constr of attr + start implement
+    header_addr = openBTreeV2(name_bt2_addr);
 
     // define btree header type for info
     // uint64_t header_addr; 
