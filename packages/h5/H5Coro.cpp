@@ -3090,6 +3090,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         #endif
     } catch (...) {
         free(heap_info);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "DENSE ATTR READ FAILURE, FREE ALLOCS");
     }
 
     /* Return Bytes Read */
@@ -3103,11 +3104,11 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
     /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
-    // TODO H5B2 Equiv construct
-    // btree2_hdr_t *bt2_name     = NULL;
+    btree2_ud_common_t udata; // user data passed to v2
+    btree2_hdr_t *bt2_name = NULL; // v2 ptr to header info
+    bool attr_exists; // attr exists in b-tree v2 tree
 
-    // TODO: build search, low priority (not hit by ex)
-    // https://github.com/HDFGroup/hdf5/blob/develop/src/H5SM.c#L328
+    /* Shared Attr Support */
     bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
     if (shared_attributes)
     {
@@ -3115,39 +3116,78 @@ int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, c
         return 0;
     }
 
-    // TODO finish constr of attr + start implement
-    header_addr = openBTreeV2(name_bt2_addr);
+    /* Open Btree via Header */
+    bt2_name = openBTreeV2(name_bt2_addr);
+    if (bt2_name == NULL) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "NULL return in bt2_name, check openBtreeV2");
+    }
 
-    // define btree header type for info
-    // uint64_t header_addr; 
-    // // define return struct/var for B2 find algorithm
-    // uint64_t pos_final;
-    // bool attr_exists = false;
-    // bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
-    // if (shared_attributes)
-    // {
-    //     print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
-    // }
-    // header_addr = openBTreeV2(name_bt2_addr);
+    /* Set udata pass down */
     // pos_final = findBTreeV2(header_addr, fheap_addr, name_bt2_addr, &attr_exists);
+
+    // FREE ALLOCATED STRUCTS
+    free(bt2_name->root);
+    free(bt2_name);
+
     // return pos_final;
 }
 
 bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
     /* Equiv to H5SM_type_shared of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/develop/src/H5SM.c#L328 */
-    print2term("TODO: isTypeSharedAttrs\n");
-
+    print2term("TODO: isTypeSharedAttrs implementation, omit support for v2 btree \n");
     return false;
 }
 
  /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::openBTreeV2 (uint64_t name_bt2_addr) {
+btree2_hdr_t* H5FileBuffer::openBTreeV2 (uint64_t addr) {
+    
+    /* Allocate */
+    btree2_hdr_t *hdr = (btree2_hdr_t*)malloc(sizeof(btree2_hdr_t)); // ptr to btree header
+    hdr->addr = addr;
 
-    print2term("TODO: openBTreeV2 \n");
+    /* Populate header */
+    uint64_t pos = addr;
+    uint32_t signature = (uint32_t)readField(4, &pos);
+    if(signature != H5_V2TREE_SIGNATURE_LE)
+    {
+        free(hdr);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
+    }
+    uint8_t version = (uint8_t) readField(1, &pos);
+    if(version != 0)
+    {
+        free(hdr);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
+    }
+    hdr->type = (btree2_subid_t) readField(1, &pos);
+    if (hdr->type != H5B2_GRP_DENSE_NAME_ID) 
+    {
+        free(hdr);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
 
-    return 0;
+    }
+
+    hdr->node_size = (uint32_t) readField(4, &pos);
+    hdr->rrec_size = (uint32_t) readField(2, &pos);
+    hdr->depth = (uint16_t) readField(2, &pos);
+    hdr->split_percent = (uint8_t) readField(1, &pos);
+    hdr->merge_percent = (uint8_t) readField(1, &pos);
+
+    btree2_node_ptr_t *root_node_ptr = (btree2_node_ptr_t*)malloc(sizeof(btree2_node_ptr_t)); // ptr to btree header
+    root_node_ptr->addr = readField(metaData.offsetsize, &pos);
+    root_node_ptr->node_nrec = (uint16_t)readField(2, &pos);
+    root_node_ptr->all_nrec = readField(metaData.lengthsize, &pos);
+    hdr->root = root_node_ptr;
+
+    hdr->check_sum = readField(4, &pos);
+
+    // TODO
+    // set call backs
+    // set native record size
+
+    return hdr;
 }
 
  /*----------------------------------------------------------------------------

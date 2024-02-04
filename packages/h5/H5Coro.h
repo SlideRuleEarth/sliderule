@@ -208,6 +208,7 @@ class H5FileBuffer
         static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
         static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
         static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
+        static const uint64_t   H5_V2TREE_SIGNATURE_LE  = 0x44485442LL; // v2 btree header
 
         /* Object Header Flags */
         static const uint8_t    SIZE_OF_CHUNK_0_MASK    = 0x03;
@@ -288,6 +289,16 @@ class H5FileBuffer
             int                     cur_objects; // mutable
         } heap_info_t;
 
+        typedef struct {
+            heap_info_t *fheap; // fractalH pointer
+            const char *name; // attr name we are searching for
+            uint32_t name_hash; // hash of attr name
+            uint8_t flags; // attr storage location
+            uint32_t corder; // creation order value of attribute to compare
+            // H5A_bt2_found_t   found_op;      // callback when correct attribute is found
+            // void             *found_op_data; // callback data when correct attribute is found
+        } btree2_ud_common_t;
+
         /* A "node pointer" to another B-tree node */
         typedef struct {
             uint64_t addr; // address of pointed node
@@ -309,36 +320,36 @@ class H5FileBuffer
         /* B-tree subID mapping for type support */
         typedef enum btree2_subid_t {
             H5B2_TEST_ID = 0,         /* B-tree is for testing (do not use for actual data) */
-            H5B2_FHEAP_HUGE_INDIR_ID, /* B-tree is for fractal heap indirectly accessed, non-filtered 'huge' objects*/
-            H5B2_FHEAP_HUGE_FILT_INDIR_ID, /* B-tree is for fractal heap indirectly accessed, filtered 'huge' objects */
-            H5B2_FHEAP_HUGE_DIR_ID, /* B-tree is for fractal heap directly accessed, non-filtered 'huge' objects */
-            H5B2_FHEAP_HUGE_FILT_DIR_ID, /* B-tree is for fractal heap directly accessed, filtered 'huge' objects */
-            H5B2_GRP_DENSE_NAME_ID,      /* B-tree is for indexing 'name' field for "dense" link storage in groups */
-            H5B2_GRP_DENSE_CORDER_ID,    /* B-tree is for indexing 'creation order' field for "dense" link storage ingroups */
-            H5B2_SOHM_INDEX_ID,          /* B-tree is an index for shared object header messages */
-            H5B2_ATTR_DENSE_NAME_ID,   /* B-tree is for indexing 'name' field for "dense" attribute storage on objects*/
-            H5B2_ATTR_DENSE_CORDER_ID, /* B-tree is for indexing 'creation order' field for "dense" attribute storage on objects */
-            H5B2_CDSET_ID,             /* B-tree is for non-filtered chunked dataset storage w/ >1 unlim dims */
-            H5B2_CDSET_FILT_ID,        /* B-tree is for filtered chunked dataset storage w/ >1 unlim dims */
+            H5B2_FHEAP_HUGE_INDIR_ID = 1, /* B-tree is for fractal heap indirectly accessed, non-filtered 'huge' objects*/
+            H5B2_FHEAP_HUGE_FILT_INDIR_ID = 2, /* B-tree is for fractal heap indirectly accessed, filtered 'huge' objects */
+            H5B2_FHEAP_HUGE_DIR_ID = 3, /* B-tree is for fractal heap directly accessed, non-filtered 'huge' objects */
+            H5B2_FHEAP_HUGE_FILT_DIR_ID = 4, /* B-tree is for fractal heap directly accessed, filtered 'huge' objects */
+            H5B2_GRP_DENSE_NAME_ID = 5,      /* B-tree is for indexing 'name' field for "dense" link storage in groups */
+            H5B2_GRP_DENSE_CORDER_ID = 6,    /* B-tree is for indexing 'creation order' field for "dense" link storage ingroups */
+            H5B2_SOHM_INDEX_ID = 7,          /* B-tree is an index for shared object header messages */
+            H5B2_ATTR_DENSE_NAME_ID = 8,   /* B-tree is for indexing 'name' field for "dense" attribute storage on objects*/
+            H5B2_ATTR_DENSE_CORDER_ID = 9, /* B-tree is for indexing 'creation order' field for "dense" attribute storage on objects */
+            H5B2_CDSET_ID = 10,             /* B-tree is for non-filtered chunked dataset storage w/ >1 unlim dims */
+            H5B2_CDSET_FILT_ID = 11,        /* B-tree is for filtered chunked dataset storage w/ >1 unlim dims */
             H5B2_TEST2_ID,             /* Another B-tree is for testing (do not use for actual data) */
             H5B2_NUM_BTREE_ID          /* Number of B-tree IDs (must be last)  */
         } btree2_subid_t;
 
         /* B-tree Type support - otherwise known as H5B2_class_t */
-        typedef struct {
-            btree2_subid_t id;
-            size_t       numrec_size; // native record size
+        // typedef struct {
+        //     btree2_subid_t id;
+        //     size_t       numrec_size; // native record size
 
-            // callback methods - excluded store, context, encode, debug
-            int (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
-            int (*decode)(const uint8_t *raw, void *record, void *ctx); // decode record from disk
+        //     // callback methods - excluded store, context, encode, debug
+        //     int (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
+        //     int (*decode)(const uint8_t *raw, void *record, void *ctx); // decode record from disk
 
-        } btree2_type_t;
+        // } btree2_type_t;
 
         /* B-tree header information */
         typedef struct {
             /* Tracking */
-            haddr_t addr; // addr of btree 
+            uint64_t addr; // addr of btree 
             size_t hdr_size; // size (bytes) of btree on disk
             size_t node_refc; // ref count of nodes using header
             size_t file_refc; // ref count of files using header
@@ -348,7 +359,14 @@ class H5FileBuffer
             void *parent; // potentially remove
 
             /* Properties */
-            const btree2_type_t *cls; // "class" H5B2_class_t under hdf5 title
+
+            // const btree2_type_t *cls;
+            btree2_subid_t type; // "class" H5B2_class_t under hdf5 title
+
+            size_t numrec_size; // native record size
+            // callback methods - excluded store, context, encode, debug
+            int (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
+            int (*decode)(const uint8_t *raw, void *record, void *ctx); // decode record from disk
 
             uint32_t node_size; // size in bytes of all B-tree nodes
             uint32_t rrec_size; // size in bytes of the B-tree record
@@ -357,11 +375,7 @@ class H5FileBuffer
             uint8_t  merge_percent; // percent full that a node needs to be decrease below before it is split
             btree2_node_ptr_t root;
 
-            /* MISSING */
-
-            // Number of Records in Root Node     -> see btree2_node_ptr_t
-            // Total Number of Records in B-tree  -> see btree2_node_ptr_t
-            // checksum (hint H5B2pkg.h)          -> ???
+            uint64_t check_sum;
 
         } btree2_hdr_t;
 
@@ -369,21 +383,20 @@ class H5FileBuffer
         typedef struct {
             /* Internal B-tree Leaf information */
             btree2_hdr_t *hdr; // ptr to pinned header
-            uint8_t    *leaf_native; // ptr to native records
-            uint16_t    nrec; // num records in this node 
-
-            void *parent; // dependency for leaf  
+            uint8_t      *leaf_native; // ptr to native records
+            uint16_t     nrec; // num records in this node 
+            void         *parent; // dependency for leaf  
         } btree2_leaf_t;
 
         /* B-tree internal node information */
         typedef struct {
             /* Internal B-tree information */
-            H5B2_hdr_t      *hdr; // ptr to pinned header
-            uint8_t         *int_native; // ptr native records               
-            H5B2_node_ptr_t *node_ptrs; // ptr to node ptrs
-            uint16_t         nrec; // num records in node
-            uint16_t         depth; // depth of node
-            void               *parent;
+            btree2_hdr_t      *hdr; // ptr to pinned header
+            uint8_t           *int_native; // ptr native records               
+            btree2_node_ptr_t *node_ptrs; // ptr to node ptrs
+            uint16_t          nrec; // num records in node
+            uint16_t          depth; // depth of node
+            void              *parent;
         } btree2_internal_t;
 
         typedef union {
