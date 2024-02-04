@@ -290,7 +290,8 @@ class H5FileBuffer
         } heap_info_t;
 
         typedef struct {
-            heap_info_t *fheap; // fractalH pointer
+            uint64_t fheap_addr;
+            heap_info_t *fheap_info; // fractalH pointer
             const char *name; // attr name we are searching for
             uint32_t name_hash; // hash of attr name
             uint8_t flags; // attr storage location

@@ -3101,12 +3101,12 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 /*----------------------------------------------------------------------------
  * readDenseAttributes
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
+void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
     /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
     btree2_ud_common_t udata; // user data passed to v2
     btree2_hdr_t *bt2_name = NULL; // v2 ptr to header info
-    bool attr_exists; // attr exists in b-tree v2 tree
+    bool attr_exists = false; // attr exists in b-tree v2 tree
 
     /* Shared Attr Support */
     bool shared_attributes = isTypeSharedAttrs(ATTRIBUTE_MSG);
@@ -3122,14 +3122,24 @@ int H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, c
         throw RunTimeException(CRITICAL, RTE_ERROR, "NULL return in bt2_name, check openBtreeV2");
     }
 
-    /* Set udata pass down */
-    // pos_final = findBTreeV2(header_addr, fheap_addr, name_bt2_addr, &attr_exists);
+    /* Set udata */
+    udata.fheap_addr = fheap_addr;
+    udata.fheap_info = heap_info_ptr;
+    udata.name = name;
+    udata.flags = 0;
+    udata.corder = 0;
 
-    // FREE ALLOCATED STRUCTS
+    /* Set udata pass down */
+    findBTreeV2(bt2_name, udata, &attr_exists);
+
+    /* Free allocations */
+    // TODO: move allocation to avoid undefined behavior
     free(bt2_name->root);
     free(bt2_name);
 
-    // return pos_final;
+    if (attr_exists == false) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+    }
 }
 
 bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
@@ -3193,11 +3203,11 @@ btree2_hdr_t* H5FileBuffer::openBTreeV2 (uint64_t addr) {
  /*----------------------------------------------------------------------------
  * findBTreeV2
  *----------------------------------------------------------------------------*/
- int H5FileBuffer::findBTreeV2 (uint64_t header_opened, uint64_t fheap_addr, uint64_t bt2_addr, bool *attr_exists) {
+ void H5FileBuffer::findBTreeV2 (btree2_hdr_t* bt2, void* udata, bool *found) {
 
-    print2term("TODO: findBTreeV2 \n");
+    
 
-    return 0;
+    
 }
 
 /*----------------------------------------------------------------------------
