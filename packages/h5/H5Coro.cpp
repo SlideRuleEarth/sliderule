@@ -3150,6 +3150,16 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
 }
 
  /*----------------------------------------------------------------------------
+ * compareType5Record
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::compareType5Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
+{
+    // TODO
+    // implementation for H5B2_GRP_DENSE_NAME_ID record type
+
+}
+
+ /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr) {
@@ -3189,6 +3199,16 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     root_node_ptr->node_nrec = (uint16_t)readField(2, &pos);
     root_node_ptr->all_nrec = readField(metaData.lengthsize, &pos);
     hdr->root = root_node_ptr;
+
+    // set the cls calling methods
+    switch(hdr->type) {
+        case H5B2_GRP_DENSE_NAME_ID:
+            hdr->decode = &H5FileBuffer::readAttributeMsg;
+            hdr->compare = &H5FileBuffer::compareType5Record;
+            break;
+        default:
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type: %d", hdr->type);
+    }
 
     hdr->check_sum = readField(4, &pos);
 
@@ -3231,7 +3251,47 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         btree2_internal_t *internal;      // pointer to internal node in B-tree
         btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
 
-        // TODO - dissect search logic for hdf5 algorithm
+        // TODO
+        // Protect current node
+
+        // Locate record within the current node
+
+        if (/*record is found*/) {
+            // Handle found record
+
+            // Unprotect current node
+
+            // Set *found and return
+        } else {
+            // Get node pointer for next node to search
+
+            // Set pointer to next node to load
+            curr_node_ptr = /*next_node_ptr*/;
+
+            // Unprotect current node
+        }
+
+
+    }
+    // handle leaf node
+    {
+        H5B2_leaf_t *leaf;
+
+        // Protect leaf node
+
+        // Locate record within the leaf node
+
+        if (/*record is found*/) {
+            // Handle found record
+
+            // Unprotect leaf node
+
+            // Set *found and return
+        } else {
+            // Handle record not found
+
+            // Unprotect leaf node
+        }
     }
 
 }
