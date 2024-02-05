@@ -3105,7 +3105,8 @@ void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, 
     /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
     btree2_ud_common_t udata; // user data passed to v2
-    btree2_hdr_t *bt2_name = NULL; // v2 ptr to header info
+    btree2_hdr_t *bt2_name = (btree2_hdr_t*)malloc(sizeof(btree2_hdr_t));; // v2 ptr to header info
+    btree2_node_ptr_t *root_node_ptr = (btree2_node_ptr_t*)malloc(sizeof(btree2_node_ptr_t)); // ptr to btree header
     bool attr_exists = false; // attr exists in b-tree v2 tree
 
     /* Shared Attr Support */
@@ -3117,9 +3118,10 @@ void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, 
     }
 
     /* Open Btree via Header */
-    bt2_name = openBTreeV2(name_bt2_addr);
-    if (bt2_name == NULL) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "NULL return in bt2_name, check openBtreeV2");
+    bt2_name->node_size = 0; // set for err checking
+    openBTreeV2(bt2_name, root_node_ptr, name_bt2_addr);
+    if (bt2_name->node_size == 0) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "0 return in bt2_name->node_size, failure suspect in openBtreeV2");
     }
 
     /* Set udata */
@@ -3133,8 +3135,7 @@ void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, 
     findBTreeV2(bt2_name, udata, &attr_exists);
 
     /* Free allocations */
-    // TODO: move allocation to avoid undefined behavior
-    free(bt2_name->root);
+    free(root_node_ptr); // free(bt2_name->root);
     free(bt2_name);
 
     if (attr_exists == false) {
@@ -3151,13 +3152,11 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
  /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
-btree2_hdr_t* H5FileBuffer::openBTreeV2 (uint64_t addr) {
-    
-    /* Allocate */
-    btree2_hdr_t *hdr = (btree2_hdr_t*)malloc(sizeof(btree2_hdr_t)); // ptr to btree header
-    hdr->addr = addr;
+void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr) {
+    /* This methods initiates data structs for b-tree v2 search */
 
     /* Populate header */
+    hdr->addr = addr;
     uint64_t pos = addr;
     uint32_t signature = (uint32_t)readField(4, &pos);
     if(signature != H5_V2TREE_SIGNATURE_LE)
@@ -3185,7 +3184,7 @@ btree2_hdr_t* H5FileBuffer::openBTreeV2 (uint64_t addr) {
     hdr->split_percent = (uint8_t) readField(1, &pos);
     hdr->merge_percent = (uint8_t) readField(1, &pos);
 
-    btree2_node_ptr_t *root_node_ptr = (btree2_node_ptr_t*)malloc(sizeof(btree2_node_ptr_t)); // ptr to btree header
+    // btree2_node_ptr_t *root_node_ptr = (btree2_node_ptr_t*)malloc(sizeof(btree2_node_ptr_t)); // ptr to btree header
     root_node_ptr->addr = readField(metaData.offsetsize, &pos);
     root_node_ptr->node_nrec = (uint16_t)readField(2, &pos);
     root_node_ptr->all_nrec = readField(metaData.lengthsize, &pos);
@@ -3193,7 +3192,7 @@ btree2_hdr_t* H5FileBuffer::openBTreeV2 (uint64_t addr) {
 
     hdr->check_sum = readField(4, &pos);
 
-    // TODO
+    // TODO - MISSING SETS
     // set call backs
     // set native record size
 
@@ -3203,11 +3202,38 @@ btree2_hdr_t* H5FileBuffer::openBTreeV2 (uint64_t addr) {
  /*----------------------------------------------------------------------------
  * findBTreeV2
  *----------------------------------------------------------------------------*/
- void H5FileBuffer::findBTreeV2 (btree2_hdr_t* bt2, void* udata, bool *found) {
+ void H5FileBuffer::findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found) {
 
-    
+    btree2_node_ptr_t curr_node_ptr;    // node pointer info for current node
+    void *parent = NULL;                // parent of current node
+    uint16_t depth;                     // current depth of the tree
+    int cmp;                            // comparison value of records
+    unsigned idx;                       // location (index) of record which matches key
+    btree2_nodepos_t  curr_pos;         // position of the current node
 
-    
+    /* Copy root ptr - exit if empty tree */
+    curr_node_ptr = hdr->root;
+
+    if (curr_node_ptr.node_nrec == 0) {
+        *found = false;
+        return;
+    }
+
+    /* Skip min/max accelerated search; note "SWMR writes" */
+    depth = hdr->depth;
+    parent = hdr;
+
+    /* Walk down B-tree to find record or leaf node where record is located */
+    cmp = -1;
+    curr_pos = H5B2_POS_ROOT;
+     
+    while (depth > 0) {
+        btree2_internal_t *internal;      // pointer to internal node in B-tree
+        btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
+
+        // TODO - dissect search logic for hdf5 algorithm
+    }
+
 }
 
 /*----------------------------------------------------------------------------

@@ -336,16 +336,13 @@ class H5FileBuffer
             H5B2_NUM_BTREE_ID          /* Number of B-tree IDs (must be last)  */
         } btree2_subid_t;
 
-        /* B-tree Type support - otherwise known as H5B2_class_t */
-        // typedef struct {
-        //     btree2_subid_t id;
-        //     size_t       numrec_size; // native record size
-
-        //     // callback methods - excluded store, context, encode, debug
-        //     int (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
-        //     int (*decode)(const uint8_t *raw, void *record, void *ctx); // decode record from disk
-
-        // } btree2_type_t;
+        /* Node position, for min/max determination */
+        typedef enum H5B2_nodepos_t {
+            H5B2_POS_ROOT,  /* Node is root (i.e. both right & left-most in tree) */
+            H5B2_POS_RIGHT, /* Node is right-most in tree, at a given depth */
+            H5B2_POS_LEFT,  /* Node is left-most in tree, at a given depth */
+            H5B2_POS_MIDDLE /* Node is neither right or left-most in tree */
+        } btree2_nodepos_t;
 
         /* B-tree header information */
         typedef struct {
@@ -363,8 +360,8 @@ class H5FileBuffer
 
             // const btree2_type_t *cls;
             btree2_subid_t type; // "class" H5B2_class_t under hdf5 title
-
             size_t numrec_size; // native record size
+
             // callback methods - excluded store, context, encode, debug
             int (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
             int (*decode)(const uint8_t *raw, void *record, void *ctx); // decode record from disk
@@ -374,6 +371,7 @@ class H5FileBuffer
             uint16_t depth;
             uint8_t  split_percent; // percent full that a node needs to increase above before it is split
             uint8_t  merge_percent; // percent full that a node needs to be decrease below before it is split
+            
             btree2_node_ptr_t root;
 
             uint64_t check_sum;
