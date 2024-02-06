@@ -199,16 +199,18 @@ class H5FileBuffer
         static const long       STR_BUFF_SIZE           = 128;
         static const long       FILTER_SIZE_SCALE       = 1; // maximum factor for dataChunkFilterBuffer
 
-        static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
-        static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
-        static const uint64_t   H5_FRHP_SIGNATURE_LE    = 0x50485246LL; // fractal heap
-        static const uint64_t   H5_FHDB_SIGNATURE_LE    = 0x42444846LL; // direct block
-        static const uint64_t   H5_FHIB_SIGNATURE_LE    = 0x42494846LL; // indirect block
-        static const uint64_t   H5_OCHK_SIGNATURE_LE    = 0x4B48434FLL; // object header continuation block
-        static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
-        static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
-        static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
-        static const uint64_t   H5_V2TREE_SIGNATURE_LE  = 0x44485442LL; // v2 btree header
+        static const uint64_t   H5_SIGNATURE_LE                 = 0x0A1A0A0D46444889LL;
+        static const uint64_t   H5_OHDR_SIGNATURE_LE            = 0x5244484FLL; // object header
+        static const uint64_t   H5_FRHP_SIGNATURE_LE            = 0x50485246LL; // fractal heap
+        static const uint64_t   H5_FHDB_SIGNATURE_LE            = 0x42444846LL; // direct block
+        static const uint64_t   H5_FHIB_SIGNATURE_LE            = 0x42494846LL; // indirect block
+        static const uint64_t   H5_OCHK_SIGNATURE_LE            = 0x4B48434FLL; // object header continuation block
+        static const uint64_t   H5_TREE_SIGNATURE_LE            = 0x45455254LL; // binary tree version 1
+        static const uint64_t   H5_HEAP_SIGNATURE_LE            = 0x50414548LL; // local heap
+        static const uint64_t   H5_SNOD_SIGNATURE_LE            = 0x444F4E53LL; // symbol table
+        static const uint64_t   H5_V2TREE_SIGNATURE_LE          = 0x44485442LL; // v2 btree header
+        static const uint64_t   H5_V2TREE_INTERNAL_SIGNATURE_LE = 0x4E495442LL; // v2 internal node
+        static const uint64_t   H5_V2TREE_LEAF_SIGNATURE_LE     = 0x464C5442LL; // v2 leaf node
 
         /* Object Header Flags */
         static const uint8_t    SIZE_OF_CHUNK_0_MASK    = 0x03;
@@ -271,13 +273,6 @@ class H5FileBuffer
         } filter_t;
 
         typedef struct {
-            uint32_t                chunk_size;
-            uint32_t                filter_mask;
-            uint64_t                slice[MAX_NDIMS];
-            uint64_t                row_key;
-        } btree_node_t;
-
-        typedef struct {
             int                     table_width;
             int                     curr_num_rows;
             int                     starting_blk_size;
@@ -288,6 +283,14 @@ class H5FileBuffer
             int                     num_objects;
             int                     cur_objects; // mutable
         } heap_info_t;
+
+        /* KAT ADDED */
+        typedef struct {
+            uint32_t                chunk_size;
+            uint32_t                filter_mask;
+            uint64_t                slice[MAX_NDIMS];
+            uint64_t                row_key;
+        } btree_node_t;
 
         typedef struct {
             uint64_t fheap_addr;
@@ -319,7 +322,7 @@ class H5FileBuffer
         } btree2_node_info_t;
 
         /* B-tree subID mapping for type support */
-        typedef enum btree2_subid_t {
+        typedef enum {
             H5B2_TEST_ID = 0,         /* B-tree is for testing (do not use for actual data) */
             H5B2_FHEAP_HUGE_INDIR_ID = 1, /* B-tree is for fractal heap indirectly accessed, non-filtered 'huge' objects*/
             H5B2_FHEAP_HUGE_FILT_INDIR_ID = 2, /* B-tree is for fractal heap indirectly accessed, filtered 'huge' objects */
@@ -337,7 +340,7 @@ class H5FileBuffer
         } btree2_subid_t;
 
         /* Node position, for min/max determination */
-        typedef enum H5B2_nodepos_t {
+        typedef enum {
             H5B2_POS_ROOT,  /* Node is root (i.e. both right & left-most in tree) */
             H5B2_POS_RIGHT, /* Node is right-most in tree, at a given depth */
             H5B2_POS_LEFT,  /* Node is left-most in tree, at a given depth */
@@ -372,8 +375,9 @@ class H5FileBuffer
             uint8_t  split_percent; // percent full that a node needs to increase above before it is split
             uint8_t  merge_percent; // percent full that a node needs to be decrease below before it is split
             
-            btree2_node_ptr_t root;
-
+            btree2_node_info_t *node_info;  // table of node info structs for current depth of B-tree
+            btree2_node_ptr_t root; // root struct
+            size_t *nat_off; // array of offsets of native records
             uint64_t check_sum;
 
         } btree2_hdr_t;
@@ -397,6 +401,16 @@ class H5FileBuffer
             uint16_t          depth; // depth of node
             void              *parent;
         } btree2_internal_t;
+
+        /* Type 5 Record Representation -  native 'name' field index records in the v2 B-tree */
+        typedef struct {
+            uint64_t id; // heap ID for attribute
+            uint8_t flags; // object header message flags for attribute
+            uint32_t corder; // 'creation order' field value
+            uint32_t hash; // hash of 'name' field value
+        } btree2_type5_rec_t;
+
+        /* END OF KAT ADDED */
 
         typedef union {
             double                  fill_lf;

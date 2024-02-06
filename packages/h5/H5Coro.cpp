@@ -3143,6 +3143,9 @@ void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, 
     }
 }
 
+ /*----------------------------------------------------------------------------
+ * isTypeSharedAttrs
+ *----------------------------------------------------------------------------*/
 bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
     /* Equiv to H5SM_type_shared of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/develop/src/H5SM.c#L328 */
     print2term("TODO: isTypeSharedAttrs implementation, omit support for v2 btree \n");
@@ -3155,7 +3158,79 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
 void H5FileBuffer::compareType5Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
 {
     // TODO
-    // implementation for H5B2_GRP_DENSE_NAME_ID record type
+    /* Implementation for H5B2_GRP_DENSE_NAME_ID record type - type 5 */
+
+    const btree2_ud_common_t *bt2_udata = (const btree2_ud_common_t *)_bt2_udata;
+    const btree2_type5_rec_t *bt2_rec   = (const btree2_type5_rec_t *)_bt2_rec;
+
+    /* Check hash value */
+    if (bt2_udata->name_hash < bt2_rec->hash)
+        *result = (-1);
+    else if (bt2_udata->name_hash > bt2_rec->hash)
+        *result = 1;
+    else {
+        // TODO 
+        // compare hash -> extract in prev function
+        // if successful, use existing readFractal to ID the matching name + heap ID
+
+        // HDF BASED LOGIC
+        // H5A_fh_ud_cmp_t fh_udata; /* User data for fractal heap 'op' callback */
+        // H5HF_t         *fheap;    /* Fractal heap handle to use for finding object */
+
+        // /* Sanity check */
+        // assert(bt2_udata->name_hash == bt2_rec->hash);
+
+        // /* Prepare user data for callback */
+        // /* down */
+        // fh_udata.name          = bt2_udata->name;
+        // fh_udata.record        = bt2_rec;
+        // fh_udata.found_op      = bt2_udata->found_op;
+        // fh_udata.found_op_data = bt2_udata->found_op_data;
+
+        // /* up */
+        // fh_udata.cmp = 0;
+
+        // /* Check for attribute in shared storage */
+        // if (bt2_rec->flags & H5O_MSG_FLAG_SHARED)
+        //     fheap = bt2_udata->shared_fheap;
+        // else
+        //     fheap = bt2_udata->fheap;
+        // assert(fheap);
+
+        // /* Check if the user's attribute and the B-tree's attribute have the same name */
+        // if (H5HF_op(fheap, &bt2_rec->id, H5A__dense_fh_name_cmp, &fh_udata) < 0)
+        //     HGOTO_ERROR(H5E_HEAP, H5E_CANTCOMPARE, FAIL, "can't compare btree2 records");
+
+        // /* Callback will set comparison value */
+        // *result = fh_udata.cmp;
+    } 
+}
+
+ /*----------------------------------------------------------------------------
+ * locateRecordBTreeV2
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp) {
+    
+    /* Performs a binary search to locate a record in a sorted array of records. */
+
+    unsigned lo = 0, hi; // low & high index values
+    unsigned my_idx = 0; // final index value
+    *cmp = -1;
+    hi = nrec;
+    while (lo < hi && *cmp) {
+        my_idx = (lo + hi) / 2;
+
+        // TODO: 
+        // need to build record/parse out info, cannot do auto casting like program
+
+        // call compare function, type set from header in prev calls e.g. type 5 - H5B2_GRP_DENSE_NAME_ID
+        (hdr->compare)(udata, native + rec_off[my_idx], cmp)
+        if (*cmp < 0)
+            hi = my_idx;
+        else
+            lo = my_idx + 1;
+    } 
+    *idx = my_idx;
 
 }
 
@@ -3200,7 +3275,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     root_node_ptr->all_nrec = readField(metaData.lengthsize, &pos);
     hdr->root = root_node_ptr;
 
-    // set the cls calling methods
+    /* Set cls based methods - type 5 only for first v */
     switch(hdr->type) {
         case H5B2_GRP_DENSE_NAME_ID:
             hdr->decode = &H5FileBuffer::readAttributeMsg;
@@ -3212,8 +3287,13 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
     hdr->check_sum = readField(4, &pos);
 
+    /* Set up node info */
+    // TODO
+
+    /* Set up offsets for record reading */
+    // TODO
+
     // TODO - MISSING SETS
-    // set call backs
     // set native record size
 
     return hdr;
@@ -3233,6 +3313,8 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
     /* Copy root ptr - exit if empty tree */
     curr_node_ptr = hdr->root;
+    // curr_node_ptr->addr is the uint64_t addr 
+    // uint16_t node_nrec & uint64_t all_nrec; also set
 
     if (curr_node_ptr.node_nrec == 0) {
         *found = false;
@@ -3240,6 +3322,8 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     }
 
     /* Skip min/max accelerated search; note "SWMR writes" */
+    // TODO possibly considered implementing for faster searches
+
     depth = hdr->depth;
     parent = hdr;
 
@@ -3251,33 +3335,70 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         btree2_internal_t *internal;      // pointer to internal node in B-tree
         btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
 
-        // TODO
-        // Protect current node
-
-        // Locate record within the current node
-
-        if (/*record is found*/) {
-            // Handle found record
-
-            // Unprotect current node
-
-            // Set *found and return
-        } else {
-            // Get node pointer for next node to search
-
-            // Set pointer to next node to load
-            curr_node_ptr = /*next_node_ptr*/;
-
-            // Unprotect current node
+        /* Signature sanity check */
+        uint32_t signature = (uint32_t) readField(4, &(curr_node_ptr->addr));
+        if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
         }
 
+        // typedef struct {
+        //     /* Internal B-tree information */
+        //     btree2_hdr_t      *hdr; // ptr to pinned header
+        //     uint8_t           *int_native; // ptr native records               
+        //     btree2_node_ptr_t *node_ptrs; // ptr to node ptrs
+        //     uint16_t          nrec; // num records in node
+        //     uint16_t          depth; // depth of node
+        //     void              *parent;
+        // } btree2_internal_t;
+
+        /* TODO Set up internal node */
+        internal->hdr = hdr;
+        internal->int_native = ...;
+        internal->node_ptrs  = ...;
+        internal->nrec = curr_node_ptr->node_nrec;
+        internal->depth = depth;
+        internal->parent = parent;
+
+
+        // TODO - Locate record within the current node
+        // parse out locations and prep for descent
+        // locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp)
+
+        if (cmp > 0) {
+            idx++;
+        }
+        if (cmp != 0) {
+
+            /* Get node pointer for next node to search */
+
+            /* must set up new struct in this scope for curr_node_ptr, reset addr,  num rec etc.*/
+            
+
+        }
+        else {
+            // record located with specific idxx+ -> set as found
+
+            /* Make callback for current record */
+
+            // EXIT
+
+        }
+
+        depth--;
 
     }
-    // handle leaf node
+    /* Exit for leaf review*/
     {
-        H5B2_leaf_t *leaf;
+        /* Assume cur_node_ptr now pointing to leaf of interest*/
 
-        // Protect leaf node
+        // TODO: set leaf node addr
+        btree2_leaf_t *leaf;
+
+        /* Signature Sanity Check*/
+        uint32_t signature = (uint32_t) readField(4, &(curr_node_ptr->addr));
+        if (signature != H5_V2TREE_LEAF_SIGNATURE_LE) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
+        }
 
         // Locate record within the leaf node
 
