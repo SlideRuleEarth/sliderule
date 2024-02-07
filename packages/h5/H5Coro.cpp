@@ -3135,8 +3135,10 @@ void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, 
     findBTreeV2(bt2_name, udata, &attr_exists);
 
     /* Free allocations */
-    free(root_node_ptr); // free(bt2_name->root);
-    free(bt2_name);
+    free(root_node_ptr); // visible 
+    free(bt2_name->node_info); // hidden
+    free(bt2_name->nat_off); // hidden
+    free(bt2_name); // visible
 
     if (attr_exists == false) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
@@ -3234,6 +3236,31 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
 
 }
 
+/*----------------------------------------------------------------------------
+ * log2_gen - helper determines the log base two of a number
+ *----------------------------------------------------------------------------*/
+unsigned H5FileBuffer::log2_gen(uint64_t n) {
+    /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
+    unsigned r; // r will be log2(n)
+    unsigned int t, tt, ttt; // temporaries
+
+    if ((ttt = (unsigned)(n >> 32)))
+        if ((tt = (unsigned)(n >> 48)))
+            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t]
+                                          : 48 + (unsigned)LogTable256[tt & 0xFF];
+        else
+            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t]
+                                          : 32 + (unsigned)LogTable256[ttt & 0xFF];
+    else if ((tt = (unsigned)(n >> 16)))
+        r = (t = (unsigned)(n >> 24)) ? 24 + (unsigned)LogTable256[t] : 16 + (unsigned)LogTable256[tt & 0xFF];
+    else
+        // added 'uint8_t' cast to pacify PGCC compiler 
+        r = (t = (unsigned)(n >> 8)) ? 8 + (unsigned)LogTable256[t] : (unsigned)LogTable256[(uint8_t)n];
+
+    return (r);
+
+}
+
  /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
@@ -3265,7 +3292,8 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
     hdr->node_size = (uint32_t) readField(4, &pos);
     hdr->rrec_size = (uint32_t) readField(2, &pos);
-    hdr->depth = (uint16_t) readField(2, &pos);
+    uint16_t depth = (uint16_t) readField(2, &pos);
+    hdr->depth = depth;
     hdr->split_percent = (uint8_t) readField(1, &pos);
     hdr->merge_percent = (uint8_t) readField(1, &pos);
 
@@ -3287,11 +3315,88 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
     hdr->check_sum = readField(4, &pos);
 
-    /* Set up node info */
-    // TODO
+    /* Header_init follow */
 
-    /* Set up offsets for record reading */
-    // TODO
+    /* Allocate array of node info structs */
+    hdr->node_info = (btree2_node_info_t*)malloc((hdr->depth + 1) * sizeof(btree2_node_info_t));
+
+    /* Init leaf node info */
+    unsigned int H5B2_METADATA_PREFIX_SIZE = 10; // H5B2_LEAF = H5B2_METADATA_PREFIX_SIZE  == (unsigned) 10, see hdf macros
+    size_t sz_max_nrec = (((hdr->node_size) - H5B2_METADATA_PREFIX_SIZE) / (hdr->rrec_size));  
+
+    /* Mimic H5_CHECKED_ASSIGN */
+    if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "sz_max_nrec exceeds unsigned rep limit: %zu", sz_max_nrec);
+    }
+    else {
+        hdr->node_info[0].max_nrec = (unsigned) sz_max_nrec;
+    }
+
+    hdr->node_info[0].split_nrec = (hdr->node_info[0].max_nrec * hdr->split_percent) / 100;
+    hdr->node_info[0].merge_nrec = (hdr->node_info[0].max_nrec * hdr->merge_percent) / 100;
+    hdr->node_info[0].cum_max_nrec = hdr->node_info[0].max_nrec;
+    hdr->node_info[0].cum_max_nrec_size = 0;
+
+    // TODO - revisit factory set-ups
+    // hdr->node_info[0].nat_rec_fac = H5FL_fac_init(hdr->cls->nrec_size * hdr->node_info[0].max_nrec)))
+    // hdr->node_info[0].node_ptr_fac = NULL;
+
+    /* Allocate array of pointers to internal node native keys */
+    hdr->nat_off = (size_t *) malloc(((size_t)hdr->node_info[0].max_nrec) * sizeof(size_t));
+
+    /* Initialize offsets in native key block */
+    for (u = 0; u < hdr->node_info[0].max_nrec; u++)
+        hdr->nat_off[u] = hdr->cls->nrec_size * u;
+
+    
+    /* Compute size to compute num records in each record */
+    // H5VM_limit_enc_size((uint64_t)hdr->node_info[0].max_nrec) == r == (H5VM_log2_gen(limit) / 8) + 1;
+    unsigned u_max_nrec_size = (log2_gen((uint64_t)hdr->node_info[0].max_nrec) / 8) + 1;
+
+    if (u_max_nrec_size > std::numeric_limits<uint8_t>::max()) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %zu", u_max_nrec_size);
+    }
+    else {
+        hdr->max_nrec_size = (uint8_t) u_max_nrec_size;
+        unsigned int H5B2_SIZEOF_RECORDS_PER_NODE = 2;
+        assert(hdr->max_nrec_size <= H5B2_SIZEOF_RECORDS_PER_NODE);
+    }
+
+    /* Initialize internal node info */
+    // H5B2_METADATA_PREFIX_SIZE == H5B2_INT_PREFIX_SIZE 
+    if (depth > 0) {
+        for (unsigned u = 1; u < (unsigned)(depth + 1); u++) {
+            // Size of a internal node pointer (on disk) 
+            unsigned b2_int_ptr_size = (unsigned) hdr->sizeof_addr + hdr->max_nrec_size + hdr->node_info[(d)-1].cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u)   
+            // Number of records that fit into internal node 
+            sz_max_nrec = ((hdr->node_size - (H5B2_METADATA_PREFIX_SIZE + b2_int_ptr_size)) / (hdr->rrec_size + b2_int_ptr_size)); // = H5B2_NUM_INT_REC(hdr, u);
+            // size check
+            if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "sz_max_nrec exceeds unsigned rep limit: %zu", sz_max_nrec);
+            }
+            else {
+                hdr->node_info[u].max_nrec = sz_max_nrec;
+            }
+            
+            assert(hdr->node_info[u].max_nrec <= hdr->node_info[u - 1].max_nrec);
+            hdr->node_info[u].split_nrec = (hdr->node_info[u].max_nrec * hdr->split_percent) / 100;
+            hdr->node_info[u].merge_nrec = (hdr->node_info[u].max_nrec * hdr->merge_percent) / 100;
+            hdr->node_info[u].cum_max_nrec = ((hdr->node_info[u].max_nrec + 1) * hdr->node_info[u - 1].cum_max_nrec) + hdr->node_info[u].max_nrec;
+            u_max_nrec_size = (log2_gen((uint64_t)hdr->node_info[u].cum_max_nrec) / 8) + 1;
+
+            if (u_max_nrec_size > std::numeric_limits<uint8_t>::max()) {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %zu", u_max_nrec_size);
+            }
+            else {
+                hdr->node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;
+            }
+
+            // TODO - revisit factory setups
+            // hdr->node_info[u].nat_rec_fac = H5FL_fac_init(hdr->cls->nrec_size * hdr->node_info[u].max_nrec)
+            // hdr->node_info[u].node_ptr_fac = H5FL_fac_init(sizeof(H5B2_node_ptr_t) * (hdr->node_info[u].max_nrec + 1))
+        
+        }
+    }
 
     // TODO - MISSING SETS
     // set native record size
