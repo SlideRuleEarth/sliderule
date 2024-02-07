@@ -404,11 +404,9 @@ class H5FileBuffer
 
         /* Type 5 Record Representation -  native 'name' field index records in the v2 B-tree */
         typedef struct {
-            uint64_t id; // heap ID for attribute
-            uint8_t flags; // object header message flags for attribute
-            uint32_t corder; // 'creation order' field value
-            uint32_t hash; // hash of 'name' field value
-        } btree2_type5_rec_t;
+            uint8_t  id[7]; // heap ID for link, 7 stolen from H5G_DENSE_FHEAP_ID_LEN
+            uint32_t hash;  // hash of 'name' field value 
+        } btree2_type5_densename_rec_t;
 
         /* END OF KAT ADDED */
 

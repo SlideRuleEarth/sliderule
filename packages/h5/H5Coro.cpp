@@ -3155,6 +3155,64 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
 }
 
  /*----------------------------------------------------------------------------
+ * uint32Decode - helper for hash decode
+ *----------------------------------------------------------------------------*/
+void uint32Decode(const uint8_t* p, uint32_t& i) {
+    /* Decode using macro def in hdf5: https://github.com/HDFGroup/hdf5/blob/develop/src/H5encode.h#L178C1-L188C16 */
+    i = (uint32_t)(*p) & 0xff;
+    p++;
+    i |= ((uint32_t)(*p) & 0xff) << 8;
+    p++;
+    i |= ((uint32_t)(*p) & 0xff) << 16;
+    p++;
+    i |= ((uint32_t)(*p) & 0xff) << 24;
+    p++;
+}
+
+/*----------------------------------------------------------------------------
+ * log2_gen - helper determines the log base two of a number
+ *----------------------------------------------------------------------------*/
+unsigned H5FileBuffer::log2_gen(uint64_t n) {
+    /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
+    unsigned r; // r will be log2(n)
+    unsigned int t, tt, ttt; // temporaries
+
+    if ((ttt = (unsigned)(n >> 32)))
+        if ((tt = (unsigned)(n >> 48)))
+            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t]
+                                          : 48 + (unsigned)LogTable256[tt & 0xFF];
+        else
+            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t]
+                                          : 32 + (unsigned)LogTable256[ttt & 0xFF];
+    else if ((tt = (unsigned)(n >> 16)))
+        r = (t = (unsigned)(n >> 24)) ? 24 + (unsigned)LogTable256[t] : 16 + (unsigned)LogTable256[tt & 0xFF];
+    else
+        // added 'uint8_t' cast to pacify PGCC compiler 
+        r = (t = (unsigned)(n >> 8)) ? 8 + (unsigned)LogTable256[t] : (unsigned)LogTable256[(uint8_t)n];
+
+    return (r);
+
+}
+
+/*----------------------------------------------------------------------------
+ * decodeType5Record
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
+    /* Implementation of H5G__dense_btree2_name_decode */
+    // https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5Gbtree2.c#L286
+    
+    // TODO: add in readField for accurate pos updates OR increment val
+
+    btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
+    size_t H5G_DENSE_FHEAP_ID_LEN = 7;
+
+    /* Decode the record's fields */
+    uint32Decode(raw, nrecord->hash);
+    memcpy(nrecord->id, raw, H5G_DENSE_FHEAP_ID_LEN);
+}
+
+
+ /*----------------------------------------------------------------------------
  * compareType5Record
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::compareType5Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
@@ -3236,31 +3294,6 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
 
 }
 
-/*----------------------------------------------------------------------------
- * log2_gen - helper determines the log base two of a number
- *----------------------------------------------------------------------------*/
-unsigned H5FileBuffer::log2_gen(uint64_t n) {
-    /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
-    unsigned r; // r will be log2(n)
-    unsigned int t, tt, ttt; // temporaries
-
-    if ((ttt = (unsigned)(n >> 32)))
-        if ((tt = (unsigned)(n >> 48)))
-            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t]
-                                          : 48 + (unsigned)LogTable256[tt & 0xFF];
-        else
-            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t]
-                                          : 32 + (unsigned)LogTable256[ttt & 0xFF];
-    else if ((tt = (unsigned)(n >> 16)))
-        r = (t = (unsigned)(n >> 24)) ? 24 + (unsigned)LogTable256[t] : 16 + (unsigned)LogTable256[tt & 0xFF];
-    else
-        // added 'uint8_t' cast to pacify PGCC compiler 
-        r = (t = (unsigned)(n >> 8)) ? 8 + (unsigned)LogTable256[t] : (unsigned)LogTable256[(uint8_t)n];
-
-    return (r);
-
-}
-
  /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
@@ -3306,7 +3339,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     /* Set cls based methods - type 5 only for first v */
     switch(hdr->type) {
         case H5B2_GRP_DENSE_NAME_ID:
-            hdr->decode = &H5FileBuffer::readAttributeMsg;
+            hdr->decode = &H5FileBuffer::decodeType5Record;
             hdr->compare = &H5FileBuffer::compareType5Record;
             break;
         default:
@@ -3436,34 +3469,61 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     cmp = -1;
     curr_pos = H5B2_POS_ROOT;
      
+    /* Instantiate internal; realloc inside node / record ptrs */
+    btree2_internal_t *internal = (btree2_internal_t *) calloc(sizeof(btree2_internal_t));
+
     while (depth > 0) {
-        btree2_internal_t *internal;      // pointer to internal node in B-tree
         btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
 
+        /* INTERNAL NODE SET UP */
+        uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
+
         /* Signature sanity check */
-        uint32_t signature = (uint32_t) readField(4, &(curr_node_ptr->addr));
+        uint32_t signature = (uint32_t) readField(4, &internal_pos);
         if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
         }
 
-        // typedef struct {
-        //     /* Internal B-tree information */
-        //     btree2_hdr_t      *hdr; // ptr to pinned header
-        //     uint8_t           *int_native; // ptr native records               
-        //     btree2_node_ptr_t *node_ptrs; // ptr to node ptrs
-        //     uint16_t          nrec; // num records in node
-        //     uint16_t          depth; // depth of node
-        //     void              *parent;
-        // } btree2_internal_t;
+        /* Version verification */
+        uint8_t version = (uint8_t) readField(1, &internal_pos);
+        if (signature != 0) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
+        }
 
-        /* TODO Set up internal node */
+        /* B-tree Type verification */
+        uint8_t type = (uint8_t) readField(1, &internal_pos);
+        if ((btree2_subid_t)type != hdr->type) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid type for internal node: %u, expected from hdr: %u", type, hdr->type);
+        }
+
+        /* Data Intake Prep -  H5B2__cache_int_deserialize */
         internal->hdr = hdr;
-        internal->int_native = ...;
-        internal->node_ptrs  = ...;
-        internal->nrec = curr_node_ptr->node_nrec;
+        internal->nrec = curr_node_ptr->node_nrec; // assume internal reflected in current ptr
         internal->depth = depth;
         internal->parent = parent;
 
+        // TODO: possibly revisit due to block factory methods
+        /* Allocate space for the native keys in memory */
+        internal->int_native = (uint8_t *)malloc((size_t)(hdr->rrec_size)*(internal->nrec));
+        /* Allocate space for the node pointers in memory - num ptrs = num records + 1 */
+        internal->node_ptrs  = (btree2_node_ptr_t *)malloc(sizeof(btree2_node_ptr_t) * ((unsigned)(internal->nrec + 1))) ;
+
+        /* Deserialize records for internal node */
+        uint8_t* native = internal->int_native;
+        for (unsigned u = 0; u < internal->nrec; u++) {
+
+            /* Decode record - modifies native arr directly */
+            hdr->decode(&internal_pos, native);
+            
+            // if ((udata->hdr->cls->decode)(image, native, udata->hdr->cb_ctx) < 0)
+
+            /* Move to next record */
+            // image += udata->hdr->rrec_size;
+            // native += udata->hdr->cls->nrec_size;
+
+        } 
+
+        /* END OF INTERNAL NODE SETUP */
 
         // TODO - Locate record within the current node
         // parse out locations and prep for descent
@@ -3491,7 +3551,14 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
         depth--;
 
+
     }
+
+    /* Free at Internal */
+    free(internal->int_native);
+    free(internal->node_ptrs);
+    free(internal);
+
     /* Exit for leaf review*/
     {
         /* Assume cur_node_ptr now pointing to leaf of interest*/
