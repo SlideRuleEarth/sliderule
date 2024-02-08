@@ -3157,7 +3157,7 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
  /*----------------------------------------------------------------------------
  * uint32Decode - helper for hash decode
  *----------------------------------------------------------------------------*/
-void uint32Decode(const uint8_t* p, uint32_t& i) {
+void H5FileBuffer::uint32Decode(const uint8_t* p, uint32_t& i) {
     /* Decode using macro def in hdf5: https://github.com/HDFGroup/hdf5/blob/develop/src/H5encode.h#L178C1-L188C16 */
     i = (uint32_t)(*p) & 0xff;
     p++;
@@ -3167,6 +3167,52 @@ void uint32Decode(const uint8_t* p, uint32_t& i) {
     p++;
     i |= ((uint32_t)(*p) & 0xff) << 24;
     p++;
+}
+
+ /*----------------------------------------------------------------------------
+ * addrDecode - helper
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p) {
+    // decode from buffer at **pp (aka pos), out into addr_p
+    // updates the pointer to point to the next byte after the address 
+    // see H5F_addr_decode_len
+
+    bool all_zero = true;
+    unsigned u;
+
+    /* Reset value in destination */
+    *addr_p = 0;
+
+    /* Decode bytes from address */
+    for (u = 0; u < addr_len; u++) {
+        uint8_t c; /* Local decoded byte */
+
+        /* Get decoded byte (and advance pointer) */
+        c = *(*pp)++;
+
+        /* Check for non-undefined address byte value */
+        if (c != 0xff)
+            all_zero = false;
+
+        if (u < sizeof(*addr_p)) {
+            haddr_t tmp = c; /* Local copy of address, for casting */
+
+            /* Shift decoded byte to correct position */
+            tmp <<= (u * 8); /*use tmp to get casting right */
+
+            /* Merge into already decoded bytes */
+            *addr_p |= tmp;
+        } /* end if */
+        else if (!all_zero)
+            assert(0 == **pp); /*overflow */
+    }                          /* end for */
+
+    /* If 'all_zero' is still true, the address was entirely composed of '0xff'
+     *  bytes, which is the encoded form of 'HADDR_UNDEF', so set the destination
+     *  to that value */
+    if (all_zero)
+        *addr_p = UINT64_MAX; // TODO: this macro may not be imported; use #include <cstdint> if not
+
 }
 
 /*----------------------------------------------------------------------------
@@ -3438,6 +3484,79 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 }
 
  /*----------------------------------------------------------------------------
+ * openInternalNode
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t curr_node_ptr) {
+    /* Set up internal node structure from given addr start: internal_pos - assume main allocstion and free occurs on outside findBTreeV2 */
+    
+    /* Signature sanity check */
+    uint32_t signature = (uint32_t) readField(4, &internal_pos);
+    if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
+    }
+
+    /* Version verification */
+    uint8_t version = (uint8_t) readField(1, &internal_pos);
+    if (signature != 0) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
+    }
+
+    /* B-tree Type verification */
+    uint8_t type = (uint8_t) readField(1, &internal_pos);
+    if ((btree2_subid_t)type != hdr->type) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid type for internal node: %u, expected from hdr: %u", type, hdr->type);
+    }
+
+    /* Data Intake Prep -  H5B2__cache_int_deserialize */
+    internal->hdr = hdr;
+    internal->nrec = curr_node_ptr->node_nrec; // assume internal reflected in current ptr
+    internal->depth = depth;
+    internal->parent = parent;
+
+    // TODO: possibly revisit due to block factory methods
+    /* Allocate space for the native keys in memory */
+    internal->int_native = (uint8_t *)malloc((size_t)(hdr->rrec_size)*(internal->nrec));
+    /* Allocate space for the node pointers in memory - num ptrs = num records + 1 */
+    internal->node_ptrs  = (btree2_node_ptr_t *)malloc(sizeof(btree2_node_ptr_t) * ((unsigned)(internal->nrec + 1))) ;
+
+    /* Deserialize records for internal node */
+    uint8_t* native = internal->int_native;
+    for (unsigned u = 0; u < internal->nrec; u++) {
+
+        /* Decode record via set decode method from type- modifies native arr directly */
+        hdr->decode(&internal_pos, native); // TODO - consider possible err checking
+
+        /* Move to next record */
+        internal_pos += hdr->rrec_size;
+        native += hdr->cls->nrec_size;
+
+    } 
+    
+    /* Deserialize node pointers for internal node */
+    btree2_node_ptr_t *int_node_ptr = internal->node_ptrs;
+    for (u = 0; u < (unsigned)(internal->nrec + 1); u++) {
+        /* Decode node address -- see H5F_addr_decode */
+        size_t addr_size = (size_t) metaData.offsetsize; // as defined by hdf spec
+        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr))
+        
+        // TODO
+        // UINT64DECODE_VAR
+        // H5_CHECKED_ASSIGN(int_node_ptr->node_nrec, uint16_t, node_nrec, int);
+
+        if (internal->depth > 1) {
+            // UINT64DECODE_VAR
+        }
+        else {
+            int_node_ptr->all_nrec = int_node_ptr->node_nrec;
+        }
+
+    }
+
+    // TODO complete set up
+
+}
+
+ /*----------------------------------------------------------------------------
  * findBTreeV2
  *----------------------------------------------------------------------------*/
  void H5FileBuffer::findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found) {
@@ -3475,55 +3594,9 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     while (depth > 0) {
         btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
 
-        /* INTERNAL NODE SET UP */
+        /* INTERNAL NODE SET UP - Write into internal */
         uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
-
-        /* Signature sanity check */
-        uint32_t signature = (uint32_t) readField(4, &internal_pos);
-        if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
-        }
-
-        /* Version verification */
-        uint8_t version = (uint8_t) readField(1, &internal_pos);
-        if (signature != 0) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
-        }
-
-        /* B-tree Type verification */
-        uint8_t type = (uint8_t) readField(1, &internal_pos);
-        if ((btree2_subid_t)type != hdr->type) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid type for internal node: %u, expected from hdr: %u", type, hdr->type);
-        }
-
-        /* Data Intake Prep -  H5B2__cache_int_deserialize */
-        internal->hdr = hdr;
-        internal->nrec = curr_node_ptr->node_nrec; // assume internal reflected in current ptr
-        internal->depth = depth;
-        internal->parent = parent;
-
-        // TODO: possibly revisit due to block factory methods
-        /* Allocate space for the native keys in memory */
-        internal->int_native = (uint8_t *)malloc((size_t)(hdr->rrec_size)*(internal->nrec));
-        /* Allocate space for the node pointers in memory - num ptrs = num records + 1 */
-        internal->node_ptrs  = (btree2_node_ptr_t *)malloc(sizeof(btree2_node_ptr_t) * ((unsigned)(internal->nrec + 1))) ;
-
-        /* Deserialize records for internal node */
-        uint8_t* native = internal->int_native;
-        for (unsigned u = 0; u < internal->nrec; u++) {
-
-            /* Decode record - modifies native arr directly */
-            hdr->decode(&internal_pos, native);
-            
-            // if ((udata->hdr->cls->decode)(image, native, udata->hdr->cb_ctx) < 0)
-
-            /* Move to next record */
-            // image += udata->hdr->rrec_size;
-            // native += udata->hdr->cls->nrec_size;
-
-        } 
-
-        /* END OF INTERNAL NODE SETUP */
+        openInternalNode(internal, hdr, internal_pos);
 
         // TODO - Locate record within the current node
         // parse out locations and prep for descent
