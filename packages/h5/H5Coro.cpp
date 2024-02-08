@@ -3215,6 +3215,22 @@ void H5FileBuffer::addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* add
 
 }
 
+
+void H5FileBuffer::varDecode(const uint8_t* p, int n, uint8_t l) {
+    /* Taken from DECODE_VAR https://github.com/mannau/h5-libwin/blob/24f3884b145417299810f9ec16c41abc92d850df/include/hdf5/H5Fprivate.h#L145 */
+    /* ARG TYPES TAKEN FROM REFERENCE HERE: https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5B2cache.c#L668 */
+    /* Decode a variable-sized buffer */
+    /* (Assumes that the high bits of the integer will be zero) */
+    
+    size_t _i;
+    n = 0;
+    (p) += l;
+    for (_i = 0; _i < l; _i++) {
+        n = (n << 8) | *(--p);
+    }
+    (p) += l;
+}
+
 /*----------------------------------------------------------------------------
  * log2_gen - helper determines the log base two of a number
  *----------------------------------------------------------------------------*/
@@ -3488,7 +3504,11 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t curr_node_ptr) {
     /* Set up internal node structure from given addr start: internal_pos - assume main allocstion and free occurs on outside findBTreeV2 */
-    
+    uint8_t *native;  
+    unsigned u;
+    uint32_t stored_chksum; 
+    int node_nrec = 0;
+
     /* Signature sanity check */
     uint32_t signature = (uint32_t) readField(4, &internal_pos);
     if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
@@ -3520,8 +3540,9 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     internal->node_ptrs  = (btree2_node_ptr_t *)malloc(sizeof(btree2_node_ptr_t) * ((unsigned)(internal->nrec + 1))) ;
 
     /* Deserialize records for internal node */
-    uint8_t* native = internal->int_native;
-    for (unsigned u = 0; u < internal->nrec; u++) {
+    native = internal->int_native;
+
+    for (u = 0; u < internal->nrec; u++) {
 
         /* Decode record via set decode method from type- modifies native arr directly */
         hdr->decode(&internal_pos, native); // TODO - consider possible err checking
@@ -3537,23 +3558,43 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     for (u = 0; u < (unsigned)(internal->nrec + 1); u++) {
         /* Decode node address -- see H5F_addr_decode */
         size_t addr_size = (size_t) metaData.offsetsize; // as defined by hdf spec
-        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr))
-        
-        // TODO
-        // UINT64DECODE_VAR
-        // H5_CHECKED_ASSIGN(int_node_ptr->node_nrec, uint16_t, node_nrec, int);
+
+        uint64_t snap_internal = internal_pos;
+        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)) // internal pos value should change
+
+        /* TEMPORARY: Sanity check to make sure internal pos is moving */
+        if (snap_internal == internal_pos){
+            throw RunTimeException(CRITICAL, RTE_ERROR, "addrDecode did not advance internal_pos in internal node set up");
+        }
+
+        /* UINT64DECODE_VAR(image, node_nrec, udata->hdr->max_nrec_size); */
+        varDecode(internal_pos, node_nrec, hdr->max_nrec_size);
+
+        /* H5_CHECKED_ASSIGN(int_node_ptr->node_nrec, uint16_t, node_nrec, int); */
+        if (node_nrec > std::numeric_limits<uint16_t>::max()) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "node_nrec exceeds uint16 rep limit: %zu", node_nrec);
+        }
+        else {
+            int_node_ptr->node_nrec = (uint16_t) node_nrec;
+        }
 
         if (internal->depth > 1) {
-            // UINT64DECODE_VAR
+            // UINT64DECODE_VAR(image, int_node_ptr->all_nrec, udata->hdr->node_info[udata->depth - 1].cum_max_nrec_size);
+            varDecode(internal_pos, int_node_ptr->all_nrec, hdr->node_info[internal->depth - 1].cum_max_nrec_size)
         }
         else {
             int_node_ptr->all_nrec = int_node_ptr->node_nrec;
         }
 
+        /* Move to next node pointer */
+        int_node_ptr++;
+
     }
 
-    // TODO complete set up
+    /* Metadata checksum */
+    UINT32DECODE(internal_pos, stored_chksum);
 
+    /* Return structure inside of internal */
 }
 
  /*----------------------------------------------------------------------------
