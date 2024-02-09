@@ -95,6 +95,7 @@ option (ENABLE_BEST_EFFORT_CONDA_ENV "Attempt to alleviate some issues with runn
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" OFF)
 option (USE_AWS_PACKAGE "Include the AWS package" OFF)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
+option (USE_CRE_PACKAGE "Include the CRE package" OFF)
 option (USE_GEO_PACKAGE "Include the GEO package" OFF)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
 option (USE_LEGACY_PACKAGE "Include the Legacy package" ON)

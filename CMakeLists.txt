@@ -121,6 +121,10 @@ if(${USE_CCSDS_PACKAGE})
     add_subdirectory (packages/ccsds)
 endif()
 
+if(${USE_CRE_PACKAGE})
+    add_subdirectory (packages/cre)
+endif()
+
 if(${USE_GEO_PACKAGE})
     add_subdirectory (packages/geo)
 endif()
