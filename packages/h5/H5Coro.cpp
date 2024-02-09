@@ -67,8 +67,17 @@
 
 #define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
 #define NC_FILLVAL_NAME "_FillValue"
+
+/* HDF5 SRC */
 #define H5O_MSG_FLAG_SHARED 0x02u
 #define H5O_FHEAP_ID_LEN 8
+#define H5HF_ID_VERS_MASK 0xC0
+#define H5HF_ID_VERS_CURR 0x00
+#define H5HF_ID_TYPE_MAN      0x00
+#define H5HF_ID_TYPE_HUGE     0x10
+#define H5HF_ID_TYPE_TINY     0x20
+#define H5HF_ID_TYPE_RESERVED 0x30
+#define H5HF_ID_TYPE_MASK     0x30 
 
 /******************************************************************************
  * H5 FUTURE CLASS
@@ -3295,24 +3304,49 @@ void H5FileBuffer::decodeType8Record(const uint8_t *raw, void *_nrecord) {
 /*----------------------------------------------------------------------------
  * fheapLocate
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate() {
+void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, H5HF_operator_t op, void *op_data) {
 
-    // TODO
+    /* Dispatcher for heap ID types (manual support only for latest ver) */
 
-    /* Dispatcher for ID types */
+    const uint8_t *id = (const uint8_t *)_id; // object ID
+    uint8_t id_flags; // heap ID flag bits 
 
-    /* Case Manual */
+    /* Get the ID flags */
+    id_flags = *id;
 
-    /* Case Huge */
+    if ((id_flags & H5HF_ID_VERS_MASK) != H5HF_ID_VERS_CURR) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Incorrect heap ID version");
+    }
 
-    /* Case Tiny */
+    /* Check type of object in heap */
+    if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
+        /* Operate on object from managed heap blocks */
+        fheapLocate_Manual(hdr, id, op, op_data, 0);
+    } 
+    else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
+        /* NOT IMPLEMENTED - Operate on 'huge' object from file */
+        // fheapLocate_Huge();
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Huge heap ID reading not supported");
+    } 
+    else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_TINY) {
+        /* NOT IMPLEMENTED - Operate on 'tiny' object from file */
+        // fheapLocate_Tiny();
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Tiny heap ID reading not supported");
+    } 
+    else {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported Heap ID");
+    }
 
 }
 
 /*----------------------------------------------------------------------------
  * fheapLocate_Manual
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate_Manual(){
+void H5FileBuffer::fheapLocate_Manual(heap_info_t* hdr, const uint8_t *id, H5HF_operator_t op, void *op_data, unsigned op_flags){
+    /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
+
+    // called with fheapLocate_Manual(hdr, id, op, op_data);
+
     // TODO
 
     /* Find using ID as navigator fheap */

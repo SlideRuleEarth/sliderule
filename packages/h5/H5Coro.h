@@ -430,6 +430,9 @@ class H5FileBuffer
             uint32_t hash;  // hash of 'name' field value 
         } btree2_type5_densename_rec_t;
 
+        /* Typedef for 'op' operations */
+        typedef void (*H5HF_operator_t)(const void *obj /*in*/, size_t obj_len, void *op_data /*in,out*/);
+
         /* END OF KAT ADDED */
 
         typedef union {
