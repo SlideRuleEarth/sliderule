@@ -12,6 +12,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/h5p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/lscre.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/metric.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/samples.lua

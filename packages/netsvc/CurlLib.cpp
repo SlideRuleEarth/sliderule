@@ -62,7 +62,7 @@ void CurlLib::deinit (void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<string*>* headers)
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<string*>* headers, const char* unix_socket)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -99,6 +99,11 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+        if(unix_socket)
+        {
+            curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, (char*)unix_socket);
+        }
 
         if(verb == EndpointObject::GET && rqst.size > 0)
         {

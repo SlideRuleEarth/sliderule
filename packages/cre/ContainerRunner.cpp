@@ -35,6 +35,8 @@
 
 #include "ContainerRunner.h"
 #include "OsApi.h"
+#include "CurlLib.h" // netsvc package dependency
+#include "EndpointObject.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -121,13 +123,45 @@ ContainerRunner::~ContainerRunner (void)
 void* ContainerRunner::controlThread (void* parm)
 {
     ContainerRunner* cr = static_cast<ContainerRunner*>(parm);
+    const char* result = NULL;
+
+    /* Run Container */
+    const char* unix_socket = "/var/run/docker.sock";
+    const char* url= "http://localhost/v1.44/containers/create";
+    FString data("{\"Image\": \"%s\"}", cr->parms->image);
+    List<string*> headers(5);
+    string* content_type = new string("Content-Type: application/json");
+    headers.add(content_type);
+    const char* response = NULL;
+    long http_code = CurlLib::request(EndpointObject::POST, url, data.c_str(), &response, NULL, false, false, &headers, unix_socket);
+    if(http_code != EndpointObject::OK)
+    {
+        mlog(CRITICAL, "Failed to start container <%s>: %s", cr->parms->image, response);
+    }
+
+    /* Clean Up Response */
+    delete [] response;
+    response = NULL;
+
+    /* Wait for Completion and Get Result */
+    if(http_code == EndpointObject::OK)
+    {
+        /* Poll Completion of Container */
+        // using timeout
+
+        /* Get Result */
+        // from well known file
+    }
+
+    /* Signal Complete */
     cr->resultLock.lock();
     {
-        cr->result = StringLib::duplicate("Hello World");
+        cr->result = result;
         cr->resultLock.signal(RESULT_SIGNAL);
     }
     cr->resultLock.unlock();
     cr->signalComplete();
+
     return NULL;
 }
 
@@ -180,4 +214,29 @@ int ContainerRunner::luaResult (lua_State* L)
     }
 
     return returnLuaStatus(L, status, num_ret);
+}
+
+/*----------------------------------------------------------------------------
+ * luaList - list() -> json of running containers
+ *----------------------------------------------------------------------------*/
+int ContainerRunner::luaList (lua_State* L)
+{
+    const char* unix_socket = "/var/run/docker.sock";
+    const char* url= "http://localhost/v1.43/containers/json";
+ 
+    /* Make Request for List of Containers */
+    const char* response = NULL;
+    int size = 0;
+    long http_code = CurlLib::request(EndpointObject::GET, url, NULL, &response, &size, false, false, NULL, unix_socket);
+
+    /* Push Result */
+    lua_pushinteger(L, http_code);
+    lua_pushinteger(L, size);
+    lua_pushstring(L, response);
+
+    /* Clean Up */
+    delete [] response;
+
+    /* Return */
+    return returnLuaStatus(L, true, 4);
 }
