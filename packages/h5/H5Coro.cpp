@@ -67,6 +67,8 @@
 
 #define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
 #define NC_FILLVAL_NAME "_FillValue"
+#define H5O_MSG_FLAG_SHARED 0x02u
+#define H5O_FHEAP_ID_LEN 8
 
 /******************************************************************************
  * H5 FUTURE CLASS
@@ -3257,13 +3259,13 @@ unsigned H5FileBuffer::log2_gen(uint64_t n) {
 }
 
 /*----------------------------------------------------------------------------
- * decodeType5Record
+ * decodeType5Record - Group Decoding
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     /* Implementation of H5G__dense_btree2_name_decode */
     // https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5Gbtree2.c#L286
     
-    // TODO: add in readField for accurate pos updates OR increment val
+    // TODO: check on VS readField pos accuracy
 
     btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
     size_t H5G_DENSE_FHEAP_ID_LEN = 7;
@@ -3273,17 +3275,72 @@ void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     memcpy(nrecord->id, raw, H5G_DENSE_FHEAP_ID_LEN);
 }
 
+/*----------------------------------------------------------------------------
+ * decodeType8Record - Group Decoding
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::decodeType8Record(const uint8_t *raw, void *_nrecord) {
+    
+    // TODO: check on VS readField pos accuracy
+
+    btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
+    /* Decode the record's fields */
+    memcpy(nrecord->id.id, raw, (size_t)H5O_FHEAP_ID_LEN);
+    raw += H5O_FHEAP_ID_LEN;
+    nrecord->flags = *raw++;
+    uint32Decode(raw, nrecord->corder);
+    uint32Decode(raw, nrecord->hash);
+
+}
+
+/*----------------------------------------------------------------------------
+ * fheapLocate
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::fheapLocate() {
+
+    // TODO
+
+    /* Dispatcher for ID types */
+
+    /* Case Manual */
+
+    /* Case Huge */
+
+    /* Case Tiny */
+
+}
+
+/*----------------------------------------------------------------------------
+ * fheapLocate_Manual
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::fheapLocate_Manual(){
+    // TODO
+
+    /* Find using ID as navigator fheap */
+
+    /* Perform operation based on demand */
+
+}
+
+/*----------------------------------------------------------------------------
+ * fheapNameCmp
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::fheapNameCmp(){
+    // TODO
+
+
+}
 
  /*----------------------------------------------------------------------------
  * compareType5Record
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::compareType5Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
+void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
 {
-    // TODO
-    /* Implementation for H5B2_GRP_DENSE_NAME_ID record type - type 5 */
+    /* Implementation of H5A__dense_btree2_name_compare with type 8 - H5B2_GRP_DENSE_NAME_ID*/
+    /* See: https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L220 */
 
+    /* Cast for Attributes */ 
     const btree2_ud_common_t *bt2_udata = (const btree2_ud_common_t *)_bt2_udata;
-    const btree2_type5_rec_t *bt2_rec   = (const btree2_type5_rec_t *)_bt2_rec;
+    const btree2_type8_densename_rec_t *bt2_rec   = (const btree2_type8_densename_rec_t *)_bt2_rec;
 
     /* Check hash value */
     if (bt2_udata->name_hash < bt2_rec->hash)
@@ -3291,40 +3348,40 @@ void H5FileBuffer::compareType5Record(const void *_bt2_udata, const void *_bt2_r
     else if (bt2_udata->name_hash > bt2_rec->hash)
         *result = 1;
     else {
-        // TODO 
-        // compare hash -> extract in prev function
-        // if successful, use existing readFractal to ID the matching name + heap ID
+        // TODO - init cmp fheap struct
+        // H5A_fh_ud_cmp_t fh_udata;
+        // https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L49
 
-        // HDF BASED LOGIC
-        // H5A_fh_ud_cmp_t fh_udata; /* User data for fractal heap 'op' callback */
-        // H5HF_t         *fheap;    /* Fractal heap handle to use for finding object */
+        // TODO: check on complete match to H5HF_t attrs
+        heap_info_t *fheap; // equiv to: pointer to internal fractal heap header info
 
-        // /* Sanity check */
-        // assert(bt2_udata->name_hash == bt2_rec->hash);
+        /* Sanity check */
+        assert(bt2_udata->name_hash == bt2_rec->hash);
 
-        // /* Prepare user data for callback */
-        // /* down */
-        // fh_udata.name          = bt2_udata->name;
-        // fh_udata.record        = bt2_rec;
-        // fh_udata.found_op      = bt2_udata->found_op;
-        // fh_udata.found_op_data = bt2_udata->found_op_data;
+        if (bt2_rec->flags & H5O_MSG_FLAG_SHARED) {
+            // fheap = bt2_udata->shared_fheap;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No support implemented for shared fractal heaps");
+        }
+        else {
+            // TODO redo if completeness not valid
+            fheap = bt2_udata->fheap_info;
+        }
 
-        // /* up */
-        // fh_udata.cmp = 0;
+        // TODO
+        // go down fheap to check on attr
+        // read out message if found
+        // H5HF_op -> H5HF__man_op -> H5HF__man_op_real -> H5A__dense_fh_name_cmp
 
-        // /* Check for attribute in shared storage */
-        // if (bt2_rec->flags & H5O_MSG_FLAG_SHARED)
-        //     fheap = bt2_udata->shared_fheap;
-        // else
-        //     fheap = bt2_udata->fheap;
-        // assert(fheap);
+        fheapLocate(fheap, &bt2_rec->id, fheapNameCmp, &fh_udata);
 
+        // hdf5 source
         // /* Check if the user's attribute and the B-tree's attribute have the same name */
         // if (H5HF_op(fheap, &bt2_rec->id, H5A__dense_fh_name_cmp, &fh_udata) < 0)
         //     HGOTO_ERROR(H5E_HEAP, H5E_CANTCOMPARE, FAIL, "can't compare btree2 records");
 
         // /* Callback will set comparison value */
         // *result = fh_udata.cmp;
+        
     } 
 }
 
@@ -3335,23 +3392,22 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
     
     /* Performs a binary search to locate a record in a sorted array of records. */
 
-    unsigned lo = 0, hi; // low & high index values
-    unsigned my_idx = 0; // final index value
+    unsigned lo        = 0, hi; // low & high index values
+    unsigned my_idx    = 0;     // final index value
+
     *cmp = -1;
+
     hi = nrec;
     while (lo < hi && *cmp) {
+        /* call on type compare method */
         my_idx = (lo + hi) / 2;
-
-        // TODO: 
-        // need to build record/parse out info, cannot do auto casting like program
-
-        // call compare function, type set from header in prev calls e.g. type 5 - H5B2_GRP_DENSE_NAME_ID
-        (hdr->compare)(udata, native + rec_off[my_idx], cmp)
+        (hdr->compare)(udata, native + rec_off[my_idx], cmp);
         if (*cmp < 0)
             hi = my_idx;
         else
             lo = my_idx + 1;
-    } 
+    }
+
     *idx = my_idx;
 
 }
@@ -3400,10 +3456,14 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
     /* Set cls based methods - type 5 only for first v */
     switch(hdr->type) {
-        case H5B2_GRP_DENSE_NAME_ID:
-            hdr->decode = &H5FileBuffer::decodeType5Record;
-            hdr->compare = &H5FileBuffer::compareType5Record;
+        case H5B2_ATTR_DENSE_NAME_ID:
+            hdr->decode = &H5FileBuffer::decodeType8Record;
+            hdr->compare = &H5FileBuffer::compareType8Record;
             break;
+        // case H5B2_GRP_DENSE_NAME_ID:
+        //     hdr->decode = &H5FileBuffer::decodeType5Record;
+        //     hdr->compare = &H5FileBuffer::compareType5Record;
+        //     break;
         default:
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type: %d", hdr->type);
     }
@@ -3545,7 +3605,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     for (u = 0; u < internal->nrec; u++) {
 
         /* Decode record via set decode method from type- modifies native arr directly */
-        hdr->decode(&internal_pos, native); // TODO - consider possible err checking
+        (hdr->decode)(&internal_pos, native); // TODO - consider possible err checking
 
         /* Move to next record */
         internal_pos += hdr->rrec_size;
@@ -3592,7 +3652,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     }
 
     /* Metadata checksum */
-    UINT32DECODE(internal_pos, stored_chksum);
+    varDecode(internal_pos, stored_chksum);
 
     /* Return structure inside of internal */
 }
@@ -3637,11 +3697,11 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
 
         /* INTERNAL NODE SET UP - Write into internal */
         uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
-        openInternalNode(internal, hdr, internal_pos);
+        openInternalNode(internal, hdr, internal_pos); // internal set with all info for locate record
 
-        // TODO - Locate record within the current node
-        // parse out locations and prep for descent
-        // locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp)
+        /* LOCATE RECORD - via type compare method */
+        // locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
+        locateRecordBTreeV2(hdr, internal->nrec, hdr->nat_off, internal->int_native, udata, &idx, &cmp);
 
         if (cmp > 0) {
             idx++;

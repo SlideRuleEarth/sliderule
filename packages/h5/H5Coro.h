@@ -303,6 +303,14 @@ class H5FileBuffer
             // void             *found_op_data; // callback data when correct attribute is found
         } btree2_ud_common_t;
 
+        typedef struct {
+            const char                     *name; // name of attribute to compare
+            const btree2_type5_densename_rec_t *record; // v2 B-tree record for attribute
+            // H5A_bt2_found_t                 found_op;      /* Callback when correct attribute is found */
+            // void                           *found_op_data; /* Callback data when correct attribute is found */
+
+        } fheap_ud_cmp_t;
+
         /* A "node pointer" to another B-tree node */
         typedef struct {
             uint64_t addr; // address of pointed node
@@ -401,6 +409,20 @@ class H5FileBuffer
             uint16_t          depth; // depth of node
             void              *parent;
         } btree2_internal_t;
+
+        /* Fractal heap ID type for shared message & attribute heap IDs. */
+        typedef union {
+            uint8_t  id[8]; /* Buffer to hold ID, for encoding/decoding */
+            uint64_t val;  /* Value, for quick comparisons */
+        } fheap_id_t;
+
+        /* Type 8 Record Representation */
+        typedef struct {
+            fheap_id_t id; // heap ID for attribute
+            uint8_t flags; // object header message flags for attribute
+            uint32_t corder; // 'creation order' field value
+            uint32_t hash; // hash of 'name' field value
+        } btree2_type8_densename_rec_t;
 
         /* Type 5 Record Representation -  native 'name' field index records in the v2 B-tree */
         typedef struct {
