@@ -43,6 +43,7 @@
 const char* ContainerRunner::OBJECT_TYPE = "ContainerRunner";
 const char* ContainerRunner::LUA_META_NAME = "ContainerRunner";
 const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
+    {"result",      ContainerRunner::luaResult},
     {NULL,          NULL}
 };
 
@@ -97,8 +98,11 @@ void ContainerRunner::deinit (void)
  *----------------------------------------------------------------------------*/
 ContainerRunner::ContainerRunner (lua_State* L, const CreParms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms)
+    parms(_parms),
+    result(NULL)
 {
+    active = true;
+    controlPid = new Thread(controlThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -106,4 +110,74 @@ ContainerRunner::ContainerRunner (lua_State* L, const CreParms* _parms):
  *----------------------------------------------------------------------------*/
 ContainerRunner::~ContainerRunner (void)
 {
+    active = false;
+    delete controlPid;
+    delete result;
+}
+
+/*----------------------------------------------------------------------------
+ * controlThread
+ *----------------------------------------------------------------------------*/
+void* ContainerRunner::controlThread (void* parm)
+{
+    ContainerRunner* cr = static_cast<ContainerRunner*>(parm);
+    cr->resultLock.lock();
+    {
+        cr->result = StringLib::duplicate("Hello World");
+        cr->resultLock.signal(RESULT_SIGNAL);
+    }
+    cr->resultLock.unlock();
+    cr->signalComplete();
+    return NULL;
+}
+
+
+/*----------------------------------------------------------------------------
+ * luaResult - result() -> result string
+ *----------------------------------------------------------------------------*/
+int ContainerRunner::luaResult (lua_State* L)
+{
+    ContainerRunner* lua_obj = NULL;
+    bool status = false;
+    int num_ret = 1;
+
+    try
+    {
+        /* Get Parameters */
+        lua_obj = dynamic_cast<ContainerRunner*>(getLuaSelf(L, 1));
+
+        /* Get Result */
+        lua_obj->resultLock.lock();
+        {
+            /* Wait for Result */
+            if(lua_obj->parms->timeout == IO_PEND)
+            {
+                while((lua_obj->result == NULL) && (lua_obj->active))
+                {
+                    lua_obj->resultLock.wait(RESULT_SIGNAL, SYS_TIMEOUT);
+                }
+            }
+            else if(lua_obj->parms->timeout > 0)
+            {
+                long timeout_ms = lua_obj->parms->timeout * 1000;
+                while((lua_obj->result == NULL) && (lua_obj->active) && (timeout_ms > 0))
+                {
+                    lua_obj->resultLock.wait(RESULT_SIGNAL, SYS_TIMEOUT);
+                    timeout_ms -= SYS_TIMEOUT;
+                }
+            }
+
+            /* Push Result */
+            lua_pushstring(L, lua_obj->result);
+            status = lua_obj->result != NULL;
+            num_ret++;
+        }
+        lua_obj->resultLock.unlock();
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+
+    return returnLuaStatus(L, status, num_ret);
 }

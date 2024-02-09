@@ -56,6 +56,9 @@ class ContainerRunner: public LuaObject
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
+        static const int RESULT_SIGNAL = 0;
+        static const int DEFAULT_TIMEOUT = 600;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -66,18 +69,31 @@ class ContainerRunner: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-        static void deinit      (void);
+        static int      luaCreate           (lua_State* L);
+        static void     init                (void);
+        static void     deinit              (void);
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool            active;
+        Thread*         controlPid;
+        const char*     result;
+        Cond            resultLock;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                    ContainerRunner      (lua_State* L, const CreParms* _parms);
-        virtual     ~ContainerRunner     (void);
+                        ContainerRunner     (lua_State* L, const CreParms* _parms);
+        virtual         ~ContainerRunner    (void);
+
+        static void*    controlThread       (void* parm);
+
+        static int      luaResult           (lua_State* L);
 };
 
 #endif  /* __container_runner__ */

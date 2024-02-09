@@ -2,6 +2,7 @@
 # Endpoints #
 install (
     FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/cre.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
         ${CMAKE_CURRENT_LIST_DIR}/selftests/example_engine_endpoint.lua

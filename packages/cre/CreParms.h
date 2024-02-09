@@ -53,16 +53,20 @@ class CreParms: public LuaObject
 
         static const char* SELF;
         static const char* IMAGE;
+        static const char* TIMEOUT;
 
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
+
+        static const int DEFAULT_TIMEOUT = 600;
 
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
         const char* image; // container image
+        int timeout;
 
         /*--------------------------------------------------------------------
         * Methods

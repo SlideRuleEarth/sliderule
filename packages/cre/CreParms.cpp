@@ -42,6 +42,7 @@
 
 const char* CreParms::SELF                = "output";
 const char* CreParms::IMAGE               = "image";
+const char* CreParms::TIMEOUT             = "timeout";
 
 const char* CreParms::OBJECT_TYPE = "CreParms";
 const char* CreParms::LUA_META_NAME = "CreParms";
@@ -82,7 +83,8 @@ int CreParms::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 CreParms::CreParms (lua_State* L, int index):
     LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    image               (NULL)
+    image               (NULL),
+    timeout             (DEFAULT_TIMEOUT)
 {
     /* Populate Object from Lua */
     try
@@ -92,10 +94,16 @@ CreParms::CreParms (lua_State* L, int index):
         {
             bool field_provided = false;
 
-            /* Output Path */
+            /* Image */
             lua_getfield(L, index, IMAGE);
             image = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, image, &field_provided));
             if(field_provided) mlog(DEBUG, "Setting %s to %s", IMAGE, image);
+            lua_pop(L, 1);
+
+            /* Timeout */
+            lua_getfield(L, index, TIMEOUT);
+            timeout = LuaObject::getLuaInteger(L, -1, true, timeout, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", TIMEOUT, timeout);
             lua_pop(L, 1);
         }
     }
