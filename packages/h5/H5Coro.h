@@ -283,10 +283,25 @@ class H5FileBuffer
             msg_type_t              msg_type;
             int                     num_objects;
             int                     cur_objects; // mutable
-            uint64_t                root_blk_addr // kat mod
+            uint64_t                root_blk_addr; // kat mod
         } heap_info_t;
 
         /* KAT ADDED */
+
+        /* Lookup table for general log2(n) routine */
+        static constexpr const unsigned char LogTable256[] = {
+            /* clang-clang-format off */
+            0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5,
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+            /* clang-clang-format on */
+        };
+
         typedef struct {
             uint32_t                chunk_size;
             uint32_t                filter_mask;
@@ -304,14 +319,6 @@ class H5FileBuffer
             // H5A_bt2_found_t   found_op;      // callback when correct attribute is found
             // void             *found_op_data; // callback data when correct attribute is found
         } btree2_ud_common_t;
-
-        typedef struct {
-            const char                     *name; // name of attribute to compare
-            const btree2_type5_densename_rec_t *record; // v2 B-tree record for attribute
-            // H5A_bt2_found_t                 found_op;      /* Callback when correct attribute is found */
-            // void                           *found_op_data; /* Callback data when correct attribute is found */
-
-        } fheap_ud_cmp_t;
 
         /* A "node pointer" to another B-tree node */
         typedef struct {
@@ -435,6 +442,13 @@ class H5FileBuffer
         /* Typedef for 'op' operations */
         typedef void (*H5HF_operator_t)(const void *obj /*in*/, size_t obj_len, void *op_data /*in,out*/);
 
+        typedef struct {
+            const char                         *name; // name of attribute to compare
+            const btree2_type8_densename_rec_t *record; // v2 B-tree record for attribute
+            // H5A_bt2_found_t                 found_op;      /* Callback when correct attribute is found */
+            // void                           *found_op_data; /* Callback data when correct attribute is found */
+        } fheap_ud_cmp_t;
+
         /* END OF KAT ADDED */
 
         typedef union {
@@ -484,7 +498,7 @@ class H5FileBuffer
         void                readDataset           (info_t* info);
 
         uint64_t            readSuperblock        (void);
-        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr);
         int                 readDirectBlock       (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);

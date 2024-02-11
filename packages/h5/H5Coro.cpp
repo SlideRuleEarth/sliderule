@@ -1006,7 +1006,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl, *heap_info_t heap_info_ptr)
+int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr)
 {
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS = 0x02;
 
@@ -1143,15 +1143,15 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     } 
     else // populate passed struct
     {
-        heap_info_ptr->table_width        = table_width,
-        heap_info_ptr->curr_num_rows      = curr_num_rows,
-        heap_info_ptr->starting_blk_size  = (int)starting_blk_size,
-        heap_info_ptr->max_dblk_size      = (int)max_dblk_size,
-        heap_info_ptr->blk_offset_size    = ((max_heap_size + 7) / 8),
-        heap_info_ptr->dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0),
-        heap_info_ptr->msg_type           = msg_type,
-        heap_info_ptr->num_objects        = (int)mg_objs,
-        heap_info_ptr->cur_objects        = 0 // updated as objects are read
+        heap_info_ptr->table_width        = table_width;
+        heap_info_ptr->curr_num_rows      = curr_num_rows;
+        heap_info_ptr->starting_blk_size  = (int)starting_blk_size;
+        heap_info_ptr->max_dblk_size      = (int)max_dblk_size;
+        heap_info_ptr->blk_offset_size    = ((max_heap_size + 7) / 8);
+        heap_info_ptr->dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0);
+        heap_info_ptr->msg_type           = msg_type;
+        heap_info_ptr->num_objects        = (int)mg_objs;
+        heap_info_ptr->cur_objects        = 0; // updated as objects are read
         heap_info_ptr->root_blk_addr      = root_blk_addr;
     }
 
@@ -3081,7 +3081,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 
     uint64_t address_snapshot = metaData.address;
     uint64_t heap_addr_snapshot = heap_address;
-    heap_info_t *heap_info = malloc(sizeof(heap_info_t));
+    heap_info_t *heap_info = (heap_info_t*) malloc(sizeof(heap_info_t));
 
     /* Wrap with general exceptions to avoid memory leaks */
     try {
@@ -3095,7 +3095,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
             if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
             {
                 print2term("Entering dense attribute search; No main attribute message match. \n");
-                readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], heap_info)
+                readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], heap_info);
             }
         #endif
     } catch (...) {
@@ -3124,7 +3124,7 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
     if (shared_attributes)
     {
         print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
-        return 0;
+        return;
     }
 
     /* Open Btree via Header */
@@ -3160,7 +3160,7 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
  *----------------------------------------------------------------------------*/
 bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
     /* Equiv to H5SM_type_shared of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/develop/src/H5SM.c#L328 */
-    print2term("TODO: isTypeSharedAttrs implementation, omit support for v2 btree \n");
+    print2term("TODO: isTypeSharedAttrs implementation, omit support for v2 btree, recieved type_id %u \n", type_id);
     return false;
 }
 
@@ -3205,7 +3205,7 @@ void H5FileBuffer::addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* add
             all_zero = false;
 
         if (u < sizeof(*addr_p)) {
-            haddr_t tmp = c; /* Local copy of address, for casting */
+            uint64_t tmp = c; /* Local copy of address, for casting */
 
             /* Shift decoded byte to correct position */
             tmp <<= (u * 8); /*use tmp to get casting right */
@@ -3342,6 +3342,9 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, H5HF_operator_
 void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF_operator_t op, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
+    // temp print to please compiler
+    print2term("Arguments to fheapLocate_Managed: heap info addr: %u , id: %u, op: %u, op_data: %u, op_flags: %u \n", (unsigned int) hdr, (unsigned int)id, (unsigned int)op,(unsigned int) op_data, (unsigned int)op_flags);
+
     // called with fheapLocate_Managed(hdr, id, op, op_data);
 
     // TODO
@@ -3356,6 +3359,9 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF
  * fheapNameCmp
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
+
+    // temp satisfy print
+    print2term("fheapNameCmp args: %u, %u, %u", (unsigned int) obj, (unsigned int) obj_len, (unsigned int) op_data);
     // TODO
     return;
 
@@ -3385,6 +3391,11 @@ void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_r
 
         // TODO: check on complete match to H5HF_t attrs
         heap_info_t *fheap; // equiv to: pointer to internal fractal heap header info
+        fheap_ud_cmp_t fh_udata;
+
+        /* Set fh udata */
+        fh_udata.name = bt2_udata->name;
+        fh_udata.record = bt2_rec;
 
         /* Sanity check */
         assert(bt2_udata->name_hash == bt2_rec->hash);
@@ -3531,7 +3542,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     hdr->nat_off = (size_t *) malloc(((size_t)hdr->node_info[0].max_nrec) * sizeof(size_t));
 
     /* Initialize offsets in native key block */
-    for (u = 0; u < hdr->node_info[0].max_nrec; u++)
+    for (unsigned u = 0; u < hdr->node_info[0].max_nrec; u++)
         hdr->nat_off[u] = hdr->cls->nrec_size * u;
 
     
