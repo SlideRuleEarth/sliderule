@@ -1152,6 +1152,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->msg_type           = msg_type,
         heap_info_ptr->num_objects        = (int)mg_objs,
         heap_info_ptr->cur_objects        = 0 // updated as objects are read
+        heap_info_ptr->root_blk_addr      = root_blk_addr;
     }
 
     /* Process Blocks */
@@ -3094,9 +3095,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
             if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
             {
                 print2term("Entering dense attribute search; No main attribute message match. \n");
-                // TODO - finish dense call
-                // TODO - check on dlvl modifications for the call with datasetPath 
-                // readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], heap_info)
+                readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], heap_info)
             }
         #endif
     } catch (...) {
@@ -3112,7 +3111,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 /*----------------------------------------------------------------------------
  * readDenseAttributes
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::readDenseAttrs (uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
+void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr) {
     /* Equiv to H5A__dense_open of HDF5 SRC Lib: https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
     btree2_ud_common_t udata; // user data passed to v2
@@ -3252,11 +3251,9 @@ unsigned H5FileBuffer::log2_gen(uint64_t n) {
 
     if ((ttt = (unsigned)(n >> 32)))
         if ((tt = (unsigned)(n >> 48)))
-            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t]
-                                          : 48 + (unsigned)LogTable256[tt & 0xFF];
+            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t] : 48 + (unsigned)LogTable256[tt & 0xFF];
         else
-            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t]
-                                          : 32 + (unsigned)LogTable256[ttt & 0xFF];
+            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t] : 32 + (unsigned)LogTable256[ttt & 0xFF];
     else if ((tt = (unsigned)(n >> 16)))
         r = (t = (unsigned)(n >> 24)) ? 24 + (unsigned)LogTable256[t] : 16 + (unsigned)LogTable256[tt & 0xFF];
     else
@@ -3321,7 +3318,7 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, H5HF_operator_
     /* Check type of object in heap */
     if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
         /* Operate on object from managed heap blocks */
-        fheapLocate_Manual(hdr, id, op, op_data, 0);
+        fheapLocate_Managed(hdr, id, op, op_data, 0);
     } 
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
         /* NOT IMPLEMENTED - Operate on 'huge' object from file */
@@ -3340,12 +3337,12 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, H5HF_operator_
 }
 
 /*----------------------------------------------------------------------------
- * fheapLocate_Manual
+ * fheapLocate_Managed
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate_Manual(heap_info_t* hdr, const uint8_t *id, H5HF_operator_t op, void *op_data, unsigned op_flags){
+void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF_operator_t op, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
-    // called with fheapLocate_Manual(hdr, id, op, op_data);
+    // called with fheapLocate_Managed(hdr, id, op, op_data);
 
     // TODO
 
@@ -3358,14 +3355,14 @@ void H5FileBuffer::fheapLocate_Manual(heap_info_t* hdr, const uint8_t *id, H5HF_
 /*----------------------------------------------------------------------------
  * fheapNameCmp
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapNameCmp(){
+void H5FileBuffer::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
     // TODO
-
+    return;
 
 }
 
  /*----------------------------------------------------------------------------
- * compareType5Record
+ * compareType8Record
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
 {

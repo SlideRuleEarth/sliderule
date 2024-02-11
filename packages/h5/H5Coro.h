@@ -272,6 +272,7 @@ class H5FileBuffer
             NUM_FILTERS             = 7
         } filter_t;
 
+        /* KAT MODIFIED */
         typedef struct {
             int                     table_width;
             int                     curr_num_rows;
@@ -282,6 +283,7 @@ class H5FileBuffer
             msg_type_t              msg_type;
             int                     num_objects;
             int                     cur_objects; // mutable
+            uint64_t                root_blk_addr // kat mod
         } heap_info_t;
 
         /* KAT ADDED */
@@ -516,6 +518,24 @@ class H5FileBuffer
 
         static uint64_t     metaGetKey            (const char* url);
         static void         metaGetUrl            (char* url, const char* resource, const char* dataset);
+
+        /* KAT ADDED METHODS */
+        void                readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr);
+        bool                isTypeSharedAttrs (unsigned type_id);
+        void                uint32Decode(const uint8_t* p, uint32_t& i);
+        void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
+        void                varDecode(const uint8_t* p, int n, uint8_t l);
+        unsigned            log2_gen(uint64_t n);
+        void                decodeType5Record(const uint8_t *raw, void *_nrecord);
+        void                decodeType8Record(const uint8_t *raw, void *_nrecord);
+        void                fheapLocate(heap_info_t *hdr, const void *_id, H5HF_operator_t op, void *op_data);
+        void                fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF_operator_t op, void *op_data, unsigned op_flags);
+        void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
+        void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
+        void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
+        void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr);
+        void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t curr_node_ptr);
+        void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
 
         /*--------------------------------------------------------------------
         * Data
