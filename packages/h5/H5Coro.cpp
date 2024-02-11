@@ -3142,7 +3142,7 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
     udata.corder = 0;
 
     /* Set udata pass down */
-    findBTreeV2(bt2_name, udata, &attr_exists);
+    findBTreeV2(bt2_name, &udata, &attr_exists);
 
     /* Free allocations */
     free(root_node_ptr); // visible 
@@ -3343,7 +3343,7 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
     // temp print to please compiler
-    print2term("Arguments to fheapLocate_Managed: heap info addr: %u , id: %u, op: %u, op_data: %u, op_flags: %u \n", (unsigned int) hdr, (unsigned int)id, (unsigned int)op,(unsigned int) op_data, (unsigned int)op_flags);
+    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , id: %lu, op: %lu, op_data: %lu, op_flags: %lu \n", (uintptr_t) hdr, (uintptr_t)id, (uintptr_t)op,(uintptr_t) op_data, (uintptr_t)op_flags);
 
     // called with fheapLocate_Managed(hdr, id, op, op_data);
 
@@ -3361,7 +3361,7 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF
 void H5FileBuffer::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
 
     // temp satisfy print
-    print2term("fheapNameCmp args: %u, %u, %u", (unsigned int) obj, (unsigned int) obj_len, (unsigned int) op_data);
+    print2term("fheapNameCmp args: %lu, %lu, %lu", (uintptr_t) obj, (uintptr_t) obj_len, (uintptr_t) op_data);
     // TODO
     return;
 
@@ -3414,7 +3414,7 @@ void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_r
         // read out message if found
         // H5HF_op -> H5HF__man_op -> H5HF__man_op_real -> H5A__dense_fh_name_cmp
 
-        fheapLocate(fheap, &bt2_rec->id, fheapNameCmp, &fh_udata);
+        fheapLocate(fheap, &bt2_rec->id, &H5FileBuffer::fheapNameCmp, &fh_udata);
 
         // hdf5 source
         // /* Check if the user's attribute and the B-tree's attribute have the same name */
@@ -3543,15 +3543,14 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
 
     /* Initialize offsets in native key block */
     for (unsigned u = 0; u < hdr->node_info[0].max_nrec; u++)
-        hdr->nat_off[u] = hdr->cls->nrec_size * u;
+        hdr->nat_off[u] = hdr->nrec_size * u;
 
-    
     /* Compute size to compute num records in each record */
     // H5VM_limit_enc_size((uint64_t)hdr->node_info[0].max_nrec) == r == (H5VM_log2_gen(limit) / 8) + 1;
     unsigned u_max_nrec_size = (log2_gen((uint64_t)hdr->node_info[0].max_nrec) / 8) + 1;
 
     if (u_max_nrec_size > std::numeric_limits<uint8_t>::max()) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %zu", u_max_nrec_size);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %d", u_max_nrec_size);
     }
     else {
         hdr->max_nrec_size = (uint8_t) u_max_nrec_size;
@@ -3564,7 +3563,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     if (depth > 0) {
         for (unsigned u = 1; u < (unsigned)(depth + 1); u++) {
             // Size of a internal node pointer (on disk) 
-            unsigned b2_int_ptr_size = (unsigned) hdr->sizeof_addr + hdr->max_nrec_size + hdr->node_info[(d)-1].cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u)   
+            unsigned b2_int_ptr_size = (unsigned) hdr->sizeof_addr + hdr->max_nrec_size + hdr->node_info[(depth)-1].cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u)   
             // Number of records that fit into internal node 
             sz_max_nrec = ((hdr->node_size - (H5B2_METADATA_PREFIX_SIZE + b2_int_ptr_size)) / (hdr->rrec_size + b2_int_ptr_size)); // = H5B2_NUM_INT_REC(hdr, u);
             // size check
@@ -3582,7 +3581,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
             u_max_nrec_size = (log2_gen((uint64_t)hdr->node_info[u].cum_max_nrec) / 8) + 1;
 
             if (u_max_nrec_size > std::numeric_limits<uint8_t>::max()) {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %zu", u_max_nrec_size);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %u", u_max_nrec_size);
             }
             else {
                 hdr->node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;
@@ -3598,7 +3597,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     // TODO - MISSING SETS
     // set native record size
 
-    return hdr;
+    return;
 }
 
  /*----------------------------------------------------------------------------
@@ -3631,9 +3630,9 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
 
     /* Data Intake Prep -  H5B2__cache_int_deserialize */
     internal->hdr = hdr;
-    internal->nrec = curr_node_ptr->node_nrec; // assume internal reflected in current ptr
-    internal->depth = depth;
-    internal->parent = parent;
+    internal->nrec = curr_node_ptr.node_nrec; // assume internal reflected in current ptr
+    internal->depth = hdr->depth;
+    internal->parent = hdr->parent;
 
     // TODO: possibly revisit due to block factory methods
     /* Allocate space for the native keys in memory */
@@ -3651,7 +3650,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
 
         /* Move to next record */
         internal_pos += hdr->rrec_size;
-        native += hdr->cls->nrec_size;
+        native += hdr->nrec_size;
 
     } 
     
@@ -3662,7 +3661,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
         size_t addr_size = (size_t) metaData.offsetsize; // as defined by hdf spec
 
         uint64_t snap_internal = internal_pos;
-        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)) // internal pos value should change
+        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)); // internal pos value should change
 
         /* TEMPORARY: Sanity check to make sure internal pos is moving */
         if (snap_internal == internal_pos){
@@ -3670,11 +3669,11 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
         }
 
         /* UINT64DECODE_VAR(image, node_nrec, udata->hdr->max_nrec_size); */
-        varDecode(internal_pos, node_nrec, hdr->max_nrec_size);
+        varDecode((uint8_t *)internal_pos, node_nrec, hdr->max_nrec_size);
 
         /* H5_CHECKED_ASSIGN(int_node_ptr->node_nrec, uint16_t, node_nrec, int); */
         if (node_nrec > std::numeric_limits<uint16_t>::max()) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "node_nrec exceeds uint16 rep limit: %zu", node_nrec);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "node_nrec exceeds uint16 rep limit: %d", node_nrec);
         }
         else {
             int_node_ptr->node_nrec = (uint16_t) node_nrec;
@@ -3682,7 +3681,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
 
         if (internal->depth > 1) {
             // UINT64DECODE_VAR(image, int_node_ptr->all_nrec, udata->hdr->node_info[udata->depth - 1].cum_max_nrec_size);
-            varDecode(internal_pos, int_node_ptr->all_nrec, hdr->node_info[internal->depth - 1].cum_max_nrec_size)
+            varDecode((uint8_t *)internal_pos, int_node_ptr->all_nrec, hdr->node_info[internal->depth - 1].cum_max_nrec_size);
         }
         else {
             int_node_ptr->all_nrec = int_node_ptr->node_nrec;
@@ -3694,9 +3693,11 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     }
 
     /* Metadata checksum */
-    varDecode(internal_pos, stored_chksum);
+    // TODO - restore
+    // varDecode(internal_pos, stored_chksum);
 
     /* Return structure inside of internal */
+    return;
 }
 
  /*----------------------------------------------------------------------------
@@ -3704,7 +3705,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
  *----------------------------------------------------------------------------*/
  void H5FileBuffer::findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found) {
 
-    btree2_node_ptr_t curr_node_ptr;    // node pointer info for current node
+    btree2_node_ptr_t* curr_node_ptr;    // node pointer info for current node
     void *parent = NULL;                // parent of current node
     uint16_t depth;                     // current depth of the tree
     int cmp;                            // comparison value of records
@@ -3716,7 +3717,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     // curr_node_ptr->addr is the uint64_t addr 
     // uint16_t node_nrec & uint64_t all_nrec; also set
 
-    if (curr_node_ptr.node_nrec == 0) {
+    if (curr_node_ptr->node_nrec == 0) {
         *found = false;
         return;
     }
@@ -3732,14 +3733,14 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     curr_pos = H5B2_POS_ROOT;
      
     /* Instantiate internal; realloc inside node / record ptrs */
-    btree2_internal_t *internal = (btree2_internal_t *) calloc(sizeof(btree2_internal_t));
+    btree2_internal_t *internal = (btree2_internal_t *) std::calloc(1, sizeof(btree2_internal_t));
 
     while (depth > 0) {
         btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
 
         /* INTERNAL NODE SET UP - Write into internal */
         uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
-        openInternalNode(internal, hdr, internal_pos); // internal set with all info for locate record
+        openInternalNode(internal, hdr, internal_pos, curr_node_ptr); // internal set with all info for locate record
 
         /* LOCATE RECORD - via type compare method */
         // locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
@@ -3749,6 +3750,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
             idx++;
         }
         if (cmp != 0) {
+            print2term("TODO \n");
 
             /* Get node pointer for next node to search */
 
@@ -3757,6 +3759,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
 
         }
         else {
+            print2term("TODO \n");
             // record located with specific idxx+ -> set as found
 
             /* Make callback for current record */
@@ -3780,7 +3783,7 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
         /* Assume cur_node_ptr now pointing to leaf of interest*/
 
         // TODO: set leaf node addr
-        btree2_leaf_t *leaf;
+        // btree2_leaf_t *leaf;
 
         /* Signature Sanity Check*/
         uint32_t signature = (uint32_t) readField(4, &(curr_node_ptr->addr));
@@ -3790,17 +3793,17 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
 
         // Locate record within the leaf node
 
-        if (/*record is found*/) {
-            // Handle found record
+        // if (/*record is found*/) {
+        //     // Handle found record
 
-            // Unprotect leaf node
+        //     // Unprotect leaf node
 
-            // Set *found and return
-        } else {
-            // Handle record not found
+        //     // Set *found and return
+        // } else {
+        //     // Handle record not found
 
-            // Unprotect leaf node
-        }
+        //     // Unprotect leaf node
+        // }
     }
 
 }

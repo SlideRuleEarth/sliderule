@@ -380,11 +380,11 @@ class H5FileBuffer
 
             // const btree2_type_t *cls;
             btree2_subid_t type; // "class" H5B2_class_t under hdf5 title
-            size_t numrec_size; // native record size
+            size_t nrec_size; // native record size
 
             // callback methods - excluded store, context, encode, debug
-            int (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
-            int (*decode)(const uint8_t *raw, void *record, void *ctx); // decode record from disk
+            void (H5FileBuffer::*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
+            void (H5FileBuffer::*decode)(const uint8_t *raw, void *record); // decode record from disk
 
             uint32_t node_size; // size in bytes of all B-tree nodes
             uint32_t rrec_size; // size in bytes of the B-tree record
@@ -393,7 +393,7 @@ class H5FileBuffer
             uint8_t  merge_percent; // percent full that a node needs to be decrease below before it is split
             
             btree2_node_info_t *node_info;  // table of node info structs for current depth of B-tree
-            btree2_node_ptr_t root; // root struct
+            btree2_node_ptr_t *root; // root struct
             size_t *nat_off; // array of offsets of native records
             uint64_t check_sum;
 
