@@ -161,6 +161,10 @@ class H5FileBuffer
                             H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only=false);
         virtual             ~H5FileBuffer       (void);
 
+        // static void                decodeType5Record(const uint8_t *raw, void *_nrecord);
+        // static void                decodeType8Record(const uint8_t *raw, void *_nrecord);
+        // static void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
+
     protected:
 
         /*--------------------------------------------------------------------
@@ -383,8 +387,8 @@ class H5FileBuffer
             size_t nrec_size; // native record size
 
             // callback methods - excluded store, context, encode, debug
-            void (H5FileBuffer::*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
-            void (H5FileBuffer::*decode)(const uint8_t *raw, void *record); // decode record from disk
+            void (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
+            void (*decode)(const uint8_t *raw, void *record); // decode record from disk
 
             uint32_t node_size; // size in bytes of all B-tree nodes
             uint32_t rrec_size; // size in bytes of the B-tree record
@@ -439,8 +443,8 @@ class H5FileBuffer
             uint32_t hash;  // hash of 'name' field value 
         } btree2_type5_densename_rec_t;
 
-        /* Typedef for 'op' operations */
-        typedef void (*H5HF_operator_t)(const void *obj /*in*/, size_t obj_len, void *op_data /*in,out*/);
+        /* Typedef for 'op' operations - REMOVED FOR CASE SWITCH */
+        // typedef void (H5FileBuffer::*H5HF_operator_t)(const void *obj /*in*/, size_t obj_len, void *op_data /*in,out*/);
 
         typedef struct {
             const char                         *name; // name of attribute to compare
@@ -538,17 +542,19 @@ class H5FileBuffer
         bool                isTypeSharedAttrs (unsigned type_id);
         void                uint32Decode(const uint8_t* p, uint32_t& i);
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
-        void                varDecode(const uint8_t* p, int n, uint8_t l);
+        void                varDecode(uint8_t* p, int n, uint8_t l);
         unsigned            log2_gen(uint64_t n);
+
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
         void                decodeType8Record(const uint8_t *raw, void *_nrecord);
-        void                fheapLocate(heap_info_t *hdr, const void *_id, H5HF_operator_t op, void *op_data);
-        void                fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, H5HF_operator_t op, void *op_data, unsigned op_flags);
-        void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
+
+        void                fheapLocate(heap_info_t *hdr, const void *_id, void *op_data);
+        void                fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, void *op_data, unsigned op_flags);
+        void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
         void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr);
-        void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t curr_node_ptr);
+        void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
 
         /*--------------------------------------------------------------------
