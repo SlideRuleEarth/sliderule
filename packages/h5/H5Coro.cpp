@@ -3095,7 +3095,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
                 readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], heap_info_dense);
             }
         #endif
-    } catch (...) {
+    } catch (const RunTimeException& e) {
         free(heap_info_dense);
         throw RunTimeException(CRITICAL, RTE_ERROR, "DENSE ATTR READ FAILURE, FREE ALLOCS");
     }
@@ -3520,10 +3520,10 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
     }
     hdr->type = (btree2_subid_t) readField(1, &pos);
-    if (hdr->type != H5B2_GRP_DENSE_NAME_ID) 
+    if (hdr->type != H5B2_ATTR_DENSE_NAME_ID) 
     {
         free(hdr);
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version, manually accepting only type 8 record support: %hhu", version);
 
     }
 
