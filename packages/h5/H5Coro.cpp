@@ -1134,7 +1134,8 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0),
         .msg_type           = msg_type,
         .num_objects        = (int)mg_objs,
-        .cur_objects        = 0 // updated as objects are read
+        .cur_objects        = 0, // updated as objects are read
+        .root_blk_addr      = root_blk_addr
     };
 
     if (heap_info_ptr != NULL) // Populate passed struct
