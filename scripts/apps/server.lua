@@ -38,6 +38,7 @@ local orchestrator_url          = cfgtbl["orchestrator"] or os.getenv("ORCHESTRA
 local org_name                  = cfgtbl["cluster"] or os.getenv("CLUSTER")
 local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PROVISIONING_SYSTEM")
 local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
+local container_registry        = cfgtbl["container_registry"] or os.getenv("CONTAINER_REGISTRY")
 
 --------------------------------------------------
 -- System Configuration
@@ -81,6 +82,11 @@ end
 if authenticate_to_podaac then
     local script_parms = {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"}
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("PodaacAuthScript")
+end
+
+-- Configure Container Registry -- 
+if __cre__ then
+   cre.setregistry(container_registry) 
 end
 
 --------------------------------------------------

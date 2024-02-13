@@ -54,6 +54,7 @@ int cre_open (lua_State* L)
     static const struct luaL_Reg cre_functions[] = {
         {"container",   ContainerRunner::luaCreate},
         {"list",        ContainerRunner::luaList},
+        {"setregistry", ContainerRunner::luaSetRegistry},
         {"parms",       CreParms::luaCreate},
         {NULL,          NULL}
     };

@@ -96,8 +96,25 @@ CreParms::CreParms (lua_State* L, int index):
 
             /* Image */
             lua_getfield(L, index, IMAGE);
-            image = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, image, &field_provided));
-            if(field_provided) mlog(DEBUG, "Setting %s to %s", IMAGE, image);
+            const char* _image = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, image, &field_provided));
+            if(field_provided)
+            {
+                /* Check Image for ONLY Legal Characters */
+                string s(_image);
+                for (auto c_iter = s.begin(); c_iter < s.end(); ++c_iter)
+                {
+                    int c = *c_iter;
+                    if(!isalnum(c) && (c != '/') && (c != '.') && (c != '-'))
+                    {
+                        delete [] _image;
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);
+                    }
+                }
+
+                /* Set Image */
+                image = _image;
+                mlog(DEBUG, "Setting %s to %s", IMAGE, image);
+            }
             lua_pop(L, 1);
 
             /* Timeout */

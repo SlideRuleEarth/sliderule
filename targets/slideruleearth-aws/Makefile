@@ -14,6 +14,8 @@
 #           The binaries are sufficient, but pay close attention to the local package versions
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
+#     * conda-lock
+#           The Python base image used for the container runtime environment uses conda-lock to create the conda dependency file
 #
 # To release a version of SlideRule:
 #     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
@@ -60,6 +62,7 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+PYTHON_CONTAINER_STAGE_DIR = $(STAGE)/container-runtime-python
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
@@ -186,6 +189,21 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform init
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
+
+container-runtime-python-lock: ## create the lock file for the container runtime environment base python image
+#	cd ../python-container && conda-lock -p linux-aarch64 -f environment.yml
+	cd ../python-container && conda-lock render -p linux-aarch64
+
+container-runtime-python-docker: ## create the container runtime environment base python image
+	-rm -Rf $(PYTHON_CONTAINER_STAGE_DIR)
+	mkdir -p $(PYTHON_CONTAINER_STAGE_DIR)
+	cp ../python-container/* $(PYTHON_CONTAINER_STAGE_DIR)
+	cd $(PYTHON_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/python-container:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(VERSION)
+	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(MAJOR_VERSION)
+	
+container-runtime-python-run: ## run the build environment docker container
+	docker run -it -v $(ROOT):/host --rm --name cre $(ECR)/python-container:$(VERSION) python /host/targets/python-container/helloworld.py
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

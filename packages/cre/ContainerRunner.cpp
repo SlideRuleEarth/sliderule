@@ -49,6 +49,7 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const char* ContainerRunner::REGISTRY = NULL;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -91,6 +92,14 @@ void ContainerRunner::deinit (void)
 {
 }
 
+/*----------------------------------------------------------------------------
+ * getRegistry
+ *----------------------------------------------------------------------------*/
+const char* ContainerRunner::getRegistry (void)
+{
+    return REGISTRY;
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -128,20 +137,14 @@ void* ContainerRunner::controlThread (void* parm)
     /* Run Container */
     const char* unix_socket = "/var/run/docker.sock";
     const char* url= "http://localhost/v1.44/containers/create";
-    FString data("{\"Image\": \"%s\"}", cr->parms->image);
+    FString data("{\"Image\": \"%s/%s\"}", REGISTRY, cr->parms->image);
     List<string*> headers(5);
     string* content_type = new string("Content-Type: application/json");
     headers.add(content_type);
     const char* response = NULL;
     long http_code = CurlLib::request(EndpointObject::POST, url, data.c_str(), &response, NULL, false, false, &headers, unix_socket);
-    if(http_code != EndpointObject::OK)
-    {
-        mlog(CRITICAL, "Failed to start container <%s>: %s", cr->parms->image, response);
-    }
-
-    /* Clean Up Response */
+    if(http_code != EndpointObject::OK) mlog(CRITICAL, "Failed to start container <%s>: %s", cr->parms->image, response);
     delete [] response;
-    response = NULL;
 
     /* Wait for Completion and Get Result */
     if(http_code == EndpointObject::OK)
@@ -239,4 +242,32 @@ int ContainerRunner::luaList (lua_State* L)
 
     /* Return */
     return returnLuaStatus(L, true, 4);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSetRegistry - setregistry(<registry>)
+ *
+ *  - MUST BE SET BEFORE FIRST USE
+ *----------------------------------------------------------------------------*/
+int ContainerRunner::luaSetRegistry (lua_State* L)
+{
+    bool status = false;
+    try
+    {
+        /* Get Parameters */
+        const char* registry_name = getLuaString(L, 1);
+
+        /* Set Registry */
+        if(REGISTRY == NULL)
+        {
+            REGISTRY = StringLib::duplicate(registry_name);
+            status = true;
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Failed to set registry: %s", e.what());
+    }
+
+    return returnLuaStatus(L, status);
 }
