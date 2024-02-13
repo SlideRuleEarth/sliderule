@@ -60,12 +60,6 @@ class ContainerRunner: public LuaObject
         static const int DEFAULT_TIMEOUT = 600;
 
         /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        const CreParms* parms;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -88,12 +82,13 @@ class ContainerRunner: public LuaObject
         Thread*         controlPid;
         const char*     result;
         Cond            resultLock;
+        CreParms*       parms;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ContainerRunner     (lua_State* L, const CreParms* _parms);
+                        ContainerRunner     (lua_State* L, CreParms* _parms);
         virtual         ~ContainerRunner    (void);
 
         static void*    controlThread       (void* parm);

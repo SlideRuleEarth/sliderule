@@ -42,6 +42,7 @@
 
 const char* CreParms::SELF                = "output";
 const char* CreParms::IMAGE               = "image";
+const char* CreParms::SCRIPT              = "script";
 const char* CreParms::TIMEOUT             = "timeout";
 
 const char* CreParms::OBJECT_TYPE = "CreParms";
@@ -84,6 +85,7 @@ int CreParms::luaCreate (lua_State* L)
 CreParms::CreParms (lua_State* L, int index):
     LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     image               (NULL),
+    script              (NULL),
     timeout             (DEFAULT_TIMEOUT)
 {
     /* Populate Object from Lua */
@@ -96,25 +98,28 @@ CreParms::CreParms (lua_State* L, int index):
 
             /* Image */
             lua_getfield(L, index, IMAGE);
-            const char* _image = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, image, &field_provided));
+            image = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, image, &field_provided));
             if(field_provided)
             {
+                mlog(DEBUG, "Setting %s to %s", IMAGE, image);
+
                 /* Check Image for ONLY Legal Characters */
-                string s(_image);
+                string s(image);
                 for (auto c_iter = s.begin(); c_iter < s.end(); ++c_iter)
                 {
                     int c = *c_iter;
-                    if(!isalnum(c) && (c != '/') && (c != '.') && (c != '-'))
+                    if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
                     {
-                        delete [] _image;
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);
                     }
                 }
-
-                /* Set Image */
-                image = _image;
-                mlog(DEBUG, "Setting %s to %s", IMAGE, image);
             }
+            lua_pop(L, 1);
+
+            /* Script */
+            lua_getfield(L, index, SCRIPT);
+            script = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, script, &field_provided));
+            if(field_provided) mlog(DEBUG, "Setting %s to %s", SCRIPT, script);
             lua_pop(L, 1);
 
             /* Timeout */
@@ -148,6 +153,12 @@ void CreParms::cleanup (void)
     {
         delete [] image;
         image = NULL;
+    }
+
+    if(script)
+    {
+        delete [] script;
+        script = NULL;
     }
 }
 

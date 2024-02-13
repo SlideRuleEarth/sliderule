@@ -37,6 +37,7 @@
 #include "OsApi.h"
 #include "CurlLib.h" // netsvc package dependency
 #include "EndpointObject.h"
+#include <rapidjson/document.h>
 
 /******************************************************************************
  * STATIC DATA
@@ -67,7 +68,13 @@ int ContainerRunner::luaCreate (lua_State* L)
         /* Get Parameters */
         _parms = dynamic_cast<CreParms*>(getLuaObject(L, 1, CreParms::OBJECT_TYPE));
 
-        /* Create Dispatch */
+        /* Check Environment */
+        if(REGISTRY == NULL)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "container registry must be set before a container can be run");
+        }
+
+        /* Create Container Runner */
         return createLuaObject(L, new ContainerRunner(L, _parms));
     }
     catch(const RunTimeException& e)
@@ -107,11 +114,13 @@ const char* ContainerRunner::getRegistry (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ContainerRunner::ContainerRunner (lua_State* L, const CreParms* _parms):
+ContainerRunner::ContainerRunner (lua_State* L, CreParms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
     result(NULL)
 {
+    assert(_parms);
+
+    parms = _parms;
     active = true;
     controlPid = new Thread(controlThread, this);
 }
@@ -123,7 +132,8 @@ ContainerRunner::~ContainerRunner (void)
 {
     active = false;
     delete controlPid;
-    delete result;
+    delete [] result;
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -131,30 +141,62 @@ ContainerRunner::~ContainerRunner (void)
  *----------------------------------------------------------------------------*/
 void* ContainerRunner::controlThread (void* parm)
 {
-    ContainerRunner* cr = static_cast<ContainerRunner*>(parm);
-    const char* result = NULL;
+    ContainerRunner* cr = reinterpret_cast<ContainerRunner*>(parm);
+    const char* result = StringLib::duplicate("{\"result\": \"testing...\"}");
 
-    /* Run Container */
+    /* Set Docker Socket */
     const char* unix_socket = "/var/run/docker.sock";
-    const char* url= "http://localhost/v1.44/containers/create";
-    FString data("{\"Image\": \"%s/%s\"}", REGISTRY, cr->parms->image);
+    const char* api_version = "v1.43";
+
+    /* Configure HTTP Headers */
     List<string*> headers(5);
     string* content_type = new string("Content-Type: application/json");
     headers.add(content_type);
-    const char* response = NULL;
-    long http_code = CurlLib::request(EndpointObject::POST, url, data.c_str(), &response, NULL, false, false, &headers, unix_socket);
-    if(http_code != EndpointObject::OK) mlog(CRITICAL, "Failed to start container <%s>: %s", cr->parms->image, response);
-    delete [] response;
 
-    /* Wait for Completion and Get Result */
-    if(http_code == EndpointObject::OK)
-    {
-        /* Poll Completion of Container */
-        // using timeout
+    /* Build Container Parameters */
+    FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
+    FString host_config("\"HostConfig\": { \"Binds\": [\"%s:%s\"] }", "/usr/local/share/applications", "/applications");
+    FString cmd("\"Cmd\": [\"python\", \"%s\"]}", cr->parms->script);
+    FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
-        /* Get Result */
-        // from well known file
-    }
+    /* Create Container */
+    FString create_url("http://localhost/%s/containers/create", api_version);
+    const char* create_response = NULL;
+    long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, &headers, unix_socket);
+    if(create_http_code != EndpointObject::Created) mlog(CRITICAL, "Failed to create container <%s>: %ld - %s", cr->parms->image, create_http_code, create_response);
+    else mlog(INFO, "Created container <%s>: %s", cr->parms->image, create_response);
+//
+//    /* Wait for Completion and Get Result */
+//    if(false && create_http_code == EndpointObject::OK)
+//    {
+//        /* Get Container ID */
+//        rapidjson::Document json;
+//        json.Parse(create_response);
+//        const char* container_id = json["Id"].GetString();
+//
+//        /* Start Container */
+//        FString start_url("http://localhost/%s/containers/%s/start", api_version, container_id);
+//        const char* start_response = NULL;
+//        long start_http_code = CurlLib::request(EndpointObject::POST, start_url.c_str(), NULL, &start_response, NULL, false, false, NULL, unix_socket);
+//        if(start_http_code != EndpointObject::OK) mlog(CRITICAL, "Failed to start container <%s>: %s", cr->parms->image, start_response);
+//
+//        /* Poll Completion of Container */
+//        FString wait_url("http://localhost/%s/containers/%s/wait", api_version, container_id);
+//        const char* wait_response = NULL;
+//        long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, NULL, unix_socket);
+//        if(wait_http_code != EndpointObject::OK) mlog(CRITICAL, "Failed to wait for container <%s>: %s", cr->parms->image, wait_response);
+//        // TODO - need to poll somehow and tie in the timeout
+//        
+//        /* Get Result */
+//        // from well known file
+//
+//        /* Clean Up */
+//        delete [] start_response;
+//        delete [] wait_response;
+//    }
+//
+    /* Clean Up */
+    delete [] create_response;
 
     /* Signal Complete */
     cr->resultLock.lock();

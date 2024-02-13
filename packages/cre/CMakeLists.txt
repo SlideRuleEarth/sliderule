@@ -1,8 +1,11 @@
 # Find cURL Library
 find_package (CURL)
 
+# Find RapidJSON Library
+find_package (RapidJSON)
+
 # Build package
-if (CURL_FOUND)
+if (CURL_FOUND AND RapidJSON_FOUND)
 
     message (STATUS "Including cre package")
 
@@ -10,6 +13,7 @@ if (CURL_FOUND)
 
     target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})
     target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
+    target_include_directories (slideruleLib PUBLIC ${RapidJSON_INCLUDE_DIR})
 
     target_sources(slideruleLib
         PRIVATE

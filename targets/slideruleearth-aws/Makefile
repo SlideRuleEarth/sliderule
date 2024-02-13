@@ -191,7 +191,7 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform destroy
 
 container-runtime-python-lock: ## create the lock file for the container runtime environment base python image
-#	cd ../python-container && conda-lock -p linux-aarch64 -f environment.yml
+	cd ../python-container && conda-lock -p linux-aarch64 -f environment.yml
 	cd ../python-container && conda-lock render -p linux-aarch64
 
 container-runtime-python-docker: ## create the container runtime environment base python image
