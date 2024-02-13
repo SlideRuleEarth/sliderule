@@ -3761,6 +3761,63 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     return;
 }
 
+uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
+    /* set leaf struct allocated at "leaf" - follows H5B2__cache_leaf_deserialize */
+
+    uint8_t *native;  
+    unsigned u; 
+
+    // TODO: incremement rc at hdr
+    // H5B2__hdr_incr(udata->hdr) < 0
+
+    /* Set leaf data */
+    leaf->hdr = hdr;
+
+    /* Signature Sanity Check*/
+    uint32_t signature = (uint32_t) readField(4, &internal_pos);
+    if (signature != H5_V2TREE_LEAF_SIGNATURE_LE) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match leaf node: %u", signature);
+    }
+
+    /* Version check */
+    uint8_t version = (uint8_t) readField(1, &internal_pos);
+    if (version != 0) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Version does not match leaf node: %u", version);
+    }
+
+    /* Type check */
+    (btree2_subid_t) type = (btree2_subid_t) readField(1, &internal_pos);
+    if (type != hdr->type) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Type of leaf node does not match header type: %u", type);
+    }
+
+    /* Allocate space for the native keys in memory & set num records */
+    leaf->nrec = curr_node_ptr->node_nrec;
+    leaf->leaf_native = (uint8_t *) malloc((size_t)(hdr->rrec_size)*(leaf->nrec));
+
+    /* Deserialize records*/
+    native = leaf->leaf_native;
+    for (u = 0; u < leaf->nrec; u++) {
+        /* Type switching */
+         switch(hdr->type) {
+            case H5B2_ATTR_DENSE_NAME_ID:
+                decodeType8Record((uint8_t *)(&internal_pos), native);
+                break;
+            default:
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type for decode: %d", hdr->type);
+        }
+
+        // TODO: check on rrec vs nrec?
+        internal_pos += hdr->rrec_size;
+        native += hdr->nrec_size;
+
+    }
+
+    /* Return final movement */
+    return internal_pos;
+
+}
+
  /*----------------------------------------------------------------------------
  * findBTreeV2
  *----------------------------------------------------------------------------*/
@@ -3863,29 +3920,24 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     /* Exit for leaf review*/
     {
         /* Assume cur_node_ptr now pointing to leaf of interest*/
+        btree2_leaf_t *leaf = (btree2_leaf_t *) std::calloc(1, sizeof(btree2_leaf_t));
 
-        // TODO: set leaf node addr
-        // btree2_leaf_t *leaf;
+        /* Read out leaf */
+        uint64_t new_pos = openLeafNode(hdr, curr_node_ptr, leaf, &(curr_node_ptr->addr));
 
-        /* Signature Sanity Check*/
-        uint32_t signature = (uint32_t) readField(4, &(curr_node_ptr->addr));
-        if (signature != H5_V2TREE_LEAF_SIGNATURE_LE) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
+        /* Locate record */
+
+        /* Check on cmp */
+        if (cmp != 0) {
+            *found = false;
+            return;
+        }
+        else {
+
         }
 
-        // Locate record within the leaf node
-
-        // if (/*record is found*/) {
-        //     // Handle found record
-
-        //     // Unprotect leaf node
-
-        //     // Set *found and return
-        // } else {
-        //     // Handle record not found
-
-        //     // Unprotect leaf node
-        // }
+        free(leaf->leaf_native);
+        free(leaf);
     }
 
 }
