@@ -1168,6 +1168,8 @@ const char* RecordObject::flags2str (unsigned int flags)
 
     if(flags & POINTER)     flagss += "|PTR";
 
+    if(flags & AUX)         flagss += "|AUX";
+
     return StringLib::duplicate(flagss.c_str());
 }
 

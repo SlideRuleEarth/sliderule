@@ -98,7 +98,8 @@ class Atl06Dispatch: public DispatchObject
             int32_t             photon_count;           // number of photons used in final elevation calculation
             uint16_t            pflags;                 // processing flags
             uint16_t            rgt;                    // reference ground track
-            uint16_t            cycle;                  // cycle number
+            uint8_t             cycle;                  // granule cycle number
+            uint8_t             region;                 // granule region number            
             uint8_t             spot;                   // 1 through 6, or 0 if unknown
             uint8_t             gt;                     // gt1l, gt1r, gt2l, gt2r, gt3l, gt3r
             int64_t             time_ns;                // nanoseconds from GPS epoch

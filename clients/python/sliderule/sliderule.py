@@ -71,6 +71,7 @@ ps_token_exp = None
 MAX_PS_CLUSTER_WAIT_SECS = 600
 
 request_timeout = (10, 120) # (connection, read) in seconds
+decode_aux = True
 
 logger = logging.getLogger(__name__)
 console = None
@@ -230,6 +231,10 @@ def __decode_native(rectype, rawdata):
 
         # do not process pointers
         if "PTR" in flags:
+            continue
+
+        # check for mvp flag
+        if not decode_aux and "AUX" in flags:
             continue
 
         # get endianness
@@ -882,6 +887,30 @@ def set_rqst_timeout (timeout):
         request_timeout = timeout
     else:
         raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+
+#
+# set_processing_flags
+#
+def set_processing_flags (aux=True):
+    '''
+    Sets flags used when processing the record definitions
+
+    Parameters
+    ----------
+        aux:    bool
+                decode auxiliary fields
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_processing_flags(aux=False)
+    '''
+    global decode_aux
+    if type(aux) == bool:
+        decode_aux = aux
+    else:
+        raise FatalError('aux must be a boolean')
+
 
 #
 # update_available_servers

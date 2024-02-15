@@ -48,6 +48,7 @@ parser.add_argument('--time_to_live',   '-l',   type=int,               default=
 parser.add_argument('--verbose',        '-v',   action='store_true',    default=False)
 parser.add_argument('--loglvl',         '-j',   type=str,               default="CRITICAL")
 parser.add_argument('--nocleanup',      '-u',   action='store_true',    default=False)
+parser.add_argument('--no_aux',         '-x',   action='store_true',    default=False)
 args,_ = parser.parse_known_args()
 
 # Initialize Organization
@@ -58,6 +59,10 @@ if args.organization == "None":
 
 # Initialize SlideRule Client
 sliderule.init(args.domain, verbose=args.verbose, loglevel=args.loglvl, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
+
+# Configure SlideRule Client
+if args.no_aux:
+    sliderule.set_processing_flags(aux=False)
 
 # Generate Region Polygon
 region = sliderule.toregion(args.aoi)

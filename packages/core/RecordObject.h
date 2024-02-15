@@ -108,7 +108,8 @@ class RecordObject
         typedef enum {
             BIGENDIAN       = 0x00000001,
             POINTER         = 0x00000002,
-            BATCH           = 0x00000004
+            BATCH           = 0x00000004,       // batch record
+            AUX             = 0x00000008        // auxiliary field
         } fieldFlags_t;
 
         typedef struct {
