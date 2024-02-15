@@ -547,7 +547,7 @@ class H5FileBuffer
         /* KAT ADDED METHODS */
         void                readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr);
         bool                isTypeSharedAttrs (unsigned type_id);
-        void                uint32Decode(const uint8_t* p, uint32_t& i);
+        // void                uint32Decode(const uint8_t* p, uint32_t& i);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int n, uint8_t l);

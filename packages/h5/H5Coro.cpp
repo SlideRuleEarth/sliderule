@@ -95,6 +95,18 @@
         c -= H5_lookup3_rot(b, 24);                                                                          \
     } while (0)
 
+#define uint32Decode(p, i)                                                                                   \
+    do {                                                                                                     \
+        (i) = (uint32_t)(*(p)&0xff);                                                                         \
+        (p)++;                                                                                               \
+        (i) |= ((uint32_t)(*(p)&0xff) << 8);                                                                 \
+        (p)++;                                                                                               \
+        (i) |= ((uint32_t)(*(p)&0xff) << 16);                                                                \
+        (p)++;                                                                                               \
+        (i) |= ((uint32_t)(*(p)&0xff) << 24);                                                                \
+        (p)++;                                                                                               \
+    } while (0)
+
 /******************************************************************************
  * B-TREE STRUCTS
  ******************************************************************************/
@@ -3233,18 +3245,18 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
  /*----------------------------------------------------------------------------
  * uint32Decode - helper for hash decode
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::uint32Decode(const uint8_t* p, uint32_t& i) {
-    /* Decode using macro def in hdf5: https://github.com/HDFGroup/hdf5/blob/develop/src/H5encode.h#L178C1-L188C16 */
-    // TODO: revisit p++ access 
-    i = (uint32_t)(*p) & 0xff;
-    p++;
-    i |= ((uint32_t)(*p) & 0xff) << 8;
-    p++;
-    i |= ((uint32_t)(*p) & 0xff) << 16;
-    p++;
-    i |= ((uint32_t)(*p) & 0xff) << 24;
-    // p++;
-}
+// void H5FileBuffer::uint32Decode(const uint8_t* p, uint32_t& i) {
+//     /* Decode using macro def in hdf5: https://github.com/HDFGroup/hdf5/blob/develop/src/H5encode.h#L178C1-L188C16 */
+//     // TODO: revisit p++ access 
+//     i = (uint32_t)(*p) & 0xff;
+//     p++;
+//     i |= ((uint32_t)(*p) & 0xff) << 8;
+//     p++;
+//     i |= ((uint32_t)(*p) & 0xff) << 16;
+//     p++;
+//     i |= ((uint32_t)(*p) & 0xff) << 24;
+//     // p++;
+// }
 
 /*----------------------------------------------------------------------------
  * checksumLookup3 - helper for jenkins hash
@@ -3933,7 +3945,7 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
 
     /* Allocate space for the native keys in memory & set num records */
     leaf->nrec = curr_node_ptr->node_nrec;
-    leaf->leaf_native = (uint8_t *) malloc((size_t)(hdr->rrec_size)*(leaf->nrec));
+    leaf->leaf_native = (uint8_t *) calloc((size_t)(leaf->nrec), (size_t)(hdr->rrec_size));
 
     /* Deserialize records*/
     native = leaf->leaf_native;
@@ -3946,7 +3958,6 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
             default:
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type for decode: %d", hdr->type);
         }
-
         
         internal_pos += hdr->rrec_size;
         native += hdr->nrec_size;
