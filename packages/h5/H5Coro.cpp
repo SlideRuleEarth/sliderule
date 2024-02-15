@@ -54,6 +54,47 @@
 #define H5_ERROR_CHECKING true
 #endif
 
+#define H5_lookup3_rot(x, k) (((x) << (k)) ^ ((x) >> (32 - (k))))
+#define H5_lookup3_mix(a, b, c)                                                                              \
+    do {                                                                                                     \
+        a -= c;                                                                                              \
+        a ^= H5_lookup3_rot(c, 4);                                                                           \
+        c += b;                                                                                              \
+        b -= a;                                                                                              \
+        b ^= H5_lookup3_rot(a, 6);                                                                           \
+        a += c;                                                                                              \
+        c -= b;                                                                                              \
+        c ^= H5_lookup3_rot(b, 8);                                                                           \
+        b += a;                                                                                              \
+        a -= c;                                                                                              \
+        a ^= H5_lookup3_rot(c, 16);                                                                          \
+        c += b;                                                                                              \
+        b -= a;                                                                                              \
+        b ^= H5_lookup3_rot(a, 19);                                                                          \
+        a += c;                                                                                              \
+        c -= b;                                                                                              \
+        c ^= H5_lookup3_rot(b, 4);                                                                           \
+        b += a;                                                                                              \
+    } while (0)
+
+#define H5_lookup3_final(a, b, c)                                                                            \
+    do {                                                                                                     \
+        c ^= b;                                                                                              \
+        c -= H5_lookup3_rot(b, 14);                                                                          \
+        a ^= c;                                                                                              \
+        a -= H5_lookup3_rot(c, 11);                                                                          \
+        b ^= a;                                                                                              \
+        b -= H5_lookup3_rot(a, 25);                                                                          \
+        c ^= b;                                                                                              \
+        c -= H5_lookup3_rot(b, 16);                                                                          \
+        a ^= c;                                                                                              \
+        a -= H5_lookup3_rot(c, 4);                                                                           \
+        b ^= a;                                                                                              \
+        b -= H5_lookup3_rot(a, 14);                                                                          \
+        c ^= b;                                                                                              \
+        c -= H5_lookup3_rot(b, 24);                                                                          \
+    } while (0)
+
 /******************************************************************************
  * B-TREE STRUCTS
  ******************************************************************************/
@@ -3153,6 +3194,7 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
     udata.fheap_addr = fheap_addr;
     udata.fheap_info = heap_info_ptr;
     udata.name = name;
+    udata.name_hash = checksumLookup3(name, strlen(name), 0); //(const void *key, size_t length, uint32_t initval)
     udata.flags = 0;
     udata.corder = 0;
 
@@ -3202,6 +3244,101 @@ void H5FileBuffer::uint32Decode(const uint8_t* p, uint32_t& i) {
     p++;
     i |= ((uint32_t)(*p) & 0xff) << 24;
     // p++;
+}
+
+/*----------------------------------------------------------------------------
+ * checksumLookup3 - helper for jenkins hash
+ *----------------------------------------------------------------------------*/
+
+uint32_t H5FileBuffer::checksumLookup3(const void *key, size_t length, uint32_t initval) {
+    /* Source: https://github.com/HDFGroup/hdf5/blob/develop/src/H5checksum.c#L365 */
+
+    /* Initialize set up */
+    const uint8_t *k = (const uint8_t *)key;
+    uint32_t       a, b, c = 0; 
+
+    /* Set up the internal state */
+    a = b = c = 0xdeadbeef + ((uint32_t)length) + initval;
+
+    /*--------------- all but the last block: affect some 32 bits of (a,b,c) */
+    while (length > 12) {
+        a += k[0];
+        a += ((uint32_t)k[1]) << 8;
+        a += ((uint32_t)k[2]) << 16;
+        a += ((uint32_t)k[3]) << 24;
+        b += k[4];
+        b += ((uint32_t)k[5]) << 8;
+        b += ((uint32_t)k[6]) << 16;
+        b += ((uint32_t)k[7]) << 24;
+        c += k[8];
+        c += ((uint32_t)k[9]) << 8;
+        c += ((uint32_t)k[10]) << 16;
+        c += ((uint32_t)k[11]) << 24;
+        H5_lookup3_mix(a, b, c);
+        length -= 12;
+        k += 12;
+    }
+
+    /*-------------------------------- last block: affect all 32 bits of (c) */
+    switch (length) /* all the case statements fall through */
+    {
+        case 12:
+            c += ((uint32_t)k[11]) << 24;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 11:
+            c += ((uint32_t)k[10]) << 16;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 10:
+            c += ((uint32_t)k[9]) << 8;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 9:
+            c += k[8];
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 8:
+            b += ((uint32_t)k[7]) << 24;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 7:
+            b += ((uint32_t)k[6]) << 16;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 6:
+            b += ((uint32_t)k[5]) << 8;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 5:
+            b += k[4];
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 4:
+            a += ((uint32_t)k[3]) << 24;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 3:
+            a += ((uint32_t)k[2]) << 16;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 2:
+            a += ((uint32_t)k[1]) << 8;
+            /* FALLTHROUGH */
+            H5_ATTR_FALLTHROUGH
+        case 1:
+            a += k[0];
+            break;
+        case 0:
+            return c;
+        default:
+            assert(0 && "This should never be executed!");
+    }
+
+    H5_lookup3_final(a, b, c);
+
+    return c;
+
 }
 
  /*----------------------------------------------------------------------------
@@ -3295,8 +3432,8 @@ unsigned H5FileBuffer::log2_gen(uint64_t n) {
 void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     /* Implementation of H5G__dense_btree2_name_decode */
     // https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5Gbtree2.c#L286
-    
-    // TODO: check on VS readField pos accuracy
+
+    // TODO fix to use readField
 
     btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
     size_t H5G_DENSE_FHEAP_ID_LEN = 7;
@@ -3312,17 +3449,24 @@ void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::decodeType8Record(const uint8_t *raw, void *_nrecord) {
     
-    // TODO: check on VS readField pos accuracy
-
+    // let uint64_t internal_pos be passed as a readField amount 
     btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
+    
+    // TODO sub in with readField when possible
+    
     /* Decode the record's fields */
     memcpy(nrecord->id.id, raw, (size_t)H5O_FHEAP_ID_LEN);
+    // uint8_t* buf_out = (uint8_t*) readField((uint64_t) H5O_FHEAP_ID_LEN, &internal_pos);
+    // memcpy(nrecord->id.id, buf_out, (size_t)H5O_FHEAP_ID_LEN);
     raw += H5O_FHEAP_ID_LEN;
+    // internal_pos += (uint64_t) H5O_FHEAP_ID_LEN;
     nrecord->flags = *raw++;
     uint32Decode(raw, nrecord->corder);
     raw += 4;
+    // internal_pos += 4
     uint32Decode(raw, nrecord->hash);
     raw += 4;
+    // internal_pos += 4
     (void)raw;
 }
 
