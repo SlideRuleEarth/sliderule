@@ -387,8 +387,8 @@ class H5FileBuffer
             size_t nrec_size; // native record size
 
             // callback methods - excluded store, context, encode, debug
-            void (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
-            void (*decode)(const uint8_t *raw, void *record); // decode record from disk
+            // void (*compare)(const void *rec1, const void *rec2, int *result); // compare two native records
+            // void (*decode)(const uint8_t *raw, void *record); // decode record from disk
 
             uint32_t node_size; // size in bytes of all B-tree nodes
             uint32_t rrec_size; // size in bytes of the B-tree record
@@ -556,6 +556,7 @@ class H5FileBuffer
         void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr);
         void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
+        uint64_t            openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
 
         /*--------------------------------------------------------------------
         * Data

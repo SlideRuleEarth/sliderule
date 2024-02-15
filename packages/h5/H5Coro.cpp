@@ -3540,23 +3540,16 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     root_node_ptr->all_nrec = readField(metaData.lengthsize, &pos);
     hdr->root = root_node_ptr;
 
-    /* REMOVED SWITCHING IN HDR SETUP - complete with straight calls */
-
-    // set cls based methods - type 8 only for first v
-    // switch(hdr->type) {
-    //     case H5B2_ATTR_DENSE_NAME_ID:
-    //         hdr->decode = &H5FileBuffer::decodeType8Record;
-    //         hdr->compare = &H5FileBuffer::compareType8Record;
-    //         break;
-    //     // case H5B2_GRP_DENSE_NAME_ID:
-    //     //     hdr->decode = &H5FileBuffer::decodeType5Record;
-    //     //     hdr->compare = &H5FileBuffer::compareType5Record;
-    //     //     break;
-    //     default:
-    //         throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type: %d", hdr->type);
-    // }
-
     hdr->check_sum = readField(4, &pos);
+
+    // set nrec size based on switch type
+    switch(hdr->type) {
+            case H5B2_ATTR_DENSE_NAME_ID:
+                hdr->nrec_size = sizeof(btree2_type8_densename_rec_t);
+                break;
+            default:
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for nrec_size: %d", hdr->type);
+        }
 
     /* Header_init follow */
 
@@ -3761,6 +3754,9 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     return;
 }
 
+/*----------------------------------------------------------------------------
+ * openLeafNode
+ *----------------------------------------------------------------------------*/
 uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
     /* set leaf struct allocated at "leaf" - follows H5B2__cache_leaf_deserialize */
 
@@ -3786,7 +3782,7 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
     }
 
     /* Type check */
-    (btree2_subid_t) type = (btree2_subid_t) readField(1, &internal_pos);
+    btree2_subid_t type = (btree2_subid_t) readField(1, &internal_pos);
     if (type != hdr->type) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Type of leaf node does not match header type: %u", type);
     }
@@ -3807,11 +3803,13 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type for decode: %d", hdr->type);
         }
 
-        // TODO: check on rrec vs nrec?
+        
         internal_pos += hdr->rrec_size;
         native += hdr->nrec_size;
 
     }
+
+    // TODO: checksum verification
 
     /* Return final movement */
     return internal_pos;
@@ -3923,16 +3921,21 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         btree2_leaf_t *leaf = (btree2_leaf_t *) std::calloc(1, sizeof(btree2_leaf_t));
 
         /* Read out leaf */
-        uint64_t new_pos = openLeafNode(hdr, curr_node_ptr, leaf, &(curr_node_ptr->addr));
+        // uint64_t new_pos = 
+        openLeafNode(hdr, curr_node_ptr, leaf, curr_node_ptr->addr);
 
         /* Locate record */
+        locateRecordBTreeV2(hdr, leaf->nrec, hdr->nat_off, leaf->leaf_native, udata, &idx, &cmp);
 
         /* Check on cmp */
         if (cmp != 0) {
             *found = false;
+            free(leaf->leaf_native);
+            free(leaf);
             return;
         }
         else {
+            // call back with operator for record
 
         }
 
