@@ -228,13 +228,26 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_metric - .metric(<...)
+ * lsys_metric - .metric()
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_metric (lua_State* L)
-//TODO: need to populate with metrics...
 {
     lua_newtable(L);
-    LuaEngine::setAttrInt(L, "alive", 1);
+
+    /* Alive */
+    lua_pushstring(L, "alive");
+    lua_newtable(L);
+    {
+        lua_pushstring(L, "value");
+        lua_pushnumber(L, 1);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "type");
+        lua_pushstring(L, EventLib::subtype2str(EventLib::GAUGE));
+        lua_settable(L, -3);
+    }
+    lua_settable(L, -3);
+
     return 1;
 }
 
