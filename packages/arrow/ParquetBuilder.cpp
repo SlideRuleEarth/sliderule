@@ -699,17 +699,22 @@ void* ParquetBuilder::builderThread(void* parm)
         (_path[3] == '/') &&
         (_path[4] == '/'))
     {
-        #ifdef __aws__
+        /* Upload File to S3 */
         builder->send2S3(&_path[5]);
-        #else
-        LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
-        #endif
     }
     else
     {
-        /* Stream Back to Client */
+        /* Stream File Back to Client */
         builder->send2Client();
     }
+
+    /* Remove File */
+    int rc = remove(builder->fileName);
+    if(rc != 0)
+    {
+        mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, builder->fileName, strerror(errno));
+    }
+
     stop_trace(INFO, send_trace_id);
 
     /* Signal Completion */
@@ -1250,6 +1255,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
     return status;
 
     #else
+    LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
     return false;
     #endif
 }
@@ -1301,19 +1307,11 @@ bool ParquetBuilder::send2Client (void)
         } while(false);
 
         /* Close File */
-        int rc1 = fclose(fp);
-        if(rc1 != 0)
+        int rc = fclose(fp);
+        if(rc != 0)
         {
             status = false;
-            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc1, fileName, strerror(errno));
-        }
-
-        /* Remove File */
-        int rc2 = remove(fileName);
-        if(rc2 != 0)
-        {
-            status = false;
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc2, fileName, strerror(errno));
+            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, fileName, strerror(errno));
         }
     }
     else // unable to open file
