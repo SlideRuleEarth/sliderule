@@ -316,18 +316,13 @@ bool Atl06Dispatch::processTermination (void)
 void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& result)
 {
     /* Check Valid Extent */
-    if(extent->valid && result.elevation.photon_count > 0)
+    if(result.elevation.photon_count <= 0)
     {
-        result.provided = true;
-    }
-    else
-    {
-        // the check for photon count is redundent with the check for
-        // a valid extent, but given that the code below is invalid
-        // if the number of photons is less than or equal to zero,
-        // the check is provided explicitly
         return;
     }
+
+    /* Result is Provided */
+    result.provided = true;
 
     /* Initial Conditions */
     bool done = false;

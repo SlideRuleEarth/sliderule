@@ -97,7 +97,7 @@ class Atl03Reader: public LuaObject
 
         /* Extent Record */
         typedef struct {
-            bool            valid;
+            uint8_t         region;
             uint8_t         track; // 1, 2, or 3
             uint8_t         pair; // 0 (l), 1 (r)
             uint8_t         spacecraft_orientation; // sc_orient_t

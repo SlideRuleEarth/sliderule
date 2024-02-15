@@ -64,6 +64,7 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
 
 const char* Atl03Reader::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
+    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS},
     {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS},
     {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS},
     {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS},
@@ -1629,8 +1630,8 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
     /* Allocate and Initialize Extent Record */
     RecordObject* record            = new RecordObject(exRecType, extent_bytes);
     extent_t* extent                = (extent_t*)record->getRecordData();
-    extent->valid                   = state.extent_valid;
     extent->extent_id               = extent_id;
+    extent->region                  = start_region;
     extent->track                   = info->track;
     extent->pair                    = info->pair;
     extent->spacecraft_orientation  = atl03.sc_orient[0];
