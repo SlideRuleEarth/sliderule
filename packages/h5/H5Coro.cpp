@@ -3445,13 +3445,10 @@ void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     /* Implementation of H5G__dense_btree2_name_decode */
     // https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5Gbtree2.c#L286
 
-    // TODO fix to use readField
-
+    /* TODO: fix reading fields, DO NOT USE DECODE MACRO */
     btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
     size_t H5G_DENSE_FHEAP_ID_LEN = 7;
-
-    /* Decode the record's fields */
-    uint32Decode(raw, nrecord->hash);
+    // uint32Decode(raw, nrecord->hash); <-- REPLACE
     raw += 4;
     memcpy(nrecord->id, raw, H5G_DENSE_FHEAP_ID_LEN);
 }
@@ -3459,27 +3456,20 @@ void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
 /*----------------------------------------------------------------------------
  * decodeType8Record - Group Decoding
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::decodeType8Record(const uint8_t *raw, void *_nrecord) {
+uint64_t H5FileBuffer::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
     
-    // let uint64_t internal_pos be passed as a readField amount 
+    unsigned u;
     btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
+    for (u = 0; u < H5O_FHEAP_ID_LEN; u++ ) {
+        nrecord->id.id[u] = (uint8_t) readField(1, &internal_pos);
+    }
+
+    nrecord->flags = (uint8_t) readField(1, &internal_pos);
+    nrecord->corder = (uint32_t) readField(4, &internal_pos);
+    nrecord->hash = (uint32_t) readField(4, &internal_pos);
+
+    return internal_pos;
     
-    // TODO sub in with readField when possible
-    
-    /* Decode the record's fields */
-    memcpy(nrecord->id.id, raw, (size_t)H5O_FHEAP_ID_LEN);
-    // uint8_t* buf_out = (uint8_t*) readField((uint64_t) H5O_FHEAP_ID_LEN, &internal_pos);
-    // memcpy(nrecord->id.id, buf_out, (size_t)H5O_FHEAP_ID_LEN);
-    raw += H5O_FHEAP_ID_LEN;
-    // internal_pos += (uint64_t) H5O_FHEAP_ID_LEN;
-    nrecord->flags = *raw++;
-    uint32Decode(raw, nrecord->corder);
-    raw += 4;
-    // internal_pos += 4
-    uint32Decode(raw, nrecord->hash);
-    raw += 4;
-    // internal_pos += 4
-    (void)raw;
 }
 
 /*----------------------------------------------------------------------------
@@ -3684,7 +3674,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     }
 
     hdr->node_size = (uint32_t) readField(4, &pos);
-    hdr->rrec_size = (uint32_t) readField(2, &pos);
+    hdr->rrec_size = (uint16_t) readField(2, &pos);
     uint16_t depth = (uint16_t) readField(2, &pos);
     hdr->depth = depth;
     hdr->split_percent = (uint8_t) readField(1, &pos);
@@ -3846,14 +3836,8 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
         // (hdr->decode)(&internal_pos, native); // old call style
         switch(hdr->type) {
             case H5B2_ATTR_DENSE_NAME_ID:
-                decodeType8Record((uint8_t *)(&internal_pos), native);
-                // uint8_t* incre_pos = (uint8_t *)(&internal_pos);
-                // incre_pos += 8;
-                // incre_pos += H5O_FHEAP_ID_LEN;
-                
+                internal_pos = decodeType8Record(internal_pos, native);
                 break;
-            // case H5B2_GRP_DENSE_NAME_ID: - type 5
-            //     break;
             default:
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type for decode: %d", hdr->type);
         }
@@ -3946,15 +3930,16 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
     /* Allocate space for the native keys in memory & set num records */
     leaf->nrec = curr_node_ptr->node_nrec;
     leaf->leaf_native = (uint8_t *) calloc((size_t)(leaf->nrec), (size_t)(hdr->rrec_size));
-
+    
     /* Deserialize records*/
     native = leaf->leaf_native;
     for (u = 0; u < leaf->nrec; u++) {
         /* Type switching */
-         switch(hdr->type) {
+        switch(hdr->type) {
             case H5B2_ATTR_DENSE_NAME_ID:
-                decodeType8Record((uint8_t *)(&internal_pos), native);
+                internal_pos = decodeType8Record(internal_pos, native);
                 break;
+            
             default:
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type for decode: %d", hdr->type);
         }

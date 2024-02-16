@@ -168,10 +168,6 @@ class H5FileBuffer
                             H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only=false);
         virtual             ~H5FileBuffer       (void);
 
-        // static void                decodeType5Record(const uint8_t *raw, void *_nrecord);
-        // static void                decodeType8Record(const uint8_t *raw, void *_nrecord);
-        // static void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
-
     protected:
 
         /*--------------------------------------------------------------------
@@ -398,7 +394,7 @@ class H5FileBuffer
             // void (*decode)(const uint8_t *raw, void *record); // decode record from disk
 
             uint32_t node_size; // size in bytes of all B-tree nodes
-            uint32_t rrec_size; // size in bytes of the B-tree record
+            uint16_t rrec_size; // size in bytes of the B-tree record
             uint16_t depth;
             uint8_t  split_percent; // percent full that a node needs to increase above before it is split
             uint8_t  merge_percent; // percent full that a node needs to be decrease below before it is split
@@ -554,7 +550,7 @@ class H5FileBuffer
         unsigned            log2_gen(uint64_t n);
 
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
-        void                decodeType8Record(const uint8_t *raw, void *_nrecord);
+        uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
         void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
 
         void                fheapLocate(heap_info_t *hdr, const void *_id, void *op_data);
