@@ -3843,7 +3843,6 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
         }
 
         /* Move to next record */
-        internal_pos += hdr->rrec_size;
         native += hdr->nrec_size;
 
     } 
@@ -3899,12 +3898,10 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
  *----------------------------------------------------------------------------*/
 uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
     /* set leaf struct allocated at "leaf" - follows H5B2__cache_leaf_deserialize */
+    /* Unimplemented from OG: H5B2__hdr_incr(udata->hdr), checksum */
 
     uint8_t *native;  
     unsigned u; 
-
-    // TODO: incremement rc at hdr
-    // H5B2__hdr_incr(udata->hdr) < 0
 
     /* Set leaf data */
     leaf->hdr = hdr;
@@ -3943,10 +3940,8 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
             default:
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type for decode: %d", hdr->type);
         }
-        
-        internal_pos += hdr->rrec_size;
+        /* Move to populate next record*/
         native += hdr->nrec_size;
-
     }
 
     // TODO: checksum verification
