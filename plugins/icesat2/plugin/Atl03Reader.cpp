@@ -688,11 +688,11 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
     {
         int32_t atl03_segment = atl03.segment_id[atl03_segment_index];
 
-        /* Get Land and Snow Flags */
+        /* Get ATL08 Land Segment Index */
         if(phoreal || ancillary)
         {
-            while( (atl08_segment_index < segment_id_beg.size) &&
-                   ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
+            while( (atl08_segment_index < (segment_id_beg.size - 1)) &&
+                   (segment_id_beg[atl08_segment_index + 1] <= atl03_segment) )
             {
                 atl08_segment_index++;
             }
