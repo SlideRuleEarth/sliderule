@@ -290,7 +290,12 @@ class H5FileBuffer
             msg_type_t              msg_type;
             int                     num_objects;
             int                     cur_objects; // mutable
-            uint64_t                root_blk_addr; // kat mod
+            uint64_t                root_blk_addr;
+            uint32_t                max_size_mg_obj;
+            uint16_t                max_heap_size;
+            
+            uint32_t                 heap_off_size;  /* Size of heap offsets (in bytes) */
+            uint16_t                 heap_len_size;  /* Size of heap ID lengths (in bytes) */
         } heap_info_t;
 
         /* KAT ADDED */
@@ -553,8 +558,8 @@ class H5FileBuffer
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
         void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
 
-        void                fheapLocate(heap_info_t *hdr, const void *_id, void *op_data);
-        void                fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, void *op_data, unsigned op_flags);
+        void                fheapLocate(heap_info_t *hdr, const void * _id, void *op_data);
+        void                fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
         void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr);

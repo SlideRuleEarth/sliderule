@@ -107,6 +107,9 @@
         (p)++;                                                                                               \
     } while (0)
 
+/* Compute the # of bytes required to store an offset into a given buffer size */
+#define H5HF_SIZEOF_OFFSET_BITS(b) (((b) + 7) / 8)
+
 /******************************************************************************
  * B-TREE STRUCTS
  ******************************************************************************/
@@ -1178,6 +1181,17 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     /* Build Heap Info Structure */
     heap_info_t heap_info;
 
+    // /* The minimum number of bytes necessary to encode the Maximum Heap Size value*/
+    // uint8_t heap_off_size = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(hdr->max_heap_size);
+    // /* The minimum number of bytes needed to encode the minimum value of Maximum Direct Block Size and Maximum Size of Managed Objects */
+    // uint8_t heap_len_size = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min(hdr->max_dblk_size, hdr->max_size_mg_obj));
+    // hdr->heap_off_size = heap_off_size;
+    // hdr->heap_len_size = heap_len_size;
+    
+    // min calc
+    uint32_t min_val = std::min((uint32_t)max_dblk_size, max_size_mg_obj);
+    uint16_t min_calc = (uint16_t) H5HF_SIZEOF_OFFSET_BITS(min_val);
+
     heap_info = {
         .table_width        = table_width,
         .curr_num_rows      = curr_num_rows,
@@ -1188,7 +1202,11 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .msg_type           = msg_type,
         .num_objects        = (int)mg_objs,
         .cur_objects        = 0, // updated as objects are read
-        .root_blk_addr      = root_blk_addr
+        .root_blk_addr      = root_blk_addr, 
+        .max_size_mg_obj    = max_size_mg_obj,
+        .max_heap_size      = max_heap_size,
+        .heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
+        .heap_len_size      = min_calc // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
     };
 
     if (heap_info_ptr != NULL) // Populate passed struct
@@ -1203,6 +1221,10 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->num_objects        = (int)mg_objs;
         heap_info_ptr->cur_objects        = 0; // updated as objects are read
         heap_info_ptr->root_blk_addr      = root_blk_addr;
+        heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
+        heap_info_ptr->max_heap_size      = max_heap_size;
+        heap_info_ptr->heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
+        heap_info_ptr->heap_len_size      = min_calc; // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj));
     }
 
     /* Process Blocks */
@@ -3475,15 +3497,17 @@ uint64_t H5FileBuffer::decodeType8Record(uint64_t internal_pos, void *_nrecord) 
 /*----------------------------------------------------------------------------
  * fheapLocate
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, void *op_data) {
+void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data) {
 
     /* Dispatcher for heap ID types (manual support only for latest ver) */
 
-    const uint8_t *id = (const uint8_t *)_id; // object ID
+    uint8_t* id = (uint8_t*)_id;
+    // uint64_t* id = _id; // object ID
     uint8_t id_flags; // heap ID flag bits 
 
     /* Get the ID flags */
     id_flags = *id;
+    // id_flags = (uint8_t) readField(1, &id); // *id; 
 
     if ((id_flags & H5HF_ID_VERS_MASK) != H5HF_ID_VERS_CURR) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Incorrect heap ID version");
@@ -3493,6 +3517,7 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, void *op_data)
     if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
         /* Operate on object from managed heap blocks */
         fheapLocate_Managed(hdr, id, op_data, 0);
+        // throw RunTimeException(CRITICAL, RTE_ERROR, "Temp");
     } 
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
         /* NOT IMPLEMENTED - Operate on 'huge' object from file */
@@ -3513,22 +3538,27 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void *_id, void *op_data)
 /*----------------------------------------------------------------------------
  * fheapLocate_Managed
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, const uint8_t *id, void *op_data, unsigned op_flags){
+void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
-    // uint8_t *p; 
-    // size_t blk_off;
-    // size_t obj_len;
+
+    /* Set object offset and len, trust implicit casting */
+
+    /* Skip from flag reading */
+    id++; 
+
+    uint64_t obj_off = 0;
+    for (size_t i = 0; i < hdr->heap_off_size; i++) {
+        obj_off |= (uint64_t)id[i] << (8 * i);
+    }
+    
+    size_t obj_len = 0;
+    for (size_t j = 0; j < hdr->heap_len_size; j++) {
+        obj_len |= (size_t)id[j] << (8 * j);
+    }
 
     // temp print to please compiler
-    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , id: %lu, op_data: %lu, op_flags: %lu \n", (uintptr_t) hdr, (uintptr_t)id, (uintptr_t) op_data, (uintptr_t)op_flags);
+    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len);
 
-    // called with fheapLocate_Managed(hdr, id, op, op_data);
-
-    // TODO
-
-    /* Find using ID as navigator fheap */
-    
-    /* Perform operation based on demand */
 
     // TODO case on type
     // H5FileBuffer::fheapNameCmp
