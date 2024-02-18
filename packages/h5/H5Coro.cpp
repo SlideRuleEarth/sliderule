@@ -1206,7 +1206,8 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .max_size_mg_obj    = max_size_mg_obj,
         .max_heap_size      = max_heap_size,
         .heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
-        .heap_len_size      = min_calc // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
+        .heap_len_size      = min_calc, // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
+        .hdr_flags          = hdr_flags
     };
 
     if (heap_info_ptr != NULL) // Populate passed struct
@@ -1225,6 +1226,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->max_heap_size      = max_heap_size;
         heap_info_ptr->heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
         heap_info_ptr->heap_len_size      = min_calc; // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj));
+        heap_info_ptr->hdr_flags          = hdr_flags;
     }
 
     /* Process Blocks */
@@ -3541,6 +3543,9 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data
 void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
+    (fheap_ud_cmp_t*) fheap_udata = (fheap_ud_cmp_t*) op_data;
+    uint64_t pos = fheap_udata->pos;
+
     /* Set object offset and len, trust implicit casting */
 
     /* Skip from flag reading */
@@ -3559,6 +3564,26 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_d
     // temp print to please compiler
     print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len);
 
+    /* Locate direct block of interest */
+    if(hdr->curr_num_rows == 0)
+    {
+        /* Direct Blocks */
+
+        // TODO: need to persist instance or move some functionality here 
+
+        // int bytes_read = readDirectBlock(hdr, hdr->starting_blk_size, hdr->root_blk_addr, hdr->hdr_flags, dlvl);
+        // removed err check
+    }
+    else
+    {
+        /* Indirect Blocks */
+
+        // TODO: need to persist instance or move here
+        // H5HF__man_dblock_locate
+
+        // int bytes_read = readIndirectBlock(hdr, 0, hdr->root_blk_addr, hdr->hdr_flags, dlvl);
+        // removed err check
+    }
 
     // TODO case on type
     // H5FileBuffer::fheapNameCmp
@@ -3606,6 +3631,7 @@ void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_r
         /* Set fh udata */
         fh_udata.name = bt2_udata->name;
         fh_udata.record = bt2_rec;
+        fh_udata.pos = bt2_udata->fheap_addr;
 
         /* Sanity check */
         assert(bt2_udata->name_hash == bt2_rec->hash);

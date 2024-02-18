@@ -293,9 +293,10 @@ class H5FileBuffer
             uint64_t                root_blk_addr;
             uint32_t                max_size_mg_obj;
             uint16_t                max_heap_size;
+            uint8_t                 hdr_flags;
             
-            uint32_t                 heap_off_size;  /* Size of heap offsets (in bytes) */
-            uint16_t                 heap_len_size;  /* Size of heap ID lengths (in bytes) */
+            uint32_t                heap_off_size;  /* Size of heap offsets (in bytes) */
+            uint16_t                heap_len_size;  /* Size of heap ID lengths (in bytes) */
         } heap_info_t;
 
         /* KAT ADDED */
@@ -457,6 +458,7 @@ class H5FileBuffer
         typedef struct {
             const char                         *name; // name of attribute to compare
             const btree2_type8_densename_rec_t *record; // v2 B-tree record for attribute
+            uint64_t pos; // addr of fheap
             // H5A_bt2_found_t                 found_op;      /* Callback when correct attribute is found */
             // void                           *found_op_data; /* Callback data when correct attribute is found */
         } fheap_ud_cmp_t;
