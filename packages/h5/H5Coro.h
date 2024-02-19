@@ -315,6 +315,11 @@ class H5FileBuffer
             /* clang-clang-format on */
         };
 
+        /* Lookup table for specialized log2(n) of power of two routine */
+        static constexpr const unsigned MultiplyDeBruijnBitPosition[32] = {0,  1,  28, 2,  29, 14, 24, 3,  30, 22, 20,
+                                                                15, 25, 17, 4,  8,  31, 27, 13, 23, 21, 19,
+                                                                16, 7,  26, 12, 18, 6,  11, 5,  10, 9};
+
         typedef struct {
             uint32_t                chunk_size;
             uint32_t                filter_mask;
@@ -377,6 +382,43 @@ class H5FileBuffer
             H5B2_POS_MIDDLE /* Node is neither right or left-most in tree */
         } btree2_nodepos_t;
 
+        /* Doubling table for opening Direct/Indirect in Fractal heap */
+        typedef struct {
+            /* Immutable, pre-set information for table */
+            // H5HF_dtable_cparam_t cparam; /* Creation parameters for table */
+
+            /* Derived information (stored, varies during lifetime of table) */
+            uint64_t table_addr;      /* Address of first block for table */
+                                    /* Undefined if no space allocated for table */
+            unsigned curr_root_rows; /* Current number of rows in the root indirect block */
+                                    /* 0 indicates that the TABLE_ADDR field points
+                                    * to direct block (of START_BLOCK_SIZE) instead
+                                    * of indirect root block.
+                                    */
+
+            /* Computed information (not stored) */
+            unsigned max_root_rows;        /* Maximum # of rows in root indirect block */
+            unsigned max_direct_rows;      /* Maximum # of direct rows in any indirect block */
+            unsigned start_bits;           /* # of bits for starting block size (i.e. log2(start_block_size)) */
+            unsigned max_direct_bits;      /* # of bits for max. direct block size (i.e. log2(max_direct_size)) */
+            unsigned max_dir_blk_off_size; /* Max. size of offsets in direct blocks */
+            unsigned first_row_bits;       /* # of bits in address of first row */
+            uint64_t num_id_first_row;     /* Number of IDs in first row of table */
+            
+            uint64_t *row_block_size;       /* Block size per row of indirect block */
+            uint64_t *row_block_off;        /* Cumulative offset per row of indirect block */
+            uint64_t *row_tot_dblock_free;  /* Total free space in dblocks for this row */
+                                        /* (For indirect block rows, it's the total
+                                            * free space in all direct blocks referenced
+                                            * from the indirect block)
+                                            */
+            size_t *row_max_dblock_free;   /* Max. free space in dblocks for this row */
+                                        /* (For indirect block rows, it's the maximum
+                                            * free space in a direct block referenced
+                                            * from the indirect block)
+                                            */
+        } dtable_t;
+
         /* B-tree header information */
         typedef struct {
             /* Tracking */
@@ -409,6 +451,8 @@ class H5FileBuffer
             btree2_node_ptr_t *root; // root struct
             size_t *nat_off; // array of offsets of native records
             uint64_t check_sum;
+
+            dtable_t* dtable; // doubling table
 
         } btree2_hdr_t;
 
@@ -548,23 +592,31 @@ class H5FileBuffer
         static void         metaGetUrl            (char* url, const char* resource, const char* dataset);
 
         /* KAT ADDED METHODS */
+
+        /* Main Dense entry points */
         void                readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr);
+
+        /* Helpers */
         bool                isTypeSharedAttrs (unsigned type_id);
-        // void                uint32Decode(const uint8_t* p, uint32_t& i);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int n, uint8_t l);
         unsigned            log2_gen(uint64_t n);
+        unsigned            log2_of2(uint32_t n);
 
+        /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
         void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
 
+        /* Fheap Navigation*/
         void                fheapLocate(heap_info_t *hdr, const void * _id, void *op_data);
         void                fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
+        
+        /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
-        void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr);
+        void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr, heap_info_t* heap_info_ptr);
         void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
         uint64_t            openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);

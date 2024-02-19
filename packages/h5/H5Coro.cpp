@@ -109,6 +109,10 @@
 
 /* Compute the # of bytes required to store an offset into a given buffer size */
 #define H5HF_SIZEOF_OFFSET_BITS(b) (((b) + 7) / 8)
+// /* Offset Len spinning off bit size */
+// #define H5HF_SIZEOF_OFFSET_LEN(l)  H5HF_SIZEOF_OFFSET_BITS(H5FileBuffer::log2_of2((unsigned)(l)))
+/* Check if n is a power of 2, used in log2_of2 */
+#define POWER_OF_TWO(n) (!(n & (n - 1)) && n)
 
 /******************************************************************************
  * B-TREE STRUCTS
@@ -1205,9 +1209,10 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .root_blk_addr      = root_blk_addr, 
         .max_size_mg_obj    = max_size_mg_obj,
         .max_heap_size      = max_heap_size,
+        .hdr_flags          = hdr_flags,
         .heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
-        .heap_len_size      = min_calc, // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
-        .hdr_flags          = hdr_flags
+        .heap_len_size      = min_calc // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
+        
     };
 
     if (heap_info_ptr != NULL) // Populate passed struct
@@ -1224,9 +1229,9 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->root_blk_addr      = root_blk_addr;
         heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
         heap_info_ptr->max_heap_size      = max_heap_size;
+        heap_info_ptr->hdr_flags          = hdr_flags;
         heap_info_ptr->heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
         heap_info_ptr->heap_len_size      = min_calc; // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj));
-        heap_info_ptr->hdr_flags          = hdr_flags;
     }
 
     /* Process Blocks */
@@ -3203,8 +3208,13 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
         print2term("TODO: sharedAttribute Handling in readDenseAttrs\n");
         free(bt2_name->node_info); // hidden
         free(bt2_name->nat_off); // hidden
+        free(bt2_name->dtable->row_block_size); // hidden
+        free(bt2_name->dtable->row_tot_dblock_free); // hidden
+        free(bt2_name->dtable->row_max_dblock_free); // hidden
+        free(bt2_name->dtable); // hidden
         free(root_node_ptr);
         free(bt2_name); // visible
+
         return;
     }
 
@@ -3212,11 +3222,15 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
     bt2_name->node_size = 0; // set for err checking
 
     try {
-        openBTreeV2(bt2_name, root_node_ptr, name_bt2_addr);
+        openBTreeV2(bt2_name, root_node_ptr, name_bt2_addr, heap_info_ptr);
     }
     catch (const RunTimeException& e) {
         free(bt2_name->node_info); // hidden
         free(bt2_name->nat_off); // hidden
+        free(bt2_name->dtable->row_block_size); // hidden
+        free(bt2_name->dtable->row_tot_dblock_free); // hidden
+        free(bt2_name->dtable->row_max_dblock_free); // hidden
+        free(bt2_name->dtable); // hidden
         free(root_node_ptr);
         free(bt2_name); // visible
         throw RunTimeException(CRITICAL, RTE_ERROR, "Error to open btreeV2 for attribute reading");
@@ -3241,6 +3255,10 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
     catch (const RunTimeException& e) {
         free(bt2_name->node_info); // hidden
         free(bt2_name->nat_off); // hidden
+        free(bt2_name->dtable->row_block_size); // hidden
+        free(bt2_name->dtable->row_tot_dblock_free); // hidden
+        free(bt2_name->dtable->row_max_dblock_free); // hidden
+        free(bt2_name->dtable); // hidden
         free(root_node_ptr);
         free(bt2_name); // visible
         throw RunTimeException(CRITICAL, RTE_ERROR, "Error to locate attribute with dense btreeV2 reading");
@@ -3249,6 +3267,10 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
     /* Free allocations */
     free(bt2_name->node_info); // hidden
     free(bt2_name->nat_off); // hidden
+    free(bt2_name->dtable->row_block_size); // hidden
+    free(bt2_name->dtable->row_tot_dblock_free); // hidden
+    free(bt2_name->dtable->row_max_dblock_free); // hidden
+    free(bt2_name->dtable); // hidden
     free(root_node_ptr);
     free(bt2_name); // visible
 
@@ -3266,21 +3288,16 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
     return false;
 }
 
- /*----------------------------------------------------------------------------
- * uint32Decode - helper for hash decode
+/*----------------------------------------------------------------------------
+ * log2of2 - helper replicating H5VM_log2_of2
  *----------------------------------------------------------------------------*/
-// void H5FileBuffer::uint32Decode(const uint8_t* p, uint32_t& i) {
-//     /* Decode using macro def in hdf5: https://github.com/HDFGroup/hdf5/blob/develop/src/H5encode.h#L178C1-L188C16 */
-//     // TODO: revisit p++ access 
-//     i = (uint32_t)(*p) & 0xff;
-//     p++;
-//     i |= ((uint32_t)(*p) & 0xff) << 8;
-//     p++;
-//     i |= ((uint32_t)(*p) & 0xff) << 16;
-//     p++;
-//     i |= ((uint32_t)(*p) & 0xff) << 24;
-//     // p++;
-// }
+unsigned H5FileBuffer::log2_of2(uint32_t n) {
+    assert(POWER_OF_TWO(n));
+    return (unsigned)(MultiplyDeBruijnBitPosition[(n * (uint32_t)0x077CB531UL) >> 27]);
+}
+
+/* Offset Len spinning off bit size */
+#define H5HF_SIZEOF_OFFSET_LEN(l)  H5HF_SIZEOF_OFFSET_BITS(H5FileBuffer::log2_of2((unsigned)(l)))
 
 /*----------------------------------------------------------------------------
  * checksumLookup3 - helper for jenkins hash
@@ -3543,7 +3560,7 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data
 void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
-    (fheap_ud_cmp_t*) fheap_udata = (fheap_ud_cmp_t*) op_data;
+    fheap_ud_cmp_t* fheap_udata = (fheap_ud_cmp_t*) op_data;
     uint64_t pos = fheap_udata->pos;
 
     /* Set object offset and len, trust implicit casting */
@@ -3562,7 +3579,7 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_d
     }
 
     // temp print to please compiler
-    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len);
+    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, pos %lu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, pos);
 
     /* Locate direct block of interest */
     if(hdr->curr_num_rows == 0)
@@ -3703,13 +3720,19 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
  /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr) {
+void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr, heap_info_t* heap_info_ptr) {
     /* This methods initiates data structs for b-tree v2 search */
 
     /* Populate header */
     hdr->addr = addr;
     uint64_t pos = addr;
     uint32_t signature = (uint32_t)readField(4, &pos);
+    unsigned u;
+    /* dtable vars */
+    uint64_t tmp_block_size; // temp block size
+    uint64_t acc_block_off; // accumulated block offset
+    size_t  j; // local index variable
+
     if(signature != H5_V2TREE_SIGNATURE_LE)
     {
         free(hdr);
@@ -3783,7 +3806,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     hdr->nat_off = (size_t *) malloc(((size_t)hdr->node_info[0].max_nrec) * sizeof(size_t));
 
     /* Initialize offsets in native key block */
-    for (unsigned u = 0; u < hdr->node_info[0].max_nrec; u++)
+    for (u = 0; u < hdr->node_info[0].max_nrec; u++)
         hdr->nat_off[u] = hdr->nrec_size * u;
 
     /* Compute size to compute num records in each record */
@@ -3801,7 +3824,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     /* Initialize internal node info */
     // H5B2_METADATA_PREFIX_SIZE == H5B2_INT_PREFIX_SIZE 
     if (depth > 0) {
-        for (unsigned u = 1; u < (unsigned)(depth + 1); u++) {
+        for (u = 1; u < (unsigned)(depth + 1); u++) {
             // Size of a internal node pointer (on disk) 
             unsigned b2_int_ptr_size = (unsigned)(metaData.offsetsize) + hdr->max_nrec_size + (hdr->node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
             // b2_int_ptr_size += (hdr->node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u)   
@@ -3836,8 +3859,36 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         }
     }
 
-    // TODO - MISSING SETS
-    // set native record size
+    /* Initiate Double Table set up */
+
+    /* Follow H5HF__dtable_init https://github.com/HDFGroup/hdf5/blob/02a57328f743342a7e26d47da4aac445ee248782/src/H5HFdtable.c#L75 */
+    hdr->dtable = (dtable_t*) malloc(sizeof(dtable_t));
+    /* Init */
+    hdr->dtable->start_bits = log2_of2((uint32_t)heap_info_ptr->starting_blk_size);
+    hdr->dtable->first_row_bits = hdr->dtable->start_bits + log2_of2((uint32_t)heap_info_ptr->table_width);
+    hdr->dtable->max_root_rows = (heap_info_ptr->max_heap_size - hdr->dtable->first_row_bits) + 1; // CAUTION FOR BUGGING
+    hdr->dtable->max_direct_bits = log2_of2((uint32_t)heap_info_ptr->max_dblk_size);
+    hdr->dtable->max_direct_rows = (hdr->dtable->max_direct_bits - hdr->dtable->start_bits) + 2;
+    hdr->dtable->num_id_first_row = (uint64_t) (heap_info_ptr->starting_blk_size * heap_info_ptr->table_width);
+    hdr->dtable->max_dir_blk_off_size = H5HF_SIZEOF_OFFSET_LEN(heap_info_ptr->max_dblk_size);
+
+    hdr->dtable->row_block_size = (uint64_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
+    hdr->dtable->row_block_off = (uint64_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
+    hdr->dtable->row_tot_dblock_free = (uint64_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
+    hdr->dtable->row_max_dblock_free = (size_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
+
+    tmp_block_size = (uint64_t) heap_info_ptr->starting_blk_size;
+    acc_block_off = (uint64_t) heap_info_ptr->starting_blk_size * heap_info_ptr->table_width;
+    hdr->dtable->row_block_size[0] = (uint64_t) heap_info_ptr->starting_blk_size;
+    hdr->dtable->row_block_off[0] = 0;
+    
+    for (j = 1; j < hdr->dtable->max_root_rows; j++) {
+        hdr->dtable->row_block_size[j] = tmp_block_size;
+        hdr->dtable->row_block_off[j] = acc_block_off;
+        tmp_block_size *= 2;
+        acc_block_off *= 2;
+    }
+    /* End of double table set up*/
 
     return;
 }
