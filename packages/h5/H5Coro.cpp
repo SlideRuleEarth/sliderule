@@ -1184,22 +1184,9 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
 
     /* Build Heap Info Structure */
     heap_info_t heap_info;
-
-    // /* The minimum number of bytes necessary to encode the Maximum Heap Size value*/
-    // uint8_t heap_off_size = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(hdr->max_heap_size);
-    // /* The minimum number of bytes needed to encode the minimum value of Maximum Direct Block Size and Maximum Size of Managed Objects */
-    // uint8_t heap_len_size = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min(hdr->max_dblk_size, hdr->max_size_mg_obj));
-    // hdr->heap_off_size = heap_off_size;
-    // hdr->heap_len_size = heap_len_size;
     
-    // min calc
-    // uint32_t min_val = std::min((uint32_t)max_dblk_size, max_size_mg_obj);
-    // uint8_t min_calc = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(min_val);
-
-    // follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199
+    /* for heap len size - follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199 */
     uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((log2_gen((uint64_t) max_size_mg_obj) / 8) + 1));
-
-    // (uint8_t)MIN(hdr->man_dtable.max_dir_blk_off_size, H5VM_limit_enc_size((uint64_t)hdr->max_man_size));
 
     heap_info = {
         .table_width        = table_width,
@@ -1216,7 +1203,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .max_heap_size      = max_heap_size,
         .hdr_flags          = hdr_flags,
         .heap_off_size      = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
-        .heap_len_size      = min_calc // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
+        .heap_len_size      = min_calc
         
     };
 
@@ -1236,7 +1223,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->max_heap_size      = max_heap_size;
         heap_info_ptr->hdr_flags          = hdr_flags;
         heap_info_ptr->heap_off_size      = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
-        heap_info_ptr->heap_len_size      = min_calc; // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj));
+        heap_info_ptr->heap_len_size      = min_calc;
     }
 
     /* Process Blocks */
@@ -3604,7 +3591,7 @@ uint64_t H5FileBuffer::buildEntries_Indirect(heap_info_t* heap_info, int nrows, 
 
     /* Build equivalent of iblock->block_off - copy indirect style*/
     const int MAX_BLOCK_OFFSET_SIZE = 8;
-    uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
+    uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE] = {0};
     readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
     memcpy(&block_off, block_offset_buf, sizeof(uint64_t));
 
@@ -3688,6 +3675,9 @@ void H5FileBuffer::man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint
     // entry (which is unsigned applied onto ents)
     *ret_entry = (row * (unsigned)hdr->table_width) + col;
 
+    /* return final block  */
+    // return block_off;
+
 }
 
 /*----------------------------------------------------------------------------
@@ -3702,7 +3692,7 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
 
     uint64_t dblock_addr; // found direct block to apply offset on
     size_t dblock_size; // dblock size
-    uint64_t dblock_block_off; // dblock block offset, extracted from top of dir block header
+    uint64_t dblock_block_off = 0; // dblock block offset, extracted from top of dir block header
     uint64_t obj_off = 0; // offset of object in heap 
     size_t obj_len = 0; // len of object in heap
     size_t blk_off; // offset of object in block 
@@ -3750,18 +3740,52 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     uint64_t pos = dblock_addr;
     pos += 5; // skip signature and v
     pos += metaData.offsetsize; // skip heap hdr addr
+
     const int MAX_BLOCK_OFFSET_SIZE = 8;
-    uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
-    readByteArray(block_offset_buf, hdr->blk_offset_size, &pos); // Block Offset
-    memcpy(&dblock_block_off, block_offset_buf, sizeof(uint64_t));
+    uint8_t new_block_offset_buf[MAX_BLOCK_OFFSET_SIZE] = {0};
+    readByteArray(new_block_offset_buf, hdr->blk_offset_size, &pos); // Block Offset
+    memcpy(&dblock_block_off, new_block_offset_buf, sizeof(uint64_t));
+
     blk_off = (size_t)(obj_off - dblock_block_off); // Offset of the block within the heap's address space
 
-    /* Point to location for object */
-    // p = dblock->blk + blk_off; // MODIFY <-- this assumes we have buffer with data
+    /* Follow H5HF__cache_dblock_deserialize */
+
+    /* Attribute message read */
+    pos = dblock_addr + (uint64_t)blk_off; // MODIFY <-- this assumes we have buffer with data
+    
+    uint64_t attr_version = readField(1, &pos);
+    pos += 1;
+    uint64_t name_size = readField(2, &pos);
+    pos += 4; // dataspace and type msg
+
+    /* Set attr_name: version 3 bumps by 4 bytes*/
+    uint8_t attr_name[STR_BUFF_SIZE];
+    if (attr_version == 1) {
+        readByteArray(attr_name, name_size, &pos);
+    }
+    if (attr_version == 3) {
+        /* NOTE: did not extract encoding, assume ASCII; H5T_cset_t name_encoding; */
+        pos += 1;
+        readByteArray(attr_name, name_size, &pos);
+    }
+
+    if (attr_version == 1) {
+        // name padding, align to next 8-byte boundary
+        pos += (8 - (name_size % 8)) % 8; 
+    }
+    
+    attr_name[name_size -1] = '\0';
+
+    print2term("\n----------------\n");
+    print2term("----------------\n");
+    print2term("Version:                                                         %d\n", (int)attr_version);
+    print2term("Name:                                                            %s\n", (const char*)attr_name);
 
     // TODO case on type
     // H5FileBuffer::fheapNameCmp() - open Attribute message for the name
     // or consider switching and reading the object
+
+    // readAttributeMsg()
 
     // temp print to please compiler
     print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, blk_off: %zu, dblock size %zu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, blk_off, dblock_size);
