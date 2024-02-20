@@ -623,6 +623,8 @@ class H5FileBuffer
 
         /* dtable search */
         void                dtableLookup(heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col);
+        void                buildEntries_Indirect(heap_info_t* heap_info, uint64_t pos, uint64_t* ents);
+        void                man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
         // TODO: finish adding block search methods
 
         /*--------------------------------------------------------------------
