@@ -3711,6 +3711,7 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
 
     uint64_t dblock_addr; // found direct block to apply offset on
     size_t dblock_size; // dblock size
+    uint64_t dblock_block_off; // dblock block offset, extracted from top of dir block header
     uint64_t obj_off = 0; // offset of object in heap 
     size_t obj_len = 0; // len of object in heap
     size_t blk_off; // offset of object in block 
@@ -3756,14 +3757,17 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
 
     }
 
-    // TODO - NEED TO TEST THIS IS A GUESS
-    /* Compute offset of object within block */
-    uint64_t block_off = pos - dblock_addr;
-    // dblock->block_off
+    /* Extract offset using the addr */
+    uint64_t pos = dblock_addr;
+    pos += 5; // skip signature and v
+    pos += metaData.offsetsize; // skip heap hdr addr
+    const int MAX_BLOCK_OFFSET_SIZE = 8;
+    uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
+    readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
+    memcpy(&dblock_block_off, block_offset_buf, sizeof(uint64_t));
     blk_off = (size_t)(obj_off - block_off); // Offset of the block within the heap's address space
 
     /* Point to location for object */
-    // TODO - might need to allocate or see if you can straight add to addr
     // p = dblock->blk + blk_off; // MODIFY <-- this assumes we have buffer with data
 
     // TODO case on type
