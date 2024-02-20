@@ -3516,7 +3516,7 @@ uint64_t H5FileBuffer::decodeType8Record(uint64_t internal_pos, void *_nrecord) 
 /*----------------------------------------------------------------------------
  * fheapLocate
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data) {
+void H5FileBuffer::fheapLocate(btree2_hdr_t* hdr_og, heap_info_t *hdr, const void * _id, void *op_data) {
 
     /* Dispatcher for heap ID types (manual support only for latest ver) */
 
@@ -3535,7 +3535,7 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data
     /* Check type of object in heap */
     if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
         /* Operate on object from managed heap blocks */
-        fheapLocate_Managed(hdr, id, op_data, 0);
+        fheapLocate_Managed(hdr_og, hdr, id, op_data, 0);
         // throw RunTimeException(CRITICAL, RTE_ERROR, "Temp");
     } 
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
@@ -3555,37 +3555,81 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data
 }
 
 /*----------------------------------------------------------------------------
- * dblockLookup
+ * dtableLookup
  *----------------------------------------------------------------------------*/
-uint64_t H5FileBuffer::man_dblockLocate(heap_info_t* hdr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry) {
+void H5FileBuffer::dtableLookup(heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col) {
+
+    /* Check for offset in first row */
+    if (off < dtable->num_id_first_row) {
+        *row = 0;
+        // Mimic H5_CHECKED_ASSIGN(*col, unsigned, (off / dtable->cparam.start_block_size), hsize_t);
+        if ((off / hdr->starting_blk_size) > std::numeric_limits<unsigned int>::max()) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "calculation in dtable look up exceeds unsigned rep limit: %zu", (off / hdr->starting_blk_size));
+        }
+        else {
+            *col = (unsigned) (off / hdr->starting_blk_size);
+        }
+    }
+    else {
+        unsigned high_bit = log2_gen(off); // determine the high bit in the offset
+        uint64_t off_mask = ((uint64_t)1) << high_bit; // compute mask for determining column
+
+        *row = (high_bit - dtable->first_row_bits) + 1;
+        // Mimic H5_CHECKED_ASSIGN(*col, unsigned, ((off - off_mask) / dtable->row_block_size[*row]), hsize_t);
+        if (((off - off_mask) / dtable->row_block_size[*row]) > std::numeric_limits<unsigned int>::max()) {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "calculation in dtable look up exceeds unsigned rep limit: %zu", ((off - off_mask) / dtable->row_block_size[*row]));
+        }
+        else {
+            *col = ((off - off_mask) / dtable->row_block_size[*row]);
+        }
+    } 
+
+}
+
+/*----------------------------------------------------------------------------
+ * man_dblockLocate
+ *----------------------------------------------------------------------------*/
+uint64_t H5FileBuffer::man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry) {
     /* Mock implementation of H5HF__man_dblock_locate */
     /* This method should only be called if we can't directly readDirect */
+    // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
 
     uint64_t iblock_addr; 
     unsigned row, col;
     unsigned entry;
 
     /* Look up row & column for object */
+    dtableLookup(hdr, &hdr_og->dtable, obj_off, &row, &col);
 
     /* Set indirect */
-    iblock_addr = hdr->dtable->table_addr;
+    iblock_addr = hdr_og->dtable->table_addr;
+    
     /* Read indirect */
     // TODO
-    /* Check for indirect block row */
-    while (row >= hdr->dtable->max_direct_rows) {
-        // TODO
-        // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
+    // all we need is children aka ents 
+
+    /* Check for indirect block row - iterates till direct hit */
+    while (row >= hdr_og->dtable->max_direct_rows) {
+        unsigned nrows; // num new rows in indirect 
+
+        /* Compute # of rows in child indirect block */
+        nrows = (log2_gen(hdr_og->dtable->row_block_size[row]) - hdr_og->dtable->first_row_bits) + 1;
+        entry = (row * (unsigned)hdr->table_width) + col;
+        /* Locate child indirect block */
+        // iblock_addr = iblock->ents[entry].addr;
 
     }
 
-    // return address of dblock of interest
+    // return:
+    // ents array of indirect
+    // entry (which is unsigned applied onto ents)
 
 }
 
 /*----------------------------------------------------------------------------
  * fheapLocate_Managed
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
+void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
     fheap_ud_cmp_t* fheap_udata = (fheap_ud_cmp_t*) op_data;
@@ -3613,12 +3657,12 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_d
     print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, pos %lu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, pos);
 
     /* Locate direct block of interest */
-    if(hdr->dtable->curr_root_rows == 0)
+    if(hdr_og->dtable->curr_root_rows == 0)
     {
         /* Direct Block */
 
         /* Set address of block before deploying down readDirectBlock */
-        dblock_addr = hdr->dtable->table_addr;
+        dblock_addr = hdr_og->dtable->table_addr;
     }
     else
     {
@@ -3628,10 +3672,10 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_d
         unsigned entry; // entry of block
         
         // TODO
-        man_dblockLocate(hdr, obj_off, ents, &entry); 
+        man_dblockLocate(hdr_og, hdr, obj_off, ents, &entry); 
 
         dblock_addr = ents[entry];
-        dblock_size = (size_t)hdr->dtable->row_block_size[entry / hdr->table_width];
+        dblock_size = (size_t)hdr_og->dtable->row_block_size[entry / hdr_og->table_width];
 
     }
 
@@ -3666,7 +3710,7 @@ void H5FileBuffer::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
  /*----------------------------------------------------------------------------
  * compareType8Record
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
+void H5FileBuffer::compareType8Record(btree2_hdr_t* hdr, const void *_bt2_udata, const void *_bt2_rec, int *result)
 {
     /* Implementation of H5A__dense_btree2_name_compare with type 8 - H5B2_GRP_DENSE_NAME_ID*/
     /* See: https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L220 */
@@ -3712,7 +3756,7 @@ void H5FileBuffer::compareType8Record(const void *_bt2_udata, const void *_bt2_r
         // H5HF_op -> H5HF__man_op -> H5HF__man_op_real -> H5A__dense_fh_name_cmp
 
         // H5HF_operator_t cmpPtr = &H5FileBuffer::fheapNameCmp;
-        fheapLocate(fheap, &bt2_rec->id, &fh_udata);
+        fheapLocate(hdr, fheap, &bt2_rec->id, &fh_udata);
 
         // hdf5 source
         // /* Check if the user's attribute and the B-tree's attribute have the same name */
@@ -3744,7 +3788,7 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
         // (hdr->compare)(udata, native + rec_off[my_idx], cmp); // old
         switch(hdr->type) {
             case H5B2_ATTR_DENSE_NAME_ID:
-                compareType8Record(udata, native + rec_off[my_idx], cmp);
+                compareType8Record(hdr, udata, native + rec_off[my_idx], cmp);
                 break;
             // case H5B2_GRP_DENSE_NAME_ID: - type 5
             //     break;

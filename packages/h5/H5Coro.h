@@ -607,10 +607,10 @@ class H5FileBuffer
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
-        void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
+        void                compareType8Record(btree2_hdr_t* hdr, const void *_bt2_udata, const void *_bt2_rec, int *result);
 
         /* Fheap Navigation*/
-        void                fheapLocate(heap_info_t *hdr, const void * _id, void *op_data);
+        void                fheapLocate(btree2_hdr_t* hdr_og, heap_info_t *hdr, const void * _id, void *op_data);
         void                fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
@@ -620,6 +620,10 @@ class H5FileBuffer
         void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
         uint64_t            openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
+
+        /* dtable search */
+        void                dtableLookup(heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col);
+        // TODO: finish adding block search methods
 
         /*--------------------------------------------------------------------
         * Data
