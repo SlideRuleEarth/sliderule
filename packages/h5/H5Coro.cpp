@@ -3555,6 +3555,34 @@ void H5FileBuffer::fheapLocate(heap_info_t *hdr, const void * _id, void *op_data
 }
 
 /*----------------------------------------------------------------------------
+ * dblockLookup
+ *----------------------------------------------------------------------------*/
+uint64_t H5FileBuffer::man_dblockLocate(heap_info_t* hdr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry) {
+    /* Mock implementation of H5HF__man_dblock_locate */
+    /* This method should only be called if we can't directly readDirect */
+
+    uint64_t iblock_addr; 
+    unsigned row, col;
+    unsigned entry;
+
+    /* Look up row & column for object */
+
+    /* Set indirect */
+    iblock_addr = hdr->dtable->table_addr;
+    /* Read indirect */
+    // TODO
+    /* Check for indirect block row */
+    while (row >= hdr->dtable->max_direct_rows) {
+        // TODO
+        // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
+
+    }
+
+    // return address of dblock of interest
+
+}
+
+/*----------------------------------------------------------------------------
  * fheapLocate_Managed
  *----------------------------------------------------------------------------*/
 void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
@@ -3563,47 +3591,63 @@ void H5FileBuffer::fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_d
     fheap_ud_cmp_t* fheap_udata = (fheap_ud_cmp_t*) op_data;
     uint64_t pos = fheap_udata->pos;
 
+    uint64_t dblock_addr; // found direct block to apply offset on
+    size_t dblock_size; // dblock size
+    uint64_t obj_off = 0; // offset of object in heap 
+    size_t obj_len = 0; // len of object in heap
+    size_t blk_off; // offset of object in block 
+    
     /* Set object offset and len, trust implicit casting */
 
     /* Skip from flag reading */
     id++; 
 
-    uint64_t obj_off = 0;
     for (size_t i = 0; i < hdr->heap_off_size; i++) {
         obj_off |= (uint64_t)id[i] << (8 * i);
     }
-    
-    size_t obj_len = 0;
     for (size_t j = 0; j < hdr->heap_len_size; j++) {
         obj_len |= (size_t)id[j] << (8 * j);
-    }
+    } // TODO: BUGGING
 
     // temp print to please compiler
     print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, pos %lu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, pos);
 
     /* Locate direct block of interest */
-    if(hdr->curr_num_rows == 0)
+    if(hdr->dtable->curr_root_rows == 0)
     {
-        /* Direct Blocks */
+        /* Direct Block */
 
-        // TODO: need to persist instance or move some functionality here 
-
-        // int bytes_read = readDirectBlock(hdr, hdr->starting_blk_size, hdr->root_blk_addr, hdr->hdr_flags, dlvl);
-        // removed err check
+        /* Set address of block before deploying down readDirectBlock */
+        dblock_addr = hdr->dtable->table_addr;
     }
     else
     {
-        /* Indirect Blocks */
+        /* Indirect Block Navigation */
 
-        // TODO: need to persist instance or move here
-        // H5HF__man_dblock_locate
+        uint64_t* ents; // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
+        unsigned entry; // entry of block
+        
+        // TODO
+        man_dblockLocate(hdr, obj_off, ents, &entry); 
 
-        // int bytes_read = readIndirectBlock(hdr, 0, hdr->root_blk_addr, hdr->hdr_flags, dlvl);
-        // removed err check
+        dblock_addr = ents[entry];
+        dblock_size = (size_t)hdr->dtable->row_block_size[entry / hdr->table_width];
+
     }
 
+    // TODO - NEED TO TEST THIS IS A GUESS
+    /* Compute offset of object within block */
+    uint64_t block_off = pos - dblock_addr;
+    // dblock->block_off
+    blk_off = (size_t)(obj_off - block_off); // Offset of the block within the heap's address space
+
+    /* Point to location for object */
+    // TODO - might need to allocate or see if you can straight add to addr
+    // p = dblock->blk + blk_off; // MODIFY <-- this assumes we have buffer with data
+
     // TODO case on type
-    // H5FileBuffer::fheapNameCmp
+    // H5FileBuffer::fheapNameCmp() - open Attribute message for the name
+    // or consider switching and reading the object
 
 }
 
@@ -3866,7 +3910,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     /* Init */
     hdr->dtable->start_bits = log2_of2((uint32_t)heap_info_ptr->starting_blk_size);
     hdr->dtable->first_row_bits = hdr->dtable->start_bits + log2_of2((uint32_t)heap_info_ptr->table_width);
-    hdr->dtable->max_root_rows = (heap_info_ptr->max_heap_size - hdr->dtable->first_row_bits) + 1; // CAUTION FOR BUGGING
+    hdr->dtable->max_root_rows = (heap_info_ptr->max_heap_size - hdr->dtable->first_row_bits) + 1; // CAUTION FOR BUGGING - Confirmed for hdf5 source but keep this warning
     hdr->dtable->max_direct_bits = log2_of2((uint32_t)heap_info_ptr->max_dblk_size);
     hdr->dtable->max_direct_rows = (hdr->dtable->max_direct_bits - hdr->dtable->start_bits) + 2;
     hdr->dtable->num_id_first_row = (uint64_t) (heap_info_ptr->starting_blk_size * heap_info_ptr->table_width);
@@ -3888,6 +3932,11 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         tmp_block_size *= 2;
         acc_block_off *= 2;
     }
+    
+    /* Additional sets */
+    hdr->dtable->curr_root_rows = (unsigned) heap_info_ptr->curr_num_rows;
+    hdr->dtable->table_addr = heap_info_ptr->root_blk_addr;
+
     /* End of double table set up*/
 
     return;
