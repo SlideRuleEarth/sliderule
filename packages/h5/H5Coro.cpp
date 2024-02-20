@@ -1193,8 +1193,13 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     // hdr->heap_len_size = heap_len_size;
     
     // min calc
-    uint32_t min_val = std::min((uint32_t)max_dblk_size, max_size_mg_obj);
-    uint16_t min_calc = (uint16_t) H5HF_SIZEOF_OFFSET_BITS(min_val);
+    // uint32_t min_val = std::min((uint32_t)max_dblk_size, max_size_mg_obj);
+    // uint8_t min_calc = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(min_val);
+
+    // follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199
+    uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((log2_gen((uint64_t) max_size_mg_obj) / 8) + 1));
+
+    // (uint8_t)MIN(hdr->man_dtable.max_dir_blk_off_size, H5VM_limit_enc_size((uint64_t)hdr->max_man_size));
 
     heap_info = {
         .table_width        = table_width,
@@ -1210,7 +1215,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .max_size_mg_obj    = max_size_mg_obj,
         .max_heap_size      = max_heap_size,
         .hdr_flags          = hdr_flags,
-        .heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
+        .heap_off_size      = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
         .heap_len_size      = min_calc // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj))
         
     };
@@ -1230,7 +1235,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
         heap_info_ptr->max_heap_size      = max_heap_size;
         heap_info_ptr->hdr_flags          = hdr_flags;
-        heap_info_ptr->heap_off_size      = (uint32_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
+        heap_info_ptr->heap_off_size      = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
         heap_info_ptr->heap_len_size      = min_calc; // (uint8_t) H5HF_SIZEOF_OFFSET_BITS(std::min((uint32_t)max_dblk_size, max_size_mg_obj));
     }
 
@@ -3589,29 +3594,19 @@ void H5FileBuffer::dtableLookup(heap_info_t* hdr, dtable_t* dtable, uint64_t off
 /*----------------------------------------------------------------------------
  * buildEntries_Indirect
  *----------------------------------------------------------------------------*/
-uint64_t buildEntries_Indirect(heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents) {
+uint64_t H5FileBuffer::buildEntries_Indirect(heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents) {
     /* Build array of addresses (ent) for this indirect block - follow H5HF__cache_iblock_deserialize x readIndirectBlock */
-    unsigned idx; // track indx in ents
+    unsigned idx = 0; // track indx in ents
     uint64_t block_off; // iblock->block_off for moving offset
     
-    pos += 5 // signature and version
-    pos += metaData.offsetsize // + hdr->blk_offset_size; // block header
+    pos += 5; // signature and version
+    pos += metaData.offsetsize; // + hdr->blk_offset_size; // block header
 
     /* Build equivalent of iblock->block_off - copy indirect style*/
     const int MAX_BLOCK_OFFSET_SIZE = 8;
     uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
     readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
     memcpy(&block_off, block_offset_buf, sizeof(uint64_t));
-
-    // int nrows = heap_info->curr_num_rows; // used for "root" indirect block only
-    int curr_size = heap_info->starting_blk_size * heap_info->table_width;
-
-    // init set as 0 with first call
-    // if(block_size > 0) nrows = (highestBit(block_size) - highestBit(curr_size)) + 1;
-    int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
-
-    //int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
-    // int N = K - (max_dblock_rows * heap_info->table_width);
 
     // TODO: this has no regard for separating types --> valid approach?
     // NOTE: when debugging compare entries encoutered
@@ -3632,7 +3627,7 @@ uint64_t buildEntries_Indirect(heap_info_t* heap_info, int nrows, uint64_t pos, 
                 /* Read Direct Block Address and Assign */
                 uint64_t direct_block_addr = readField(metaData.offsetsize, &pos);
                 ents[idx] = direct_block_addr;
-                idx++
+                idx++;
                 
             }
             else /* Indirect Block Entry and Assign */
@@ -3640,7 +3635,7 @@ uint64_t buildEntries_Indirect(heap_info_t* heap_info, int nrows, uint64_t pos, 
                 /* Read Indirect Block Address */
                 uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
                 ents[idx] = indirect_block_addr;
-                idx++
+                idx++;
             }
         }
     }
@@ -3658,36 +3653,31 @@ void H5FileBuffer::man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint
     // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
 
     uint64_t iblock_addr; 
-    uint64_t pos;
+    // uint64_t pos;
     unsigned row, col;
-    unsigned entry;
-    unsigned nrows; // num new rows in indirect 
+    // unsigned nrows; // num new rows in indirect 
     uint64_t block_off;
 
     /* Look up row & column for object */
-    dtableLookup(hdr, &hdr_og->dtable, obj_off, &row, &col);
+    dtableLookup(hdr, hdr_og->dtable, obj_off, &row, &col);
 
     /* Set indirect */
     iblock_addr = hdr_og->dtable->table_addr;
     
-    /* Read indirect - set up ents array */
-
-    // iblock->nrows     = *udata->nrows;
-    // TODO: calculate and modify nrows to be used 
-
-    int nrows = heap_info->curr_num_rows;
+    /* Read indirect - set up ents array */ // FLAG FOR DEBUGGING
+    int nrows = hdr->curr_num_rows;
     block_off = buildEntries_Indirect(hdr, nrows, iblock_addr, ents);
 
     /* Check for indirect block row - iterates till direct hit */
     while (row >= hdr_og->dtable->max_direct_rows) {
-
+        unsigned entry;
         /* Compute # of rows in child indirect block */
         nrows = (log2_gen(hdr_og->dtable->row_block_size[row]) - hdr_og->dtable->first_row_bits) + 1;
         entry = (row * (unsigned)hdr->table_width) + col;
         /* Locate child indirect block */
         iblock_addr = ents[entry];
         /* new iblock search and set - row col - remove offset worht of iblock*/
-        dtableLookup(hdr, &hdr_og->dtable, (obj_off - block_off), &row, &col);
+        dtableLookup(hdr, hdr_og->dtable, (obj_off - block_off), &row, &col);
         /* Switch to new block - new ents list */
         block_off = buildEntries_Indirect(hdr, nrows, iblock_addr, ents);
 
@@ -3706,8 +3696,9 @@ void H5FileBuffer::man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint
 void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags){
     /* Operate on managed heap - H5HF__man_op + H5HF__man_op_real*/
 
-    fheap_ud_cmp_t* fheap_udata = (fheap_ud_cmp_t*) op_data;
-    uint64_t pos = fheap_udata->pos;
+    // NOTE: currently unused, open flag
+    // fheap_ud_cmp_t* fheap_udata = (fheap_ud_cmp_t*) op_data;
+    // uint64_t pos = fheap_udata->pos;
 
     uint64_t dblock_addr; // found direct block to apply offset on
     size_t dblock_size; // dblock size
@@ -3721,39 +3712,37 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     /* Skip from flag reading */
     id++; 
 
-    for (size_t i = 0; i < hdr->heap_off_size; i++) {
+    // NOTE: rework using readByteArray
+    size_t i;
+    for (i=0; i < hdr->heap_off_size; i++) {
         obj_off |= (uint64_t)id[i] << (8 * i);
     }
-    for (size_t j = 0; j < hdr->heap_len_size; j++) {
-        obj_len |= (size_t)id[j] << (8 * j);
-    } // TODO: BUGGING
-
-    // temp print to please compiler
-    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, pos %lu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, pos);
+    id += hdr->heap_off_size;
+    for (i=0; i < hdr->heap_len_size; i++) {
+        obj_len |= (size_t)id[i] << (8 * i);
+    } // BUGGING
 
     /* Locate direct block of interest */
     if(hdr_og->dtable->curr_root_rows == 0)
     {
         /* Direct Block */
-
         /* Set address of block before deploying down readDirectBlock */
         dblock_addr = hdr_og->dtable->table_addr;
+        dblock_size = hdr->starting_blk_size;
     }
     else
     {
         /* Indirect Block Navigation */
-
         uint64_t* ents = (uint64_t*) malloc((size_t)(hdr->curr_num_rows * hdr->table_width)* sizeof(uint64_t)); // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
         unsigned entry; // entry of block
         
         man_dblockLocate(hdr_og, hdr, obj_off, ents, &entry); 
 
         dblock_addr = ents[entry];
-        dblock_size = (size_t)hdr_og->dtable->row_block_size[entry / hdr_og->table_width];
+        dblock_size = (size_t)hdr_og->dtable->row_block_size[entry / hdr->table_width];
         
         /* Release when complete */
         free(ents);
-
 
     }
 
@@ -3763,9 +3752,9 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     pos += metaData.offsetsize; // skip heap hdr addr
     const int MAX_BLOCK_OFFSET_SIZE = 8;
     uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
-    readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
+    readByteArray(block_offset_buf, hdr->blk_offset_size, &pos); // Block Offset
     memcpy(&dblock_block_off, block_offset_buf, sizeof(uint64_t));
-    blk_off = (size_t)(obj_off - block_off); // Offset of the block within the heap's address space
+    blk_off = (size_t)(obj_off - dblock_block_off); // Offset of the block within the heap's address space
 
     /* Point to location for object */
     // p = dblock->blk + blk_off; // MODIFY <-- this assumes we have buffer with data
@@ -3773,6 +3762,9 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     // TODO case on type
     // H5FileBuffer::fheapNameCmp() - open Attribute message for the name
     // or consider switching and reading the object
+
+    // temp print to please compiler
+    print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, blk_off: %zu, dblock size %zu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, blk_off, dblock_size);
 
 }
 

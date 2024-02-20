@@ -295,8 +295,8 @@ class H5FileBuffer
             uint16_t                max_heap_size;
             uint8_t                 hdr_flags;
             
-            uint32_t                heap_off_size;  /* Size of heap offsets (in bytes) */
-            uint16_t                heap_len_size;  /* Size of heap ID lengths (in bytes) */
+            uint8_t                 heap_off_size;  /* uint32_t Size of heap offsets (in bytes) */
+            uint8_t                 heap_len_size;  /* Size of heap ID lengths (in bytes) */
         } heap_info_t;
 
         /* KAT ADDED */
@@ -611,7 +611,7 @@ class H5FileBuffer
 
         /* Fheap Navigation*/
         void                fheapLocate(btree2_hdr_t* hdr_og, heap_info_t *hdr, const void * _id, void *op_data);
-        void                fheapLocate_Managed(heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags);
+        void                fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint8_t* id, void *op_data, unsigned op_flags);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
         /* Btreev2 setting and navigation */
@@ -623,9 +623,8 @@ class H5FileBuffer
 
         /* dtable search */
         void                dtableLookup(heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col);
-        void                buildEntries_Indirect(heap_info_t* heap_info, uint64_t pos, uint64_t* ents);
+        uint64_t            buildEntries_Indirect(heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents);
         void                man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
-        // TODO: finish adding block search methods
 
         /*--------------------------------------------------------------------
         * Data
