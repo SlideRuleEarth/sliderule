@@ -3589,7 +3589,7 @@ void H5FileBuffer::dtableLookup(heap_info_t* hdr, dtable_t* dtable, uint64_t off
 /*----------------------------------------------------------------------------
  * buildEntries_Indirect
  *----------------------------------------------------------------------------*/
-uint64_t buildEntries_Indirect(heap_info_t* heap_info, int block_size, uint64_t pos, uint64_t* ents) {
+uint64_t buildEntries_Indirect(heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents) {
     /* Build array of addresses (ent) for this indirect block - follow H5HF__cache_iblock_deserialize x readIndirectBlock */
     unsigned idx; // track indx in ents
     uint64_t block_off; // iblock->block_off for moving offset
@@ -3603,13 +3603,13 @@ uint64_t buildEntries_Indirect(heap_info_t* heap_info, int block_size, uint64_t 
     readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
     memcpy(&block_off, block_offset_buf, sizeof(uint64_t));
 
-    int nrows = heap_info->curr_num_rows; // used for "root" indirect block only
+    // int nrows = heap_info->curr_num_rows; // used for "root" indirect block only
     int curr_size = heap_info->starting_blk_size * heap_info->table_width;
 
     // init set as 0 with first call
-    if(block_size > 0) nrows = (highestBit(block_size) - highestBit(curr_size)) + 1;
+    // if(block_size > 0) nrows = (highestBit(block_size) - highestBit(curr_size)) + 1;
     int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
-    
+
     //int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
     // int N = K - (max_dblock_rows * heap_info->table_width);
 
@@ -3635,7 +3635,7 @@ uint64_t buildEntries_Indirect(heap_info_t* heap_info, int block_size, uint64_t 
                 idx++
                 
             }
-            else /* Indirect Block Entry and Assign*/
+            else /* Indirect Block Entry and Assign */
             {
                 /* Read Indirect Block Address */
                 uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
@@ -3671,7 +3671,12 @@ void H5FileBuffer::man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint
     iblock_addr = hdr_og->dtable->table_addr;
     
     /* Read indirect - set up ents array */
-    block_off = buildEntries_Indirect(hdr, 0, iblock_addr, ents);
+
+    // iblock->nrows     = *udata->nrows;
+    // TODO: calculate and modify nrows to be used 
+
+    int nrows = heap_info->curr_num_rows;
+    block_off = buildEntries_Indirect(hdr, nrows, iblock_addr, ents);
 
     /* Check for indirect block row - iterates till direct hit */
     while (row >= hdr_og->dtable->max_direct_rows) {
@@ -3683,12 +3688,15 @@ void H5FileBuffer::man_dblockLocate(btree2_hdr_t* hdr_og, heap_info_t* hdr, uint
         iblock_addr = ents[entry];
         /* new iblock search and set - row col - remove offset worht of iblock*/
         dtableLookup(hdr, &hdr_og->dtable, (obj_off - block_off), &row, &col);
+        /* Switch to new block - new ents list */
+        block_off = buildEntries_Indirect(hdr, nrows, iblock_addr, ents);
 
     }
 
-    // return:
-    // ents array of indirect
+    // return via args 
+    // ents array of indirect -> * ents
     // entry (which is unsigned applied onto ents)
+    *ret_entry = (row * (unsigned)hdr->table_width) + col;
 
 }
 
