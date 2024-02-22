@@ -62,6 +62,7 @@ int OsApi::io_timeout = IO_DEFAULT_TIMEOUT;
 int OsApi::io_maxsize = IO_DEFAULT_MAXSIZE;
 int64_t OsApi::launch_time = 0;
 char* OsApi::environment_version = NULL;
+bool OsApi::is_public = false;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -382,4 +383,20 @@ void OsApi::setEnvVersion (const char* verstr)
 const char* OsApi::getEnvVersion (void)
 {
     return environment_version;
+}
+
+/*----------------------------------------------------------------------------
+ * getEnvVersion
+ *----------------------------------------------------------------------------*/
+void OsApi::setIsPublic (bool _is_public)
+{
+    is_public = _is_public;
+}
+
+/*----------------------------------------------------------------------------
+ * getEnvVersion
+ *----------------------------------------------------------------------------*/
+bool OsApi::getIsPublic (void)
+{
+    return is_public;
 }

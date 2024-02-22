@@ -54,6 +54,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"metric",      LuaLibrarySys::lsys_metric},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"setenvver",   LuaLibrarySys::lsys_setenvver},
+    {"setispublic", LuaLibrarySys::lsys_setispublic},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
@@ -292,6 +293,29 @@ int LuaLibrarySys::lsys_setenvver (lua_State* L)
     else
     {
         mlog(CRITICAL, "Invalid parameter supplied to set environment version, must be a string");
+        status = false;
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setispublic
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setispublic (lua_State* L)
+{
+    bool status = true;
+    const char* is_public_str = NULL;
+    if(lua_isstring(L, 1))
+    {
+        is_public_str = lua_tostring(L, 1);
+        bool is_public = StringLib::match(is_public_str, "True");
+        OsApi::setIsPublic(is_public);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to setting is_public, must be a string 'True' or 'False'");
         status = false;
     }
 

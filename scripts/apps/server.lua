@@ -39,6 +39,7 @@ local org_name                  = cfgtbl["cluster"] or os.getenv("CLUSTER")
 local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PROVISIONING_SYSTEM")
 local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
 local container_registry        = cfgtbl["container_registry"] or os.getenv("CONTAINER_REGISTRY")
+local is_public                 = cfgtbl["is_public"] or os.getenv("IS_PUBLIC") or "False"
 
 --------------------------------------------------
 -- System Configuration
@@ -46,6 +47,9 @@ local container_registry        = cfgtbl["container_registry"] or os.getenv("CON
 
 -- Set Environment Version --
 sys.setenvver(environment_version)
+
+-- Set Is Public --
+sys.setispublic(is_public)
 
 -- Configure System Message Queue Depth --
 sys.setstddepth(msgq_depth)

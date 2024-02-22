@@ -228,6 +228,8 @@ class OsApi
         static int64_t      getLaunchTime       (void);
         static void         setEnvVersion       (const char* verstr);
         static const char*  getEnvVersion       (void);
+        static void         setIsPublic         (bool _is_public);
+        static bool         getIsPublic         (void);
 
     private:
 
@@ -237,6 +239,7 @@ class OsApi
         static int io_maxsize;
         static int64_t launch_time;
         static char* environment_version;
+        static bool is_public;
 };
 
 #endif  /* __osapi__ */

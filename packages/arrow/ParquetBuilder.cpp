@@ -526,24 +526,29 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     /* Check Path */
     if((parms->path == NULL) || (parms->path[0] == '\0'))
     {
-        if(parms->asset_name)
+        /* Check Asset Provided */
+        if(!parms->asset_name)
         {
-            /* Generate Output Path */
-            Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
-            const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
-            const char* path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
-            FString path_name("/%s.%016lX", id, OsApi::time(OsApi::CPU_CLK));
-            FString path_str("%s%s%s%s", path_prefix, asset->getPath(), path_name.c_str(), path_suffix);
-            asset->releaseLuaObject();
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path without asset");
+        }
 
-            /* Set Output Path */
-            outputPath = path_str.c_str(true);
-            mlog(INFO, "Generating unique path: %s", outputPath);
-        }
-        else
+        /* Check Private Cluster */
+        if(OsApi::getIsPublic())
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to stage output on public cluster");
         }
+
+        /* Generate Output Path */
+        Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
+        const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
+        const char* path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
+        FString path_name("/%s.%016lX", id, OsApi::time(OsApi::CPU_CLK));
+        FString path_str("%s%s%s%s", path_prefix, asset->getPath(), path_name.c_str(), path_suffix);
+        asset->releaseLuaObject();
+
+        /* Set Output Path */
+        outputPath = path_str.c_str(true);
+        mlog(INFO, "Generating unique path: %s", outputPath);
     }
     else
     {
