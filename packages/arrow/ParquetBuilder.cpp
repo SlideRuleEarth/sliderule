@@ -428,10 +428,9 @@ struct ParquetBuilder::impl
 int ParquetBuilder::luaCreate (lua_State* L)
 {
     ArrowParms* _parms = NULL;
-    geo_data_t geo = {
-        .x_key = NULL,
-        .y_key = NULL
-    };
+    geo_data_t geo;
+    geo.x_key = NULL;
+    geo.y_key = NULL;
 
     try
     {
@@ -1207,7 +1206,7 @@ void ParquetBuilder::processRecordBatch (int num_rows)
                 };
                 (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(wkbpoint_t));
                 if(x_field.flags & RecordObject::BATCH) x_field.offset += batchRowSizeBytes * 8;
-                if(x_field.flags & RecordObject::BATCH) y_field.offset += batchRowSizeBytes * 8;
+                if(y_field.flags & RecordObject::BATCH) y_field.offset += batchRowSizeBytes * 8;
             }
             x_field.offset = starting_x_offset;
             y_field.offset = starting_y_offset;

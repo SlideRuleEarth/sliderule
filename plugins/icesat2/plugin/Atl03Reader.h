@@ -102,7 +102,7 @@ class Atl03Reader: public LuaObject
             uint8_t         pair; // 0 (l), 1 (r)
             uint8_t         spacecraft_orientation; // sc_orient_t
             uint16_t        reference_ground_track;
-            uint16_t        cycle;
+            uint8_t         cycle;
             uint32_t        segment_id;
             uint32_t        photon_count;
             float           solar_elevation;
@@ -309,9 +309,9 @@ class Atl03Reader: public LuaObject
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context08; // for ATL08 file
 
-        int32_t             start_rgt;
-        int32_t             start_cycle;
-        int32_t             start_region;
+        uint16_t             start_rgt;
+        uint8_t              start_cycle;
+        uint8_t              start_region;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -327,7 +327,7 @@ class Atl03Reader: public LuaObject
         void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
         static void         generateAncillaryRecords    (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, AncillaryFields::type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
-        static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
+        static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 
         static int          luaParms                    (lua_State* L);
         static int          luaStats                    (lua_State* L);

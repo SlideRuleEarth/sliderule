@@ -69,7 +69,7 @@ const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
     {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"cycle",           RecordObject::UINT16,   offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id),             1,  NULL, NATIVE_FLAGS},
     {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance),       1,  NULL, NATIVE_FLAGS}, // distance from equator
     {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
@@ -1750,7 +1750,7 @@ void Atl03Reader::postRecord (RecordObject& record, stats_t& local_stats)
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& cycle, int32_t& region)
+void Atl03Reader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
 {
     if(StringLib::size(_resource) < 29)
     {
@@ -1769,7 +1769,7 @@ void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
     rgt_str[4] = '\0';
     if(StringLib::str2long(rgt_str, &val, 10))
     {
-        rgt = val;
+        rgt = (uint16_t)val;
     }
     else
     {
@@ -1782,7 +1782,7 @@ void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
     cycle_str[2] = '\0';
     if(StringLib::str2long(cycle_str, &val, 10))
     {
-        cycle = val;
+        cycle = (uint8_t)val;
     }
     else
     {
@@ -1795,7 +1795,7 @@ void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
     region_str[2] = '\0';
     if(StringLib::str2long(region_str, &val, 10))
     {
-        region = val;
+        region = (uint8_t)val;
     }
     else
     {

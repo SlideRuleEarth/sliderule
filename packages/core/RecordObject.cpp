@@ -1503,11 +1503,11 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
 /*----------------------------------------------------------------------------
  * getUserField
  *----------------------------------------------------------------------------*/
-RecordObject::field_t RecordObject::getUserField (definition_t* def, const char* field_name)
+RecordObject::field_t RecordObject::getUserField (definition_t* def, const char* field_name, uint32_t parent_flags)
 {
     assert(field_name);
 
-    field_t field = { INVALID_FIELD, 0, 0, NULL, NATIVE_FLAGS };
+    field_t field = { INVALID_FIELD, 0, 0, NULL, parent_flags };
     long element = -1;
 
     /* Sanity Check Def */
@@ -1585,7 +1585,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
         else
         {
             definition_t* subdef = definitions[field.exttype];
-            field_t subfield = getUserField(subdef, subfield_name);
+            field_t subfield = getUserField(subdef, subfield_name, field.flags);
             subfield.offset += field.offset;
             field = subfield;
         }
@@ -1596,6 +1596,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     }
 
     /* Return Field */
+    field.flags |= parent_flags;
     return field;
 }
 

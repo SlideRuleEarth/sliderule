@@ -126,7 +126,7 @@ class RecordObject
             int32_t         offset;             // bits for BITFIELD, bytes for everything else
             int32_t         elements;
             const char*     exttype;
-            uint64_t        flags;
+            uint64_t        flags;              // 64-bits provided here to consume padding
         } fieldDef_t;
 
         typedef enum {
@@ -328,7 +328,7 @@ class RecordObject
 
         /* Regular Methods */
         field_t                 getPointedToField   (field_t field, bool allow_null, int element=0);
-        static field_t          getUserField        (definition_t* def, const char* field_name);
+        static field_t          getUserField        (definition_t* def, const char* field_name, uint32_t parent_flags=NATIVE_FLAGS);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags);
 
