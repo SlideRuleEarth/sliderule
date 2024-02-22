@@ -547,18 +547,25 @@ def emptyframe(**kwargs):
 #
 # Process Output File
 #
-def procoutputfile(parm):
+def procoutputfile(parm, rsps):
     output = parm["output"]
+    path = output["path"]
+    # Check If Remote Record Is In Responses
+    for rsp in rsps:
+        if 'arrowrec.remote' == rsp['__rectype']:
+            path = rsp['url']
+            break
+    # Handle Local Files
     if "open_on_complete" in output and output["open_on_complete"]:
         if "as_geo" in output and not output["as_geo"]:
             # Return Parquet File as DataFrame
-            return geopandas.pd.read_parquet(output["path"])
+            return geopandas.pd.read_parquet(path)
         else:
             # Return GeoParquet File as GeoDataFrame
-            return geopandas.read_parquet(output["path"])
+            return geopandas.read_parquet(path)
     else:
         # Return Parquet Filename
-        return output["path"]
+        return path
 
 #
 #  Get Values from Raw Buffer

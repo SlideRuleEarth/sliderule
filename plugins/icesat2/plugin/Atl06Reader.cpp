@@ -205,12 +205,9 @@ Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, co
     }
     catch(const RunTimeException& e)
     {
-        /* Log Error */
-        mlog(e.level(), "Failed to read global information in resource %s: %s", resource, e.what());
-
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) LuaEndpoint::generateExceptionStatus(RTE_TIMEOUT, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
-        else LuaEndpoint::generateExceptionStatus(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
+        if(e.code() == RTE_TIMEOUT) alert(RTE_TIMEOUT, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0);
@@ -639,8 +636,7 @@ void* Atl06Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of resource %s track %d: %s", info->reader->resource, info->track, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), info->reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
     }
 
     /* Handle Global Reader Updates */

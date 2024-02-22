@@ -36,7 +36,6 @@
 #include "core.h"
 #include "ArrowParms.h"
 
-
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -163,7 +162,10 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             }
             else if(asset_name != NULL)
             {
-                credentials = CredentialStore::get(asset_name);
+                Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+                const char* identity = asset->getIdentity();
+                credentials = CredentialStore::get(identity);
+                asset->releaseLuaObject();
                 if(credentials.provided)
                 {
                     mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);

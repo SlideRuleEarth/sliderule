@@ -46,13 +46,6 @@ const struct luaL_Reg LuaEndpoint::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* LuaEndpoint::EndpointExceptionRecType = "exceptrec";
-const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
-    {"code",        RecordObject::INT32,    offsetof(response_exception_t, code),   1,                       NULL, NATIVE_FLAGS},
-    {"level",       RecordObject::INT32,    offsetof(response_exception_t, level),  1,                       NULL, NATIVE_FLAGS},
-    {"text",        RecordObject::STRING,   offsetof(response_exception_t, text),   MAX_EXCEPTION_TEXT_SIZE, NULL, NATIVE_FLAGS}
-};
-
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
 const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
@@ -96,7 +89,6 @@ LuaEndpoint::Authenticator::~Authenticator(void)
  *----------------------------------------------------------------------------*/
 void LuaEndpoint::init (void)
 {
-    RECDEF(EndpointExceptionRecType, EndpointExceptionRecDef, sizeof(response_exception_t), "code");
 }
 
 /*----------------------------------------------------------------------------
@@ -119,29 +111,6 @@ int LuaEndpoint::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
-}
-
-/*----------------------------------------------------------------------------
- * generateExceptionStatus
- *----------------------------------------------------------------------------*/
-void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publisher* outq, bool* active, const char* errmsg, ...)
-{
-    /* Build Error Message */
-    char error_buf[MAX_EXCEPTION_TEXT_SIZE];
-    va_list args;
-    va_start(args, errmsg);
-    int vlen = vsnprintf(error_buf, MAX_EXCEPTION_TEXT_SIZE - 1, errmsg, args);
-    int attr_size = MAX(MIN(vlen + 1, MAX_EXCEPTION_TEXT_SIZE), 1);
-    error_buf[attr_size - 1] = '\0';
-    va_end(args);
-
-    /* Post Endpoint Exception Record */
-    RecordObject record(EndpointExceptionRecType);
-    response_exception_t* exception = (response_exception_t*)record.getRecordData();
-    exception->code = code;
-    exception->level = (int32_t)level;
-    StringLib::format(exception->text, MAX_EXCEPTION_TEXT_SIZE, "%s", error_buf);
-    record.post(outq, 0, active);
 }
 
 /******************************************************************************

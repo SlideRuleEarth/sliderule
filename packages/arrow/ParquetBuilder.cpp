@@ -74,6 +74,12 @@ const RecordObject::fieldDef_t ParquetBuilder::dataRecDef[] = {
     {"data",       RecordObject::UINT8,    offsetof(arrow_file_data_t, data),                      0,  NULL, NATIVE_FLAGS} // variable length
 };
 
+const char* ParquetBuilder::remoteRecType = "arrowrec.remote";
+const RecordObject::fieldDef_t ParquetBuilder::remoteRecDef[] = {
+    {"url",   RecordObject::STRING,   offsetof(arrow_file_remote_t, url),                URL_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"size",  RecordObject::INT64,    offsetof(arrow_file_remote_t, size),                         1,  NULL, NATIVE_FLAGS}
+};
+
 const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
 
 /******************************************************************************
@@ -422,6 +428,10 @@ struct ParquetBuilder::impl
 int ParquetBuilder::luaCreate (lua_State* L)
 {
     ArrowParms* _parms = NULL;
+    geo_data_t geo = {
+        .x_key = NULL,
+        .y_key = NULL
+    };
 
     try
     {
@@ -436,7 +446,6 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* index_key       = getLuaString(L, 8, true, NULL);
 
         /* Build Geometry Fields */
-        geo_data_t geo;
         geo.as_geo = _parms->as_geo;
         if(geo.as_geo && (x_key != NULL) && (y_key != NULL))
         {
@@ -467,6 +476,8 @@ int ParquetBuilder::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
+        delete [] geo.x_key;
+        delete [] geo.y_key;
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -479,6 +490,7 @@ void ParquetBuilder::init (void)
 {
     RECDEF(metaRecType, metaRecDef, sizeof(arrow_file_meta_t), NULL);
     RECDEF(dataRecType, dataRecDef, sizeof(arrow_file_data_t), NULL);
+    RECDEF(remoteRecType, remoteRecDef, sizeof(arrow_file_remote_t), NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -510,6 +522,33 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     assert(inq_name);
     assert(rec_type);
     assert(id);
+
+    /* Check Path */
+    if((parms->path == NULL) || (parms->path[0] == '\0'))
+    {
+        if(parms->asset_name)
+        {
+            /* Generate Output Path */
+            Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
+            const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
+            const char* path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
+            FString path_name("/%s.%016lX", id, OsApi::time(OsApi::CPU_CLK));
+            FString path_str("%s%s%s%s", path_prefix, asset->getPath(), path_name.c_str(), path_suffix);
+            asset->releaseLuaObject();
+
+            /* Set Output Path */
+            outputPath = path_str.c_str(true);
+            mlog(INFO, "Generating unique path: %s", outputPath);
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path");
+        }
+    }
+    else
+    {
+        outputPath = StringLib::duplicate(parms->path);
+    }
 
     /* Allocate Private Implementation */
     pimpl = new ParquetBuilder::impl;
@@ -586,6 +625,7 @@ ParquetBuilder::~ParquetBuilder(void)
     delete builderPid;
     parms->releaseLuaObject();
     delete [] fileName;
+    delete [] outputPath;
     delete [] recType;
     delete outQ;
     delete inQ;
@@ -689,10 +729,10 @@ void* ParquetBuilder::builderThread(void* parm)
     (void)builder->pimpl->parquetWriter->Close();
 
     /* Send File to User */
-    const char* _path = builder->parms->path;
+    const char* _path = builder->outputPath;
     uint32_t send_trace_id = start_trace(INFO, trace_id, "send_file", "{\"path\": \"%s\"}", _path);
     int _path_len = StringLib::size(_path);
-    if((_path_len > 5) &&
+    if( (_path_len > 5) &&
         (_path[0] == 's') &&
         (_path[1] == '3') &&
         (_path[2] == ':') &&
@@ -1229,7 +1269,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
     if(status)
     {
         /* Send Initial Status */
-        LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
+        alert(RTE_INFO, INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
 
         try
         {
@@ -1237,14 +1277,24 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
             int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
 
             /* Send Successful Status */
-            LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
+            alert(RTE_INFO, INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
+
+            /* Send Remote Record */
+            RecordObject remote_record(remoteRecType);
+            arrow_file_remote_t* remote = (arrow_file_remote_t*)remote_record.getRecordData();
+            StringLib::copy(&remote->url[0], outputPath, URL_MAX_LEN);
+            remote->size = bytes_uploaded;
+            if(!remote_record.post(outQ))
+            {
+                mlog(CRITICAL, "Failed to send remote record back to user for %s", outputPath);
+            }
         }
         catch(const RunTimeException& e)
         {
             status = false;
 
             /* Send Error Status */
-            LuaEndpoint::generateExceptionStatus(RTE_ERROR, e.level(), outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
+            alert(RTE_ERROR, e.level(), outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
         }
     }
 
@@ -1255,7 +1305,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
     return status;
 
     #else
-    LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
+    alert(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
     return false;
     #endif
 }

@@ -61,7 +61,7 @@ class TestMosaic:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 19
+        assert len(gdf.keys()) == 20
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
@@ -82,7 +82,7 @@ class TestMosaic:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 26
+        assert len(gdf.keys()) == 27
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231

@@ -66,6 +66,7 @@ class ParquetBuilder: public LuaObject
 
         static const int LIST_BLOCK_SIZE = 32;
         static const int FILE_NAME_MAX_LEN = 128;
+        static const int URL_MAX_LEN = 512;
         static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
         static const int ROW_GROUP_SIZE = 0x4000000; // 64MB
         static const int QUEUE_BUFFER_FACTOR = 3;
@@ -79,6 +80,9 @@ class ParquetBuilder: public LuaObject
 
         static const char* dataRecType;
         static const RecordObject::fieldDef_t dataRecDef[];
+
+        static const char* remoteRecType;
+        static const RecordObject::fieldDef_t remoteRecDef[];
 
         static const char* TMP_FILE_PREFIX;
 
@@ -95,6 +99,11 @@ class ParquetBuilder: public LuaObject
             char    filename[FILE_NAME_MAX_LEN];
             uint8_t data[FILE_BUFFER_RSPS_SIZE];
         } arrow_file_data_t;
+
+        typedef struct {
+            char    url[URL_MAX_LEN];
+            long    size;
+        } arrow_file_remote_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -152,6 +161,7 @@ class ParquetBuilder: public LuaObject
         int                 batchRowSizeBytes;
         int                 maxRowsInGroup;
         const char*         fileName; // used locally to build file
+        const char*         outputPath; // final destination of the file
         geo_data_t          geoData;
 
         struct impl; // arrow implementation

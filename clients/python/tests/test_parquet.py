@@ -27,7 +27,7 @@ class TestParquet:
         os.remove("testfile1.parquet")
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 16
+        assert len(gdf.keys()) == 17
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
@@ -48,7 +48,7 @@ class TestParquet:
         os.remove("testfile5.parquet")
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 18
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
@@ -69,7 +69,7 @@ class TestParquet:
         os.remove("testfile2.parquet")
         assert init
         assert len(gdf) == 190491
-        assert len(gdf.keys()) == 23
+        assert len(gdf.keys()) == 24
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231

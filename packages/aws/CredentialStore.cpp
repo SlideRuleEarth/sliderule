@@ -84,7 +84,7 @@ void CredentialStore::deinit (void)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-CredentialStore::Credential CredentialStore::get (const char* host)
+CredentialStore::Credential CredentialStore::get (const char* identity)
 {
     Credential credential;
 
@@ -92,7 +92,7 @@ CredentialStore::Credential CredentialStore::get (const char* host)
     {
         try
         {
-            credential = credentialStore[host];
+            credential = credentialStore[identity];
         }
         catch(const RunTimeException& e)
         {
@@ -107,14 +107,14 @@ CredentialStore::Credential CredentialStore::get (const char* host)
 /*----------------------------------------------------------------------------
  * put
  *----------------------------------------------------------------------------*/
-bool CredentialStore::put (const char* host, const Credential& credential)
+bool CredentialStore::put (const char* identity, const Credential& credential)
 {
     bool status = false;
 
     credentialLock.lock();
     {
         /* Store Credentials */
-        status = credentialStore.add(host, credential);
+        status = credentialStore.add(identity, credential);
     }
     credentialLock.unlock();
 

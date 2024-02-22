@@ -268,8 +268,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of resource %s beam %d: %s", reader->resource, info->beam, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
     }
 
     /* Handle Global Reader Updates */

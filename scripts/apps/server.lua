@@ -65,6 +65,7 @@ local assets = asset.loaddir(asset_directory)
 
 -- Run IAM Role Authentication Script (identity="iam-role") --
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
+sys.wait(5) -- best effort delay to give time for iam role to be established
 
 -- Run Earth Data Authentication Scripts --
 if authenticate_to_nsidc then

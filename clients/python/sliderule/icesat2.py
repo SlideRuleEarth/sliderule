@@ -151,7 +151,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
 
     # Check for Output Options
     if "output" in parm:
-        gdf = sliderule.procoutputfile(parm)
+        gdf = sliderule.procoutputfile(parm, rsps)
         profiles["flatten"] = time.perf_counter() - tstart_flatten
         return gdf
 
@@ -561,7 +561,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
         # Check for Output Options
         if "output" in parm:
             profiles[atl03sp.__name__] = time.perf_counter() - tstart
-            return sliderule.procoutputfile(parm)
+            return sliderule.procoutputfile(parm, rsps)
         else: # Native Output
             # Flatten Responses
             tstart_flatten = time.perf_counter()
