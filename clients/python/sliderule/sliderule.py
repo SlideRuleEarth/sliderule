@@ -1355,6 +1355,13 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             datafile = file.read()
         os.remove(tempfile)
 
+    elif isinstance(source, Polygon):
+        gdf = geopandas.GeoDataFrame(geometry=[source], crs=EPSG_WGS84)
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
+
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
         # create lat/lon lists
         if len(source) == 4: # bounding box
