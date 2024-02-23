@@ -1203,7 +1203,8 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .max_heap_size      = max_heap_size,
         .hdr_flags          = hdr_flags,
         .heap_off_size      = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
-        .heap_len_size      = min_calc
+        .heap_len_size      = min_calc,
+        .dlvl               = dlvl
         
     };
 
@@ -1224,6 +1225,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         heap_info_ptr->hdr_flags          = hdr_flags;
         heap_info_ptr->heap_off_size      = (uint8_t) H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
         heap_info_ptr->heap_len_size      = min_calc;
+        heap_info_ptr->dlvl               = dlvl;
     }
 
     /* Process Blocks */
@@ -2979,7 +2981,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
     }
-    uint8_t attr_name[STR_BUFF_SIZE];
+    uint8_t attr_name[STR_BUFF_SIZE]; // = {0};
 
     /* Set attr_name: version 3 bumps by 4 bytes*/
     if (version == 1) {
@@ -2991,7 +2993,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         readByteArray(attr_name, name_size, &pos);
     }
 
-    mlog(CRITICAL, "received attr_name: %s", attr_name);
+    // mlog(CRITICAL, "received attr_name: %s", (const char *) attr_name);
 
     if (version == 1) {
         // name padding, align to next 8-byte boundary
@@ -3710,7 +3712,7 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     id += hdr->heap_off_size;
     for (i=0; i < hdr->heap_len_size; i++) {
         obj_len |= (size_t)id[i] << (8 * i);
-    } // BUGGING
+    }
 
     /* Locate direct block of interest */
     if(hdr_og->dtable->curr_root_rows == 0)
@@ -3748,46 +3750,20 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
 
     blk_off = (size_t)(obj_off - dblock_block_off); // Offset of the block within the heap's address space
 
-    /* Follow H5HF__cache_dblock_deserialize */
-
-    /* Attribute message read */
+    /* Attribute message read - call func */
     pos = dblock_addr + (uint64_t)blk_off; // MODIFY <-- this assumes we have buffer with data
-    
-    uint64_t attr_version = readField(1, &pos);
-    pos += 1;
-    uint64_t name_size = readField(2, &pos);
-    pos += 4; // dataspace and type msg
+    uint64_t msg_size = (uint64_t) obj_len;
 
-    /* Set attr_name: version 3 bumps by 4 bytes*/
-    uint8_t attr_name[STR_BUFF_SIZE];
-    if (attr_version == 1) {
-        readByteArray(attr_name, name_size, &pos);
-    }
-    if (attr_version == 3) {
-        /* NOTE: did not extract encoding, assume ASCII; H5T_cset_t name_encoding; */
-        pos += 1;
-        readByteArray(attr_name, name_size, &pos);
+    /* Case switch on type - replaces fheapCmp */
+    switch(hdr_og->type) {
+        case H5B2_ATTR_DENSE_NAME_ID:
+            readAttributeMsg(pos, hdr->hdr_flags, hdr->dlvl, msg_size);
+            break;
+        default:
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type message read: %d", hdr_og->type);
     }
 
-    if (attr_version == 1) {
-        // name padding, align to next 8-byte boundary
-        pos += (8 - (name_size % 8)) % 8; 
-    }
-    
-    attr_name[name_size -1] = '\0';
-
-    print2term("\n----------------\n");
-    print2term("----------------\n");
-    print2term("Version:                                                         %d\n", (int)attr_version);
-    print2term("Name:                                                            %s\n", (const char*)attr_name);
-
-    // TODO case on type
-    // H5FileBuffer::fheapNameCmp() - open Attribute message for the name
-    // or consider switching and reading the object
-
-    // readAttributeMsg()
-
-    // temp print to please compiler
+    // NOTE REMOVE temp print to please compiler
     print2term("Arguments to fheapLocate_Managed: heap info addr: %lu , op_data: %lu, op_flags: %lu, obj_off %lu, obj_len %zu, blk_off: %zu, dblock size %zu \n", (uintptr_t) hdr, (uintptr_t) op_data, (uintptr_t)op_flags, obj_off, obj_len, blk_off, dblock_size);
 
 }

@@ -297,6 +297,9 @@ class H5FileBuffer
             
             uint8_t                 heap_off_size;  /* uint32_t Size of heap offsets (in bytes) */
             uint8_t                 heap_len_size;  /* Size of heap ID lengths (in bytes) */
+
+            int                     dlvl; /* Pass down to found message for dense */
+
         } heap_info_t;
 
         /* KAT ADDED */
