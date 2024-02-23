@@ -733,7 +733,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                     if(info->reader->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
                     {
                         uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
-                        if( (atl03.solar_elevation[atl03_segment] <= 5.0) &&
+                        if( (atl03.solar_elevation[atl03_segment_index] <= 5.0) &&
                             ((spot == 1) || (spot == 3) || (spot == 5)) &&
                             (atl03.signal_conf_ph[atl03_photon] == Icesat2Parms::CNF_SURFACE_HIGH) &&
                             ((relief[atl03_photon] >= 0.0) && (relief[atl03_photon] < 35.0)) )
