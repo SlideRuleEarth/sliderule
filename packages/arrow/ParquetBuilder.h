@@ -53,6 +53,12 @@
 #include "MsgQ.h"
 
 /******************************************************************************
+ * FORWARD DECLARATIONS
+ ******************************************************************************/
+
+class ArrowImpl; // arrow implementation
+
+/******************************************************************************
  * PARQUET BUILDER CLASS
  ******************************************************************************/
 
@@ -90,6 +96,22 @@ class ParquetBuilder: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef List<RecordObject::field_t> field_list_t;
+
+        typedef struct {
+            bool                    as_geo;
+            const char*             x_key;
+            const char*             y_key;
+            RecordObject::field_t   x_field;
+            RecordObject::field_t   y_field;
+        } geo_data_t;
+
+        typedef struct {
+            Subscriber::msgRef_t    ref;
+            RecordObject*           record;
+            int                     rows;
+        } batch_t;
+
         typedef struct {
             char    filename[FILE_NAME_MAX_LEN];
             long    size;
@@ -116,34 +138,6 @@ class ParquetBuilder: public LuaObject
     private:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef List<RecordObject::field_t> field_list_t;
-        typedef field_list_t::Iterator field_iterator_t;
-
-        typedef struct {
-            bool                    as_geo;
-            const char*             x_key;
-            const char*             y_key;
-            RecordObject::field_t   x_field;
-            RecordObject::field_t   y_field;
-        } geo_data_t;
-
-        typedef struct WKBPoint {
-            uint8_t byteOrder;
-            uint32_t wkbType;
-            double  x;
-            double  y;
-        } ALIGN_PACKED wkbpoint_t;
-
-        typedef struct {
-            Subscriber::msgRef_t    ref;
-            RecordObject*           record;
-            int                     rows;
-        } batch_t;
-
-        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
@@ -152,10 +146,8 @@ class ParquetBuilder: public LuaObject
         bool                active;
         Subscriber*         inQ;
         const char*         recType;
-        const char*         batchRecType;
         Ordering<batch_t>   recordBatch;
         field_list_t        fieldList;
-        field_iterator_t*   fieldIterator;
         Publisher*          outQ;
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;
@@ -164,8 +156,7 @@ class ParquetBuilder: public LuaObject
         const char*         outputPath; // final destination of the file
         geo_data_t          geoData;
 
-        struct impl; // arrow implementation
-        impl* pimpl; // private arrow data
+        ArrowImpl* impl; // private arrow data
 
         /*--------------------------------------------------------------------
          * Methods
@@ -177,7 +168,7 @@ class ParquetBuilder: public LuaObject
                             ~ParquetBuilder         (void);
 
         static void*        builderThread           (void* parm);
-        void                processRecordBatch      (int num_rows);
+        void                clearBatch              (uint32_t trace_id);
         bool                send2S3                 (const char* s3dst);
         bool                send2Client             (void);
 };
