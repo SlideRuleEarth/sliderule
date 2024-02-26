@@ -416,6 +416,706 @@ struct ParquetBuilder::impl
         /* Append Meta String */
         metadata->Append("pandas", pandasstr.c_str());
     }
+
+    /*----------------------------------------------------------------------------
+    * processField
+    *----------------------------------------------------------------------------*/
+    static void processField (RecordObject::field_t& field, shared_ptr<arrow::Array>* column, Ordering<batch_t>& record_batch, int num_rows, int batch_row_size_bits)
+    {
+        batch_t batch;
+
+        switch(field.type)
+        {
+            case RecordObject::DOUBLE:
+            {
+                arrow::DoubleBuilder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((double)batch.record->getValueReal(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        float value = (float)batch.record->getValueReal(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::FLOAT:
+            {
+                arrow::FloatBuilder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((float)batch.record->getValueReal(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        float value = (float)batch.record->getValueReal(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT8:
+            {
+                arrow::Int8Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int8_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        int8_t value = (int8_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT16:
+            {
+                arrow::Int16Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int16_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        int16_t value = (int16_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT32:
+            {
+                arrow::Int32Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int32_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        int32_t value = (int32_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT64:
+            {
+                arrow::Int64Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        int64_t value = (int64_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT8:
+            {
+                arrow::UInt8Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint8_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        uint8_t value = (uint8_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT16:
+            {
+                arrow::UInt16Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint16_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        uint16_t value = (uint16_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT32:
+            {
+                arrow::UInt32Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint32_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        uint32_t value = (uint32_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT64:
+            {
+                arrow::UInt64Builder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((uint64_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        uint64_t value = (uint64_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::TIME8:
+            {
+                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        int64_t value = (int64_t)batch.record->getValueInteger(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(value);
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::STRING:
+            {
+                arrow::StringBuilder builder;
+                (void)builder.Reserve(num_rows);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    if(field.flags & RecordObject::BATCH)
+                    {
+                        int32_t starting_offset = field.offset;
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            const char* str = batch.record->getValueText(field);
+                            builder.UnsafeAppend(str, StringLib::size(str));
+                            field.offset += batch_row_size_bits;
+                        }
+                        field.offset = starting_offset;
+                    }
+                    else // non-batch field
+                    {
+                        const char* str = batch.record->getValueText(field);
+                        for(int row = 0; row < batch.rows; row++)
+                        {
+                            builder.UnsafeAppend(str, StringLib::size(str));
+                        }
+                    }
+                    key = record_batch.next(&batch);
+                }
+                (void)builder.Finish(column);
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+    }
+
+    /*----------------------------------------------------------------------------
+    * processArray
+    *----------------------------------------------------------------------------*/
+    static void processArray (RecordObject::field_t& field, shared_ptr<arrow::Array>* column, Ordering<batch_t>& record_batch, int batch_row_size_bits)
+    {
+        batch_t batch;
+
+        if(!(field.flags & RecordObject::BATCH))
+        {
+            batch_row_size_bits = 0;
+        }
+
+        switch(field.type)
+        {
+            case RecordObject::DOUBLE:
+            {
+                auto builder = make_shared<arrow::DoubleBuilder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((double)batch.record->getValueReal(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::FLOAT:
+            {
+                auto builder = make_shared<arrow::FloatBuilder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((float)batch.record->getValueReal(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT8:
+            {
+                auto builder = make_shared<arrow::Int8Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((int8_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT16:
+            {
+                auto builder = make_shared<arrow::Int16Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((int16_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT32:
+            {
+                auto builder = make_shared<arrow::Int32Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((int32_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::INT64:
+            {
+                auto builder = make_shared<arrow::Int64Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((int64_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT8:
+            {
+                auto builder = make_shared<arrow::UInt8Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((uint8_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT16:
+            {
+                auto builder = make_shared<arrow::UInt16Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((uint16_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT32:
+            {
+                auto builder = make_shared<arrow::UInt32Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((uint32_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::UINT64:
+            {
+                auto builder = make_shared<arrow::UInt64Builder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((uint64_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::TIME8:
+            {
+                auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            (void)builder->Append((int64_t)batch.record->getValueInteger(field, element));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            case RecordObject::STRING:
+            {
+                auto builder = make_shared<arrow::StringBuilder>();
+                arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
+                unsigned long key = record_batch.first(&batch);
+                while(key != (unsigned long)INVALID_KEY)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch.rows; row++)
+                    {
+                        (void)list_builder.Append();
+                        for(int element = 0; element < field.elements; element++)
+                        {
+                            const char* str = batch.record->getValueText(field, NULL, element);
+                            (void)builder->Append(str, StringLib::size(str));
+                        }
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                    key = record_batch.next(&batch);
+                }
+                (void)list_builder.Finish(column);
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+    }
+
 };
 
 /******************************************************************************
@@ -788,389 +1488,11 @@ void ParquetBuilder::processRecordBatch (int num_rows)
     {
         uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
         RecordObject::field_t field = (*fieldIterator)[i];
+        
+        /* Build Column */
         shared_ptr<arrow::Array> column;
-
-        /* Loop Through Each Row */
-        switch(field.type)
-        {
-            case RecordObject::DOUBLE:
-            {
-                arrow::DoubleBuilder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((double)batch.record->getValueReal(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        double value = (double)batch.record->getValueReal(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::FLOAT:
-            {
-                arrow::FloatBuilder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((float)batch.record->getValueReal(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        float value = (float)batch.record->getValueReal(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::INT8:
-            {
-                arrow::Int8Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((int8_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        int8_t value = (int8_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::INT16:
-            {
-                arrow::Int16Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((int16_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        int16_t value = (int16_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::INT32:
-            {
-                arrow::Int32Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((int32_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        int32_t value = (int32_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::INT64:
-            {
-                arrow::Int64Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        int64_t value = (int64_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::UINT8:
-            {
-                arrow::UInt8Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((uint8_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        uint8_t value = (uint8_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::UINT16:
-            {
-                arrow::UInt16Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((uint16_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        uint16_t value = (uint16_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::UINT32:
-            {
-                arrow::UInt32Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((uint32_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        uint32_t value = (uint32_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::UINT64:
-            {
-                arrow::UInt64Builder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((uint64_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        uint64_t value = (uint64_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::TIME8:
-            {
-                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend((int64_t)batch.record->getValueInteger(field));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        int64_t value = (int64_t)batch.record->getValueInteger(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(value);
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            case RecordObject::STRING:
-            {
-                arrow::StringBuilder builder;
-                (void)builder.Reserve(num_rows);
-                unsigned long key = recordBatch.first(&batch);
-                while(key != (unsigned long)INVALID_KEY)
-                {
-                    if(field.flags & RecordObject::BATCH)
-                    {
-                        int32_t starting_offset = field.offset;
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            const char* str = batch.record->getValueText(field);
-                            builder.UnsafeAppend(str, StringLib::size(str));
-                            field.offset += batchRowSizeBytes * 8;
-                        }
-                        field.offset = starting_offset;
-                    }
-                    else // non-batch field
-                    {
-                        const char* str = batch.record->getValueText(field);
-                        for(int row = 0; row < batch.rows; row++)
-                        {
-                            builder.UnsafeAppend(str, StringLib::size(str));
-                        }
-                    }
-                    key = recordBatch.next(&batch);
-                }
-                (void)builder.Finish(&column);
-                break;
-            }
-
-            default:
-            {
-                break;
-            }
-        }
+        if(field.elements <= 1) pimpl->processField(field, &column, recordBatch, num_rows, batchRowSizeBytes * 8);
+        else pimpl->processArray(field, &column, recordBatch, batchRowSizeBytes * 8);
 
         /* Add Column to Columns */
         columns.push_back(column);
@@ -1222,7 +1544,11 @@ void ParquetBuilder::processRecordBatch (int num_rows)
     if(pimpl->parquetWriter)
     {
         shared_ptr<arrow::Table> table = arrow::Table::Make(pimpl->schema, columns);
-        (void)pimpl->parquetWriter->WriteTable(*table, num_rows);
+        arrow::Status s = pimpl->parquetWriter->WriteTable(*table, num_rows);
+        if(!s.ok())
+        {
+            alert(RTE_ERROR, CRITICAL, outQ, NULL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
+        }
     }
     stop_trace(INFO, write_trace_id);
 
@@ -1329,6 +1655,9 @@ bool ParquetBuilder::send2Client (void)
         fseek(fp, 0L, SEEK_END);
         long file_size = ftell(fp);
         fseek(fp, 0L, SEEK_SET);
+
+        /* Log Status */
+        mlog(INFO, "Writing parquet file %s of size %ld", fileName, file_size);
 
         do
         {
