@@ -138,40 +138,38 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             lua_pop(L, 1);
 
             #ifdef __aws__
-            /* Region */
-            lua_getfield(L, index, REGION);
-            region = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
-            if(region)
+            if(asset_name)
             {
-                mlog(DEBUG, "Setting %s to %s", REGION, region);
-            }
-            else if(asset_name != NULL)
-            {
+                /* Get Asset */
                 Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-                region = StringLib::duplicate(asset->getRegion());
-                asset->releaseLuaObject();
-            }
-            lua_pop(L, 1);
 
-            /* AWS Credentials */
-            lua_getfield(L, index, CREDENTIALS);
-            credentials.fromLua(L, -1);
-            if(credentials.provided)
-            {
-                mlog(DEBUG, "Setting %s from user", CREDENTIALS);
-            }
-            else if(asset_name != NULL)
-            {
-                Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-                const char* identity = asset->getIdentity();
-                credentials = CredentialStore::get(identity);
+                /* Region */
+                region = StringLib::duplicate(asset->getRegion());
+                if(region) mlog(DEBUG, "Setting %s to %s from asset %s", REGION, region, asset_name);
+                else mlog(ERROR, "Failed to get region from asset %s", asset_name);
+
+                /* Credentials */
+                credentials = CredentialStore::get(asset->getIdentity());
+                if(credentials.provided) mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
+                else mlog(ERROR, "Failed to get credentials from asset %s", asset_name);
+
+                /* Release Asset */
                 asset->releaseLuaObject();
-                if(credentials.provided)
-                {
-                    mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
-                }
             }
-            lua_pop(L, 1);
+            else
+            {
+                /* Region */
+                lua_getfield(L, index, REGION);
+                region = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
+                if(region) mlog(DEBUG, "Setting %s to %s", REGION, region);
+                lua_pop(L, 1);
+
+                /* AWS Credentials */
+                lua_getfield(L, index, CREDENTIALS);
+                credentials.fromLua(L, -1);
+                if(credentials.provided) mlog(DEBUG, "Setting %s from user", CREDENTIALS);
+                lua_pop(L, 1);
+            }
             #endif
         }
     }

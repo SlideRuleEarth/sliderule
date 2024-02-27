@@ -175,15 +175,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     assert(rec_type);
     assert(id);
 
-    /* Check Path */
-    if((parms->path == NULL) || (parms->path[0] == '\0'))
+    /* Get Path */
+    if(parms->asset_name)
     {
-        /* Check Asset Provided */
-        if(!parms->asset_name)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path without asset");
-        }
-
         /* Check Private Cluster */
         if(OsApi::getIsPublic())
         {
@@ -201,6 +195,10 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
         /* Set Output Path */
         outputPath = path_str.c_str(true);
         mlog(INFO, "Generating unique path: %s", outputPath);
+    }
+    else if((parms->path == NULL) || (parms->path[0] == '\0'))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path");
     }
     else
     {
