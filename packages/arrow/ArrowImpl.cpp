@@ -208,6 +208,8 @@ bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
         /* Check for Geometry Columns */
         if(parquetBuilder->getAsGeo())
         {
+
+// TODO: this could just check for the x and y flags
             if(field.offset == parquetBuilder->getXField().offset || field.offset == parquetBuilder->getYField().offset) 
             {
                 /* skip over source columns for geometry as they will be added

@@ -109,13 +109,17 @@ class RecordObject
             BIGENDIAN       = 0x00000001,
             POINTER         = 0x00000002,
             BATCH           = 0x00000004,       // batch record
-            AUX             = 0x00000008        // auxiliary field
+            AUX             = 0x00000008,       // auxiliary field
+            X_COORD         = 0x00000010,
+            Y_COORD         = 0x00000020,
+            TIME            = 0x00000040,
+            INDEX           = 0x00000080
         } fieldFlags_t;
 
         typedef struct {
             fieldType_t     type;               // predefined types
             int32_t         offset;             // offset in bits into structure
-            int32_t         elements;           // size in bits of field
+            int32_t         elements;           // number of elements in array
             const char*     exttype;            // record type when type=USER
             unsigned int    flags;              // see fieldFlags_t
         } field_t;
@@ -250,12 +254,17 @@ class RecordObject
         static valType_t        getValueType        (const field_t& field);
         static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
         static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags=NATIVE_FLAGS);
-
+        
         /* Utility Static Methods */
         static bool             isRecord            (const char* rec_type);
         static bool             isType              (unsigned char* buffer, int size, const char* rec_type);
         static int              getRecords          (char*** rec_types);
-        static const char*      getRecordIdField    (const char* rec_type); // returns name of field
+        static const char*      getRecordIdField    (const char* rec_type);
+        static const char*      getRecordIndexField (const char* rec_type);
+        static const char*      getRecordTimeField  (const char* rec_type);
+        static const char*      getRecordXField     (const char* rec_type);
+        static const char*      getRecordYField     (const char* rec_type);
+        static const char*      getRecordBatchField (const char* rec_type);
         static int              getRecordSize       (const char* rec_type);
         static int              getRecordDataSize   (const char* rec_type);
         static int              getRecordMaxFields  (const char* rec_type);
@@ -287,13 +296,23 @@ class RecordObject
         struct definition_t
         {
             const char*             type_name;      // the name of the type of record
-            const char*             id_field;       // field name for id
+            const char*             id_field;       // field name for id; used in dispatches
+            const char*             index_field;    // field name for index (e.g. extend_id; could be same as id)
+            const char*             time_field;     // field name for time 
+            const char*             x_field;        // field name for x coordinate (e.g. longitude)
+            const char*             y_field;        // field name for y coordinate (e.g. latitude)
+            const char*             batch_field;    // field name for batch
             int                     type_size;      // size in bytes of type name string including null termination
             int                     data_size;      // number of bytes of binary data
             int                     record_size;    // total size of memory allocated for record
             Dictionary<field_t>     fields;
 
             definition_t(const char* _type_name, const char* _id_field, int _data_size, int _max_fields):
+                index_field(NULL),
+                time_field(NULL),
+                x_field(NULL),
+                y_field(NULL),
+                batch_field(NULL),
                 fields(_max_fields)
                 { type_name = StringLib::duplicate(_type_name);
                   type_size = (int)StringLib::size(_type_name) + 1;
@@ -302,7 +321,12 @@ class RecordObject
                   record_size = sizeof(rec_hdr_t) + type_size + _data_size; }
             ~definition_t(void)
                 { delete [] type_name;
-                  delete [] id_field; }
+                  delete [] id_field; 
+                  delete [] index_field;
+                  delete [] time_field;
+                  delete [] x_field;
+                  delete [] y_field;
+                  delete [] batch_field; }
         };
 
         /*--------------------------------------------------------------------
@@ -331,6 +355,7 @@ class RecordObject
         static field_t          getUserField        (definition_t* def, const char* field_name, uint32_t parent_flags=NATIVE_FLAGS);
         static recordDefErr_t   addDefinition       (definition_t** rec_def, const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields);
         static recordDefErr_t   addField            (definition_t* def, const char* field_name, fieldType_t type, int offset, int elements, const char* exttype, unsigned int flags);
+        static void             scanDefinition      (definition_t* def, const char* field_prefix, const char* rec_type);
 
         /* Overloaded Methods */
         static definition_t*    getDefinition       (const char* rec_type);

@@ -51,17 +51,17 @@ using std::numeric_limits;
 
 const char* Atl06Reader::elRecType = "atl06srec.elevation";
 const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS},
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                     1,  NULL, NATIVE_FLAGS},
     {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),                   1,  NULL, NATIVE_FLAGS},
     {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                    1,  NULL, NATIVE_FLAGS},
     {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS},
 // land_ice_segments
-    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
+    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
     {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS},
     {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"atl06_quality_summary",   RecordObject::INT8,     offsetof(elevation_t, atl06_quality_summary),   1,  NULL, NATIVE_FLAGS},
     {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),              1,  NULL, NATIVE_FLAGS},
     {"sigma_geo_h",             RecordObject::FLOAT,    offsetof(elevation_t, sigma_geo_h),             1,  NULL, NATIVE_FLAGS},

@@ -252,6 +252,19 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
         outputPath = StringLib::duplicate(parms->path);
     }
 
+    /* Get Row Size */
+    const char* batch_rec_field_name = RecordObject::getRecordBatchField(recType);
+    RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, batch_rec_field_name);
+    if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
+    else batchRowSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
+    rowSizeBytes = RecordObject::getRecordDataSize(recType) + batchRowSizeBytes;
+    maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
+
+    /* Initialize Queues */
+    int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
+    outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
+    inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
+
     /* Create Unique Temporary Filename */
     FString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
     fileName = tmp_file.c_str(true);
@@ -261,16 +274,6 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Allocate Implementation */
     impl = new ArrowImpl(this);
-
-    /* Row Based Parameters */
-    batchRowSizeBytes = RecordObject::getRecordDataSize(impl->getBatchRecType());
-    rowSizeBytes = RecordObject::getRecordDataSize(recType) + batchRowSizeBytes;
-    maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
-
-    /* Initialize Queues */
-    int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
-    outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
-    inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Start Builder Thread */
     active = true;

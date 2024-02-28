@@ -73,8 +73,8 @@ const RecordObject::fieldDef_t SwotL2Reader::varRecDef[] = {
 const char* SwotL2Reader::scanRecType = "swotl2geo.scan";
 const RecordObject::fieldDef_t SwotL2Reader::scanRecDef[] = {
     {"scan_id",     RecordObject::UINT64,   offsetof(scan_rec_t, scan_id),      1,                      NULL, NATIVE_FLAGS},
-    {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS},
-    {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS}
+    {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS | RecordObject::X_COORD}
 };
 
 const char* SwotL2Reader::geoRecType = "swotl2geo";

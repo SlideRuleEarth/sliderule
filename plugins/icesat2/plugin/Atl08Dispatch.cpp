@@ -51,7 +51,7 @@ using std::numeric_limits;
 
 const char* Atl08Dispatch::vegRecType = "atl08rec.vegetation";
 const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),              1, NULL, NATIVE_FLAGS},
+    {"extent_id",               RecordObject::UINT64,   offsetof(vegetation_t, extent_id),              1, NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"segment_id",              RecordObject::UINT32,   offsetof(vegetation_t, segment_id),             1, NULL, NATIVE_FLAGS},
     {"rgt",                     RecordObject::UINT16,   offsetof(vegetation_t, rgt),                    1, NULL, NATIVE_FLAGS},
     {"cycle",                   RecordObject::UINT16,   offsetof(vegetation_t, cycle),                  1, NULL, NATIVE_FLAGS},
@@ -62,9 +62,9 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"veg_ph_count",            RecordObject::UINT32,   offsetof(vegetation_t, vegetation_photon_count),1, NULL, NATIVE_FLAGS},
     {"landcover",               RecordObject::UINT8,    offsetof(vegetation_t, landcover),              1, NULL, NATIVE_FLAGS},
     {"snowcover",               RecordObject::UINT8,    offsetof(vegetation_t, snowcover),              1, NULL, NATIVE_FLAGS},
-    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS},
+    {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"x_atc",                   RecordObject::DOUBLE,   offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS},
     {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS},
     {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS},
