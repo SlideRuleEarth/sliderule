@@ -69,7 +69,17 @@ local assets = asset.loaddir(asset_directory)
 
 -- Run IAM Role Authentication Script (identity="iam-role") --
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
-sys.wait(5) -- best effort delay to give time for iam role to be established
+local iam_role_max_wait = 10
+while not aws.csget("iam-role") do
+    iam_role_max_wait = iam_role_max_wait - 1
+    if iam_role_max_wait == 0 then
+        print("Failed to establish IAM role credentials at startup")
+        break
+    else
+        print("Waiting to establish IAM role...")
+        sys.wait(1)
+    end
+end
 
 -- Run Earth Data Authentication Scripts --
 if authenticate_to_nsidc then

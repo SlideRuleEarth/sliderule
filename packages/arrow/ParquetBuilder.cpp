@@ -273,16 +273,8 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Start Builder Thread */
-    if(impl->isValid())
-    {
-        active = true;
-        builderPid = new Thread(builderThread, this);
-    }
-    else
-    {
-        active = false;
-        builderPid = NULL;
-    }
+    active = true;
+    builderPid = new Thread(builderThread, this);
 }
 
 /*----------------------------------------------------------------------------

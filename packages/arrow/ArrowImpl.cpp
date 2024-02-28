@@ -73,14 +73,6 @@ ArrowImpl::~ArrowImpl (void)
 }
 
 /*----------------------------------------------------------------------------
- * isValid
- *----------------------------------------------------------------------------*/
-bool ArrowImpl::isValid (void)
-{
-    return parquetWriter != NULL;
-}
-
-/*----------------------------------------------------------------------------
 * getBatchRecType
 *----------------------------------------------------------------------------*/
 const char* ArrowImpl::getBatchRecType (void)
@@ -231,7 +223,7 @@ bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
         }
 
         /* Add to Schema */
-        if(field.elements == 1 || field.type == RecordObject::USER)
+        if(field.elements == 1)
         {
             switch(field.type)
             {
@@ -273,7 +265,8 @@ bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
                 case RecordObject::TIME8:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
                 case RecordObject::STRING:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::utf8())));      break;
 
-                case RecordObject::USER:    // arrays of user data types (i.e. nested structures) are not supported
+                case RecordObject::USER:    if(field.flags & RecordObject::BATCH) buildFieldList(field.exttype, field.offset, field.flags);
+                                            else mlog(CRITICAL, "User fields that are arrays must be identified as batches: %s", field.exttype);
                                             add_field_to_list = false;
                                             break;
                                             

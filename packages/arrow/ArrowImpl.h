@@ -71,7 +71,6 @@ class ArrowImpl
         explicit ArrowImpl          (ParquetBuilder* _builder);
         ~ArrowImpl                  (void);
 
-        bool isValid                (void);
         const char* getBatchRecType (void);
         bool processRecordBatch     (Ordering<ParquetBuilder::batch_t>& record_batch,
                                      int num_rows,
