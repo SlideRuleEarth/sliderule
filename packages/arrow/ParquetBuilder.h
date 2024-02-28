@@ -70,7 +70,6 @@ class ParquetBuilder: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int LIST_BLOCK_SIZE = 32;
         static const int FILE_NAME_MAX_LEN = 128;
         static const int URL_MAX_LEN = 512;
         static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
@@ -95,8 +94,6 @@ class ParquetBuilder: public LuaObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
-
-        typedef List<RecordObject::field_t> field_list_t;
 
         typedef struct {
             bool                    as_geo;
@@ -131,9 +128,16 @@ class ParquetBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-        static void deinit      (void);
+        static int              luaCreate       (lua_State* L);
+        static void             init            (void);
+        static void             deinit          (void);
+
+        const char*             getFileName     (void);
+        const char*             getRecType      (void);
+        const char*             getIndexKey     (void);
+        bool                    getAsGeo        (void);
+        RecordObject::field_t&  getXField       (void);
+        RecordObject::field_t&  getYField       (void);
 
     private:
 
@@ -146,8 +150,8 @@ class ParquetBuilder: public LuaObject
         bool                active;
         Subscriber*         inQ;
         const char*         recType;
+        const char*         indexKey;
         Ordering<batch_t>   recordBatch;
-        field_list_t        fieldList;
         Publisher*          outQ;
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;

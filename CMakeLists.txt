@@ -63,11 +63,6 @@ if (${ENABLE_H5CORO_ATTRIBUTE_SUPPORT})
     target_compile_definitions (slideruleLib PUBLIC H5CORO_ATTRIBUTE_SUPPORT)
 endif ()
 
-if (${ENABLE_APACHE_ARROW_10_COMPAT})
-    message (STATUS "Enabling Apache Arrow 10 compatibility")
-    target_compile_definitions (slideruleLib PUBLIC APACHE_ARROW_10_COMPAT)
-endif ()
-
 if (${ENABLE_BEST_EFFORT_CONDA_ENV})
     message (STATUS "Attempting best effort at running in a mixed system and conda environment")
     target_compile_definitions (slideruleLib PUBLIC BEST_EFFORT_CONDA_ENV)

@@ -68,11 +68,7 @@ class ArrowImpl
          * Methods
          *--------------------------------------------------------------------*/
 
-        ArrowImpl                   (ParquetBuilder::field_list_t& field_list, 
-                                     const ParquetBuilder::geo_data_t& geo_data, 
-                                     const char* rec_type,
-                                     const char* index_key,
-                                     const char* file_name);
+        explicit ArrowImpl          (ParquetBuilder* _builder);
         ~ArrowImpl                  (void);
 
         bool isValid                (void);
@@ -86,10 +82,17 @@ class ArrowImpl
     private:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int LIST_BLOCK_SIZE = 32;
+
+        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef ParquetBuilder::field_list_t::Iterator field_iterator_t;
+        typedef List<RecordObject::field_t> field_list_t;
+        typedef field_list_t::Iterator field_iterator_t;
 
         typedef struct WKBPoint {
             uint8_t                 byteOrder;
@@ -102,29 +105,24 @@ class ArrowImpl
          * Data
          *--------------------------------------------------------------------*/
 
+        ParquetBuilder*                         parquetBuilder;
         shared_ptr<arrow::Schema>               schema;
         unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
+        vector<shared_ptr<arrow::Field>>        fieldVector;
+        field_list_t                            fieldList;
         field_iterator_t*                       fieldIterator;
         const char*                             batchRecType;
+        bool                                    firstTime;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool addFieldsToSchema      (vector<shared_ptr<arrow::Field>>& schema_vector, 
-                                     ParquetBuilder::field_list_t& field_list, 
-                                     const char** batch_rec_type, 
-                                     const ParquetBuilder::geo_data_t& geo, 
-                                     const char* rec_type, 
-                                     int offset, 
-                                     int flags);
+        bool createSchema           (void);
+        bool buildFieldList         (const char* rec_type, int offset, int flags);
         void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, 
-                                     const shared_ptr<arrow::Schema>& _schema, 
-                                     const field_iterator_t* field_iterator, 
-                                     const char* index_key,
-                                     bool as_geo);
+        void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void processField           (RecordObject::field_t& field, 
                                      shared_ptr<arrow::Array>* column, 
                                      Ordering<ParquetBuilder::batch_t>& record_batch, 
@@ -140,9 +138,6 @@ class ArrowImpl
                                      Ordering<ParquetBuilder::batch_t>& record_batch, 
                                      int num_rows, 
                                      int batch_row_size_bits);
-
-
-
 };
 
 #endif  /* __arrow_impl__ */

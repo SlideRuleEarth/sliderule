@@ -80,6 +80,7 @@ class ArrowParms: public LuaObject
         static const char* FORMAT;
         static const char* OPEN_ON_COMPLETE;
         static const char* AS_GEO;
+        static const char* ANCILLARY;
         static const char* ASSET;
         static const char* REGION;
         static const char* CREDENTIALS;
@@ -98,6 +99,7 @@ class ArrowParms: public LuaObject
         bool            as_geo;                         // whether to create a standard geo-based formatted file
         const char*     asset_name;
         const char*     region;
+        vector<string>  ancillary_fields;
 
         #ifdef __aws__
         CredentialStore::Credential credentials;
@@ -124,6 +126,7 @@ class ArrowParms: public LuaObject
         static int      luaIsParquet        (lua_State* L);
         static int      luaIsCSV            (lua_State* L);
         static int      luaPath             (lua_State* L);
+        void            luaGetAncillary     (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __arrow_parms__ */

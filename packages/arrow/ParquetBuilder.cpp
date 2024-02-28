@@ -153,6 +153,54 @@ void ParquetBuilder::deinit (void)
 {
 }
 
+/*----------------------------------------------------------------------------
+ * getFileName
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::getFileName (void)
+{
+    return fileName;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecType
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::getRecType (void)
+{
+    return recType;
+}
+
+/*----------------------------------------------------------------------------
+ * getIndexKey
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::getIndexKey (void)
+{
+    return indexKey;
+}
+/*----------------------------------------------------------------------------
+
+ * getAsGeo
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::getAsGeo (void)
+{
+    return geoData.as_geo;
+}
+
+/*----------------------------------------------------------------------------
+ * getXField
+ *----------------------------------------------------------------------------*/
+RecordObject::field_t& ParquetBuilder::getXField (void)
+{
+    return geoData.x_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getYField
+ *----------------------------------------------------------------------------*/
+RecordObject::field_t& ParquetBuilder::getYField (void)
+{
+    return geoData.y_field;
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  *******************************************************************************/
@@ -166,7 +214,6 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     recType(StringLib::duplicate(rec_type)),
-    fieldList(LIST_BLOCK_SIZE),
     geoData(geo)
 {
     assert(_parms);
@@ -209,8 +256,11 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     FString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
     fileName = tmp_file.c_str(true);
 
+    /* Save Index Key */
+    indexKey = StringLib::duplicate(index_key);
+
     /* Allocate Implementation */
-    impl = new ArrowImpl(fieldList, geoData, recType, index_key, fileName);
+    impl = new ArrowImpl(this);
 
     /* Row Based Parameters */
     batchRowSizeBytes = RecordObject::getRecordDataSize(impl->getBatchRecType());
@@ -246,6 +296,7 @@ ParquetBuilder::~ParquetBuilder(void)
     delete [] fileName;
     delete [] outputPath;
     delete [] recType;
+    delete [] indexKey;
     delete outQ;
     delete inQ;
     delete impl;
@@ -315,7 +366,11 @@ void* ParquetBuilder::builderThread(void* parm)
                 if(row_cnt >= builder->maxRowsInGroup)
                 {
                     bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, builder->geoData);
-                    if(!status) alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
+                    if(!status)
+                    {
+                        alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
+                        builder->active = false; // breaks out of loop
+                    }
                     builder->clearBatch(trace_id);
                     row_cnt = 0;
                 }

@@ -49,58 +49,18 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowImpl::ArrowImpl (ParquetBuilder::field_list_t& field_list, 
-                      const ParquetBuilder::geo_data_t& geo_data, 
-                      const char* rec_type,
-                      const char* index_key,
-                      const char* file_name)
+ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
+    parquetBuilder(_builder),
+    schema(NULL),
+    fieldList(LIST_BLOCK_SIZE),
+    fieldIterator(NULL),
+    batchRecType(NULL),
+    firstTime(true)
 {
-    /* Initialize Data */
-    batchRecType = NULL;
-
-    /* Define Table Schema */    
-    vector<shared_ptr<arrow::Field>> schema_vector;
-    addFieldsToSchema(schema_vector, field_list, &batchRecType, geo_data, rec_type, 0, 0);
-    if(geo_data.as_geo) schema_vector.push_back(arrow::field("geometry", arrow::binary()));
-    schema = make_shared<arrow::Schema>(schema_vector);
-    fieldIterator = new field_iterator_t(field_list);
-
-    /* Create Arrow Output Stream */
-    shared_ptr<arrow::io::FileOutputStream> file_output_stream;
-    PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(file_name));
-
-    /* Create Writer Properties */
-    parquet::WriterProperties::Builder writer_props_builder;
-    writer_props_builder.compression(parquet::Compression::SNAPPY);
-    writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
-    shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
-
-    /* Create Arrow Writer Properties */
-    auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
-
-    /* Build GeoParquet MetaData */
-    auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-    if(geo_data.as_geo) appendGeoMetaData(metadata);
-    appendServerMetaData(metadata);
-    appendPandasMetaData(metadata, schema, fieldIterator, index_key, geo_data.as_geo);
-    schema = schema->WithMetadata(metadata);
-
-    /* Create Parquet Writer */
-    #ifdef APACHE_ARROW_10_COMPAT
-        (void)parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props, &parquetWriter);
-    #elif 0 // alternative method of creating file writer
-        std::shared_ptr<parquet::SchemaDescriptor> parquet_schema;
-        (void)parquet::arrow::ToParquetSchema(schema.get(), *writer_props, *arrow_writer_props, &parquet_schema);
-        auto schema_node = std::static_pointer_cast<parquet::schema::GroupNode>(parquet_schema->schema_root());
-        std::unique_ptr<parquet::ParquetFileWriter> base_writer;
-        base_writer = parquet::ParquetFileWriter::Open(std::move(file_output_stream), schema_node, std::move(writer_props), metadata);
-        auto schema_ptr = std::make_shared<::arrow::Schema>(*schema);
-        (void)parquet::arrow::FileWriter::Make(::arrow::default_memory_pool(), std::move(base_writer), std::move(schema_ptr), std::move(arrow_writer_props), &parquetWriter);
-    #else
-        arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
-        if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
-        else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
-    #endif
+    /* Build Field List and Iterator */    
+    buildFieldList(parquetBuilder->getRecType(), 0, 0);
+    if(parquetBuilder->getAsGeo()) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
+    fieldIterator = new field_iterator_t(fieldList);
 }
 
 /*----------------------------------------------------------------------------
@@ -166,21 +126,28 @@ bool ArrowImpl::processRecordBatch (Ordering<ParquetBuilder::batch_t>& record_ba
         stop_trace(INFO, geo_trace_id);
     }
 
-    /* Build and Write Table */
-    uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+    /* Create Parquet Writer (on first time) */
+    if(firstTime)
+    {
+        createSchema();
+        firstTime = false;
+    }
+
     if(parquetWriter)
     {
+        /* Build and Write Table */
+        uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
         shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
         arrow::Status s = parquetWriter->WriteTable(*table, num_rows);
         if(s.ok()) status = true;
         else mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
-    }
-    stop_trace(INFO, write_trace_id);
+        stop_trace(INFO, write_trace_id);
 
-    /* Close Parquet Writer */
-    if(file_finished)
-    {
-        (void)parquetWriter->Close();
+        /* Close Parquet Writer */
+        if(file_finished)
+        {
+            (void)parquetWriter->Close();
+        }
     }
 
     /* Stop Trace */
@@ -195,15 +162,46 @@ bool ArrowImpl::processRecordBatch (Ordering<ParquetBuilder::batch_t>& record_ba
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
-* addFieldsToSchema
+* createSchema
 *----------------------------------------------------------------------------*/
-bool ArrowImpl::addFieldsToSchema ( vector<shared_ptr<arrow::Field>>& schema_vector, 
-                                    ParquetBuilder::field_list_t& field_list, 
-                                    const char** batch_rec_type, 
-                                    const ParquetBuilder::geo_data_t& geo_data, 
-                                    const char* rec_type, 
-                                    int offset, 
-                                    int flags )
+bool ArrowImpl::createSchema (void)
+{
+    /* Set Arrow Output Stream */
+    shared_ptr<arrow::io::FileOutputStream> file_output_stream;
+    PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(parquetBuilder->getFileName()));
+
+    /* Set Writer Properties */
+    parquet::WriterProperties::Builder writer_props_builder;
+    writer_props_builder.compression(parquet::Compression::SNAPPY);
+    writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
+    shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
+
+    /* Set Arrow Writer Properties */
+    auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
+
+    /* Create Schema */
+    schema = make_shared<arrow::Schema>(fieldVector);
+
+    /* Set MetaData */
+    auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+    if(parquetBuilder->getAsGeo()) appendGeoMetaData(metadata);
+    appendServerMetaData(metadata);
+    appendPandasMetaData(metadata);
+    schema = schema->WithMetadata(metadata);
+
+    /* Create Parquet Writer */
+    arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+    if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
+    else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+
+    /* Return Status */
+    return parquetWriter != NULL;
+}
+
+/*----------------------------------------------------------------------------
+* buildFieldList
+*----------------------------------------------------------------------------*/
+bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
 {
     /* Loop Through Fields in Record */
     Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
@@ -216,9 +214,9 @@ bool ArrowImpl::addFieldsToSchema ( vector<shared_ptr<arrow::Field>>& schema_vec
         bool add_field_to_list = true;
 
         /* Check for Geometry Columns */
-        if(geo_data.as_geo)
+        if(parquetBuilder->getAsGeo())
         {
-            if(field.offset == geo_data.x_field.offset || field.offset == geo_data.y_field.offset) 
+            if(field.offset == parquetBuilder->getXField().offset || field.offset == parquetBuilder->getYField().offset) 
             {
                 /* skip over source columns for geometry as they will be added
                 * separately as a part of the dedicated geometry column */
@@ -227,9 +225,9 @@ bool ArrowImpl::addFieldsToSchema ( vector<shared_ptr<arrow::Field>>& schema_vec
         }
 
         /* Check for Batch Record Type */
-        if((*batch_rec_type == NULL) && (field.flags & RecordObject::BATCH))
+        if((batchRecType == NULL) && (field.flags & RecordObject::BATCH))
         {
-            *batch_rec_type = StringLib::duplicate(field.exttype);
+            batchRecType = StringLib::duplicate(field.exttype);
         }
 
         /* Add to Schema */
@@ -237,20 +235,20 @@ bool ArrowImpl::addFieldsToSchema ( vector<shared_ptr<arrow::Field>>& schema_vec
         {
             switch(field.type)
             {
-                case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_name, arrow::int8()));       break;
-                case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_name, arrow::int16()));      break;
-                case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_name, arrow::int32()));      break;
-                case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_name, arrow::int64()));      break;
-                case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_name, arrow::uint8()));      break;
-                case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_name, arrow::uint16()));     break;
-                case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_name, arrow::uint32()));     break;
-                case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_name, arrow::uint64()));     break;
-                case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_name, arrow::float32()));    break;
-                case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_name, arrow::float64()));    break;
-                case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
-                case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_name, arrow::utf8()));       break;
+                case RecordObject::INT8:    fieldVector.push_back(arrow::field(field_name, arrow::int8()));       break;
+                case RecordObject::INT16:   fieldVector.push_back(arrow::field(field_name, arrow::int16()));      break;
+                case RecordObject::INT32:   fieldVector.push_back(arrow::field(field_name, arrow::int32()));      break;
+                case RecordObject::INT64:   fieldVector.push_back(arrow::field(field_name, arrow::int64()));      break;
+                case RecordObject::UINT8:   fieldVector.push_back(arrow::field(field_name, arrow::uint8()));      break;
+                case RecordObject::UINT16:  fieldVector.push_back(arrow::field(field_name, arrow::uint16()));     break;
+                case RecordObject::UINT32:  fieldVector.push_back(arrow::field(field_name, arrow::uint32()));     break;
+                case RecordObject::UINT64:  fieldVector.push_back(arrow::field(field_name, arrow::uint64()));     break;
+                case RecordObject::FLOAT:   fieldVector.push_back(arrow::field(field_name, arrow::float32()));    break;
+                case RecordObject::DOUBLE:  fieldVector.push_back(arrow::field(field_name, arrow::float64()));    break;
+                case RecordObject::TIME8:   fieldVector.push_back(arrow::field(field_name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
+                case RecordObject::STRING:  fieldVector.push_back(arrow::field(field_name, arrow::utf8()));       break;
 
-                case RecordObject::USER:    addFieldsToSchema(schema_vector, field_list, batch_rec_type, geo_data, field.exttype, field.offset, field.flags);
+                case RecordObject::USER:    buildFieldList(field.exttype, field.offset, field.flags);
                                             add_field_to_list = false;
                                             break;
 
@@ -262,18 +260,18 @@ bool ArrowImpl::addFieldsToSchema ( vector<shared_ptr<arrow::Field>>& schema_vec
         {
             switch(field.type)
             {
-                case RecordObject::INT8:    schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int8())));      break;
-                case RecordObject::INT16:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int16())));     break;
-                case RecordObject::INT32:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int32())));     break;
-                case RecordObject::INT64:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::int64())));     break;
-                case RecordObject::UINT8:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint8())));     break;
-                case RecordObject::UINT16:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint16())));    break;
-                case RecordObject::UINT32:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint32())));    break;
-                case RecordObject::UINT64:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::uint64())));    break;
-                case RecordObject::FLOAT:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::float32())));   break;
-                case RecordObject::DOUBLE:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::float64())));   break;
-                case RecordObject::TIME8:   schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
-                case RecordObject::STRING:  schema_vector.push_back(arrow::field(field_name, arrow::list(arrow::utf8())));      break;
+                case RecordObject::INT8:    fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::int8())));      break;
+                case RecordObject::INT16:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::int16())));     break;
+                case RecordObject::INT32:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::int32())));     break;
+                case RecordObject::INT64:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::int64())));     break;
+                case RecordObject::UINT8:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::uint8())));     break;
+                case RecordObject::UINT16:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::uint16())));    break;
+                case RecordObject::UINT32:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::uint32())));    break;
+                case RecordObject::UINT64:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::uint64())));    break;
+                case RecordObject::FLOAT:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::float32())));   break;
+                case RecordObject::DOUBLE:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::float64())));   break;
+                case RecordObject::TIME8:   fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
+                case RecordObject::STRING:  fieldVector.push_back(arrow::field(field_name, arrow::list(arrow::utf8())));      break;
 
                 case RecordObject::USER:    // arrays of user data types (i.e. nested structures) are not supported
                                             add_field_to_list = false;
@@ -290,7 +288,7 @@ bool ArrowImpl::addFieldsToSchema ( vector<shared_ptr<arrow::Field>>& schema_vec
             RecordObject::field_t column_field = field;
             column_field.offset += offset;
             column_field.flags |= flags;
-            field_list.add(column_field);
+            fieldList.add(column_field);
         }
     }
 
@@ -423,11 +421,7 @@ void ArrowImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetad
 /*----------------------------------------------------------------------------
 * appendPandasMetaData
 *----------------------------------------------------------------------------*/
-void ArrowImpl::appendPandasMetaData (  const std::shared_ptr<arrow::KeyValueMetadata>& metadata, 
-                                        const shared_ptr<arrow::Schema>& _schema, 
-                                        const field_iterator_t* field_iterator, 
-                                        const char* index_key,
-                                        bool as_geo )
+void ArrowImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Initialize Pandas Meta Data String */
     string pandasstr(R"json({
@@ -449,7 +443,7 @@ void ArrowImpl::appendPandasMetaData (  const std::shared_ptr<arrow::KeyValueMet
     /* Build Columns String */
     string columns;
     int index = 0;
-    for(const std::string& field_name: _schema->field_names())
+    for(const std::string& field_name: schema->field_names())
     {
         /* Initialize Column String */
         string columnstr(R"json({"name": "_NAME_", "field_name": "_NAME_", "pandas_type": "_PTYPE_", "numpy_type": "_NTYPE_", "metadata": null})json");
@@ -457,10 +451,10 @@ void ArrowImpl::appendPandasMetaData (  const std::shared_ptr<arrow::KeyValueMet
         const char* numpy_type = "";
         bool is_last_entry = false;
 
-        if(index < field_iterator->length)
+        if(index < fieldIterator->length)
         {
             /* Add Column from Field List */
-            RecordObject::field_t field = (*field_iterator)[index++];
+            RecordObject::field_t field = (*fieldIterator)[index++];
             switch(field.type)
             {
                 case RecordObject::DOUBLE:  pandas_type = "float64";    numpy_type = "float64";         break;
@@ -479,12 +473,12 @@ void ArrowImpl::appendPandasMetaData (  const std::shared_ptr<arrow::KeyValueMet
             }
 
             /* Mark Last Column */
-            if(!as_geo && (index == field_iterator->length))
+            if(!parquetBuilder->getAsGeo() && (index == fieldIterator->length))
             {
                 is_last_entry = true;
             }
         }
-        else if(as_geo && StringLib::match(field_name.c_str(), "geometry"))
+        else if(parquetBuilder->getAsGeo() && StringLib::match(field_name.c_str(), "geometry"))
         {
             /* Add Column for Geometry */
             pandas_type = "bytes";
@@ -508,6 +502,7 @@ void ArrowImpl::appendPandasMetaData (  const std::shared_ptr<arrow::KeyValueMet
     }
 
     /* Build Index String */
+    const char* index_key = parquetBuilder->getIndexKey();
     FString indexstr("\"%s\"", index_key ? index_key : "");
 
     /* Fill In Pandas Meta Data String */

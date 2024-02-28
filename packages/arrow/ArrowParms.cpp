@@ -45,6 +45,7 @@ const char* ArrowParms::PATH                = "path";
 const char* ArrowParms::FORMAT              = "format";
 const char* ArrowParms::OPEN_ON_COMPLETE    = "open_on_complete";
 const char* ArrowParms::AS_GEO              = "as_geo";
+const char* ArrowParms::ANCILLARY           = "ancillary";
 const char* ArrowParms::ASSET               = "asset";
 const char* ArrowParms::REGION              = "region";
 const char* ArrowParms::CREDENTIALS         = "credentials";
@@ -129,6 +130,12 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             lua_getfield(L, index, AS_GEO);
             as_geo = LuaObject::getLuaBoolean(L, -1, true, as_geo, &field_provided);
             if(field_provided) mlog(DEBUG, "Setting %s to %d", AS_GEO, (int)as_geo);
+            lua_pop(L, 1);
+
+            /* Ancillary */
+            lua_getfield(L, index, ANCILLARY);
+            luaGetAncillary(L, -1, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to user provided list", ANCILLARY);
             lua_pop(L, 1);
 
             /* Asset */
@@ -304,5 +311,44 @@ int ArrowParms::luaPath (lua_State* L)
     catch(const RunTimeException& e)
     {
         return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetAncillary
+ *----------------------------------------------------------------------------*/
+void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    if(provided) *provided = false;
+
+    /* Must be table of strings */
+    if(lua_istable(L, index))
+    {
+        /* Get number of fields in table */
+        int num_fields = lua_rawlen(L, index);
+        if(num_fields > 0 && provided) *provided = true;
+
+        /* Iterate through each field in table */
+        for(int i = 0; i < num_fields; i++)
+        {
+            /* Get field */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set field */
+            if(lua_isstring(L, -1))
+            {
+                const char* field_str = LuaObject::getLuaString(L, -1);
+                string field_name(field_str);
+                ancillary_fields.push_back(field_name);
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "ancillary fields must be provided as a table of strings");
     }
 }
