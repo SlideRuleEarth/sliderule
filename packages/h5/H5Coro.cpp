@@ -2333,7 +2333,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
-    mlog(CRITICAL, "datamessage databits: %lld", (long long) databits);
+    // mlog(CRITICAL, "datamessage databits: %lld", (long long) databits);
 
     if(H5_ERROR_CHECKING)
     {
@@ -3058,8 +3058,6 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
-
-    // mlog(CRITICAL, "received dataspace message: %x", dataspace_bytes_read);
     
     pos += dataspace_bytes_read;
     if (version == 1) {
@@ -4855,7 +4853,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             info.elements = info.elements / info.numcols;
         }
 
-        /* Perform Integer Type Transaltion */
+        /* Perform Integer Type Translation */
         if(valtype == RecordObject::INTEGER)
         {
             /* Allocate Buffer of Integers */
