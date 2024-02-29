@@ -290,3 +290,6 @@ The following raster datasets shall be supported for sampling:
 #### SRWC-5.2: Request Parameters
 
 All request parameters supported by SlideRule for a given request shall be supported by the web client.
+
+
+## Appendix A. Parameter Components

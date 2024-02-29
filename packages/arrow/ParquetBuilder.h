@@ -132,7 +132,7 @@ class ParquetBuilder: public LuaObject
 
         const char*             getFileName     (void);
         const char*             getRecType      (void);
-        const char*             getIndexKey     (void);
+        const char*             getTimeKey      (void);
         bool                    getAsGeo        (void);
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
@@ -148,7 +148,7 @@ class ParquetBuilder: public LuaObject
         bool                active;
         Subscriber*         inQ;
         const char*         recType;
-        const char*         indexKey;
+        const char*         timeKey;
         Ordering<batch_t>   recordBatch;
         Publisher*          outQ;
         int                 rowSizeBytes;

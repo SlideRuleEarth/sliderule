@@ -66,6 +66,7 @@ class TestParquet:
                   "maxi": 1,
                   "output": { "path": "testfile2.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
+        print(gdf.keys())
         os.remove("testfile2.parquet")
         assert init
         assert len(gdf) == 190491

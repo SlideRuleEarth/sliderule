@@ -73,7 +73,7 @@ ArrowImpl::~ArrowImpl (void)
 /*----------------------------------------------------------------------------
  * processRecordBatch
  *----------------------------------------------------------------------------*/
-bool ArrowImpl::processRecordBatch (Ordering<ParquetBuilder::batch_t>& record_batch, int num_rows, int batch_row_size_bits, ParquetBuilder::geo_data_t& geo_data, bool file_finished)
+bool ArrowImpl::processRecordBatch (Ordering<ParquetBuilder::batch_t>& record_batch, int num_rows, int batch_row_size_bits, bool file_finished)
 {
     bool status = false;
 
@@ -99,11 +99,11 @@ bool ArrowImpl::processRecordBatch (Ordering<ParquetBuilder::batch_t>& record_ba
     }
 
     /* Add Geometry Column (if GeoParquet) */
-    if(geo_data.as_geo)
+    if(parquetBuilder->getAsGeo())
     {
         uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
         shared_ptr<arrow::Array> column;
-        processGeometry(geo_data.x_field, geo_data.y_field, &column, record_batch, num_rows, batch_row_size_bits);
+        processGeometry(parquetBuilder->getXField(), parquetBuilder->getYField(), &column, record_batch, num_rows, batch_row_size_bits);
         columns.push_back(column);
         stop_trace(INFO, geo_trace_id);
     }
@@ -479,13 +479,23 @@ void ArrowImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetad
     }
 
     /* Build Index String */
-    const char* index_key = parquetBuilder->getIndexKey();
-    FString indexstr("\"%s\"", index_key ? index_key : "");
+    const char* time_key = parquetBuilder->getTimeKey();
+    if(!time_key) time_key = ""; // replace null with empty string
+    string time_str(time_key);
+    int max_loops = 10; // upper bound the nesting
+    for(int i = 0; i < max_loops; i++)
+    {
+        /* Remove Parent Fields */
+        size_t pos = time_str.find(".");
+        if(pos != string::npos) time_str.replace(0, pos+1, "");
+        else break;
+    }
+    FString formatted_time("\"%s\"", time_str.c_str());
 
     /* Fill In Pandas Meta Data String */
     pandasstr = std::regex_replace(pandasstr, std::regex("    "), "");
     pandasstr = std::regex_replace(pandasstr, std::regex("\n"), " ");
-    pandasstr = std::regex_replace(pandasstr, std::regex("_INDEX_"), index_key ? indexstr.c_str() : "");
+    pandasstr = std::regex_replace(pandasstr, std::regex("_INDEX_"), time_key[0] ? formatted_time.c_str() : "");
     pandasstr = std::regex_replace(pandasstr, std::regex("_COLUMNS_"), columns.c_str());
 
     /* Append Meta String */

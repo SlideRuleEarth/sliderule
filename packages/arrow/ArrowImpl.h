@@ -72,10 +72,7 @@ class ArrowImpl
         ~ArrowImpl                  (void);
 
         bool processRecordBatch     (Ordering<ParquetBuilder::batch_t>& record_batch,
-                                     int num_rows,
-                                     int batch_row_size_bits,
-                                     ParquetBuilder::geo_data_t& geo_data,
-                                     bool file_finished=false);
+                                     int num_rows, int batch_row_size_bits, bool file_finished=false);
 
     private:
 

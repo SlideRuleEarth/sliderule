@@ -137,11 +137,11 @@ const char* ParquetBuilder::getRecType (void)
 }
 
 /*----------------------------------------------------------------------------
- * getIndexKey
+ * getTimeKey
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getIndexKey (void)
+const char* ParquetBuilder::getTimeKey (void)
 {
-    return indexKey;
+    return timeKey;
 }
 /*----------------------------------------------------------------------------
 
@@ -256,10 +256,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);
 
-    /* Save Index Key */
-    indexKey = StringLib::duplicate(rec_meta->index_field);
-    printf("INDEX KEY: %s\n", indexKey);
-
+    /* Save Time Key */
+    timeKey = StringLib::duplicate(rec_meta->time_field);
+    
     /* Get Row Size */
     RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
     if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
@@ -295,7 +294,7 @@ ParquetBuilder::~ParquetBuilder(void)
     delete [] fileName;
     delete [] outputPath;
     delete [] recType;
-    delete [] indexKey;
+    delete [] timeKey;
     delete outQ;
     delete inQ;
     delete impl;
@@ -359,7 +358,7 @@ void* ParquetBuilder::builderThread(void* parm)
                 row_cnt += num_rows;
                 if(row_cnt >= builder->maxRowsInGroup)
                 {
-                    bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, builder->geoData);
+                    bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
                     if(!status)
                     {
                         alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
@@ -386,7 +385,7 @@ void* ParquetBuilder::builderThread(void* parm)
     }
 
     /* Process Remaining Records */
-    bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, builder->geoData, true);
+    bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
     if(!status) alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
     builder->clearBatch(trace_id);
 
