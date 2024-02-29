@@ -14,9 +14,6 @@ local args = {
     default_asset   = "swot-sim-ecco-llc4320",
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     result_rec      = "swotl2geo",
-    index_field     = "scan.scan_id",
-    lon_field       = "scan.longitude",
-    lat_field       = "scan.latitude"
 }
 
 local rqst_parms    = swot.parms(parms)

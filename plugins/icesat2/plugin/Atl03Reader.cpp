@@ -52,7 +52,7 @@ const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"x_atc",           RecordObject::FLOAT,    offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
     {"y_atc",           RecordObject::FLOAT,    offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
-    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS},
+    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"snowcover",       RecordObject::UINT8,    offsetof(photon_t, snowcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},

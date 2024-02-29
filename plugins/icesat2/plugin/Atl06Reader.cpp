@@ -58,7 +58,7 @@ const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
     {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS},
 // land_ice_segments
     {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS},
+    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS},
     {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},

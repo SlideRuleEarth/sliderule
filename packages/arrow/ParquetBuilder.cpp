@@ -82,9 +82,6 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
 int ParquetBuilder::luaCreate (lua_State* L)
 {
     ArrowParms* _parms = NULL;
-    geo_data_t geo;
-    geo.x_key = NULL;
-    geo.y_key = NULL;
 
     try
     {
@@ -94,43 +91,13 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
         const char* id              = getLuaString(L, 5);
-        const char* x_key           = getLuaString(L, 6, true, NULL);
-        const char* y_key           = getLuaString(L, 7, true, NULL);
-        const char* index_key       = getLuaString(L, 8, true, NULL);
-
-        /* Build Geometry Fields */
-        geo.as_geo = _parms->as_geo;
-        if(geo.as_geo && (x_key != NULL) && (y_key != NULL))
-        {
-            geo.x_field = RecordObject::getDefinedField(rec_type, x_key);
-            if(geo.x_field.type == RecordObject::INVALID_FIELD)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract x field [%s] from record type <%s>", x_key, rec_type);
-            }
-
-            geo.y_field = RecordObject::getDefinedField(rec_type, y_key);
-            if(geo.y_field.type == RecordObject::INVALID_FIELD)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract y field [%s] from record type <%s>", y_key, rec_type);
-            }
-
-            geo.x_key = StringLib::duplicate(x_key);
-            geo.y_key = StringLib::duplicate(y_key);
-        }
-        else
-        {
-            /* Unable to Create GeoParquet */
-            geo.as_geo = false;
-        }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, _parms, outq_name, inq_name, rec_type, id, geo, index_key));
+        return createLuaObject(L, new ParquetBuilder(L, _parms, outq_name, inq_name, rec_type, id));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        delete [] geo.x_key;
-        delete [] geo.y_key;
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -210,17 +177,47 @@ RecordObject::field_t& ParquetBuilder::getYField (void)
  *----------------------------------------------------------------------------*/
 ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* outq_name, const char* inq_name,
-                                const char* rec_type, const char* id, const geo_data_t& geo, const char* index_key):
+                                const char* rec_type, const char* id):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
-    recType(StringLib::duplicate(rec_type)),
-    geoData(geo)
+    parms(_parms)
 {
     assert(_parms);
     assert(outq_name);
     assert(inq_name);
     assert(rec_type);
     assert(id);
+
+    /* Get Record Meta Data */
+    RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
+    if(rec_meta == NULL)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
+    }
+
+    /* Build Geometry Fields */
+    geoData.as_geo = parms->as_geo;
+    if(geoData.as_geo)
+    {
+        /* Check if Record has Geospatial Fields */
+        if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get x and y coordinates for %s", rec_type);
+        }
+
+        /* Get X Field */
+        geoData.x_field = RecordObject::getDefinedField(rec_type, rec_meta->x_field);
+        if(geoData.x_field.type == RecordObject::INVALID_FIELD)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract x field [%s] from record type <%s>", rec_meta->x_field, rec_type);
+        }
+
+        /* Get Y Field */
+        geoData.y_field = RecordObject::getDefinedField(rec_type, rec_meta->y_field);
+        if(geoData.y_field.type == RecordObject::INVALID_FIELD)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract y field [%s] from record type <%s>", rec_meta->y_field, rec_type);
+        }
+    }
 
     /* Get Path */
     if(parms->asset_name)
@@ -252,9 +249,19 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
         outputPath = StringLib::duplicate(parms->path);
     }
 
+    /*
+     * NO THROWING BEYOND THIS POINT
+     */
+
+    /* Set Record Type */
+    recType = StringLib::duplicate(rec_type);
+
+    /* Save Index Key */
+    indexKey = StringLib::duplicate(rec_meta->index_field);
+    printf("INDEX KEY: %s\n", indexKey);
+
     /* Get Row Size */
-    const char* batch_rec_field_name = RecordObject::getRecordBatchField(recType);
-    RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, batch_rec_field_name);
+    RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
     if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
     else batchRowSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
     rowSizeBytes = RecordObject::getRecordDataSize(recType) + batchRowSizeBytes;
@@ -268,9 +275,6 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     /* Create Unique Temporary Filename */
     FString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
     fileName = tmp_file.c_str(true);
-
-    /* Save Index Key */
-    indexKey = StringLib::duplicate(index_key);
 
     /* Allocate Implementation */
     impl = new ArrowImpl(this);
@@ -295,11 +299,6 @@ ParquetBuilder::~ParquetBuilder(void)
     delete outQ;
     delete inQ;
     delete impl;
-    if(geoData.as_geo)
-    {
-        delete [] geoData.x_key;
-        delete [] geoData.y_key;
-    }
 }
 
 /*----------------------------------------------------------------------------

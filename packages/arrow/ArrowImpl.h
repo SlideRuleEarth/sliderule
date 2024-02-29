@@ -71,7 +71,6 @@ class ArrowImpl
         explicit ArrowImpl          (ParquetBuilder* _builder);
         ~ArrowImpl                  (void);
 
-        const char* getBatchRecType (void);
         bool processRecordBatch     (Ordering<ParquetBuilder::batch_t>& record_batch,
                                      int num_rows,
                                      int batch_row_size_bits,
@@ -110,7 +109,6 @@ class ArrowImpl
         vector<shared_ptr<arrow::Field>>        fieldVector;
         field_list_t                            fieldList;
         field_iterator_t*                       fieldIterator;
-        const char*                             batchRecType;
         bool                                    firstTime;
 
         /*--------------------------------------------------------------------

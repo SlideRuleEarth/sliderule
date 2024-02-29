@@ -52,7 +52,7 @@ const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"latitude",        RecordObject::DOUBLE,   offsetof(g04a_footprint_t, latitude),        1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(g04a_footprint_t, longitude),       1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"agbd",            RecordObject::FLOAT,    offsetof(g04a_footprint_t, agbd),            1,  NULL, NATIVE_FLAGS},
-    {"elevation",       RecordObject::FLOAT,    offsetof(g04a_footprint_t, elevation),       1,  NULL, NATIVE_FLAGS},
+    {"elevation",       RecordObject::FLOAT,    offsetof(g04a_footprint_t, elevation),       1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g04a_footprint_t, solar_elevation), 1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g04a_footprint_t, sensitivity),     1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g04a_footprint_t, beam),            1,  NULL, NATIVE_FLAGS},

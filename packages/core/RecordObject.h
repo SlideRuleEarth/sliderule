@@ -108,12 +108,13 @@ class RecordObject
         typedef enum {
             BIGENDIAN       = 0x00000001,
             POINTER         = 0x00000002,
-            BATCH           = 0x00000004,       // batch record
-            AUX             = 0x00000008,       // auxiliary field
+            AUX             = 0x00000004,       // auxiliary field
+            BATCH           = 0x00000008,       // batch record
             X_COORD         = 0x00000010,
             Y_COORD         = 0x00000020,
-            TIME            = 0x00000040,
-            INDEX           = 0x00000080
+            Z_COORD         = 0x00000040,
+            TIME            = 0x00000080,
+            INDEX           = 0x00000100
         } fieldFlags_t;
 
         typedef struct {
@@ -160,6 +161,33 @@ class RecordObject
             uint16_t                type_size;
             uint32_t                data_size;
         } rec_hdr_t;
+
+        struct meta_t
+        {
+            const char*             index_field;    // field name for index (e.g. extend_id; could be same as id)
+            const char*             time_field;     // field name for time 
+            const char*             x_field;        // field name for x coordinate (e.g. longitude)
+            const char*             y_field;        // field name for y coordinate (e.g. latitude)
+            const char*             z_field;
+            const char*             batch_field;    // field name for batch
+            
+            meta_t(void):
+                index_field(NULL),
+                time_field(NULL),
+                x_field(NULL),
+                y_field(NULL),
+                z_field(NULL),
+                batch_field(NULL) {}
+            ~meta_t(void)
+            {
+                delete [] index_field;
+                delete [] time_field;
+                delete [] x_field;
+                delete [] y_field;
+                delete [] z_field;
+                delete [] batch_field; 
+            }
+        };
 
         /*--------------------------------------------------------------------
          * Constants
@@ -264,7 +292,9 @@ class RecordObject
         static const char*      getRecordTimeField  (const char* rec_type);
         static const char*      getRecordXField     (const char* rec_type);
         static const char*      getRecordYField     (const char* rec_type);
+        static const char*      getRecordZField     (const char* rec_type);
         static const char*      getRecordBatchField (const char* rec_type);
+        static meta_t*          getRecordMetaFields (const char* rec_type);
         static int              getRecordSize       (const char* rec_type);
         static int              getRecordDataSize   (const char* rec_type);
         static int              getRecordMaxFields  (const char* rec_type);
@@ -297,22 +327,13 @@ class RecordObject
         {
             const char*             type_name;      // the name of the type of record
             const char*             id_field;       // field name for id; used in dispatches
-            const char*             index_field;    // field name for index (e.g. extend_id; could be same as id)
-            const char*             time_field;     // field name for time 
-            const char*             x_field;        // field name for x coordinate (e.g. longitude)
-            const char*             y_field;        // field name for y coordinate (e.g. latitude)
-            const char*             batch_field;    // field name for batch
+            meta_t                  meta;           // meta fields populated by the scanDefinition function
             int                     type_size;      // size in bytes of type name string including null termination
             int                     data_size;      // number of bytes of binary data
             int                     record_size;    // total size of memory allocated for record
             Dictionary<field_t>     fields;
 
             definition_t(const char* _type_name, const char* _id_field, int _data_size, int _max_fields):
-                index_field(NULL),
-                time_field(NULL),
-                x_field(NULL),
-                y_field(NULL),
-                batch_field(NULL),
                 fields(_max_fields)
                 { type_name = StringLib::duplicate(_type_name);
                   type_size = (int)StringLib::size(_type_name) + 1;
@@ -321,12 +342,7 @@ class RecordObject
                   record_size = sizeof(rec_hdr_t) + type_size + _data_size; }
             ~definition_t(void)
                 { delete [] type_name;
-                  delete [] id_field; 
-                  delete [] index_field;
-                  delete [] time_field;
-                  delete [] x_field;
-                  delete [] y_field;
-                  delete [] batch_field; }
+                  delete [] id_field; }
         };
 
         /*--------------------------------------------------------------------

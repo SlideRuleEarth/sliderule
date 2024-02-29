@@ -51,7 +51,7 @@ const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(g01b_footprint_t, time_ns),            1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
     {"latitude",        RecordObject::DOUBLE,   offsetof(g01b_footprint_t, latitude),           1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(g01b_footprint_t, longitude),          1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS},
+    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"elevation_stop",  RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_stop),     1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS},

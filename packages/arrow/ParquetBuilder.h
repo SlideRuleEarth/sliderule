@@ -97,8 +97,6 @@ class ParquetBuilder: public LuaObject
 
         typedef struct {
             bool                    as_geo;
-            const char*             x_key;
-            const char*             y_key;
             RecordObject::field_t   x_field;
             RecordObject::field_t   y_field;
         } geo_data_t;
@@ -168,7 +166,7 @@ class ParquetBuilder: public LuaObject
 
                             ParquetBuilder          (lua_State* L, ArrowParms* parms,
                                                      const char* outq_name, const char* inq_name,
-                                                     const char* rec_type, const char* id, const geo_data_t& geo, const char* index_key);
+                                                     const char* rec_type, const char* id);
                             ~ParquetBuilder         (void);
 
         static void*        builderThread           (void* parm);

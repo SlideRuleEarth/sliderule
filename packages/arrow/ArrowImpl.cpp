@@ -54,7 +54,6 @@ ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
     schema(NULL),
     fieldList(LIST_BLOCK_SIZE),
     fieldIterator(NULL),
-    batchRecType(NULL),
     firstTime(true)
 {
     /* Build Field List and Iterator */    
@@ -69,15 +68,6 @@ ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
 ArrowImpl::~ArrowImpl (void)
 {
     delete fieldIterator;
-    delete [] batchRecType;
-}
-
-/*----------------------------------------------------------------------------
-* getBatchRecType
-*----------------------------------------------------------------------------*/
-const char* ArrowImpl::getBatchRecType (void)
-{
-    return batchRecType;
 }
 
 /*----------------------------------------------------------------------------
@@ -208,20 +198,12 @@ bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
         /* Check for Geometry Columns */
         if(parquetBuilder->getAsGeo())
         {
-
-// TODO: this could just check for the x and y flags
-            if(field.offset == parquetBuilder->getXField().offset || field.offset == parquetBuilder->getYField().offset) 
+            /* skip over source columns for geometry as they will be added
+             * separately as a part of the dedicated geometry column */
+            if(field.flags & (RecordObject::X_COORD | RecordObject::Y_COORD))
             {
-                /* skip over source columns for geometry as they will be added
-                * separately as a part of the dedicated geometry column */
                 continue;
             }
-        }
-
-        /* Check for Batch Record Type */
-        if((batchRecType == NULL) && (field.flags & RecordObject::BATCH))
-        {
-            batchRecType = StringLib::duplicate(field.exttype);
         }
 
         /* Add to Schema */

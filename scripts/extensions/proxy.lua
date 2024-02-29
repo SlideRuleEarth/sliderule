@@ -16,7 +16,7 @@
 
 local json = require("json")
 
-local function proxy(resources, parms, endpoint, rec, lon, lat)
+local function proxy(resources, parms, endpoint, rec)
     -- Create User Status --
     local userlog = msg.publish(rspq)
 
@@ -34,7 +34,7 @@ local function proxy(resources, parms, endpoint, rec, lon, lat)
         local output_parms = arrow.parms(parms[arrow.PARMS])
         -- Parquet Writer --
         if output_parms:isparquet() then
-            parquet_builder = arrow.parquet(output_parms, rspq, rspq .. "-parquet", rec, rqstid, lon, lat, "time")
+            parquet_builder = arrow.parquet(output_parms, rspq, rspq .. "-parquet", rec, rqstid)
             if parquet_builder then
                 rsps_from_nodes = rspq .. "-parquet"
                 terminate_proxy_stream = true

@@ -1050,7 +1050,7 @@ const char* RecordObject::getRecordIndexField (const char* rec_type)
 {
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
-    return def->index_field;
+    return def->meta.index_field;
 }
 
 /*----------------------------------------------------------------------------
@@ -1060,7 +1060,7 @@ const char* RecordObject::getRecordTimeField (const char* rec_type)
 {
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
-    return def->time_field;
+    return def->meta.time_field;
 }
 
 /*----------------------------------------------------------------------------
@@ -1070,7 +1070,7 @@ const char* RecordObject::getRecordXField (const char* rec_type)
 {
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
-    return def->x_field;
+    return def->meta.x_field;
 }
 
 /*----------------------------------------------------------------------------
@@ -1080,7 +1080,17 @@ const char* RecordObject::getRecordYField (const char* rec_type)
 {
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
-    return def->y_field;
+    return def->meta.y_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordZField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordZField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.z_field;
 }
 
 /*----------------------------------------------------------------------------
@@ -1090,7 +1100,17 @@ const char* RecordObject::getRecordBatchField (const char* rec_type)
 {
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
-    return def->batch_field;
+    return def->meta.batch_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordMetaFields
+ *----------------------------------------------------------------------------*/
+RecordObject::meta_t* RecordObject::getRecordMetaFields (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return &(def->meta);
 }
 
 /*----------------------------------------------------------------------------
@@ -1783,11 +1803,12 @@ void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, 
         const field_t& field = kv.value;
 
         /* Check for Marked Field */
-        if((field.flags & INDEX)    && (def->index_field == NULL))  def->index_field    = field_name.c_str(true);
-        if((field.flags & TIME)     && (def->time_field == NULL))   def->time_field     = field_name.c_str(true);
-        if((field.flags & X_COORD)  && (def->x_field == NULL))      def->x_field        = field_name.c_str(true);
-        if((field.flags & Y_COORD)  && (def->y_field == NULL))      def->y_field        = field_name.c_str(true);
-        if((field.flags & BATCH)    && (def->batch_field == NULL))  def->batch_field    = field_name.c_str(true);
+        if((field.flags & INDEX)    && (def->meta.index_field == NULL))  def->meta.index_field    = field_name.c_str(true);
+        if((field.flags & TIME)     && (def->meta.time_field == NULL))   def->meta.time_field     = field_name.c_str(true);
+        if((field.flags & X_COORD)  && (def->meta.x_field == NULL))      def->meta.x_field        = field_name.c_str(true);
+        if((field.flags & Y_COORD)  && (def->meta.y_field == NULL))      def->meta.y_field        = field_name.c_str(true);
+        if((field.flags & Z_COORD)  && (def->meta.z_field == NULL))      def->meta.z_field        = field_name.c_str(true);
+        if((field.flags & BATCH)    && (def->meta.batch_field == NULL))  def->meta.batch_field    = field_name.c_str(true);
 
         /* Recurse for User Fields */
         if(field.type == USER)
