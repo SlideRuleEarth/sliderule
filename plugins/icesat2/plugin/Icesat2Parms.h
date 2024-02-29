@@ -69,8 +69,8 @@ class Icesat2Parms: public NetsvcParms
         static const char* ATL08_CLASS;
         static const char* QUALITY;
         static const char* TRACK;
+        static const char* BEAMS;
         static const char* STAGES;
-        static const char* COMPACT;
         static const char* ALONG_TRACK_SPREAD;
         static const char* MIN_PHOTON_COUNT;
         static const char* EXTENT_LENGTH;

@@ -54,6 +54,7 @@ const char* Icesat2Parms::YAPC_VERSION                 = "version";
 const char* Icesat2Parms::ATL08_CLASS                  = "atl08_class";
 const char* Icesat2Parms::QUALITY                      = "quality_ph";
 const char* Icesat2Parms::TRACK                        = "track";
+const char* Icesat2Parms::BEAMS                        = "beams";
 const char* Icesat2Parms::STAGES                       = "stages";
 const char* Icesat2Parms::ALONG_TRACK_SPREAD           = "ats";
 const char* Icesat2Parms::MIN_PHOTON_COUNT             = "cnt";
@@ -346,6 +347,11 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         lua_getfield(L, index, Icesat2Parms::TRACK);
         track = LuaObject::getLuaInteger(L, -1, true, track, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::TRACK, track);
+        lua_pop(L, 1);
+
+        /* Beams */
+        lua_getfield(L, index, Icesat2Parms::BEAMS);
+        get_lua_beams(L, -1, &provided);
         lua_pop(L, 1);
 
         /* Maximum Iterations */

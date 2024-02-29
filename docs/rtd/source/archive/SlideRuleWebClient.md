@@ -293,3 +293,98 @@ All request parameters supported by SlideRule for a given request shall be suppo
 
 
 ## Appendix A. Parameter Components
+
+* __Mission__: dropdown or select button
+    - ICESat-2
+    - GEDI
+
+* __API__: dropdown
+    - atl03s
+    - atl06
+    - atl06s
+    - atl08
+    - atl24s
+
+* __General__: accordian header
+    - _Polygon_: label 
+        - _Draw On Map_: radio button
+        - _Upload_: radio button
+            - _File Upload_: file upload button
+    - _Rasterize Polygon_: checkbox
+        - _Cell Size_: input number (degrees)
+    - _Ignore Polygon for CMR_: checkbox
+    - _Projection_: label
+        - *auto*: radio button
+        - *plate_carree*: radio button
+        - *north_polar*: radio button
+        - *south_polar*: radio button
+    - _Timeout_: input number (seconds)
+        - _rqst-timeout_: input number (seconds)
+        - _node-timeout_: input number (seconds)
+        - _read-timeout_: input number (seconds)        
+
+* __Granule Selection__: accordian header (ICESat-2)
+    - _Track_: label
+        - _1_: checkbox
+        - _2_: checkbox
+        - _3_: checkbox
+        - _all_: checkbox / toggle others
+    - _Beam_: label
+        - _gt1l_: checkbox
+        - _gt1r_: checkbox
+        - _gt2l_: checkbox
+        - _gt2r_: checkbox
+        - _gt3l_: checkbox
+        - _gt3r_: checkbox
+        - _all_: checbox / toggle others
+    - _RGT_: input number
+    - _Cycle_: input number
+    - _Region_: input number
+    - _T0_: calendar
+    - _T1_: calendar
+
+* __Photon Selection__: accordian header (ICESat-2)
+    - _ATL03 Confidence_: input switch
+        - _Surface Reference Type_: label
+            - *land*: radio button
+            - *ocean*: radio button
+            - *sea ice*: radio button
+            - *land_ice*: radio button
+            - *inland_water*: radio button
+        - _Signal Confidence_:  label
+            - *tep*: radio button
+            - *not_considered*: radio button
+            - *background*: radio button
+            - *within_10m*: radio button
+            - *low*: radio button
+            - *medium*: radio button
+            - *high*: radio button
+    - _ATL08 Classification_: input switch
+        - _Land Type_: label
+            - *noise*: checkbox
+            - *ground*: checkbox
+            - *canopy*: checkbox
+            - *top_of_canopy*: checkbox
+            - *unclassified*: checkbox
+    - _ATL03 YAPC_: input switch
+        - _Score_: input number
+    - _SR YAPC_: input switch
+        - _Score_: input number
+        - _Knn_: input number
+        - _Window Height_: input number
+        - _Window Width_: input number
+        - _Version_: label
+            - *version 1*: radio button
+            - *version 2*: radio button
+            - *version 3*: radio button
+
+
+        "score": the minimum yapc classification score of a photon to be used in the processing request
+
+"knn": the number of nearest neighbors to use, or specify 0 to allow automatic selection of the number of neighbors (recommended)
+
+"win_h": the window height used to filter the nearest neighbors
+
+"win_x": the window width used to filter the nearest neighbors
+
+"version": the version of the YAPC algorithm to use
