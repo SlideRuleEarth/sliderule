@@ -69,7 +69,7 @@ class TestParquet:
         os.remove("testfile2.parquet")
         assert init
         assert len(gdf) == 190491
-        assert len(gdf.keys()) == 24
+        assert len(gdf.keys()) == 22
         assert gdf["rgt"][0] == 1160
         assert gdf["cycle"][0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
