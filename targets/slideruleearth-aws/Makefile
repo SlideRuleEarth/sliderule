@@ -201,6 +201,11 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
 	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
 
+static-website-export: ## export static website to local host directory
+	-rm -Rf $(STATIC_WEB_STAGE_DIR)/dist
+	mkdir -p $(STATIC_WEB_STAGE_DIR)/dist
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_STAGE_DIR)/dist:/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+
 static-website-run: ## locally run the static website; needs VERSION
 	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
