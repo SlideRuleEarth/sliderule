@@ -30,28 +30,28 @@ resource "aws_cloudfront_response_headers_policy" "security_headers_policy" {
   }
 }
 
-# resource "aws_cloudfront_function" "remove_web_from_uri" {
-#   name    = "remove-web-from-uri"
-#   runtime = "cloudfront-js-1.0"
-#   comment = "Function to remove /web from URI"
-#
-#   # Use the file function to load the function code from a separate file
-#   # For example, if your JavaScript code is saved in 'remove-web-from-uri.js'
-#   code = <<-EOF
-#   function handler(event) {
-#       var request = event.request;
-#       var uri = request.uri;
-#
-#       // Check if URI starts with /web and remove it
-#       if (uri.startsWith('/web')) {
-#           request.uri = uri.replace('/web', '');
-#       }
-#
-#       return request;
-#   }
-#   EOF
-#
-# }
+resource "aws_cloudfront_function" "remove_web_from_uri" {
+  name    = "remove-web-from-uri"
+  runtime = "cloudfront-js-1.0"
+  comment = "Function to remove /web from URI"
+
+  # Use the file function to load the function code from a separate file
+  # For example, if your JavaScript code is saved in 'remove-web-from-uri.js'
+  code = <<-EOF
+  function handler(event) {
+      var request = event.request;
+      var uri = request.uri;
+
+      // Check if URI starts with /web and remove it
+      if (uri.startsWith('/web')) {
+          request.uri = uri.replace('/web', '');
+      }
+
+      return request;
+  }
+  EOF
+
+}
 
 
 resource "aws_cloudfront_distribution" "my_cloudfront" {
@@ -98,10 +98,10 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
 
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers_policy.id
 
-    # function_association {
-    #   event_type = "viewer-request"
-    #   function_arn = aws_cloudfront_function.remove_web_from_uri.arn
-    # }
+    function_association {
+      event_type = "viewer-request"
+      function_arn = aws_cloudfront_function.remove_web_from_uri.arn
+    }
 
   }
   price_class = "PriceClass_200"
@@ -111,20 +111,6 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
     acm_certificate_arn = aws_acm_certificate.mysite.arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1"
-  }
-
-  custom_error_response {
-    error_caching_min_ttl = 0
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-  }
-
-  custom_error_response {
-    error_caching_min_ttl = 0
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
   }
 
 }
