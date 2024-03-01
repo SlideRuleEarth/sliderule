@@ -207,6 +207,14 @@ class Icesat2Parms: public NetsvcParms
             PHOREAL_UNSUPPORTED = 3
         } phoreal_geoloc_t;
 
+        /* Ancillary Field Types */
+        typedef enum {
+            PHOTON_ANC_TYPE     = 0,
+            EXTENT_ANC_TYPE     = 1,
+            ATL08_ANC_TYPE      = 2,
+            ATL06_ANC_TYPE      = 3
+        } anc_type_t;
+
         /* YAPC Settings */
         typedef struct {
             uint8_t             score;                          // minimum allowed weight of photon using yapc algorithm

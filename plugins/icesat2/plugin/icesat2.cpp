@@ -124,7 +124,6 @@ extern "C" {
 void initicesat2 (void)
 {
     /* Initialize Modules */
-    AncillaryFields::init();
     Atl03Reader::init();
     Atl03Indexer::init();
     Atl06Dispatch::init();

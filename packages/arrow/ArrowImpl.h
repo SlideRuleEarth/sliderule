@@ -65,14 +65,20 @@ class ArrowImpl
     public:
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef ParquetBuilder::batch_list_t batch_list_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         explicit ArrowImpl          (ParquetBuilder* _builder);
         ~ArrowImpl                  (void);
 
-        bool processRecordBatch     (Ordering<ParquetBuilder::batch_t>& record_batch,
-                                     int num_rows, int batch_row_size_bits, bool file_finished=false);
+        bool processRecordBatch     (batch_list_t& record_batch, int num_rows, 
+                                     int batch_row_size_bits, bool file_finished=false);
 
     private:
 
@@ -88,7 +94,7 @@ class ArrowImpl
 
         typedef List<RecordObject::field_t> field_list_t;
         typedef field_list_t::Iterator field_iterator_t;
-
+                
         typedef struct WKBPoint {
             uint8_t                 byteOrder;
             uint32_t                wkbType;
@@ -119,17 +125,17 @@ class ArrowImpl
         void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void processField           (RecordObject::field_t& field, 
                                      shared_ptr<arrow::Array>* column, 
-                                     Ordering<ParquetBuilder::batch_t>& record_batch, 
+                                     batch_list_t& record_batch, 
                                      int num_rows, 
                                      int batch_row_size_bits);
         void processArray           (RecordObject::field_t& field, 
                                      shared_ptr<arrow::Array>* column, 
-                                     Ordering<ParquetBuilder::batch_t>& record_batch, 
+                                     batch_list_t& record_batch, 
                                      int batch_row_size_bits);
         void processGeometry        (RecordObject::field_t& x_field, 
                                      RecordObject::field_t& y_field, 
                                      shared_ptr<arrow::Array>* column, 
-                                     Ordering<ParquetBuilder::batch_t>& record_batch, 
+                                     batch_list_t& record_batch, 
                                      int num_rows, 
                                      int batch_row_size_bits);
 };

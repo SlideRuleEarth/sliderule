@@ -14,6 +14,7 @@ target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/core.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/AncillaryFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
@@ -70,6 +71,7 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/core.h
+        ${CMAKE_CURRENT_LIST_DIR}/AncillaryFields.h
         ${CMAKE_CURRENT_LIST_DIR}/Asset.h
         ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.h

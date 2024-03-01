@@ -322,40 +322,109 @@ void* ParquetBuilder::builderThread(void* parm)
         {
             /* Process Record */
             if(ref.size > 0)
-            {
-                /* Get Record and Match to Type being Processed */
+            {               
+                /* Create Batch Structure */
                 RecordInterface* record = new RecordInterface((unsigned char*)ref.data, ref.size);
-                if(!StringLib::match(record->getRecordType(), builder->recType))
+                batch_t* batch = new batch_t(ref, builder->inQ);
+
+                /* Process Container Records */
+                if(StringLib::match(record->getRecordType(), ContainerRecord::recType))
                 {
+                    vector<RecordObject*> anc_vec;
+
+                    /* Loop Through Records in Container */
+                    ContainerRecord::rec_t* container = (ContainerRecord::rec_t*)record->getRecordData();
+                    for(uint32_t i = 0; i < container->rec_cnt; i++)
+                    {
+                        /* Pull Out Subrecord */
+                        uint8_t* buffer = (uint8_t*)container + container->entries[i].rec_offset;
+                        int size = container->entries[i].rec_size;
+                        RecordObject* subrec = new RecordInterface(buffer, size);
+
+                        /* Handle Supported Record Types */
+                        if(StringLib::match(subrec->getRecordType(), builder->recType))
+                        {
+                            batch->pri_record = subrec;
+                        }
+                        else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancFieldRecType))
+                        {
+                            anc_vec.push_back(subrec);
+                            batch->anc_rows += 1;
+                        }
+                        else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancElementRecType))
+                        {
+                            AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(subrec->getRecordData());
+                            batch->anc_rows += element_array->num_elements;
+                            anc_vec.push_back(subrec);
+                        }
+                        else // ignore
+                        {
+                            delete subrec; // cleaned up
+                        }
+                    }
+
+                    /* Clean Up Container Record */
                     delete record;
+
+                    /* Build Ancillary Record Array */
+                    if(anc_vec.size() > 0)
+                    {
+                        batch->anc_records = new RecordObject* [anc_vec.size()];
+                        for(size_t i = 0; i < anc_vec.size(); i++)
+                        {
+                            batch->anc_records[i] = anc_vec[i];
+                        }
+                    }
+
+                    /* Check If Primary Record Found 
+                     *  must be after above code to populate
+                     *  ancillary record array so that they
+                     *  get freed */
+                    if(!batch->pri_record)
+                    {
+                        builder->outQ->postCopy(ref.data, ref.size);
+                        delete batch;
+                        continue;
+                    }
+                }
+                else if(StringLib::match(record->getRecordType(), builder->recType))
+                {
+                    batch->pri_record = record;
+                }
+                else
+                {
+                    /* Record of Non-Targeted Type - Pass Through */
                     builder->outQ->postCopy(ref.data, ref.size);
-                    builder->inQ->dereference(ref);
+                    delete record;
+                    delete batch;
                     continue;
                 }
 
                 /* Determine Rows in Record */
-                int record_size_bytes = record->getAllocatedDataSize();
+                int record_size_bytes = batch->pri_record->getAllocatedDataSize();
                 int batch_size_bytes = record_size_bytes - (builder->rowSizeBytes - builder->batchRowSizeBytes);
-                int num_rows =  batch_size_bytes / builder->batchRowSizeBytes;
+                batch->rows =  batch_size_bytes / builder->batchRowSizeBytes;
+
+                /* Sanity Check Rows */
                 int left_over = batch_size_bytes % builder->batchRowSizeBytes;
                 if(left_over > 0)
                 {
-                    mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), batch_size_bytes, builder->batchRowSizeBytes);
-                    delete record; // record is not batched, so must delete here
-                    builder->inQ->dereference(ref); // record is not batched, so must dereference here
+                    mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", batch->pri_record->getRecordType(), batch_size_bytes, builder->batchRowSizeBytes);
+                    delete batch;
                     continue;
                 }
 
-                /* Create Batch Structure */
-                batch_t batch = {
-                    .ref = ref,
-                    .record = record,
-                    .rows = num_rows
-                };
+                /* Sanity Check Number of Ancillary Fields */                
+                if(batch->anc_rows > 0 && batch->anc_rows != batch->rows)
+                {
+                    mlog(ERROR, "Attempting to supply ancillary fields with mismatched number of rows for %s: %d != %d", batch->pri_record->getRecordType(), batch->anc_rows, batch->rows);
+                    delete batch;
+                    continue;
+                }
 
                 /* Add Batch to Ordering */
-                builder->recordBatch.add(row_cnt, batch);
-                row_cnt += num_rows;
+                builder->recordBatch.add(batch);
+                row_cnt += batch->rows;
                 if(row_cnt >= builder->maxRowsInGroup)
                 {
                     bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
@@ -364,7 +433,7 @@ void* ParquetBuilder::builderThread(void* parm)
                         alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
                         builder->active = false; // breaks out of loop
                     }
-                    builder->clearBatch(trace_id);
+                    builder->recordBatch.clear();
                     row_cnt = 0;
                 }
             }
@@ -387,7 +456,7 @@ void* ParquetBuilder::builderThread(void* parm)
     /* Process Remaining Records */
     bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
     if(!status) alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
-    builder->clearBatch(trace_id);
+    builder->recordBatch.clear();
 
     /* Send File to User */
     const char* _path = builder->outputPath;
@@ -426,24 +495,6 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Exit Thread */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * clearBatch
- *----------------------------------------------------------------------------*/
-void ParquetBuilder::clearBatch (uint32_t trace_id)
-{
-    batch_t batch;
-    uint32_t clear_trace_id = start_trace(INFO, trace_id, "clear_batch", "%s", "{}");
-    unsigned long key = recordBatch.first(&batch);
-    while(key != (unsigned long)INVALID_KEY)
-    {
-        delete batch.record;
-        inQ->dereference(batch.ref);
-        key = recordBatch.next(&batch);
-    }
-    recordBatch.clear();
-    stop_trace(INFO, clear_trace_id);
 }
 
 /*----------------------------------------------------------------------------

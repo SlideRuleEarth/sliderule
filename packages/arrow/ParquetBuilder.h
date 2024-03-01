@@ -95,17 +95,34 @@ class ParquetBuilder: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
+        struct batch_t {
+            Subscriber::msgRef_t    ref;
+            Subscriber*             in_q;
+            RecordObject*           pri_record;
+            RecordObject**          anc_records;
+            int                     rows;
+            int                     anc_rows;
+            batch_t(Subscriber::msgRef_t& _ref, Subscriber* _in_q):
+                ref(_ref),
+                in_q(_in_q),
+                pri_record(NULL),
+                anc_records(NULL),
+                rows(0),
+                anc_rows(0) {}
+            ~batch_t(void) {
+                in_q->dereference(ref);
+                delete pri_record;
+                for(int i = 0; i < anc_rows; i++) delete anc_records[i];
+                delete [] anc_records; }
+        };
+
+        typedef List<batch_t*>  batch_list_t;
+
         typedef struct {
             bool                    as_geo;
             RecordObject::field_t   x_field;
             RecordObject::field_t   y_field;
         } geo_data_t;
-
-        typedef struct {
-            Subscriber::msgRef_t    ref;
-            RecordObject*           record;
-            int                     rows;
-        } batch_t;
 
         typedef struct {
             char    filename[FILE_NAME_MAX_LEN];
@@ -140,6 +157,12 @@ class ParquetBuilder: public LuaObject
     private:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int EXPECTED_RECORDS_IN_BATCH = 256;
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
@@ -149,7 +172,7 @@ class ParquetBuilder: public LuaObject
         Subscriber*         inQ;
         const char*         recType;
         const char*         timeKey;
-        Ordering<batch_t>   recordBatch;
+        batch_list_t        recordBatch;
         Publisher*          outQ;
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;
@@ -164,15 +187,13 @@ class ParquetBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, ArrowParms* parms,
-                                                     const char* outq_name, const char* inq_name,
-                                                     const char* rec_type, const char* id);
-                            ~ParquetBuilder         (void);
-
-        static void*        builderThread           (void* parm);
-        void                clearBatch              (uint32_t trace_id);
-        bool                send2S3                 (const char* s3dst);
-        bool                send2Client             (void);
+                        ParquetBuilder          (lua_State* L, ArrowParms* parms,
+                                                 const char* outq_name, const char* inq_name,
+                                                 const char* rec_type, const char* id);
+                        ~ParquetBuilder         (void);
+        static void*    builderThread           (void* parm);
+        bool            send2S3                 (const char* s3dst);
+        bool            send2Client             (void);
 };
 
 #endif  /* __parquet_builder__ */

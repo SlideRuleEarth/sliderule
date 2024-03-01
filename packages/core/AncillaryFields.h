@@ -65,14 +65,6 @@ struct AncillaryFields
         estimation_t        estimation;
     } entry_t;
 
-    /* Ancillary Field Types */
-    typedef enum {
-        PHOTON_ANC_TYPE     = 0,
-        EXTENT_ANC_TYPE     = 1,
-        ATL08_ANC_TYPE      = 2,
-        ATL06_ANC_TYPE      = 3
-    } type_t;
-
     /* Ancillary Field Record */
     typedef struct {
         uint8_t             anc_type;       // type_t

@@ -565,7 +565,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                     const char* field_name = parms->atl06_fields->get(i).field.c_str();
 
                     AncillaryFields::field_t field;
-                    field.anc_type = AncillaryFields::ATL06_ANC_TYPE;
+                    field.anc_type = Icesat2Parms::ATL06_ANC_TYPE;
                     field.field_index = i;
                     field.data_type = atl06.anc_data[field_name]->elementType();
                     atl06.anc_data[field_name]->serialize(&field.value[0], segment, 1);
