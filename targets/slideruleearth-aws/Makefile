@@ -60,7 +60,7 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
-DOCS_STAGE_DIR = $(STAGE)/docs
+DOCS_STAGE_DIR = $(STATIC_WEB_STAGE_DIR)/dist/jekyll/_site
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
@@ -348,18 +348,8 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -f report.pdf
 	- rm -f report.xml
 
-docs-build:
-	-rm -Rf $(DOCS_STAGE_DIR)
-	mkdir -p $(DOCS_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(DOCS_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(DOCS_STAGE_DIR)
-	rsync -a $(ROOT) $(DOCS_STAGE_DIR)/sliderule --exclude build --exclude stage
-	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(DOCS_STAGE_DIR)/rtd/source/assets
-	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(DOCS_STAGE_DIR)/rtd/source/assets
-	-cp -R /data/web $(DOCS_STAGE_DIR)/rtd/source/_static/html
-
-docs-live-update: docs-build # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync docs/dist/ s3://docs.$(DOMAIN) --delete
+docs-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(DOCS_STAGE_DIR) s3://docs.$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
 
 docs-live-update-testsliderule: ## Update the testsliderule.org with new docs static website build
@@ -377,6 +367,9 @@ docs-destroy: # Destroy the web client
 	mkdir -p terraform/docs && cd terraform/docs && terraform init && terraform workspace select $(DOMAIN)-docs || terraform workspace new $(DOMAIN)-docs && terraform validate && \
 	terraform destroy -var domainName=docs.$(DOMAIN) -var domainApex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
+docs-destroy-testsliderule: ## Destroy the docs static website on testsliderule.org
+	make docs-destroy DOMAIN=testsliderule.org
+	
 ########################
 # Test Targets
 ########################
@@ -409,3 +402,6 @@ help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)
+	@echo DOMAIN: $(DOMAIN)	
+	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
+	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)

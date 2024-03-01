@@ -1,5 +1,5 @@
 resource "aws_cloudfront_response_headers_policy" "security_headers_policy" {
-  name = "my-security-headers-policy"
+  name = "${var.domain_root}-docs-security-headers-policy"
   security_headers_config {
     content_type_options {
       override = true
@@ -24,11 +24,35 @@ resource "aws_cloudfront_response_headers_policy" "security_headers_policy" {
       override                   = true
     }
     content_security_policy {
-      content_security_policy = "frame-ancestors 'none'; default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self'; style-src-elem 'self' 'unsafe-inline' object-src 'none'; font-src 'self' connect-src 'self' https://*.testsliderule.org;"
+      content_security_policy = "frame-ancestors 'none'; default-src 'none'; img-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net ; connect-src 'self' https://*.testsliderule.org;"
       override                = true
     }
   }
 }
+
+# resource "aws_cloudfront_function" "remove_web_from_uri" {
+#   name    = "remove-web-from-uri"
+#   runtime = "cloudfront-js-1.0"
+#   comment = "Function to remove /web from URI"
+#
+#   # Use the file function to load the function code from a separate file
+#   # For example, if your JavaScript code is saved in 'remove-web-from-uri.js'
+#   code = <<-EOF
+#   function handler(event) {
+#       var request = event.request;
+#       var uri = request.uri;
+#
+#       // Check if URI starts with /web and remove it
+#       if (uri.startsWith('/web')) {
+#           request.uri = uri.replace('/web', '');
+#       }
+#
+#       return request;
+#   }
+#   EOF
+#
+# }
+
 
 resource "aws_cloudfront_distribution" "my_cloudfront" {
   depends_on = [
@@ -73,6 +97,12 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
     max_ttl                = 86400
 
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers_policy.id
+
+    # function_association {
+    #   event_type = "viewer-request"
+    #   function_arn = aws_cloudfront_function.remove_web_from_uri.arn
+    # }
+
   }
   price_class = "PriceClass_200"
 
