@@ -60,6 +60,7 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+DOCS_STAGE_DIR = $(STAGE)/docs
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
@@ -76,6 +77,7 @@ DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='client.$(DOMAIN)'].Id" --output text)
 
 CLANG_VER ?= ""
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -340,6 +342,35 @@ distclean: ## fully remove all non-version controlled files and directories
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f report.pdf
 	- rm -f report.xml
+
+docs-build:
+	-rm -Rf $(DOCS_STAGE_DIR)
+	mkdir -p $(DOCS_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(DOCS_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(DOCS_STAGE_DIR)
+	rsync -a $(ROOT) $(DOCS_STAGE_DIR)/sliderule --exclude build --exclude stage
+	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(DOCS_STAGE_DIR)/rtd/source/assets
+	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(DOCS_STAGE_DIR)/rtd/source/assets
+	-cp -R /data/web $(DOCS_STAGE_DIR)/rtd/source/_static/html
+
+docs-live-update: docs-build # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync docs/dist/ s3://docs.$(DOMAIN) --delete
+	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
+
+docs-live-update-testsliderule: ## Update the testsliderule.org with new docs static website build
+	make live-update DOMAIN=testsliderule.org
+
+docs-deploy: ## deploy the docs static website config to cloudfront and upload site to s3 bucket
+	mkdir -p terraform/docs && cd terraform/docs && terraform init && terraform workspace select $(DOMAIN)-docs || terraform workspace new $(DOMAIN)-docs && terraform validate && \
+	terraform apply -var domainName=docs.$(DOMAIN) -var domainApex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
+
+docs-deploy-to-testsliderule: ## Deploy the docs static website to the testsliderule.org cloudfront and update the s3 bucket
+	make docs-deploy DOMAIN=testsliderule.org && \
+	make docs-live-update DOMAIN=testsliderule.org
+
+docs-destroy: # Destroy the web client 
+	mkdir -p terraform/docs && cd terraform/docs && terraform init && terraform workspace select $(DOMAIN)-docs || terraform workspace new $(DOMAIN)-docs && terraform validate && \
+	terraform destroy -var domainName=docs.$(DOMAIN) -var domainApex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 ########################
 # Test Targets
