@@ -349,7 +349,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
     - _T1_: calendar
 
 * __Photon Selection__: accordian header [ICESat-2]
-    - _ATL03 Confidence_: input switch
+    - _ATL03 Confidence_: input switch (enables inputs below)
         - _Surface Reference Type_: label
             - *land*: radio button
             - *ocean*: radio button
@@ -364,16 +364,16 @@ All request parameters supported by SlideRule for a given request shall be suppo
             - *low*: radio button
             - *medium*: radio button
             - *high*: radio button
-    - _ATL08 Classification_: input switch
+    - _ATL08 Classification_: input switch (enables inputs below)
         - _Land Type_: label
             - *noise*: checkbox
             - *ground*: checkbox
             - *canopy*: checkbox
             - *top_of_canopy*: checkbox
             - *unclassified*: checkbox
-    - _ATL03 YAPC_: input switch
+    - _ATL03 YAPC_: input switch (enables inputs below)
         - _Score_: input number
-    - _SR YAPC_: input switch
+    - _SR YAPC_: input switch (enables inputs below)
         - _Score_: input number
         - _Knn_: input number
         - _Window Height_: input number
