@@ -3799,6 +3799,9 @@ void H5FileBuffer::compareType8Record(btree2_hdr_t* hdr, const void *_bt2_udata,
         // TODO - init cmp fheap struct
         // H5A_fh_ud_cmp_t fh_udata;
         // https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L49
+        
+        /* Update for cmp to pass up*/
+        *result = 0;
 
         // TODO: check on complete match to H5HF_t attrs
         heap_info_t *fheap; // equiv to: pointer to internal fractal heap header info
@@ -4336,13 +4339,9 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         /* Check on cmp */
         if (cmp != 0) {
             *found = false;
-            free(leaf->leaf_native);
-            free(leaf);
-            return;
         }
         else {
-            // call back with operator for record
-
+            *found = true;
         }
 
         free(leaf->leaf_native);
@@ -4886,6 +4885,26 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                     tbuf[i] = (int)dptr[i];
                 }
             }
+            /* String to Int - assumes ASCII encoding */
+            else if(info.datatype == RecordObject::STRING)
+            {
+                // char* dptr = (char*)info.data;
+                uint8_t* dptr = (uint8_t*)info.data;
+
+                // TODO this is redundant, but metaData not visible to scope
+                uint8_t* len_cnt = dptr;
+                uint32_t length = 0;
+                while (*len_cnt != '\0') {
+                    length++;
+                    len_cnt++;
+                }
+                for(uint32_t i = 0; i < length; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+                info.elements = length;
+            }
+
             /* Short to Int */
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
@@ -5013,7 +5032,8 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
+    // TODO: FIX MALLOC ERR
+    // mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
 
     /* Return Info */
     return info;
