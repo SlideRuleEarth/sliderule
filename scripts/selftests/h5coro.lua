@@ -98,7 +98,7 @@ print("vals recieved with type: ".. type(vals))
 print("len of vals:", #vals)
 print("received string as:", vals)
 
-e1 = string.unpack('f', vals) -- unpack values with float for FillRange
+e1 = string.unpack('I4', vals) -- ('f', vals) -- unpack values with float for FillRange
 
 print("e1 val: " .. e1)
 -- print("e2 val: " ..e2)
