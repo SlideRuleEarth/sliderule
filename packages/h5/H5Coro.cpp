@@ -2333,7 +2333,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
-    // mlog(CRITICAL, "datamessage databits: %lld", (long long) databits);
+    mlog(CRITICAL, "datamessage databits: %lld", (long long) databits);
 
     if(H5_ERROR_CHECKING)
     {
@@ -2993,7 +2993,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         readByteArray(attr_name, name_size, &pos);
     }
 
-    // mlog(CRITICAL, "received attr_name: %s", (const char *) attr_name);
+    mlog(CRITICAL, "received attr_name: %s", (const char *) attr_name);
 
     if (version == 1) {
         // name padding, align to next 8-byte boundary
@@ -3527,8 +3527,9 @@ void H5FileBuffer::fheapLocate(btree2_hdr_t* hdr_og, heap_info_t *hdr, const voi
     /* Check type of object in heap */
     if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
         /* Operate on object from managed heap blocks */
+        mlog(DEBUG, "enter fheapLocate_Managed with id_flag %u", id_flags);
         fheapLocate_Managed(hdr_og, hdr, id, op_data, 0);
-        // throw RunTimeException(CRITICAL, RTE_ERROR, "Temp");
+        mlog(DEBUG, "exit fheapLocate_Managed with id_flag %u", id_flags);
     } 
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
         /* NOT IMPLEMENTED - Operate on 'huge' object from file */
@@ -3726,7 +3727,9 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
         uint64_t* ents = (uint64_t*) malloc((size_t)(hdr->curr_num_rows * hdr->table_width)* sizeof(uint64_t)); // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
         unsigned entry; // entry of block
         
+        mlog(DEBUG, "enter man_dblockLocate with %lu", dblock_block_off);
         man_dblockLocate(hdr_og, hdr, obj_off, ents, &entry); 
+        mlog(DEBUG, "exit man_dblockLocate with %lu", dblock_block_off);
 
         dblock_addr = ents[entry];
         dblock_size = (size_t)hdr_og->dtable->row_block_size[entry / hdr->table_width];
@@ -3755,7 +3758,9 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     /* Case switch on type - replaces fheapCmp */
     switch(hdr_og->type) {
         case H5B2_ATTR_DENSE_NAME_ID:
+            mlog(DEBUG, "enter readAttrMssg %lu", dblock_block_off);
             readAttributeMsg(pos, hdr->hdr_flags, hdr->dlvl, msg_size);
+            mlog(DEBUG, "exit readAttrMssg %lu", dblock_block_off);
             break;
         default:
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type message read: %d", hdr_og->type);
@@ -3830,7 +3835,9 @@ void H5FileBuffer::compareType8Record(btree2_hdr_t* hdr, const void *_bt2_udata,
         // H5HF_op -> H5HF__man_op -> H5HF__man_op_real -> H5A__dense_fh_name_cmp
 
         // H5HF_operator_t cmpPtr = &H5FileBuffer::fheapNameCmp;
+        mlog(DEBUG, "enter fheapLocate, result val: %d", *result);
         fheapLocate(hdr, fheap, &bt2_rec->id, &fh_udata);
+        mlog(DEBUG, "exit fheapLocate, result val: %d", *result);
 
         // hdf5 source
         // /* Check if the user's attribute and the B-tree's attribute have the same name */
@@ -3862,7 +3869,9 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
         // (hdr->compare)(udata, native + rec_off[my_idx], cmp); // old
         switch(hdr->type) {
             case H5B2_ATTR_DENSE_NAME_ID:
+                mlog(DEBUG, "enter compareType8Record with cmp: %d", *cmp);
                 compareType8Record(hdr, udata, native + rec_off[my_idx], cmp);
+                mlog(DEBUG, "exit compareType8Record with cmp: %d", *cmp);
                 break;
             // case H5B2_GRP_DENSE_NAME_ID: - type 5
             //     break;
@@ -4056,6 +4065,7 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     hdr->dtable->table_addr = heap_info_ptr->root_blk_addr;
 
     /* End of double table set up*/
+    mlog(DEBUG, "finished open tree v2 with depth value: %u", depth); 
 
     return;
 }
@@ -4200,7 +4210,7 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
 
     /* Allocate space for the native keys in memory & set num records */
     leaf->nrec = curr_node_ptr->node_nrec;
-    leaf->leaf_native = (uint8_t *) calloc((size_t)(leaf->nrec), (size_t)(hdr->rrec_size));
+    leaf->leaf_native = (uint8_t *) calloc((size_t)(leaf->nrec), (size_t)(hdr->nrec_size));
     
     /* Deserialize records*/
     native = leaf->leaf_native;
@@ -4208,7 +4218,9 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         /* Type switching */
         switch(hdr->type) {
             case H5B2_ATTR_DENSE_NAME_ID:
+                // mlog(DEBUG, "enter decodeType8 %lu", internal_pos);
                 internal_pos = decodeType8Record(internal_pos, native);
+                // mlog(DEBUG, "enter decodeType8 %lu", internal_pos);
                 break;
             
             default:
@@ -4259,6 +4271,8 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
     btree2_internal_t *internal = (btree2_internal_t *) std::calloc(1, sizeof(btree2_internal_t));
 
     while (depth > 0) {
+
+        print2term("WARNING: INCOMPLETE IMPLEMENTATION FOR INTERNAL NODE \n");
 
         btree2_node_ptr_t  next_node_ptr; // node pointer info for next node
 
@@ -4330,11 +4344,14 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         btree2_leaf_t *leaf = (btree2_leaf_t *) std::calloc(1, sizeof(btree2_leaf_t));
 
         /* Read out leaf */
-        // uint64_t new_pos = 
+        // mlog(DEBUG, "enter open leaf node read at: %lu", curr_node_ptr->addr);
         openLeafNode(hdr, curr_node_ptr, leaf, curr_node_ptr->addr);
+        // mlog(DEBUG, "complete leaf node read at: %lu", curr_node_ptr->addr);
 
         /* Locate record */
+        mlog(DEBUG, "initiate locateRecord %lu", curr_node_ptr->addr);
         locateRecordBTreeV2(hdr, leaf->nrec, hdr->nat_off, leaf->leaf_native, udata, &idx, &cmp);
+        mlog(DEBUG, "exit locateRecord %lu", curr_node_ptr->addr);
 
         /* Check on cmp */
         if (cmp != 0) {
@@ -4346,6 +4363,8 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
 
         free(leaf->leaf_native);
         free(leaf);
+
+        mlog(DEBUG, "exit findBtree %lu", curr_node_ptr->addr);
     }
 
 }
@@ -5032,8 +5051,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    // TODO: FIX MALLOC ERR
-    // mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
+    mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, asset->getName(), datasetname);
 
     /* Return Info */
     return info;
