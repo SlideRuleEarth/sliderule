@@ -353,7 +353,7 @@ docs-live-update: # Update the static web site docs in the S3 bucket and invalid
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
 
 docs-live-update-testsliderule: ## Update the testsliderule.org with new docs static website build
-	make live-update DOMAIN=testsliderule.org
+	make docs-live-update DOMAIN=testsliderule.org
 
 docs-deploy: ## deploy the docs static website config to cloudfront and upload site to s3 bucket
 	mkdir -p terraform/docs && cd terraform/docs && terraform init && terraform workspace select $(DOMAIN)-docs || terraform workspace new $(DOMAIN)-docs && terraform validate && \

@@ -46,6 +46,14 @@ resource "aws_cloudfront_function" "remove_web_from_uri" {
       if (uri.startsWith('/web')) {
           request.uri = uri.replace('/web', '');
       }
+      // Check whether the URI is missing a file name.
+      if (uri.endsWith('/')) {
+          request.uri += 'index.html';
+      } 
+      // Check whether the URI is missing a file extension.
+      else if (!uri.includes('.')) {
+          request.uri += '/index.html';
+      }
 
       return request;
   }
