@@ -81,8 +81,10 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
     uint32_t parent_trace_id = EventLib::grabId();
     uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
 
-    /* Loop Through Fields in Schema */
+    /* Allocate Columns for this Batch */
     vector<shared_ptr<arrow::Array>> columns;
+    
+    /* Loop Through Fields in Primary Record */
     for(int i = 0; i < fieldIterator->length; i++)
     {
         uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
@@ -106,6 +108,12 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
         processGeometry(parquetBuilder->getXField(), parquetBuilder->getYField(), &column, record_batch, num_rows, batch_row_size_bits);
         columns.push_back(column);
         stop_trace(INFO, geo_trace_id);
+    }
+
+    /* Add Ancillary Columns */
+    if(parquetBuilder->getHasAncillary())
+    {
+        processAncillary(columns, record_batch);
     }
 
     /* Create Parquet Writer (on first time) */
@@ -1206,4 +1214,75 @@ void ArrowImpl::processGeometry (RecordObject::field_t& x_field, RecordObject::f
         y_field.offset = starting_y_offset;
     }
     (void)builder.Finish(column);
+}
+
+/*----------------------------------------------------------------------------
+* processGeometry
+*----------------------------------------------------------------------------*/
+void ArrowImpl::processAncillary (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
+{
+    Dictionary<shared_ptr<arrow::Array>> column_table;
+    vector<string>& ancillary_fields = parquetBuilder->getParms()->ancillary_fields;
+
+
+// create a dictionary of vectors of field references
+// the key is the field name
+// then loop through the ancillary_fields vector for each field name there
+//   look it up in the dictionary
+//   and loop through all of the fields for that field name
+//   at that point it will have the same type so a builder can be created
+
+
+    for(int i = 0; i < record_batch.length(); i++)
+    {
+        ParquetBuilder::batch_t* batch = record_batch[i];
+        for(int j = 0; j < batch->anc_fields; j++)
+        {
+            AncillaryFields::field_array_t* field_array = reinterpret_cast<AncillaryFields::field_array_t*>(batch->anc_records[j]->getRecordData());
+            for(int k = 0; k < field_array->num_fields; k++)
+            {
+                AncillaryFields::field_t& field = field_array->fields[k];
+                //field.data_type
+
+                /* Get Name */
+                if(field.field_index < parquetBuilder->getParms()->ancillary_fields.size())
+                {
+                    const char* name = parquetBuilder->getParms()->ancillary_fields[field.field_index].c_str();
+                }
+                else
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field.field_index);
+                }
+
+            }
+        }
+
+            arrow::DoubleBuilder builder;
+            (void)builder.Reserve(num_rows);
+            for(int i = 0; i < record_batch.length(); i++)
+            {
+                if(field.flags & RecordObject::BATCH)
+                {
+                    int32_t starting_offset = field.offset;
+                    for(int row = 0; row < batch->rows; row++)
+                    {
+                        builder.UnsafeAppend((double)batch->pri_record->getValueReal(field));
+                        field.offset += batch_row_size_bits;
+                    }
+                    field.offset = starting_offset;
+                }
+                else // non-batch field
+                {
+                    float value = (float)batch->pri_record->getValueReal(field);
+                    for(int row = 0; row < batch->rows; row++)
+                    {
+                        builder.UnsafeAppend(value);
+                    }
+                }
+            }
+            (void)builder.Finish(column);
+
+
+    
+    columns.push_back(column);
 }

@@ -168,6 +168,22 @@ RecordObject::field_t& ParquetBuilder::getYField (void)
     return geoData.y_field;
 }
 
+/*----------------------------------------------------------------------------
+ * getHasAncillary
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::getHasAncillary (void)
+{
+    return hasAncillary;
+}
+
+/*----------------------------------------------------------------------------
+ * getParms
+ *----------------------------------------------------------------------------*/
+ArrowParms* ParquetBuilder::getParms (void)
+{
+    return parms;
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  *******************************************************************************/
@@ -179,7 +195,8 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* outq_name, const char* inq_name,
                                 const char* rec_type, const char* id):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms)
+    parms(_parms),
+    hasAncillary(false)
 {
     assert(_parms);
     assert(outq_name);
@@ -349,13 +366,13 @@ void* ParquetBuilder::builderThread(void* parm)
                         else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancFieldRecType))
                         {
                             anc_vec.push_back(subrec);
-                            batch->anc_rows += 1;
+                            batch->anc_fields += 1;
                         }
                         else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancElementRecType))
                         {
-                            AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(subrec->getRecordData());
-                            batch->anc_rows += element_array->num_elements;
                             anc_vec.push_back(subrec);
+                            AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(subrec->getRecordData());
+                            batch->anc_elements += element_array->num_elements;
                         }
                         else // ignore
                         {
@@ -367,10 +384,11 @@ void* ParquetBuilder::builderThread(void* parm)
                     delete record;
 
                     /* Build Ancillary Record Array */
-                    if(anc_vec.size() > 0)
+                    batch->num_anc_recs = anc_vec.size();
+                    if(batch->num_anc_recs > 0)
                     {
-                        batch->anc_records = new RecordObject* [anc_vec.size()];
-                        for(size_t i = 0; i < anc_vec.size(); i++)
+                        batch->anc_records = new RecordObject* [batch->num_anc_recs];
+                        for(size_t i = 0; i < batch->num_anc_recs; i++)
                         {
                             batch->anc_records[i] = anc_vec[i];
                         }
@@ -385,6 +403,11 @@ void* ParquetBuilder::builderThread(void* parm)
                         builder->outQ->postCopy(ref.data, ref.size);
                         delete batch;
                         continue;
+                    }
+                    else
+                    {
+                        /* Ancillary Data Present */
+                        builder->hasAncillary = true;
                     }
                 }
                 else if(StringLib::match(record->getRecordType(), builder->recType))
@@ -414,10 +437,11 @@ void* ParquetBuilder::builderThread(void* parm)
                     continue;
                 }
 
-                /* Sanity Check Number of Ancillary Fields */                
-                if(batch->anc_rows > 0 && batch->anc_rows != batch->rows)
+                /* Sanity Check Number of Ancillary Rows */                
+                if((batch->anc_fields > 0 && batch->anc_fields != batch->rows) || 
+                   (batch->anc_elements > 0 && batch->anc_elements != batch->rows))
                 {
-                    mlog(ERROR, "Attempting to supply ancillary fields with mismatched number of rows for %s: %d != %d", batch->pri_record->getRecordType(), batch->anc_rows, batch->rows);
+                    mlog(ERROR, "Attempting to supply ancillary data with mismatched number of rows for %s: %d,%d != %d", batch->pri_record->getRecordType(), batch->anc_fields, batch->anc_elements, batch->rows);
                     delete batch;
                     continue;
                 }

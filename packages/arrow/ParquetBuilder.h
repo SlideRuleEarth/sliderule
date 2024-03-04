@@ -101,18 +101,22 @@ class ParquetBuilder: public LuaObject
             RecordObject*           pri_record;
             RecordObject**          anc_records;
             int                     rows;
-            int                     anc_rows;
+            int                     num_anc_recs;
+            int                     anc_fields;
+            int                     anc_elements;
             batch_t(Subscriber::msgRef_t& _ref, Subscriber* _in_q):
                 ref(_ref),
                 in_q(_in_q),
                 pri_record(NULL),
                 anc_records(NULL),
                 rows(0),
-                anc_rows(0) {}
+                num_anc_recs(0),
+                anc_fields(0),
+                anc_elements(0) {}
             ~batch_t(void) {
                 in_q->dereference(ref);
                 delete pri_record;
-                for(int i = 0; i < anc_rows; i++) delete anc_records[i];
+                for(int i = 0; i < num_anc_recs; i++) delete anc_records[i];
                 delete [] anc_records; }
         };
 
@@ -153,6 +157,8 @@ class ParquetBuilder: public LuaObject
         bool                    getAsGeo        (void);
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
+        bool                    getHasAncillary (void);
+        ArrowParms*             getParms        (void);
 
     private:
 
@@ -173,6 +179,7 @@ class ParquetBuilder: public LuaObject
         const char*         recType;
         const char*         timeKey;
         batch_list_t        recordBatch;
+        bool                hasAncillary;
         Publisher*          outQ;
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;

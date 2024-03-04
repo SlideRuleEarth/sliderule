@@ -138,6 +138,8 @@ class ArrowImpl
                                      batch_list_t& record_batch, 
                                      int num_rows, 
                                      int batch_row_size_bits);
+        void processAncillary       (vector<shared_ptr<arrow::Array>>& columns,
+                                     batch_list_t& record_batch);
 };
 
 #endif  /* __arrow_impl__ */
