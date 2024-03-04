@@ -64,11 +64,11 @@ resource "aws_cloudfront_function" "remove_web_from_uri" {
 
 resource "aws_cloudfront_distribution" "my_cloudfront" {
   depends_on = [
-    aws_s3_bucket.my_site_bucket
+    aws_s3_bucket.docs_site_bucket
   ]
 
   origin {
-    domain_name = aws_s3_bucket.my_site_bucket.bucket_regional_domain_name
+    domain_name = aws_s3_bucket.docs_site_bucket.bucket_regional_domain_name
     origin_id   = "s3-cloudfront"
 
     s3_origin_config {

@@ -39,3 +39,27 @@ resource "aws_route53_record" "web" {
     evaluate_target_health = false
   }
 }
+
+resource "aws_route53_record" "redirect_apex" {
+  zone_id = data.aws_route53_zone.public.id
+  name    = "${var.domainApex}"
+  type    = "A"
+
+  alias {
+    name                   = aws_s3_bucket_website_configuration.redirect_apex_config.website_domain
+    zone_id                = aws_s3_bucket.domain_apex_bucket.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "redirect_www" {
+  zone_id = data.aws_route53_zone.public.id
+  name    = "www.${var.domainApex}"
+  type    = "A"
+
+  alias {
+    name                   = aws_s3_bucket_website_configuration.redirect_www_config.website_domain
+    zone_id                = aws_s3_bucket.www_bucket.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
