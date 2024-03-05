@@ -97,7 +97,7 @@ const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :sampler(<raster>, <raster_key>, <outq name>, <rec_type>, <use_time>, <use_height>)
+ * luaCreate - :sampler(<raster>, <raster_key>, <outq name>, <rec_type>, <use_time>)
  *----------------------------------------------------------------------------*/
 int RasterSampler::luaCreate (lua_State* L)
 {
