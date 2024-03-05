@@ -5,14 +5,13 @@ variable "domainApex" {
 }
 
 variable "domainName" {
-    description = "full domain name of client site to use with extension e.g. client.testsliderule.org"
+    description = "full domain name of site to use with TLD e.g. docs.testsliderule.org"
     default = "docs.testsliderule.org"
 }
 
 variable "domain_root" {
     description = "domain name without subdomain e.g. testsliderule"
     default = "testsliderule.org"
-  
 }
 
 variable "cost_grouping" {
