@@ -17,7 +17,6 @@ provider "aws" {
 
 module "cloudfront" {
   source = "./modules/"
-  domain_root   = var.domain_root
-  domain_name    = var.domain_name
-  domain_apex    = var.domain_apex
+  domain_root = var.domain_root
+  domain      = var.domain
 }

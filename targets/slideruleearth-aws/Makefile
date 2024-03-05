@@ -77,7 +77,7 @@ DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
-DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='docs.$(DOMAIN)'].Id" --output text)
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 
 CLANG_VER ?= ""
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -212,18 +212,18 @@ static-website-export: ## export static website to local host directory
 	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
 
 static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://docs.$(DOMAIN) --delete
+	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
 
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var domain_name=docs.$(DOMAIN) -var domain_apex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
+	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
 
 static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain_name=docs.$(DOMAIN) -var domain_apex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 static-website-docker-push: ## push static-website docker image to registry
 	docker push $(ECR)/static-website:$(VERSION)

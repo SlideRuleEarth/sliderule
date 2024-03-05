@@ -24,7 +24,7 @@ resource "aws_cloudfront_response_headers_policy" "security_headers_policy" {
       override                   = true
     }
     content_security_policy {
-      content_security_policy = "frame-ancestors 'none'; default-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline'; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net ; connect-src 'self' https://*.testsliderule.org;"
+      content_security_policy = "frame-ancestors 'none'; default-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' https://cdn.jsdelivr.net 'unsafe-inline'; object-src 'none'; font-src 'self' https://cdn.jsdelivr.net ; connect-src 'self' https://*.${var.domain};"
       override                = true
     }
   }
@@ -78,7 +78,7 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases = [var.domain_name]
+  aliases = [var.domain]
   
   restrictions {
     geo_restriction {
@@ -124,5 +124,5 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
 }
 
 resource "aws_cloudfront_origin_access_identity" "origin_access_identity" {
-  comment = "access-identity-${var.domain_name}.s3.amazonaws.com"
+  comment = "access-identity-${var.domain}.s3.amazonaws.com"
 }

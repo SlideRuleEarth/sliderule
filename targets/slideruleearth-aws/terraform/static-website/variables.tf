@@ -1,16 +1,11 @@
 
-variable "domain_apex" {
-    description = "domain name without subdomain e.g. testsliderule.org"
-    # Must provide on cmd line
-}
-
-variable "domain_name" {
-    description = "full domain name of site to use with TLD e.g. docs.testsliderule.org"
+variable "domain" {
+    description = "domain name testsliderule.org"
     # Must provide on cmd line
 }
 
 variable "domain_root" {
-    description = "domain name without subdomain e.g. testsliderule"
+    description = "domain name without TLD e.g. testsliderule"
     # Must provide on cmd line
 }
 
