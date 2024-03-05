@@ -1,17 +1,17 @@
 
-variable "domainApex" {
+variable "domain_apex" {
     description = "domain name without subdomain e.g. testsliderule.org"
-    default = "testsliderule.org"
+    # Must provide on cmd line
 }
 
-variable "domainName" {
+variable "domain_name" {
     description = "full domain name of site to use with TLD e.g. docs.testsliderule.org"
-    default = "docs.testsliderule.org"
+    # Must provide on cmd line
 }
 
 variable "domain_root" {
     description = "domain name without subdomain e.g. testsliderule"
-    default = "testsliderule.org"
+    # Must provide on cmd line
 }
 
 variable "cost_grouping" {

@@ -1,3 +1,3 @@
 output "domain_apex" {
-  value = var.domainApex
+  value = var.domain_apex
 }

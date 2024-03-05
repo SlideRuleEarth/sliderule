@@ -1,9 +1,9 @@
 resource "aws_s3_bucket" "docs_site_bucket" {
-  bucket = var.domainName
+  bucket = var.domain_name
   force_destroy = true
 }
 resource "aws_s3_bucket" "domain_apex_bucket" {
-  bucket = var.domainApex
+  bucket = var.domain_apex
   force_destroy = true
 }
 
@@ -21,7 +21,7 @@ resource "aws_s3_bucket_website_configuration" "redirect_apex_config" {
       "KeyPrefixEquals": ""
     },
     "Redirect": {
-      "HostName": "${var.domainName}",
+      "HostName": "${var.domain_name}",
       "Protocol": "https",
       "ReplaceKeyPrefixWith": "",
       "HttpRedirectCode": "301"
@@ -32,7 +32,7 @@ EOF
 }
 
 resource "aws_s3_bucket" "www_bucket" {
-  bucket = "www.${var.domainApex}"
+  bucket = "www.${var.domain_apex}"
   force_destroy = true
 }
 
@@ -50,7 +50,7 @@ resource "aws_s3_bucket_website_configuration" "redirect_www_config" {
       "KeyPrefixEquals": ""
     },
     "Redirect": {
-      "HostName": "${var.domainName}",
+      "HostName": "${var.domain_name}",
       "Protocol": "https",
       "ReplaceKeyPrefixWith": "",
       "HttpRedirectCode": "301"

@@ -1,10 +1,10 @@
 data "aws_route53_zone" "public" {
-  name         = var.domainApex
+  name         = var.domain_apex
   private_zone = false
 }
 
 resource "aws_acm_certificate" "mysite" {
-  domain_name       = "*.${var.domainApex}"
+  domain_name       = "*.${var.domain_apex}"
   validation_method = "DNS"
   lifecycle {
     create_before_destroy = true
@@ -28,7 +28,7 @@ resource "aws_acm_certificate_validation" "cert" {
 
 resource "aws_route53_record" "web" {
   zone_id = data.aws_route53_zone.public.id
-  name    = var.domainName
+  name    = var.domain_name
 
   type = "A"
 
@@ -41,7 +41,7 @@ resource "aws_route53_record" "web" {
 
 resource "aws_route53_record" "redirect_apex" {
   zone_id = data.aws_route53_zone.public.id
-  name    = "${var.domainApex}"
+  name    = "${var.domain_apex}"
   type    = "A"
 
   alias {
@@ -53,7 +53,7 @@ resource "aws_route53_record" "redirect_apex" {
 
 resource "aws_route53_record" "redirect_www" {
   zone_id = data.aws_route53_zone.public.id
-  name    = "www.${var.domainApex}"
+  name    = "www.${var.domain_apex}"
   type    = "A"
 
   alias {

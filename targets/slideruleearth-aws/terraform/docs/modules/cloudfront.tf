@@ -78,7 +78,7 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases = [var.domainName]
+  aliases = [var.domain_name]
   
   restrictions {
     geo_restriction {
@@ -124,5 +124,5 @@ resource "aws_cloudfront_distribution" "my_cloudfront" {
 }
 
 resource "aws_cloudfront_origin_access_identity" "origin_access_identity" {
-  comment = "access-identity-${var.domainName}.s3.amazonaws.com"
+  comment = "access-identity-${var.domain_name}.s3.amazonaws.com"
 }

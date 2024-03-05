@@ -1,9 +1,9 @@
 variable "domain_root" {
   type = string
 }
-variable "domainName" {
+variable "domain_name" {
   type = string
 }
-variable "domainApex" {
+variable "domain_apex" {
   type = string
 }
