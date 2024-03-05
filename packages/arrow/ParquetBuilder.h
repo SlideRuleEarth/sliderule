@@ -157,8 +157,9 @@ class ParquetBuilder: public LuaObject
         bool                    getAsGeo        (void);
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
-        bool                    getHasAncillary (void);
         ArrowParms*             getParms        (void);
+        bool                    hasAncFields    (void);
+        bool                    hasAncElements  (void);
 
     private:
 
@@ -179,7 +180,8 @@ class ParquetBuilder: public LuaObject
         const char*         recType;
         const char*         timeKey;
         batch_list_t        recordBatch;
-        bool                hasAncillary;
+        bool                hasAncillaryFields;
+        bool                hasAncillaryElements;
         Publisher*          outQ;
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;

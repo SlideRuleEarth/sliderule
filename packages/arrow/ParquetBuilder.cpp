@@ -169,19 +169,27 @@ RecordObject::field_t& ParquetBuilder::getYField (void)
 }
 
 /*----------------------------------------------------------------------------
- * getHasAncillary
- *----------------------------------------------------------------------------*/
-bool ParquetBuilder::getHasAncillary (void)
-{
-    return hasAncillary;
-}
-
-/*----------------------------------------------------------------------------
  * getParms
  *----------------------------------------------------------------------------*/
 ArrowParms* ParquetBuilder::getParms (void)
 {
     return parms;
+}
+
+/*----------------------------------------------------------------------------
+ * hasAncFields
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::hasAncFields (void)
+{
+    return hasAncillaryFields;
+}
+
+/*----------------------------------------------------------------------------
+ * hasAncElements
+ *----------------------------------------------------------------------------*/
+bool ParquetBuilder::hasAncElements (void)
+{
+    return hasAncillaryElements;
 }
 
 /******************************************************************************
@@ -196,7 +204,8 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
                                 const char* rec_type, const char* id):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    hasAncillary(false)
+    hasAncillaryFields(false),
+    hasAncillaryElements(false)
 {
     assert(_parms);
     assert(outq_name);
@@ -363,7 +372,7 @@ void* ParquetBuilder::builderThread(void* parm)
                         {
                             batch->pri_record = subrec;
                         }
-                        else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancFieldRecType))
+                        else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancFieldArrayRecType))
                         {
                             anc_vec.push_back(subrec);
                             batch->anc_fields += 1;
@@ -388,7 +397,7 @@ void* ParquetBuilder::builderThread(void* parm)
                     if(batch->num_anc_recs > 0)
                     {
                         batch->anc_records = new RecordObject* [batch->num_anc_recs];
-                        for(size_t i = 0; i < batch->num_anc_recs; i++)
+                        for(int i = 0; i < batch->num_anc_recs; i++)
                         {
                             batch->anc_records[i] = anc_vec[i];
                         }
@@ -403,11 +412,6 @@ void* ParquetBuilder::builderThread(void* parm)
                         builder->outQ->postCopy(ref.data, ref.size);
                         delete batch;
                         continue;
-                    }
-                    else
-                    {
-                        /* Ancillary Data Present */
-                        builder->hasAncillary = true;
                     }
                 }
                 else if(StringLib::match(record->getRecordType(), builder->recType))
@@ -445,6 +449,10 @@ void* ParquetBuilder::builderThread(void* parm)
                     delete batch;
                     continue;
                 }
+
+                /* Set Ancillary Flags */
+                if(batch->anc_fields > 0) builder->hasAncillaryFields = true;
+                if(batch->anc_elements > 0) builder->hasAncillaryElements = true;
 
                 /* Add Batch to Ordering */
                 builder->recordBatch.add(batch);

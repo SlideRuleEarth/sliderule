@@ -120,6 +120,7 @@ struct AncillaryFields
     static void             setValueAsInteger       (field_t* field, int64_t value);
     static double*          getValueAsDouble        (uint8_t* buffer);
     static float*           getValueAsFloat         (uint8_t* buffer);
+    static int64_t*         getValueAsInteger       (uint8_t* buffer);
     static RecordObject*    createFieldArrayRecord  (uint64_t extent_id, vector<field_t>& field_vec);
 };
 

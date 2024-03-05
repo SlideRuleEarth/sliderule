@@ -311,6 +311,19 @@ float* AncillaryFields::getValueAsFloat (uint8_t* buffer)
 }
 
 /*----------------------------------------------------------------------------
+ * getValueAsInteger
+ *----------------------------------------------------------------------------*/
+int64_t* AncillaryFields::getValueAsInteger (uint8_t* buffer)
+{
+    union {
+        int64_t* lptr;
+        uint8_t* iptr;
+    } cast;
+    cast.iptr = buffer;
+    return cast.lptr;
+}
+
+/*----------------------------------------------------------------------------
  * createFieldArrayRecord
  *----------------------------------------------------------------------------*/
 RecordObject* AncillaryFields::createFieldArrayRecord (uint64_t extent_id, vector<field_t>& field_vec)

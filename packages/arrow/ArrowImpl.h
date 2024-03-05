@@ -111,7 +111,6 @@ class ArrowImpl
         unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
         vector<shared_ptr<arrow::Field>>        fieldVector;
         field_list_t                            fieldList;
-        field_iterator_t*                       fieldIterator;
         bool                                    firstTime;
 
         /*--------------------------------------------------------------------
@@ -138,7 +137,9 @@ class ArrowImpl
                                      batch_list_t& record_batch, 
                                      int num_rows, 
                                      int batch_row_size_bits);
-        void processAncillary       (vector<shared_ptr<arrow::Array>>& columns,
+        void processAncillaryFields  (vector<shared_ptr<arrow::Array>>& columns,
+                                     batch_list_t& record_batch);
+        void processAncillaryElements(vector<shared_ptr<arrow::Array>>& columns,
                                      batch_list_t& record_batch);
 };
 

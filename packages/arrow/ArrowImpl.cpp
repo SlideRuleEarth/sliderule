@@ -29,6 +29,13 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * The order of the columns in the parquet file are:
+ *  - Fields from the primary record
+ *  - Geometry
+ *  - Ancillary fields
+ */
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
@@ -53,13 +60,11 @@ ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
     parquetBuilder(_builder),
     schema(NULL),
     fieldList(LIST_BLOCK_SIZE),
-    fieldIterator(NULL),
     firstTime(true)
 {
     /* Build Field List and Iterator */    
     buildFieldList(parquetBuilder->getRecType(), 0, 0);
     if(parquetBuilder->getAsGeo()) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
-    fieldIterator = new field_iterator_t(fieldList);
 }
 
 /*----------------------------------------------------------------------------
@@ -67,7 +72,6 @@ ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
  *----------------------------------------------------------------------------*/
 ArrowImpl::~ArrowImpl (void)
 {
-    delete fieldIterator;
 }
 
 /*----------------------------------------------------------------------------
@@ -85,10 +89,10 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
     vector<shared_ptr<arrow::Array>> columns;
     
     /* Loop Through Fields in Primary Record */
-    for(int i = 0; i < fieldIterator->length; i++)
+    for(int i = 0; i < fieldList.length(); i++)
     {
         uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
-        RecordObject::field_t field = (*fieldIterator)[i];
+        RecordObject::field_t& field = fieldList[i];
         
         /* Build Column */
         shared_ptr<arrow::Array> column;
@@ -111,10 +115,8 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
     }
 
     /* Add Ancillary Columns */
-    if(parquetBuilder->getHasAncillary())
-    {
-        processAncillary(columns, record_batch);
-    }
+    if(parquetBuilder->hasAncFields())      processAncillaryFields(columns, record_batch);
+    if(parquetBuilder->hasAncElements())    processAncillaryElements(columns, record_batch);
 
     /* Create Parquet Writer (on first time) */
     if(firstTime)
@@ -427,47 +429,38 @@ void ArrowImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetad
 
     /* Build Columns String */
     string columns;
-    int index = 0;
-    for(const std::string& field_name: schema->field_names())
+    int column_index = 0;
+    int num_columns = schema->fields().size();
+    for(const shared_ptr<arrow::Field>& field: schema->fields())
     {
+        const string& field_name = field->name();
+        const shared_ptr<arrow::DataType>& field_type = field->type();
+
         /* Initialize Column String */
         string columnstr(R"json({"name": "_NAME_", "field_name": "_NAME_", "pandas_type": "_PTYPE_", "numpy_type": "_NTYPE_", "metadata": null})json");
         const char* pandas_type = "";
         const char* numpy_type = "";
         bool is_last_entry = false;
 
-        if(index < fieldIterator->length)
-        {
-            /* Add Column from Field List */
-            RecordObject::field_t field = (*fieldIterator)[index++];
-            switch(field.type)
-            {
-                case RecordObject::DOUBLE:  pandas_type = "float64";    numpy_type = "float64";         break;
-                case RecordObject::FLOAT:   pandas_type = "float32";    numpy_type = "float32";         break;
-                case RecordObject::INT8:    pandas_type = "int8";       numpy_type = "int8";            break;
-                case RecordObject::INT16:   pandas_type = "int16";      numpy_type = "int16";           break;
-                case RecordObject::INT32:   pandas_type = "int32";      numpy_type = "int32";           break;
-                case RecordObject::INT64:   pandas_type = "int64";      numpy_type = "int64";           break;
-                case RecordObject::UINT8:   pandas_type = "uint8";      numpy_type = "uint8";           break;
-                case RecordObject::UINT16:  pandas_type = "uint16";     numpy_type = "uint16";          break;
-                case RecordObject::UINT32:  pandas_type = "uint32";     numpy_type = "uint32";          break;
-                case RecordObject::UINT64:  pandas_type = "uint64";     numpy_type = "uint64";          break;
-                case RecordObject::TIME8:   pandas_type = "datetime";   numpy_type = "datetime64[ns]";  break;
-                case RecordObject::STRING:  pandas_type = "bytes";      numpy_type = "object";          break;
-                default:                    pandas_type = "bytes";      numpy_type = "object";          break;
-            }
+        if      (field_type->Equals(arrow::float64()))      { pandas_type = "float64";    numpy_type = "float64";           }
+        else if (field_type->Equals(arrow::float32()))      { pandas_type = "float32";    numpy_type = "float32";           }
+        else if (field_type->Equals(arrow::int8()))         { pandas_type = "int8";       numpy_type = "int8";              }
+        else if (field_type->Equals(arrow::int16()))        { pandas_type = "int16";      numpy_type = "int16";             }
+        else if (field_type->Equals(arrow::int32()))        { pandas_type = "int32";      numpy_type = "int32";             }
+        else if (field_type->Equals(arrow::int64()))        { pandas_type = "int64";      numpy_type = "int64";             }
+        else if (field_type->Equals(arrow::uint8()))        { pandas_type = "uint8";      numpy_type = "uint8";             }
+        else if (field_type->Equals(arrow::uint16()))       { pandas_type = "uint16";     numpy_type = "uint16";            }
+        else if (field_type->Equals(arrow::uint32()))       { pandas_type = "uint32";     numpy_type = "uint32";            }
+        else if (field_type->Equals(arrow::uint64()))       { pandas_type = "uint64";     numpy_type = "uint64";            }
+        else if (field_type->Equals(arrow::timestamp(arrow::TimeUnit::NANO)))
+                                                            { pandas_type = "datetime";   numpy_type = "datetime64[ns]";    }
+        else if (field_type->Equals(arrow::utf8()))         { pandas_type = "bytes";      numpy_type = "object";            }
+        else if (field_type->Equals(arrow::binary()))       { pandas_type = "bytes";      numpy_type = "object";            }
+        else                                                { pandas_type = "bytes";      numpy_type = "object";            }
 
-            /* Mark Last Column */
-            if(!parquetBuilder->getAsGeo() && (index == fieldIterator->length))
-            {
-                is_last_entry = true;
-            }
-        }
-        else if(parquetBuilder->getAsGeo() && StringLib::match(field_name.c_str(), "geometry"))
+        /* Mark Last Column */
+        if(++column_index == num_columns)
         {
-            /* Add Column for Geometry */
-            pandas_type = "bytes";
-            numpy_type = "object";
             is_last_entry = true;
         }
         
@@ -536,7 +529,7 @@ void ArrowImpl::processField (RecordObject::field_t& field, shared_ptr<arrow::Ar
                 }
                 else // non-batch field
                 {
-                    float value = (float)batch->pri_record->getValueReal(field);
+                    double value = (double)batch->pri_record->getValueReal(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -1217,72 +1210,509 @@ void ArrowImpl::processGeometry (RecordObject::field_t& x_field, RecordObject::f
 }
 
 /*----------------------------------------------------------------------------
-* processGeometry
+* processAncillaryFields
 *----------------------------------------------------------------------------*/
-void ArrowImpl::processAncillary (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
+void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
 {
-    Dictionary<shared_ptr<arrow::Array>> column_table;
     vector<string>& ancillary_fields = parquetBuilder->getParms()->ancillary_fields;
+    Dictionary<vector<AncillaryFields::field_t*>> field_table;
+    Dictionary<RecordObject::fieldType_t> field_type_table;
 
+    /* Initialize Field Table */
+    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    {
+        const char* name = ancillary_fields[i].c_str();
+        vector<AncillaryFields::field_t*> field_vec;
+        field_table.add(name, field_vec);
+    }
 
-// create a dictionary of vectors of field references
-// the key is the field name
-// then loop through the ancillary_fields vector for each field name there
-//   look it up in the dictionary
-//   and loop through all of the fields for that field name
-//   at that point it will have the same type so a builder can be created
-
-
+    /* Populate Field Table */
     for(int i = 0; i < record_batch.length(); i++)
     {
         ParquetBuilder::batch_t* batch = record_batch[i];
-        for(int j = 0; j < batch->anc_fields; j++)
+
+        /* Loop through Ancillary Fields */
+        for(int j = 0; j < batch->num_anc_recs; j++)
         {
             AncillaryFields::field_array_t* field_array = reinterpret_cast<AncillaryFields::field_array_t*>(batch->anc_records[j]->getRecordData());
-            for(int k = 0; k < field_array->num_fields; k++)
+            for(uint32_t k = 0; k < field_array->num_fields; k++)
             {
                 AncillaryFields::field_t& field = field_array->fields[k];
-                //field.data_type
-
+                const char* name = NULL;
+                
                 /* Get Name */
-                if(field.field_index < parquetBuilder->getParms()->ancillary_fields.size())
-                {
-                    const char* name = parquetBuilder->getParms()->ancillary_fields[field.field_index].c_str();
-                }
-                else
-                {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field.field_index);
-                }
+                if(field.field_index < ancillary_fields.size()) name = ancillary_fields[field.field_index].c_str();
+                else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field.field_index);
 
+                /* Add to Field Table */
+                field_table[name].push_back(&field);
+                field_type_table.add(name, static_cast<RecordObject::fieldType_t>(field.data_type), false);
+            }
+        }
+    }
+
+    /* Loop Through Fields */
+    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    {
+        const char* name = ancillary_fields[i].c_str();
+        vector<AncillaryFields::field_t*>& field_vec = field_table[name];
+        RecordObject::fieldType_t type = field_type_table[name];
+        int num_rows = field_vec.size();
+
+        /* Populate Schema */
+        if(firstTime)
+        {
+            switch(type)
+            {
+                case RecordObject::INT8:    fieldVector.push_back(arrow::field(name, arrow::int8()));       break;
+                case RecordObject::INT16:   fieldVector.push_back(arrow::field(name, arrow::int16()));      break;
+                case RecordObject::INT32:   fieldVector.push_back(arrow::field(name, arrow::int32()));      break;
+                case RecordObject::INT64:   fieldVector.push_back(arrow::field(name, arrow::int64()));      break;
+                case RecordObject::UINT8:   fieldVector.push_back(arrow::field(name, arrow::uint8()));      break;
+                case RecordObject::UINT16:  fieldVector.push_back(arrow::field(name, arrow::uint16()));     break;
+                case RecordObject::UINT32:  fieldVector.push_back(arrow::field(name, arrow::uint32()));     break;
+                case RecordObject::UINT64:  fieldVector.push_back(arrow::field(name, arrow::uint64()));     break;
+                case RecordObject::FLOAT:   fieldVector.push_back(arrow::field(name, arrow::float32()));    break;
+                case RecordObject::DOUBLE:  fieldVector.push_back(arrow::field(name, arrow::float64()));    break;
+                case RecordObject::TIME8:   fieldVector.push_back(arrow::field(name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
+                default:                    break;
             }
         }
 
-            arrow::DoubleBuilder builder;
-            (void)builder.Reserve(num_rows);
-            for(int i = 0; i < record_batch.length(); i++)
+        /* Populate Column */
+        shared_ptr<arrow::Array> column;
+        switch(type)
+        {
+            case RecordObject::DOUBLE:
             {
-                if(field.flags & RecordObject::BATCH)
+                arrow::DoubleBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
                 {
-                    int32_t starting_offset = field.offset;
-                    for(int row = 0; row < batch->rows; row++)
-                    {
-                        builder.UnsafeAppend((double)batch->pri_record->getValueReal(field));
-                        field.offset += batch_row_size_bits;
-                    }
-                    field.offset = starting_offset;
+                    AncillaryFields::field_t* field = field_vec[i];
+                    double* val_ptr = AncillaryFields::getValueAsDouble(field->value);
+                    builder.UnsafeAppend((double)*val_ptr);
                 }
-                else // non-batch field
-                {
-                    float value = (float)batch->pri_record->getValueReal(field);
-                    for(int row = 0; row < batch->rows; row++)
-                    {
-                        builder.UnsafeAppend(value);
-                    }
-                }
+                (void)builder.Finish(&column);
+                break;
             }
-            (void)builder.Finish(column);
 
+            case RecordObject::FLOAT:
+            {
+                arrow::FloatBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    float* val_ptr = AncillaryFields::getValueAsFloat(field->value);
+                    builder.UnsafeAppend((float)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
 
-    
-    columns.push_back(column);
+            case RecordObject::INT8:
+            {
+                arrow::Int8Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((int8_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT16:
+            {
+                arrow::Int16Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((int16_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT32:
+            {
+                arrow::Int32Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((int32_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT64:
+            {
+                arrow::Int64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((int64_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT8:
+            {
+                arrow::UInt8Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((uint8_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT16:
+            {
+                arrow::UInt16Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((uint16_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT32:
+            {
+                arrow::UInt32Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((uint32_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT64:
+            {
+                arrow::UInt64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((uint64_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::TIME8:
+            {
+                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+                (void)builder.Reserve(num_rows);
+                for(int j = 0; j < num_rows; j++)
+                {
+                    AncillaryFields::field_t* field = field_vec[i];
+                    int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
+                    builder.UnsafeAppend((int64_t)*val_ptr);
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+
+        /* Add to Columns */
+        columns.push_back(column);
+    }
+}
+
+/*----------------------------------------------------------------------------
+* processAncillaryElements
+*----------------------------------------------------------------------------*/
+void ArrowImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
+{
+    int num_rows = 0;
+    vector<string>& ancillary_fields = parquetBuilder->getParms()->ancillary_fields;
+    Dictionary<vector<AncillaryFields::element_array_t*>> element_table;
+    Dictionary<RecordObject::fieldType_t> element_type_table;
+
+    /* Initialize Field Table */
+    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    {
+        const char* name = ancillary_fields[i].c_str();
+        vector<AncillaryFields::element_array_t*> element_vec;
+        element_table.add(name, element_vec);
+    }
+
+    /* Populate Field Table */
+    for(int i = 0; i < record_batch.length(); i++)
+    {
+        ParquetBuilder::batch_t* batch = record_batch[i];
+
+        /* Loop through Ancillary Elements */
+        for(int j = 0; j < batch->num_anc_recs; j++)
+        {
+            AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(batch->anc_records[j]->getRecordData());
+
+            /* Get Name */
+            const char* name = NULL;
+            if(element_array->field_index < ancillary_fields.size()) name = ancillary_fields[element_array->field_index].c_str();
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", element_array->field_index);
+
+            /* Add to Element Table */
+            element_table[name].push_back(element_array);
+            element_type_table.add(name, static_cast<RecordObject::fieldType_t>(element_array->data_type), false);
+            num_rows += element_array->num_elements;
+        }
+    }
+
+    /* Loop Through Fields */
+    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    {
+        const char* name = ancillary_fields[i].c_str();
+        vector<AncillaryFields::element_array_t*>& element_vec = element_table[name];
+        RecordObject::fieldType_t type = element_type_table[name];
+
+        /* Populate Schema */
+        if(firstTime)
+        {
+            switch(type)
+            {
+                case RecordObject::INT8:    fieldVector.push_back(arrow::field(name, arrow::int8()));       break;
+                case RecordObject::INT16:   fieldVector.push_back(arrow::field(name, arrow::int16()));      break;
+                case RecordObject::INT32:   fieldVector.push_back(arrow::field(name, arrow::int32()));      break;
+                case RecordObject::INT64:   fieldVector.push_back(arrow::field(name, arrow::int64()));      break;
+                case RecordObject::UINT8:   fieldVector.push_back(arrow::field(name, arrow::uint8()));      break;
+                case RecordObject::UINT16:  fieldVector.push_back(arrow::field(name, arrow::uint16()));     break;
+                case RecordObject::UINT32:  fieldVector.push_back(arrow::field(name, arrow::uint32()));     break;
+                case RecordObject::UINT64:  fieldVector.push_back(arrow::field(name, arrow::uint64()));     break;
+                case RecordObject::FLOAT:   fieldVector.push_back(arrow::field(name, arrow::float32()));    break;
+                case RecordObject::DOUBLE:  fieldVector.push_back(arrow::field(name, arrow::float64()));    break;
+                case RecordObject::TIME8:   fieldVector.push_back(arrow::field(name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
+                default:                    break;
+            }
+        }
+
+        /* Populate Column */
+        shared_ptr<arrow::Array> column;
+        switch(type)
+        {
+            case RecordObject::DOUBLE:
+            {
+                arrow::DoubleBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    double* src = AncillaryFields::getValueAsDouble(&element_array->data[0]);
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::FLOAT:
+            {
+                arrow::FloatBuilder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    float* src = AncillaryFields::getValueAsFloat(&element_array->data[0]);
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT8:
+            {
+                arrow::Int8Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    int8_t* src = (int8_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT16:
+            {
+                arrow::Int16Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    int16_t* src = (int16_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT32:
+            {
+                arrow::Int32Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    int32_t* src = (int32_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::INT64:
+            {
+                arrow::Int64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    int64_t* src = (int64_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT8:
+            {
+                arrow::UInt8Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    uint8_t* src = (uint8_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT16:
+            {
+                arrow::UInt16Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    uint16_t* src = (uint16_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT32:
+            {
+                arrow::UInt32Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    uint32_t* src = (uint32_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::UINT64:
+            {
+                arrow::UInt64Builder builder;
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    uint64_t* src = (uint64_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            case RecordObject::TIME8:
+            {
+                arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
+                (void)builder.Reserve(num_rows);
+                for(size_t j = 0; j < element_vec.size(); j++)
+                {
+                    AncillaryFields::element_array_t* element_array = element_vec[j];
+                    int64_t* src = (int64_t*)&element_array->data[0];
+                    for(uint32_t k = 0; k < element_array->num_elements; k++)
+                    {
+                        builder.UnsafeAppend(src[k]);
+                    }
+                }
+                (void)builder.Finish(&column);
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+
+        /* Add to Columns */
+        columns.push_back(column);
+    }
 }
