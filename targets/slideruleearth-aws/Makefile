@@ -216,12 +216,14 @@ static-website-live-update: # Update the static web site docs in the S3 bucket a
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
 
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
-	mkdir -p terraform/docs && cd terraform/docs && terraform init && terraform workspace select $(DOMAIN)-docs || terraform workspace new $(DOMAIN)-docs && terraform validate && \
-	terraform apply -var domain_name=docs.$(DOMAIN) -var domain_apex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform apply -var domain_name=docs.$(DOMAIN) -var domain_apex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
 
 static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	mkdir -p terraform/docs && cd terraform/docs && terraform init && terraform workspace select $(DOMAIN)-docs || terraform workspace new $(DOMAIN)-docs && terraform validate && \
-	terraform destroy -var domain_name=docs.$(DOMAIN) -var domain_apex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform destroy -var domain_name=docs.$(DOMAIN) -var domain_apex=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 static-website-docker-push: ## push static-website docker image to registry
 	docker push $(ECR)/static-website:$(VERSION)

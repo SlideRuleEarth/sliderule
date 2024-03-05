@@ -31,7 +31,7 @@ resource "aws_cloudfront_response_headers_policy" "security_headers_policy" {
 }
 
 resource "aws_cloudfront_function" "remove_web_from_uri" {
-  name    = "remove-web-from-uri"
+  name    = "${var.domain_root}-remove-web-from-uri"
   runtime = "cloudfront-js-1.0"
   comment = "Function to remove /web from URI"
 
