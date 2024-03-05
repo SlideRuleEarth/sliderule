@@ -1237,16 +1237,15 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
             AncillaryFields::field_array_t* field_array = reinterpret_cast<AncillaryFields::field_array_t*>(batch->anc_records[j]->getRecordData());
             for(uint32_t k = 0; k < field_array->num_fields; k++)
             {
-                AncillaryFields::field_t& field = field_array->fields[k];
-                const char* name = NULL;
-                
                 /* Get Name */
-                if(field.field_index < ancillary_fields.size()) name = ancillary_fields[field.field_index].c_str();
-                else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field.field_index);
+                const char* name = NULL;
+                uint8_t field_index = field_array->fields[k].field_index;
+                if(field_index < ancillary_fields.size()) name = ancillary_fields[field_index].c_str();
+                else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field_index);
 
                 /* Add to Field Table */
-                field_table[name].push_back(&field);
-                field_type_table.add(name, static_cast<RecordObject::fieldType_t>(field.data_type), false);
+                field_table[name].push_back(&(field_array->fields[k]));
+                field_type_table.add(name, static_cast<RecordObject::fieldType_t>(field_array->fields[k].data_type), false);
             }
         }
     }
@@ -1289,7 +1288,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     double* val_ptr = AncillaryFields::getValueAsDouble(field->value);
                     builder.UnsafeAppend((double)*val_ptr);
                 }
@@ -1303,7 +1302,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     float* val_ptr = AncillaryFields::getValueAsFloat(field->value);
                     builder.UnsafeAppend((float)*val_ptr);
                 }
@@ -1317,7 +1316,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((int8_t)*val_ptr);
                 }
@@ -1331,7 +1330,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((int16_t)*val_ptr);
                 }
@@ -1345,7 +1344,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((int32_t)*val_ptr);
                 }
@@ -1359,7 +1358,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((int64_t)*val_ptr);
                 }
@@ -1373,7 +1372,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((uint8_t)*val_ptr);
                 }
@@ -1387,7 +1386,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((uint16_t)*val_ptr);
                 }
@@ -1401,7 +1400,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((uint32_t)*val_ptr);
                 }
@@ -1415,7 +1414,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((uint64_t)*val_ptr);
                 }
@@ -1429,7 +1428,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
                 (void)builder.Reserve(num_rows);
                 for(int j = 0; j < num_rows; j++)
                 {
-                    AncillaryFields::field_t* field = field_vec[i];
+                    AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
                     builder.UnsafeAppend((int64_t)*val_ptr);
                 }
