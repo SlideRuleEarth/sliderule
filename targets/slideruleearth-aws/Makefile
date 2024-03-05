@@ -60,6 +60,7 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
@@ -76,6 +77,7 @@ DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 
 CLANG_VER ?= ""
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -204,10 +206,19 @@ static-website-docker: ## make the static website docker image; needs VERSION
 static-website-run: ## locally run the static website; needs VERSION
 	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
+static-website-export: ## export static website to local host directory
+	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
+	mkdir -p $(STATIC_WEB_EXPORT_DIR)
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+
+static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
+
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(ECR)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
 
 static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
@@ -373,3 +384,6 @@ help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)
+	@echo DOMAIN: $(DOMAIN)	
+	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
+	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
