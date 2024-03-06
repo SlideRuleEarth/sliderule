@@ -100,6 +100,9 @@ void initgedi (void)
     Gedi04aReader::init();
     Gedi04bRaster::init();
 
+    /* Register GEDI IO Driver */
+    Asset::registerDriver(GediIODriver::FORMAT, GediIODriver::create);
+
     /* Register Rasters */
     RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        Gedi03Raster::create);
     RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_RASTER_NAME,           Gedi03Raster::create);

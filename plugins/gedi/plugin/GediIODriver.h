@@ -29,30 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gediplugin__
-#define __gediplugin__
+#ifndef __gedi_io_driver__
+#define __gedi_io_driver__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "FootprintReader.h"
-#include "Gedi01bReader.h"
-#include "Gedi02aReader.h"
-#include "Gedi03Raster.h"
-#include "Gedi04aReader.h"
-#include "Gedi04bRaster.h"
-#include "GediIODriver.h"
-#include "GediParms.h"
+#include "Asset.h"
+#include "S3CurlIODriver.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initgedi (void);
-}
+class GediIODriver: S3CurlIODriver
+{
+    public:
 
-#endif  /* __gediplugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const char* FORMAT;
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static Asset::IODriver* create  (const Asset* _asset, const char* resource);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        GediIODriver (const Asset* _asset, const char* resource);
+        ~GediIODriver (void);
+};
+
+#endif  /* __gedi_io_driver__ */
