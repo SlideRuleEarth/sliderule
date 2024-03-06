@@ -477,6 +477,7 @@ void Icesat2Parms::cleanup (void) const
     delete atl03_geo_fields;
     delete atl03_ph_fields;
     delete atl06_fields;
+    delete atl08_fields;
 }
 
 /*----------------------------------------------------------------------------
