@@ -38,7 +38,6 @@
 #include "core.h"
 
 #include <curl/curl.h>
-#include <rapidjson/document.h>
 
 /******************************************************************************
  * PROVISIONING SYSTEM LIBRARY CLASS

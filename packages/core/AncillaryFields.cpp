@@ -38,12 +38,19 @@
 #include <map>
 
 #include "core.h"
-#include "icesat2.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
+/*
+ * Ancillary Field Records
+ * 
+ *  This record is used to capture a set of different fields in the source granule,
+ *  all associated with a single extent id.  For example, if there was an ancillary
+ *  field request for fields X, Y, and Z, then this record would hold the values
+ *  for X, Y, and Z all in a single record and associate it with the extent.
+ */ 
 const char* AncillaryFields::ancFieldRecType = "ancfrec.field";
 const RecordObject::fieldDef_t AncillaryFields::ancFieldRecDef[] = {
     {"anc_type",        RecordObject::UINT8,    offsetof(field_t, anc_type),                1,  NULL, NATIVE_FLAGS},
@@ -59,6 +66,14 @@ const RecordObject::fieldDef_t AncillaryFields::ancFieldArrayRecDef[] = {
     {"fields",          RecordObject::USER,     offsetof(field_array_t, fields),            0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
+/* 
+ * Ancillary Element Records
+ *
+ *  This record is used to capture an array of field values all associated with a single field.
+ *  It is primarily used for the ATL03 photon data and things like that where there is a variable
+ *  number of values associated with a given field for a given extent.  So wherease the Ancillary
+ *  Field Record is multiple fields each with one value; this is multiple values for just one field.
+ */ 
 const char* AncillaryFields::ancElementRecType = "ancerec";
 const RecordObject::fieldDef_t AncillaryFields::ancElementRecDef[] = {
     {"extent_id",       RecordObject::UINT64,   offsetof(element_array_t, extent_id),       1,  NULL, NATIVE_FLAGS},
@@ -293,6 +308,19 @@ float* AncillaryFields::getValueAsFloat (uint8_t* buffer)
     } cast;
     cast.iptr = buffer;
     return cast.fptr;
+}
+
+/*----------------------------------------------------------------------------
+ * getValueAsInteger
+ *----------------------------------------------------------------------------*/
+int64_t* AncillaryFields::getValueAsInteger (uint8_t* buffer)
+{
+    union {
+        int64_t* lptr;
+        uint8_t* iptr;
+    } cast;
+    cast.iptr = buffer;
+    return cast.lptr;
 }
 
 /*----------------------------------------------------------------------------

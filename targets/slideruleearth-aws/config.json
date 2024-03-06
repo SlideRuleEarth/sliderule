@@ -8,5 +8,6 @@
     "authenticate_to_lpdaac": true,
     "authenticate_to_podaac": true,
     "register_as_service": true,
-    "authenticate_to_ps": false
+    "authenticate_to_ps": false,
+    "container_registry": "742127912612.dkr.ecr.us-west-2.amazonaws.com"
 }

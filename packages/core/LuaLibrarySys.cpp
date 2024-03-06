@@ -54,6 +54,8 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"metric",      LuaLibrarySys::lsys_metric},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"setenvver",   LuaLibrarySys::lsys_setenvver},
+    {"setispublic", LuaLibrarySys::lsys_setispublic},
+    {"setcluster",  LuaLibrarySys::lsys_setcluster},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
@@ -228,13 +230,26 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_metric - .metric(<...)
+ * lsys_metric - .metric()
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_metric (lua_State* L)
-//TODO: need to populate with metrics...
 {
     lua_newtable(L);
-    LuaEngine::setAttrInt(L, "alive", 1);
+
+    /* Alive */
+    lua_pushstring(L, "alive");
+    lua_newtable(L);
+    {
+        lua_pushstring(L, "value");
+        lua_pushnumber(L, 1);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "type");
+        lua_pushstring(L, EventLib::subtype2str(EventLib::GAUGE));
+        lua_settable(L, -3);
+    }
+    lua_settable(L, -3);
+
     return 1;
 }
 
@@ -279,6 +294,51 @@ int LuaLibrarySys::lsys_setenvver (lua_State* L)
     else
     {
         mlog(CRITICAL, "Invalid parameter supplied to set environment version, must be a string");
+        status = false;
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setispublic
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setispublic (lua_State* L)
+{
+    bool status = true;
+    const char* is_public_str = NULL;
+    if(lua_isstring(L, 1))
+    {
+        is_public_str = lua_tostring(L, 1);
+        bool is_public = StringLib::match(is_public_str, "True");
+        OsApi::setIsPublic(is_public);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to setting is_public, must be a string 'True' or 'False'");
+        status = false;
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setcluster
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setcluster (lua_State* L)
+{
+    bool status = true;
+    const char* cluster_str = NULL;
+    if(lua_isstring(L, 1))
+    {
+        cluster_str = lua_tostring(L, 1);
+        OsApi::setCluster(cluster_str);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to set cluster, must be a string");
         status = false;
     }
 

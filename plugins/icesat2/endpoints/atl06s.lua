@@ -14,11 +14,6 @@ local args = {
     default_asset   = "icesat2",
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     result_rec      = "atl06srec",
-    index_field     = "extent_id",
-    lon_field       = "elevation.longitude",
-    lat_field       = "elevation.latitude",
-    time_field      = "elevation.time",
-    height_field    = "elevation.h_li"
 }
 
 local rqst_parms    = icesat2.parms(parms)

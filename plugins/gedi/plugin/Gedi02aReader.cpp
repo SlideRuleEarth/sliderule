@@ -47,11 +47,11 @@
 
 const char* Gedi02aReader::fpRecType = "gedi02arec.footprint";
 const RecordObject::fieldDef_t Gedi02aReader::fpRecDef[] = {
-    {"shot_number",     RecordObject::UINT64,   offsetof(g02a_footprint_t, shot_number),             1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::TIME8,    offsetof(g02a_footprint_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(g02a_footprint_t, latitude),                1,  NULL, NATIVE_FLAGS},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(g02a_footprint_t, longitude),               1,  NULL, NATIVE_FLAGS},
-    {"elevation_lm",    RecordObject::FLOAT,    offsetof(g02a_footprint_t, elevation_lowestmode),    1,  NULL, NATIVE_FLAGS},
+    {"shot_number",     RecordObject::UINT64,   offsetof(g02a_footprint_t, shot_number),             1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"time",            RecordObject::TIME8,    offsetof(g02a_footprint_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(g02a_footprint_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(g02a_footprint_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"elevation_lm",    RecordObject::FLOAT,    offsetof(g02a_footprint_t, elevation_lowestmode),    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"elevation_hr",    RecordObject::FLOAT,    offsetof(g02a_footprint_t, elevation_highestreturn), 1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g02a_footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g02a_footprint_t, sensitivity),             1,  NULL, NATIVE_FLAGS},
@@ -257,8 +257,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of resource %s beam %d: %s", reader->resource, info->beam, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
     }
 
     /* Handle Global Reader Updates */

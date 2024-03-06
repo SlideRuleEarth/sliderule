@@ -47,33 +47,34 @@
 
 const char* Atl03Reader::phRecType = "atl03rec.photons";
 const RecordObject::fieldDef_t Atl03Reader::phRecDef[] = {
-    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"x_atc",           RecordObject::FLOAT,    offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
     {"y_atc",           RecordObject::FLOAT,    offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
-    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS},
-    {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS},
-    {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS},
-    {"snowcover",       RecordObject::UINT8,    offsetof(photon_t, snowcover),      1,  NULL, NATIVE_FLAGS},
-    {"atl08_class",     RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS},
-    {"atl03_cnf",       RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS},
-    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS},
-    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS}
+    {"height",          RecordObject::FLOAT,    offsetof(photon_t, height),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"relief",          RecordObject::FLOAT,    offsetof(photon_t, relief),         1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"landcover",       RecordObject::UINT8,    offsetof(photon_t, landcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"snowcover",       RecordObject::UINT8,    offsetof(photon_t, snowcover),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"atl08_class",     RecordObject::UINT8,    offsetof(photon_t, atl08_class),    1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"atl03_cnf",       RecordObject::INT8,     offsetof(photon_t, atl03_cnf),      1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX}
 };
 
 const char* Atl03Reader::exRecType = "atl03rec";
 const RecordObject::fieldDef_t Atl03Reader::exRecDef[] = {
-    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS},
-    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS},
-    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS},
-    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS},
-    {"cycle",           RecordObject::UINT16,   offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
+    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"segment_id",      RecordObject::UINT32,   offsetof(extent_t, segment_id),             1,  NULL, NATIVE_FLAGS},
     {"segment_dist",    RecordObject::DOUBLE,   offsetof(extent_t, segment_distance),       1,  NULL, NATIVE_FLAGS}, // distance from equator
-    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS},
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
+    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -183,7 +184,8 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         {
             for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
             {
-                if(parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track)
+                int gt_index = (2 * (track - 1)) + pair;
+                if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
@@ -203,12 +205,9 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     }
     catch(const RunTimeException& e)
     {
-        /* Log Error */
-        mlog(e.level(), "Failed to read global information in resource %s: %s", resource, e.what());
-
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) LuaEndpoint::generateExceptionStatus(RTE_TIMEOUT, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
-        else LuaEndpoint::generateExceptionStatus(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
+        if(e.code() == RTE_TIMEOUT) alert(RTE_TIMEOUT, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0);
@@ -687,11 +686,11 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
     {
         int32_t atl03_segment = atl03.segment_id[atl03_segment_index];
 
-        /* Get Land and Snow Flags */
+        /* Get ATL08 Land Segment Index */
         if(phoreal || ancillary)
         {
-            while( (atl08_segment_index < segment_id_beg.size) &&
-                   ((segment_id_beg[atl08_segment_index] + NUM_ATL03_SEGS_IN_ATL08_SEG) <= atl03_segment) )
+            while( (atl08_segment_index < (segment_id_beg.size - 1)) &&
+                   (segment_id_beg[atl08_segment_index + 1] <= atl03_segment) )
             {
                 atl08_segment_index++;
             }
@@ -734,7 +733,7 @@ void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, cons
                     if(info->reader->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Parms::ATL08_TOP_OF_CANOPY))
                     {
                         uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
-                        if( (atl03.solar_elevation[atl03_segment] <= 5.0) &&
+                        if( (atl03.solar_elevation[atl03_segment_index] <= 5.0) &&
                             ((spot == 1) || (spot == 3) || (spot == 5)) &&
                             (atl03.signal_conf_ph[atl03_photon] == Icesat2Parms::CNF_SURFACE_HIGH) &&
                             ((relief[atl03_photon] >= 0.0) && (relief[atl03_photon] < 35.0)) )
@@ -1472,9 +1471,9 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     int rec_total_size = 0;
                     reader->generateExtentRecord(extent_id, info, state, atl03, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, AncillaryFields::PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, AncillaryFields::EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
-                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, AncillaryFields::ATL08_ANC_TYPE, atl08_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_ph_fields, atl03.anc_ph_data, Icesat2Parms::PHOTON_ANC_TYPE, photon_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl03_geo_fields, atl03.anc_geo_data, Icesat2Parms::EXTENT_ANC_TYPE, segment_indices, rec_list, rec_total_size);
+                    Atl03Reader::generateAncillaryRecords(extent_id, parms->atl08_fields, atl08.anc_seg_data, Icesat2Parms::ATL08_ANC_TYPE, atl08_indices, rec_list, rec_total_size);
 
                     /* Send Records */
                     if(rec_list.size() == 1)
@@ -1494,8 +1493,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
                 catch(const RunTimeException& e)
                 {
-                    mlog(e.level(), "Error posting results for resource %s track %d: %s", info->reader->resource, info->track, e.what());
-                    LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), info->reader->resource);
+                    alert(e.code(), e.level(), reader->outQ, &reader->active, "Error posting results for resource %s track %d: %s", info->reader->resource, info->track, e.what());
                 }
 
                 /* Clean Up Records */
@@ -1515,8 +1513,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of resource %s track %d: %s", info->reader->resource, info->track, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), info->reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -1629,8 +1626,8 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
     /* Allocate and Initialize Extent Record */
     RecordObject* record            = new RecordObject(exRecType, extent_bytes);
     extent_t* extent                = (extent_t*)record->getRecordData();
-    extent->valid                   = state.extent_valid;
     extent->extent_id               = extent_id;
+    extent->region                  = start_region;
     extent->track                   = info->track;
     extent->pair                    = info->pair;
     extent->spacecraft_orientation  = atl03.sc_orient[0];
@@ -1665,7 +1662,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackS
 /*----------------------------------------------------------------------------
  * generateAncillaryRecords
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, AncillaryFields::type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, Icesat2Parms::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size)
 {
     if(field_list && field_dict && indices)
     {
@@ -1753,7 +1750,7 @@ void Atl03Reader::postRecord (RecordObject& record, stats_t& local_stats)
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& cycle, int32_t& region)
+void Atl03Reader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
 {
     if(StringLib::size(_resource) < 29)
     {
@@ -1772,7 +1769,7 @@ void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
     rgt_str[4] = '\0';
     if(StringLib::str2long(rgt_str, &val, 10))
     {
-        rgt = val;
+        rgt = (uint16_t)val;
     }
     else
     {
@@ -1785,7 +1782,7 @@ void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
     cycle_str[2] = '\0';
     if(StringLib::str2long(cycle_str, &val, 10))
     {
-        cycle = val;
+        cycle = (uint8_t)val;
     }
     else
     {
@@ -1798,7 +1795,7 @@ void Atl03Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
     region_str[2] = '\0';
     if(StringLib::str2long(region_str, &val, 10))
     {
-        region = val;
+        region = (uint8_t)val;
     }
     else
     {

@@ -41,6 +41,9 @@ from sliderule import earthdata, logger
 # profiling times for each major function
 profiles = {}
 
+# whether exceptions should be rethrown
+rethrow_exceptions = False
+
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -148,7 +151,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
 
     # Check for Output Options
     if "output" in parm:
-        gdf = sliderule.procoutputfile(parm)
+        gdf = sliderule.procoutputfile(parm, rsps)
         profiles["flatten"] = time.perf_counter() - tstart_flatten
         return gdf
 
@@ -285,7 +288,7 @@ def __build_request(parm, resources, default_asset='icesat2'):
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60, bypass_dns=False):
+def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFAULT_MAX_REQUESTED_RESOURCES, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60, bypass_dns=False, rethrow=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other ICESat-2 API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
@@ -300,8 +303,10 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
         >>> from sliderule import icesat2
         >>> icesat2.init()
     '''
+    global rethrow_exceptions
     sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['icesat2'])
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
+    rethrow_exceptions = rethrow
 
 #
 #  ATL06
@@ -403,7 +408,11 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return sliderule.emptyframe()
+        if rethrow_exceptions:
+            raise
+    
+    # Error Case
+    return sliderule.emptyframe()
 
 #
 #  Subsetted ATL06
@@ -480,7 +489,11 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     # Handle Runtime Errorss
     except RuntimeError as e:
         logger.critical(e)
-        return sliderule.emptyframe()
+        if rethrow_exceptions:
+            raise
+    
+    # Error Case
+    return sliderule.emptyframe()
 
 #
 #  Subsetted ATL03
@@ -548,7 +561,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
         # Check for Output Options
         if "output" in parm:
             profiles[atl03sp.__name__] = time.perf_counter() - tstart
-            return sliderule.procoutputfile(parm)
+            return sliderule.procoutputfile(parm, rsps)
         else: # Native Output
             # Flatten Responses
             tstart_flatten = time.perf_counter()
@@ -639,8 +652,10 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
+        if rethrow_exceptions:
+            raise
 
-    # Error or No Data
+    # Error Case
     return sliderule.emptyframe()
 
 #
@@ -719,4 +734,8 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        return sliderule.emptyframe()
+        if rethrow_exceptions:
+            raise
+    
+    # Error Case
+    return sliderule.emptyframe()

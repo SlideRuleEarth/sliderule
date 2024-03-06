@@ -53,6 +53,12 @@
 #include "MsgQ.h"
 
 /******************************************************************************
+ * FORWARD DECLARATIONS
+ ******************************************************************************/
+
+class ArrowImpl; // arrow implementation
+
+/******************************************************************************
  * PARQUET BUILDER CLASS
  ******************************************************************************/
 
@@ -64,8 +70,8 @@ class ParquetBuilder: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int LIST_BLOCK_SIZE = 32;
         static const int FILE_NAME_MAX_LEN = 128;
+        static const int URL_MAX_LEN = 512;
         static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
         static const int ROW_GROUP_SIZE = 0x4000000; // 64MB
         static const int QUEUE_BUFFER_FACTOR = 3;
@@ -80,11 +86,47 @@ class ParquetBuilder: public LuaObject
         static const char* dataRecType;
         static const RecordObject::fieldDef_t dataRecDef[];
 
+        static const char* remoteRecType;
+        static const RecordObject::fieldDef_t remoteRecDef[];
+
         static const char* TMP_FILE_PREFIX;
 
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+
+        struct batch_t {
+            Subscriber::msgRef_t    ref;
+            Subscriber*             in_q;
+            RecordObject*           pri_record;
+            RecordObject**          anc_records;
+            int                     rows;
+            int                     num_anc_recs;
+            int                     anc_fields;
+            int                     anc_elements;
+            batch_t(Subscriber::msgRef_t& _ref, Subscriber* _in_q):
+                ref(_ref),
+                in_q(_in_q),
+                pri_record(NULL),
+                anc_records(NULL),
+                rows(0),
+                num_anc_recs(0),
+                anc_fields(0),
+                anc_elements(0) {}
+            ~batch_t(void) {
+                in_q->dereference(ref);
+                delete pri_record;
+                for(int i = 0; i < num_anc_recs; i++) delete anc_records[i];
+                delete [] anc_records; }
+        };
+
+        typedef List<batch_t*>  batch_list_t;
+
+        typedef struct {
+            bool                    as_geo;
+            RecordObject::field_t   x_field;
+            RecordObject::field_t   y_field;
+        } geo_data_t;
 
         typedef struct {
             char    filename[FILE_NAME_MAX_LEN];
@@ -96,43 +138,36 @@ class ParquetBuilder: public LuaObject
             uint8_t data[FILE_BUFFER_RSPS_SIZE];
         } arrow_file_data_t;
 
+        typedef struct {
+            char    url[URL_MAX_LEN];
+            long    size;
+        } arrow_file_remote_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-        static void deinit      (void);
+        static int              luaCreate       (lua_State* L);
+        static void             init            (void);
+        static void             deinit          (void);
+
+        const char*             getFileName     (void);
+        const char*             getRecType      (void);
+        const char*             getTimeKey      (void);
+        bool                    getAsGeo        (void);
+        RecordObject::field_t&  getXField       (void);
+        RecordObject::field_t&  getYField       (void);
+        ArrowParms*             getParms        (void);
+        bool                    hasAncFields    (void);
+        bool                    hasAncElements  (void);
 
     private:
 
         /*--------------------------------------------------------------------
-         * Types
+         * Constants
          *--------------------------------------------------------------------*/
 
-        typedef List<RecordObject::field_t> field_list_t;
-        typedef field_list_t::Iterator field_iterator_t;
-
-        typedef struct {
-            bool                    as_geo;
-            const char*             x_key;
-            const char*             y_key;
-            RecordObject::field_t   x_field;
-            RecordObject::field_t   y_field;
-        } geo_data_t;
-
-        typedef struct WKBPoint {
-            uint8_t byteOrder;
-            uint32_t wkbType;
-            double  x;
-            double  y;
-        } ALIGN_PACKED wkbpoint_t;
-
-        typedef struct {
-            Subscriber::msgRef_t    ref;
-            RecordObject*           record;
-            int                     rows;
-        } batch_t;
+        static const int EXPECTED_RECORDS_IN_BATCH = 256;
 
         /*--------------------------------------------------------------------
          * Data
@@ -143,33 +178,31 @@ class ParquetBuilder: public LuaObject
         bool                active;
         Subscriber*         inQ;
         const char*         recType;
-        const char*         batchRecType;
-        Ordering<batch_t>   recordBatch;
-        field_list_t        fieldList;
-        field_iterator_t*   fieldIterator;
+        const char*         timeKey;
+        batch_list_t        recordBatch;
+        bool                hasAncillaryFields;
+        bool                hasAncillaryElements;
         Publisher*          outQ;
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;
         int                 maxRowsInGroup;
         const char*         fileName; // used locally to build file
+        const char*         outputPath; // final destination of the file
         geo_data_t          geoData;
 
-        struct impl; // arrow implementation
-        impl* pimpl; // private arrow data
+        ArrowImpl* impl; // private arrow data
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            ParquetBuilder          (lua_State* L, ArrowParms* parms,
-                                                     const char* outq_name, const char* inq_name,
-                                                     const char* rec_type, const char* id, const geo_data_t& geo, const char* index_key);
-                            ~ParquetBuilder         (void);
-
-        static void*        builderThread           (void* parm);
-        void                processRecordBatch      (int num_rows);
-        bool                send2S3                 (const char* s3dst);
-        bool                send2Client             (void);
+                        ParquetBuilder          (lua_State* L, ArrowParms* parms,
+                                                 const char* outq_name, const char* inq_name,
+                                                 const char* rec_type, const char* id);
+                        ~ParquetBuilder         (void);
+        static void*    builderThread           (void* parm);
+        bool            send2S3                 (const char* s3dst);
+        bool            send2Client             (void);
 };
 
 #endif  /* __parquet_builder__ */

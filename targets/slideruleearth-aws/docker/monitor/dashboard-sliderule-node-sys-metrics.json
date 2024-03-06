@@ -783,7 +783,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "node_filesystem_avail_bytes{device=\"/dev/root\",job=\"sliderule_node_sys\"}",
+          "expr": "node_filesystem_avail_bytes{device=\"/dev/nvme0n1p1\",job=\"sliderule_node_sys\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"

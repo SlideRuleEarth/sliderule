@@ -490,7 +490,7 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
 
     /* Post Record */
     int rec_size = offsetof(EventLib::event_t, attr) + attr_size + 1;
-    RecordObject record(EventLib::rec_type, rec_size);
+    RecordObject record(EventLib::eventRecType, rec_size);
     memcpy(record.getRecordData(), &event, rec_size);
     uint8_t* rec_buf = NULL;
     int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);

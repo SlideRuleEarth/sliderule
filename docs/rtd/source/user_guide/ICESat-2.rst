@@ -23,6 +23,7 @@ The photon-input parameters allow the user to select an area, a time range, or a
 * ``"poly"``: polygon defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_)
 * ``"raster"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson </web/rtd/user_guide/SlideRule.html#geojson>`_)
 * ``"track"``: reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0)
+* ``"beam"``: list of beam identifiers (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all)
 * ``"rgt"``: reference ground track (defaults to all if not specified)
 * ``"cycle"``: counter of 91-day repeat cycles completed by the mission (defaults to all if not specified)
 * ``"region"``: geographic region for corresponding standard product (defaults to all if not specified)
@@ -341,6 +342,7 @@ The elevation GeoDataFrame has the following columns:
 - ``"pflags"``: processing flags (0x1 - spread too short; 0x2 - too few photons; 0x4 - max iterations reached)
 - ``"rgt"``: reference ground track
 - ``"cycle"``: cycle
+- ``"region"``: region of source granule
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
 - ``"x_atc"``: along track distance from the equator in meters
@@ -365,6 +367,7 @@ The vegetation GeoDataFrame has the following columns:
 - ``"segment_id"``: segment ID of first ATL03 segment in result
 - ``"rgt"``: reference ground track
 - ``"cycle"``: cycle
+- ``"region"``: region of source granule
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
 - ``"ph_count"``: total number of photons used by PhoREAL algorithm for this extent

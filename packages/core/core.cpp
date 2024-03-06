@@ -170,6 +170,7 @@ void initcore (void)
     TimeLib::init();
     LuaEngine::init();
     ContainerRecord::init();
+    AncillaryFields::init();
     
     /* Register IO Drivers */
     Asset::registerDriver("nil", Asset::IODriver::create);

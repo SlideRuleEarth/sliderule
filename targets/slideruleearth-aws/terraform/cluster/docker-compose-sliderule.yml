@@ -19,7 +19,9 @@ services:
       - IPV4=${IPV4}
       - ORCHESTRATOR=http://10.0.1.5:8050
       - CLUSTER=$CLUSTER
+      - IS_PUBLIC=$IS_PUBLIC
       - PROVISIONING_SYSTEM=$PROVISIONING_SYSTEM
+      - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
     healthcheck:
       test: curl -X GET -d "{}" http://localhost:10081/probe/health || exit 1

@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 import numpy
+import geopandas
 import os
 import os.path
 import sliderule
@@ -27,9 +28,9 @@ class TestParquet:
         os.remove("testfile1.parquet")
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 16
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert len(gdf.keys()) == 17
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
@@ -48,9 +49,9 @@ class TestParquet:
         os.remove("testfile5.parquet")
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 17
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert len(gdf.keys()) == 18
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
@@ -69,9 +70,9 @@ class TestParquet:
         os.remove("testfile2.parquet")
         assert init
         assert len(gdf) == 190491
-        assert len(gdf.keys()) == 23
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert len(gdf.keys()) == 22
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
@@ -112,3 +113,58 @@ class TestParquet:
         assert len(gdf) == 20642
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.349347328')
         assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582347520')
+
+    def test_atl08_ancillary(self, init):
+        # Boreal Tiles (in WGS84)
+        boreal_tiles = geopandas.read_file(os.path.join(TESTDIR, 'data/boreal_tiles_v004_model_ready.gpkg')).to_crs(4326)
+
+        # Ancillary Fields
+        ancillary_fields = ["canopy/h_canopy_uncertainty","h_dif_ref","msw_flag","sigma_topo","segment_landcover","canopy/segment_cover","segment_snowcover","terrain/h_te_uncertainty"]
+        ancillary_outputs = [field[field.find("/")+1:] for field in ancillary_fields]
+
+        # SlideRule ATL08/PhoREAL Parameters
+        parms = {
+            "poly": sliderule.toregion(boreal_tiles.geometry[0])["poly"],
+            "t0": f'2020-06-01T00:00:00Z',
+            "t1": f'2020-09-30T00:00:00Z',
+            "srt": icesat2.SRT_LAND,
+            "len": 30,
+            "res": 30,
+            "pass_invalid": True, 
+            "atl08_class": ["atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
+            "atl08_fields": ancillary_fields, 
+            "phoreal": {"binsize": 1.0, "geoloc": "center", "above_classifier": True, "use_abs_h": False, "send_waveform": False},
+            "output": {
+                "path": "testfile5.parquet",
+                "format": "parquet",
+                "as_geo": True,
+                "ancillary": ancillary_outputs,
+                "open_on_complete": True
+            }
+        }
+
+        # Make Parquet Processing Request
+        atl08_pq = icesat2.atl08p(parms, resources=['ATL03_20200906053544_11130802_006_02.h5'], keep_id=True)
+
+        # Make DataFrame Processing Request
+        del parms["output"]
+        atl08_df = icesat2.atl08p(parms, resources=['ATL03_20200906053544_11130802_006_02.h5'], keep_id=True)
+
+        # Sort Data Frames
+        pq = atl08_pq.sort_values('extent_id')
+        df = atl08_df.sort_values('extent_id')
+
+        # Clean up
+        os.remove("testfile5.parquet")
+
+        # Compare Data Frames
+        for i in range(len(ancillary_fields)):
+            anc_field = ancillary_fields[i]
+            anc_output = ancillary_outputs[i]
+            pq_col = pq[anc_output]
+            df_col = df[anc_field]
+            num_mismatches = 0
+            for k in range(len(df_col)):
+                if pq_col.iloc[k] != df_col.iloc[k]:
+                    num_mismatches += 1
+            assert num_mismatches == 0, f'there were mismatches in {anc_field}'

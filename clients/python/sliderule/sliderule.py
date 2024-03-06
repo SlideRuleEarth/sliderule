@@ -71,6 +71,7 @@ ps_token_exp = None
 MAX_PS_CLUSTER_WAIT_SECS = 600
 
 request_timeout = (10, 120) # (connection, read) in seconds
+decode_aux = True
 
 logger = logging.getLogger(__name__)
 console = None
@@ -230,6 +231,10 @@ def __decode_native(rectype, rawdata):
 
         # do not process pointers
         if "PTR" in flags:
+            continue
+
+        # check for mvp flag
+        if not decode_aux and "AUX" in flags:
             continue
 
         # get endianness
@@ -542,18 +547,25 @@ def emptyframe(**kwargs):
 #
 # Process Output File
 #
-def procoutputfile(parm):
+def procoutputfile(parm, rsps):
     output = parm["output"]
+    path = output["path"]
+    # Check If Remote Record Is In Responses
+    for rsp in rsps:
+        if 'arrowrec.remote' == rsp['__rectype']:
+            path = rsp['url']
+            break
+    # Handle Local Files
     if "open_on_complete" in output and output["open_on_complete"]:
         if "as_geo" in output and not output["as_geo"]:
             # Return Parquet File as DataFrame
-            return geopandas.pd.read_parquet(output["path"])
+            return geopandas.pd.read_parquet(path)
         else:
             # Return GeoParquet File as GeoDataFrame
-            return geopandas.read_parquet(output["path"])
+            return geopandas.read_parquet(path)
     else:
         # Return Parquet Filename
-        return output["path"]
+        return path
 
 #
 #  Get Values from Raw Buffer
@@ -882,6 +894,30 @@ def set_rqst_timeout (timeout):
         request_timeout = timeout
     else:
         raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
+
+#
+# set_processing_flags
+#
+def set_processing_flags (aux=True):
+    '''
+    Sets flags used when processing the record definitions
+
+    Parameters
+    ----------
+        aux:    bool
+                decode auxiliary fields
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_processing_flags(aux=False)
+    '''
+    global decode_aux
+    if type(aux) == bool:
+        decode_aux = aux
+    else:
+        raise FatalError('aux must be a boolean')
+
 
 #
 # update_available_servers
@@ -1314,6 +1350,13 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         # user provided GeoDataFrame instead of a file
         gdf = source
         # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
+
+    elif isinstance(source, Polygon):
+        gdf = geopandas.GeoDataFrame(geometry=[source], crs=EPSG_WGS84)
         gdf.to_file(tempfile, driver="GeoJSON")
         with open(tempfile, mode='rt') as file:
             datafile = file.read()

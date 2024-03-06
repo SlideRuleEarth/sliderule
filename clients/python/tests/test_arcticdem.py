@@ -61,9 +61,9 @@ class TestMosaic:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 19
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert len(gdf.keys()) == 20
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
@@ -82,15 +82,15 @@ class TestMosaic:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 26
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert len(gdf.keys()) == 27
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
         assert gdf["mosaic.count"].describe()["max"] == 81
         assert gdf["mosaic.stdev"].describe()["count"] == 957
-        assert gdf["mosaic.time"][0] == vrtFileTime
+        assert gdf["mosaic.time"].iloc[0] == vrtFileTime
 
 @pytest.mark.network
 class TestStrips:

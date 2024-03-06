@@ -73,8 +73,8 @@ const RecordObject::fieldDef_t SwotL2Reader::varRecDef[] = {
 const char* SwotL2Reader::scanRecType = "swotl2geo.scan";
 const RecordObject::fieldDef_t SwotL2Reader::scanRecDef[] = {
     {"scan_id",     RecordObject::UINT64,   offsetof(scan_rec_t, scan_id),      1,                      NULL, NATIVE_FLAGS},
-    {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS},
-    {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS}
+    {"latitude",    RecordObject::DOUBLE,   offsetof(scan_rec_t, latitude),     1,                      NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",   RecordObject::DOUBLE,   offsetof(scan_rec_t, longitude),    1,                      NULL, NATIVE_FLAGS | RecordObject::X_COORD}
 };
 
 const char* SwotL2Reader::geoRecType = "swotl2geo";
@@ -178,8 +178,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     else
     {
         /* Report Empty Region */
-        mlog(INFO, "Empty spatial region for %s", resource);
-        LuaEndpoint::generateExceptionStatus(RTE_INFO, INFO, outQ, &active, "Empty spatial region for %s", resource);
+        alert(RTE_INFO, INFO, outQ, &active, "Empty spatial region for %s", resource);
 
         /* Terminate */
         threadCount = 0;
@@ -480,8 +479,7 @@ void* SwotL2Reader::varThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of %s/%s: %s", reader->resource, info->variable_name, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on %s/%s: %s", reader->resource, info->variable_name, e.what());
     }
 
     /* Update Statistics */

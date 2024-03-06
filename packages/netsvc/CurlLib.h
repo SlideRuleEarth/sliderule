@@ -56,10 +56,7 @@ class CurlLib
         static void         init            (void);
         static void         deinit          (void);
 
-        static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false, List<string*>* headers=NULL);
-        static long         get             (const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false);
-        static long         put             (const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false);
-        static long         post            (const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false);
+        static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer=false, bool verify_hostname=false, List<string*>* headers=NULL, const char* unix_socket=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
         static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active=NULL);
         static int          getHeaders      (lua_State* L, int index, List<string*>& header_list);

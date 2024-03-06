@@ -54,6 +54,7 @@ const char* Icesat2Parms::YAPC_VERSION                 = "version";
 const char* Icesat2Parms::ATL08_CLASS                  = "atl08_class";
 const char* Icesat2Parms::QUALITY                      = "quality_ph";
 const char* Icesat2Parms::TRACK                        = "track";
+const char* Icesat2Parms::BEAMS                        = "beams";
 const char* Icesat2Parms::STAGES                       = "stages";
 const char* Icesat2Parms::ALONG_TRACK_SPREAD           = "ats";
 const char* Icesat2Parms::MIN_PHOTON_COUNT             = "cnt";
@@ -243,6 +244,20 @@ Icesat2Parms::phoreal_geoloc_t Icesat2Parms::str2geoloc (const char* fmt_str)
     return PHOREAL_UNSUPPORTED;
 }
 
+/*----------------------------------------------------------------------------
+ * str2geoloc
+ *----------------------------------------------------------------------------*/
+Icesat2Parms::gt_t Icesat2Parms::str2gt (const char* gt_str)
+{
+    if(StringLib::match(gt_str, "gt1l"))      return GT1L;
+    if(StringLib::match(gt_str, "gt1r"))      return GT1R;
+    if(StringLib::match(gt_str, "gt2l"))      return GT2L;
+    if(StringLib::match(gt_str, "gt2r"))      return GT2R;
+    if(StringLib::match(gt_str, "gt3l"))      return GT3L;
+    if(StringLib::match(gt_str, "gt3r"))      return GT3R;
+    return INVALID_GT;
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -258,6 +273,7 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     atl03_cnf                   { false, false, true, true, true, true, true },
     quality_ph                  { true, false, false, false },
     atl08_class                 { false, false, false, false, false },
+    beams                       { true, true, true, true, true, true},
     stages                      { true, false, false, false },
     yapc                        { .score      = 0,
                                   .version    = 3,
@@ -331,6 +347,11 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         lua_getfield(L, index, Icesat2Parms::TRACK);
         track = LuaObject::getLuaInteger(L, -1, true, track, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::TRACK, track);
+        lua_pop(L, 1);
+
+        /* Beams */
+        lua_getfield(L, index, Icesat2Parms::BEAMS);
+        get_lua_beams(L, -1, &provided);
         lua_pop(L, 1);
 
         /* Maximum Iterations */
@@ -456,6 +477,7 @@ void Icesat2Parms::cleanup (void) const
     delete atl03_geo_fields;
     delete atl03_ph_fields;
     delete atl06_fields;
+    delete atl08_fields;
 }
 
 /*----------------------------------------------------------------------------
@@ -767,6 +789,107 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "ATL08 classification must be provided as a table or string");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_lua_beams
+ *----------------------------------------------------------------------------*/
+void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    if(provided) *provided = false;
+
+    /* Must be table of classifications or a single classification as a string */
+    if(lua_istable(L, index))
+    {
+        /* Clear classification table (sets all to false) */
+        memset(beams, 0, sizeof(beams));
+        if(provided) *provided = true;
+
+        /* Iterate through each beam in table */
+        int num_beams = lua_rawlen(L, index);
+        for(int i = 0; i < num_beams; i++)
+        {
+            /* Get beam */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set beam */
+            if(lua_isinteger(L, -1))
+            {
+                int beam = LuaObject::getLuaInteger(L, -1);
+                switch(beam)
+                {
+                    case GT1L:  beams[gt2index(GT1L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+                    case GT1R:  beams[gt2index(GT1R)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+                    case GT2L:  beams[gt2index(GT2L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+                    case GT2R:  beams[gt2index(GT2R)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+                    case GT3L:  beams[gt2index(GT3L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+                    case GT3R:  beams[gt2index(GT3R)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+                    default: mlog(ERROR, "Invalid beam: %d", beam); break;
+
+                }
+            }
+            else if(lua_isstring(L, -1))
+            {
+                const char* beam_str = LuaObject::getLuaString(L, -1);
+                gt_t gt = str2gt(beam_str);
+                int gt_index = gt2index(static_cast<int>(gt));
+                if(gt_index != INVALID_GT)
+                {
+                    beams[gt_index] = true;
+                    mlog(DEBUG, "Selecting beam %s", beam_str);
+                }
+                else
+                {
+                    mlog(ERROR, "Invalid beam: %s", beam_str); 
+                }
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(lua_isinteger(L, index))
+    {
+        /* Clear beam table (sets all to false) */
+        memset(beams, 0, sizeof(beams));
+
+        /* Set beam */
+        int beam = LuaObject::getLuaInteger(L, -1);
+        switch(beam)
+        {
+            case GT1L:  beams[gt2index(GT1L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+            case GT1R:  beams[gt2index(GT1R)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+            case GT2L:  beams[gt2index(GT2L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+            case GT2R:  beams[gt2index(GT2R)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+            case GT3L:  beams[gt2index(GT3L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+            case GT3R:  beams[gt2index(GT3R)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
+            default: mlog(ERROR, "Invalid beam: %d", beam); break;
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        /* Clear beam table (sets all to false) */
+        memset(beams, 0, sizeof(beams));
+
+        /* Set beam */
+        const char* beam_str = LuaObject::getLuaString(L, -1);
+        gt_t gt = str2gt(beam_str);
+        int gt_index = gt2index(static_cast<int>(gt));
+        if(gt_index != INVALID_GT)
+        {
+            beams[gt_index] = true;
+            mlog(DEBUG, "Selecting beam %s", beam_str);
+        }
+        else
+        {
+            mlog(ERROR, "Invalid beam: %s", beam_str); 
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "Beam selection must be provided as a table or string");
     }
 }
 
