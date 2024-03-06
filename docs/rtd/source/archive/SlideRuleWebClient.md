@@ -310,7 +310,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
     - gedi02a
     - gedi04a
 
-* __General__: accordian header
+* __General__: accordion header
     - _Polygon_: label 
         - _Draw On Map_: radio button
         - _Upload_: radio button
@@ -328,7 +328,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
         - _node-timeout_: input number (seconds)
         - _read-timeout_: input number (seconds)        
 
-* __Granule Selection__: accordian header [ICESat-2]
+* __Granule Selection__: accordion header [ICESat-2]
     - _Track_: label
         - _1_: checkbox
         - _2_: checkbox
@@ -341,14 +341,14 @@ All request parameters supported by SlideRule for a given request shall be suppo
         - _gt2r_: checkbox
         - _gt3l_: checkbox
         - _gt3r_: checkbox
-        - _all_: checbox / toggle others
+        - _all_: checkbox / toggle others
     - _RGT_: input number
     - _Cycle_: input number
     - _Region_: input number
     - _T0_: calendar
     - _T1_: calendar
 
-* __Photon Selection__: accordian header [ICESat-2]
+* __Photon Selection__: accordion header [ICESat-2]
     - _ATL03 Confidence_: input switch (enables inputs below)
         - _Surface Reference Type_: label
             - *land*: radio button
@@ -383,7 +383,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
             - *version 2*: radio button
             - *version 3*: radio button
 
-* __Extents (Variable-Length Segmentation)__: accordian header [ICESat-2]
+* __Extents (Variable-Length Segmentation)__: accordion header [ICESat-2]
     - _Length_: input number (meters)
     - _Step Size_: input number (meters)
     - _Distance in Segments_: checkbox (changes above inputs to segments instead of meters)
@@ -391,29 +391,29 @@ All request parameters supported by SlideRule for a given request shall be suppo
     - _Along Track Spread_: input number [greyed out when pass invalid selected]
     - _Minimum Photon Count_: input number [greyed out when pass invalid selected]
 
-* __Surface Elevation Algorithm__: accordian header [atl06]
+* __Surface Elevation Algorithm__: accordion header [atl06]
     - _Maximum Iterations_: input number
     - _Minimum Window Height_: input number (meters)
     - _Maximum Robust Dispersion_: input number (meters)
 
-* __Vegetation Density Algorithm__: accordian header [atl08]
+* __Vegetation Density Algorithm__: accordion header [atl08]
     - _Bin Size_: input number (meters)
     - _Geolocation_: label
         - _mean_: radio button
         - _median_: radio button
         - _center_: radio button
-    - _Use Absoulte Heights_: checkbox
+    - _Use Absolute Heights_: checkbox
     - _Send Waveforms_: checkbox
     - _Use ABoVE Classifier_: checkbox
 
-* __Ancillary Fields__: accordian header [ICESat-2]
+* __Ancillary Fields__: accordion header [ICESat-2]
     - _ATL03 Geospatial Fields_: multiselect [atl03, atl06]
     - _ATL03 Photon Fields_: multiselect [atl03, atl06]
     - _ATL06 Ice Segment Fields_: multiselect [atl06s]
     - _ATL08 Land Segment Fields_: multiselect [atl08]
         - _interpolate_: checkbox (next to each field selection)
 
-* __GEDI Footprint Selection__: accordian header [GEDI]
+* __GEDI Footprint Selection__: accordion header [GEDI]
     - _Beam_: multiselect
         - 0
         - 1
@@ -429,7 +429,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
     - _L4 Quality Flag_: checkbox [gedi04a]
     - _Surface Flag_: checkbox
 
-* __Raster Sampling__: accordian header
+* __Raster Sampling__: accordion header
     - _Rasters to Sample_: data table (updated with each added entry)
     - _Add Entry_: button
         - *key*: input text
@@ -455,7 +455,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
             - *upload*: file upload button (populates text area on upload)
         - *bands*: multiselect (selection based on asset field)
 
-* __Output__: accordian header
+* __Output__: accordion header
     - _Enabled_: input switch (shows everything else below when enabled)
     - _Staged_: checkbox (greys out path, region, and credentials when selected)
     - _Format_: label
