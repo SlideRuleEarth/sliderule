@@ -71,12 +71,6 @@ class TestAncillary:
         gdf = icesat2.atl08(parms, "ATL03_20181017222812_02950102_006_02.h5")
         assert init
         assert len(gdf) == 819
-
-        print(gdf["h_dif_ref"].quantile(q=.50))
-        print(gdf["rgt_y"].quantile(q=.50))
-        print(gdf["sigma_atlas_land%"].quantile(q=.50))
-        print(gdf["cloud_flag_atm%"].quantile(q=.50))
-
         assert abs(gdf["h_dif_ref"].quantile(q=.50) - -0.9443359375) < 0.000001
         assert abs(gdf["rgt_y"].quantile(q=.50) - 295.0) < 0.000001
         assert abs(gdf["sigma_atlas_land%"].quantile(q=.50) - 0.24470525979995728) < 0.000001
