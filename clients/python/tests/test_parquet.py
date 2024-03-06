@@ -29,8 +29,8 @@ class TestParquet:
         assert init
         assert len(gdf) == 957
         assert len(gdf.keys()) == 17
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
@@ -50,8 +50,8 @@ class TestParquet:
         assert init
         assert len(gdf) == 957
         assert len(gdf.keys()) == 18
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
@@ -71,8 +71,8 @@ class TestParquet:
         assert init
         assert len(gdf) == 190491
         assert len(gdf.keys()) == 22
-        assert gdf["rgt"][0] == 1160
-        assert gdf["cycle"][0] == 2
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
