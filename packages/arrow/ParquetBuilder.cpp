@@ -258,8 +258,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
         const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
         const char* path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
-        FString path_name("/%s.%016lX", id, OsApi::time(OsApi::CPU_CLK));
-        FString path_str("%s%s%s%s", path_prefix, asset->getPath(), path_name.c_str(), path_suffix);
+        FString path_name("%s.%016lX", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK));
+        bool use_provided_path = ((parms->path != NULL) && (parms->path[0] != '\0'));
+        FString path_str("%s%s/%s%s", path_prefix, asset->getPath(), use_provided_path ? parms->path : path_name.c_str(), path_suffix);
         asset->releaseLuaObject();
 
         /* Set Output Path */

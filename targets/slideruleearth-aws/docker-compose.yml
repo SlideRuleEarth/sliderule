@@ -19,7 +19,7 @@ services:
       - IPV4=127.0.0.1
       - ORCHESTRATOR=http://127.0.0.1:8050
       - IS_PUBLIC=False
-      - CLUSTER=sliderule
+      - CLUSTER=localhost
       - PROVISIONING_SYSTEM=https://ps.localhost
       - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION

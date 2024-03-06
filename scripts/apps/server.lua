@@ -51,6 +51,9 @@ sys.setenvver(environment_version)
 -- Set Is Public --
 sys.setispublic(is_public)
 
+-- Set ECluster Name --
+sys.setcluster(org_name)
+
 -- Configure System Message Queue Depth --
 sys.setstddepth(msgq_depth)
 

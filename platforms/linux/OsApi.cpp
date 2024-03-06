@@ -61,8 +61,9 @@ OsApi::print_func_t OsApi::print_func = NULL;
 int OsApi::io_timeout = IO_DEFAULT_TIMEOUT;
 int OsApi::io_maxsize = IO_DEFAULT_MAXSIZE;
 int64_t OsApi::launch_time = 0;
-char* OsApi::environment_version = NULL;
+const char* OsApi::environment_version = "unknown";
 bool OsApi::is_public = false;
+const char* OsApi::cluster_name = "localhost";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -75,7 +76,6 @@ void OsApi::init(print_func_t _print_func)
 {
     memfd = open("/proc/meminfo", O_RDONLY);
     launch_time = OsApi::time(OsApi::SYS_CLK);
-    OsApi::dupstr(&environment_version, "unknown");
     print_func = _print_func;
 }
 
@@ -103,15 +103,16 @@ void OsApi::sleep(double secs)
 /*----------------------------------------------------------------------------
  *  dupstr
  *----------------------------------------------------------------------------*/
-void OsApi::dupstr (char** dst, const char* src)
+void OsApi::dupstr (const char** dst, const char* src)
 {
     assert(dst);
-    if(*dst) delete [] *dst;
+    assert(src);
     int len = 0;
     while(src[len] != '\0') len++;
-    *dst = new char[len + 1];
-    for(int k = 0; k < len; k++) (*dst)[k] = src[k];
-    (*dst)[len] = '\0';
+    char* buf = new char[len + 1]; 
+    for(int k = 0; k < len; k++) buf[k] = src[k];
+    buf[len] = '\0';
+    *dst = buf;
 }
 
 /*----------------------------------------------------------------------------
@@ -399,4 +400,20 @@ void OsApi::setIsPublic (bool _is_public)
 bool OsApi::getIsPublic (void)
 {
     return is_public;
+}
+
+/*----------------------------------------------------------------------------
+ * setEnvVersion
+ *----------------------------------------------------------------------------*/
+void OsApi::setCluster (const char* cluster)
+{
+    OsApi::dupstr(&cluster_name, cluster);
+}
+
+/*----------------------------------------------------------------------------
+ * getEnvVersion
+ *----------------------------------------------------------------------------*/
+const char* OsApi::getCluster (void)
+{
+    return cluster_name;
 }

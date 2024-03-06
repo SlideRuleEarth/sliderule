@@ -55,6 +55,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"setenvver",   LuaLibrarySys::lsys_setenvver},
     {"setispublic", LuaLibrarySys::lsys_setispublic},
+    {"setcluster",  LuaLibrarySys::lsys_setcluster},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
@@ -316,6 +317,28 @@ int LuaLibrarySys::lsys_setispublic (lua_State* L)
     else
     {
         mlog(CRITICAL, "Invalid parameter supplied to setting is_public, must be a string 'True' or 'False'");
+        status = false;
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setcluster
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setcluster (lua_State* L)
+{
+    bool status = true;
+    const char* cluster_str = NULL;
+    if(lua_isstring(L, 1))
+    {
+        cluster_str = lua_tostring(L, 1);
+        OsApi::setCluster(cluster_str);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to set cluster, must be a string");
         status = false;
     }
 
