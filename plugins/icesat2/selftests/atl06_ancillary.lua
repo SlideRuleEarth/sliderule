@@ -45,7 +45,7 @@ while true do
     end
 end
 
-runner.check(cnt >= 85, "failed to read sufficient number of contaner records")    
+runner.check(cnt >= 85, string.format('failed to read sufficient number of contaner records: %d', cnt))    
 
 -- Clean Up --
 
