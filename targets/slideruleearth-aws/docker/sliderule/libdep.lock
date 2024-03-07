@@ -1,7 +1,7 @@
 arrow: apache-arrow-16.0.0.dev-0-gbb7f584bf
-gdal: v3.8.3-0-g654f4907ab
+gdal: v3.8.4-0-gc2d2a61739
 geos: 3.12.1-0-g9a5d0587f
 libgeotiff: 1.7.1-0-gbdeff84
-pistache: 0.0.5-75-g1c733a1
-PROJ: 9.3.1-0-g0f2922e1
-rapidjson: v1.1.0-745-g6089180e
+pistache: 0.0.5-79-g875c973
+PROJ: 9.4.0-0-g7cd00d0b
+rapidjson: v1.1.0-748-g3f73edae

@@ -24,6 +24,11 @@ jobs:
         role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-AssumeRoleWithAction
         aws-region: us-east-1
 
+    - name: Upload Cluster Terraform
+      run: |
+       cd targets/slideruleearth-aws
+       make cluster-upload-terraform
+
     - name: Set Up Docker Buildx
       uses: docker/setup-buildx-action@v3    
 
@@ -44,11 +49,6 @@ jobs:
       run: |
        cd targets/slideruleearth-aws
        make cluster-docker-push
-
-    - name: Upload Cluster Terraform
-      run: |
-       cd targets/slideruleearth-aws
-       make cluster-upload-terraform
 
 #    - name: Build AMI
 #      run: |
