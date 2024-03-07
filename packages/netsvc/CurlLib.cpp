@@ -245,7 +245,8 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
     /* Terminate Stream */
     if(with_terminator)
     {
-        outq->postCopy("", 0);
+        int rc = outq->postCopy("", 0, DATA_TIMEOUT * 1000);
+        if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", outq->getName(), rc);
     }
 
     /* Return HTTP Code */
@@ -323,7 +324,8 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
     /* Terminate Stream */
     if(with_terminator)
     {
-        outq->postCopy("", 0);
+        int rc = outq->postCopy("", 0, DATA_TIMEOUT * 1000);
+        if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", outq->getName(), rc);
     }
 
     /* Return HTTP Code */
@@ -601,7 +603,7 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
 size_t CurlLib::postData(void *buffer, size_t size, size_t nmemb, void *userp)
 {
     Publisher* outq = static_cast<Publisher*>(userp);
-    return outq->postCopy(buffer, size * nmemb);
+    return outq->postCopy(buffer, size * nmemb, DATA_TIMEOUT * 1000);
 }
 
 /*----------------------------------------------------------------------------

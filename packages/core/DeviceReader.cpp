@@ -161,6 +161,7 @@ void* DeviceReader::readerThread (void* parm)
     delete [] buf;
     dr->device->closeConnection();
     dr->signalComplete();
-    dr->outq->postCopy("", 0); // send terminator
+    int rc = dr->outq->postCopy("", 0, SYS_TIMEOUT); // send terminator
+    if(rc <= 0) mlog(ERROR, "Device reader failed to post terminator %s: %d", dr->outq->getName(), rc);
     return NULL;
 }

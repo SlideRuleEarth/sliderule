@@ -193,11 +193,12 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Respond with Unauthorized Error */
         char header[MAX_HDR_SIZE];
         int header_length = buildheader(header, Unauthorized);
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* End Response */
-    rspq->postCopy("", 0);
+    int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
+    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
 
     /* Generate Metric for Endpoint */
     double duration = TimeLib::latchtime() - start;
@@ -277,27 +278,27 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             {
                 int result_length = StringLib::size(result);
                 int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
-                rspq->postCopy(header, header_length);
-                rspq->postCopy(result, result_length);
+                rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+                rspq->postCopy(result, result_length, POST_TIMEOUT_MS);
             }
             else
             {
                 int header_length = buildheader(header, Not_Found);
-                rspq->postCopy(header, header_length);
+                rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
             }
         }
         else
         {
             mlog(ERROR, "Failed to execute request: %s", scriptpath);
             int header_length = buildheader(header, Internal_Server_Error);
-            rspq->postCopy(header, header_length);
+            rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
         }
     }
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         int header_length = buildheader(header, Service_Unavailable);
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* Clean Up */
@@ -320,7 +321,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
     {
         /* Send Header */
         int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
 
         /* Create Engine */
         engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
@@ -338,7 +339,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         int header_length = buildheader(header, Service_Unavailable);
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* Clean Up */

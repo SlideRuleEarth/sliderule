@@ -300,7 +300,23 @@ void* Gedi04aReader::subsettingThread (void* parm)
         /* Indicate End of Data */
         if(reader->numComplete == reader->threadCount)
         {
-            if(reader->sendTerminator) reader->outQ->postCopy("", 0);
+            if(reader->sendTerminator)
+            {
+                int status = MsgQ::STATE_TIMEOUT;
+                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                {
+                    status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
+                    if(status < 0)
+                    {
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        break;
+                    }
+                    else if(status == MsgQ::STATE_TIMEOUT)
+                    {
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                    }
+                }
+            }
             reader->signalComplete();
         }
     }

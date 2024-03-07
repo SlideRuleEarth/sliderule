@@ -267,7 +267,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
         else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
 
         /* Indicate End of Data */
-        if(sendTerminator) outQ->postCopy("", 0);
+        if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
         signalComplete();
     }
 }

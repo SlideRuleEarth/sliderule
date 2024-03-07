@@ -62,7 +62,8 @@ class LuaEndpoint: public EndpointObject
         static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
         static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
 
-        static const int MAX_RESPONSE_TIME_MS = 5000;
+        static const int POST_TIMEOUT_MS = 60000;
+        static const int MAX_RESPONSE_TIME_MS = 60000;
         static const char* LUA_RESPONSE_QUEUE;
         static const char* LUA_REQUEST_ID;
 

@@ -266,7 +266,7 @@ int H5File::luaRead (lua_State* L)
 
         /* Terminate Data */
         Publisher outQ(outq_name);
-        outQ.postCopy("", 0);
+        outQ.postCopy("", 0, SYS_TIMEOUT);
     }
     catch(const RunTimeException& e)
     {

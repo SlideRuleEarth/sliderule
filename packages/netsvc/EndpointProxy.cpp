@@ -288,7 +288,16 @@ void* EndpointProxy::collatorThread (void* parm)
     /* Send Terminator */
     if(proxy->sendTerminator)
     {
-        proxy->outQ->postCopy("", 0);
+        int status = MsgQ::STATE_TIMEOUT;
+        while(proxy->active && (status == MsgQ::STATE_TIMEOUT))
+        {
+            status = proxy->outQ->postCopy("", 0, SYS_TIMEOUT);
+            if(status < 0)
+            {
+                mlog(CRITICAL, "Failed (%d) to post terminator", status);
+                break;
+            }
+        }
     }
 
     /* Signal Complete */

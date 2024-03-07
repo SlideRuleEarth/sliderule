@@ -371,7 +371,7 @@ void SwotL2Reader::checkComplete (void)
         if(numComplete >= threadCount)
         {
             mlog(INFO, "Completed processing resource %s", resource);
-            if(sendTerminator) outQ->postCopy("", 0);
+            if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
             signalComplete();
         }
     }

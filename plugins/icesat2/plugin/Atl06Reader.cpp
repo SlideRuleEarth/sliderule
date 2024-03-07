@@ -210,7 +210,7 @@ Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, co
         else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
 
         /* Indicate End of Data */
-        if(sendTerminator) outQ->postCopy("", 0);
+        if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
         signalComplete();
     }
 }
@@ -656,7 +656,23 @@ void* Atl06Reader::subsettingThread (void* parm)
             mlog(INFO, "Completed processing resource %s", info->reader->resource);
 
             /* Indicate End of Data */
-            if(reader->sendTerminator) reader->outQ->postCopy("", 0);
+            if(reader->sendTerminator)
+            {
+                int status = MsgQ::STATE_TIMEOUT;
+                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                {
+                    status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
+                    if(status < 0)
+                    {
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        break;
+                    }
+                    else if(status == MsgQ::STATE_TIMEOUT)
+                    {
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                    }
+                }
+            }
             reader->signalComplete();
         }
     }
