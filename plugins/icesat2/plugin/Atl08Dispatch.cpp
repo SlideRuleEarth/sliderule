@@ -717,7 +717,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
                 int bufsize = atl08Record->serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
             }
-            else
+            else if(recVec.size() > 1)
             {
                 /* Post Serialized Container Record */
                 ContainerRecord container(recVec);
