@@ -69,8 +69,8 @@ class Icesat2Parms: public NetsvcParms
         static const char* ATL08_CLASS;
         static const char* QUALITY;
         static const char* TRACK;
+        static const char* BEAMS;
         static const char* STAGES;
-        static const char* COMPACT;
         static const char* ALONG_TRACK_SPREAD;
         static const char* MIN_PHOTON_COUNT;
         static const char* EXTENT_LENGTH;
@@ -124,7 +124,8 @@ class Icesat2Parms: public NetsvcParms
             GT2L = 30,
             GT2R = 40,
             GT3L = 50,
-            GT3R = 60
+            GT3R = 60,
+            INVALID_GT = 70
         } gt_t;
 
         /* Spots */
@@ -206,6 +207,14 @@ class Icesat2Parms: public NetsvcParms
             PHOREAL_UNSUPPORTED = 3
         } phoreal_geoloc_t;
 
+        /* Ancillary Field Types */
+        typedef enum {
+            PHOTON_ANC_TYPE     = 0,
+            EXTENT_ANC_TYPE     = 1,
+            ATL08_ANC_TYPE      = 2,
+            ATL06_ANC_TYPE      = 3
+        } anc_type_t;
+
         /* YAPC Settings */
         typedef struct {
             uint8_t             score;                          // minimum allowed weight of photon using yapc algorithm
@@ -236,6 +245,8 @@ class Icesat2Parms: public NetsvcParms
         static quality_ph_t             str2atl03quality        (const char* quality_ph_str);
         static atl08_classification_t   str2atl08class          (const char* classifiction_str);
         static phoreal_geoloc_t         str2geoloc              (const char* fmt_str);
+        static gt_t                     str2gt                  (const char* gt_str);
+        static int                      gt2index                (int gt) { return (gt / 10) - 1; }
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -270,6 +281,7 @@ class Icesat2Parms: public NetsvcParms
         bool                        atl03_cnf[NUM_SIGNAL_CONF];     // list of desired signal confidences of photons from atl03 classification
         bool                        quality_ph[NUM_PHOTON_QUALITY]; // list of desired photon quality levels from atl03
         bool                        atl08_class[NUM_ATL08_CLASSES]; // list of surface classifications to use (leave empty to skip)
+        bool                        beams[NUM_SPOTS];               // list of which beams (gt[l|r][1|2|3])
         bool                        stages[NUM_STAGES];             // algorithm iterations
         yapc_t                      yapc;                           // settings used in YAPC algorithm
         int                         track;                          // reference pair track number (1, 2, 3, or 0 for all tracks)
@@ -299,6 +311,7 @@ class Icesat2Parms: public NetsvcParms
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
         void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
         void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
+        void                    get_lua_beams           (lua_State* L, int index, bool* provided);
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
         static void             get_lua_field_list      (lua_State* L, int index, AncillaryFields::list_t** string_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);

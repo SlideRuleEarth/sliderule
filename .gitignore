@@ -1,4 +1,5 @@
 .vscode/
+.DS_Store
 
 # Prerequisites
 *.d
@@ -44,3 +45,5 @@ cscope.*
 compile_commands.json
 report.pdf
 report.xml
+# infracost
+.infracost/

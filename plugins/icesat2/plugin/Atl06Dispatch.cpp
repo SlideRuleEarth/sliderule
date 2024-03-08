@@ -85,24 +85,25 @@ const double Atl06Dispatch::SIGMA_XMIT = 0.00000000068; // seconds
 
 const char* Atl06Dispatch::elRecType = "atl06rec.elevation"; // extended elevation measurement record
 const RecordObject::fieldDef_t Atl06Dispatch::elRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),           1,  NULL, NATIVE_FLAGS},
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),           1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
-    {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, photon_count),        1,  NULL, NATIVE_FLAGS},
-    {"pflags",                  RecordObject::UINT16,   offsetof(elevation_t, pflags),              1,  NULL, NATIVE_FLAGS},
-    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                 1,  NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                1,  NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                  1,  NULL, NATIVE_FLAGS},
-    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),             1,  NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS},
-    {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS},
-    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),           1,  NULL, NATIVE_FLAGS},
+    {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, photon_count),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"pflags",                  RecordObject::UINT16,   offsetof(elevation_t, pflags),              1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"cycle",                   RecordObject::UINT8,    offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"region",                  RecordObject::UINT8,    offsetof(elevation_t, region),              1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),             1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),           1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"x_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, x_atc),               1,  NULL, NATIVE_FLAGS},
     {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),               1,  NULL, NATIVE_FLAGS},
-    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, window_height),       1,  NULL, NATIVE_FLAGS},
-    {"rms_misfit",              RecordObject::FLOAT,    offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS},
-    {"h_sigma",                 RecordObject::FLOAT,    offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS}
+    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, window_height),       1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"rms_misfit",              RecordObject::FLOAT,    offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"h_sigma",                 RecordObject::FLOAT,    offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS | RecordObject::AUX}
 };
 
 const char* Atl06Dispatch::atRecType = "atl06rec";
@@ -248,6 +249,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     result.elevation.segment_id = extent->segment_id;
     result.elevation.rgt = extent->reference_ground_track;
     result.elevation.cycle = extent->cycle;
+    result.elevation.region = extent->region;
     result.elevation.x_atc = extent->segment_distance;
     result.elevation.pflags = 0;
 
@@ -316,18 +318,13 @@ bool Atl06Dispatch::processTermination (void)
 void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& result)
 {
     /* Check Valid Extent */
-    if(extent->valid && result.elevation.photon_count > 0)
+    if(result.elevation.photon_count <= 0)
     {
-        result.provided = true;
-    }
-    else
-    {
-        // the check for photon count is redundent with the check for
-        // a valid extent, but given that the code below is invalid
-        // if the number of photons is less than or equal to zero,
-        // the check is provided explicitly
         return;
     }
+
+    /* Result is Provided */
+    result.provided = true;
 
     /* Initial Conditions */
     bool done = false;

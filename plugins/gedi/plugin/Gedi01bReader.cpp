@@ -47,11 +47,11 @@
 
 const char* Gedi01bReader::fpRecType = "gedi01brec.footprint";
 const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
-    {"shot_number",     RecordObject::UINT64,   offsetof(g01b_footprint_t, shot_number),        1,  NULL, NATIVE_FLAGS},
-    {"time",            RecordObject::TIME8,    offsetof(g01b_footprint_t, time_ns),            1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(g01b_footprint_t, latitude),           1,  NULL, NATIVE_FLAGS},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(g01b_footprint_t, longitude),          1,  NULL, NATIVE_FLAGS},
-    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS},
+    {"shot_number",     RecordObject::UINT64,   offsetof(g01b_footprint_t, shot_number),        1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"time",            RecordObject::TIME8,    offsetof(g01b_footprint_t, time_ns),            1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"latitude",        RecordObject::DOUBLE,   offsetof(g01b_footprint_t, latitude),           1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",       RecordObject::DOUBLE,   offsetof(g01b_footprint_t, longitude),          1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"elevation_stop",  RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_stop),     1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS},
@@ -268,8 +268,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of resource %s beam %d: %s", reader->resource, info->beam, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -298,7 +297,23 @@ void* Gedi01bReader::subsettingThread (void* parm)
         /* Indicate End of Data */
         if(reader->numComplete == reader->threadCount)
         {
-            if(reader->sendTerminator) reader->outQ->postCopy("", 0);
+            if(reader->sendTerminator)
+            {
+                int status = MsgQ::STATE_TIMEOUT;
+                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                {
+                    status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
+                    if(status < 0)
+                    {
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        break;
+                    }
+                    else if(status == MsgQ::STATE_TIMEOUT)
+                    {
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                    }
+                }
+            }
             reader->signalComplete();
         }
     }

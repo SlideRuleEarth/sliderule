@@ -208,8 +208,9 @@ class OsApi
 
         static void         init                (print_func_t _print_func);
         static void         deinit              (void);
+
         static void         sleep               (double secs); // sleep at highest resolution available on system
-        static void         dupstr              (char** dst, const char* src);
+        static void         dupstr              (const char** dst, const char* src);
         static int64_t      time                (int clkid);
         static int64_t      timeres             (int clkid); // returns the resolution of the clock
         static uint16_t     swaps               (uint16_t val);
@@ -220,6 +221,7 @@ class OsApi
         static int          nproc               (void);
         static double       memusage            (void);
         static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
+
         static bool         setIOMaxsize        (int maxsize);
         static int          getIOMaxsize        (void);
         static void         setIOTimeout        (int timeout);
@@ -228,6 +230,10 @@ class OsApi
         static int64_t      getLaunchTime       (void);
         static void         setEnvVersion       (const char* verstr);
         static const char*  getEnvVersion       (void);
+        static void         setIsPublic         (bool _is_public);
+        static bool         getIsPublic         (void);
+        static void         setCluster          (const char* cluster);
+        static const char*  getCluster          (void);
 
     private:
 
@@ -236,7 +242,9 @@ class OsApi
         static int io_timeout;
         static int io_maxsize;
         static int64_t launch_time;
-        static char* environment_version;
+        static const char* environment_version;
+        static bool is_public;
+        static const char* cluster_name;
 };
 
 #endif  /* __osapi__ */

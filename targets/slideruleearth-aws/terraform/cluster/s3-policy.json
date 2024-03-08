@@ -14,7 +14,7 @@
     {
       "Effect": "Allow",
       "Action": ["s3:PutObject"],
-      "Resource": ["arn:aws:s3:::sliderule/logs/*"]
+      "Resource": ["arn:aws:s3:::sliderule/logs/*", "arn:aws:s3:::sliderule-public/*"]
     }
   ]
 }

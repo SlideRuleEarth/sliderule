@@ -47,6 +47,7 @@
  ******************************************************************************/
 
 #define mlog(lvl,...) EventLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)
+#define alert(code,lvl,outq,active,...) EventLib::alertMsg(code,lvl,outq,active,__VA_ARGS__)
 
 #ifdef __tracing__
 #define start_trace(lvl, parent, name, fmt, ...) EventLib::startTrace(parent, name, lvl, fmt, __VA_ARGS__)
@@ -75,8 +76,10 @@ class EventLib
         static const int MAX_ATTR_SIZE = 1024;
         static const int MAX_METRICS = 128;
         static const int32_t INVALID_METRIC = -1;
+        static const int MAX_ALERT_SIZE = 256;
 
-        static const char* rec_type;
+        static const char* alertRecType;
+        static const char* eventRecType;
 
         /*--------------------------------------------------------------------
          * Types
@@ -111,6 +114,12 @@ class EventLib
             GAUGE = 1
         } metric_subtype_t;
 
+        typedef struct {
+            int32_t code;
+            int32_t level;
+            char    text[MAX_ALERT_SIZE];
+        } alert_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -131,7 +140,7 @@ class EventLib
         static uint32_t         grabId          (void);
 
         static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
-
+        static void             alertMsg        (int code, event_level_t level, void* rspsq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
         static void             generateMetric  (event_level_t lvl, const char* name, metric_subtype_t subtype, double value);
 
     private:

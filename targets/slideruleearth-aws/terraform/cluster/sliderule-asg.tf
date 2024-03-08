@@ -53,10 +53,12 @@ resource "aws_launch_configuration" "sliderule-instance" {
       #!/bin/bash
       export ENVIRONMENT_VERSION=${var.environment_version}
       export IPV4=$(hostname -I | awk '{print $1}')
-      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
       export CLUSTER=${var.cluster_name}
+      export IS_PUBLIC=${var.is_public}
       export SLIDERULE_IMAGE=${var.container_repo}/sliderule:${var.cluster_version}
       export PROVISIONING_SYSTEM="https://ps.${var.domain}"
+      export CONTAINER_REGISTRY=${var.container_repo}
+      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-sliderule.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
   EOF

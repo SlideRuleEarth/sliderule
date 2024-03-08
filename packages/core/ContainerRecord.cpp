@@ -60,8 +60,8 @@ RecordObject::fieldDef_t ContainerRecord::recDef[] =
  *----------------------------------------------------------------------------*/
 void ContainerRecord::init (void)
 {
-    RECDEF(recType,       recDef,       sizeof(rec_t),      NULL);
     RECDEF(entryRecType,  entryRecDef,  sizeof(entry_t),    NULL);
+    RECDEF(recType,       recDef,       sizeof(rec_t),      NULL);
 }
 
 /*----------------------------------------------------------------------------

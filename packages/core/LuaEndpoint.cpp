@@ -46,13 +46,6 @@ const struct luaL_Reg LuaEndpoint::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* LuaEndpoint::EndpointExceptionRecType = "exceptrec";
-const RecordObject::fieldDef_t LuaEndpoint::EndpointExceptionRecDef[] = {
-    {"code",        RecordObject::INT32,    offsetof(response_exception_t, code),   1,                       NULL, NATIVE_FLAGS},
-    {"level",       RecordObject::INT32,    offsetof(response_exception_t, level),  1,                       NULL, NATIVE_FLAGS},
-    {"text",        RecordObject::STRING,   offsetof(response_exception_t, text),   MAX_EXCEPTION_TEXT_SIZE, NULL, NATIVE_FLAGS}
-};
-
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
 const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
@@ -96,7 +89,6 @@ LuaEndpoint::Authenticator::~Authenticator(void)
  *----------------------------------------------------------------------------*/
 void LuaEndpoint::init (void)
 {
-    RECDEF(EndpointExceptionRecType, EndpointExceptionRecDef, sizeof(response_exception_t), "code");
 }
 
 /*----------------------------------------------------------------------------
@@ -119,29 +111,6 @@ int LuaEndpoint::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
-}
-
-/*----------------------------------------------------------------------------
- * generateExceptionStatus
- *----------------------------------------------------------------------------*/
-void LuaEndpoint::generateExceptionStatus (int code, event_level_t level, Publisher* outq, bool* active, const char* errmsg, ...)
-{
-    /* Build Error Message */
-    char error_buf[MAX_EXCEPTION_TEXT_SIZE];
-    va_list args;
-    va_start(args, errmsg);
-    int vlen = vsnprintf(error_buf, MAX_EXCEPTION_TEXT_SIZE - 1, errmsg, args);
-    int attr_size = MAX(MIN(vlen + 1, MAX_EXCEPTION_TEXT_SIZE), 1);
-    error_buf[attr_size - 1] = '\0';
-    va_end(args);
-
-    /* Post Endpoint Exception Record */
-    RecordObject record(EndpointExceptionRecType);
-    response_exception_t* exception = (response_exception_t*)record.getRecordData();
-    exception->code = code;
-    exception->level = (int32_t)level;
-    StringLib::format(exception->text, MAX_EXCEPTION_TEXT_SIZE, "%s", error_buf);
-    record.post(outq, 0, active);
 }
 
 /******************************************************************************
@@ -197,7 +166,8 @@ void* LuaEndpoint::requestThread (void* parm)
 
         /* Extract Bearer Token */
         string* auth_hdr;
-        if(request->headers.find("Authorization", &auth_hdr))
+        if(request->headers.find("Authorization", &auth_hdr) || 
+           request->headers.find("authorization", &auth_hdr) )
         {
             bearer_token = StringLib::find(auth_hdr->c_str(), ' ');
             if(bearer_token) bearer_token += 1;
@@ -214,22 +184,21 @@ void* LuaEndpoint::requestThread (void* parm)
     /* Dispatch Handle Request */
     if(authorized)
     {
-        switch(request->verb)
-        {
-            case GET:   lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id); break;
-            case POST:  lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id); break;
-            default:    break;
-        }
+        /* Handle Response */
+        if(info->streaming) lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
+        else                lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
     }
     else
     {
+        /* Respond with Unauthorized Error */
         char header[MAX_HDR_SIZE];
         int header_length = buildheader(header, Unauthorized);
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* End Response */
-    rspq->postCopy("", 0);
+    int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
+    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
 
     /* Generate Metric for Endpoint */
     double duration = TimeLib::latchtime() - start;
@@ -256,12 +225,30 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
     EndpointObject::info_t* info = new EndpointObject::info_t;
     info->endpoint = this;
     info->request = request;
+    info->streaming = true;
+
+    /* Determine Streaming */
+    if(request->verb == GET)
+    {
+        info->streaming = false;
+    }
+    else // check header
+    {
+        string* hdr_str;
+        if(request->headers.find("x-sliderule-streaming", &hdr_str))
+        {
+            if(hdr_str->compare("0") == 0)
+            {
+                info->streaming = false;
+            }
+        }
+    }
 
     /* Start Thread */
     Thread pid(requestThread, info, false);
 
     /* Return Response Type */
-    if(request->verb == POST) return STREAMING;
+    if(info->streaming) return STREAMING;
     return NORMAL;
 }
 
@@ -291,27 +278,27 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             {
                 int result_length = StringLib::size(result);
                 int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
-                rspq->postCopy(header, header_length);
-                rspq->postCopy(result, result_length);
+                rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+                rspq->postCopy(result, result_length, POST_TIMEOUT_MS);
             }
             else
             {
                 int header_length = buildheader(header, Not_Found);
-                rspq->postCopy(header, header_length);
+                rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
             }
         }
         else
         {
             mlog(ERROR, "Failed to execute request: %s", scriptpath);
             int header_length = buildheader(header, Internal_Server_Error);
-            rspq->postCopy(header, header_length);
+            rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
         }
     }
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         int header_length = buildheader(header, Service_Unavailable);
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* Clean Up */
@@ -334,7 +321,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
     {
         /* Send Header */
         int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
 
         /* Create Engine */
         engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
@@ -352,7 +339,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         int header_length = buildheader(header, Service_Unavailable);
-        rspq->postCopy(header, header_length);
+        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* Clean Up */

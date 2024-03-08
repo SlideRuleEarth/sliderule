@@ -65,14 +65,6 @@ struct AncillaryFields
         estimation_t        estimation;
     } entry_t;
 
-    /* Ancillary Field Types */
-    typedef enum {
-        PHOTON_ANC_TYPE     = 0,
-        EXTENT_ANC_TYPE     = 1,
-        ATL08_ANC_TYPE      = 2,
-        ATL06_ANC_TYPE      = 3
-    } type_t;
-
     /* Ancillary Field Record */
     typedef struct {
         uint8_t             anc_type;       // type_t
@@ -128,6 +120,7 @@ struct AncillaryFields
     static void             setValueAsInteger       (field_t* field, int64_t value);
     static double*          getValueAsDouble        (uint8_t* buffer);
     static float*           getValueAsFloat         (uint8_t* buffer);
+    static int64_t*         getValueAsInteger       (uint8_t* buffer);
     static RecordObject*    createFieldArrayRecord  (uint64_t extent_id, vector<field_t>& field_vec);
 };
 

@@ -38,6 +38,8 @@ local orchestrator_url          = cfgtbl["orchestrator"] or os.getenv("ORCHESTRA
 local org_name                  = cfgtbl["cluster"] or os.getenv("CLUSTER")
 local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PROVISIONING_SYSTEM")
 local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
+local container_registry        = cfgtbl["container_registry"] or os.getenv("CONTAINER_REGISTRY")
+local is_public                 = cfgtbl["is_public"] or os.getenv("IS_PUBLIC") or "False"
 
 --------------------------------------------------
 -- System Configuration
@@ -45,6 +47,12 @@ local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
 
 -- Set Environment Version --
 sys.setenvver(environment_version)
+
+-- Set Is Public --
+sys.setispublic(is_public)
+
+-- Set ECluster Name --
+sys.setcluster(org_name)
 
 -- Configure System Message Queue Depth --
 sys.setstddepth(msgq_depth)
@@ -64,6 +72,17 @@ local assets = asset.loaddir(asset_directory)
 
 -- Run IAM Role Authentication Script (identity="iam-role") --
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
+local iam_role_max_wait = 10
+while not aws.csget("iam-role") do
+    iam_role_max_wait = iam_role_max_wait - 1
+    if iam_role_max_wait == 0 then
+        print("Failed to establish IAM role credentials at startup")
+        break
+    else
+        print("Waiting to establish IAM role...")
+        sys.wait(1)
+    end
+end
 
 -- Run Earth Data Authentication Scripts --
 if authenticate_to_nsidc then
@@ -81,6 +100,11 @@ end
 if authenticate_to_podaac then
     local script_parms = {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"}
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("PodaacAuthScript")
+end
+
+-- Configure Container Registry -- 
+if __cre__ then
+   cre.setregistry(container_registry) 
 end
 
 --------------------------------------------------

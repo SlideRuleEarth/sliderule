@@ -14,11 +14,6 @@ local args = {
     default_asset   = "gedi04a",
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     result_rec      = "gedi04arec",
-    index_field     = "footprint.shot_number",
-    lon_field       = "footprint.longitude",
-    lat_field       = "footprint.latitude",
-    time_field      = "footprint.time",
-    height_field    = "footprint.elevation"
 }
 
 local rqst_parms    = gedi.parms(parms)

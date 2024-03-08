@@ -34,8 +34,7 @@ parms = {
     "srt": icesat2.SRT_LAND,
     "cnf": icesat2.CNF_SURFACE_HIGH,
     "len": 40.0,
-    "res": 20.0,
-    "maxi": 1
+    "res": 20.0
 }
 
 # make request

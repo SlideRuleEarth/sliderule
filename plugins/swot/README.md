@@ -10,9 +10,18 @@ The base build environment must be setup as described in the [SlideRule](https:/
 
 Use the [Makefile](Makefile) to build and install the plugin.
 
-For a development version of SlideRule that includes the plugin and is run locally:
+For a development version of SlideRule that supports the plugin and is run locally, first build and install the sliderule server application:
 ```bash
-$ make config-development
+$ make config
+$ make
+$ make install
+```
+
+Then build and install the SWOT plugin:
+```bash
+$ mkdir build
+$ cd build
+$ cmake <path_to_sliderule_repo>/plugins/icesat2 -DCMAKE_BUILD_TYPE=Release
 $ make
 $ make install
 ```

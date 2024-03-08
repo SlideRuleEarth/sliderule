@@ -51,17 +51,17 @@ using std::numeric_limits;
 
 const char* Atl06Reader::elRecType = "atl06srec.elevation";
 const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS},
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                     1,  NULL, NATIVE_FLAGS},
     {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),                   1,  NULL, NATIVE_FLAGS},
     {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                    1,  NULL, NATIVE_FLAGS},
     {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS},
 // land_ice_segments
-    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS},
-    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS},
+    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"atl06_quality_summary",   RecordObject::INT8,     offsetof(elevation_t, atl06_quality_summary),   1,  NULL, NATIVE_FLAGS},
     {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),              1,  NULL, NATIVE_FLAGS},
     {"sigma_geo_h",             RecordObject::FLOAT,    offsetof(elevation_t, sigma_geo_h),             1,  NULL, NATIVE_FLAGS},
@@ -205,15 +205,12 @@ Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, co
     }
     catch(const RunTimeException& e)
     {
-        /* Log Error */
-        mlog(e.level(), "Failed to read global information in resource %s: %s", resource, e.what());
-
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) LuaEndpoint::generateExceptionStatus(RTE_TIMEOUT, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
-        else LuaEndpoint::generateExceptionStatus(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
+        if(e.code() == RTE_TIMEOUT) alert(RTE_TIMEOUT, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
 
         /* Indicate End of Data */
-        if(sendTerminator) outQ->postCopy("", 0);
+        if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
         signalComplete();
     }
 }
@@ -568,7 +565,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                     const char* field_name = parms->atl06_fields->get(i).field.c_str();
 
                     AncillaryFields::field_t field;
-                    field.anc_type = AncillaryFields::ATL06_ANC_TYPE;
+                    field.anc_type = Icesat2Parms::ATL06_ANC_TYPE;
                     field.field_index = i;
                     field.data_type = atl06.anc_data[field_name]->elementType();
                     atl06.anc_data[field_name]->serialize(&field.value[0], segment, 1);
@@ -639,8 +636,7 @@ void* Atl06Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure during processing of resource %s track %d: %s", info->reader->resource, info->track, e.what());
-        LuaEndpoint::generateExceptionStatus(e.code(), e.level(), reader->outQ, &reader->active, "%s: (%s)", e.what(), info->reader->resource);
+        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -660,7 +656,23 @@ void* Atl06Reader::subsettingThread (void* parm)
             mlog(INFO, "Completed processing resource %s", info->reader->resource);
 
             /* Indicate End of Data */
-            if(reader->sendTerminator) reader->outQ->postCopy("", 0);
+            if(reader->sendTerminator)
+            {
+                int status = MsgQ::STATE_TIMEOUT;
+                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
+                {
+                    status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
+                    if(status < 0)
+                    {
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        break;
+                    }
+                    else if(status == MsgQ::STATE_TIMEOUT)
+                    {
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                    }
+                }
+            }
             reader->signalComplete();
         }
     }

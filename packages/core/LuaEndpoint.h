@@ -59,27 +59,13 @@ class LuaEndpoint: public EndpointObject
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const char* EndpointExceptionRecType;
-        static const RecordObject::fieldDef_t EndpointExceptionRecDef[];
-
         static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
         static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
 
-        static const int MAX_RESPONSE_TIME_MS = 5000;
-        static const int MAX_EXCEPTION_TEXT_SIZE = 256;
+        static const int POST_TIMEOUT_MS = 60000;
+        static const int MAX_RESPONSE_TIME_MS = 60000;
         static const char* LUA_RESPONSE_QUEUE;
         static const char* LUA_REQUEST_ID;
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        /* Response Exception Record */
-        typedef struct {
-            int32_t code;
-            int32_t level;
-            char    text[MAX_EXCEPTION_TEXT_SIZE];
-        } response_exception_t;
 
         /*--------------------------------------------------------------------
          * Authenticator Subclass
@@ -110,7 +96,6 @@ class LuaEndpoint: public EndpointObject
 
         static void         init                    (void);
         static int          luaCreate               (lua_State* L);
-        static void         generateExceptionStatus (int code, event_level_t level, Publisher* outq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
     protected:
 

@@ -1,0 +1,22 @@
+# conda env create -f environment.yml
+name: sliderule
+channels:
+  - conda-forge
+dependencies:
+  - geopandas
+  - numpy
+  - pandas
+  - pip
+  - pyarrow
+  - pyproj
+  - pytables
+  - pytest
+  - python
+  - requests
+  - scikit-learn
+  - scipy
+  - setuptools_scm
+  - shapely
+  - tk
+  - xyzservices
+  - sliderule

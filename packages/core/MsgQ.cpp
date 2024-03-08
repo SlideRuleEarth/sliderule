@@ -349,9 +349,7 @@ int Publisher::postRef(void* data, int size, int timeout)
  *----------------------------------------------------------------------------*/
 int Publisher::postCopy(const void* data, int size, int timeout)
 {
-    int status = post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, NULL, 0, timeout);
-    if(status == STATE_OKAY) return size;
-    return status;
+    return post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, NULL, 0, timeout);
 }
 
 /*----------------------------------------------------------------------------
@@ -371,11 +369,7 @@ int Publisher::postCopy(const void* data, int size, int timeout)
 int Publisher::postCopy(const void* data, int size, const void* secondary_data, int secondary_size, int timeout)
 {
     if(size < 0 || secondary_size < 0) return STATE_SIZE_ERROR;
-
-    int status = post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, (void*)secondary_data, secondary_size, timeout);
-
-    if(status == STATE_OKAY) return size + secondary_size;
-    return status;
+    return post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, (void*)secondary_data, secondary_size, timeout);
 }
 
 /*----------------------------------------------------------------------------

@@ -36,7 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "AncillaryFields.h"
 #include "Atl03Reader.h"
 #include "Atl03Indexer.h"
 #include "Atl06Dispatch.h"

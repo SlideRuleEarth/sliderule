@@ -14,6 +14,8 @@
 #           The binaries are sufficient, but pay close attention to the local package versions
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
+#     * conda-lock
+#           The Python base image used for the container runtime environment uses conda-lock to create the conda dependency file
 #
 # To release a version of SlideRule:
 #     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
@@ -61,6 +63,8 @@ PROXY_STAGE_DIR = $(STAGE)/proxy
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
+PYTHON_CONTAINER_STAGE_DIR = $(STAGE)/container-runtime-python
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
 VERSION ?= latest
@@ -75,8 +79,9 @@ ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
+ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
 USERCFG ?=
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 
 CLANG_VER ?= ""
 CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
@@ -89,6 +94,7 @@ DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
 DEBUG_CFG += -DUSE_AWS_PACKAGE=ON
 DEBUG_CFG += -DUSE_CCSDS_PACKAGE=ON
+DEBUG_CFG += -DUSE_CRE_PACKAGE=ON
 DEBUG_CFG += -DUSE_GEO_PACKAGE=ON
 DEBUG_CFG += -DUSE_H5_PACKAGE=ON
 DEBUG_CFG += -DUSE_LEGACY_PACKAGE=ON
@@ -100,6 +106,7 @@ RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += -DINSTALLDIR=$(INSTALL_DIR)
 RELEASE_CFG += -DUSE_ARROW_PACKAGE=ON
 RELEASE_CFG += -DUSE_AWS_PACKAGE=ON
+RELEASE_CFG += -DUSE_CRE_PACKAGE=ON
 RELEASE_CFG += -DUSE_GEO_PACKAGE=ON
 RELEASE_CFG += -DUSE_H5_PACKAGE=ON
 RELEASE_CFG += -DUSE_NETSVC_PACKAGE=ON
@@ -173,7 +180,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(BATHY_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
@@ -190,6 +197,21 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform init
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
+
+container-runtime-python-lock: ## create the lock file for the container runtime environment base python image
+	cd ../python-container && conda-lock -p linux-aarch64 -f environment.yml
+	cd ../python-container && conda-lock render -p linux-aarch64
+
+container-runtime-python-docker: ## create the container runtime environment base python image
+	-rm -Rf $(PYTHON_CONTAINER_STAGE_DIR)
+	mkdir -p $(PYTHON_CONTAINER_STAGE_DIR)
+	cp ../python-container/* $(PYTHON_CONTAINER_STAGE_DIR)
+	cd $(PYTHON_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/python-container:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(VERSION)
+	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(MAJOR_VERSION)
+	
+container-runtime-python-run: ## run the build environment docker container
+	docker run -it -v $(ROOT):/host --rm --name cre $(ECR)/python-container:$(VERSION) python /host/targets/python-container/helloworld.py
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -210,10 +232,19 @@ static-website-docker: ## make the static website docker image; needs VERSION
 static-website-run: ## locally run the static website; needs VERSION
 	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
+static-website-export: ## export static website to local host directory
+	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
+	mkdir -p $(STATIC_WEB_EXPORT_DIR)
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+
+static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
+
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(ECR)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
 
 static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
@@ -301,7 +332,7 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	mkdir -p $(TF_STAGE_DIR)
 	cp terraform/cluster/*.* $(TF_STAGE_DIR)
 	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
-	echo "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
+	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
 
@@ -379,3 +410,6 @@ help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)
+	@echo DOMAIN: $(DOMAIN)	
+	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
+	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)

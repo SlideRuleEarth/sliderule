@@ -56,7 +56,7 @@
  */
 static Publisher* outq;
 
-static RecordObject::fieldDef_t rec_def[] =
+static RecordObject::fieldDef_t eventRecDef[] =
 {
     {"time",    RecordObject::INT64,    offsetof(EventLib::event_t, systime), 1,                        NULL, NATIVE_FLAGS},
     {"tid",     RecordObject::INT64,    offsetof(EventLib::event_t, tid),     1,                        NULL, NATIVE_FLAGS},
@@ -70,11 +70,19 @@ static RecordObject::fieldDef_t rec_def[] =
     {"attr",    RecordObject::STRING,   offsetof(EventLib::event_t, attr),    0,                        NULL, NATIVE_FLAGS}
 };
 
+static RecordObject::fieldDef_t alertRecDef[] = 
+{
+    {"code",    RecordObject::INT32,    offsetof(EventLib::alert_t, code),    1,                        NULL, NATIVE_FLAGS},
+    {"level",   RecordObject::INT32,    offsetof(EventLib::alert_t, level),   1,                        NULL, NATIVE_FLAGS},
+    {"text",    RecordObject::STRING,   offsetof(EventLib::alert_t, text),    EventLib::MAX_ALERT_SIZE, NULL, NATIVE_FLAGS}
+};
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* EventLib::rec_type = "eventrec";
+const char* EventLib::eventRecType = "eventrec";
+const char* EventLib::alertRecType = "exceptrec";
 
 std::atomic<uint32_t> EventLib::trace_id{1};
 Thread::key_t EventLib::trace_key;
@@ -92,8 +100,9 @@ event_level_t EventLib::metric_level;
  *----------------------------------------------------------------------------*/
 void EventLib::init (const char* eventq)
 {
-    /* Define Event Record */
-    RECDEF(rec_type, rec_def, offsetof(event_t, attr) + 1, NULL);
+    /* Define Records */
+    RECDEF(eventRecType, eventRecDef, offsetof(event_t, attr) + 1, NULL);
+    RECDEF(alertRecType, alertRecDef, sizeof(alert_t), "code");
 
     /* Create Thread Global */
     trace_key = Thread::createGlobal();
@@ -330,6 +339,33 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 }
 
 /*----------------------------------------------------------------------------
+ * alertMsg
+ *----------------------------------------------------------------------------*/
+void EventLib::alertMsg (int code, event_level_t level, void* rspsq, bool* active, const char* errmsg, ...)
+{
+    /* Allocate and Initialize Alert Record */
+    RecordObject record(alertRecType);
+    alert_t* alert = reinterpret_cast<alert_t*>(record.getRecordData());
+    alert->code = code;
+    alert->level = (int32_t)level;
+
+    /* Build Message */
+    va_list args;
+    va_start(args, errmsg);
+    int vlen = vsnprintf(alert->text, MAX_ALERT_SIZE - 1, errmsg, args);
+    int attr_size = MAX(MIN(vlen + 1, MAX_ALERT_SIZE), 1);
+    alert->text[attr_size - 1] = '\0';
+    va_end(args);
+
+    /* Generate Corresponding Log Message */
+    mlog(level, "%s", alert->text);
+
+    /* Post Alert Record */
+    Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
+    record.post(rspsq_ptr, 0, active);
+}
+
+/*----------------------------------------------------------------------------
  * generateMetric
  *----------------------------------------------------------------------------*/
 void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subtype_t subtype, double value)
@@ -366,7 +402,7 @@ void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subty
 int EventLib::sendEvent (event_t* event, int attr_size)
 {
     int event_record_size = offsetof(event_t, attr) + attr_size;
-    RecordObject record(rec_type, event_record_size, false);
+    RecordObject record(eventRecType, event_record_size, false);
     event_t* data = (event_t*)record.getRecordData();
     memcpy(data, event, event_record_size);
     return record.post(outq, 0, NULL, false);

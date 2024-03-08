@@ -37,12 +37,13 @@
  ******************************************************************************/
 
 #include "FootprintReader.h"
-#include "GediParms.h"
 #include "Gedi01bReader.h"
 #include "Gedi02aReader.h"
 #include "Gedi03Raster.h"
 #include "Gedi04aReader.h"
 #include "Gedi04bRaster.h"
+#include "GediIODriver.h"
+#include "GediParms.h"
 
 /******************************************************************************
  * PROTOTYPES

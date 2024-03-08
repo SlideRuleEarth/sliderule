@@ -172,3 +172,180 @@ atl03_polygon_subset
 	atl06p:              60.109332 secs
 	atl03sp:             2.847249 secs
 ```
+
+## Metrics
+
+Collected over a three week period starting the week of January 2, 2024, and going to January 22, 2024.
+
+```yaml
+# TYPE num_requests counter
+num_requests 156061
+
+# TYPE num_complete counter
+num_complete 28027
+
+# TYPE num_failures counter
+num_failures 130
+
+# TYPE num_timeouts counter
+num_timeouts 130
+
+# TYPE num_active_locks counter
+num_active_locks 1
+
+# TYPE sliderule_members counter
+sliderule_members 7
+
+# TYPE version_count counter
+version_count 546
+
+# TYPE atl08p_count counter
+atl08p_count 120
+
+# TYPE atl08_count counter
+atl08_count 2255
+
+# TYPE definition_count counter
+definition_count 4448
+
+# TYPE gedi02a_count counter
+gedi02a_count 11
+
+# TYPE h5p_count counter
+h5p_count 6
+
+# TYPE prometheus_count counter
+prometheus_count 422584
+
+# TYPE 0x0a_count counter
+0x0a_count 2
+
+# TYPE atl06_count counter
+atl06_count 18836
+
+# TYPE atl06s_count counter
+atl06s_count 191
+
+# TYPE atl03sp_count counter
+atl03sp_count 544
+
+# TYPE atl06p_count counter
+atl06p_count 2965
+
+# TYPE atl06sp_count counter
+atl06sp_count 5
+
+# TYPE gedi02ap_count counter
+gedi02ap_count 3
+
+# TYPE health_count counter
+health_count 420156
+
+# TYPE gedi01bp_count counter
+gedi01bp_count 1
+
+# TYPE atl03s_count counter
+atl03s_count 6732
+
+# TYPE atl06 gauge
+atl06 117.362336
+
+# TYPE gedi01bp_sum gauge
+gedi01bp_sum 1.003987
+
+# TYPE atl06p gauge
+atl06p 118.393798
+
+# TYPE atl03sp_sum gauge
+atl03sp_sum 100579.779392
+
+# TYPE atl03s_sum gauge
+atl03s_sum 176653.993890
+
+# TYPE atl03s gauge
+atl03s 44.259128
+
+# TYPE prometheus gauge
+prometheus 0.000534
+
+# TYPE atl06sp gauge
+atl06sp 3.145811
+
+# TYPE gedi02ap gauge
+gedi02ap 5.622379
+
+# TYPE atl03sp gauge
+atl03sp 59.389806
+
+# TYPE atl06s_sum gauge
+atl06s_sum 159.399699
+
+# TYPE atl08p gauge
+atl08p 99.660827
+
+# TYPE atl08 gauge
+atl08 3.847016
+
+# TYPE gedi02a_sum gauge
+gedi02a_sum 31.647260
+
+# TYPE gedi01bp gauge
+gedi01bp 1.003987
+
+# TYPE atl06p_sum gauge
+atl06p_sum 13038.757624
+
+# TYPE atl08_sum gauge
+atl08_sum 9114.070914
+
+# TYPE definition gauge
+definition 0.001002
+
+# TYPE health_sum gauge
+health_sum 409.537852
+
+# TYPE 0x0a_sum gauge
+0x0a_sum 0.002649
+
+# TYPE 0x0a gauge
+0x0a 0.000845
+
+# TYPE atl06_sum gauge
+atl06_sum 77645.166217
+
+# TYPE atl06s gauge
+atl06s 1.065392
+
+# TYPE version_sum gauge
+version_sum 1.492095
+
+# TYPE definition_sum gauge
+definition_sum 45.705516
+
+# TYPE atl08p_sum gauge
+atl08p_sum 2793.945123
+
+# TYPE h5p_sum gauge
+h5p_sum 6.316802
+
+# TYPE version gauge
+version 0.001197
+
+# TYPE h5p gauge
+h5p 0.000996
+
+# TYPE gedi02a gauge
+gedi02a 3.529869
+
+# TYPE gedi02ap_sum gauge
+gedi02ap_sum 7.629843
+
+# TYPE prometheus_sum gauge
+prometheus_sum 276.030060
+
+# TYPE atl06sp_sum gauge
+atl06sp_sum 17.284461
+
+# TYPE health gauge
+health 0.000863
+```

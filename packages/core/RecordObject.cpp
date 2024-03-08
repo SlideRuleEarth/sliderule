@@ -986,7 +986,10 @@ RecordObject::valType_t RecordObject::getValueType(const field_t& f)
 RecordObject::recordDefErr_t RecordObject::defineRecord(const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     assert(rec_type);
-    return addDefinition(NULL, rec_type, id_field, data_size, fields, num_fields, max_fields);
+    definition_t* rec_def = NULL;
+    recordDefErr_t status = addDefinition(&rec_def, rec_type, id_field, data_size, fields, num_fields, max_fields);
+    if(status == SUCCESS_DEF) scanDefinition(rec_def, "", rec_type);
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -1038,6 +1041,76 @@ const char* RecordObject::getRecordIdField(const char* rec_type)
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->id_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordIndexField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordIndexField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.index_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordTimeField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordTimeField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.time_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordXField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordXField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.x_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordYField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordYField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.y_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordZField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordZField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.z_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordBatchField
+ *----------------------------------------------------------------------------*/
+const char* RecordObject::getRecordBatchField (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return def->meta.batch_field;
+}
+
+/*----------------------------------------------------------------------------
+ * getRecordMetaFields
+ *----------------------------------------------------------------------------*/
+RecordObject::meta_t* RecordObject::getRecordMetaFields (const char* rec_type)
+{
+    definition_t* def = getDefinition(rec_type);
+    if(def == NULL) return NULL;
+    return &(def->meta);
 }
 
 /*----------------------------------------------------------------------------
@@ -1145,10 +1218,16 @@ unsigned int RecordObject::str2flags (const char* str)
     for(int i = 0; i < flaglist->length(); i++)
     {
         const char* flag = (*flaglist)[i]->c_str();
-        if(StringLib::match(flag, "NATIVE"))    flags = NATIVE_FLAGS;
-        else if(StringLib::match(flag, "LE"))   flags &= ~BIGENDIAN;
-        else if(StringLib::match(flag, "BE"))   flags |= BIGENDIAN;
-        else if(StringLib::match(flag, "PTR"))  flags |= POINTER;
+        if(StringLib::match(flag, "NATIVE"))        flags = NATIVE_FLAGS;
+        else if(StringLib::match(flag, "LE"))       flags &= ~BIGENDIAN;
+        else if(StringLib::match(flag, "BE"))       flags |= BIGENDIAN;
+        else if(StringLib::match(flag, "PTR"))      flags |= POINTER;
+        else if(StringLib::match(flag, "AUX"))      flags |= AUX;
+        else if(StringLib::match(flag, "BATCH"))    flags |= BATCH;
+        else if(StringLib::match(flag, "X_COORD"))  flags |= X_COORD;
+        else if(StringLib::match(flag, "Y_COORD"))  flags |= Y_COORD;
+        else if(StringLib::match(flag, "TIME"))     flags |= TIME;
+        else if(StringLib::match(flag, "INDEX"))    flags |= INDEX;
     }
     delete flaglist;
     return flags;
@@ -1165,8 +1244,13 @@ const char* RecordObject::flags2str (unsigned int flags)
 
     if(flags & BIGENDIAN)   flagss += "BE";
     else                    flagss += "LE";
-
     if(flags & POINTER)     flagss += "|PTR";
+    if(flags & BATCH)       flagss += "|BATCH";
+    if(flags & AUX)         flagss += "|AUX";
+    if(flags & X_COORD)     flagss += "|X";
+    if(flags & Y_COORD)     flagss += "|Y";
+    if(flags & TIME)        flagss += "|T";
+    if(flags & INDEX)       flagss += "|I";
 
     return StringLib::duplicate(flagss.c_str());
 }
@@ -1457,7 +1541,7 @@ RecordObject::RecordObject(void)
 }
 
 /*----------------------------------------------------------------------------
- * addDefinition
+ * getPointedToField
  *
  *  returns pointer to record definition in rec_def
  *----------------------------------------------------------------------------*/
@@ -1501,11 +1585,11 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
 /*----------------------------------------------------------------------------
  * getUserField
  *----------------------------------------------------------------------------*/
-RecordObject::field_t RecordObject::getUserField (definition_t* def, const char* field_name)
+RecordObject::field_t RecordObject::getUserField (definition_t* def, const char* field_name, uint32_t parent_flags)
 {
     assert(field_name);
 
-    field_t field = { INVALID_FIELD, 0, 0, NULL, NATIVE_FLAGS };
+    field_t field = { INVALID_FIELD, 0, 0, NULL, parent_flags };
     long element = -1;
 
     /* Sanity Check Def */
@@ -1583,7 +1667,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
         else
         {
             definition_t* subdef = definitions[field.exttype];
-            field_t subfield = getUserField(subdef, subfield_name);
+            field_t subfield = getUserField(subdef, subfield_name, field.flags);
             subfield.offset += field.offset;
             field = subfield;
         }
@@ -1594,6 +1678,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     }
 
     /* Return Field */
+    field.flags |= parent_flags;
     return field;
 }
 
@@ -1694,6 +1779,43 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 
     /* Return Field and Status */
     return status;
+}
+
+/*----------------------------------------------------------------------------
+* scanDefinition
+*----------------------------------------------------------------------------*/
+void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, const char* rec_type)
+{    
+    /* Get Fields in Record */
+    Dictionary<field_t>* fields = getRecordFields(rec_type);
+    if(fields == NULL)
+    {
+        mlog(CRITICAL, "Unable to scan record type: %s\n", rec_type);
+        return;
+    }
+
+    /* Loop Through Fields in Record */
+    Dictionary<field_t>::Iterator field_iter(*fields);
+    for(int i = 0; i < field_iter.length; i++)
+    {
+        Dictionary<field_t>::kv_t kv = field_iter[i];
+        FString field_name("%s%s%s", field_prefix, strlen(field_prefix) == 0 ? "" : ".", kv.key);
+        const field_t& field = kv.value;
+
+        /* Check for Marked Field */
+        if((field.flags & INDEX)    && (def->meta.index_field == NULL))  def->meta.index_field    = field_name.c_str(true);
+        if((field.flags & TIME)     && (def->meta.time_field == NULL))   def->meta.time_field     = field_name.c_str(true);
+        if((field.flags & X_COORD)  && (def->meta.x_field == NULL))      def->meta.x_field        = field_name.c_str(true);
+        if((field.flags & Y_COORD)  && (def->meta.y_field == NULL))      def->meta.y_field        = field_name.c_str(true);
+        if((field.flags & Z_COORD)  && (def->meta.z_field == NULL))      def->meta.z_field        = field_name.c_str(true);
+        if((field.flags & BATCH)    && (def->meta.batch_field == NULL))  def->meta.batch_field    = field_name.c_str(true);
+
+        /* Recurse for User Fields */
+        if(field.type == USER)
+        {
+            scanDefinition(def, field_name.c_str(), field.exttype);
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------

@@ -47,6 +47,10 @@
 #include "ccsds.h"
 #endif
 
+#ifdef __cre__
+#include "cre.h"
+#endif
+
 #ifdef __geo__
 #include "geo.h"
 #endif
@@ -302,6 +306,10 @@ int main (int argc, char* argv[])
         initccsds();
     #endif
 
+    #ifdef __cre__
+        initcre();
+    #endif
+
     #ifdef __geo__
         initgeo();
     #endif
@@ -377,6 +385,10 @@ int main (int argc, char* argv[])
 
     #ifdef __ccsds__
         deinitccsds();
+    #endif
+
+    #ifdef __cre__
+        deinitcre();
     #endif
 
     #ifdef __aws__

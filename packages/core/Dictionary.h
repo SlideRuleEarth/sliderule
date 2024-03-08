@@ -465,9 +465,9 @@ int Dictionary<T>::getKeys (char*** keys) const
     {
         if(hashTable[i].chain != EMPTY_ENTRY)
         {
-            char* new_key = NULL;
+            const char* new_key = NULL;
             OsApi::dupstr(&new_key, hashTable[i].key);
-            (*keys)[j++] = new_key;
+            (*keys)[j++] = (char*)new_key;
         }
     }
 
@@ -618,7 +618,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
             hashTable[i].prev = other.hashTable[i].prev;
 
             /* copy key */
-            char* new_key = NULL;
+            const char* new_key = NULL;
             OsApi::dupstr(&new_key, other.hashTable[i].key);
             hashTable[i].key = new_key;
         }
@@ -726,7 +726,7 @@ void Dictionary<T>::addNode (const char* key, const T& data, unsigned int hash, 
     }
     else
     {
-        char* tmp_key = NULL;
+        const char* tmp_key = NULL;
         OsApi::dupstr(&tmp_key, key);
         new_key = tmp_key;
     }

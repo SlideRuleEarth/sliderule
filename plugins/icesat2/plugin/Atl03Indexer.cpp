@@ -307,7 +307,7 @@ void* Atl03Indexer::indexerThread (void* parm)
         if(indexer->numComplete == indexer->threadCount)
         {
             /* Indicate End of Data */
-            indexer->outQ->postCopy("", 0);
+            indexer->outQ->postCopy("", 0, SYS_TIMEOUT);
             indexer->signalComplete();
         }
     }

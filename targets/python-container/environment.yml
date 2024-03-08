@@ -1,0 +1,11 @@
+name: sliderule-container-runtime-environment
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - numpy
+  - requests
+  - fiona
+  - geopandas
+  - shapely
+  - pyarrow

@@ -23,6 +23,7 @@ The photon-input parameters allow the user to select an area, a time range, or a
 * ``"poly"``: polygon defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_)
 * ``"raster"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson </web/rtd/user_guide/SlideRule.html#geojson>`_)
 * ``"track"``: reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0)
+* ``"beam"``: list of beam identifiers (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all)
 * ``"rgt"``: reference ground track (defaults to all if not specified)
 * ``"cycle"``: counter of 91-day repeat cycles completed by the mission (defaults to all if not specified)
 * ``"region"``: geographic region for corresponding standard product (defaults to all if not specified)
@@ -82,8 +83,7 @@ To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here i
         "ats": 10.0,
         "cnt": 5,
         "len": 20.0,
-        "res": 20.0,
-        "maxi": 1
+        "res": 20.0
     }
 
 2.3 Photon-extent parameters
@@ -153,11 +153,13 @@ Ancillary data returned from the ``"atl06s"`` and ``"atl06sp"`` APIs come from t
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Ancillary data returned from the ``"atl08"`` and ``"atl08p"`` APIs come from the land_segments group of the ATL08 granules.  The data goes through a series of processing steps before being returned back to the user as per-extent (i.e. variable-length segment) result values.
+
 * When a user requests an ATL08 ancillary field, the ATL08 classifications are automatically enabled with all unclassified photons filtered out (i.e. noise, ground, canopy, and top of canopy are included; unclassified photons are excluded).  If the user is also requesting PhoREAL processing, then noise photons are automatically filtered out as well.  Lastly, if the user manually specifies which ATL08 photon classifications to use, then that manual specification takes precedence and is used.
 * If a user manually specifies that unclassified photons are to be included, the value used for an ancillary field for that photon has all 1's in the binary encoding of that value.  For example, if it is an 8-bit unsigned integer, the value would be 255.  If it is a double-precision floating point, the value would be -nan.
 * Since the ATL08 APIs return per-extent values and not per-photon values, the set of per-photon ancillary field values must be reduced in some way to a single per-extent value to be returned back to the user.  There are currently two options available for how this reduction occurs.
-1. Nearest Neighbor (Mode): the value that appears most often in the extent is selected.  This is the default method.  For example, if a user specifies ``"atl08_fields": ["asr"]`` in their parameters, and the PhoREAL extent consists of mostly two-thirds of one ATL08 segment, and a third of the next ATL08 segment (and if the photons rate is consistent across those two ATL08 segments), then the value returned by the nearest neighbor processing will be the ATL08 land_segment value from the first ATL08 segment.
-2. Interpolation (Average): the value that is the average of all the per-photon values provided.  This is only performed when the user appends a "%" to the end of the field's name in the field list parameter.  For example, if a user specifies ``"atl08_fields": ["asr%"]`` in their parameters, then the returned result is the average of all of the "asr" values in the PhoREAL extent.  Note that the GeoDataFrame returned to the user will include the "%" in the column name for this particular field - that is so a user can request both nearest neighbor and interpolated values for the same field in a single request.
+
+  1. Nearest Neighbor (Mode): the value that appears most often in the extent is selected.  This is the default method.  For example, if a user specifies ``"atl08_fields": ["asr"]`` in their parameters, and the PhoREAL extent consists of mostly two-thirds of one ATL08 segment, and a third of the next ATL08 segment (and if the photons rate is consistent across those two ATL08 segments), then the value returned by the nearest neighbor processing will be the ATL08 land_segment value from the first ATL08 segment.
+  2. Interpolation (Average): the value that is the average of all the per-photon values provided.  This is only performed when the user appends a "%" to the end of the field's name in the field list parameter.  For example, if a user specifies ``"atl08_fields": ["asr%"]`` in their parameters, then the returned result is the average of all of the "asr" values in the PhoREAL extent.  Note that the GeoDataFrame returned to the user will include the "%" in the column name for this particular field - that is so a user can request both nearest neighbor and interpolated values for the same field in a single request.
 
 
 2.6 PhoREAL parameters
@@ -340,6 +342,7 @@ The elevation GeoDataFrame has the following columns:
 - ``"pflags"``: processing flags (0x1 - spread too short; 0x2 - too few photons; 0x4 - max iterations reached)
 - ``"rgt"``: reference ground track
 - ``"cycle"``: cycle
+- ``"region"``: region of source granule
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
 - ``"x_atc"``: along track distance from the equator in meters
@@ -364,6 +367,7 @@ The vegetation GeoDataFrame has the following columns:
 - ``"segment_id"``: segment ID of first ATL03 segment in result
 - ``"rgt"``: reference ground track
 - ``"cycle"``: cycle
+- ``"region"``: region of source granule
 - ``"spot"``: laser spot 1 to 6
 - ``"gt"``: ground track (10: GT1L, 20: GT1R, 30: GT2L, 40: GT2R, 50: GT3L, 60: GT3R)
 - ``"ph_count"``: total number of photons used by PhoREAL algorithm for this extent
@@ -464,8 +468,7 @@ atl06
             "ats": 20.0,
             "cnt": 10,
             "len": 40.0,
-            "res": 20.0,
-            "maxi": 1
+            "res": 20.0
         }
 
         # Build ATL06 Request

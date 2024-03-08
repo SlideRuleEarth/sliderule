@@ -97,7 +97,7 @@ const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :sampler(<raster>, <raster_key>, <outq name>, <rec_type>, <index_key>, <lon_key>, <lat_key>)
+ * luaCreate - :sampler(<raster>, <raster_key>, <outq name>, <rec_type>, <use_time>)
  *----------------------------------------------------------------------------*/
 int RasterSampler::luaCreate (lua_State* L)
 {
@@ -109,14 +109,10 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* raster_key  = getLuaString(L, 2);
         const char* outq_name   = getLuaString(L, 3);
         const char* rec_type    = getLuaString(L, 4);
-        const char* index_key   = getLuaString(L, 5);
-        const char* lon_key     = getLuaString(L, 6);
-        const char* lat_key     = getLuaString(L, 7);
-        const char* time_key    = getLuaString(L, 8, true, NULL);
-        const char* height_key  = getLuaString(L, 9, true, NULL);
+        bool        use_time    = getLuaBoolean(L, 5, true, false);
 
         /* Create Dispatch */
-        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, index_key, lon_key, lat_key, time_key, height_key));
+        return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, use_time));
     }
     catch(const RunTimeException& e)
     {
@@ -153,83 +149,53 @@ void RasterSampler::deinit (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* raster_key,
-                              const char* outq_name, const char* rec_type,
-                              const char* index_key, const char* lon_key, const char* lat_key,
-                              const char* time_key, const char* height_key):
+                              const char* outq_name, const char* rec_type, bool use_time):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_raster);
     assert(outq_name);
-    assert(lon_key);
-    assert(lat_key);
+
+    /* Get Record Meta Data */
+    RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
+    if(rec_meta == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
+
+    /* Determine Record Batch Size */
+    RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(rec_type, rec_meta->batch_field);
+    if(batch_rec_field.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get batch size <%s> for %s", rec_meta->batch_field, rec_type);
+    batchRecordSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
+
+    /* Determine Record Size */
+    recordSizeBytes = RecordObject::getRecordDataSize(rec_type) + batchRecordSizeBytes;
+    if(recordSizeBytes <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get record size for %s", rec_type);
+
+    /* Get Index Field (e.g. Extent Id) */
+    indexField = RecordObject::getDefinedField(rec_type, rec_meta->index_field);
+    if(indexField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get index field <%s> for %s", rec_meta->index_field, rec_type);
+
+    /* Get Longitude Field */
+    lonField = RecordObject::getDefinedField(rec_type, rec_meta->x_field);
+    if(lonField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get longitude field <%s> for %s", rec_meta->x_field, rec_type);
+
+    /* Get Latitude Field */
+    latField = RecordObject::getDefinedField(rec_type, rec_meta->y_field);
+    if(latField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get latitude field <%s> for %s", rec_meta->y_field, rec_type);
+
+    /* Get Time Field */
+    timeField.type = RecordObject::INVALID_FIELD;
+    if(use_time)
+    {
+        timeField = RecordObject::getDefinedField(rec_type, rec_meta->time_field);
+        if(timeField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get time field <%s> for %s", rec_meta->time_field, rec_type);
+    }
+
+    /* Get Height Field 
+     *  code below lets it be invalid if no height field is present */
+    heightField = RecordObject::getDefinedField(rec_type, rec_meta->z_field);
 
     /* Initialize Class Data */
     raster = _raster;
     rasterKey = StringLib::duplicate(raster_key);
     outQ = new Publisher(outq_name);
-
-    /* Determine Record Batch Size */
-    batchRecordSizeBytes = 0;
-    Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
-    Dictionary<RecordObject::field_t>::Iterator field_iter(*fields);
-    for(int i = 0; i < field_iter.length; i++)
-    {
-        if(field_iter[i].value.flags & RecordObject::BATCH)
-        {
-            batchRecordSizeBytes = RecordObject::getRecordDataSize(field_iter[i].value.exttype);
-            break;
-        }
-    }
-
-    /* Determine Record Size */
-    recordSizeBytes = RecordObject::getRecordDataSize(rec_type) + batchRecordSizeBytes;
-    if(recordSizeBytes <= 0)
-    {
-        mlog(CRITICAL, "Failed to get size of record: %s", rec_type);
-    }
-
-    /* Get Index Field (e.g. Extent Id) */
-    indexField = RecordObject::getDefinedField(rec_type, index_key);
-    if(indexField.type == RecordObject::INVALID_FIELD)
-    {
-        mlog(CRITICAL, "Failed to get field %s from record type: %s", index_key, rec_type);
-    }
-
-    /* Get Longitude Field */
-    lonField = RecordObject::getDefinedField(rec_type, lon_key);
-    if(lonField.type == RecordObject::INVALID_FIELD)
-    {
-        mlog(CRITICAL, "Failed to get field %s from record type: %s", lon_key, rec_type);
-    }
-
-    /* Get Latitude Field */
-    latField = RecordObject::getDefinedField(rec_type, lat_key);
-    if(latField.type == RecordObject::INVALID_FIELD)
-    {
-        mlog(CRITICAL, "Failed to get field %s from record type: %s", lat_key, rec_type);
-    }
-
-    /* Get Time Field */
-    timeField.type = RecordObject::INVALID_FIELD;
-    if(time_key)
-    {
-        timeField = RecordObject::getDefinedField(rec_type, time_key);
-        if(timeField.type == RecordObject::INVALID_FIELD)
-        {
-            mlog(CRITICAL, "Failed to get field %s from record type: %s", time_key, rec_type);
-        }
-    }
-
-    /* Get Height Field */
-    heightField.type = RecordObject::INVALID_FIELD;
-    if(height_key)
-    {
-        heightField = RecordObject::getDefinedField(rec_type, height_key);
-        if(heightField.type == RecordObject::INVALID_FIELD)
-        {
-            mlog(CRITICAL, "Failed to get field %s from record type: %s", height_key, rec_type);
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -320,9 +286,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         /* Generate Error Messages */
         if(err & SS_THREADS_LIMIT_ERROR)
         {
-            LuaEndpoint::generateExceptionStatus(RTE_ERROR, CRITICAL, outQ, NULL,
-                                                "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
-                                                rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
+            alert(RTE_ERROR, CRITICAL, outQ, NULL,
+                    "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
+                    rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
         }
 
         if(raster->hasZonalStats())

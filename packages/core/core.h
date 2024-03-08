@@ -38,6 +38,7 @@
 
 #include "OsApi.h"
 
+#include "AncillaryFields.h"
 #include "Asset.h"
 #include "AssetIndex.h"
 #include "CaptureDispatch.h"

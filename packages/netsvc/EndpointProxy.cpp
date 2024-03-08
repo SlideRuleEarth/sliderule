@@ -250,7 +250,7 @@ void* EndpointProxy::collatorThread (void* parm)
                     status = proxy->rqstPub->postCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        LuaEndpoint::generateExceptionStatus(RTE_ERROR, ERROR, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
+                        alert(RTE_ERROR, ERROR, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
                         break;
                     }
                 }
@@ -288,7 +288,16 @@ void* EndpointProxy::collatorThread (void* parm)
     /* Send Terminator */
     if(proxy->sendTerminator)
     {
-        proxy->outQ->postCopy("", 0);
+        int status = MsgQ::STATE_TIMEOUT;
+        while(proxy->active && (status == MsgQ::STATE_TIMEOUT))
+        {
+            status = proxy->outQ->postCopy("", 0, SYS_TIMEOUT);
+            if(status < 0)
+            {
+                mlog(CRITICAL, "Failed (%d) to post terminator", status);
+                break;
+            }
+        }
     }
 
     /* Signal Complete */
@@ -350,7 +359,7 @@ void* EndpointProxy::proxyThread (void* parm)
             /* Post Status */
             int code = valid ? RTE_INFO : RTE_ERROR;
             event_level_t level = valid ? INFO : ERROR;
-            LuaEndpoint::generateExceptionStatus(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+            alert(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
                                                     valid ? "Successfully completed" : "Failed to complete",
                                                     current_resource + 1, proxy->numResources, resource);
         }
