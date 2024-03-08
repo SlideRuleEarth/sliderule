@@ -32,7 +32,7 @@ Version description of the v4.3.1 release of ICESat-2 SlideRule.
 
 * [407da7d](https://github.com/ICESat2-SlideRule/sliderule/commit/407da7d6bedf27d898bc0f5939321af6686b3005) - fixed bug in ABoVE classifier code that was causing out of bounds memory access
 
-* [e94161a](https://github.com/ICESat2-SlideRule/sliderule/commit/e94161ae0506df39e66001341fe293e8dde1270a) - fixed bug in GeoParquet geometry code where only the first latitude,longitude of each batch was being used for the batch; it caused the data to stack up on top of eacho ther and look decimated
+* [e94161a](https://github.com/ICESat2-SlideRule/sliderule/commit/e94161ae0506df39e66001341fe293e8dde1270a) - fixed bug in GeoParquet geometry code where only the first latitude,longitude of each batch was being used for the batch; it caused the data to stack up on top of each other and look decimated
 
 * [368](https://github.com/ICESat2-SlideRule/sliderule/issues/368) - fixed bug in PhoREAL implementation ancillary field interpolation
 
