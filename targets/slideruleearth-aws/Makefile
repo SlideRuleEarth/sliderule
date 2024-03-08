@@ -211,7 +211,7 @@ container-runtime-python-docker: ## create the container runtime environment bas
 	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(MAJOR_VERSION)
 	
 container-runtime-python-run: ## run the build environment docker container
-	docker run -it -v $(ROOT):/host --rm --name cre $(ECR)/python-container:$(VERSION) python /host/targets/python-container/helloworld.py
+	docker run -it --rm --name cre $(ECR)/python-container:$(VERSION) python /usr/local/etc/helloworld.py
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
