@@ -50,6 +50,9 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const char* ContainerRunner::HOST_SHARED_DIRECTORY = "/usr/local/share/applications";
+const char* ContainerRunner::CONTAINER_SCRIPT_RUNTIME_DIRECTORY = "/usr/local/etc";
+
 const char* ContainerRunner::REGISTRY = NULL;
 
 /******************************************************************************
@@ -155,8 +158,8 @@ void* ContainerRunner::controlThread (void* parm)
 
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
-    FString host_config("\"HostConfig\": { \"Binds\": [\"%s:%s\"] }", "/usr/local/share/applications", "/applications");
-    FString cmd("\"Cmd\": [\"python\", \"/applications/%s\"]}", cr->parms->script);
+    FString host_config("\"HostConfig\": { \"Binds\": [\"%s:%s\"] }", HOST_SHARED_DIRECTORY, HOST_SHARED_DIRECTORY);
+    FString cmd("\"Cmd\": [\"python\", \"%s/%s\"]}", CONTAINER_SCRIPT_RUNTIME_DIRECTORY, cr->parms->script);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
     /* Create Container */
