@@ -86,9 +86,6 @@ Options include:
    -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=[ON|OFF] enable reading attribute fields of H5 files (performance penalty)
                                        default: OFF
 
-   -DENABLE_APACHE_ARROW_10_COMPAT=[ON|OFF] compile-time support for Apache Arrow v10 library
-                                       default: OFF
-
    -DENABLE_TRACING=[ON|OFF]           compile in trace points
                                        default: OFF
 
