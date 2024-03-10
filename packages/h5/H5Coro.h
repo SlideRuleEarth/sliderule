@@ -49,13 +49,6 @@
 #define H5CORO_MAXIMUM_NAME_SIZE 208 // 104
 #endif
 
-// suppress compiler warnings
-#   if defined(__clang__) || defined(__GNUC__) && __GNUC__ >= 7 && !defined(__INTEL_COMPILER)
-#       define H5_ATTR_FALLTHROUGH __attribute__((fallthrough));
-#   else
-#       define H5_ATTR_FALLTHROUGH /* FALLTHROUGH */
-#   endif
-
 /******************************************************************************
  * HDF5 FUTURE CLASS
  ******************************************************************************/
