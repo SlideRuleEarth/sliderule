@@ -54,7 +54,9 @@
 #define H5_ERROR_CHECKING true
 #endif
 
-// TODO: address macros, args not safe 
+/******************************************************************************
+ * MACROS REDEFINED
+ ******************************************************************************/
 #define H5_lookup3_rot(x, k) (((x) << (k)) ^ ((x) >> (32 - (k))))
 #define H5_lookup3_mix(a, b, c)                                                                              \
     do {                                                                                                     \
@@ -96,22 +98,11 @@
         c -= H5_lookup3_rot(b, 24);                                                                          \
     } while (0)
 
-#define uint32Decode(p, i)                                                                                   \
-    do {                                                                                                     \
-        (i) = (uint32_t)(*(p)&0xff);                                                                         \
-        (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 8);                                                                 \
-        (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 16);                                                                \
-        (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 24);                                                                \
-        (p)++;                                                                                               \
-    } while (0)
-
 /* Compute the # of bytes required to store an offset into a given buffer size */
 #define H5HF_SIZEOF_OFFSET_BITS(b) (((b) + 7) / 8)
-/* Check if n is a power of 2, used in log2_of2 */
-#define POWER_OF_TWO(n) (!(n & (n - 1)) && n)
+
+/* Offset Len spinning off bit size */
+#define H5HF_SIZEOF_OFFSET_LEN(l)  H5HF_SIZEOF_OFFSET_BITS(H5FileBuffer::log2_of2((unsigned)(l)))
 
 /******************************************************************************
  * B-TREE STRUCTS
@@ -3248,12 +3239,9 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
  * log2of2 - helper replicating H5VM_log2_of2
  *----------------------------------------------------------------------------*/
 unsigned H5FileBuffer::log2_of2(uint32_t n) {
-    assert(POWER_OF_TWO(n));
+    assert((!(n & (n - 1)) && n));
     return (unsigned)(MultiplyDeBruijnBitPosition[(n * (uint32_t)0x077CB531UL) >> 27]);
 }
-
-/* Offset Len spinning off bit size */
-#define H5HF_SIZEOF_OFFSET_LEN(l)  H5HF_SIZEOF_OFFSET_BITS(H5FileBuffer::log2_of2((unsigned)(l)))
 
 /*----------------------------------------------------------------------------
  * checksumLookup3 - helper for jenkins hash
@@ -3264,7 +3252,7 @@ uint32_t H5FileBuffer::checksumLookup3(const void *key, size_t length, uint32_t 
 
     /* Initialize set up */
     const uint8_t *k = (const uint8_t *)key;
-    uint32_t       a, b, c = 0; 
+    uint32_t a, b, c = 0; 
 
     /* Set up the internal state */
     a = b = c = 0xdeadbeef + ((uint32_t)length) + initval;
@@ -3423,7 +3411,7 @@ void H5FileBuffer::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     /* TODO: fix reading fields, DO NOT USE DECODE MACRO */
     btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
     size_t H5G_DENSE_FHEAP_ID_LEN = 7;
-    // uint32Decode(raw, nrecord->hash); <-- REPLACE
+    // TODO FIX
     raw += 4;
     memcpy(nrecord->id, raw, H5G_DENSE_FHEAP_ID_LEN);
 }
