@@ -55,50 +55,6 @@
 #endif
 
 /******************************************************************************
- * MACROS REDEFINED
- ******************************************************************************/
-#define H5_lookup3_rot(x, k) (((x) << (k)) ^ ((x) >> (32 - (k))))
-#define H5_lookup3_mix(a, b, c)                                                                              \
-    do {                                                                                                     \
-        a -= c;                                                                                              \
-        a ^= H5_lookup3_rot(c, 4);                                                                           \
-        c += b;                                                                                              \
-        b -= a;                                                                                              \
-        b ^= H5_lookup3_rot(a, 6);                                                                           \
-        a += c;                                                                                              \
-        c -= b;                                                                                              \
-        c ^= H5_lookup3_rot(b, 8);                                                                           \
-        b += a;                                                                                              \
-        a -= c;                                                                                              \
-        a ^= H5_lookup3_rot(c, 16);                                                                          \
-        c += b;                                                                                              \
-        b -= a;                                                                                              \
-        b ^= H5_lookup3_rot(a, 19);                                                                          \
-        a += c;                                                                                              \
-        c -= b;                                                                                              \
-        c ^= H5_lookup3_rot(b, 4);                                                                           \
-        b += a;                                                                                              \
-    } while (0)
-
-#define H5_lookup3_final(a, b, c)                                                                            \
-    do {                                                                                                     \
-        c ^= b;                                                                                              \
-        c -= H5_lookup3_rot(b, 14);                                                                          \
-        a ^= c;                                                                                              \
-        a -= H5_lookup3_rot(c, 11);                                                                          \
-        b ^= a;                                                                                              \
-        b -= H5_lookup3_rot(a, 25);                                                                          \
-        c ^= b;                                                                                              \
-        c -= H5_lookup3_rot(b, 16);                                                                          \
-        a ^= c;                                                                                              \
-        a -= H5_lookup3_rot(c, 4);                                                                           \
-        b ^= a;                                                                                              \
-        b -= H5_lookup3_rot(a, 14);                                                                          \
-        c ^= b;                                                                                              \
-        c -= H5_lookup3_rot(b, 24);                                                                          \
-    } while (0)
-
-/******************************************************************************
  * B-TREE STRUCTS
  ******************************************************************************/
 
@@ -3254,6 +3210,51 @@ uint16_t H5FileBuffer::H5HF_SIZEOF_OFFSET_LEN(int l) {
 
 }
 
+uint32_t H5FileBuffer::H5_lookup3_rot(uint32_t x, uint32_t k) {
+    // #define H5_lookup3_rot(x, k) (((x) << (k)) ^ ((x) >> (32 - (k))))
+    return (((x) << (k)) ^ ((x) >> (32 - (k))));
+
+}
+
+void H5FileBuffer::H5_lookup3_mix(uint32_t* a,uint32_t* b, uint32_t* c) {
+    *a -= *c;                                                                                              
+    *a ^= H5_lookup3_rot(*c, 4);                                                                           
+    *c += *b;                                                                                              
+    *b -= *a;                                                                                              
+    *b ^= H5_lookup3_rot(*a, 6);                                                                           
+    *a += *c;                                                                                              
+    *c -= *b;                                                                                              
+    *c ^= H5_lookup3_rot(*b, 8);                                                                           
+    *b += *a;                                                                                              
+    *a -= *c;                                                                                              
+    *a ^= H5_lookup3_rot(*c, 16);                                                                          
+    *c += *b;                                                                                              
+    *b -= *a;                                                                                              
+    *b ^= H5_lookup3_rot(*a, 19);                                                                          
+    *a += *c;                                                                                              
+    *c -= *b;                                                                                              
+    *c ^= H5_lookup3_rot(*b, 4);                                                                           
+    *b += *a;
+}
+
+void H5FileBuffer::H5_lookup3_final(uint32_t* a, uint32_t* b, uint32_t* c) {
+    *c ^= *b;                                                                                              
+    *c -= H5_lookup3_rot(*b, 14);                                                                          
+    *a ^= *c;                                                                                              
+    *a -= H5_lookup3_rot(*c, 11);                                                                          
+    *b ^= *a;                                                                                              
+    *b -= H5_lookup3_rot(*a, 25);                                                                          
+    *c ^= *b;                                                                                              
+    *c -= H5_lookup3_rot(*b, 16);                                                                          
+    *a ^= *c;                                                                                              
+    *a -= H5_lookup3_rot(*c, 4);                                                                           
+    *b ^= *a;                                                                                              
+    *b -= H5_lookup3_rot(*a, 14);                                                                          
+    *c ^= *b;                                                                                              
+    *c -= H5_lookup3_rot(*b, 24);
+
+}
+
 /*----------------------------------------------------------------------------
  * checksumLookup3 - helper for jenkins hash
  *----------------------------------------------------------------------------*/
@@ -3282,7 +3283,7 @@ uint32_t H5FileBuffer::checksumLookup3(const void *key, size_t length, uint32_t 
         c += ((uint32_t)k[9]) << 8;
         c += ((uint32_t)k[10]) << 16;
         c += ((uint32_t)k[11]) << 24;
-        H5_lookup3_mix(a, b, c);
+        H5_lookup3_mix(&a, &b, &c);
         length -= 12;
         k += 12;
     }
@@ -3321,7 +3322,7 @@ uint32_t H5FileBuffer::checksumLookup3(const void *key, size_t length, uint32_t 
             assert(0 && "This should never be executed!");
     }
 
-    H5_lookup3_final(a, b, c);
+    H5_lookup3_final(&a, &b, &c);
 
     return c;
 

@@ -563,6 +563,9 @@ class H5FileBuffer
         unsigned            log2_of2(uint32_t n);
         uint16_t            H5HF_SIZEOF_OFFSET_BITS(uint16_t b);
         uint16_t            H5HF_SIZEOF_OFFSET_LEN(int l);
+        uint32_t            H5_lookup3_rot(uint32_t x, uint32_t k);
+        void                H5_lookup3_mix(uint32_t* a,uint32_t* b, uint32_t* c);
+        void                H5_lookup3_final(uint32_t* a, uint32_t* b, uint32_t* c);
 
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
