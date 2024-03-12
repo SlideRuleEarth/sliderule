@@ -561,6 +561,8 @@ class H5FileBuffer
         void                varDecode(uint8_t* p, int n, uint8_t l);
         unsigned            log2_gen(uint64_t n);
         unsigned            log2_of2(uint32_t n);
+        uint16_t            H5HF_SIZEOF_OFFSET_BITS(uint16_t b);
+        uint16_t            H5HF_SIZEOF_OFFSET_LEN(int l);
 
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);

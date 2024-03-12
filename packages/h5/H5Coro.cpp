@@ -98,12 +98,6 @@
         c -= H5_lookup3_rot(b, 24);                                                                          \
     } while (0)
 
-/* Compute the # of bytes required to store an offset into a given buffer size */
-#define H5HF_SIZEOF_OFFSET_BITS(b) (((b) + 7) / 8)
-
-/* Offset Len spinning off bit size */
-#define H5HF_SIZEOF_OFFSET_LEN(l)  H5HF_SIZEOF_OFFSET_BITS(H5FileBuffer::log2_of2((unsigned)(l)))
-
 /******************************************************************************
  * B-TREE STRUCTS
  ******************************************************************************/
@@ -3241,6 +3235,23 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
 unsigned H5FileBuffer::log2_of2(uint32_t n) {
     assert((!(n & (n - 1)) && n));
     return (unsigned)(MultiplyDeBruijnBitPosition[(n * (uint32_t)0x077CB531UL) >> 27]);
+}
+
+/*----------------------------------------------------------------------------
+ * H5HF_SIZEOF_OFFSET_BITS
+ *----------------------------------------------------------------------------*/
+uint16_t H5FileBuffer::H5HF_SIZEOF_OFFSET_BITS(uint16_t b) {
+    /* Compute the # of bytes required to store an offset into a given buffer size - taken from h5 macro */
+    return (((b) + 7) / 8);
+}
+
+/*----------------------------------------------------------------------------
+ * H5HF_SIZEOF_OFFSET_LEN
+ *----------------------------------------------------------------------------*/
+uint16_t H5FileBuffer::H5HF_SIZEOF_OFFSET_LEN(int l) {
+    /* Offset Len spinning off bit size - taken from h5 macro */
+    return H5HF_SIZEOF_OFFSET_BITS((uint16_t) log2_of2((unsigned) l));
+
 }
 
 /*----------------------------------------------------------------------------
