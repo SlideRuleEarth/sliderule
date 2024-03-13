@@ -206,8 +206,8 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(RTE_TIMEOUT, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
-        else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", resource, e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -1493,7 +1493,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
                 catch(const RunTimeException& e)
                 {
-                    alert(e.code(), e.level(), reader->outQ, &reader->active, "Error posting results for resource %s track %d: %s", info->reader->resource, info->track, e.what());
+                    alert(e.level(), e.code(), reader->outQ, &reader->active, "Error posting results for resource %s track %d: %s", info->reader->resource, info->track, e.what());
                 }
 
                 /* Clean Up Records */
@@ -1513,7 +1513,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
     }
 
     /* Handle Global Reader Updates */

@@ -250,7 +250,7 @@ void* EndpointProxy::collatorThread (void* parm)
                     status = proxy->rqstPub->postCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        alert(RTE_ERROR, ERROR, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
+                        alert(ERROR, RTE_ERROR, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
                         break;
                     }
                 }
@@ -359,7 +359,7 @@ void* EndpointProxy::proxyThread (void* parm)
             /* Post Status */
             int code = valid ? RTE_INFO : RTE_ERROR;
             event_level_t level = valid ? INFO : ERROR;
-            alert(code, level, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+            alert(level, code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
                                                     valid ? "Successfully completed" : "Failed to complete",
                                                     current_resource + 1, proxy->numResources, resource);
         }

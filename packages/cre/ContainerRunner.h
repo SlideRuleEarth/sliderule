@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "MsgQ.h"
 #include "LuaObject.h"
 #include "CreParms.h"
 
@@ -59,6 +60,8 @@ class ContainerRunner: public LuaObject
         static const int RESULT_SIGNAL = 0;
         static const int DEFAULT_TIMEOUT = 600;
 
+        static const char* INPUT_CONTROL_FILENAME;
+        static const char* OUTPUT_CONTROL_FILENAME;
         static const char* HOST_SHARED_DIRECTORY;
         static const char* CONTAINER_SCRIPT_RUNTIME_DIRECTORY;
 
@@ -72,6 +75,9 @@ class ContainerRunner: public LuaObject
         static const char*  getRegistry         (void);
         static int          luaList             (lua_State* L);
         static int          luaSetRegistry      (lua_State* L);
+        static int          luaSettings         (lua_State* L);
+        static int          luaCreateUnique     (lua_State* L);
+        static int          luaDeleteUnique     (lua_State* L);
 
     private:
 
@@ -83,7 +89,8 @@ class ContainerRunner: public LuaObject
 
         bool            active;
         Thread*         controlPid;
-        const char*     result;
+        Publisher*      outQ;
+        const char*     uniqueSharedDirectory;
         Cond            resultLock;
         CreParms*       parms;
 
@@ -91,12 +98,9 @@ class ContainerRunner: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ContainerRunner     (lua_State* L, CreParms* _parms);
+                        ContainerRunner     (lua_State* L, CreParms* _parms, const char* unique_shared_directory, const char* outq_name);
         virtual         ~ContainerRunner    (void);
-
         static void*    controlThread       (void* parm);
-
-        static int      luaResult           (lua_State* L);
 };
 
 #endif  /* __container_runner__ */

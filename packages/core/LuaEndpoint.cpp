@@ -268,6 +268,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
     {
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
+        engine->setString(LUA_REQUEST_ID, request->id);
         bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
         /* Send Response */

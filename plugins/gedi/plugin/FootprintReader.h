@@ -263,8 +263,8 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(RTE_TIMEOUT, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
-        else alert(RTE_RESOURCE_DOES_NOT_EXIST, e.level(), outQ, &active, "%s: (%s)", e.what(), resource);
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "%s: (%s)", e.what(), resource);
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "%s: (%s)", e.what(), resource);
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);

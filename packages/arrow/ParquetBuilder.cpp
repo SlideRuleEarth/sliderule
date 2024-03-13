@@ -463,7 +463,7 @@ void* ParquetBuilder::builderThread(void* parm)
                     bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
                     if(!status)
                     {
-                        alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
+                        alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
                         builder->active = false; // breaks out of loop
                     }
                     builder->recordBatch.clear();
@@ -488,7 +488,7 @@ void* ParquetBuilder::builderThread(void* parm)
 
     /* Process Remaining Records */
     bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
-    if(!status) alert(RTE_ERROR, INFO, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
+    if(!status) alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
     builder->recordBatch.clear();
 
     /* Send File to User */
@@ -561,7 +561,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
     if(status)
     {
         /* Send Initial Status */
-        alert(RTE_INFO, INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
+        alert(INFO, RTE_INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
 
         try
         {
@@ -569,7 +569,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
             int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
 
             /* Send Successful Status */
-            alert(RTE_INFO, INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
+            alert(INFO, RTE_INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
 
             /* Send Remote Record */
             RecordObject remote_record(remoteRecType);
@@ -586,7 +586,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
             status = false;
 
             /* Send Error Status */
-            alert(RTE_ERROR, e.level(), outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
+            alert(e.level(), RTE_ERROR, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
         }
     }
 
@@ -597,7 +597,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
     return status;
 
     #else
-    alert(RTE_ERROR, CRITICAL, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
+    alert(CRITICAL, RTE_ERROR, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
     return false;
     #endif
 }

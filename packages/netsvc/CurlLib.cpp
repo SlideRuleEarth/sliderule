@@ -125,6 +125,10 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
             curl_easy_setopt(curl, CURLOPT_READDATA, &rqst);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
         }
+        else if(verb == EndpointObject::DELETE)
+        {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        }
 
         /* Add Headers */
         struct curl_slist* hdr_slist = NULL;

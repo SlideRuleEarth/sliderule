@@ -286,7 +286,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         /* Generate Error Messages */
         if(err & SS_THREADS_LIMIT_ERROR)
         {
-            alert(RTE_ERROR, CRITICAL, outQ, NULL,
+            alert(CRITICAL, RTE_ERROR, outQ, NULL,
                     "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
                     rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
         }

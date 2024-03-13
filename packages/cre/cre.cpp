@@ -55,6 +55,9 @@ int cre_open (lua_State* L)
         {"container",   ContainerRunner::luaCreate},
         {"list",        ContainerRunner::luaList},
         {"setregistry", ContainerRunner::luaSetRegistry},
+        {"settings",    ContainerRunner::luaSettings},
+        {"createunique",ContainerRunner::luaCreateUnique},
+        {"deleteunique",ContainerRunner::luaDeleteUnique},
         {"parms",       CreParms::luaCreate},
         {NULL,          NULL}
     };

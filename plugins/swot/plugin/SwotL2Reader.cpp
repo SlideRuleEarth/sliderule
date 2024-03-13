@@ -178,7 +178,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     else
     {
         /* Report Empty Region */
-        alert(RTE_INFO, INFO, outQ, &active, "Empty spatial region for %s", resource);
+        alert(INFO, RTE_INFO, outQ, &active, "Empty spatial region for %s", resource);
 
         /* Terminate */
         threadCount = 0;
@@ -479,7 +479,7 @@ void* SwotL2Reader::varThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on %s/%s: %s", reader->resource, info->variable_name, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on %s/%s: %s", reader->resource, info->variable_name, e.what());
     }
 
     /* Update Statistics */
