@@ -3190,6 +3190,13 @@ bool H5FileBuffer::isTypeSharedAttrs (unsigned type_id) {
  *----------------------------------------------------------------------------*/
 unsigned H5FileBuffer::log2_of2(uint32_t n) {
     assert((!(n & (n - 1)) && n));
+
+    static constexpr const unsigned MultiplyDeBruijnBitPosition[32] = {
+        0,  1,  28, 2,  29, 14, 24, 3,  30, 22, 20,
+        15, 25, 17, 4,  8,  31, 27, 13, 23, 21, 19,
+        16, 7,  26, 12, 18, 6,  11, 5,  10, 9
+    };
+
     return (unsigned)(MultiplyDeBruijnBitPosition[(n * (uint32_t)0x077CB531UL) >> 27]);
 }
 
@@ -3210,12 +3217,18 @@ uint16_t H5FileBuffer::H5HF_SIZEOF_OFFSET_LEN(int l) {
 
 }
 
+/*----------------------------------------------------------------------------
+ * H5_lookup3_rot
+ *----------------------------------------------------------------------------*/
 uint32_t H5FileBuffer::H5_lookup3_rot(uint32_t x, uint32_t k) {
     // #define H5_lookup3_rot(x, k) (((x) << (k)) ^ ((x) >> (32 - (k))))
     return (((x) << (k)) ^ ((x) >> (32 - (k))));
 
 }
 
+/*----------------------------------------------------------------------------
+ * H5_lookup3_mix
+ *----------------------------------------------------------------------------*/
 void H5FileBuffer::H5_lookup3_mix(uint32_t* a,uint32_t* b, uint32_t* c) {
     *a -= *c;                                                                                              
     *a ^= H5_lookup3_rot(*c, 4);                                                                           
@@ -3237,6 +3250,9 @@ void H5FileBuffer::H5_lookup3_mix(uint32_t* a,uint32_t* b, uint32_t* c) {
     *b += *a;
 }
 
+/*----------------------------------------------------------------------------
+ * H5_lookup3_final
+ *----------------------------------------------------------------------------*/
 void H5FileBuffer::H5_lookup3_final(uint32_t* a, uint32_t* b, uint32_t* c) {
     *c ^= *b;                                                                                              
     *c -= H5_lookup3_rot(*b, 14);                                                                          
@@ -3397,6 +3413,19 @@ unsigned H5FileBuffer::log2_gen(uint64_t n) {
     /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
     unsigned r; // r will be log2(n)
     unsigned int t, tt, ttt; // temporaries
+
+    static constexpr const unsigned char LogTable256[] = {
+        /* clang-clang-format off */
+        0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+        /* clang-clang-format on */
+    };
 
     if ((ttt = (unsigned)(n >> 32)))
         if ((tt = (unsigned)(n >> 48)))
