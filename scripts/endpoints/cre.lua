@@ -20,6 +20,10 @@ local parms = rqst["parms"]
 
 -- initialize result
 local result = ""
+local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
+local duration = 0
+local interval = 10 < timeout and 10 or timeout -- seconds
+local cre_runner = nil
 
 -- get settings
 local shared_directory, input_ctrl_filename, output_ctrl_filename = cre.settings()
@@ -29,7 +33,7 @@ local output_ctrl_file = string.format("%s/%s", unique_shared_directory, output_
 print(input_ctrl_file, output_ctrl_file)
 
 -- create unique shared directory
-if not cre.createunique(rqstid) then goto cleanup end
+if not cre.createunique(unique_shared_directory) then goto cleanup end
 
 -- write input file
 do
@@ -43,7 +47,7 @@ end
 -- execute container
 do
     local cre_parms = cre.parms(parms)
-    local cre_runner = cre.container(cre_parms, unique_shared_directory)
+    cre_runner = cre.container(cre_parms, unique_shared_directory)
 end
 
 -- read output file
@@ -56,6 +60,19 @@ end
 
 -- clean up --
 ::cleanup::
-cre.deleteunique(rqstid)
+
+-- Wait Until Container Completion --
+while not cre_runner:waiton(interval * 1000) do
+    duration = duration + interval
+    -- Check for Timeout --
+    if timeout >= 0 and duration >= timeout then
+        print(string.format("container <%s> request timed-out after %d seconds", parms["image"], duration))
+        do return false end
+    end
+    print(string.format("container <%s> continuing to run (after %d seconds)", parms["image"], duration))
+end
+
+-- delete unique shared directory
+cre.deleteunique(unique_shared_directory)
 
 return result

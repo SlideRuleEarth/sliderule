@@ -153,16 +153,15 @@ int ContainerRunner::luaSettings (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreateUnique - createunique()
+ * luaCreateUnique - createunique(<unique shared directory>)
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaCreateUnique (lua_State* L)
 {
     bool status = false;
     try
     {
-        const char* unique_id = getLuaString(L, 1);
-        FString unique_shared_directory("%s/%s", HOST_SHARED_DIRECTORY, unique_id);
-        if(!std::filesystem::create_directory(unique_shared_directory.c_str()))
+        const char* unique_shared_directory = getLuaString(L, 1);
+        if(!std::filesystem::create_directory(unique_shared_directory))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create unique shared directory: %s", strerror(errno));
         }
@@ -182,16 +181,15 @@ int ContainerRunner::luaCreateUnique (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaDeleteUnique - deleteunique()
+ * luaDeleteUnique - deleteunique(<unique shared directory>)
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaDeleteUnique (lua_State* L)
 {
     bool status = false;
     try
     {
-        const char* unique_id = getLuaString(L, 1);
-        FString unique_shared_directory("%s/%s", HOST_SHARED_DIRECTORY, unique_id);
-        if(!std::filesystem::remove_all(unique_shared_directory.c_str()))
+        const char* unique_shared_directory = getLuaString(L, 1);
+        if(!std::filesystem::remove_all(unique_shared_directory))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to delete unique shared directory: %s", strerror(errno));
         }
@@ -289,7 +287,7 @@ void* ContainerRunner::controlThread (void* parm)
 
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
-    FString host_config("\"HostConfig\": { \"Binds\": [\"%s:%s\"] }", cr->uniqueSharedDirectory, HOST_SHARED_DIRECTORY);
+    FString host_config("\"HostConfig\": { \"Binds\": [\"%s:%s\"], \"AutoRemove\": true }", cr->uniqueSharedDirectory, cr->uniqueSharedDirectory);
     FString cmd("\"Cmd\": [\"python\", \"%s/%s\"]}", CONTAINER_SCRIPT_RUNTIME_DIRECTORY, cr->parms->script);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
@@ -321,7 +319,7 @@ void* ContainerRunner::controlThread (void* parm)
         const char* wait_response = NULL;
         long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, NULL, unix_socket);
         if(wait_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", cr->parms->image, wait_http_code, wait_response);
-        else mlog(INFO, "Waited for container <%s> with Id %s", cr->parms->image, container_id);
+        else mlog(INFO, "Waited for and auto-removed container <%s> with Id %s", cr->parms->image, container_id);
         delete [] wait_response;
 
         /* (If Necessary) Force Stop Container */
@@ -333,15 +331,15 @@ void* ContainerRunner::controlThread (void* parm)
             if(stop_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
             else mlog(INFO, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
             delete [] stop_response;
-        }
 
-        /* Remove Container */
-        FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
-        const char* remove_response = NULL;
-        long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, NULL, unix_socket);
-        if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
-        else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
-        delete [] remove_response;
+            /* Remove Container */
+            FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
+            const char* remove_response = NULL;
+            long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, NULL, unix_socket);
+            if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
+            else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
+            delete [] remove_response;
+        }
 
         /* Get Result */
         if(cr->outQ)
