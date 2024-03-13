@@ -1190,6 +1190,8 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         pos += bytes_read;
     }
 
+    // IDEA: Move if dense search on into here 
+
     /* Return Bytes Read */
     uint64_t ending_position = pos;
     return ending_position - starting_position;
@@ -3089,10 +3091,11 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     }
 
     /* Follow Heap Address if Provided */
-
     uint64_t address_snapshot = metaData.address;
     uint64_t heap_addr_snapshot = heap_address;
-    heap_info_t *heap_info_dense = (heap_info_t*) malloc(sizeof(heap_info_t));
+    heap_info_t* heap_info_dense = (heap_info_t*) malloc(sizeof(heap_info_t));
+    // TODO: 
+    // heap_info_t heap_info_dense; where references must be passed via &heap_info_dense as arg
 
     /* Wrap with general exceptions to avoid memory leaks */
     try {
@@ -3229,45 +3232,45 @@ uint32_t H5FileBuffer::H5_lookup3_rot(uint32_t x, uint32_t k) {
 /*----------------------------------------------------------------------------
  * H5_lookup3_mix
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::H5_lookup3_mix(uint32_t* a,uint32_t* b, uint32_t* c) {
-    *a -= *c;                                                                                              
-    *a ^= H5_lookup3_rot(*c, 4);                                                                           
-    *c += *b;                                                                                              
-    *b -= *a;                                                                                              
-    *b ^= H5_lookup3_rot(*a, 6);                                                                           
-    *a += *c;                                                                                              
-    *c -= *b;                                                                                              
-    *c ^= H5_lookup3_rot(*b, 8);                                                                           
-    *b += *a;                                                                                              
-    *a -= *c;                                                                                              
-    *a ^= H5_lookup3_rot(*c, 16);                                                                          
-    *c += *b;                                                                                              
-    *b -= *a;                                                                                              
-    *b ^= H5_lookup3_rot(*a, 19);                                                                          
-    *a += *c;                                                                                              
-    *c -= *b;                                                                                              
-    *c ^= H5_lookup3_rot(*b, 4);                                                                           
-    *b += *a;
+void H5FileBuffer::H5_lookup3_mix(uint32_t& a,uint32_t& b, uint32_t& c) {
+    a -= c;                                                                                              
+    a ^= H5_lookup3_rot(c, 4);                                                                           
+    c += b;                                                                                              
+    b -= a;                                                                                              
+    b ^= H5_lookup3_rot(a, 6);                                                                           
+    a += c;                                                                                              
+    c -= b;                                                                                              
+    c ^= H5_lookup3_rot(b, 8);                                                                           
+    b += a;                                                                                              
+    a -= c;                                                                                              
+    a ^= H5_lookup3_rot(c, 16);                                                                          
+    c += b;                                                                                              
+    b -= a;                                                                                              
+    b ^= H5_lookup3_rot(a, 19);                                                                          
+    a += c;                                                                                              
+    c -= b;                                                                                              
+    c ^= H5_lookup3_rot(b, 4);                                                                           
+    b += a;
 }
 
 /*----------------------------------------------------------------------------
  * H5_lookup3_final
  *----------------------------------------------------------------------------*/
-void H5FileBuffer::H5_lookup3_final(uint32_t* a, uint32_t* b, uint32_t* c) {
-    *c ^= *b;                                                                                              
-    *c -= H5_lookup3_rot(*b, 14);                                                                          
-    *a ^= *c;                                                                                              
-    *a -= H5_lookup3_rot(*c, 11);                                                                          
-    *b ^= *a;                                                                                              
-    *b -= H5_lookup3_rot(*a, 25);                                                                          
-    *c ^= *b;                                                                                              
-    *c -= H5_lookup3_rot(*b, 16);                                                                          
-    *a ^= *c;                                                                                              
-    *a -= H5_lookup3_rot(*c, 4);                                                                           
-    *b ^= *a;                                                                                              
-    *b -= H5_lookup3_rot(*a, 14);                                                                          
-    *c ^= *b;                                                                                              
-    *c -= H5_lookup3_rot(*b, 24);
+void H5FileBuffer::H5_lookup3_final(uint32_t& a, uint32_t& b, uint32_t& c) {
+    c ^= b;                                                                                              
+    c -= H5_lookup3_rot(b, 14);                                                                          
+    a ^= c;                                                                                              
+    a -= H5_lookup3_rot(c, 11);                                                                          
+    b ^= a;                                                                                              
+    b -= H5_lookup3_rot(a, 25);                                                                          
+    c ^= b;                                                                                              
+    c -= H5_lookup3_rot(b, 16);                                                                          
+    a ^= c;                                                                                              
+    a -= H5_lookup3_rot(c, 4);                                                                           
+    b ^= a;                                                                                              
+    b -= H5_lookup3_rot(a, 14);                                                                          
+    c ^= b;                                                                                              
+    c -= H5_lookup3_rot(b, 24);
 
 }
 
@@ -3299,7 +3302,7 @@ uint32_t H5FileBuffer::checksumLookup3(const void *key, size_t length, uint32_t 
         c += ((uint32_t)k[9]) << 8;
         c += ((uint32_t)k[10]) << 16;
         c += ((uint32_t)k[11]) << 24;
-        H5_lookup3_mix(&a, &b, &c);
+        H5_lookup3_mix(a, b, c);
         length -= 12;
         k += 12;
     }
@@ -3338,7 +3341,7 @@ uint32_t H5FileBuffer::checksumLookup3(const void *key, size_t length, uint32_t 
             assert(0 && "This should never be executed!");
     }
 
-    H5_lookup3_final(&a, &b, &c);
+    H5_lookup3_final(a, b, c);
 
     return c;
 
