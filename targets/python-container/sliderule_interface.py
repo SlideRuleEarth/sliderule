@@ -43,7 +43,7 @@ HOST_SHARED_DIRECTORY = "/usr/local/share/applications"
 def get_input_files():
     input_files = []
     try:
-        with open(os.join(HOST_SHARED_DIRECTORY, INPUT_CONTROL_FILENAME), 'r') as file:
+        with open(os.path.join(HOST_SHARED_DIRECTORY, INPUT_CONTROL_FILENAME), 'r') as file:
             data = json.load(file)
             input_files = data["input_files"]
     except Exception as e:
@@ -62,8 +62,8 @@ def get_output_directory():
 def set_output_files(output_files=[]):
     try:
         data = {"output_files": output_files}
-        with open(os.join(HOST_SHARED_DIRECTORY, OUTPUT_CONTROL_FILENAME), 'w') as file:
-            json.dump(a, file)
+        with open(os.path.join(HOST_SHARED_DIRECTORY, OUTPUT_CONTROL_FILENAME), 'w') as file:
+            json.dump(data, file)
     except Exception as e:
         print(f'Failed to set output files: {e}')
 

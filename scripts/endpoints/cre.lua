@@ -19,7 +19,7 @@ local rqst  = json.decode(arg[1])
 local parms = rqst["parms"]
 
 -- initialize result
-local result = ""
+local result = "{}"
 local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 local duration = 0
 local interval = 10 < timeout and 10 or timeout -- seconds
@@ -30,7 +30,6 @@ local shared_directory, input_ctrl_filename, output_ctrl_filename = cre.settings
 local unique_shared_directory = string.format("%s/%s", shared_directory, rqstid)
 local input_ctrl_file = string.format("%s/%s", unique_shared_directory, input_ctrl_filename)
 local output_ctrl_file = string.format("%s/%s", unique_shared_directory, output_ctrl_filename)
-print(input_ctrl_file, output_ctrl_file)
 
 -- create unique shared directory
 if not cre.createunique(unique_shared_directory) then goto cleanup end
@@ -54,7 +53,7 @@ end
 do
     local output_file = io.open(output_ctrl_file, "r")
     if not output_file then goto cleanup end
-    local output_parms = json.decode(output_file:read())
+    result = json.decode(output_file:read())
     output_file:close()
 end
 

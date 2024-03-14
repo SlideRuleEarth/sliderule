@@ -287,7 +287,7 @@ void* ContainerRunner::controlThread (void* parm)
 
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
-    FString host_config("\"HostConfig\": { \"Binds\": [\"%s:%s\"], \"AutoRemove\": true }", cr->uniqueSharedDirectory, cr->uniqueSharedDirectory);
+    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->uniqueSharedDirectory, HOST_SHARED_DIRECTORY);
     FString cmd("\"Cmd\": [\"python\", \"%s/%s\"]}", CONTAINER_SCRIPT_RUNTIME_DIRECTORY, cr->parms->script);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
@@ -319,7 +319,7 @@ void* ContainerRunner::controlThread (void* parm)
         const char* wait_response = NULL;
         long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, NULL, unix_socket);
         if(wait_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", cr->parms->image, wait_http_code, wait_response);
-        else mlog(INFO, "Waited for and auto-removed container <%s> with Id %s", cr->parms->image, container_id);
+        else mlog(INFO, "Waited for container <%s> with Id %s", cr->parms->image, container_id);
         delete [] wait_response;
 
         /* (If Necessary) Force Stop Container */
@@ -331,15 +331,24 @@ void* ContainerRunner::controlThread (void* parm)
             if(stop_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
             else mlog(INFO, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
             delete [] stop_response;
-
-            /* Remove Container */
-            FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
-            const char* remove_response = NULL;
-            long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, NULL, unix_socket);
-            if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
-            else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
-            delete [] remove_response;
         }
+
+        /* Get Logs for Container */
+        FString log_url("http://localhost/%s/containers/%s/logs?stdout=1&stderr=1", api_version, container_id);
+        const char* log_response = NULL;
+        int log_response_size = 0;
+        long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, NULL, unix_socket);
+        if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", cr->parms->image, log_http_code, log_response);
+        else cr->processContainerLogs(log_response, log_response_size, container_id);
+        delete [] log_response;
+
+        /* Remove Container */
+        FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
+        const char* remove_response = NULL;
+        long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, NULL, unix_socket);
+        if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
+        else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
+        delete [] remove_response;
 
         /* Get Result */
         if(cr->outQ)
@@ -356,4 +365,55 @@ void* ContainerRunner::controlThread (void* parm)
     cr->signalComplete();
 
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * controlThread
+ *----------------------------------------------------------------------------*/
+void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size, const char* id)
+{
+    char id_str[8];
+    StringLib::copy(id_str, id, 8);
+
+    int buffer_index = 0;
+    while(buffer_index < buffer_size)
+    {
+        /* Check Truncation */
+        if(buffer_index > (buffer_size - 8))
+        {
+            mlog(CRITICAL, "%s - truncated container log response at %d of %d", id_str, buffer_index, buffer_size);
+            break;
+        }
+
+        /* Get Stdout vs. Stderr */
+        int pipe = buffer[buffer_index];
+        buffer_index += 4;
+
+        /* Get Message Length */
+        uint32_t message_length = buffer[buffer_index++];
+        message_length <<= 8;
+        message_length |= buffer[buffer_index++];
+        message_length <<= 8;
+        message_length |= buffer[buffer_index++];
+        message_length <<= 8;
+        message_length |= buffer[buffer_index++];
+
+        /* Get Message */
+        int log_message_length = MIN(EventLib::MAX_ATTR_SIZE, message_length);
+        char* message = new char [log_message_length + 1];
+        StringLib::copy(message, &buffer[buffer_index], log_message_length + 1);
+        buffer_index += message_length;
+
+        /* Determine Log Level */
+        event_level_t lvl;
+        if      (pipe == 1) lvl = INFO;
+        else if (pipe == 2) lvl = ERROR;
+        else                lvl = CRITICAL;
+
+        /* Log Message */
+        mlog(lvl, "%s - %s", id_str, message);
+
+        /* Clean Up */
+        delete [] message;
+    }
 }

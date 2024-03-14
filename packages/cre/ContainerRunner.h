@@ -98,9 +98,10 @@ class ContainerRunner: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ContainerRunner     (lua_State* L, CreParms* _parms, const char* unique_shared_directory, const char* outq_name);
-        virtual         ~ContainerRunner    (void);
-        static void*    controlThread       (void* parm);
+                        ContainerRunner         (lua_State* L, CreParms* _parms, const char* unique_shared_directory, const char* outq_name);
+        virtual         ~ContainerRunner        (void);
+        static void*    controlThread           (void* parm);
+        void            processContainerLogs    (const char* buffer, int buffer_size, const char* id);
 };
 
 #endif  /* __container_runner__ */
