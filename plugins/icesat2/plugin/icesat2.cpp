@@ -126,6 +126,7 @@ void initicesat2 (void)
     /* Initialize Modules */
     Atl03Reader::init();
     Atl03Indexer::init();
+    Atl03TableBuilder::init();
     Atl06Dispatch::init();
     Atl06Reader::init();
     Atl08Dispatch::init();

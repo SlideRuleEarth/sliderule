@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, University of Washington
+ * Copyright (c) 2023, University of Texas
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the University of Washington nor the names of its
+ * 3. Neither the name of the University of Texas nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF TEXAS AND CONTRIBUTORS
  * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF TEXAS OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
@@ -29,40 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __bathy_parms__
+#define __bathy_parms__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl03Reader.h"
-#include "Atl03Indexer.h"
-#include "Atl03TableBuilder.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "BathyParms.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
+#include "OsApi.h"
+#include "LuaObject.h"
 #include "Icesat2Parms.h"
-#include "MeritRaster.h"
-
-#ifdef WITH_UNITTESTS
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
 
 /******************************************************************************
- * PROTOTYPES
+ * REQUEST PARAMETERS
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
-}
+class BathyParms: public Icesat2Parms
+{
+    public:
 
-#endif  /* __icesat2_plugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const char* PH_IN_EXTENT;
+        static const char* MAX_ALONG_TRACK_SPREAD;
 
+        static const int DEFAULT_PH_IN_EXTENT = 8192;
+        static const double DEFAULT_MAX_ALONG_TRACK_SPREAD;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int  luaCreate       (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        int         ph_in_extent;
+        double      max_along_track_spread;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                    BathyParms      (lua_State* L, int index);
+                    ~BathyParms     (void);
+
+        void        cleanup         (void) const;
+};
+
+#endif  /* __bathy_parms__ */

@@ -45,9 +45,11 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03TableBuilder.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl08Dispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Icesat2Parms.cpp
@@ -88,9 +90,11 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03TableBuilder.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl08Dispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyParms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.h

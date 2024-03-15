@@ -51,7 +51,6 @@ GEDI_BUILD_DIR = $(BUILD)/gedi
 USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
 OPENDATA_BUILD_DIR = $(BUILD)/opendata
 SWOT_BUILD_DIR = $(BUILD)/swot
-BATHY_BUILD_DIR = $(BUILD)/bathy
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
@@ -131,7 +130,6 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(USGS3DEP_BUILD_DIR)
 	mkdir -p $(OPENDATA_BUILD_DIR)
 	mkdir -p $(SWOT_BUILD_DIR)
-	mkdir -p $(BATHY_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
 	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
@@ -143,7 +141,6 @@ config-debug: prep ## configure the server for running locally with debug symbol
 	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/usgs3dep
 	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/opendata
 	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/swot
-	cd $(BATHY_BUILD_DIR)     && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/../sliderule-bathy
 
 config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
@@ -155,7 +152,6 @@ config-release: prep ## configure server to run a release version locally
 	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/usgs3dep
 	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/opendata
 	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
-	cd $(BATHY_BUILD_DIR)     && cmake $(RELEASE_CFG) $(ROOT)/../sliderule-bathy
 
 sliderule: ## build the server using the local configuration
 	make -j4 -C $(SLIDERULE_BUILD_DIR)
@@ -176,8 +172,6 @@ sliderule: ## build the server using the local configuration
 	make -C $(OPENDATA_BUILD_DIR) install
 	make -j4 -C $(SWOT_BUILD_DIR)
 	make -C $(SWOT_BUILD_DIR) install
-	make -j4 -C $(BATHY_BUILD_DIR)
-	make -C $(BATHY_BUILD_DIR) install
 
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
