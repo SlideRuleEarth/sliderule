@@ -311,7 +311,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         else
         {
             /* Unable to Perform cURL Call */
-            mlog(ERROR, "Unable to perform cRUL call on %s: %s", url, curl_easy_strerror(res));
+            mlog(ERROR, "Unable to perform cURL call on %s: %s", url, curl_easy_strerror(res));
             http_code = EndpointObject::Service_Unavailable;
         }
 

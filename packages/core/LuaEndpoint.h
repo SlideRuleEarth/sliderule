@@ -103,7 +103,7 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEndpoint     (lua_State* L, double normal_mem_thresh, double stream_mem_thresh, event_level_t lvl);
+                            LuaEndpoint     (lua_State* L, double normal_mem_thresh, double stream_mem_thresh);
         virtual             ~LuaEndpoint    (void);
 
         static void*        requestThread   (void* parm);
@@ -121,7 +121,6 @@ class LuaEndpoint: public EndpointObject
 
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
-        event_level_t       logLevel;
         Authenticator*      authenticator;
 };
 

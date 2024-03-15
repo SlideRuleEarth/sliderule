@@ -462,8 +462,11 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                     else
                     {
                         /* Request Failed */
-                        StringLib::printify((char*)info.buffer, info.index);
-                        mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
+                        if(info.index > 0)
+                        {
+                            StringLib::printify((char*)info.buffer, info.index);
+                            mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
+                        }
                         mlog(CRITICAL, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
                     }
 

@@ -762,7 +762,7 @@ int StringLib::printify (char* buffer, int size)
             buffer[i] = '.';
         }
     }
-    buffer[size - 1] = '\0';
+    if(size > 0) buffer[size - 1] = '\0';
     return replacements;
 }
 

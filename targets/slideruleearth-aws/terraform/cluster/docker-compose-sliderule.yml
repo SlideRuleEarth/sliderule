@@ -24,7 +24,7 @@ services:
       - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
     healthcheck:
-      test: curl -X GET -d "{}" http://localhost:10081/probe/health || exit 1
+      test: curl -X GET -d "{}" http://localhost:9081/source/health || exit 1
       interval: 30s
       timeout: 10s
       retries: 1
