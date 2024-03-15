@@ -3,7 +3,7 @@ services:
   sliderule:
     image: ${SLIDERULE_IMAGE}
     network_mode: "host"
-    restart: unless-stopped
+    restart: always
     pull_policy: if_not_present
     entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
     stdin_open: true # docker run -i

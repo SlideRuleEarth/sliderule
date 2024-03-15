@@ -3,7 +3,7 @@ services:
   monitor:
     image: ${MONITOR_IMAGE}
     network_mode: "host"
-    restart: unless-stopped
+    restart: always
     pull_policy: if_not_present
     entrypoint: /usr/local/etc/docker-entrypoint.sh
     stdin_open: true # docker run -i
@@ -11,7 +11,7 @@ services:
   proxy:
     image: ${PROXY_IMAGE}
     network_mode: "host"
-    restart: unless-stopped
+    restart: always
     pull_policy: if_not_present
     stdin_open: true # docker run -i
     tty: true # docker run -t
@@ -26,7 +26,7 @@ services:
   website:
     image: ${STATIC_WEBSITE_IMAGE}
     network_mode: "host"
-    restart: unless-stopped
+    restart: always
     pull_policy: if_not_present
     stdin_open: true # docker run -i
     tty: true # docker run -t
