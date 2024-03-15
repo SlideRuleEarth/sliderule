@@ -3091,7 +3091,6 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Follow Heap Address if Provided */
     uint64_t address_snapshot = metaData.address;
     uint64_t heap_addr_snapshot = heap_address;
-    // heap_info_t* heap_info_dense = (heap_info_t*) malloc(sizeof(heap_info_t));
     heap_info_t heap_info_dense;
 
     /* Wrap with general exceptions to avoid memory leaks */
@@ -3110,12 +3109,8 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
             }
         #endif
     } catch (const RunTimeException& e) {
-        // free(heap_info_dense);
         throw RunTimeException(CRITICAL, RTE_ERROR, "DENSE ATTR READ FAILURE, FREE ALLOCS");
     }
-
-    /* Free heap info when complete */
-    // free(heap_info_dense);
 
     /* Return Bytes Read */
     uint64_t ending_position = pos;
@@ -3156,17 +3151,6 @@ void H5FileBuffer::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, c
 
     /* openBTreeV2 - populates header info and allocates btree space */
     openBTreeV2(&bt2_hdr, &root_node_ptr, name_bt2_addr, heap_info_ptr, &udata, &attr_exists, &dtable);
-
-    /* findBTreeV2 - attempt to locate record with matching name */
-    // findBTreeV2(&bt2_hdr, &udata, &attr_exists);
-
-    // free(bt2_hdr.node_info);
-    // free(bt2_hdr.nat_off);
-    // free(bt2_hdr.dtable->row_block_size);
-    // free(bt2_hdr.dtable->row_block_off);
-    // free(bt2_hdr.dtable->row_tot_dblock_free);
-    // free(bt2_hdr.dtable->row_max_dblock_free);
-    // free(bt2_hdr.dtable);
 
     if (!attr_exists) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
@@ -3680,15 +3664,12 @@ void H5FileBuffer::fheapLocate_Managed(btree2_hdr_t* hdr_og, heap_info_t* hdr, u
     else
     {
         /* Indirect Block Navigation */
-        uint64_t* ents = (uint64_t*) malloc((size_t)(hdr->curr_num_rows * hdr->table_width)* sizeof(uint64_t)); // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
+        uint64_t ents[(size_t)hdr->curr_num_rows * hdr->table_width]; // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
         unsigned entry; // entry of block
         
         /* Search for direct block using double table and offset */
         man_dblockLocate(hdr_og, hdr, obj_off, ents, &entry); 
         dblock_addr = ents[entry];
-
-        /* Release when complete */
-        free(ents);
 
     }
 
@@ -3830,14 +3811,12 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     /* Signature check */
     if(signature != H5_V2TREE_SIGNATURE_LE)
     {
-        free(hdr);
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
     }
     /* Version check */
     uint8_t version = (uint8_t) readField(1, &pos);
     if(version != 0)
     {
-        free(hdr);
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
     }
     /* Record type extraction */
@@ -3866,7 +3845,6 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         }
 
     /* Allocate array of node info structs */
-    // hdr->node_info = (btree2_node_info_t*)malloc((hdr->depth + 1) * sizeof(btree2_node_info_t));
     btree2_node_info_t info_arr[hdr->depth + 1];
     hdr->node_info = info_arr;
 
@@ -3874,14 +3852,11 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     unsigned int H5B2_METADATA_PREFIX_SIZE = 10; // H5B2_LEAF == H5B2_METADATA_PREFIX_SIZE  == (unsigned) 10, see hdf5 src macros
     size_t sz_max_nrec = (((hdr->node_size) - H5B2_METADATA_PREFIX_SIZE) / (hdr->rrec_size));  
 
-    // assert(sz_max_nrec <= std::numeric_limits<unsigned int>::max());
-
     if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "sz_max_nrec exceeds unsigned rep limit: %zu", sz_max_nrec); // == H5_CHECKED_ASSIGN, see hdf5 src
     }
     else {
         hdr->node_info[0].max_nrec = (unsigned) sz_max_nrec;
-        // assert(hdr->node_info[0].max_nrec != 0);
     }
 
     hdr->node_info[0].split_nrec = (hdr->node_info[0].max_nrec * hdr->split_percent) / 100;
@@ -3890,9 +3865,8 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     hdr->node_info[0].cum_max_nrec_size = 0;
 
     /* Allocate array of pointers to internal node native keys */
-    // hdr->nat_off = (size_t *) malloc(((size_t)hdr->node_info[0].max_nrec) * sizeof(size_t));
-
     // size_t nat_off_array[ (size_t)hdr->node_info[0].max_nrec];
+
     std::vector<size_t> nat_off_array(hdr->node_info[0].max_nrec);
     hdr->nat_off = nat_off_array.data(); //nat_off_array;
 
@@ -3946,9 +3920,6 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     }
 
     /* Initiate Double Table */
-    // hdr->dtable = (dtable_t*) malloc(sizeof(dtable_t));
-
-    // dtable_t dt_curr;
     hdr->dtable = dt_curr;
 
     hdr->dtable->start_bits = log2_of2((uint32_t)heap_info_ptr->starting_blk_size);
@@ -3959,16 +3930,12 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     hdr->dtable->num_id_first_row = (uint64_t) (heap_info_ptr->starting_blk_size * heap_info_ptr->table_width);
     hdr->dtable->max_dir_blk_off_size = H5HF_SIZEOF_OFFSET_LEN(heap_info_ptr->max_dblk_size);
 
-    // hdr->dtable->row_block_size = (uint64_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
     uint64_t row_block_arr[hdr->dtable->max_root_rows];
     hdr->dtable->row_block_size = row_block_arr;
-    // hdr->dtable->row_block_off = (uint64_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
     uint64_t row_off_arr[hdr->dtable->max_root_rows];
     hdr->dtable->row_block_off = row_off_arr;
-    // hdr->dtable->row_tot_dblock_free = (uint64_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
     uint64_t row_tot_free_arr[hdr->dtable->max_root_rows];
     hdr->dtable->row_tot_dblock_free = row_tot_free_arr;
-    // hdr->dtable->row_max_dblock_free = (size_t *) malloc(hdr->dtable->max_root_rows * sizeof(uint64_t));
     uint64_t row_max_free_arr[hdr->dtable->max_root_rows];
     hdr->dtable->row_max_dblock_free = row_max_free_arr;
 
@@ -4033,11 +4000,6 @@ void H5FileBuffer::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* h
     internal->nrec = curr_node_ptr->node_nrec; // assume internal reflected in current ptr
     internal->depth = hdr->depth;
     internal->parent = hdr->parent;
-
-    /* Allocate space for the native keys in memory */
-    internal->int_native = (uint8_t *)malloc((size_t)(hdr->rrec_size)*(internal->nrec));
-    /* Allocate space for the node pointers in memory - num ptrs = num records + 1 */
-    internal->node_ptrs  = (btree2_node_ptr_t *)malloc(sizeof(btree2_node_ptr_t) * ((unsigned)(internal->nrec + 1))) ;
 
     /* Deserialize records*/
     native = internal->int_native;
@@ -4134,7 +4096,6 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
 
     /* Allocate space for the native keys in memory & set num records */
     leaf->nrec = curr_node_ptr->node_nrec;
-    leaf->leaf_native = (uint8_t *) calloc((size_t)(leaf->nrec), (size_t)(hdr->nrec_size));
     
     /* Deserialize records*/
     native = leaf->leaf_native;
@@ -4188,7 +4149,12 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
     curr_pos = H5B2_POS_ROOT;
      
     /* Init internal */
-    btree2_internal_t *internal = (btree2_internal_t *) std::calloc(1, sizeof(btree2_internal_t));
+    btree2_internal_t internal;
+    uint8_t int_nat_arr[(size_t)(hdr->rrec_size * curr_node_ptr->node_nrec)];
+    internal.int_native = int_nat_arr;
+    btree2_node_ptr_t node_ptrs_arr[(unsigned)(curr_node_ptr->node_nrec + 1)];
+    internal.node_ptrs = node_ptrs_arr;
+
     btree2_node_ptr_t next_node_ptr;
 
     while (depth > 0) {
@@ -4197,17 +4163,17 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
 
         /* INTERNAL NODE SET UP - Write into internal */
         uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
-        openInternalNode(internal, hdr, internal_pos, curr_node_ptr); // internal set with all info for locate record
+        openInternalNode(&internal, hdr, internal_pos, curr_node_ptr); // internal set with all info for locate record
 
         /* LOCATE RECORD - via type compare method */
-        locateRecordBTreeV2(hdr, internal->nrec, hdr->nat_off, internal->int_native, udata, &idx, &cmp);
+        locateRecordBTreeV2(hdr, internal.nrec, hdr->nat_off, internal.int_native, udata, &idx, &cmp);
 
         if (cmp > 0) {
             idx++;
         }
         if (cmp != 0) {
             
-            next_node_ptr = internal->node_ptrs[idx];
+            next_node_ptr = internal.node_ptrs[idx];
 
             /* Set the position of the next node */
             if (H5B2_POS_MIDDLE != curr_pos) {
@@ -4217,7 +4183,7 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
                     else
                         curr_pos = H5B2_POS_MIDDLE;
                 } /* end if */
-                else if (idx == internal->nrec) {
+                else if (idx == internal.nrec) {
                     if (H5B2_POS_RIGHT == curr_pos || H5B2_POS_ROOT == curr_pos)
                         curr_pos = H5B2_POS_RIGHT;
                     else
@@ -4232,9 +4198,6 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
 
         }
         else {
-            free(internal->int_native);
-            free(internal->node_ptrs);
-            free(internal);
             *found = true;
             return;
         }
@@ -4246,12 +4209,14 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
     /* Leaf search */
     {
         /* Assume cur_node_ptr now pointing to leaf of interest*/
-        btree2_leaf_t *leaf = (btree2_leaf_t *) std::calloc(1, sizeof(btree2_leaf_t));
+        btree2_leaf_t leaf;
+        uint8_t leaf_native_arr[ (size_t) (curr_node_ptr->node_nrec * hdr->nrec_size)];
+        leaf.leaf_native = leaf_native_arr;
 
-        openLeafNode(hdr, curr_node_ptr, leaf, curr_node_ptr->addr);
+        openLeafNode(hdr, curr_node_ptr, &leaf, curr_node_ptr->addr);
 
         /* Locate record */
-        locateRecordBTreeV2(hdr, leaf->nrec, hdr->nat_off, leaf->leaf_native, udata, &idx, &cmp);
+        locateRecordBTreeV2(hdr, leaf.nrec, hdr->nat_off, leaf.leaf_native, udata, &idx, &cmp);
 
         if (cmp != 0) {
             *found = false;
@@ -4259,12 +4224,6 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         else {
             *found = true;
         }
-
-        free(internal->int_native);
-        free(internal->node_ptrs);
-        free(internal);
-        free(leaf->leaf_native);
-        free(leaf);
 
     }
 
