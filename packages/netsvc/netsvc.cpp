@@ -61,6 +61,7 @@ int netsvc_open (lua_State* L)
         {"orchlock",    OrchestratorLib::luaLock},
         {"orchunlock",  OrchestratorLib::luaUnlock},
         {"orchhealth",  OrchestratorLib::luaHealth},
+        {"orchnodes",   OrchestratorLib::luaGetNodes},
         {"psurl",       ProvisioningSystemLib::luaUrl},
         {"psorg",       ProvisioningSystemLib::luaSetOrganization},
         {"pslogin",     ProvisioningSystemLib::luaLogin},

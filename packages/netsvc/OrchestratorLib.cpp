@@ -308,6 +308,10 @@ int OrchestratorLib::getNodes (void)
             mlog(CRITICAL, "Failed to process response from status: %s", rsps.response);
         }
     }
+    else
+    {
+        mlog(CRITICAL, "Failed to get discovery status: %ld", rsps.code);
+    }
 
     delete [] rsps.response;
 
@@ -448,6 +452,24 @@ int OrchestratorLib::luaHealth(lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error getting health: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetNodes - orchnodes()
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::luaGetNodes(lua_State* L)
+{
+    try
+    {
+        lua_pushinteger(L, getNodes());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting number of nodes: %s", e.what());
         lua_pushnil(L);
     }
 
