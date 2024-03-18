@@ -20,6 +20,7 @@ target_compile_options (slideruleLib PUBLIC -Wshadow) # turn on warning for inne
 target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-fprofile-arcs>")
 target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-ftest-coverage>")
 target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-fstack-protector-all>")
+target_compile_definitions (slideruleLib PUBLIC "$<$<CONFIG:Debug>:__no_unload__>") # don't unload dynamic modules when in debug so symbols available to address sanitizer postmortem
 
 if(ENABLE_ADDRESS_SANITIZER)
 	target_compile_options (slideruleLib PUBLIC -fsanitize=address -fno-omit-frame-pointer)

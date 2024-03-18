@@ -100,15 +100,10 @@ int EndpointProxy::luaCreate (lua_State* L)
         int         _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request 
         const char* _outq_name          = getLuaString(L, 6); // get output queue
         bool        _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
-        long        _num_threads        = getLuaInteger(L, 8, true, OsApi::nproc() * CPU_LOAD_FACTOR); // get number of proxy threads
-        long        _rqst_queue_depth   = getLuaInteger(L, 9, true, DEFAULT_PROXY_QUEUE_DEPTH); // get depth of request queue for proxy threads
-
-        /* Check Parameters */
-        if(_num_threads <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be greater than zero");
-        if (_num_threads > MAX_PROXY_THREADS) throw RunTimeException(CRITICAL, RTE_ERROR, "Number of threads must be less than %d", MAX_PROXY_THREADS);
+        long        _cluster_size_hint  = getLuaInteger(L, 8, true, 0);
 
         /* Return Endpoint Proxy Object */
-        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _locks_per_node, _outq_name, _send_terminator, _num_threads, _rqst_queue_depth);
+        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _locks_per_node, _outq_name, _send_terminator, _cluster_size_hint);
         int retcnt = createLuaObject(L, ep);
         delete [] _resources;
         return retcnt;
@@ -135,7 +130,7 @@ int EndpointProxy::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                               const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
-                              bool _send_terminator, int _num_threads, int _rqst_queue_depth):
+                              bool _send_terminator, int _cluster_size_hint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_resources);
@@ -145,9 +140,20 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     numResources = _num_resources;
     timeout = _timeout_secs;
     locksPerNode = _locks_per_node;
-    numProxyThreads = _num_threads;
-    rqstQDepth = _rqst_queue_depth;
     sendTerminator = _send_terminator;
+
+    /* Heuristically Determine Number of Proxy Threads */
+    if(_cluster_size_hint > 0)
+    {
+        int max_possible_concurrent_requests = (NetsvcParms::MAX_LOCKS_PER_NODE / locksPerNode) * _cluster_size_hint;
+        int candidate_num_threads = MIN(max_possible_concurrent_requests, _num_resources);
+        numProxyThreads = MIN(candidate_num_threads, MAX_PROXY_THREADS);
+    }
+    else
+    {
+        int reasonable_concurrent_requests_for_num_cpus = OsApi::nproc() * NetsvcParms::MAX_LOCKS_PER_NODE;
+        numProxyThreads = MIN(reasonable_concurrent_requests_for_num_cpus, MAX_PROXY_THREADS);
+    }
 
     /* Completion Condition */
     numResourcesComplete = 0;
@@ -156,7 +162,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     active = true;
 
     /* Create Proxy Threads */
-    rqstPub = new Publisher(NULL, NULL, rqstQDepth);
+    rqstPub = new Publisher(NULL, NULL, PROXY_QUEUE_DEPTH);
     rqstSub = new Subscriber(*rqstPub);
     proxyPids = new Thread* [numProxyThreads];
     for(int t = 0; t < numProxyThreads; t++)
@@ -240,6 +246,14 @@ void* EndpointProxy::collatorThread (void* parm)
         {
             for(unsigned i = 0; i < nodes->size(); i++)
             {
+                /* Sanity Check Current Resources */
+                if(current_resource >= proxy->numResources)
+                {
+                    mlog(CRITICAL, "Inconsistent number of nodes returned from orchestrator: %ld > %d", nodes->size(), num_nodes_to_request);
+                    for(unsigned j = i; j < nodes->size(); j++) delete nodes->at(j);
+                    break;
+                }
+
                 /* Populate Request */
                 proxy->nodes[current_resource] = nodes->at(i);
 
@@ -262,7 +276,7 @@ void* EndpointProxy::collatorThread (void* parm)
             /*  If No Nodes Available */
             if(nodes->empty())
             {
-                OsApi::sleep(0.20); // 5Hz
+                OsApi::performIOTimeout();
             }
 
             /* Free Node List (individual nodes still remain) */
@@ -324,26 +338,84 @@ void* EndpointProxy::proxyThread (void* parm)
             const char* resource = proxy->resources[current_resource];
             OrchestratorLib::Node* node = proxy->nodes[current_resource];
             bool valid = false; // set to true on success
+            bool need_to_free_node = false; // set to true when retries occur
+            long failed_transactions[NUM_RETRIES];
+            int num_failed = 0;
 
-            /* Make Request */
-            if(proxy->outQ->getSubCnt() > 0)
+            /* Make (possibly multiple) Request(s) */
+            int attempts = NUM_RETRIES;
+            while(!valid && attempts-- > 0 && node)
             {
-                try
+                /* Make Request */
+                if(proxy->outQ->getSubCnt() > 0)
                 {
-                    FString url("%s/source/%s", node->member, proxy->endpoint);
-                    FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
-                    long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
-                    if(http_code == EndpointObject::OK) valid = true;
-                    else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)http_code);
+                    try
+                    {
+                        FString url("%s/source/%s", node->member, proxy->endpoint);
+                        FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
+                        long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
+                        if(http_code == EndpointObject::OK) valid = true;
+                        else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)http_code);
+                    }
+                    catch(const RunTimeException& e)
+                    {
+                        mlog(e.level(), "Failure processing request: %s", e.what());
+                    }
                 }
-                catch(const RunTimeException& e)
+
+                /* Unlock Node (on success) */
+                if(valid) OrchestratorLib::unlock(&node->transaction, 1);
+                else failed_transactions[num_failed++] = node->transaction;
+
+                /* Reset Node */
+                if(need_to_free_node) delete node;
+                node = NULL;
+
+                /* Handle Retry on Failure */
+                if(!valid && attempts > 0)
                 {
-                    mlog(e.level(), "Failure processing request: %s", e.what());
+                    mlog(CRITICAL, "Retrying processing resource [%d out of %d]: %s", current_resource + 1, proxy->numResources, resource);
+                    while(proxy->active && (proxy->outQ->getSubCnt() > 0) && !node)
+                    {
+                        vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, 1, proxy->timeout, proxy->locksPerNode);
+                        if(nodes)
+                        {
+                            /* Check Number of Nodes Returned */
+                            if(nodes->size() >= 1)
+                            {
+                                node = nodes->at(0);
+                                need_to_free_node = true;
+
+                                /* Sanity Check Number of Nodes Returned */
+                                if(nodes->size() > 1)
+                                {
+                                    mlog(CRITICAL, "Inconsistent number of nodes returned from orchestrator: %ld > 1", nodes->size());
+                                    for(unsigned j = 1; j < nodes->size(); j++) delete nodes->at(j);
+                                }
+                            }
+                            else // if(nodes->empty())
+                            {
+                                OsApi::performIOTimeout();
+                            }
+
+                            /* Clean Up Nodes */
+                            delete nodes;
+                        }
+                        else
+                        {
+                            mlog(CRITICAL, "Unable to reach orchestrator... abandoning retries!");
+                            attempts = 0; // breaks out of above loop
+                            break;
+                        }
+                    }
                 }
             }
 
-            /* Unlock Node */
-            OrchestratorLib::unlock(&node->transaction, 1);
+            /* Unlock Failed Transactions */
+            if(num_failed > 0)
+            {
+                OrchestratorLib::unlock(failed_transactions, num_failed);
+            }
 
             /* Resource Completed */
             proxy->completion.lock();

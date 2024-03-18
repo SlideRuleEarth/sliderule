@@ -53,11 +53,11 @@ class EndpointProxy: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int CPU_LOAD_FACTOR = 10; // number of concurrent requests per cpu
         static const int COLLATOR_POLL_RATE = 1000; // milliseconds
-        static const int DEFAULT_PROXY_QUEUE_DEPTH = 1000;
-        static const int MAX_PROXY_THREADS = 1000;
+        static const int PROXY_QUEUE_DEPTH = 1000;
+        static const int MAX_PROXY_THREADS = 200;
         static const int DEFAULT_TIMEOUT = 600; // seconds
+        static const int NUM_RETRIES = 3;
 
         static const char* SERVICE;
 
@@ -93,7 +93,6 @@ class EndpointProxy: public LuaObject
         int                     locksPerNode;
         Publisher*              outQ;
         int                     numProxyThreads;
-        int                     rqstQDepth;
         bool                    sendTerminator;
 
         /*--------------------------------------------------------------------
@@ -102,7 +101,7 @@ class EndpointProxy: public LuaObject
 
                             EndpointProxy           (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                                                      const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
-                                                     bool _send_terminator, int _num_threads, int _rqst_queue_depth);
+                                                     bool _send_terminator, int _cluster_size_hint);
                             ~EndpointProxy          (void);
 
         static void*        collatorThread          (void* parm);

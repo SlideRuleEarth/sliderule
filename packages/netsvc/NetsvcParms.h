@@ -63,10 +63,14 @@ class NetsvcParms: public LuaObject
         static const char* NODE_TIMEOUT;
         static const char* READ_TIMEOUT;
         static const char* GLOBAL_TIMEOUT; // sets all timeouts at once
+        static const char* CLUSTER_SIZE_HINT;
 
         static const int DEFAULT_RQST_TIMEOUT       = 600; // seconds
         static const int DEFAULT_NODE_TIMEOUT       = 600; // seconds
         static const int DEFAULT_READ_TIMEOUT       = 600; // seconds
+
+        static const int DEFAULT_CLUSTER_SIZE_HINT  = 0; // dynamic
+        static const int MAX_LOCKS_PER_NODE         = 3; // must match value in intelligent load balancer
 
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
@@ -87,7 +91,7 @@ class NetsvcParms: public LuaObject
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
-
+        int                     cluster_size_hint;              // hint for the number of nodes in the cluster sliderule is running in
         MathLib::proj_t         projection;                     // which projection to use for the polygon
         MathLib::point_t*       projected_poly;                 // array of points that hold the projected polygon
         int                     points_in_poly;                 // number of points in the projected polygon

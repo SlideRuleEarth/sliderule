@@ -78,6 +78,8 @@ int netsvc_open (lua_State* L)
     LuaEngine::setAttrInt(L, "RQST_TIMEOUT",  NetsvcParms::DEFAULT_RQST_TIMEOUT);
     LuaEngine::setAttrInt(L, "NODE_TIMEOUT",  NetsvcParms::DEFAULT_NODE_TIMEOUT);
     LuaEngine::setAttrInt(L, "READ_TIMEOUT",  NetsvcParms::DEFAULT_READ_TIMEOUT);
+    LuaEngine::setAttrInt(L, "CLUSTER_SIZE_HINT",  NetsvcParms::DEFAULT_CLUSTER_SIZE_HINT);
+    LuaEngine::setAttrInt(L, "MAX_LOCKS_PER_NODE",  NetsvcParms::MAX_LOCKS_PER_NODE);
 
     return 1;
 }

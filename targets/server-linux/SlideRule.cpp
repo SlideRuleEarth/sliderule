@@ -254,8 +254,10 @@ static void ulplugins(void)
         if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());
         else deinit();
 
-        /* Close */
-        dlclose(curr_plugin->plugin);
+        #ifndef __no_unload__
+            /* Close */
+            dlclose(curr_plugin->plugin);
+        #endif
 
         /* Goto Next */
         curr_plugin = curr_plugin->next;

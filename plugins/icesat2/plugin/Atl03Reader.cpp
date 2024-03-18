@@ -596,28 +596,36 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
 {
     if(ancillary)
     {
-        /* Allocate Ancillary Data Dictionary */
-        anc_seg_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
-    
-        /* Read Ancillary Fields */
-        AncillaryFields::list_t* atl08_fields = info->reader->parms->atl08_fields;
-        for(int i = 0; i < atl08_fields->length(); i++)
+        try
         {
-            const char* field_name = (*atl08_fields)[i].field.c_str();
-            FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource08, dataset_name.c_str(), &info->reader->context08);
-            bool status = anc_seg_data->add(field_name, array);
-            if(!status) delete array;
-            assert(status); // the dictionary add should never fail
-        }
+            /* Allocate Ancillary Data Dictionary */
+            anc_seg_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
+        
+            /* Read Ancillary Fields */
+            AncillaryFields::list_t* atl08_fields = info->reader->parms->atl08_fields;
+            for(int i = 0; i < atl08_fields->length(); i++)
+            {
+                const char* field_name = (*atl08_fields)[i].field.c_str();
+                FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
+                H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource08, dataset_name.c_str(), &info->reader->context08);
+                bool status = anc_seg_data->add(field_name, array);
+                if(!status) delete array;
+                assert(status); // the dictionary add should never fail
+            }
 
-        /* Join Ancillary Reads */
-        H5DArray* array = NULL;
-        const char* dataset_name = anc_seg_data->first(&array);
-        while(dataset_name != NULL)
+            /* Join Ancillary Reads */
+            H5DArray* array = NULL;
+            const char* dataset_name = anc_seg_data->first(&array);
+            while(dataset_name != NULL)
+            {
+                array->join(info->reader->read_timeout_ms, true);
+                dataset_name = anc_seg_data->next(&array);
+            }
+        }
+        catch(const RunTimeException& e)
         {
-            array->join(info->reader->read_timeout_ms, true);
-            dataset_name = anc_seg_data->next(&array);
+            delete anc_seg_data;
+            throw;    
         }
     }
 }
