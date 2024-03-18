@@ -255,7 +255,7 @@ bool OrchestratorLib::health (void)
         }
         catch(const std::exception& e)
         {
-            mlog(CRITICAL, "Failed process response to health: %s", rsps.response);
+            mlog(CRITICAL, "Failed to process response from health: %s", rsps.response);
         }
     }
 
@@ -282,6 +282,36 @@ bool OrchestratorLib::metric (const unsigned char* metric_buf, int buf_size)
     delete [] rsps.response;
 
     return status;
+}
+
+/*----------------------------------------------------------------------------
+ * getNodes
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::getNodes (void)
+{
+    int num_nodes = 0;
+
+    const char* data = "{\"service\":\"sliderule\"}";
+    rsps_t rsps = request(EndpointObject::GET, "/discovery/status", data);
+    if(rsps.code == EndpointObject::OK)
+    {
+        try
+        {
+            rapidjson::Document json;
+            json.Parse(rsps.response);
+
+            rapidjson::Value& s = json["nodes"];
+            num_nodes = s.GetInt();
+        }
+        catch(const std::exception& e)
+        {
+            mlog(CRITICAL, "Failed to process response from status: %s", rsps.response);
+        }
+    }
+
+    delete [] rsps.response;
+
+    return num_nodes;
 }
 
 /*----------------------------------------------------------------------------

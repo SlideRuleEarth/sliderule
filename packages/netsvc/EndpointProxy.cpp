@@ -141,18 +141,22 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     timeout = _timeout_secs;
     locksPerNode = _locks_per_node;
     sendTerminator = _send_terminator;
+    numProxyThreads = DEFAULT_PROXY_THREADS;
 
-    /* Heuristically Determine Number of Proxy Threads */
-    if(_cluster_size_hint > 0)
+    /* 
+     * Possibly Override of Number of Proxy Threads 
+     *  - if a hint for the size of the cluster is provided, then use it
+     *  - otherwise query the orchestrator for the number of registered nodes
+     *  - set the number of proxy threads to the maximum number of concurrent requests the cluster can handle
+     */
+    int num_nodes = 0;
+    if(_cluster_size_hint > 0) num_nodes = _cluster_size_hint;
+    else num_nodes = OrchestratorLib::getNodes();
+    if(num_nodes > 0)
     {
-        int max_possible_concurrent_requests = (NetsvcParms::MAX_LOCKS_PER_NODE / locksPerNode) * _cluster_size_hint;
+        int max_possible_concurrent_requests = (NetsvcParms::MAX_LOCKS_PER_NODE / locksPerNode) * num_nodes;
         int candidate_num_threads = MIN(max_possible_concurrent_requests, _num_resources);
         numProxyThreads = MIN(candidate_num_threads, MAX_PROXY_THREADS);
-    }
-    else
-    {
-        int reasonable_concurrent_requests_for_num_cpus = OsApi::nproc() * NetsvcParms::MAX_LOCKS_PER_NODE;
-        numProxyThreads = MIN(reasonable_concurrent_requests_for_num_cpus, MAX_PROXY_THREADS);
     }
 
     /* Completion Condition */
