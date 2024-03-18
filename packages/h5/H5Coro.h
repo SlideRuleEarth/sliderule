@@ -558,6 +558,8 @@ class H5FileBuffer
         
         /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
+        void                initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr_t *root_node_ptr);
+        void                initDTable(btree2_hdr_t *hdr, heap_info_t* heap_info_ptr);
         void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr, heap_info_t* heap_info_ptr, void* udata, bool *found, dtable_t* dt_curr);
         void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
