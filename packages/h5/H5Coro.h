@@ -370,10 +370,10 @@ class H5FileBuffer
             unsigned                first_row_bits; // # of bits in address of first row
             uint64_t                num_id_first_row; // num of IDs in first row of table
             
-            uint64_t                *row_block_size; // block size per row of indirect block
-            uint64_t                *row_block_off; // cumulative offset per row of indirect block
-            uint64_t                *row_tot_dblock_free; // total free space in dblocks for this row  (For indirect block rows, it's the total free space in all direct blocks referenced from the indirect block)
-            size_t                  *row_max_dblock_free; // max. free space in dblocks for this row (For indirect block rows, it's the maximum free space in a direct block referenced  from the indirect block)
+            vector<uint64_t>        row_block_size; // block size per row of indirect block
+            vector<uint64_t>        row_block_off; // cumulative offset per row of indirect block
+            vector<uint64_t>        row_tot_dblock_free; // total free space in dblocks for this row  (For indirect block rows, it's the total free space in all direct blocks referenced from the indirect block)
+            vector<uint64_t>        row_max_dblock_free; // max. free space in dblocks for this row (For indirect block rows, it's the maximum free space in a direct block referenced  from the indirect block)
         } dtable_t;
 
         /* B-tree header information */
@@ -398,9 +398,9 @@ class H5FileBuffer
             uint8_t                 split_percent; // percent full that a node needs to increase above before it is split
             uint8_t                 merge_percent; // percent full that a node needs to be decrease below before it is split
             
-            btree2_node_info_t      *node_info;  // table of node info structs for current depth of B-tree
+            vector<btree2_node_info_t> node_info;  // table of node info structs for current depth of B-tree
             btree2_node_ptr_t       *root; // root struct
-            size_t                  *nat_off; // array of offsets of native records
+            vector<size_t>          nat_off;
             uint64_t                check_sum;
             dtable_t*               dtable; // doubling table
 
@@ -559,7 +559,8 @@ class H5FileBuffer
         /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
         void                initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr_t *root_node_ptr);
-        void                initDTable(btree2_hdr_t *hdr, heap_info_t* heap_info_ptr);
+        void                initDTable(btree2_hdr_t *hdr, heap_info_t* heap_info_ptr,  dtable_t* dt_curr, vector<uint64_t>& row_block_size, vector<uint64_t>& row_block_off, vector<uint64_t>& row_tot_dblock_free, vector<uint64_t>& row_max_dblock_free);
+        void                initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node_info);
         void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr, heap_info_t* heap_info_ptr, void* udata, bool *found, dtable_t* dt_curr);
         void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);

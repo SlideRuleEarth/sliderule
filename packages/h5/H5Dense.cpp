@@ -40,15 +40,17 @@
  * DEFINES
  ******************************************************************************/
 
-#define H5O_MSG_FLAG_SHARED   0x02u
-#define H5O_FHEAP_ID_LEN      8
-#define H5HF_ID_VERS_MASK     0xC0
-#define H5HF_ID_VERS_CURR     0x00
-#define H5HF_ID_TYPE_MAN      0x00
-#define H5HF_ID_TYPE_HUGE     0x10
-#define H5HF_ID_TYPE_TINY     0x20
-#define H5HF_ID_TYPE_RESERVED 0x30
-#define H5HF_ID_TYPE_MASK     0x30 
+#define H5O_MSG_FLAG_SHARED          0x02u
+#define H5O_FHEAP_ID_LEN             8
+#define H5HF_ID_VERS_MASK            0xC0
+#define H5HF_ID_VERS_CURR            0x00
+#define H5HF_ID_TYPE_MAN             0x00
+#define H5HF_ID_TYPE_HUGE            0x10
+#define H5HF_ID_TYPE_TINY            0x20
+#define H5HF_ID_TYPE_RESERVED        0x30
+#define H5HF_ID_TYPE_MASK            0x30 
+#define H5B2_METADATA_PREFIX_SIZE    10
+#define H5B2_SIZEOF_RECORDS_PER_NODE 2
 
 /******************************************************************************
  * (CONTINUED) H5 FILE BUFFER CLASS 
@@ -699,17 +701,13 @@ void H5FileBuffer::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t 
     unsigned my_idx = 0; // current record idx
 
     *cmp = -1;
-
     hi = nrec;
-
-    // const void * pass_in;
 
     while (lo < hi && *cmp) {
         /* call on type compare method */
         my_idx = (lo + hi) / 2;
         switch(hdr->type) {
             case H5B2_ATTR_DENSE_NAME_ID:
-                // pass_in = native + rec_off[my_idx];
                 compareType8Record(hdr, udata, native + rec_off[my_idx], cmp);
                 break;
             default:
@@ -772,44 +770,56 @@ void H5FileBuffer::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for nrec_size: %d", hdr->type);
     }
 
+    if (hdr->node_size == 0) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "0 return in bt2_hdr->node_size, failure suspect in openBtreeV2");
+    }
 }
 
-void H5FileBuffer::initDTable(btree2_hdr_t *hdr, heap_info_t* heap_info_ptr) {
+ /*----------------------------------------------------------------------------
+ * initDTable
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::initDTable(btree2_hdr_t *hdr, heap_info_t* heap_info_ptr, dtable_t* dt_curr, vector<uint64_t>& row_block_size, vector<uint64_t>& row_block_off, vector<uint64_t>& row_tot_dblock_free, vector<uint64_t>& row_max_dblock_free) {
+
+    hdr->dtable = dt_curr;
     hdr->dtable->start_bits = log2_of2((uint32_t)heap_info_ptr->starting_blk_size);
     hdr->dtable->first_row_bits = hdr->dtable->start_bits + log2_of2((uint32_t)heap_info_ptr->table_width);
-    hdr->dtable->max_root_rows = (heap_info_ptr->max_heap_size - hdr->dtable->first_row_bits) + 1; // CAUTION FOR BUGGING - Confirmed for hdf5 source but keep this warning
+    hdr->dtable->max_root_rows = (heap_info_ptr->max_heap_size - hdr->dtable->first_row_bits) + 1;
     hdr->dtable->max_direct_bits = log2_of2((uint32_t)heap_info_ptr->max_dblk_size);
     hdr->dtable->max_direct_rows = (hdr->dtable->max_direct_bits - hdr->dtable->start_bits) + 2;
     hdr->dtable->num_id_first_row = (uint64_t) (heap_info_ptr->starting_blk_size * heap_info_ptr->table_width);
     hdr->dtable->max_dir_blk_off_size = H5HF_SIZEOF_OFFSET_LEN(heap_info_ptr->max_dblk_size);
+    hdr->dtable->curr_root_rows = (unsigned) heap_info_ptr->curr_num_rows;
+    hdr->dtable->table_addr = heap_info_ptr->root_blk_addr;
+
+    row_block_size.resize(hdr->dtable->max_root_rows);
+    row_block_off.resize(hdr->dtable->max_root_rows);
+    row_tot_dblock_free.resize(hdr->dtable->max_root_rows);
+    row_max_dblock_free.resize(hdr->dtable->max_root_rows);
+
+    hdr->dtable->row_block_size = row_block_size;
+    hdr->dtable->row_block_off = row_block_off;
+    hdr->dtable->row_tot_dblock_free = row_tot_dblock_free;
+    hdr->dtable->row_max_dblock_free = row_max_dblock_free;
+
+    uint64_t tmp_block_size = (uint64_t) heap_info_ptr->starting_blk_size;
+    uint64_t acc_block_off = (uint64_t) heap_info_ptr->starting_blk_size * heap_info_ptr->table_width;
+    hdr->dtable->row_block_size[0] = (uint64_t) heap_info_ptr->starting_blk_size;
+    hdr->dtable->row_block_off[0] = 0;
+    
+    for (size_t j = 1; j < hdr->dtable->max_root_rows; j++) {
+        hdr->dtable->row_block_size[j] = tmp_block_size;
+        hdr->dtable->row_block_off[j] = acc_block_off;
+        tmp_block_size *= 2;
+        acc_block_off *= 2;
+    }
 }
 
- /*----------------------------------------------------------------------------
- * openBTreeV2
- *----------------------------------------------------------------------------*/
-void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr, heap_info_t* heap_info_ptr, void* udata, bool* found, dtable_t* dt_curr) {
-    /* Opens an existing v2 B-tree in the file; initiates: 
-    btreev2 header, double table, array of node info structs, 
-    pointers to internal nodes, internal node info, offsets */
-    /* openBtree HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2.c#L186 */
-    /* header_init HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2hdr.c#L94*/
-    /* table_init HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/02a57328f743342a7e26d47da4aac445ee248782/src/H5HFdtable.c#L75 */
+void H5FileBuffer::initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node_info) {
 
-    /* dtable vars */
-    uint64_t tmp_block_size; // temp block size
-    uint64_t acc_block_off; // accumulated block offset
-    size_t j;
-    unsigned u;
-
-    /* Populate btreev2 header from fields */
-    initHdrBTreeV2(hdr, addr, root_node_ptr);
-
-    /* alloc array of node info structs */
-    btree2_node_info_t info_arr[hdr->depth + 1];
-    hdr->node_info = info_arr;
+    node_info.resize(hdr->depth + 1);
+    hdr->node_info = node_info;
 
     /* Init leaf node info */
-    unsigned int H5B2_METADATA_PREFIX_SIZE = 10; // H5B2_LEAF == H5B2_METADATA_PREFIX_SIZE  == (unsigned) 10, see hdf5 src macros
     size_t sz_max_nrec = (((hdr->node_size) - H5B2_METADATA_PREFIX_SIZE) / (hdr->rrec_size));  
 
     if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
@@ -825,16 +835,11 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     hdr->node_info[0].cum_max_nrec_size = 0;
 
     /* Allocate array of pointers to internal node native keys */
+    hdr->nat_off = vector<size_t>(hdr->node_info[0].max_nrec);
     
-    // size_t nat_off_array[(size_t) (hdr->node_info[0].max_nrec)];
-    // hdr->nat_off = nat_off_array;
-
-    std::vector<size_t> nat_off_array(hdr->node_info[0].max_nrec);
-    hdr->nat_off = nat_off_array.data(); 
-
     /* Initialize offsets in native key block */
     if (hdr->node_info[0].max_nrec != 0 ){
-        for (u = 0; u < hdr->node_info[0].max_nrec; u++) {
+        for (unsigned u = 0; u < hdr->node_info[0].max_nrec; u++) {
             hdr->nat_off[u] = hdr->nrec_size * u;
         }
     }
@@ -850,12 +855,11 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
     }
 
     hdr->max_nrec_size = (uint8_t) u_max_nrec_size;
-    unsigned int H5B2_SIZEOF_RECORDS_PER_NODE = 2;
     assert(hdr->max_nrec_size <= H5B2_SIZEOF_RECORDS_PER_NODE);
 
     /* Initialize internal node info, including size and number */
     if (hdr->depth > 0) {
-        for (u = 1; u < (unsigned)(hdr->depth + 1); u++) {
+        for (unsigned u = 1; u < (unsigned)(hdr->depth + 1); u++) {
             print2term("WARNING: UNTESTED IMPLEMENTATION FOR INTERNAL NODE \n");
 
             unsigned b2_int_ptr_size = (unsigned)(metaData.offsetsize) + hdr->max_nrec_size + (hdr->node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
@@ -881,46 +885,39 @@ void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_
         }
     }
 
+}
+
+
+ /*----------------------------------------------------------------------------
+ * openBTreeV2
+ *----------------------------------------------------------------------------*/
+void H5FileBuffer::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr, heap_info_t* heap_info_ptr, void* udata, bool* found, dtable_t* dt_curr) {
+    /* Opens an existing v2 B-tree in the file; initiates: 
+    btreev2 header, double table, array of node info structs, 
+    pointers to internal nodes, internal node info, offsets */
+    /* openBtree HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2.c#L186 */
+    /* header_init HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2hdr.c#L94*/
+    /* table_init HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/02a57328f743342a7e26d47da4aac445ee248782/src/H5HFdtable.c#L75 */
+
+    /* Stack inits */
+    vector<btree2_node_info_t> node_info;
+    vector<uint64_t> row_block_size;
+    vector<uint64_t> row_block_off;
+    vector<uint64_t> row_tot_dblock_free;
+    vector<uint64_t> row_max_dblock_free;
+
+    /* Btreev2 header */
+    initHdrBTreeV2(hdr, addr, root_node_ptr);
+
+    /* Node info structs */
+    initNodeInfo(hdr, node_info);
+
     /* Initiate Double Table */
-    hdr->dtable = dt_curr;
-
-    initDTable(hdr, heap_info_ptr);
-
-    uint64_t row_block_arr[hdr->dtable->max_root_rows];
-    hdr->dtable->row_block_size = row_block_arr;
-    uint64_t row_off_arr[hdr->dtable->max_root_rows];
-    hdr->dtable->row_block_off = row_off_arr;
-    uint64_t row_tot_free_arr[hdr->dtable->max_root_rows];
-    hdr->dtable->row_tot_dblock_free = row_tot_free_arr;
-    uint64_t row_max_free_arr[hdr->dtable->max_root_rows];
-    hdr->dtable->row_max_dblock_free = row_max_free_arr;
-
-    tmp_block_size = (uint64_t) heap_info_ptr->starting_blk_size;
-    acc_block_off = (uint64_t) heap_info_ptr->starting_blk_size * heap_info_ptr->table_width;
-    hdr->dtable->row_block_size[0] = (uint64_t) heap_info_ptr->starting_blk_size;
-    hdr->dtable->row_block_off[0] = 0;
-    
-    for (j = 1; j < hdr->dtable->max_root_rows; j++) {
-        hdr->dtable->row_block_size[j] = tmp_block_size;
-        hdr->dtable->row_block_off[j] = acc_block_off;
-        tmp_block_size *= 2;
-        acc_block_off *= 2;
-    }
-    
-    hdr->dtable->curr_root_rows = (unsigned) heap_info_ptr->curr_num_rows;
-    hdr->dtable->table_addr = heap_info_ptr->root_blk_addr;
-
-    // MOVED FOR FRAME OPENING
-
-    /* Begin tree search via findBTree*/
-    if (hdr->node_size == 0) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "0 return in bt2_hdr->node_size, failure suspect in openBtreeV2");
-    }
+    initDTable(hdr, heap_info_ptr, dt_curr, row_block_size, row_block_off, row_tot_dblock_free, row_max_dblock_free);
 
     /* findBTreeV2 - attempt to locate record with matching name */
     findBTreeV2(hdr, udata, found);
-
-    return;
+    
 }
 
  /*----------------------------------------------------------------------------
@@ -1122,7 +1119,7 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         openInternalNode(&internal, hdr, internal_pos, curr_node_ptr); // internal set with all info for locate record
 
         /* LOCATE RECORD - via type compare method */
-        locateRecordBTreeV2(hdr, internal.nrec, hdr->nat_off, internal.int_native, udata, &idx, &cmp);
+        locateRecordBTreeV2(hdr, internal.nrec, hdr->nat_off.data(), internal.int_native, udata, &idx, &cmp);
 
         if (cmp > 0) {
             idx++;
@@ -1172,7 +1169,7 @@ uint64_t H5FileBuffer::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_n
         openLeafNode(hdr, curr_node_ptr, &leaf, curr_node_ptr->addr);
 
         /* Locate record */
-        locateRecordBTreeV2(hdr, leaf.nrec, hdr->nat_off, leaf.leaf_native, udata, &idx, &cmp);
+        locateRecordBTreeV2(hdr, leaf.nrec, hdr->nat_off.data(), leaf.leaf_native, udata, &idx, &cmp);
 
         if (cmp != 0) {
             *found = false;
