@@ -13,6 +13,7 @@ if (ZLIB_FOUND)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/h5.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5Coro.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/H5Dense.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DArray.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
