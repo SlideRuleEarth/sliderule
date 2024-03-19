@@ -4,4 +4,4 @@ geos: 3.12.1-0-g9a5d0587f
 libgeotiff: 1.7.1-0-gbdeff84
 pistache: 0.0.5-79-g875c973
 PROJ: 9.4.0-0-g7cd00d0b
-rapidjson: v1.1.0-748-g3f73edae
+rapidjson: v1.1.0-751-g5ec44fb9

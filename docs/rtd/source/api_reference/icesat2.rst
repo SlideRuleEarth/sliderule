@@ -24,6 +24,18 @@ atl06
 
 """"""""""""""""
 
+atl06s
+------
+.. autofunction:: sliderule.icesat2.atl06s
+
+""""""""""""""""
+
+atl06sp
+-------
+.. autofunction:: sliderule.icesat2.atl06sp
+
+""""""""""""""""
+
 atl06p
 ------
 .. autofunction:: sliderule.icesat2.atl06p

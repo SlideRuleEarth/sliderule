@@ -257,7 +257,9 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
         /* Generate Output Path */
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
         const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
-        const char* path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
+        const char* path_suffix = "bin";
+        if(parms->format == ArrowParms::PARQUET) path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
+        if(parms->format == ArrowParms::CSV) path_suffix = "csv";
         FString path_name("%s.%016lX", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK));
         bool use_provided_path = ((parms->path != NULL) && (parms->path[0] != '\0'));
         FString path_str("%s%s/%s%s", path_prefix, asset->getPath(), use_provided_path ? parms->path : path_name.c_str(), path_suffix);
@@ -299,7 +301,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
     /* Create Unique Temporary Filename */
-    FString tmp_file("%s%s.parquet", TMP_FILE_PREFIX, id);
+    FString tmp_file("%s%s.bin", TMP_FILE_PREFIX, id);
     fileName = tmp_file.c_str(true);
 
     /* Allocate Implementation */
@@ -619,7 +621,7 @@ bool ParquetBuilder::send2Client (void)
         fseek(fp, 0L, SEEK_SET);
 
         /* Log Status */
-        mlog(INFO, "Writing parquet file %s of size %ld", fileName, file_size);
+        mlog(INFO, "Writing file %s of size %ld", fileName, file_size);
 
         do
         {
@@ -662,7 +664,7 @@ bool ParquetBuilder::send2Client (void)
     else // unable to open file
     {
         status = false;
-        mlog(CRITICAL, "Failed (%d) to read parquet file %s: %s", errno, fileName, strerror(errno));
+        mlog(CRITICAL, "Failed (%d) to read file %s: %s", errno, fileName, strerror(errno));
     }
 
     /* Return Status */

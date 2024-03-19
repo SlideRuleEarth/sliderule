@@ -240,6 +240,8 @@ void* EndpointProxy::collatorThread (void* parm)
     EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
     int current_resource = 0;
 
+    alert(INFO, RTE_INFO, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
+    
     while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
     {
         /* Get Available Nodes */

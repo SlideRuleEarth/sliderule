@@ -39,6 +39,7 @@
 #include <iostream>
 #include <arrow/builder.h>
 #include <arrow/table.h>
+#include <arrow/csv/writer.h>
 #include <arrow/io/file.h>
 #include <arrow/util/key_value_metadata.h>
 #include <parquet/arrow/writer.h>
@@ -106,18 +107,21 @@ class ArrowImpl
          * Data
          *--------------------------------------------------------------------*/
 
-        ParquetBuilder*                         parquetBuilder;
-        shared_ptr<arrow::Schema>               schema;
-        unique_ptr<parquet::arrow::FileWriter>  parquetWriter;
-        vector<shared_ptr<arrow::Field>>        fieldVector;
-        field_list_t                            fieldList;
-        bool                                    firstTime;
+        ParquetBuilder*                                 parquetBuilder;
+        shared_ptr<arrow::Schema>                       schema;
+        unique_ptr<parquet::arrow::FileWriter>          parquetWriter;
+        std::shared_ptr<arrow::io::FileOutputStream>    csvWriter;
+        ArrowParms::format_t                            writerFormat;
+        vector<shared_ptr<arrow::Field>>                fieldVector;
+        field_list_t                                    fieldList;
+        bool                                            firstTime;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool createSchema           (void);
+        ArrowParms::format_t createSchema (void);
+        
         bool buildFieldList         (const char* rec_type, int offset, int flags);
         void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);

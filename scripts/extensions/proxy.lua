@@ -34,7 +34,7 @@ local function proxy(resources, parms, endpoint, rec)
     if parms[arrow.PARMS] then
         local output_parms = arrow.parms(parms[arrow.PARMS])
         -- Parquet Writer --
-        if output_parms:isparquet() then
+        if output_parms:isparquet() or output_parms:iscsv() then
             parquet_builder = arrow.parquet(output_parms, rspq, rspq .. "-parquet", rec, rqstid)
             if parquet_builder then
                 rsps_from_nodes = rspq .. "-parquet"
