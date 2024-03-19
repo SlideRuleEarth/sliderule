@@ -199,6 +199,16 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
     assert(resource);
     assert(dataset);
 
+    // KAT ADDED: set non static vars for H5V2 visbility
+    info_in = info;
+    context_in = context;
+    asset_in = asset;
+    resource_in = resource;
+    dataset_in = dataset;
+    startrow_in = startrow;
+    numrows_in = numrows;
+    _meta_only_in = _meta_only;
+
     /* Initialize Class Data */
     ioDriver                = NULL;
     ioContextLocal          = true;
@@ -3094,7 +3104,15 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
             if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
             {
                 print2term("Entering dense attribute search; No main attribute message match. \n");
-                readDenseAttrs(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense);
+                H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, 
+                info_in, context_in, asset_in, resource_in, dataset_in, startrow_in, numrows_in, _meta_only_in);
+                if (curr_btreev2.found_out) {
+                    readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
+                }
+                else {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+                }
+
             }
         #endif
     } catch (const RunTimeException& e) {
@@ -3510,6 +3528,50 @@ void H5FileBuffer::metaGetUrl (char* url, const char* resource, const char* data
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "truncated meta repository url: %s", url);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * log2_gen - helper determines the log base two of a number
+ *----------------------------------------------------------------------------*/
+unsigned H5FileBuffer::log2_gen(uint64_t n) {
+    /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
+    unsigned r; // r will be log2(n)
+    unsigned int t, tt, ttt; // temporaries
+
+    static constexpr const unsigned char LogTable256[] = {
+        /* clang-clang-format off */
+        0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+        /* clang-clang-format on */
+    };
+
+    if ((ttt = (unsigned)(n >> 32)))
+        if ((tt = (unsigned)(n >> 48)))
+            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t] : 48 + (unsigned)LogTable256[tt & 0xFF];
+        else
+            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t] : 32 + (unsigned)LogTable256[ttt & 0xFF];
+    else if ((tt = (unsigned)(n >> 16)))
+        r = (t = (unsigned)(n >> 24)) ? 24 + (unsigned)LogTable256[t] : 16 + (unsigned)LogTable256[tt & 0xFF];
+    else
+        // added 'uint8_t' cast to pacify PGCC compiler 
+        r = (t = (unsigned)(n >> 8)) ? 8 + (unsigned)LogTable256[t] : (unsigned)LogTable256[(uint8_t)n];
+
+    return (r);
+
+}
+
+/*----------------------------------------------------------------------------
+ * H5HF_SIZEOF_OFFSET_BITS
+ *----------------------------------------------------------------------------*/
+uint16_t H5FileBuffer::H5HF_SIZEOF_OFFSET_BITS(uint16_t b) {
+    /* Compute the # of bytes required to store an offset into a given buffer size - taken from h5 macro */
+    return (((b) + 7) / 8);
 }
 
 /******************************************************************************
