@@ -134,6 +134,7 @@ class Atl03BathyReader: public LuaObject
             char                prefix[7];
             int                 track;
             int                 pair;
+            int                 beam;
         } info_t;
 
         /* Region Subclass */

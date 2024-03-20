@@ -43,6 +43,7 @@
 
 const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::MAX_ALONG_TRACK_SPREAD = "max_along_track_spread";
+const char* BathyParms::BEAM_FILE_PREFIX = "beam_file_prefix";
 
 const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
 
@@ -83,7 +84,8 @@ int BathyParms::luaCreate (lua_State* L)
 BathyParms::BathyParms(lua_State* L, int index):
     Icesat2Parms (L, index),
     ph_in_extent (DEFAULT_PH_IN_EXTENT),
-    max_along_track_spread (DEFAULT_MAX_ALONG_TRACK_SPREAD)
+    max_along_track_spread (DEFAULT_MAX_ALONG_TRACK_SPREAD),
+    beam_file_prefix(NULL)
 {
     bool provided = false;
 
@@ -99,6 +101,12 @@ BathyParms::BathyParms(lua_State* L, int index):
         lua_getfield(L, index, BathyParms::MAX_ALONG_TRACK_SPREAD);
         max_along_track_spread = LuaObject::getLuaFloat(L, -1, true, max_along_track_spread, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_ALONG_TRACK_SPREAD, max_along_track_spread);
+        lua_pop(L, 1);
+
+        /* beam file prefix */
+        lua_getfield(L, index, BathyParms::BEAM_FILE_PREFIX);
+        beam_file_prefix = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, beam_file_prefix, &provided));
+        if(provided) mlog(DEBUG, "Setting %s to %s", BathyParms::BEAM_FILE_PREFIX, beam_file_prefix);
         lua_pop(L, 1);
     }
     catch(const RunTimeException& e)
@@ -121,4 +129,5 @@ BathyParms::~BathyParms (void)
  *----------------------------------------------------------------------------*/
 void BathyParms::cleanup (void) const
 {
+    delete [] beam_file_prefix;
 }

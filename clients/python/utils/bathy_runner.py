@@ -35,6 +35,7 @@ parms = {
     "poly": region['poly'],
     "cnf": "atl03_not_considered",
     "pass_invalid": True,
+    "beam_file_prefix": "bathy",
     "output": { 
         "path": args.serverfile, 
         "format": "csv", 

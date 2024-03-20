@@ -54,6 +54,7 @@ class BathyParms: public Icesat2Parms
 
         static const char* PH_IN_EXTENT;
         static const char* MAX_ALONG_TRACK_SPREAD;
+        static const char* BEAM_FILE_PREFIX;
 
         static const int DEFAULT_PH_IN_EXTENT = 8192;
         static const double DEFAULT_MAX_ALONG_TRACK_SPREAD;
@@ -70,6 +71,7 @@ class BathyParms: public Icesat2Parms
 
         int         ph_in_extent;
         double      max_along_track_spread;
+        const char* beam_file_prefix;
 
         /*--------------------------------------------------------------------
          * Methods

@@ -150,11 +150,14 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     resource = StringLib::duplicate(_resource);
     parms = _parms;
 
-    /* Generate ATL08 Resource Name */
+    /* Generate ATL09 Resource Name */
     resource09 = StringLib::duplicate(resource);
     resource09[4] = '9';
+    // TODO: need to change the name to the first ATL03 granule for the orbit (region = 1)
+    resource09[27] = '0';
+    resource09[28] = '1';
 
-    /* Create Publisher */
+    /* Create Publisher and File Pointer */
     outQ = new Publisher(outq_name);
     sendTerminator = _send_terminator;
 
@@ -184,6 +187,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
                     info->builder = this;
                     info->track = track;
                     info->pair = pair;
+                    info->beam = gt_index + 1;
                     StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
                     readerPid[threadCount++] = new Thread(subsettingThread, info);
                 }
@@ -532,6 +536,9 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     Atl03BathyReader* builder = info->builder;
     BathyParms* parms = builder->parms;
 
+    /* Thread Variables */
+    fileptr_t out_file = NULL;
+
     /* Start Trace */
     uint32_t trace_id = start_trace(INFO, builder->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->builder->asset->getName(), info->builder->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
@@ -693,14 +700,96 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         extent->photons[p] = extent_photons[p];
                     }
 
-                    /* Post Record */
-                    uint8_t* rec_buf = NULL;
-                    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-                    int post_status = MsgQ::STATE_TIMEOUT;
-                    while(builder->active && (post_status = builder->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-                    if(post_status <= 0)
+                    /* Export Data */
+                    if(parms->beam_file_prefix == NULL)
                     {
-                        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record.getRecordType(), builder->outQ->getName(), post_status);
+                        /* Post Record */
+                        uint8_t* rec_buf = NULL;
+                        int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+                        int post_status = MsgQ::STATE_TIMEOUT;
+                        while(builder->active && (post_status = builder->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+                        if(post_status <= 0)
+                        {
+                            mlog(ERROR, "Atl03 bathy reader failed to post %s to stream %s: %d", record.getRecordType(), builder->outQ->getName(), post_status);
+                        }
+                    }
+                    else
+                    {
+                        if(out_file == NULL)
+                        {
+                            /* Open JSON File */
+                            FString json_filename("%s_beam_%d.json", parms->beam_file_prefix, info->beam);
+                            fileptr_t json_file = fopen(json_filename.c_str(), "w");
+                            if(json_file == NULL)
+                            {
+                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror(errno));
+                            }
+
+/* 
+ * Build JSON File
+ *  block indentation to preserve tabs in destination file 
+ */
+FString json_contents(R"json({
+    "track": "%d",
+    "pair": %d,
+    "beam": "gt%d%c",
+    "sc_orient": "%s",
+    "region": %d,
+    "rgt": %d,
+    "cycle": %d,
+    "utm_zone": %d,
+    "wind_v": %f,
+    "pointing_angle": %f
+})json",
+    extent->track, 
+    extent->pair, 
+    extent->track, extent->pair == 0 ? 'l' : 'r', 
+    extent->spacecraft_orientation == Icesat2Parms::SC_BACKWARD ? "backward" : "forward", 
+    extent->region, 
+    extent->reference_ground_track,
+    extent->cycle,
+    extent->utm_zone,
+    extent->wind_v,
+    extent->pointing_angle);
+
+                            /* Write and Close JSON File */
+                            fprintf(json_file, json_contents.c_str());
+                            fclose(json_file);
+
+                            /* Open Data File */
+                            FString filename("%s_beam_%d.csv", parms->beam_file_prefix, info->beam);
+                            out_file = fopen(filename.c_str(), "w");
+                            if(out_file == NULL)
+                            {
+                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror(errno));
+                            }
+
+                            /* Write Header */
+                            fprintf(out_file, "index_ph,time,geoid_corr_h,latitude,longitude,x_ph,y_ph,x_atc,y_atc,sigma_along,sigma_across,ndwi,yapc_score,max_signal_conf,quality_ph,background_rate,solar_elevation\n");
+                        }
+
+                        /* Write Data */
+                        for(unsigned i = 0; i < extent->photon_count; i++)
+                        {
+                            fprintf(out_file, "%d,", extent->photons[i].index_ph);
+                            fprintf(out_file, "%ld,", extent->photons[i].time_ns);
+                            fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
+                            fprintf(out_file, "%lf,", extent->photons[i].latitude);
+                            fprintf(out_file, "%lf,", extent->photons[i].longitude);
+                            fprintf(out_file, "%lf,", extent->photons[i].x_ph);
+                            fprintf(out_file, "%lf,", extent->photons[i].y_ph);
+                            fprintf(out_file, "%lf,", extent->photons[i].x_atc);
+                            fprintf(out_file, "%lf,", extent->photons[i].y_atc);
+                            fprintf(out_file, "%f,", extent->photons[i].sigma_along);
+                            fprintf(out_file, "%f,", extent->photons[i].sigma_across);
+                            fprintf(out_file, "%f,", extent->photons[i].ndwi);
+                            fprintf(out_file, "%d,", extent->photons[i].yapc_score);
+                            fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
+                            fprintf(out_file, "%d,", extent->photons[i].quality_ph);
+                            fprintf(out_file, "%lf,", extent->background_rate);
+                            fprintf(out_file, "%f", extent->solar_elevation);
+                            fprintf(out_file, "\n");
+                        }
                     }
                 }
 
@@ -714,6 +803,12 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     catch(const RunTimeException& e)
     {
         alert(e.level(), e.code(), builder->outQ, &builder->active, "Failure on resource %s track %d: %s", info->builder->resource, info->track, e.what());
+    }
+
+    /* Close Output File (if open) */
+    if(out_file)
+    {
+        fclose(out_file);
     }
 
     /* Handle Global Reader Updates */
