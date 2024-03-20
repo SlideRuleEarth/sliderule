@@ -107,14 +107,14 @@ class ArrowImpl
          * Data
          *--------------------------------------------------------------------*/
 
-        ParquetBuilder*                                 parquetBuilder;
-        shared_ptr<arrow::Schema>                       schema;
-        unique_ptr<parquet::arrow::FileWriter>          parquetWriter;
-        std::shared_ptr<arrow::io::FileOutputStream>    csvWriter;
-        ArrowParms::format_t                            writerFormat;
-        vector<shared_ptr<arrow::Field>>                fieldVector;
-        field_list_t                                    fieldList;
-        bool                                            firstTime;
+        ParquetBuilder*                             parquetBuilder;
+        shared_ptr<arrow::Schema>                   schema;
+        unique_ptr<parquet::arrow::FileWriter>      parquetWriter;
+        shared_ptr<arrow::io::FileOutputStream>     csvWriter;
+        ArrowParms::format_t                        writerFormat;
+        vector<shared_ptr<arrow::Field>>            fieldVector;
+        field_list_t                                fieldList;
+        bool                                        firstTime;
 
         /*--------------------------------------------------------------------
          * Methods

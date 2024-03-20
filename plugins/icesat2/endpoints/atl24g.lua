@@ -21,5 +21,5 @@ local proc          = georesource.initialize(resource, parms, nil, args)
 
 if proc then
     local reader    = icesat2.atl03table(proc.asset, resource, args.result_q, rqst_parms, false)
-    local status    = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, true)
+    local status    = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
 end

@@ -499,11 +499,20 @@ Atl03TableBuilder::Atl03Data::~Atl03Data (void)
  * Atl09Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03TableBuilder::Atl09Class::Atl09Class (info_t* info):
+    valid       (false),
     met_u10m    (info->builder->asset, info->builder->resource09, FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->builder->context09),
     met_v10m    (info->builder->asset, info->builder->resource09, FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->builder->context09)
 {
-    met_u10m.join(info->builder->read_timeout_ms, true);
-    met_v10m.join(info->builder->read_timeout_ms, true);
+    try
+    {
+        met_u10m.join(info->builder->read_timeout_ms, true);
+        met_v10m.join(info->builder->read_timeout_ms, true);
+        valid = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "ATL09 data unavailable for %s", info->builder->resource09);
+    }
 }
 
 /*----------------------------------------------------------------------------

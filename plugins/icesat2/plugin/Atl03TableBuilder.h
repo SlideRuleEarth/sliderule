@@ -196,6 +196,9 @@ class Atl03TableBuilder: public LuaObject
                 explicit Atl09Class (info_t* info);
                 ~Atl09Class         (void);
 
+                /* Generated Data */
+                bool                valid;
+
                 /* Read Data */
                 H5Array<float>      met_u10m;
                 H5Array<float>      met_v10m;

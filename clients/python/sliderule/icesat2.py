@@ -795,7 +795,7 @@ def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
         rqst = __build_request(parm, resources)
 
         # Make Request
-        rsps = sliderule.source("atl24p", rqst, stream=True, callbacks=callbacks)
+        rsps = sliderule.source("atl24gp", rqst, stream=True, callbacks=callbacks)
 
         # Check for Output Options
         if "output" in parm:
