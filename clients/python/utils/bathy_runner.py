@@ -9,7 +9,7 @@ parser.add_argument('--granule',        '-g',   type=str,               default=
 parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/bahia_de_jiguey.geojson")
 parser.add_argument('--track',          '-t',   type=int,               default=1)
 parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
-parser.add_argument('--organization',   '-o',   type=str,               default="utexas")
+parser.add_argument('--organization',   '-o',   type=str,               default="bathy")
 parser.add_argument('--desired_nodes',  '-n',   type=int,               default=None)
 parser.add_argument('--time_to_live',   '-m',   type=int,               default=120)
 parser.add_argument('--verbose',        '-v',   action='store_true',    default=False)
