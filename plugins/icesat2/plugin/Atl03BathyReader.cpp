@@ -45,10 +45,10 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl03TableBuilder::phRecType = "bathyrec.photons";
-const RecordObject::fieldDef_t Atl03TableBuilder::phRecDef[] = {
+const char* Atl03BathyReader::phRecType = "bathyrec.photons";
+const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"index",           RecordObject::INT32,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"index_ph",        RecordObject::INT32,    offsetof(photon_t, index_ph),       1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
@@ -64,8 +64,8 @@ const RecordObject::fieldDef_t Atl03TableBuilder::phRecDef[] = {
     {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
 };
 
-const char* Atl03TableBuilder::exRecType = "bathyrec";
-const RecordObject::fieldDef_t Atl03TableBuilder::exRecDef[] = {
+const char* Atl03BathyReader::exRecType = "bathyrec";
+const RecordObject::fieldDef_t Atl03BathyReader::exRecDef[] = {
     {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
@@ -82,9 +82,9 @@ const RecordObject::fieldDef_t Atl03TableBuilder::exRecDef[] = {
 };
 
 
-const char* Atl03TableBuilder::OBJECT_TYPE = "Atl03TableBuilder";
-const char* Atl03TableBuilder::LUA_META_NAME = "Atl03TableBuilder";
-const struct luaL_Reg Atl03TableBuilder::LUA_META_TABLE[] = {
+const char* Atl03BathyReader::OBJECT_TYPE = "Atl03BathyReader";
+const char* Atl03BathyReader::LUA_META_NAME = "Atl03BathyReader";
+const struct luaL_Reg Atl03BathyReader::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -95,7 +95,7 @@ const struct luaL_Reg Atl03TableBuilder::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
-int Atl03TableBuilder::luaCreate (lua_State* L)
+int Atl03BathyReader::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
     BathyParms* parms = NULL;
@@ -110,13 +110,13 @@ int Atl03TableBuilder::luaCreate (lua_State* L)
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03TableBuilder(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
         if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating Atl03TableBuilder: %s", e.what());
+        mlog(e.level(), "Error creating Atl03BathyReader: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -124,7 +124,7 @@ int Atl03TableBuilder::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Atl03TableBuilder::init (void)
+void Atl03BathyReader::init (void)
 {
     RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
     RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
@@ -133,7 +133,7 @@ void Atl03TableBuilder::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Atl03TableBuilder (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, bool _send_terminator):
+Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -211,7 +211,7 @@ Atl03TableBuilder::Atl03TableBuilder (lua_State* L, Asset* _asset, const char* _
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::~Atl03TableBuilder (void)
+Atl03BathyReader::~Atl03BathyReader (void)
 {
     active = false;
 
@@ -233,7 +233,7 @@ Atl03TableBuilder::~Atl03TableBuilder (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Region::Region (info_t* info):
+Atl03BathyReader::Region::Region (info_t* info):
     segment_lat    (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->builder->context),
     segment_lon    (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->builder->context),
     segment_ph_cnt (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->builder->context),
@@ -270,7 +270,7 @@ Atl03TableBuilder::Region::Region (info_t* info):
         /* Check If Anything to Process */
         if(num_photons <= 0)
         {
-            throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
+            throw RunTimeException(CRITICAL, RTE_EMPTY_SUBSET, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
@@ -288,7 +288,7 @@ Atl03TableBuilder::Region::Region (info_t* info):
 /*----------------------------------------------------------------------------
  * Region::Destructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Region::~Region (void)
+Atl03BathyReader::Region::~Region (void)
 {
     cleanup();
 }
@@ -296,7 +296,7 @@ Atl03TableBuilder::Region::~Region (void)
 /*----------------------------------------------------------------------------
  * Region::cleanup
  *----------------------------------------------------------------------------*/
-void Atl03TableBuilder::Region::cleanup (void)
+void Atl03BathyReader::Region::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
@@ -305,7 +305,7 @@ void Atl03TableBuilder::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03TableBuilder::Region::polyregion (info_t* info)
+void Atl03BathyReader::Region::polyregion (info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -369,7 +369,7 @@ void Atl03TableBuilder::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03TableBuilder::Region::rasterregion (info_t* info)
+void Atl03BathyReader::Region::rasterregion (info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -452,7 +452,7 @@ void Atl03TableBuilder::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Atl03Data::Atl03Data (info_t* info, const Region& region):
+Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sc_orient           (info->builder->asset, info->builder->resource,                                "/orbit_info/sc_orient",                &info->builder->context),
     velocity_sc         (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->builder->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->builder->context, 0, region.first_segment, region.num_segments),
@@ -491,14 +491,14 @@ Atl03TableBuilder::Atl03Data::Atl03Data (info_t* info, const Region& region):
 /*----------------------------------------------------------------------------
  * Atl03Data::Destructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Atl03Data::~Atl03Data (void)
+Atl03BathyReader::Atl03Data::~Atl03Data (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Atl09Class::Constructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Atl09Class::Atl09Class (info_t* info):
+Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     valid       (false),
     met_u10m    (info->builder->asset, info->builder->resource09, FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->builder->context09),
     met_v10m    (info->builder->asset, info->builder->resource09, FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->builder->context09)
@@ -518,18 +518,18 @@ Atl03TableBuilder::Atl09Class::Atl09Class (info_t* info):
 /*----------------------------------------------------------------------------
  * Atl09Class::Destructor
  *----------------------------------------------------------------------------*/
-Atl03TableBuilder::Atl09Class::~Atl09Class (void)
+Atl03BathyReader::Atl09Class::~Atl09Class (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
-void* Atl03TableBuilder::subsettingThread (void* parm)
+void* Atl03BathyReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    Atl03TableBuilder* builder = info->builder;
+    Atl03BathyReader* builder = info->builder;
     BathyParms* parms = builder->parms;
 
     /* Start Trace */
@@ -761,7 +761,7 @@ void* Atl03TableBuilder::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double Atl03TableBuilder::calculateBackground (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03)
+double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03)
 {
     double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(bckgrd_in < atl03.bckgrd_rate.size)
@@ -813,7 +813,7 @@ double Atl03TableBuilder::calculateBackground (int32_t current_segment, int32_t&
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03TableBuilder::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
+void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
 {
     if(StringLib::size(_resource) < 29)
     {

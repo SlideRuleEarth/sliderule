@@ -53,7 +53,7 @@
  * ATL03 TABLE BUILDER
  ******************************************************************************/
 
-class Atl03TableBuilder: public LuaObject
+class Atl03BathyReader: public LuaObject
 {
     public:
 
@@ -130,7 +130,7 @@ class Atl03TableBuilder: public LuaObject
 
 
         typedef struct {
-            Atl03TableBuilder*  builder;
+            Atl03BathyReader*  builder;
             char                prefix[7];
             int                 track;
             int                 pair;
@@ -232,8 +232,8 @@ class Atl03TableBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03TableBuilder           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, bool _send_terminator=true);
-                            ~Atl03TableBuilder          (void);
+                            Atl03BathyReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, bool _send_terminator=true);
+                            ~Atl03BathyReader          (void);
 
         static void*        subsettingThread            (void* parm);
 
