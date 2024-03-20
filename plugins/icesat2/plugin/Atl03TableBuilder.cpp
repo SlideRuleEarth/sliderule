@@ -75,8 +75,8 @@ const RecordObject::fieldDef_t Atl03TableBuilder::exRecDef[] = {
     {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
     {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"wind_v",          RecordObject::FLOAT,    offsetof(extent_t, wind_v),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"pointing_angle",  RecordObject::FLOAT,    offsetof(extent_t, pointing_angle),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"wind_v",          RecordObject::FLOAT,    offsetof(extent_t, wind_v),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"pointing_angle",  RecordObject::FLOAT,    offsetof(extent_t, pointing_angle),         1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
