@@ -59,9 +59,10 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5BTreeV2::H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, heap_info_t* heap_info_ptr, info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only): H5FileBuffer(info, context, asset, resource, dataset, startrow, numrows, _meta_only) 
+H5BTreeV2::H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
     found_out = false;
+    h5filePtr_ = h5file;
     readDenseAttrs(fheap_addr, name_bt2_addr, name, heap_info_ptr);
 }
 
@@ -116,6 +117,42 @@ bool H5BTreeV2::isTypeSharedAttrs (unsigned type_id) {
 }
 
 /*----------------------------------------------------------------------------
+ * log2_gen - helper determines the log base two of a number
+ *----------------------------------------------------------------------------*/
+unsigned H5BTreeV2::log2_gen(uint64_t n) {
+    /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
+    unsigned r; // r will be log2(n)
+    unsigned int t, tt, ttt; // temporaries
+
+    static constexpr const unsigned char LogTable256[] = {
+        /* clang-clang-format off */
+        0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+        /* clang-clang-format on */
+    };
+
+    if ((ttt = (unsigned)(n >> 32)))
+        if ((tt = (unsigned)(n >> 48)))
+            r = (t = (unsigned)(n >> 56)) ? 56 + (unsigned)LogTable256[t] : 48 + (unsigned)LogTable256[tt & 0xFF];
+        else
+            r = (t = (unsigned)(n >> 40)) ? 40 + (unsigned)LogTable256[t] : 32 + (unsigned)LogTable256[ttt & 0xFF];
+    else if ((tt = (unsigned)(n >> 16)))
+        r = (t = (unsigned)(n >> 24)) ? 24 + (unsigned)LogTable256[t] : 16 + (unsigned)LogTable256[tt & 0xFF];
+    else
+        // added 'uint8_t' cast to pacify PGCC compiler 
+        r = (t = (unsigned)(n >> 8)) ? 8 + (unsigned)LogTable256[t] : (unsigned)LogTable256[(uint8_t)n];
+
+    return (r);
+
+}
+
+/*----------------------------------------------------------------------------
  * log2of2 - helper replicating H5VM_log2_of2
  *----------------------------------------------------------------------------*/
 unsigned H5BTreeV2::log2_of2(uint32_t n) {
@@ -131,11 +168,20 @@ unsigned H5BTreeV2::log2_of2(uint32_t n) {
 }
 
 /*----------------------------------------------------------------------------
+ * H5HF_SIZEOF_OFFSET_BITS
+ *----------------------------------------------------------------------------*/
+uint16_t H5BTreeV2::H5HF_SIZEOF_OFFSET_BITS(uint16_t b) {
+    /* Compute the # of bytes required to store an offset into a given buffer size - taken from h5 macro */
+    return (((b) + 7) / 8);
+}
+
+
+/*----------------------------------------------------------------------------
  * H5HF_SIZEOF_OFFSET_LEN
  *----------------------------------------------------------------------------*/
 uint16_t H5BTreeV2::H5HF_SIZEOF_OFFSET_LEN(int l) {
     /* Offset Len spinning off bit size - taken from h5 macro */
-    return H5FileBuffer::H5HF_SIZEOF_OFFSET_BITS((uint16_t) log2_of2((unsigned) l));
+    return H5HF_SIZEOF_OFFSET_BITS((uint16_t) log2_of2((unsigned) l));
 
 }
 
@@ -353,12 +399,12 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
     unsigned u;
     btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
     for (u = 0; u < H5O_FHEAP_ID_LEN; u++ ) {
-        nrecord->id.id[u] = (uint8_t) H5FileBuffer::readField(1, &internal_pos);
+        nrecord->id.id[u] = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     }
 
-    nrecord->flags = (uint8_t) H5FileBuffer::readField(1, &internal_pos);
-    nrecord->corder = (uint32_t) H5FileBuffer::readField(4, &internal_pos);
-    nrecord->hash = (uint32_t) H5FileBuffer::readField(4, &internal_pos);
+    nrecord->flags = (uint8_t) h5filePtr_->readField(1, &internal_pos);
+    nrecord->corder = (uint32_t) h5filePtr_->readField(4, &internal_pos);
+    nrecord->hash = (uint32_t) h5filePtr_->readField(4, &internal_pos);
 
     return internal_pos;
     
@@ -465,7 +511,7 @@ uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, 
             if(row_block_size <= heap_info->max_dblk_size)
             {
                 /* Read Direct Block Address and Assign */
-                uint64_t direct_block_addr = H5FileBuffer::readField(metaData.offsetsize, &pos);
+                uint64_t direct_block_addr = h5filePtr_->readField(metaData.offsetsize, &pos);
                 ents[idx] = direct_block_addr;
                 idx++;
                 
@@ -473,7 +519,7 @@ uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, 
             else /* Indirect Block Entry and Assign */
             {
                 /* Read Indirect Block Address */
-                uint64_t indirect_block_addr = H5FileBuffer::readField(metaData.offsetsize, &pos);
+                uint64_t indirect_block_addr = h5filePtr_->readField(metaData.offsetsize, &pos);
                 ents[idx] = indirect_block_addr;
                 idx++;
             }
@@ -702,7 +748,7 @@ void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr
     /* populate header */
     hdr->addr = addr;
     uint64_t pos = addr;
-    uint32_t signature = (uint32_t)H5FileBuffer::readField(4, &pos);
+    uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
 
     /* Signature check */
     if(signature != H5_V2TREE_SIGNATURE_LE)
@@ -710,26 +756,26 @@ void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
     }
     /* Version check */
-    uint8_t version = (uint8_t) H5FileBuffer::readField(1, &pos);
+    uint8_t version = (uint8_t) h5filePtr_->readField(1, &pos);
     if(version != 0)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
     }
     /* Record type extraction */
-    hdr->type = (btree2_subid_t) H5FileBuffer::readField(1, &pos);
+    hdr->type = (btree2_subid_t) h5filePtr_->readField(1, &pos);
 
     /* Cont. parse Btreev2 header */
-    hdr->node_size = (uint32_t) H5FileBuffer::readField(4, &pos);
-    hdr->rrec_size = (uint16_t) H5FileBuffer::readField(2, &pos);
-    uint16_t depth = (uint16_t) H5FileBuffer::readField(2, &pos);
+    hdr->node_size = (uint32_t) h5filePtr_->readField(4, &pos);
+    hdr->rrec_size = (uint16_t) h5filePtr_->readField(2, &pos);
+    uint16_t depth = (uint16_t) h5filePtr_->readField(2, &pos);
     hdr->depth = depth;
-    hdr->split_percent = (uint8_t) H5FileBuffer::readField(1, &pos);
-    hdr->merge_percent = (uint8_t) H5FileBuffer::readField(1, &pos);
-    root_node_ptr->addr = H5FileBuffer::readField(metaData.offsetsize, &pos);
-    root_node_ptr->node_nrec = (uint16_t)H5FileBuffer::readField(2, &pos);
-    root_node_ptr->all_nrec = H5FileBuffer::readField(metaData.lengthsize, &pos);
+    hdr->split_percent = (uint8_t) h5filePtr_->readField(1, &pos);
+    hdr->merge_percent = (uint8_t) h5filePtr_->readField(1, &pos);
+    root_node_ptr->addr = h5filePtr_->readField(metaData.offsetsize, &pos);
+    root_node_ptr->node_nrec = (uint16_t)h5filePtr_->readField(2, &pos);
+    root_node_ptr->all_nrec = h5filePtr_->readField(metaData.lengthsize, &pos);
     hdr->root = root_node_ptr;
-    hdr->check_sum = H5FileBuffer::readField(4, &pos);
+    hdr->check_sum = h5filePtr_->readField(4, &pos);
 
     switch(hdr->type) {
         case H5B2_ATTR_DENSE_NAME_ID:
@@ -908,19 +954,19 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr,
     int node_nrec = 0;
 
     /* Signature sanity check */
-    uint32_t signature = (uint32_t) H5FileBuffer::readField(4, &internal_pos);
+    uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
     if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
     }
 
     /* Version check */
-    uint8_t version = (uint8_t) H5FileBuffer::readField(1, &internal_pos);
+    uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if (signature != 0) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
     }
 
     /* B-tree Type check */
-    uint8_t type = (uint8_t) H5FileBuffer::readField(1, &internal_pos);
+    uint8_t type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if ((btree2_subid_t)type != hdr->type) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid type for internal node: %u, expected from hdr: %u", type, hdr->type);
     }
@@ -1007,19 +1053,19 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
     leaf->hdr = hdr;
 
     /* Signature Check*/
-    uint32_t signature = (uint32_t) H5FileBuffer::readField(4, &internal_pos);
+    uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
     if (signature != H5_V2TREE_LEAF_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match leaf node: %u", signature);
     }
 
     /* Version check */
-    uint8_t version = (uint8_t) H5FileBuffer::readField(1, &internal_pos);
+    uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if (version != 0) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Version does not match leaf node: %u", version);
     }
 
     /* Type check */
-    btree2_subid_t type = (btree2_subid_t) H5FileBuffer::readField(1, &internal_pos);
+    btree2_subid_t type = (btree2_subid_t) h5filePtr_->readField(1, &internal_pos);
     if (type != hdr->type) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Type of leaf node does not match header type: %u", type);
     }
