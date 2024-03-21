@@ -165,7 +165,7 @@ class H5FileBuffer
 
 
         /* KAT ADDED - CHANGE VISIBILITY */
-        static uint64_t readField(int64_t size, uint64_t* pos);
+        // static uint64_t readField(int64_t size, uint64_t* pos);
 
         typedef enum {
             DATASPACE_MSG           = 0x1,
@@ -389,7 +389,7 @@ class H5FileBuffer
         static uint64_t     ioHashL2              (uint64_t key);
 
         void                readByteArray         (uint8_t* data, int64_t size, uint64_t* pos);
-        // uint64_t            readField             (int64_t size, uint64_t* pos);
+        uint64_t            readField             (int64_t size, uint64_t* pos);
         void                readDataset           (info_t* info);
 
         uint64_t            readSuperblock        (void);
@@ -463,6 +463,8 @@ class H5FileBuffer
 
         /* Meta Info */
         meta_entry_t        metaData;
+
+    friend class H5BTreeV2;
 };
 
 
@@ -471,6 +473,7 @@ class H5FileBuffer
  ******************************************************************************/
 class H5BTreeV2
 {
+
     public:
         /* key return values for outside */
         // TODO: more custom for attribute mssg reading...

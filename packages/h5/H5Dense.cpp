@@ -486,12 +486,12 @@ uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, 
     uint64_t block_off; // iblock->block_off for moving offset
     
     pos += 5; // signature and version
-    pos += metaData.offsetsize; // + hdr->blk_offset_size; // block header
+    pos += h5filePtr_->metaData.offsetsize; // + hdr->blk_offset_size; // block header
 
     /* Build equivalent of iblock->block_off - copy indirect style*/
     const int MAX_BLOCK_OFFSET_SIZE = 8;
     uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE] = {0};
-    readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
+    h5filePtr_->readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
     memcpy(&block_off, block_offset_buf, sizeof(uint64_t));
 
     // TODO: this has no regard for separating types --> valid approach?
@@ -511,7 +511,7 @@ uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, 
             if(row_block_size <= heap_info->max_dblk_size)
             {
                 /* Read Direct Block Address and Assign */
-                uint64_t direct_block_addr = h5filePtr_->readField(metaData.offsetsize, &pos);
+                uint64_t direct_block_addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
                 ents[idx] = direct_block_addr;
                 idx++;
                 
@@ -519,7 +519,7 @@ uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, 
             else /* Indirect Block Entry and Assign */
             {
                 /* Read Indirect Block Address */
-                uint64_t indirect_block_addr = h5filePtr_->readField(metaData.offsetsize, &pos);
+                uint64_t indirect_block_addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
                 ents[idx] = indirect_block_addr;
                 idx++;
             }
@@ -624,12 +624,12 @@ void H5BTreeV2::fheapLocate_Managed(btree2_hdr_t* hdr_og, H5FileBuffer::heap_inf
     /* read direct block to access message */
     uint64_t pos = dblock_addr;
     pos += 5; // skip signature and version of object 
-    pos += metaData.offsetsize; // skip heap hdr addr
+    pos += h5filePtr_->metaData.offsetsize; // skip heap hdr addr
 
     /* Unpack block offset */
     const int MAX_BLOCK_OFFSET_SIZE = 8;
     uint8_t new_block_offset_buf[MAX_BLOCK_OFFSET_SIZE] = {0};
-    readByteArray(new_block_offset_buf, hdr->blk_offset_size, &pos);
+    h5filePtr_->readByteArray(new_block_offset_buf, hdr->blk_offset_size, &pos);
     memcpy(&dblock_block_off, new_block_offset_buf, sizeof(uint64_t));
 
     // TODO: checksum (only present if flags 1 see spec)
@@ -751,7 +751,7 @@ void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr
     uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
 
     /* Signature check */
-    if(signature != H5_V2TREE_SIGNATURE_LE)
+    if(signature != H5FileBuffer::H5_V2TREE_SIGNATURE_LE)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
     }
@@ -771,9 +771,9 @@ void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr
     hdr->depth = depth;
     hdr->split_percent = (uint8_t) h5filePtr_->readField(1, &pos);
     hdr->merge_percent = (uint8_t) h5filePtr_->readField(1, &pos);
-    root_node_ptr->addr = h5filePtr_->readField(metaData.offsetsize, &pos);
+    root_node_ptr->addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
     root_node_ptr->node_nrec = (uint16_t)h5filePtr_->readField(2, &pos);
-    root_node_ptr->all_nrec = h5filePtr_->readField(metaData.lengthsize, &pos);
+    root_node_ptr->all_nrec = h5filePtr_->readField(h5filePtr_->metaData.lengthsize, &pos);
     hdr->root = root_node_ptr;
     hdr->check_sum = h5filePtr_->readField(4, &pos);
 
@@ -887,7 +887,7 @@ void H5BTreeV2::initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node
         for (unsigned u = 1; u < (unsigned)(hdr->depth + 1); u++) {
             print2term("WARNING: UNTESTED IMPLEMENTATION FOR INTERNAL NODE \n");
 
-            unsigned b2_int_ptr_size = (unsigned)(metaData.offsetsize) + hdr->max_nrec_size + (hdr->node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
+            unsigned b2_int_ptr_size = (unsigned)(h5filePtr_->metaData.offsetsize) + hdr->max_nrec_size + (hdr->node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
             sz_max_nrec = ((hdr->node_size - (H5B2_METADATA_PREFIX_SIZE + b2_int_ptr_size)) / (hdr->rrec_size + b2_int_ptr_size)); // = H5B2_NUM_INT_REC(hdr, u);
             if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "sz_max_nrec exceeds unsigned rep limit: %zu", sz_max_nrec);
@@ -955,7 +955,7 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr,
 
     /* Signature sanity check */
     uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
-    if (signature != H5_V2TREE_INTERNAL_SIGNATURE_LE) {
+    if (signature != H5FileBuffer::H5_V2TREE_INTERNAL_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
     }
 
@@ -999,7 +999,7 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr,
     btree2_node_ptr_t *int_node_ptr = internal->node_ptrs.data();
     for (u = 0; u < (unsigned)(internal->nrec + 1); u++) {
         /* Decode node address -- see H5F_addr_decode */
-        size_t addr_size = (size_t) metaData.offsetsize; // as defined by hdf spec
+        size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
 
         uint64_t snap_internal = internal_pos;
         addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)); // internal pos value should change
@@ -1054,7 +1054,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
 
     /* Signature Check*/
     uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
-    if (signature != H5_V2TREE_LEAF_SIGNATURE_LE) {
+    if (signature != H5FileBuffer::H5_V2TREE_LEAF_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match leaf node: %u", signature);
     }
 
