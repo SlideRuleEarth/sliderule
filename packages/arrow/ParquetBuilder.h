@@ -44,7 +44,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"

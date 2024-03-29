@@ -43,17 +43,18 @@
 #include <arrow/io/file.h>
 #include <arrow/util/key_value_metadata.h>
 #include <parquet/arrow/writer.h>
+#include <parquet/arrow/reader.h>
 #include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
 #include <parquet/file_writer.h>
 #include <regex>
 
-#include "MsgQ.h"
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"
 #include "ArrowParms.h"
 #include "ParquetBuilder.h"
+#include "ParquetSampler.h"
 #include "OsApi.h"
 #include "MsgQ.h"
 
@@ -78,8 +79,11 @@ class ArrowImpl
         explicit ArrowImpl          (ParquetBuilder* _builder);
         ~ArrowImpl                  (void);
 
-        bool processRecordBatch     (batch_list_t& record_batch, int num_rows, 
+        bool processRecordBatch     (batch_list_t& record_batch, int num_rows,
                                      int batch_row_size_bits, bool file_finished=false);
+
+        void getPointsFromFile      (const char* file_path, std::vector<OGRPoint>& points);
+        void createParquetFile      (const char* input_file, const char* output_file, const std::vector<ParquetSampler::sampler_t*>& _samplers);
 
     private:
 
@@ -95,7 +99,7 @@ class ArrowImpl
 
         typedef List<RecordObject::field_t> field_list_t;
         typedef field_list_t::Iterator field_iterator_t;
-                
+
         typedef struct WKBPoint {
             uint8_t                 byteOrder;
             uint32_t                wkbType;
@@ -121,30 +125,36 @@ class ArrowImpl
          *--------------------------------------------------------------------*/
 
         ArrowParms::format_t createSchema (void);
-        
+
         bool buildFieldList         (const char* rec_type, int offset, int flags);
         void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void processField           (RecordObject::field_t& field, 
-                                     shared_ptr<arrow::Array>* column, 
-                                     batch_list_t& record_batch, 
-                                     int num_rows, 
+        void processField           (RecordObject::field_t& field,
+                                     shared_ptr<arrow::Array>* column,
+                                     batch_list_t& record_batch,
+                                     int num_rows,
                                      int batch_row_size_bits);
-        void processArray           (RecordObject::field_t& field, 
-                                     shared_ptr<arrow::Array>* column, 
-                                     batch_list_t& record_batch, 
+        void processArray           (RecordObject::field_t& field,
+                                     shared_ptr<arrow::Array>* column,
+                                     batch_list_t& record_batch,
                                      int batch_row_size_bits);
-        void processGeometry        (RecordObject::field_t& x_field, 
-                                     RecordObject::field_t& y_field, 
-                                     shared_ptr<arrow::Array>* column, 
-                                     batch_list_t& record_batch, 
-                                     int num_rows, 
+        void processGeometry        (RecordObject::field_t& x_field,
+                                     RecordObject::field_t& y_field,
+                                     shared_ptr<arrow::Array>* column,
+                                     batch_list_t& record_batch,
+                                     int num_rows,
                                      int batch_row_size_bits);
         void processAncillaryFields  (vector<shared_ptr<arrow::Array>>& columns,
                                      batch_list_t& record_batch);
         void processAncillaryElements(vector<shared_ptr<arrow::Array>>& columns,
                                      batch_list_t& record_batch);
+
+        void printHelloworld         (void);
+
+        std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path);
+        void tableToParquetFile(std::shared_ptr<arrow::Table> table, const char* file_path);
+        OGRPoint convertWKBToPoint(const std::string& wkb_data);
 };
 
 #endif  /* __arrow_impl__ */

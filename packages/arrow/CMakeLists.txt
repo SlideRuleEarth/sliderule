@@ -18,6 +18,7 @@ if (Arrow_FOUND AND Parquet_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/ArrowImpl.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowParms.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ParquetBuilder.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/ParquetSampler.cpp
     )
 
     target_include_directories (slideruleLib
@@ -31,7 +32,7 @@ if (Arrow_FOUND AND Parquet_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/arrow.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowImpl.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowParms.h
-            ${CMAKE_CURRENT_LIST_DIR}/ParquetBuilder.h
+            ${CMAKE_CURRENT_LIST_DIR}/ParquetSampler.h
         DESTINATION
             ${INCDIR}
     )
