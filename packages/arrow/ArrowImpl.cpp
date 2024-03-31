@@ -391,9 +391,26 @@ void ArrowImpl::createParquetFile(const char* input_file, const char* output_fil
         }
     }
 
+
+    auto metadata = table->schema()->metadata()->Copy();
+
+    /*
+     * Pandas metadata does not contain information about the new columns.
+     * Pandas and geopands can use/read the file just fine without pandas custom metadata.
+     * Removing it is a lot easier than updating it.
+     */
+    const std::string pandas_key = "pandas";
+    if(metadata->Contains(pandas_key))
+    {
+        int key_index = metadata->FindKey(pandas_key);
+        if(key_index != -1)
+        {
+            PARQUET_THROW_NOT_OK(metadata->Delete(key_index));
+        }
+    }
+
     /* Attach metadata to the new schema */
     auto combined_schema = std::make_shared<arrow::Schema>(fields);
-    auto metadata = table->schema()->metadata();
     combined_schema = combined_schema->WithMetadata(metadata);
 
     /* Create a new table with the combined schema and columns */
@@ -403,6 +420,9 @@ void ArrowImpl::createParquetFile(const char* input_file, const char* output_fil
     mlog(DEBUG, "Table is  %ld rows and %d columns.", updated_table->num_rows(), updated_table->num_columns());
 
     tableToParquetFile(updated_table, output_file);
+
+    // printParquetMetadata(input_file);
+    // printParquetMetadata(output_file);
 }
 
 /******************************************************************************
@@ -2115,3 +2135,42 @@ OGRPoint ArrowImpl::convertWKBToPoint(const std::string& wkb_data)
     return poi;
 }
 
+/*----------------------------------------------------------------------------
+* printParquetMetadata
+*----------------------------------------------------------------------------*/
+void ArrowImpl::printParquetMetadata(const char* file_path)
+{
+    std::shared_ptr<arrow::io::ReadableFile> infile;
+    PARQUET_ASSIGN_OR_THROW(infile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
+
+    std::unique_ptr<parquet::arrow::FileReader> reader;
+    PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &reader));
+
+    std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
+    std::cout << "***********************************************************" << std::endl;
+    std::cout << "***********************************************************" << std::endl;
+    std::cout << "***********************************************************" << std::endl;
+    std::cout << "File Metadata:" << std::endl;
+    std::cout << "  Version: " << file_metadata->version() << std::endl;
+    std::cout << "  Num Row Groups: " << file_metadata->num_row_groups() << std::endl;
+    std::cout << "  Num Columns: " << file_metadata->num_columns() << std::endl;
+    std::cout << "  Num Row Groups: " << file_metadata->num_row_groups() << std::endl;
+    std::cout << "  Num Rows: " << file_metadata->num_rows() << std::endl;
+    std::cout << "  Created By: " << file_metadata->created_by() << std::endl;
+    std::cout << "  Key Value Metadata:" << std::endl;
+    for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
+    {
+        std::string key = file_metadata->key_value_metadata()->key(i);
+        std::string value = file_metadata->key_value_metadata()->value(i);
+
+        if(key == "ARROW:schema") continue;
+        std::cout << "    " << key << ": " << value << std::endl;
+    }
+
+    std::cout << "  Schema:" << std::endl;
+    for(int i = 0; i < file_metadata->num_columns(); i++)
+    {
+        std::shared_ptr<parquet::schema::ColumnPath> path = file_metadata->schema()->Column(i)->path();
+        std::cout << "    " << path->ToDotString() << std::endl;
+    }
+}

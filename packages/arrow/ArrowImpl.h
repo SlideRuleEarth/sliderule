@@ -153,8 +153,9 @@ class ArrowImpl
         void printHelloworld         (void);
 
         std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path);
-        void tableToParquetFile(std::shared_ptr<arrow::Table> table, const char* file_path);
-        OGRPoint convertWKBToPoint(const std::string& wkb_data);
+        void     tableToParquetFile   (std::shared_ptr<arrow::Table> table, const char* file_path);
+        OGRPoint convertWKBToPoint    (const std::string& wkb_data);
+        void     printParquetMetadata (const char* file_path);
 };
 
 #endif  /* __arrow_impl__ */

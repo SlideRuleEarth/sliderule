@@ -282,10 +282,9 @@ void* ParquetSampler::samplerThread(void* parm)
 {
     sampler_t* sampler = static_cast<sampler_t*>(parm);
 
-    /* for each point in points */
     for(auto point : sampler->obj->points)
     {
-        OGRPoint poi = point; /* Make a copy for this thread */
+        OGRPoint poi = point; /* Must make a copy of point for this thread */
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
