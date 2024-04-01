@@ -37,22 +37,6 @@
 #include "core.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define H5O_MSG_FLAG_SHARED          0x02u
-#define H5O_FHEAP_ID_LEN             8
-#define H5HF_ID_VERS_MASK            0xC0
-#define H5HF_ID_VERS_CURR            0x00
-#define H5HF_ID_TYPE_MAN             0x00
-#define H5HF_ID_TYPE_HUGE            0x10
-#define H5HF_ID_TYPE_TINY            0x20
-#define H5HF_ID_TYPE_RESERVED        0x30
-#define H5HF_ID_TYPE_MASK            0x30 
-#define H5B2_METADATA_PREFIX_SIZE    10
-#define H5B2_SIZEOF_RECORDS_PER_NODE 2
-
-/******************************************************************************
  * H5 BTREE V2 CLASS
  ******************************************************************************/
 
@@ -61,6 +45,7 @@
  *----------------------------------------------------------------------------*/
 H5BTreeV2::H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
+    // TODO: init list; sequnece of init before body entered 
     found_out = false;
     h5filePtr_ = h5file;
     readDenseAttrs(fheap_addr, name_bt2_addr, name, heap_info_ptr);
@@ -81,6 +66,7 @@ void H5BTreeV2::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, cons
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
     }
 
+    // TODO: effective struct init via {}
     btree2_ud_common_t udata; // struct to pass useful info e.g. name, hash
     bool attr_exists = false;
 
