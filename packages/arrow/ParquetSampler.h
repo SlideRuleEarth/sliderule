@@ -75,12 +75,14 @@ class ParquetSampler: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
         typedef std::vector<RasterSample*> sample_list_t;
-
-        typedef struct Sampler {
+        typedef struct Sampler
+        {
             RasterObject*               robj;
+            ParquetSampler*             obj;
             int64_t                     gps;    /* Overrides RasterObject 'closest_time' */
             std::vector<sample_list_t*> samples;
-            ParquetSampler*             obj;
+            const char*                 asset_name;
+            std::vector<std::pair<uint64_t, const char*>> filemap;
 
             explicit Sampler (RasterObject* _robj, ParquetSampler* _obj);
                     ~Sampler (void);
@@ -96,7 +98,6 @@ class ParquetSampler: public LuaObject
         static int              luaSample       (lua_State* L);
         static void             init            (void);
         static void             deinit          (void);
-
         void                    sample          (int64_t gps);
 
     private:

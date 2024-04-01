@@ -130,8 +130,6 @@ int ParquetSampler::luaSample (lua_State* L)
 }
 
 
-
-
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
@@ -151,8 +149,9 @@ void ParquetSampler::deinit (void)
  *----------------------------------------------------------------------------*/
 ParquetSampler::Sampler::Sampler (RasterObject* _robj, ParquetSampler* _obj):
     robj(_robj),
+    obj(_obj),
     gps(0),
-    obj(_obj)
+    asset_name(NULL)
 {
 }
 
@@ -189,13 +188,19 @@ void ParquetSampler::Sampler::clearSamples(void)
 void ParquetSampler::sample(int64_t gps)
 {
     /* Remove outputPath file if it exists */
-    if (std::filesystem::exists(outputPath))
+    if(std::filesystem::exists(outputPath))
     {
         int rc = std::remove(outputPath);
-        if (rc != 0)
+        if(rc != 0)
         {
             mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, outputPath, strerror(errno));
         }
+    }
+
+    /* User may call this method with different gps times, clear the samples */
+    for(sampler_t* sampler : samplers)
+    {
+        sampler->clearSamples();
     }
 
     /* Start Sampler Threads */
@@ -213,13 +218,16 @@ void ParquetSampler::sample(int64_t gps)
     }
     samplerPids.clear();
 
-    /* Create new parquet file with columns/samples from all raster objects */
-    impl->createParquetFile(inputPath, outputPath, samplers);
 
-    /* User may call this method with different gps time, clear the samples */
-    for(sampler_t* sampler : samplers)
+    /* Create new parquet file with columns/samples from all raster objects */
+    try
     {
-        sampler->clearSamples();
+        impl->createParquetFile(inputPath, outputPath, samplers);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating parquet file: %s", e.what());
+        throw;
     }
 }
 
@@ -281,6 +289,7 @@ ParquetSampler::~ParquetSampler(void)
 void* ParquetSampler::samplerThread(void* parm)
 {
     sampler_t* sampler = static_cast<sampler_t*>(parm);
+    RasterObject* robj = sampler->robj;
 
     for(auto point : sampler->obj->points)
     {
@@ -288,7 +297,7 @@ void* ParquetSampler::samplerThread(void* parm)
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
-        uint32_t err = sampler->robj->getSamples(&poi, sampler->gps, *slist, NULL);
+        uint32_t err = robj->getSamples(&poi, sampler->gps, *slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
@@ -310,6 +319,42 @@ void* ParquetSampler::samplerThread(void* parm)
         /* Add sample list to sampler */
         sampler->samples.push_back(slist);
     }
+
+    sampler->asset_name = robj->getAssetName();
+
+    /* Create raster file map <id, filename> */
+    Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
+    for(int i = 0; i < iterator.length; i++)
+    {
+        const char*  name = iterator[i].key;
+        const uint64_t id = iterator[i].value;
+
+        /* For some data sets, dictionary contains quality mask rasters in addition to data rasters.
+         * Only add rasters with id present in the samples
+        */
+        bool include_in_filemap = false;
+        for(ParquetSampler::sample_list_t* slist : sampler->samples)
+        {
+            for(RasterSample* sample : *slist)
+            {
+                if(sample->fileId == id)
+                {
+                    include_in_filemap = true;
+                    break;
+                }
+            }
+
+            if(include_in_filemap) break;
+        }
+
+        if(include_in_filemap)
+            sampler->filemap.push_back(std::make_pair(id, name));
+    }
+
+    /* Sort the map with increasing file id */
+    std::sort(sampler->filemap.begin(), sampler->filemap.end(),
+        [](const std::pair<uint64_t, std::string>& a, const std::pair<uint64_t, std::string>& b)
+        { return a.first < b.first; } );
 
     /* Exit Thread */
     return NULL;

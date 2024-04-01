@@ -45,6 +45,10 @@
 #include "ArrowParms.h"
 #include "ArrowImpl.h"
 
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
 #ifdef __aws__
 #include "aws.h"
 #endif
@@ -336,7 +340,7 @@ void ArrowImpl::createParquetFile(const char* input_file, const char* output_fil
             PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
         }
 
-        std::string prefix = robj->getAssetName();
+        const std::string prefix = sampler->asset_name;
 
         /* Create fields for the new columns */
         auto value_field  = std::make_shared<arrow::Field>(prefix + ".value",  arrow::list(arrow::float64()));
@@ -391,7 +395,6 @@ void ArrowImpl::createParquetFile(const char* input_file, const char* output_fil
         }
     }
 
-
     auto metadata = table->schema()->metadata()->Copy();
 
     /*
@@ -408,6 +411,9 @@ void ArrowImpl::createParquetFile(const char* input_file, const char* output_fil
             PARQUET_THROW_NOT_OK(metadata->Delete(key_index));
         }
     }
+
+    /* Create a filemap metadata */
+    PARQUET_THROW_NOT_OK(metadata->Set("filemap", createFileMap(_samplers)));
 
     /* Attach metadata to the new schema */
     auto combined_schema = std::make_shared<arrow::Schema>(fields);
@@ -2096,6 +2102,7 @@ OGRPoint ArrowImpl::convertWKBToPoint(const std::string& wkb_data)
 
     // Next four bytes are wkbType
     std::memcpy(&point.wkbType, wkb_data.data() + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
 
     // Convert to host byte order if necessary
     if(point.byteOrder == 0)
@@ -2112,27 +2119,60 @@ OGRPoint ArrowImpl::convertWKBToPoint(const std::string& wkb_data)
     {
         throw std::runtime_error("Unknown byte order.");
     }
-    offset += sizeof(uint32_t);
 
     // Next eight bytes are x coordinate
     std::memcpy(&point.x, wkb_data.data() + offset, sizeof(double));
+    offset += sizeof(double);
+
     if((point.byteOrder == 0 && __BYTE_ORDER != __BIG_ENDIAN) ||
-        (point.byteOrder == 1 && __BYTE_ORDER != __LITTLE_ENDIAN))
+       (point.byteOrder == 1 && __BYTE_ORDER != __LITTLE_ENDIAN))
     {
         point.x = swap_double(point.x);
     }
-    offset += sizeof(double);
 
     // Next eight bytes are y coordinate
     std::memcpy(&point.y, wkb_data.data() + offset, sizeof(double));
     if((point.byteOrder == 0 && __BYTE_ORDER != __BIG_ENDIAN) ||
-        (point.byteOrder == 1 && __BYTE_ORDER != __LITTLE_ENDIAN))
+       (point.byteOrder == 1 && __BYTE_ORDER != __LITTLE_ENDIAN))
     {
         point.y = swap_double(point.y);
     }
 
     OGRPoint poi(point.x, point.y, 0);
     return poi;
+}
+
+/*----------------------------------------------------------------------------
+* createFileMap
+*----------------------------------------------------------------------------*/
+std::string ArrowImpl::createFileMap(const std::vector<ParquetSampler::sampler_t*>& _samplers)
+{
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    /* Serialize into JSON */
+    for(ParquetSampler::sampler_t* sampler : _samplers)
+    {
+        rapidjson::Value asset_list_json(rapidjson::kArrayType);
+
+        for(const auto& pair : sampler->filemap)
+        {
+            rapidjson::Value asset_json(rapidjson::kObjectType);
+            asset_json.AddMember("file_id", pair.first, allocator);
+            asset_json.AddMember("file_name", rapidjson::Value(pair.second, allocator), allocator);
+            asset_list_json.PushBack(asset_json, allocator);
+        }
+
+        document.AddMember(rapidjson::Value(sampler->asset_name, allocator), asset_list_json, allocator);
+    }
+
+    /* Convert JSON document to string */
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+    std::string serialized_json = buffer.GetString();
+    return serialized_json;
 }
 
 /*----------------------------------------------------------------------------

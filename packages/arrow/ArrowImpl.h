@@ -156,6 +156,7 @@ class ArrowImpl
         void     tableToParquetFile   (std::shared_ptr<arrow::Table> table, const char* file_path);
         OGRPoint convertWKBToPoint    (const std::string& wkb_data);
         void     printParquetMetadata (const char* file_path);
+        std::string createFileMap     (const std::vector<ParquetSampler::sampler_t*>& _samplers);
 };
 
 #endif  /* __arrow_impl__ */
