@@ -1491,8 +1491,8 @@ class widgets:
                     (kwargs['atl03']['cycle'] == cycle)]
             if (kwargs['classification'] == 'atl08'):
                 # noise, ground, canopy, top of canopy, unclassified
-                colormap = np.array(['c','b','g','g','y'])
-                classes = ['noise','ground','canopy','toc','unclassified']
+                colormap = np.array(['c','b','limegreen','g','y'])
+                classes = ['noise','ground','canopy','top of canopy','unclassified']
                 sc = ax.scatter(atl03.index.values, atl03["height"].values,
                     c=colormap[atl03["atl08_class"].values.astype('i')],
                     s=1.5, rasterized=True)
@@ -2692,33 +2692,38 @@ class ICESat2:
 
             - 'scatter' : scatter plot of along-track heights
             - 'cycles' : time series plot for each orbital cycle
+        data_type: str, GeoDataFrame data format for 'scatter' plot
+
+            - 'atl03' : ATL03 geolocated photons
+            - 'atl06' : ATL06 segment heights
         cmap : str, matplotlib colormap
         title: str, title to use for the plot
         legend: bool, title to use for the plot
         legend_label: str, legend label type for 'cycles' plot
         legend_frameon: bool, use a background patch for legend
         column_name: str, GeoDataFrame column for 'cycles' plot
-        atl03: obj, ATL03 GeoDataFrame for 'scatter' plot
+
         classification: str, ATL03 photon classification for scatter plot
 
             - 'atl03' : ATL03 photon confidence
             - 'atl08' : ATL08 photon-level land classification
             - 'yapc' : Yet Another Photon Classification photon-density
             - 'none' : no classification of photons
+        x_offset: float, offset for along-track distance
         cycle_start: int, beginning cycle for 'cycles' plot
         """
         # default keyword arguments
         kwargs.setdefault('ax', None)
         kwargs.setdefault('kind', 'cycles')
+        kwargs.setdefault('data_type', 'atl06')
         kwargs.setdefault('cmap', 'viridis')
         kwargs.setdefault('title', None)
         kwargs.setdefault('legend', False)
         kwargs.setdefault('legend_label','date')
         kwargs.setdefault('legend_frameon',True)
         kwargs.setdefault('column_name', 'h_mean')
-        kwargs.setdefault('atl03', None)
         kwargs.setdefault('classification', None)
-        kwargs.setdefault('segments', True)
+        kwargs.setdefault('x_offset', 0.0)
         kwargs.setdefault('cycle_start', 3)
         kwargs.setdefault('cycle', 0)
         kwargs.setdefault('RGT', 0)
@@ -2735,13 +2740,20 @@ class ICESat2:
             fig,ax = plt.subplots(num=1, figsize=(8,6))
             fig.set_facecolor('white')
             fig.canvas.header_visible = False
+            # list of legend elements
+            legend_handles = []
         else:
+            # use existing axis
             ax = kwargs['ax']
-        # list of legend elements
-        legend_elements = []
+            # get existing legend elements
+            try:
+                legend_handles = ax.get_legend().legendHandles
+            except AttributeError:
+                legend_handles = []
+
         # different plot types
         # cycles: along-track plot showing all available cycles
-        # scatter: plot showing a single cycle possibly with ATL03
+        # scatter: plot showing a single cycle
         if (kwargs['kind'] == 'cycles'):
             # for each unique cycles
             for cycle in self._gdf['cycle'].unique():
@@ -2749,60 +2761,64 @@ class ICESat2:
                 if (cycle < kwargs['cycle_start']):
                     continue
                 # reduce data frame to RGT, ground track and cycle
-                geodataframe = self._gdf[
+                atl06 = self._gdf[
                     (self._gdf['rgt'] == RGT) &
                     (self._gdf['gt'] == GT) &
                     (self._gdf['cycle'] == cycle)]
-                if not any(geodataframe[column].values):
+                if not any(atl06[column].values):
                     continue
+                # set index to along-track distance
+                atl06['x_atc'] -= kwargs['x_offset']
+                atl06.set_index('x_atc', inplace=True)
                 # plot reduced data frame
-                l, = ax.plot(geodataframe['x_atc'].values,
-                    geodataframe[column].values,
+                l, = ax.plot(atl06.index.values,
+                    atl06[column].values,
                     marker='.', lw=0, ms=1.5)
                 # create legend element for cycle
                 if (kwargs['legend_label'] == 'date'):
-                    label = geodataframe.index[0].strftime('%Y-%m-%d')
+                    label = atl06.index[0].strftime('%Y-%m-%d')
                 elif (kwargs['legend_label'] == 'cycle'):
                     label = f'Cycle {cycle:0.0f}'
-                legend_elements.append(matplotlib.lines.Line2D([0], [0],
-                    color=l.get_color(), lw=6, label=label))
+                # append handle to legend
+                handle = matplotlib.lines.Line2D([0], [0],
+                    color=l.get_color(), lw=6, label=label)
+                legend_handles.append(handle)
             # add axes labels
             ax.set_xlabel('Along-Track Distance [m]')
             ax.set_ylabel(f'SlideRule {column}')
         elif (kwargs['kind'] == 'scatter'):
             # extract orbital cycle parameters
             cycle = int(kwargs['cycle'])
-            if (kwargs['atl03'] == 'dataframe'):
+            if (kwargs['data_type'] == 'atl03'):
                 # reduce entered data frame to RGT, ground track and cycle
                 atl03 = self._gdf[(self._gdf['rgt'] == RGT) &
                     (self._gdf['track'] == self.PT(GT)) &
                     (self._gdf['pair'] == self.LR(GT)) &
                     (self._gdf['cycle'] == cycle)]
-            elif (kwargs['atl03'] is not None):
-                # reduce ATL03 data frame to RGT, ground track and cycle
-                atl03 = kwargs['atl03'][(kwargs['atl03']['rgt'] == RGT) &
-                    (kwargs['atl03']['track'] == self.PT(GT)) &
-                    (kwargs['atl03']['pair'] == self.LR(GT)) &
-                    (kwargs['atl03']['cycle'] == cycle)]
-            if (kwargs['classification'] == 'atl08'):
+                # set index to along-track distance
+                atl03['segment_dist'] += atl03['x_atc']
+                atl03['segment_dist'] -= kwargs['x_offset']
+                atl03.set_index('segment_dist', inplace=True)
+            if (kwargs['data_type'] == 'atl03') and (kwargs['classification'] == 'atl08'):
                 # noise, ground, canopy, top of canopy, unclassified
-                colormap = np.array(['c','b','g','g','y'])
-                classes = ['noise','ground','canopy','toc','unclassified']
+                colormap = np.array(['c','b','limegreen','g','y'])
+                classes = ['noise','ground','canopy','top of canopy','unclassified']
                 sc = ax.scatter(atl03.index.values, atl03["height"].values,
                     c=colormap[atl03["atl08_class"].values.astype('i')],
                     s=1.5, rasterized=True)
+                # append handles to legend
                 for i,lab in enumerate(classes):
-                    element = matplotlib.lines.Line2D([0], [0],
+                    handle = matplotlib.lines.Line2D([0], [0],
                         color=colormap[i], lw=6, label=lab)
-                    legend_elements.append(element)
-            elif (kwargs['classification'] == 'yapc'):
+                    legend_handles.append(handle)
+            elif (kwargs['data_type'] == 'atl03') and (kwargs['classification'] == 'yapc'):
                 sc = ax.scatter(atl03.index.values,
                     atl03["height"].values,
                     c=atl03["yapc_score"],
                     cmap=kwargs['cmap'],
                     s=1.5, rasterized=True)
                 plt.colorbar(sc)
-            elif (kwargs['classification'] == 'atl03'):
+            elif (kwargs['data_type'] == 'atl03') and (kwargs['classification'] == 'atl03'):
                 # background, buffer, low, medium, high
                 colormap = np.array(['y','c','b','g','m'])
                 confidences = ['background','buffer','low','medium','high']
@@ -2811,36 +2827,44 @@ class ICESat2:
                 sc = ax.scatter(atl03.index.values, atl03["height"].values,
                     c=colormap[atl03["atl03_cnf"].values.astype('i')],
                     s=1.5, rasterized=True)
+                # append handles to legend
                 for i,lab in enumerate(confidences):
-                    element = matplotlib.lines.Line2D([0], [0],
+                    handle = matplotlib.lines.Line2D([0], [0],
                         color=colormap[i], lw=6, label=lab)
-                    legend_elements.append(element)
-            elif (kwargs['atl03'] is not None):
+                    legend_handles.append(handle)
+            elif (kwargs['data_type'] == 'atl03'):
                 # plot all available ATL03 points as gray
                 sc = ax.scatter(atl03.index.values, atl03["height"].values,
                     c='0.4', s=0.5, rasterized=True)
-                legend_elements.append(matplotlib.lines.Line2D([0], [0],
-                    color='0.4', lw=6, label='ATL03'))
-            if kwargs['segments']:
-                geodataframe = self._gdf[
+                # append handle to legend
+                handle = matplotlib.lines.Line2D([0], [0],
+                    color='0.4', lw=6, label='ATL03')
+                legend_handles.append(handle)
+            # plot ATL06-SR segments for cycle and track
+            if (kwargs['data_type'] == 'atl06'):
+                atl06 = self._gdf[
                     (self._gdf['rgt'] == RGT) &
                     (self._gdf['gt'] == GT) &
                     (self._gdf['cycle'] == cycle)]
+                # set index to along-track distance
+                atl06['x_atc'] -= kwargs['x_offset']
+                atl06.set_index('x_atc', inplace=True)
                 # plot reduced data frame
-                sc = ax.scatter(geodataframe.index.values,
-                    geodataframe["h_mean"].values,
+                sc = ax.scatter(atl06.index.values,
+                    atl06["h_mean"].values,
                     c='red', s=2.5, rasterized=True)
-                legend_elements.append(matplotlib.lines.Line2D([0], [0],
-                    color='red', lw=6, label='ATL06-SR'))
+                handle = matplotlib.lines.Line2D([0], [0],
+                    color='red', lw=6, label='ATL06-SR')
+                legend_handles.append(handle)
             # add axes labels
-            ax.set_xlabel('UTC')
+            ax.set_xlabel('Along-Track Distance [m]')
             ax.set_ylabel('Height (m)')
         # add title
         if kwargs['title']:
             ax.set_title(kwargs['title'])
         # create legend
         if kwargs['legend']:
-            lgd = ax.legend(handles=legend_elements, loc=3,
+            lgd = ax.legend(handles=legend_handles, loc=3,
                 frameon=kwargs['legend_frameon'])
         # set legend frame to solid white
         if kwargs['legend'] and kwargs['legend_frameon']:
@@ -2849,6 +2873,7 @@ class ICESat2:
         if kwargs['ax'] is None:
             # show the figure
             plt.tight_layout()
+            plt.draw()
 
     def ground_track(self, GT):
         """extract the ground track name for a given Ground Track (GT) index
