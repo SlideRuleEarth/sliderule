@@ -92,6 +92,13 @@ class LuaLibrarySys
         static int      lsys_lsrec          (lua_State* L);
         static int      lsys_cwd            (lua_State* L);
         static int      lsys_memu           (lua_State* L);
+        static int      lsys_setmemlimit    (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static double memory_limit;
 };
 
 #endif  /* __lua_library_sys__ */

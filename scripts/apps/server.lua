@@ -51,11 +51,14 @@ sys.setenvver(environment_version)
 -- Set Is Public --
 sys.setispublic(is_public)
 
--- Set ECluster Name --
+-- Set Cluster Name --
 sys.setcluster(org_name)
 
 -- Configure System Message Queue Depth --
 sys.setstddepth(msgq_depth)
+
+-- Configure Memory Limit --
+sys.setmemlimit(stream_mem_thresh)
 
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally

@@ -1145,18 +1145,18 @@ uint8_t Atl03Reader::YapcScore::operator[] (int index) const
  *----------------------------------------------------------------------------*/
 Atl03Reader::TrackState::TrackState (const Atl03Data& atl03)
 {
-    ph_in              = 0;
-    seg_in             = 0;
-    seg_ph             = 0;
-    start_segment      = 0;
-    start_distance     = atl03.segment_dist_x[0];
-    seg_distance       = 0.0;
-    start_seg_portion  = 0.0;
-    track_complete     = false;
-    bckgrd_in          = 0;
-    extent_segment     = 0;
-    extent_valid       = true;
-    extent_length      = 0.0;
+    ph_in               = 0;
+    seg_in              = 0;
+    seg_ph              = 0;
+    start_segment       = 0;
+    start_distance      = atl03.segment_dist_x[0];
+    seg_distance        = 0.0;
+    start_seg_portion   = 0.0;
+    track_complete      = false;
+    bckgrd_in           = 0;
+    extent_segment      = 0;
+    extent_valid        = true;
+    extent_length       = 0.0;
 }
 
 /*----------------------------------------------------------------------------
@@ -1501,7 +1501,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
                 catch(const RunTimeException& e)
                 {
-                    alert(e.level(), e.code(), reader->outQ, &reader->active, "Error posting results for resource %s track %d: %s", info->reader->resource, info->track, e.what());
+                    alert(e.level(), e.code(), reader->outQ, &reader->active, "Error generating results for resource %s track %d.%d: %s", info->reader->resource, info->track, info->pair, e.what());
                 }
 
                 /* Clean Up Records */
@@ -1521,7 +1521,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", info->reader->resource, info->track, info->pair, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -1538,7 +1538,7 @@ void* Atl03Reader::subsettingThread (void* parm)
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->reader->resource);
+            mlog(INFO, "Completed processing resource %s track %d.%d (f: %u, s: %u, d: %u)", info->reader->resource, info->track, info->pair, local_stats.extents_filtered, local_stats.extents_sent, local_stats.extents_dropped);
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -1549,12 +1549,12 @@ void* Atl03Reader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s track %d.%d", status, info->reader->resource, info->track, info->pair);
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                        mlog(INFO, "Timeout posting terminator for %s track %d.%d ... trying again", info->reader->resource, info->track, info->pair);
                     }
                 }
             }
@@ -1753,7 +1753,7 @@ void Atl03Reader::postRecord (RecordObject& record, stats_t& local_stats)
     }
     else
     {
-        mlog(ERROR, "Atl03 reader failed to post %s to stream %s: %d", record.getRecordType(), outQ->getName(), post_status);
+        mlog(DEBUG, "Atl03 reader failed to post %s to stream %s: %d", record.getRecordType(), outQ->getName(), post_status);
         local_stats.extents_dropped++;
     }
 }

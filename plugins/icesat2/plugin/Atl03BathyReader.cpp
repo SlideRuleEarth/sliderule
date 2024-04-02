@@ -753,7 +753,7 @@ FString json_contents(R"json({
     extent->pointing_angle);
 
                             /* Write and Close JSON File */
-                            fprintf(json_file, json_contents.c_str());
+                            fprintf(json_file, "%s", json_contents.c_str());
                             fclose(json_file);
 
                             /* Open Data File */
