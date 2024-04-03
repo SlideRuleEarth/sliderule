@@ -66,7 +66,6 @@ void H5BTreeV2::readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, cons
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
     }
 
-    // TODO: effective struct init via {}
     btree2_ud_common_t udata; // struct to pass useful info e.g. name, hash
     bool attr_exists = false;
 
@@ -578,16 +577,9 @@ void H5BTreeV2::fheapLocate_Managed(btree2_hdr_t* hdr_og, H5FileBuffer::heap_inf
     size_t blk_off; // offset of object in block 
     
     id++; // skip due to flag reading
-
-    // NOTE: rework using readByteArray
-    size_t i;
-    for (i=0; i < hdr->heap_off_size; i++) {
-        obj_off |= (uint64_t)id[i] << (8 * i);
-    }
+    memcpy(&obj_off, id, (size_t)(hdr->heap_off_size));
     id += hdr->heap_off_size;
-    for (i=0; i < hdr->heap_len_size; i++) {
-        obj_len |= (size_t)id[i] << (8 * i);
-    }
+    memcpy(&obj_len, id, (size_t)(hdr->heap_len_size));
 
     /* Locate direct block of interest */
     if(hdr_og->dtable->curr_root_rows == 0)
@@ -676,7 +668,7 @@ void H5BTreeV2::compareType8Record(btree2_hdr_t* hdr, const void *_bt2_udata, co
         assert(bt2_udata->name_hash == bt2_rec->hash);
 
         if (bt2_rec->flags & H5O_MSG_FLAG_SHARED) {
-            // TODO: fheap = bt2_udata->shared_fheap;
+            // TODO: shared fractal heap support, see OG implementation; fheap = bt2_udata->shared_fheap;
             throw RunTimeException(CRITICAL, RTE_ERROR, "No support implemented for shared fractal heaps");
         }
         else {
@@ -729,7 +721,6 @@ void H5BTreeV2::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *re
  * initHdrBTreeV2
  *----------------------------------------------------------------------------*/
 void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr_t *root_node_ptr) {
-    // TODO - EXPAND
     
     /* populate header */
     hdr->addr = addr;
@@ -747,14 +738,14 @@ void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
     }
+
     /* Record type extraction */
     hdr->type = (btree2_subid_t) h5filePtr_->readField(1, &pos);
 
     /* Cont. parse Btreev2 header */
     hdr->node_size = (uint32_t) h5filePtr_->readField(4, &pos);
     hdr->rrec_size = (uint16_t) h5filePtr_->readField(2, &pos);
-    uint16_t depth = (uint16_t) h5filePtr_->readField(2, &pos);
-    hdr->depth = depth;
+    hdr->depth = (uint16_t) h5filePtr_->readField(2, &pos);
     hdr->split_percent = (uint8_t) h5filePtr_->readField(1, &pos);
     hdr->merge_percent = (uint8_t) h5filePtr_->readField(1, &pos);
     root_node_ptr->addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
@@ -763,6 +754,7 @@ void H5BTreeV2::initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr
     hdr->root = root_node_ptr;
     hdr->check_sum = h5filePtr_->readField(4, &pos);
 
+    /* allocate native record size using type found */
     switch(hdr->type) {
         case H5B2_ATTR_DENSE_NAME_ID:
             hdr->nrec_size = sizeof(btree2_type8_densename_rec_t);
@@ -806,7 +798,7 @@ void H5BTreeV2::initDTable(btree2_hdr_t *hdr, H5FileBuffer::heap_info_t* heap_in
     hdr->dtable->row_tot_dblock_free = row_tot_dblock_free;
     hdr->dtable->row_max_dblock_free = row_max_dblock_free;
 
-    /* block sizing */
+    /* buid block sizing for each row*/
     uint64_t tmp_block_size = (uint64_t) heap_info_ptr->starting_blk_size;
     uint64_t acc_block_off = (uint64_t) heap_info_ptr->starting_blk_size * heap_info_ptr->table_width;
     hdr->dtable->row_block_size[0] = (uint64_t) heap_info_ptr->starting_blk_size;
@@ -1098,6 +1090,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
     /* Copy root ptr - exit if empty tree */
     curr_node_ptr = hdr->root;
 
+    /* Sanity check: no records at node imply finished search */
     if (curr_node_ptr->node_nrec == 0) {
         *found = false;
         return;

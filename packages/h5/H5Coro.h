@@ -477,8 +477,6 @@ class H5BTreeV2
     public:
         /* key return values for outside */
 
-        // TODO: more custom for attribute mssg reading...
-
         uint64_t pos_out = 0; 
         uint8_t  hdr_flags_out = 0; 
         int      hdr_dlvl_out = 0; 
@@ -646,8 +644,6 @@ class H5BTreeV2
             uint32_t                hash = 0; // hash of 'name' field value 
         } btree2_type5_densename_rec_t;
 
-        /* END OF KAT ADDED */
-
         /* Main Dense entry point */
         void                readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr);
 
@@ -656,9 +652,7 @@ class H5BTreeV2
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int n, uint8_t l);
-        // unsigned            log2_gen(uint64_t n);
         unsigned            log2_of2(uint32_t n);
-        // uint16_t            H5HF_SIZEOF_OFFSET_BITS(uint16_t b);
         uint16_t            H5HF_SIZEOF_OFFSET_LEN(int l);
         uint32_t            H5_lookup3_rot(uint32_t x, uint32_t k);
         void                H5_lookup3_mix(uint32_t& a, uint32_t& b, uint32_t& c);
