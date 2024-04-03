@@ -1,4 +1,4 @@
-arrow: apache-arrow-16.0.0.dev-0-gbb7f584bf
+arrow: apache-arrow-15.0.2-0-ge03105efc
 gdal: v3.8.4-0-gc2d2a61739
 geos: 3.12.1-0-g9a5d0587f
 libgeotiff: 1.7.1-0-gbdeff84
