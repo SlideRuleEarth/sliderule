@@ -57,7 +57,7 @@ const struct luaL_Reg ParquetSampler::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquetsampler(<rasters_cnt>, <rasterobj1> <rasterobj2> ... <input_file_path>, <output_file_path>
+ * luaCreate - :parquetsampler(input_file_path, output_file_path, {["mosaic"]: dem1, ["strips"]: dem2})
  *----------------------------------------------------------------------------*/
 int ParquetSampler::luaCreate (lua_State* L)
 {
@@ -67,7 +67,7 @@ int ParquetSampler::luaCreate (lua_State* L)
         const char* input_file  = getLuaString(L, 1);
         const char* output_file = getLuaString(L, 2);
 
-        std::vector<RasterObject*> raster_objects;
+        std::vector<raster_info_t> rasters;
 
         /* Check if the third parameter is a table */
         luaL_checktype(L, 3, LUA_TTABLE);
@@ -77,19 +77,16 @@ int ParquetSampler::luaCreate (lua_State* L)
 
         while(lua_next(L, 3) != 0)
         {
-            /* uses 'key' (at index -2) and 'value' (at index -1) */
-            printf("Found element %s\n", lua_tostring(L, -1));
+            const char*   rkey = getLuaString(L, -2);
+            RasterObject* robj = dynamic_cast<RasterObject*>(getLuaObject(L, -1, RasterObject::OBJECT_TYPE));
+            rasters.push_back({rkey, robj});
 
-            /* Get Raster Object */
-            RasterObject* robj = static_cast<RasterObject*>(getLuaObject(L, -1, RasterObject::OBJECT_TYPE));
-            raster_objects.push_back(robj);
-
-            /* removes 'value'; keeps 'key' for next iteration */
+            /* Pop value */
             lua_pop(L, 1);
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetSampler(L, input_file, output_file, raster_objects));
+        return createLuaObject(L, new ParquetSampler(L, input_file, output_file, rasters));
     }
     catch(const RunTimeException& e)
     {
@@ -108,17 +105,7 @@ int ParquetSampler::luaSample (lua_State* L)
     {
         /* Get Self */
         ParquetSampler* lua_obj = dynamic_cast<ParquetSampler*>(getLuaSelf(L, 1));
-
-        const char* closest_time_str = getLuaString(L, 2, true, NULL);
-
-        /* Get gps closest time (overrides params provided closest time) */
-        int64_t gps = 0;
-        if(closest_time_str != NULL)
-        {
-            gps = TimeLib::str2gpstime(closest_time_str);
-        }
-
-        lua_obj->sample(gps);
+        lua_obj->sample();
     }
     catch(const RunTimeException& e)
     {
@@ -147,12 +134,12 @@ void ParquetSampler::deinit (void)
 /*----------------------------------------------------------------------------
  * Sampler Constructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::Sampler::Sampler (RasterObject* _robj, ParquetSampler* _obj):
+ParquetSampler::Sampler::Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj):
     robj(_robj),
     obj(_obj),
-    gps(0),
-    asset_name(NULL)
+    use_poi_time(false)
 {
+    rkey = StringLib::duplicate(_rkey);
 }
 
 
@@ -162,6 +149,7 @@ ParquetSampler::Sampler::Sampler (RasterObject* _robj, ParquetSampler* _obj):
 ParquetSampler::Sampler::~Sampler (void)
 {
     clearSamples();
+    delete [] rkey;
     robj->releaseLuaObject();
 }
 
@@ -185,7 +173,7 @@ void ParquetSampler::Sampler::clearSamples(void)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-void ParquetSampler::sample(int64_t gps)
+void ParquetSampler::sample(void)
 {
     /* Remove outputPath file if it exists */
     if(std::filesystem::exists(outputPath))
@@ -206,7 +194,6 @@ void ParquetSampler::sample(int64_t gps)
     /* Start Sampler Threads */
     for(sampler_t* sampler : samplers)
     {
-        sampler->gps = gps;
         Thread* pid = new Thread(samplerThread, sampler);
         samplerPids.push_back(pid);
     }
@@ -239,7 +226,7 @@ void ParquetSampler::sample(int64_t gps)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char* output_file, const std::vector<RasterObject*>& robjs):
+ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char* output_file, const std::vector<raster_info_t>& rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Add Lua sample function */
@@ -248,11 +235,16 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
     if (!input_file)  throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file");
     if (!output_file) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file");
 
-    for(RasterObject* robj : robjs)
+    for(const raster_info_t& raster : rasters)
     {
+        const char*   rkey = raster.rkey;
+        RasterObject* robj = raster.robj;
+
+        if(!rkey) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster key");
         if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
 
-        sampler_t* sampler = new sampler_t(robj, this);
+        sampler_t* sampler = new sampler_t(rkey, robj, this);
+        sampler->use_poi_time = robj->usePOItime();
         samplers.push_back(sampler);
     }
 
@@ -262,9 +254,7 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
     /* Allocate Implementation */
     impl = new ArrowImpl(NULL);
 
-    /* Get Points from input geoparquet file */
     impl->getPointsFromFile(inputPath, points);
-    mlog(DEBUG, "Input Parquet File: %s with %lu points\n", inputPath, points.size());
 }
 
 /*----------------------------------------------------------------------------
@@ -277,6 +267,9 @@ ParquetSampler::~ParquetSampler(void)
 
     for(sampler_t* sampler : samplers)
         delete sampler;
+
+    for(point_info_t* pinfo : points)
+        delete pinfo;
 
     delete [] inputPath;
     delete [] outputPath;
@@ -291,13 +284,14 @@ void* ParquetSampler::samplerThread(void* parm)
     sampler_t* sampler = static_cast<sampler_t*>(parm);
     RasterObject* robj = sampler->robj;
 
-    for(auto point : sampler->obj->points)
+    for(point_info_t* pinfo : sampler->obj->points)
     {
-        OGRPoint poi = point; /* Must make a copy of point for this thread */
+        OGRPoint poi = pinfo->point; /* Must make a copy of point for this thread */
+        double   gps = sampler->use_poi_time ? pinfo->gps_time : 0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
-        uint32_t err = robj->getSamples(&poi, sampler->gps, *slist, NULL);
+        uint32_t err = robj->getSamples(&poi, gps, *slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
@@ -308,7 +302,7 @@ void* ParquetSampler::samplerThread(void* parm)
         if(!listvalid)
         {
             /* Clear sample list */
-            for( auto sample : *slist)
+            for( RasterSample* sample : *slist)
                 delete sample;
 
             /* Clear the list but don't delete it, empty slist indicates no samples for this point */
@@ -319,8 +313,6 @@ void* ParquetSampler::samplerThread(void* parm)
         /* Add sample list to sampler */
         sampler->samples.push_back(slist);
     }
-
-    sampler->asset_name = robj->getAssetName();
 
     /* Create raster file map <id, filename> */
     Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());

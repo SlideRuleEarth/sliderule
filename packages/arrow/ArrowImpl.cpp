@@ -175,10 +175,10 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
 /*----------------------------------------------------------------------------
 * getpoints
 *----------------------------------------------------------------------------*/
-void ArrowImpl::getPointsFromFile(const char* file_path, std::vector<OGRPoint>& points)
+void ArrowImpl::getPointsFromFile(const char* file_path, std::vector<ParquetSampler::point_info_t*>& points)
 {
     std::shared_ptr<arrow::Table> table = parquetFileToTable(file_path);
-    auto geometry_column_index = table->schema()->GetFieldIndex("geometry");
+    int geometry_column_index = table->schema()->GetFieldIndex("geometry");
     if(geometry_column_index == -1)
     {
         throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
@@ -190,13 +190,29 @@ void ArrowImpl::getPointsFromFile(const char* file_path, std::vector<OGRPoint>& 
     /* The geometry column is binary type */
     auto binary_array = std::static_pointer_cast<arrow::BinaryArray>(geometry_column);
 
-    /* Iterate over each item in the geometry column */
-    for(int64_t item = 0; item < binary_array->length(); item++)
+    /* Iterate over each item in the geometry column and extract point */
+    for(int64_t i = 0; i < binary_array->length(); i++)
     {
-        auto wkb_data = binary_array->GetString(item);     /* Get WKB data as string (binary data) */
-        OGRPoint poi = convertWKBToPoint(wkb_data);
-        points.push_back(poi);
+        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
+        OGRPoint point = convertWKBToPoint(wkb_data);
+        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t(point);
+        points.push_back(pinfo);
     }
+
+    int time_column_index = table->schema()->GetFieldIndex("time");
+    if(time_column_index > -1)
+    {
+        /* If time column exists it will have the same length as the geometry column */
+        auto time_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(time_column_index)->chunk(0));
+        mlog(DEBUG, "Time column elements: %ld", time_column->length());
+
+        /* Update gps time for each point */
+        for(int64_t i = 0; i < time_column->length(); i++)
+        {
+            points[i]->gps_time = time_column->Value(i);
+        }
+    }
+    else mlog(DEBUG, "Time column not found.");
 }
 
 /*----------------------------------------------------------------------------
@@ -340,7 +356,7 @@ void ArrowImpl::createParquetFile(const char* input_file, const char* output_fil
             PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
         }
 
-        const std::string prefix = sampler->asset_name;
+        const std::string prefix = sampler->rkey;
 
         /* Create fields for the new columns */
         auto value_field  = std::make_shared<arrow::Field>(prefix + ".value",  arrow::list(arrow::float64()));
@@ -2164,7 +2180,7 @@ std::string ArrowImpl::createFileMap(const std::vector<ParquetSampler::sampler_t
             asset_list_json.PushBack(asset_json, allocator);
         }
 
-        document.AddMember(rapidjson::Value(sampler->asset_name, allocator), asset_list_json, allocator);
+        document.AddMember(rapidjson::Value(sampler->rkey, allocator), asset_list_json, allocator);
     }
 
     /* Convert JSON document to string */

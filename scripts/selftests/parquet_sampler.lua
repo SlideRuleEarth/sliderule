@@ -24,31 +24,24 @@ end
 local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true}))
 runner.check(dem1 ~= nil)
 
-local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, with_flags=true}))
+local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, with_flags=true, use_poi_time=true}))
 runner.check(dem2 ~= nil)
 
-local parquet_sampler = arrow.parquetsampler(in_file, out_file, {dem1, dem2})
+local parquet_sampler = arrow.parquetsampler(in_file, out_file, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 print('\n------------------\nTest01: parquetsampler sample \n------------------')
 
--- For performance limit strips rasters to one strip by using tstr filter
-local tstr = "2023:2:4:23:3:0"
-local status = parquet_sampler:sample(tstr)
+local status = parquet_sampler:sample()
 
 print('\n------------------\nTest02: parquet file creation \n------------------')
 
 -- There is no easy way to read parquet file in Lua, check the size of the output file
 -- the file was tested with python and it has the expected content
 local size = getFileSize(out_file);
-local expected_size = 18606
+print("Output file size: " .. size .. " bytes")
+local expected_size = 28489
 runner.check(size == expected_size, "Expected output file size: " .. expected_size .. " bytes, but got: " .. size .. " bytes")
-
--- For multiple strips for each point use this instead
--- local status = parquet_sampler:sample()
--- local size = getFileSize(out_file);
--- local expected_size = 29749
--- runner.check(size == expected_size, "Expected output file size: " .. expected_size .. " bytes, but got: " .. size .. " bytes")
 
 -- Remove the output file
 os.remove(out_file)

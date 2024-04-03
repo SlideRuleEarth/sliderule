@@ -76,14 +76,14 @@ class ArrowImpl
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit ArrowImpl          (ParquetBuilder* _builder);
-        ~ArrowImpl                  (void);
+        explicit ArrowImpl       (ParquetBuilder* _builder);
+        ~ArrowImpl               (void);
 
-        bool processRecordBatch     (batch_list_t& record_batch, int num_rows,
-                                     int batch_row_size_bits, bool file_finished=false);
+        bool processRecordBatch  (batch_list_t& record_batch, int num_rows,
+                                 int batch_row_size_bits, bool file_finished=false);
 
-        void getPointsFromFile      (const char* file_path, std::vector<OGRPoint>& points);
-        void createParquetFile      (const char* input_file, const char* output_file, const std::vector<ParquetSampler::sampler_t*>& _samplers);
+        void getPointsFromFile   (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
+        void createParquetFile   (const char* input_file, const char* output_file, const std::vector<ParquetSampler::sampler_t*>& _samplers);
 
     private:
 

@@ -74,17 +74,31 @@ class ParquetSampler: public LuaObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+        typedef struct
+        {
+            const char*    rkey;
+            RasterObject*  robj;
+        } raster_info_t;
+
+        typedef struct PointInfo
+        {
+            OGRPoint       point;
+            double         gps_time;
+
+            explicit PointInfo (const OGRPoint& _point): point(_point), gps_time(0.0) {}
+        } point_info_t;
+
         typedef std::vector<RasterSample*> sample_list_t;
         typedef struct Sampler
         {
+            const char*                 rkey;
             RasterObject*               robj;
             ParquetSampler*             obj;
-            int64_t                     gps;    /* Overrides RasterObject 'closest_time' */
+            bool                        use_poi_time;
             std::vector<sample_list_t*> samples;
-            const char*                 asset_name;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
-            explicit Sampler (RasterObject* _robj, ParquetSampler* _obj);
+            explicit Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj);
                     ~Sampler (void);
             void     clearSamples (void);
         } sampler_t;
@@ -98,7 +112,7 @@ class ParquetSampler: public LuaObject
         static int              luaSample       (lua_State* L);
         static void             init            (void);
         static void             deinit          (void);
-        void                    sample          (int64_t gps);
+        void                    sample          (void);
 
     private:
 
@@ -114,7 +128,7 @@ class ParquetSampler: public LuaObject
         const char*                outputPath;
         std::vector<Thread*>       samplerPids;
         std::vector<sampler_t*>    samplers;
-        std::vector<OGRPoint>      points;
+        std::vector<point_info_t*> points;
 
         ArrowImpl* impl; // private arrow data
 
@@ -124,7 +138,7 @@ class ParquetSampler: public LuaObject
 
                         ParquetSampler          (lua_State* L,
                                                  const char* input_file, const char* output_file,
-                                                 const std::vector<RasterObject*>& robjs);
+                                                 const std::vector<raster_info_t>& rasters);
                         ~ParquetSampler         (void);
         static void*    samplerThread           (void* parm);
 };

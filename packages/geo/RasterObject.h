@@ -92,14 +92,14 @@ class RasterObject: public LuaObject
             return parms->flags_file;
         }
 
+        bool usePOItime(void)
+        {
+            return parms->use_poi_time;
+        }
+
         const Dictionary<uint64_t>& fileDictGet(void)
         {
             return fileDict;
-        }
-
-        const char* getAssetName(void)
-        {
-            return parms->asset_name;
         }
 
     protected:
