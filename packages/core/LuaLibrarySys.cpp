@@ -65,6 +65,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"healthy",     LuaLibrarySys::lsys_healthy},
     {"ipv4",        LuaLibrarySys::lsys_ipv4},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
+    {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
     {"memu",        LuaLibrarySys::lsys_memu},
     {"setmemlimit", LuaLibrarySys::lsys_setmemlimit},
@@ -541,6 +542,28 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
         delete [] rectypes[i];
     }
     delete [] rectypes;
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_lsobj
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_lsobj (lua_State* L)
+{
+    (void)L;
+
+    vector<LuaObject::object_info_t> globals;
+    LuaObject::getGlobalObjects(globals);
+    print2term("\n%30s   %s\n", "Object Name", "Reference");
+    for(LuaObject::object_info_t& object: globals)
+    {
+        long reference_count = object.refCnt;
+        print2term("%30s   %ld        %s\n", object.objName.c_str(), reference_count, object.objType.c_str());
+    }
+
+    print2term("\nNumber of Global Objects: %lu\n", (unsigned long)globals.size());
+    print2term("Total Number of Objects: %ld\n", LuaObject::getNumObjects());
+
     return 0;
 }
 

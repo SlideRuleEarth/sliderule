@@ -276,6 +276,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         .hdr_index = 0,
         .rec_size = 0,
         .rec_index = 0,
+        .err_cnt = 0,
         .rec_buf = NULL,
         .outq = outq,
         .url = url,
@@ -322,6 +323,12 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         if(parser.rec_size > 0)
         {
             delete [] parser.rec_buf;
+        }
+
+        /* Display Error Message if Errors Encountered */
+        if(parser.err_cnt > 0)
+        {
+            mlog(CRITICAL, "Errors encountered on request to %s: %d", url, parser.err_cnt);
         }
     }
 
@@ -533,7 +540,7 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
     uint8_t* input_data = static_cast<uint8_t*>(buffer);
     uint32_t input_index = 0;
 
-    while(bytes_to_process > 0)
+    while((!parser->active || *parser->active) && (bytes_to_process > 0))
     {
         if(parser->rec_size == 0) // record header
         {
@@ -583,17 +590,20 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
                 while((!parser->active || *parser->active) && post_status == MsgQ::STATE_TIMEOUT)
                 {
                     post_status = parser->outq->postRef(parser->rec_buf, parser->rec_size, SYS_TIMEOUT);
+                    // reset body
+                    if(post_status != MsgQ::STATE_TIMEOUT)
+                    {
+                        parser->rec_index = 0;
+                        parser->rec_size = 0;
+                    }
+                    // handle post errors
                     if(post_status < 0)
                     {
-                        // handle post errors
+                        mlog(DEBUG, "Failed to post response for %s: %d", parser->url, post_status);
                         delete [] parser->rec_buf;
-                        mlog(CRITICAL, "Failed to post response for %s: %d", parser->url, post_status);
+                        parser->err_cnt++;
                     }
                 }
-
-                // reset body
-                parser->rec_index = 0;
-                parser->rec_size = 0;
             }
         }
     }

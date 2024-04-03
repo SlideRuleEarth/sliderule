@@ -91,6 +91,7 @@ class CurlLib
             uint32_t    hdr_index;
             uint32_t    rec_size;
             uint32_t    rec_index;
+            uint32_t    err_cnt;
             uint8_t*    rec_buf;
             Publisher*  outq;
             const char* url;
