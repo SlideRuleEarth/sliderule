@@ -297,6 +297,15 @@ uint32_t H5BTreeV2::checksumLookup3(const void *key, size_t length, uint32_t ini
 
 }
 
+/*----------------------------------------------------------------------------
+ * checkAssigned - verify that value doesn't overflow when casted to type T
+ *----------------------------------------------------------------------------*/
+template<typename T, typename V>
+bool H5BTreeV2::checkAssigned(const T& type, const V& value) {
+    print2term("Recieved type for assignment check: %u", (unsigned) type);
+    return value <= std::numeric_limits<T>::max();
+}
+
  /*----------------------------------------------------------------------------
  * addrDecode - helper
  *----------------------------------------------------------------------------*/
@@ -381,8 +390,9 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
     /* Decode Version 2 B-tree, Type 8 Record*/
     /* See HDF5 official documentation: https://docs.hdfgroup.org/hdf5/v1_10/_f_m_t3.html#DatatypeMessage:~:text=Layout%3A%20Version%202%20B%2Dtree%2C%20Type%208%20Record%20Layout%20%2D%20Attribute%20Name%20for%20Indexed%20Attributes */
 
-    unsigned u;
+    unsigned u = 0;
     btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
+    
     for (u = 0; u < H5O_FHEAP_ID_LEN; u++ ) {
         nrecord->id.id[u] = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     }
@@ -402,7 +412,7 @@ void H5BTreeV2::fheapLocate(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t *hdr
 
     /* Dispatcher for heap ID types - currently only supporting manual type */
     uint8_t* id = (uint8_t*)_id;
-    uint8_t id_flags; // heap ID flag bits 
+    uint8_t id_flags = 0; // heap ID flag bits 
     id_flags = *id;
 
     if ((id_flags & H5HF_ID_VERS_MASK) != H5HF_ID_VERS_CURR) {
@@ -435,29 +445,23 @@ void H5BTreeV2::fheapLocate(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t *hdr
  *----------------------------------------------------------------------------*/
 void H5BTreeV2::dtableLookup(H5FileBuffer::heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col) {
 
+    bool checkA = false;
+
     /* Check for offset in first row */
     if (off < dtable->num_id_first_row) {
         *row = 0;
-        // Mimic H5_CHECKED_ASSIGN(*col, unsigned, (off / dtable->cparam.start_block_size), hsize_t);
-        if ((off / hdr->starting_blk_size) > std::numeric_limits<unsigned int>::max()) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "calculation in dtable look up exceeds unsigned rep limit: %zu", (off / hdr->starting_blk_size));
-        }
-        else {
-            *col = (unsigned) (off / hdr->starting_blk_size);
-        }
+        checkA = checkAssigned(*col, off / hdr->starting_blk_size);
+        assert(checkA && "Failed checkAssigned for dtableLookup"); 
+        *col = (unsigned) (off / hdr->starting_blk_size);
     }
     else {
         unsigned high_bit = log2_gen(off); // determine the high bit in the offset
         uint64_t off_mask = ((uint64_t)1) << high_bit; // compute mask for determining column
 
         *row = (high_bit - dtable->first_row_bits) + 1;
-        // Mimic H5_CHECKED_ASSIGN(*col, unsigned, ((off - off_mask) / dtable->row_block_size[*row]), hsize_t);
-        if (((off - off_mask) / dtable->row_block_size[*row]) > std::numeric_limits<unsigned int>::max()) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "calculation in dtable look up exceeds unsigned rep limit: %zu", ((off - off_mask) / dtable->row_block_size[*row]));
-        }
-        else {
-            *col = ((off - off_mask) / dtable->row_block_size[*row]);
-        }
+        checkA = checkAssigned(*col, ((off - off_mask) / dtable->row_block_size[*row]));
+        assert(checkA && "Failed checkAssigned for dtableLookup"); 
+        *col = ((off - off_mask) / dtable->row_block_size[*row]);
     } 
 
 }
@@ -468,10 +472,10 @@ void H5BTreeV2::dtableLookup(H5FileBuffer::heap_info_t* hdr, dtable_t* dtable, u
 uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents) {
     /* Build array of addresses (ent) for this indirect block - follow H5HF__cache_iblock_deserialize x readIndirectBlock */
     unsigned idx = 0; // track indx in ents
-    uint64_t block_off; // iblock->block_off for moving offset
+    uint64_t block_off = 0; // iblock->block_off for moving offset
     
     pos += 5; // signature and version
-    pos += h5filePtr_->metaData.offsetsize; // + hdr->blk_offset_size; // block header
+    pos += h5filePtr_->metaData.offsetsize; // skip block header
 
     /* Build equivalent of iblock->block_off - copy indirect style*/
     const int MAX_BLOCK_OFFSET_SIZE = 8;
@@ -485,9 +489,15 @@ uint64_t H5BTreeV2::buildEntries_Indirect(H5FileBuffer::heap_info_t* heap_info, 
     {
         /* Calculate Row's Block Size */
         int row_block_size;
-        if      (row == 0)  row_block_size = heap_info->starting_blk_size;
-        else if (row == 1)  row_block_size = heap_info->starting_blk_size;
-        else                row_block_size = heap_info->starting_blk_size * (0x2 << (row - 2));
+        if (row == 0) {
+            row_block_size = heap_info->starting_blk_size;
+        }
+        else if (row == 1) { 
+            row_block_size = heap_info->starting_blk_size;
+        }
+        else {
+            row_block_size = heap_info->starting_blk_size * (0x2 << (row - 2));
+        }
 
         /* Process Entries in Row */
         for(int entry = 0; entry < heap_info->table_width; entry++)
@@ -523,11 +533,9 @@ void H5BTreeV2::man_dblockLocate(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t
     /* This method should only be called if we can't directly readDirect */
     // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
 
-    uint64_t iblock_addr; 
-    // uint64_t pos;
-    unsigned row, col;
-    // unsigned nrows; // num new rows in indirect 
-    uint64_t block_off;
+    uint64_t iblock_addr = 0; 
+    unsigned row = 0, col = 0;
+    uint64_t block_off = 0;
 
     /* Look up row & column for object */
     dtableLookup(hdr, hdr_og->dtable, obj_off, &row, &col);
@@ -535,7 +543,7 @@ void H5BTreeV2::man_dblockLocate(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t
     /* Set indirect */
     iblock_addr = hdr_og->dtable->table_addr;
     
-    /* Read indirect - set up ents array */ // FLAG FOR DEBUGGING
+    /* Read indirect - set up ents array */
     int nrows = hdr->curr_num_rows;
     block_off = buildEntries_Indirect(hdr, nrows, iblock_addr, ents);
 
@@ -554,13 +562,8 @@ void H5BTreeV2::man_dblockLocate(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t
 
     }
 
-    // return via args 
-    // ents array of indirect -> * ents
-    // entry (which is unsigned applied onto ents)
+    /* populate entry pointer using derived info */
     *ret_entry = (row * (unsigned)hdr->table_width) + col;
-
-    /* return final block  */
-    // return block_off;
 
 }
 
@@ -570,11 +573,11 @@ void H5BTreeV2::man_dblockLocate(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t
 void H5BTreeV2::fheapLocate_Managed(btree2_hdr_t* hdr_og, H5FileBuffer::heap_info_t* hdr, uint8_t* id){
     /* Operate on managed heap - eqiv to hdf5 ref functions: H5HF__man_op, H5HF__man_op_real*/
 
-    uint64_t dblock_addr; // found direct block to apply offset on
+    uint64_t dblock_addr = 0; // found direct block to apply offset on
     uint64_t dblock_block_off = 0; // dblock block offset, extracted from top of dir block header
     uint64_t obj_off = 0; // offset of object in heap 
     size_t obj_len = 0; // len of object in heap
-    size_t blk_off; // offset of object in block 
+    size_t blk_off = 0; // offset of object in block 
     
     id++; // skip due to flag reading
     memcpy(&obj_off, id, (size_t)(hdr->heap_off_size));
@@ -620,7 +623,7 @@ void H5BTreeV2::fheapLocate_Managed(btree2_hdr_t* hdr_og, H5FileBuffer::heap_inf
     /* read object switch on mssg type */
     switch(hdr_og->type) {
         case H5B2_ATTR_DENSE_NAME_ID:
-            // H5FileBuffer::readAttributeMsg(pos, hdr->hdr_flags, hdr->dlvl, msg_size);
+            /* return info for outside readAttributeMessage - complete obj construction*/
             pos_out = pos;
             hdr_flags_out = hdr->hdr_flags;
             hdr_dlvl_out = hdr->dlvl;
@@ -690,11 +693,10 @@ void H5BTreeV2::locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *re
     sets *idx to location of record greater than or equal to record to locate */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2int.c#L89 */
 
-    unsigned lo = 0, hi; // bounds of search range
+    unsigned lo = 0, hi = nrec; // bounds of search range
     unsigned my_idx = 0; // current record idx
 
     *cmp = -1;
-    hi = nrec;
 
     while (lo < hi && *cmp) {
         /* call on type compare method */
@@ -824,12 +826,9 @@ void H5BTreeV2::initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node
     /* Init leaf node info */
     size_t sz_max_nrec = (((hdr->node_size) - H5B2_METADATA_PREFIX_SIZE) / (hdr->rrec_size));  
 
-    if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "sz_max_nrec exceeds unsigned rep limit: %zu", sz_max_nrec); // == H5_CHECKED_ASSIGN, see hdf5 src
-    }
-    else {
-        hdr->node_info[0].max_nrec = (unsigned) sz_max_nrec;
-    }
+    bool checkA = checkAssigned(hdr->node_info[0].max_nrec, sz_max_nrec);
+    assert(checkA && "Failed checkAssigned for initNodeInfo: sz_max_nrec overflows type of of hdr->node_info[0].max_nrec"); 
+    hdr->node_info[0].max_nrec = (unsigned) sz_max_nrec;
 
     hdr->node_info[0].split_nrec = (hdr->node_info[0].max_nrec * hdr->split_percent) / 100;
     hdr->node_info[0].merge_nrec = (hdr->node_info[0].max_nrec * hdr->merge_percent) / 100;
@@ -853,11 +852,10 @@ void H5BTreeV2::initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node
     /* Compute size to compute num records in each record */
     unsigned u_max_nrec_size = (log2_gen((uint64_t)hdr->node_info[0].max_nrec) / 8) + 1;
 
-    if (u_max_nrec_size > std::numeric_limits<uint8_t>::max()) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %d", u_max_nrec_size);
-    }
-
+    checkA = checkAssigned(hdr->max_nrec_size, u_max_nrec_size);
+    assert(checkA && "Failed checkAssigned for initNodeInfo: u_max_nrec_size exceeds uint8 rep limit"); 
     hdr->max_nrec_size = (uint8_t) u_max_nrec_size;
+
     assert(hdr->max_nrec_size <= H5B2_SIZEOF_RECORDS_PER_NODE);
 
     /* Init internal node info, including size and number */
@@ -867,22 +865,18 @@ void H5BTreeV2::initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node
 
             unsigned b2_int_ptr_size = (unsigned)(h5filePtr_->metaData.offsetsize) + hdr->max_nrec_size + (hdr->node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
             sz_max_nrec = ((hdr->node_size - (H5B2_METADATA_PREFIX_SIZE + b2_int_ptr_size)) / (hdr->rrec_size + b2_int_ptr_size)); // = H5B2_NUM_INT_REC(hdr, u);
-            if (sz_max_nrec > std::numeric_limits<unsigned int>::max()) {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "sz_max_nrec exceeds unsigned rep limit: %zu", sz_max_nrec);
-            }
-            else {
-                hdr->node_info[u].max_nrec = sz_max_nrec;
-            }
-            
+            checkA = checkAssigned(hdr->node_info[u].max_nrec, sz_max_nrec);
+            assert(checkA && "Failed checkAssigned for initNodeInfo: sz_max_nrec exceeds unsigned rep limit");
+            hdr->node_info[u].max_nrec = sz_max_nrec;
+
             assert(hdr->node_info[u].max_nrec <= hdr->node_info[u - 1].max_nrec);
             hdr->node_info[u].split_nrec = (hdr->node_info[u].max_nrec * hdr->split_percent) / 100;
             hdr->node_info[u].merge_nrec = (hdr->node_info[u].max_nrec * hdr->merge_percent) / 100;
             hdr->node_info[u].cum_max_nrec = ((hdr->node_info[u].max_nrec + 1) * hdr->node_info[u - 1].cum_max_nrec) + hdr->node_info[u].max_nrec;
             u_max_nrec_size = (log2_gen((uint64_t)hdr->node_info[u].cum_max_nrec) / 8) + 1;
 
-            if (u_max_nrec_size > std::numeric_limits<uint8_t>::max()) {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "u_max_nrec_size exceeds uint8 rep limit: %u", u_max_nrec_size);
-            }
+            checkA = checkAssigned(hdr->node_info[u].cum_max_nrec_size, u_max_nrec_size);
+            assert(checkA && "Failed checkAssigned for initNodeInfo: u_max_nrec_size exceeds uint8 rep limit");
             hdr->node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;
         
         }
@@ -927,8 +921,8 @@ void H5BTreeV2::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr
 void H5BTreeV2::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr) {
     /* Set up internal node structure from given addr start: internal_pos */
 
-    uint8_t *native;  
-    unsigned u;
+    uint8_t *native = nullptr;  
+    unsigned u = 0;
     int node_nrec = 0;
 
     /* Signature sanity check */
@@ -979,27 +973,14 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr,
         /* Decode node address -- see H5F_addr_decode */
         size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
 
-        uint64_t snap_internal = internal_pos;
         addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)); // internal pos value should change
-
-        /* TEMPORARY: Sanity check to make sure internal pos is moving */
-        if (snap_internal == internal_pos){
-            throw RunTimeException(CRITICAL, RTE_ERROR, "addrDecode did not advance internal_pos in internal node set up");
-        }
-
-        /* UINT64DECODE_VAR(image, node_nrec, udata->hdr->max_nrec_size); */
         varDecode((uint8_t *)internal_pos, node_nrec, hdr->max_nrec_size);
 
-        /* H5_CHECKED_ASSIGN(int_node_ptr->node_nrec, uint16_t, node_nrec, int); */
-        if (node_nrec > std::numeric_limits<uint16_t>::max()) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "node_nrec exceeds uint16 rep limit: %d", node_nrec);
-        }
-        else {
-            int_node_ptr->node_nrec = (uint16_t) node_nrec;
-        }
+        bool checkA = checkAssigned(int_node_ptr->node_nrec, node_nrec);
+        assert(checkA && "node_nrec exceeds uint16 rep limit");
+        int_node_ptr->node_nrec = (uint16_t) node_nrec;
 
         if (internal->depth > 1) {
-            // UINT64DECODE_VAR(image, int_node_ptr->all_nrec, udata->hdr->node_info[udata->depth - 1].cum_max_nrec_size);
             varDecode((uint8_t *)internal_pos, int_node_ptr->all_nrec, hdr->node_info[internal->depth - 1].cum_max_nrec_size);
         }
         else {
@@ -1025,9 +1006,8 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
     /* given pointer to lead node, set *leaf struct and deserialize the records contained at the node */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2cache.c#L988 */
 
-    uint8_t *native;  
-    unsigned u; 
-
+    uint8_t *native = nullptr;  
+    unsigned u = 0; 
     leaf->hdr = hdr;
 
     /* Signature Check*/
@@ -1081,10 +1061,10 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
     /* Given start of btreev2, search for matching udata */
     /* HDF5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2.c#L429 */
 
-    btree2_node_ptr_t* curr_node_ptr; // node ptr info for curr
-    uint16_t depth;                   // of tree
-    int cmp;                          // comparison value of records (0 if found, else -1 or 1 for search direction)
-    unsigned idx;                     // location (index) of record which matches key
+    btree2_node_ptr_t* curr_node_ptr = nullptr; // node ptr info for curr
+    uint16_t depth = 0;                         // of tree
+    int cmp = 0;                          // comparison value of records (0 if found, else -1 or 1 for search direction)
+    unsigned idx = 0;                     // location (index) of record which matches key
     btree2_nodepos_t curr_pos;        // address of curr ndoe
 
     /* Copy root ptr - exit if empty tree */

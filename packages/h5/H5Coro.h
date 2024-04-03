@@ -650,6 +650,7 @@ class H5BTreeV2
         /* Helpers */
         bool                isTypeSharedAttrs (unsigned type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
+        template<typename T, typename V> bool checkAssigned(const T& type, const V& value); 
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int n, uint8_t l);
         unsigned            log2_of2(uint32_t n);
@@ -677,7 +678,7 @@ class H5BTreeV2
         void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
         uint64_t            openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
-
+        
         /* dtable search */
         void                dtableLookup( H5FileBuffer::heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col);
         uint64_t            buildEntries_Indirect( H5FileBuffer::heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents);
