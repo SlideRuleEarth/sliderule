@@ -6,12 +6,35 @@ Version description of the v4.3.2 release of SlideRule Earth.
 
 ## New Features
 
+* Container Runtime Environment (__Feature Preview__) - ability to run Python containers from SlideRule endpoint
+
+* CSV output from ParquetBuilder supported
 
 ## Issues Resolved
 
+* [8c8fe17](https://github.com/ICESat2-SlideRule/sliderule/commit/8c8fe174e25fff0fb7fd6416cbf25b6bd63580d3) - docker compose restart policy changed to "always" for production
+
+* [5d893d0](https://github.com/ICESat2-SlideRule/sliderule/commit/5d893d0769425f4178304960ad0148fc62483919) - fixed bug in atl08 processing that caused crash when last batch was a full batch
+
+* [35c071f](https://github.com/ICESat2-SlideRule/sliderule/commit/35c071fadf9a14d58c95b66b4e578cdb05bcab3c) - changed health check to go to AppServer and removed ProbeServer; this fixes the issue where the AppServer goes down but the ProbeServer remained healthy and therefore the node was deemed healthy
+
+* [35c071f](https://github.com/ICESat2-SlideRule/sliderule/commit/35c071fadf9a14d58c95b66b4e578cdb05bcab3c) - fixed bug in S3 curl library where S3 get request immediately failed and debug message attempted to be printed with no data
+
+* [08a3eaf](https://github.com/ICESat2-SlideRule/sliderule/commit/08a3eaf9ac1758c097e60a81f47d4029fa1ab6cd) - implemented proxy (EnpointProxy) retries for failed proxied requests; the lock for the proxied node is held until the request is successful or the retries are exhausted (this prevents the retry always going back to the same node); polling for available nodes was slowed down to 1Hz (from 5Hz); bug in cleaning up ancillary data fixed)
+
+* [01f5b8b](https://github.com/ICESat2-SlideRule/sliderule/commit/01f5b8b7c79bdd248029b326d4e8b9dac971f5b3) - pinned v15.0.2 of Apache Arrow library to avoid memory bug in latest tag; (the arrow repo does not have releases)
+
+* [5338ef6](https://github.com/ICESat2-SlideRule/sliderule/commit/5338ef6f6166a15b1ab6b83abe3632b2d34790c3) - fixed CurlLib memory leak when client request is prematurely terminated
+
+* [cf5290a](https://github.com/ICESat2-SlideRule/sliderule/commit/cf5290a3007b95c922d6e03f2c8c52d73e8370f0) - added memory usage limit to health check to avoid situation where a node with not enough memory to service a processing request keeps registering itself (and consequently always has no active locks because it rejects all requests and therefore keeps having requests routed to it)
 
 ## Development Updates
 
+* [f68aa36](https://github.com/ICESat2-SlideRule/sliderule/commit/f68aa367b4436f528ea40b902d4d621288a18024) - number of threads in proxy (EndpointProxy) is calculated based on a user provided hint or the number of nodes in the cluster currently registered
+
+* [08a3eaf](https://github.com/ICESat2-SlideRule/sliderule/commit/08a3eaf9ac1758c097e60a81f47d4029fa1ab6cd) - added support for stack traces to have symbols from dynamically loaded modules (via `__no_unload__` which is defaulted in Debug builds)
+
+* [5338ef6](https://github.com/ICESat2-SlideRule/sliderule/commit/5338ef6f6166a15b1ab6b83abe3632b2d34790c3) - `sys.lsobj` Lua API added to list global LuaObjects and total number of LuaObjects
 
 ## Getting This Release
 
