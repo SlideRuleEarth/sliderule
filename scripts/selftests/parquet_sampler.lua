@@ -4,7 +4,7 @@ asset = require("asset")
 local assets = asset.loaddir()
 local td = runner.rootdir(arg[0])
 
-local in_file = td.."atl06_5rows.parquet"
+local in_file = td.."atl06_10rows.parquet"
 local out_file = td.."samples.parquet"
 
 -- console.monitor:config(core.LOG, core.DEBUG)
@@ -33,15 +33,22 @@ runner.check(parquet_sampler ~= nil)
 print('\n------------------\nTest01: parquetsampler sample \n------------------')
 
 local status = parquet_sampler:sample()
-
-print('\n------------------\nTest02: parquet file creation \n------------------')
-
--- There is no easy way to read parquet file in Lua, check the size of the output file
--- the file was tested with python and it has the expected content
 local size = getFileSize(out_file);
 print("Output file size: " .. size .. " bytes")
 local expected_size = 28487
 runner.check(size == expected_size, "Expected output file size: " .. expected_size .. " bytes, but got: " .. size .. " bytes")
+
+print('\n------------------\nTest02: parquetsampler sample again \n------------------')
+
+local status = parquet_sampler:sample()
+local size = getFileSize(out_file);
+print("Output file size: " .. size .. " bytes")
+local expected_size = 28487
+runner.check(size == expected_size, "Expected output file size: " .. expected_size .. " bytes, but got: " .. size .. " bytes")
+
+
+-- There is no easy way to read parquet file in Lua, check the size of the output file
+-- the file was tested with python and it has the expected content
 
 -- Remove the output file
 os.remove(out_file)

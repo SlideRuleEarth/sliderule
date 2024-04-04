@@ -133,6 +133,7 @@ class ParquetSampler: public LuaObject
         std::vector<point_info_t*> points;
         std::vector<sampler_t*>    samplers;
         ArrowSamplerImpl*          impl; // private arrow data
+        bool                       alreadySampled;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -142,6 +143,7 @@ class ParquetSampler: public LuaObject
                                                  const char* input_file, const char* output_file,
                                                  const std::vector<raster_info_t>& rasters);
                         ~ParquetSampler         (void);
+        void            Delete                  (void);
         static void*    samplerThread           (void* parm);
 };
 

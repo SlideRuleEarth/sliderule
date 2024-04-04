@@ -106,7 +106,7 @@ int ParquetSampler::luaSample (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error sampling%s: %s", LUA_META_NAME, e.what());
+        mlog(e.level(), "Error sampling %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 
@@ -171,7 +171,9 @@ void ParquetSampler::Sampler::clearSamples(void)
  *----------------------------------------------------------------------------*/
 void ParquetSampler::sample(void)
 {
-    /* Remove outputPath file if it exists */
+    if(alreadySampled) return;
+    alreadySampled = true;
+
     if(std::filesystem::exists(outputPath))
     {
         int rc = std::remove(outputPath);
@@ -180,9 +182,6 @@ void ParquetSampler::sample(void)
             mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, outputPath, strerror(errno));
         }
     }
-
-    /* In case user called multiple times clear all samples and new columns */
-    impl->clearColumns();
 
     /* Start Sampler Threads */
     for(sampler_t* sampler : samplers)
@@ -219,7 +218,8 @@ void ParquetSampler::sample(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char* output_file, const std::vector<raster_info_t>& rasters):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    alreadySampled(false)
 {
     /* Add Lua sample function */
     LuaEngine::setAttrFunc(L, "sample", luaSample);
@@ -227,32 +227,49 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
     if (!input_file)  throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file");
     if (!output_file) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file");
 
-    for(std::size_t i = 0; i < rasters.size(); i++)
+    try
     {
-        const raster_info_t& raster = rasters[i];
-        const char*   rkey = raster.rkey;
-        RasterObject* robj = raster.robj;
+        for(std::size_t i = 0; i < rasters.size(); i++)
+        {
+            const raster_info_t& raster = rasters[i];
+            const char* rkey = raster.rkey;
+            RasterObject* robj = raster.robj;
 
-        if(!rkey) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster key");
-        if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
+            if(!rkey) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster key");
+            if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
 
-        sampler_t* sampler = new sampler_t(rkey, robj, this);
-        samplers.push_back(sampler);
+            sampler_t* sampler = new sampler_t(rkey, robj, this);
+            samplers.push_back(sampler);
+        }
+
+        inputPath  = StringLib::duplicate(input_file);
+        outputPath = StringLib::duplicate(output_file);
+
+        /* Allocate Implementation */
+        impl = new ArrowSamplerImpl(this);
+
+        impl->getPointsFromFile(inputPath, points);
     }
-
-    inputPath  = StringLib::duplicate(input_file);
-    outputPath = StringLib::duplicate(output_file);
-
-    /* Allocate Implementation */
-    impl = new ArrowSamplerImpl(this);
-
-    impl->getPointsFromFile(inputPath, points);
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating ParquetSampler: %s", e.what());
+        Delete();
+        throw;
+    }
 }
 
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
 ParquetSampler::~ParquetSampler(void)
+{
+    Delete();
+}
+
+/*----------------------------------------------------------------------------
+ * Delete -
+ *----------------------------------------------------------------------------*/
+void ParquetSampler::Delete(void)
 {
     for(Thread* pid : samplerPids)
         delete pid;
@@ -307,31 +324,33 @@ void* ParquetSampler::samplerThread(void* parm)
     }
 
     /* Convert samples into new columns */
-    sampler->obj->impl->processSamples(sampler);
-
-    /* Clear the samples, they are no longer needed */
-    sampler->clearSamples();
-
-    /* Create raster file map <id, filename> */
-    Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
-    for(int i = 0; i < iterator.length; i++)
+    if(sampler->obj->impl->processSamples(sampler))
     {
-        const char*  name = iterator[i].key;
-        const uint64_t id = iterator[i].value;
-
-        /* For some data sets, dictionary contains quality mask rasters in addition to data rasters.
-         * Only add rasters with id present in the samples
-        */
-        if(sampler->file_ids.find(id) != sampler->file_ids.end())
+        /* Create raster file map <id, filename> */
+        Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
+        for(int i = 0; i < iterator.length; i++)
         {
-            sampler->filemap.push_back(std::make_pair(id, name));
+            const char* name = iterator[i].key;
+            const uint64_t id = iterator[i].value;
+
+            /* For some data sets, dictionary contains quality mask rasters in addition to data rasters.
+             * Only add rasters with id present in the samples
+            */
+            if(sampler->file_ids.find(id) != sampler->file_ids.end())
+            {
+                sampler->filemap.push_back(std::make_pair(id, name));
+            }
         }
+
+        /* Sort the map with increasing file id */
+        std::sort(sampler->filemap.begin(), sampler->filemap.end(),
+            [](const std::pair<uint64_t, std::string>& a, const std::pair<uint64_t, std::string>& b)
+            { return a.first < b.first; });
     }
 
-    /* Sort the map with increasing file id */
-    std::sort(sampler->filemap.begin(), sampler->filemap.end(),
-        [](const std::pair<uint64_t, std::string>& a, const std::pair<uint64_t, std::string>& b)
-        { return a.first < b.first; } );
+    /* Release since not needed anymore */
+    sampler->clearSamples();
+    sampler->file_ids.clear();
 
     /* Exit Thread */
     return NULL;

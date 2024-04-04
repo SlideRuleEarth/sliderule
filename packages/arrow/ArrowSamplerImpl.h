@@ -62,7 +62,7 @@ class ArrowSamplerImpl
 
         void getPointsFromFile    (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
         void createParquetFile    (const char* input_file, const char* output_file);
-        void processSamples       (ParquetSampler::sampler_t* sampler);
+        bool processSamples       (ParquetSampler::sampler_t* sampler);
         void clearColumns         (void);
 
     private:

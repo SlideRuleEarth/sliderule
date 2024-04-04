@@ -170,7 +170,7 @@ void ArrowSamplerImpl::createParquetFile(const char* input_file, const char* out
 /*----------------------------------------------------------------------------
 * processSamples
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
 {
     auto pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -210,75 +210,84 @@ void ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
     arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
     auto mad_builder = static_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
 
-    /* Iterate over each sample in a vector of lists of samples */
-    for(ParquetSampler::sample_list_t* slist : sampler->samples)
-    {
-        /* Start a new lists for each RasterSample */
-        PARQUET_THROW_NOT_OK(value_list_builder.Append());
-        PARQUET_THROW_NOT_OK(time_list_builder.Append());
-        if(robj->hasFlags())
-        {
-            PARQUET_THROW_NOT_OK(flags_list_builder.Append());
-        }
-        PARQUET_THROW_NOT_OK(fileid_list_builder.Append());
-        if(robj->hasZonalStats())
-        {
-            PARQUET_THROW_NOT_OK(count_list_builder.Append());
-            PARQUET_THROW_NOT_OK(min_list_builder.Append());
-            PARQUET_THROW_NOT_OK(max_list_builder.Append());
-            PARQUET_THROW_NOT_OK(mean_list_builder.Append());
-            PARQUET_THROW_NOT_OK(median_list_builder.Append());
-            PARQUET_THROW_NOT_OK(stdev_list_builder.Append());
-            PARQUET_THROW_NOT_OK(mad_list_builder.Append());
-        }
-
-        /* Iterate over each sample */
-        for(RasterSample* sample : *slist)
-        {
-            /* Append the value to the value list */
-            PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
-            PARQUET_THROW_NOT_OK(time_builder->Append(sample->time));
-            if(robj->hasFlags())
-            {
-                PARQUET_THROW_NOT_OK(flags_builder->Append(sample->flags));
-            }
-            PARQUET_THROW_NOT_OK(fileid_builder->Append(sample->fileId));
-            if(robj->hasZonalStats())
-            {
-                PARQUET_THROW_NOT_OK(count_builder->Append(sample->stats.count));
-                PARQUET_THROW_NOT_OK(min_builder->Append(sample->stats.min));
-                PARQUET_THROW_NOT_OK(max_builder->Append(sample->stats.max));
-                PARQUET_THROW_NOT_OK(mean_builder->Append(sample->stats.mean));
-                PARQUET_THROW_NOT_OK(median_builder->Append(sample->stats.median));
-                PARQUET_THROW_NOT_OK(stdev_builder->Append(sample->stats.stdev));
-                PARQUET_THROW_NOT_OK(mad_builder->Append(sample->stats.mad));
-            }
-
-            /* Collect all fileIds used by samples - duplicates are ignored */
-            sampler->file_ids.insert(sample->fileId);
-        }
-    }
-
-    /* Finish the list builders */
     std::shared_ptr<arrow::Array> value_list_array, time_list_array, fileid_list_array, flags_list_array;
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
 
-    PARQUET_THROW_NOT_OK(value_list_builder.Finish(&value_list_array));
-    PARQUET_THROW_NOT_OK(time_list_builder.Finish(&time_list_array));
-    if(robj->hasFlags())
+    try
     {
-        PARQUET_THROW_NOT_OK(flags_list_builder.Finish(&flags_list_array));
+        /* Iterate over each sample in a vector of lists of samples */
+        for(ParquetSampler::sample_list_t* slist : sampler->samples)
+        {
+            /* Start a new lists for each RasterSample */
+            PARQUET_THROW_NOT_OK(value_list_builder.Append());
+            PARQUET_THROW_NOT_OK(time_list_builder.Append());
+            if(robj->hasFlags())
+            {
+                PARQUET_THROW_NOT_OK(flags_list_builder.Append());
+            }
+            PARQUET_THROW_NOT_OK(fileid_list_builder.Append());
+            if(robj->hasZonalStats())
+            {
+                PARQUET_THROW_NOT_OK(count_list_builder.Append());
+                PARQUET_THROW_NOT_OK(min_list_builder.Append());
+                PARQUET_THROW_NOT_OK(max_list_builder.Append());
+                PARQUET_THROW_NOT_OK(mean_list_builder.Append());
+                PARQUET_THROW_NOT_OK(median_list_builder.Append());
+                PARQUET_THROW_NOT_OK(stdev_list_builder.Append());
+                PARQUET_THROW_NOT_OK(mad_list_builder.Append());
+            }
+
+            /* Iterate over each sample */
+            for(RasterSample* sample : *slist)
+            {
+                /* Append the value to the value list */
+                PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
+                PARQUET_THROW_NOT_OK(time_builder->Append(sample->time));
+                if(robj->hasFlags())
+                {
+                    PARQUET_THROW_NOT_OK(flags_builder->Append(sample->flags));
+                }
+                PARQUET_THROW_NOT_OK(fileid_builder->Append(sample->fileId));
+                if(robj->hasZonalStats())
+                {
+                    PARQUET_THROW_NOT_OK(count_builder->Append(sample->stats.count));
+                    PARQUET_THROW_NOT_OK(min_builder->Append(sample->stats.min));
+                    PARQUET_THROW_NOT_OK(max_builder->Append(sample->stats.max));
+                    PARQUET_THROW_NOT_OK(mean_builder->Append(sample->stats.mean));
+                    PARQUET_THROW_NOT_OK(median_builder->Append(sample->stats.median));
+                    PARQUET_THROW_NOT_OK(stdev_builder->Append(sample->stats.stdev));
+                    PARQUET_THROW_NOT_OK(mad_builder->Append(sample->stats.mad));
+                }
+
+                /* Collect all fileIds used by samples - duplicates are ignored */
+                sampler->file_ids.insert(sample->fileId);
+            }
+        }
+
+        /* Finish the list builders */
+        PARQUET_THROW_NOT_OK(value_list_builder.Finish(&value_list_array));
+        PARQUET_THROW_NOT_OK(time_list_builder.Finish(&time_list_array));
+        if(robj->hasFlags())
+        {
+            PARQUET_THROW_NOT_OK(flags_list_builder.Finish(&flags_list_array));
+        }
+        PARQUET_THROW_NOT_OK(fileid_list_builder.Finish(&fileid_list_array));
+        if(robj->hasZonalStats())
+        {
+            PARQUET_THROW_NOT_OK(count_list_builder.Finish(&count_list_array));
+            PARQUET_THROW_NOT_OK(min_list_builder.Finish(&min_list_array));
+            PARQUET_THROW_NOT_OK(max_list_builder.Finish(&max_list_array));
+            PARQUET_THROW_NOT_OK(mean_list_builder.Finish(&mean_list_array));
+            PARQUET_THROW_NOT_OK(median_list_builder.Finish(&median_list_array));
+            PARQUET_THROW_NOT_OK(stdev_list_builder.Finish(&stdev_list_array));
+            PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
+        }
     }
-    PARQUET_THROW_NOT_OK(fileid_list_builder.Finish(&fileid_list_array));
-    if(robj->hasZonalStats())
+    catch(const RunTimeException& e)
     {
-        PARQUET_THROW_NOT_OK(count_list_builder.Finish(&count_list_array));
-        PARQUET_THROW_NOT_OK(min_list_builder.Finish(&min_list_array));
-        PARQUET_THROW_NOT_OK(max_list_builder.Finish(&max_list_array));
-        PARQUET_THROW_NOT_OK(mean_list_builder.Finish(&mean_list_array));
-        PARQUET_THROW_NOT_OK(median_list_builder.Finish(&median_list_array));
-        PARQUET_THROW_NOT_OK(stdev_list_builder.Finish(&stdev_list_array));
-        PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
+        /* No columns will be added */
+        mlog(e.level(), "Error processing samples: %s", e.what());
+        return false;
     }
 
     const std::string prefix = sampler->rkey;
@@ -339,6 +348,8 @@ void ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
         }
     }
     mutex.unlock();
+
+    return true;
 }
 
 
