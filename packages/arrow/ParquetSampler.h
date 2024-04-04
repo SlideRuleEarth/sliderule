@@ -49,11 +49,13 @@
 #include "RasterObject.h"
 #include "OsApi.h"
 
+#include <set>
+
 /******************************************************************************
  * FORWARD DECLARATIONS
  ******************************************************************************/
 
-class ArrowImpl; // arrow implementation
+class ArrowSamplerImpl; // arrow implementation
 
 /******************************************************************************
  * PARQUET SAMPLER CLASS
@@ -91,11 +93,11 @@ class ParquetSampler: public LuaObject
         typedef std::vector<RasterSample*> sample_list_t;
         typedef struct Sampler
         {
-            const char*                 rkey;
-            RasterObject*               robj;
-            ParquetSampler*             obj;
-            bool                        use_poi_time;
-            std::vector<sample_list_t*> samples;
+            const char*                  rkey;
+            RasterObject*                robj;
+            ParquetSampler*              obj;
+            std::vector<sample_list_t*>  samples;
+            std::set<uint64_t>           file_ids;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
             explicit Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj);
@@ -108,11 +110,12 @@ class ParquetSampler: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int              luaCreate       (lua_State* L);
-        static int              luaSample       (lua_State* L);
-        static void             init            (void);
-        static void             deinit          (void);
-        void                    sample          (void);
+        static int               luaCreate       (lua_State* L);
+        static int               luaSample       (lua_State* L);
+        static void              init            (void);
+        static void              deinit          (void);
+        void                     sample          (void);
+        const std::vector<sampler_t*>& getSamplers(void) {return samplers;}
 
     private:
 
@@ -127,10 +130,9 @@ class ParquetSampler: public LuaObject
         const char*                inputPath;
         const char*                outputPath;
         std::vector<Thread*>       samplerPids;
-        std::vector<sampler_t*>    samplers;
         std::vector<point_info_t*> points;
-
-        ArrowImpl* impl; // private arrow data
+        std::vector<sampler_t*>    samplers;
+        ArrowSamplerImpl*          impl; // private arrow data
 
         /*--------------------------------------------------------------------
          * Methods

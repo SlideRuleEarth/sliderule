@@ -35,12 +35,9 @@
 
 #include "core.h"
 #include "ParquetSampler.h"
-#include "ArrowImpl.h"
+#include "ArrowSamplerImpl.h"
 #include <filesystem>
 
-#ifdef __aws__
-#include "aws.h"
-#endif
 
 /******************************************************************************
  * STATIC DATA
@@ -136,8 +133,7 @@ void ParquetSampler::deinit (void)
  *----------------------------------------------------------------------------*/
 ParquetSampler::Sampler::Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj):
     robj(_robj),
-    obj(_obj),
-    use_poi_time(false)
+    obj(_obj)
 {
     rkey = StringLib::duplicate(_rkey);
 }
@@ -185,11 +181,8 @@ void ParquetSampler::sample(void)
         }
     }
 
-    /* User may call this method with different gps times, clear the samples */
-    for(sampler_t* sampler : samplers)
-    {
-        sampler->clearSamples();
-    }
+    /* In case user called multiple times clear all samples and new columns */
+    impl->clearColumns();
 
     /* Start Sampler Threads */
     for(sampler_t* sampler : samplers)
@@ -205,11 +198,10 @@ void ParquetSampler::sample(void)
     }
     samplerPids.clear();
 
-
     /* Create new parquet file with columns/samples from all raster objects */
     try
     {
-        impl->createParquetFile(inputPath, outputPath, samplers);
+        impl->createParquetFile(inputPath, outputPath);
     }
     catch(const RunTimeException& e)
     {
@@ -235,8 +227,9 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
     if (!input_file)  throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file");
     if (!output_file) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file");
 
-    for(const raster_info_t& raster : rasters)
+    for(std::size_t i = 0; i < rasters.size(); i++)
     {
+        const raster_info_t& raster = rasters[i];
         const char*   rkey = raster.rkey;
         RasterObject* robj = raster.robj;
 
@@ -244,7 +237,6 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
         if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
 
         sampler_t* sampler = new sampler_t(rkey, robj, this);
-        sampler->use_poi_time = robj->usePOItime();
         samplers.push_back(sampler);
     }
 
@@ -252,7 +244,7 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
     outputPath = StringLib::duplicate(output_file);
 
     /* Allocate Implementation */
-    impl = new ArrowImpl(NULL);
+    impl = new ArrowSamplerImpl(this);
 
     impl->getPointsFromFile(inputPath, points);
 }
@@ -287,7 +279,7 @@ void* ParquetSampler::samplerThread(void* parm)
     for(point_info_t* pinfo : sampler->obj->points)
     {
         OGRPoint poi = pinfo->point; /* Must make a copy of point for this thread */
-        double   gps = sampler->use_poi_time ? pinfo->gps_time : 0;
+        double   gps = robj->usePOItime() ? pinfo->gps_time : 0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
@@ -314,6 +306,12 @@ void* ParquetSampler::samplerThread(void* parm)
         sampler->samples.push_back(slist);
     }
 
+    /* Convert samples into new columns */
+    sampler->obj->impl->processSamples(sampler);
+
+    /* Clear the samples, they are no longer needed */
+    sampler->clearSamples();
+
     /* Create raster file map <id, filename> */
     Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
     for(int i = 0; i < iterator.length; i++)
@@ -324,23 +322,10 @@ void* ParquetSampler::samplerThread(void* parm)
         /* For some data sets, dictionary contains quality mask rasters in addition to data rasters.
          * Only add rasters with id present in the samples
         */
-        bool include_in_filemap = false;
-        for(ParquetSampler::sample_list_t* slist : sampler->samples)
+        if(sampler->file_ids.find(id) != sampler->file_ids.end())
         {
-            for(RasterSample* sample : *slist)
-            {
-                if(sample->fileId == id)
-                {
-                    include_in_filemap = true;
-                    break;
-                }
-            }
-
-            if(include_in_filemap) break;
-        }
-
-        if(include_in_filemap)
             sampler->filemap.push_back(std::make_pair(id, name));
+        }
     }
 
     /* Sort the map with increasing file id */

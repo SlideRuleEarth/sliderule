@@ -40,7 +40,7 @@ print('\n------------------\nTest02: parquet file creation \n------------------'
 -- the file was tested with python and it has the expected content
 local size = getFileSize(out_file);
 print("Output file size: " .. size .. " bytes")
-local expected_size = 28489
+local expected_size = 28487
 runner.check(size == expected_size, "Expected output file size: " .. expected_size .. " bytes, but got: " .. size .. " bytes")
 
 -- Remove the output file
