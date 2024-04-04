@@ -298,7 +298,7 @@ class Icesat2Parms: public NetsvcParms
         AncillaryFields::list_t*    atl08_fields;                   // list of ATL08 fields to associate with an extent
         phoreal_t                   phoreal;                        // phoreal algorithm settings
 
-    private:
+    protected:
 
         /*--------------------------------------------------------------------
          * Methods

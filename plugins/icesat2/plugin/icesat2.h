@@ -38,9 +38,11 @@
 
 #include "Atl03Reader.h"
 #include "Atl03Indexer.h"
+#include "Atl03BathyReader.h"
 #include "Atl06Dispatch.h"
 #include "Atl06Reader.h"
 #include "Atl08Dispatch.h"
+#include "BathyParms.h"
 #include "CumulusIODriver.h"
 #include "GTArray.h"
 #include "GTDArray.h"

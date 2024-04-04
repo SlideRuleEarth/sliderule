@@ -3,7 +3,7 @@ services:
   ilb:
     image: ${ILB_IMAGE}
     network_mode: "host"
-    restart: unless-stopped
+    restart: always
     pull_policy: if_not_present
     stdin_open: true # docker run -i
     tty: true # docker run -t

@@ -33,6 +33,7 @@ import copy
 import json
 import ssl
 import urllib.request
+import http
 import requests
 import numpy
 import geopandas
@@ -326,6 +327,8 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
                 break # exit loop because cmr search was successful
             except urllib.error.HTTPError as e:
                 logger.error('HTTP Request Error: {}'.format(e.reason))
+            except http.client.HTTPException as e:
+                logger.error('HTTP Client Error: {}'.format(e.reason))
             except RuntimeError as e:
                 logger.error("Runtime Error:", e)
 

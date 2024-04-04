@@ -101,10 +101,9 @@ int LuaEndpoint::luaCreate (lua_State* L)
         /* Get Parameters */
         double normal_mem_thresh = getLuaFloat(L, 1, true, DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD);
         double stream_mem_thresh = getLuaFloat(L, 2, true, DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD);
-        event_level_t lvl = (event_level_t)getLuaInteger(L, 3, true, INFO);
 
         /* Create Lua Endpoint */
-        return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh, lvl));
+        return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh));
     }
     catch(const RunTimeException& e)
     {
@@ -120,11 +119,10 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh, event_level_t lvl):
+LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh):
     EndpointObject(L, LUA_META_NAME, LUA_META_TABLE),
     normalRequestMemoryThreshold(normal_mem_thresh),
     streamRequestMemoryThreshold(stream_mem_thresh),
-    logLevel(lvl),
     authenticator(NULL)
 {
 }
@@ -153,7 +151,8 @@ void* LuaEndpoint::requestThread (void* parm)
     uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
-    mlog(lua_endpoint->logLevel, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
+    event_level_t log_level = info->streaming ? INFO : DEBUG;
+    mlog(log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
@@ -268,6 +267,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
     {
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
+        engine->setString(LUA_REQUEST_ID, request->id);
         bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
         /* Send Response */

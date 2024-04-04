@@ -44,9 +44,9 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True, "as_geo": False } }
+                  "output": { "path": "testfile2.parquet", "format": "parquet", "open_on_complete": True, "as_geo": False } }
         gdf = icesat2.atl06p(parms, resources=[resource])
-        os.remove("testfile5.parquet")
+        os.remove("testfile2.parquet")
         assert init
         assert len(gdf) == 957
         assert len(gdf.keys()) == 18
@@ -65,9 +65,9 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile2.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile3.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
-        os.remove("testfile2.parquet")
+        os.remove("testfile3.parquet")
         assert init
         assert len(gdf) == 190491
         assert len(gdf.keys()) == 22
@@ -87,9 +87,9 @@ class TestParquet:
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "output": { "path": "testfile3.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile4.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
-        os.remove("testfile3.parquet")
+        os.remove("testfile4.parquet")
         assert init
         assert len(gdf) == 265
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.350047744')
@@ -106,9 +106,9 @@ class TestParquet:
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "output": { "path": "testfile4.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
-        os.remove("testfile4.parquet")
+        os.remove("testfile5.parquet")
         assert init
         assert len(gdf) == 20642
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.349347328')
@@ -135,7 +135,7 @@ class TestParquet:
             "atl08_fields": ancillary_fields, 
             "phoreal": {"binsize": 1.0, "geoloc": "center", "above_classifier": True, "use_abs_h": False, "send_waveform": False},
             "output": {
-                "path": "testfile5.parquet",
+                "path": "testfile6.parquet",
                 "format": "parquet",
                 "as_geo": True,
                 "ancillary": ancillary_outputs,
@@ -155,7 +155,7 @@ class TestParquet:
         df = atl08_df.sort_values('extent_id')
 
         # Clean up
-        os.remove("testfile5.parquet")
+        os.remove("testfile6.parquet")
 
         # Compare Data Frames
         for i in range(len(ancillary_fields)):
@@ -168,3 +168,45 @@ class TestParquet:
                 if pq_col.iloc[k] != df_col.iloc[k]:
                     num_mismatches += 1
             assert num_mismatches == 0, f'there were mismatches in {anc_field}'
+
+    def test_atl06_csv(self, init):
+        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        parms = { "poly": region['poly'],
+                  "cnf": "atl03_high",
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1,
+                  "output": { "path": "", "format": "", "open_on_complete": True, "as_geo": False } }
+
+        # create parquet file
+        parms["output"]["path"] = "testfile7.parquet"
+        parms["output"]["format"] = "parquet"
+        gdf_from_parquet = icesat2.atl06p(parms, resources=[resource], keep_id=True)
+        os.remove("testfile7.parquet")
+
+        # create csv file
+        parms["output"]["path"] = "testfile7.csv"
+        parms["output"]["format"] = "csv"
+        gdf_from_csv = icesat2.atl06p(parms, resources=[resource], keep_id=True)
+        os.remove("testfile7.csv")
+
+        # sort values
+        gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')
+        gdf_from_csv = gdf_from_csv.sort_values('extent_id')
+        
+        # checks
+        assert init
+        assert len(gdf_from_parquet) == 957
+        assert len(gdf_from_parquet.keys()) == 18, f'keys are {list(gdf_from_parquet.keys())}'
+        assert len(gdf_from_csv) == 957
+        assert len(gdf_from_csv.keys()) == 19, f'keys are {list(gdf_from_csv.keys())}' # time column counts as a key
+        columns_to_check = ["dh_fit_dx","n_fit_photons","longitude"]
+        for column in columns_to_check:
+            for row in range(len(gdf_from_parquet)):
+                parquet_val = gdf_from_parquet[column].iloc[row]
+                csv_val = gdf_from_csv[column].iloc[row]
+                assert abs(parquet_val - csv_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {csv_val}'
+            

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, University of Washington
+ * Copyright (c) 2023, University of Texas
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the University of Washington nor the names of its
+ * 3. Neither the name of the University of Texas nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF TEXAS AND CONTRIBUTORS
  * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF TEXAS OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
@@ -29,23 +29,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __endpoint_proxy__
-#define __endpoint_proxy__
+#ifndef __bathy_parms__
+#define __bathy_parms__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
-#include "MsgQ.h"
 #include "OsApi.h"
-#include "OrchestratorLib.h"
+#include "LuaObject.h"
+#include "Icesat2Parms.h"
 
 /******************************************************************************
- * ATL03 READER
+ * REQUEST PARAMETERS
  ******************************************************************************/
 
-class EndpointProxy: public LuaObject
+class BathyParms: public Icesat2Parms
 {
     public:
 
@@ -53,60 +52,35 @@ class EndpointProxy: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int COLLATOR_POLL_RATE = 1000; // milliseconds
-        static const int PROXY_QUEUE_DEPTH = 1000;
-        static const int MAX_PROXY_THREADS = 200;
-        static const int DEFAULT_PROXY_THREADS = 40; // when no better method to determine is available
-        static const int DEFAULT_TIMEOUT = 600; // seconds
-        static const int NUM_RETRIES = 3;
+        static const char* PH_IN_EXTENT;
+        static const char* MAX_ALONG_TRACK_SPREAD;
+        static const char* BEAM_FILE_PREFIX;
 
-        static const char* SERVICE;
-
-        static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        static const int DEFAULT_PH_IN_EXTENT = 8192;
+        static const double DEFAULT_MAX_ALONG_TRACK_SPREAD;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-
-    private:
+        static int  luaCreate       (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    active;
-        Publisher*              rqstPub;
-        Subscriber*             rqstSub;
-        Thread**                proxyPids;
-        Thread*                 collatorPid;
-        const char**            resources;
-        OrchestratorLib::Node** nodes;
-        int                     numResources;
-        int                     numResourcesComplete;
-        Cond                    completion;
-        const char*             endpoint;
-        const char*             parameters;
-        int                     timeout;
-        int                     locksPerNode;
-        Publisher*              outQ;
-        int                     numProxyThreads;
-        bool                    sendTerminator;
+        int         ph_in_extent;
+        double      max_along_track_spread;
+        const char* beam_file_prefix;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            EndpointProxy           (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
-                                                     const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
-                                                     bool _send_terminator, int _cluster_size_hint);
-                            ~EndpointProxy          (void);
+                    BathyParms      (lua_State* L, int index);
+                    ~BathyParms     (void);
 
-        static void*        collatorThread          (void* parm);
-        static void*        proxyThread             (void* parm);
+        void        cleanup         (void) const;
 };
 
-#endif  /* __endpoint_proxy__ */
+#endif  /* __bathy_parms__ */

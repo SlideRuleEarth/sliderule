@@ -42,15 +42,16 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* NetsvcParms::POLYGON        = "poly";
-const char* NetsvcParms::RASTER         = "raster";
-const char* NetsvcParms::LATITUDE       = "lat";
-const char* NetsvcParms::LONGITUDE      = "lon";
-const char* NetsvcParms::PROJECTION     = "proj";
-const char* NetsvcParms::RQST_TIMEOUT   = "rqst-timeout";
-const char* NetsvcParms::NODE_TIMEOUT   = "node-timeout";
-const char* NetsvcParms::READ_TIMEOUT   = "read-timeout";
-const char* NetsvcParms::GLOBAL_TIMEOUT = "timeout";
+const char* NetsvcParms::POLYGON            = "poly";
+const char* NetsvcParms::RASTER             = "raster";
+const char* NetsvcParms::LATITUDE           = "lat";
+const char* NetsvcParms::LONGITUDE          = "lon";
+const char* NetsvcParms::PROJECTION         = "proj";
+const char* NetsvcParms::RQST_TIMEOUT       = "rqst-timeout";
+const char* NetsvcParms::NODE_TIMEOUT       = "node-timeout";
+const char* NetsvcParms::READ_TIMEOUT       = "read-timeout";
+const char* NetsvcParms::GLOBAL_TIMEOUT     = "timeout";
+const char* NetsvcParms::CLUSTER_SIZE_HINT  = "cluster_size_hint";
 
 const char* NetsvcParms::OBJECT_TYPE = "NetsvcParms";
 const char* NetsvcParms::LUA_META_NAME = "NetsvcParms";
@@ -98,6 +99,7 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
     read_timeout                (DEFAULT_READ_TIMEOUT),
+    cluster_size_hint           (DEFAULT_CLUSTER_SIZE_HINT),
     projection                  (MathLib::AUTOMATIC),
     projected_poly              (NULL),
     points_in_poly              (0)
@@ -154,6 +156,12 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
         lua_getfield(L, index, NetsvcParms::READ_TIMEOUT);
         read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::READ_TIMEOUT, read_timeout);
+        lua_pop(L, 1);
+
+        /* Cluster Size Hint */
+        lua_getfield(L, index, NetsvcParms::CLUSTER_SIZE_HINT);
+        cluster_size_hint = LuaObject::getLuaInteger(L, -1, true, cluster_size_hint, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::CLUSTER_SIZE_HINT, cluster_size_hint);
         lua_pop(L, 1);
 
         /* Process Area of Interest */

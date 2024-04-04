@@ -731,7 +731,7 @@ void H5FileBuffer::readDataset (info_t* info)
             case CONTIGUOUS_LAYOUT:
             {
                 uint64_t data_addr = metaData.address + buffer_offset;
-                ioRequest(&data_addr, buffer_size, buffer, IO_CACHE_L1_LINESIZE, false);
+                ioRequest(&data_addr, buffer_size, buffer, 0, false);
                 break;
             }
 

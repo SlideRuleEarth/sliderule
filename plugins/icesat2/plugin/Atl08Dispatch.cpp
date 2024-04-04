@@ -734,6 +734,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
 
             /* Reset Vector of Records */
             recVec.clear();
+            batchIndex = 0;
         }
     }
     batchMutex.unlock();

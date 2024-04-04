@@ -65,11 +65,15 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"healthy",     LuaLibrarySys::lsys_healthy},
     {"ipv4",        LuaLibrarySys::lsys_ipv4},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
+    {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
     {"memu",        LuaLibrarySys::lsys_memu},
+    {"setmemlimit", LuaLibrarySys::lsys_setmemlimit},
     {"lsdev",       DeviceObject::luaList},
     {NULL,          NULL}
 };
+
+double LuaLibrarySys::memory_limit = 1.0;
 
 /******************************************************************************
  * SYSTEM LIBRARY EXTENSION METHODS
@@ -155,7 +159,7 @@ int LuaLibrarySys::lsys_quit (lua_State* L)
     int errors = 0;
     if(lua_isnumber(L, 1))
     {
-        errors = lua_tonumber(L, 1);
+        errors = lua_tointeger(L, 1);
     }
 
     setinactive( errors );
@@ -195,7 +199,7 @@ int LuaLibrarySys::lsys_wait (lua_State* L)
     int secs = 0;
     if(lua_isnumber(L, 1))
     {
-        secs = lua_tonumber(L, 1);
+        secs = lua_tointeger(L, 1);
     }
     else
     {
@@ -394,7 +398,7 @@ int LuaLibrarySys::lsys_setstddepth (lua_State* L)
     int depth = 0;
     if(lua_isnumber(L, 1))
     {
-        depth = lua_tonumber(L, 1);
+        depth = lua_tointeger(L, 1);
     }
     else
     {
@@ -425,7 +429,7 @@ int LuaLibrarySys::lsys_setiosize (lua_State* L)
     else
     {
         /* Set I/O Size */
-        int size = lua_tonumber(L, 1);
+        int size = lua_tointeger(L, 1);
         status = OsApi::setIOMaxsize(size);
     }
 
@@ -452,10 +456,10 @@ int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
 
     if(lua_isnumber(L, 1))
     {
-        int type_mask = lua_tonumber(L, 1);
+        int type_mask = lua_tointeger(L, 1);
         if(lua_isnumber(L, 2))
         {
-            event_level_t lvl = (event_level_t)lua_tonumber(L, 2);
+            event_level_t lvl = (event_level_t)lua_tointeger(L, 2);
             if(type_mask & EventLib::LOG) EventLib::setLvl(EventLib::LOG, lvl);
             if(type_mask & EventLib::TRACE) EventLib::setLvl(EventLib::TRACE, lvl);
             if(type_mask & EventLib::METRIC) EventLib::setLvl(EventLib::METRIC, lvl);
@@ -493,7 +497,17 @@ int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_healthy (lua_State* L)
 {
-    lua_pushboolean(L, true);
+    bool health = true;
+
+    /* Check Memory Usage */
+    double current_memory_usage = OsApi::memusage();
+    if(current_memory_usage >= memory_limit)
+    {
+        health = false;
+    }
+
+    /* Return Health */
+    lua_pushboolean(L, health);
     return 1;
 }
 
@@ -532,6 +546,28 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * lsys_lsobj
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_lsobj (lua_State* L)
+{
+    (void)L;
+
+    vector<LuaObject::object_info_t> globals;
+    LuaObject::getGlobalObjects(globals);
+    print2term("\n%30s   %s\n", "Object Name", "Reference");
+    for(LuaObject::object_info_t& object: globals)
+    {
+        long reference_count = object.refCnt;
+        print2term("%30s   %ld        %s\n", object.objName.c_str(), reference_count, object.objType.c_str());
+    }
+
+    print2term("\nNumber of Global Objects: %lu\n", (unsigned long)globals.size());
+    print2term("Total Number of Objects: %ld\n", LuaObject::getNumObjects());
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
  * lsys_cwd - current working directory
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_cwd (lua_State* L)
@@ -555,5 +591,28 @@ int LuaLibrarySys::lsys_memu (lua_State* L)
 {
     double m = OsApi::memusage();
     lua_pushnumber(L, m);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setmemlimit - set memory limit
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setmemlimit (lua_State* L)
+{
+    bool status = false;
+
+    if(!lua_isnumber(L, 1))
+    {
+        mlog(CRITICAL, "memory limit must be a number");
+    }
+    else
+    {
+        /* Set Memory Limit */
+        memory_limit = lua_tonumber(L, 1);
+        status = true;
+    }
+
+    /* Return Status */
+    lua_pushboolean(L, status);
     return 1;
 }

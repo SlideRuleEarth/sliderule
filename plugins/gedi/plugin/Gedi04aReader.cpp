@@ -271,7 +271,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.code(), e.level(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
     }
 
     /* Handle Global Reader Updates */

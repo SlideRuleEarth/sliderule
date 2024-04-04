@@ -255,7 +255,7 @@ bool OrchestratorLib::health (void)
         }
         catch(const std::exception& e)
         {
-            mlog(CRITICAL, "Failed process response to health: %s", rsps.response);
+            mlog(CRITICAL, "Failed to process response from health: %s", rsps.response);
         }
     }
 
@@ -282,6 +282,40 @@ bool OrchestratorLib::metric (const unsigned char* metric_buf, int buf_size)
     delete [] rsps.response;
 
     return status;
+}
+
+/*----------------------------------------------------------------------------
+ * getNodes
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::getNodes (void)
+{
+    int num_nodes = 0;
+
+    const char* data = "{\"service\":\"sliderule\"}";
+    rsps_t rsps = request(EndpointObject::GET, "/discovery/status", data);
+    if(rsps.code == EndpointObject::OK)
+    {
+        try
+        {
+            rapidjson::Document json;
+            json.Parse(rsps.response);
+
+            rapidjson::Value& s = json["nodes"];
+            num_nodes = s.GetInt();
+        }
+        catch(const std::exception& e)
+        {
+            mlog(CRITICAL, "Failed to process response from status: %s", rsps.response);
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Failed to get discovery status: %ld", rsps.code);
+    }
+
+    delete [] rsps.response;
+
+    return num_nodes;
 }
 
 /*----------------------------------------------------------------------------
@@ -418,6 +452,24 @@ int OrchestratorLib::luaHealth(lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error getting health: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetNodes - orchnodes()
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::luaGetNodes(lua_State* L)
+{
+    try
+    {
+        lua_pushinteger(L, getNodes());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting number of nodes: %s", e.what());
         lua_pushnil(L);
     }
 

@@ -46,6 +46,7 @@
 const char* LuaObject::BASE_OBJECT_TYPE = "LuaObject";
 Dictionary<LuaObject::global_object_t> LuaObject::globalObjects;
 Mutex LuaObject::globalMut;
+std::atomic<long> LuaObject::numObjects(0);
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -218,6 +219,38 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
 }
 
 /*----------------------------------------------------------------------------
+ * getGlobalObjects
+ *----------------------------------------------------------------------------*/
+void LuaObject::getGlobalObjects (vector<object_info_t>& globals)
+{
+    globalMut.lock();
+    {
+        global_object_t global_object;
+        const char* object_name = globalObjects.first(&global_object);
+        while(object_name != NULL)
+        {
+            object_info_t info = {
+                .objName = object_name,
+                .objType = global_object.lua_obj->getType(),
+                .refCnt = global_object.lua_obj->referenceCount
+            };
+            globals.push_back(info);
+            object_name = globalObjects.next(&global_object);
+        }
+    }
+    globalMut.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * getNumObjects
+ *----------------------------------------------------------------------------*/
+long LuaObject::getNumObjects (void)
+{
+    long num_objects = numObjects;
+    return num_objects;
+}
+
+/*----------------------------------------------------------------------------
  * getLuaObjectByName
  *----------------------------------------------------------------------------*/
 LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_type)
@@ -302,6 +335,9 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
         mlog(DEBUG, "Created object of type %s/%s", getType(), LuaMetaName);
     }
 
+    /* Count Object */
+    numObjects++;
+
     /* Start Trace */
     traceId = start_trace(DEBUG, engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
 }
@@ -325,6 +361,9 @@ LuaObject::~LuaObject (void)
         }
     }
     globalMut.unlock();
+
+    /* Count Object */
+    numObjects--;
 }
 
 /*----------------------------------------------------------------------------

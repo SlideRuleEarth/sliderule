@@ -341,7 +341,7 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 /*----------------------------------------------------------------------------
  * alertMsg
  *----------------------------------------------------------------------------*/
-void EventLib::alertMsg (int code, event_level_t level, void* rspsq, bool* active, const char* errmsg, ...)
+void EventLib::alertMsg (event_level_t level, int code, void* rspsq, bool* active, const char* errmsg, ...)
 {
     /* Allocate and Initialize Alert Record */
     RecordObject record(alertRecType);
@@ -361,8 +361,11 @@ void EventLib::alertMsg (int code, event_level_t level, void* rspsq, bool* activ
     mlog(level, "%s", alert->text);
 
     /* Post Alert Record */
-    Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
-    record.post(rspsq_ptr, 0, active);
+    if(rspsq)
+    {
+        Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
+        record.post(rspsq_ptr, 0, active);
+    }
 }
 
 /*----------------------------------------------------------------------------

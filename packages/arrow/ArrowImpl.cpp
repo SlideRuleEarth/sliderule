@@ -59,6 +59,7 @@
 ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
     parquetBuilder(_builder),
     schema(NULL),
+    writerFormat(ArrowParms::UNSUPPORTED),
     fieldList(LIST_BLOCK_SIZE),
     firstTime(true)
 {
@@ -121,11 +122,11 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
     /* Create Parquet Writer (on first time) */
     if(firstTime)
     {
-        createSchema();
+        writerFormat = createSchema();
         firstTime = false;
     }
 
-    if(parquetWriter)
+    if(writerFormat == ArrowParms::PARQUET)
     {
         /* Build and Write Table */
         uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -139,6 +140,20 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
         if(file_finished)
         {
             (void)parquetWriter->Close();
+        }
+    }
+    else if(writerFormat == ArrowParms::CSV)
+    {
+        /* Write the Table to a CSV file */
+        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+        arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csvWriter.get());
+        if(s.ok()) status = true;
+        else mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());
+
+        /* Close Parquet Writer */
+        if(file_finished)
+        {
+            (void)csvWriter.get()->Close();
         }
     }
 
@@ -156,38 +171,68 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
 /*----------------------------------------------------------------------------
 * createSchema
 *----------------------------------------------------------------------------*/
-bool ArrowImpl::createSchema (void)
+ArrowParms::format_t ArrowImpl::createSchema (void)
 {
-    /* Set Arrow Output Stream */
-    shared_ptr<arrow::io::FileOutputStream> file_output_stream;
-    PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(parquetBuilder->getFileName()));
-
-    /* Set Writer Properties */
-    parquet::WriterProperties::Builder writer_props_builder;
-    writer_props_builder.compression(parquet::Compression::SNAPPY);
-    writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
-    shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
-
-    /* Set Arrow Writer Properties */
-    auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
+    ArrowParms::format_t writer_format = ArrowParms::UNSUPPORTED;
 
     /* Create Schema */
     schema = make_shared<arrow::Schema>(fieldVector);
 
-    /* Set MetaData */
-    auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-    if(parquetBuilder->getAsGeo()) appendGeoMetaData(metadata);
-    appendServerMetaData(metadata);
-    appendPandasMetaData(metadata);
-    schema = schema->WithMetadata(metadata);
+    if(parquetBuilder->getParms()->format == ArrowParms::PARQUET)
+    {
+        /* Set Arrow Output Stream */
+        shared_ptr<arrow::io::FileOutputStream> file_output_stream;
+        PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(parquetBuilder->getFileName()));
 
-    /* Create Parquet Writer */
-    arrow::Result<std::unique_ptr<parquet::arrow::FileWriter>> result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
-    if(result.ok()) parquetWriter = std::move(result).ValueOrDie();
-    else mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+        /* Set Writer Properties */
+        parquet::WriterProperties::Builder writer_props_builder;
+        writer_props_builder.compression(parquet::Compression::SNAPPY);
+        writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
+        shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
+
+        /* Set Arrow Writer Properties */
+        auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
+
+        /* Set MetaData */
+        auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+        if(parquetBuilder->getAsGeo()) appendGeoMetaData(metadata);
+        appendServerMetaData(metadata);
+        appendPandasMetaData(metadata);
+        schema = schema->WithMetadata(metadata);
+
+        /* Create Parquet Writer */
+        auto result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+        if(result.ok())
+        {
+            parquetWriter = std::move(result).ValueOrDie();
+            writer_format = ArrowParms::PARQUET;
+        }
+        else 
+        {
+            mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+        }
+    }
+    else if(parquetBuilder->getParms()->format == ArrowParms::CSV)
+    {
+        /* Create CSV Writer */
+        auto result = arrow::io::FileOutputStream::Open(parquetBuilder->getFileName());
+        if(result.ok())
+        {
+            csvWriter = result.ValueOrDie();
+            writer_format = ArrowParms::CSV;
+        }
+        else 
+        {
+            mlog(CRITICAL, "Failed to open csv writer: %s", result.status().ToString().c_str());
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Unsupported format: %d", parquetBuilder->getParms()->format);
+    }
 
     /* Return Status */
-    return parquetWriter != NULL;
+    return writer_format;
 }
 
 /*----------------------------------------------------------------------------

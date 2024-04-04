@@ -557,12 +557,18 @@ def procoutputfile(parm, rsps):
             break
     # Handle Local Files
     if "open_on_complete" in output and output["open_on_complete"]:
-        if "as_geo" in output and not output["as_geo"]:
-            # Return Parquet File as DataFrame
-            return geopandas.pd.read_parquet(path)
+        if output["format"] == "parquet":
+            if "as_geo" in output and not output["as_geo"]:
+                # Return Parquet File as DataFrame
+                return geopandas.pd.read_parquet(path)
+            else:
+                # Return GeoParquet File as GeoDataFrame
+                return geopandas.read_parquet(path)
+        elif output["format"] == "csv":
+            # Return CSV File as DataFrame
+            return geopandas.pd.read_csv(path)
         else:
-            # Return GeoParquet File as GeoDataFrame
-            return geopandas.read_parquet(path)
+            raise FatalError('unsupported output format: %s' % (output["format"]))
     else:
         # Return Parquet Filename
         return path

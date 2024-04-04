@@ -3,8 +3,6 @@ import {core,h5coro,icesat2} from '../sliderule/index.js';
 import http from 'http'
 core.init({domain:"localhost", organization: null, protocol: http});
 
-//core.init({});
-
 icesat2.atl06p(
     { "cnf": "atl03_high",
       "ats": 20.0,
@@ -18,9 +16,3 @@ icesat2.atl06p(
     error => console.error('Error = ', error)
 );
 
-/*
-h5coro.h5("ancillary_data/atlas_sdp_gps_epoch", "ATL03_20181019065445_03150111_005_01.h5", "icesat2").then(
-    result => console.log("GPS Epoch: ", result),
-    error => console.error(error)
-);
-*/

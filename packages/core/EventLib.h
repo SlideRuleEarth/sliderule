@@ -47,7 +47,7 @@
  ******************************************************************************/
 
 #define mlog(lvl,...) EventLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)
-#define alert(code,lvl,outq,active,...) EventLib::alertMsg(code,lvl,outq,active,__VA_ARGS__)
+#define alert(lvl, code,outq,active,...) EventLib::alertMsg(lvl,code,outq,active,__VA_ARGS__)
 
 #ifdef __tracing__
 #define start_trace(lvl, parent, name, fmt, ...) EventLib::startTrace(parent, name, lvl, fmt, __VA_ARGS__)
@@ -140,7 +140,7 @@ class EventLib
         static uint32_t         grabId          (void);
 
         static void             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
-        static void             alertMsg        (int code, event_level_t level, void* rspsq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
+        static void             alertMsg        (event_level_t level, int code, void* rspsq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
         static void             generateMetric  (event_level_t lvl, const char* name, metric_subtype_t subtype, double value);
 
     private:

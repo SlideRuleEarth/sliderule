@@ -51,11 +51,14 @@ sys.setenvver(environment_version)
 -- Set Is Public --
 sys.setispublic(is_public)
 
--- Set ECluster Name --
+-- Set Cluster Name --
 sys.setcluster(org_name)
 
 -- Configure System Message Queue Depth --
 sys.setstddepth(msgq_depth)
+
+-- Configure Memory Limit --
+sys.setmemlimit(stream_mem_thresh)
 
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally
@@ -125,17 +128,6 @@ end
 -- Run Application HTTP Server --
 local app_server = core.httpd(app_port):name("AppServer")
 app_server:attach(source_endpoint, "/source")
-
---------------------------------------------------
--- Probe Server (internal)
---------------------------------------------------
-
--- Configure Probe Endpoints --
-local probe_endpoint = core.endpoint(1.0, 1.0, core.DEBUG):name("ProbeEndpoint")
-
--- Run Probe HTTP Server --
-local probe_server = core.httpd(probe_port):name("ProbeServer")
-probe_server:attach(probe_endpoint, "/probe")
 
 --------------------------------------------------
 -- Register Service

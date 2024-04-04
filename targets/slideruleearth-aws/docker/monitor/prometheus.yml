@@ -23,8 +23,8 @@ scrape_configs:
   - job_name: 'sliderule_node_app'
     ec2_sd_configs:
       - region: us-west-2
-        port: 10081
-    metrics_path: "/probe/prometheus"
+        port: 9081
+    metrics_path: "/source/prometheus"
     relabel_configs:
         # Only monitor instances with a Name ending with "-node"
       - source_labels: [__meta_ec2_tag_Name]

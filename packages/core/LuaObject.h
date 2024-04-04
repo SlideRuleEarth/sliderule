@@ -79,6 +79,12 @@ class LuaObject
             LuaObject*  luaObj;
         } luaUserData_t;
 
+        typedef struct {
+            string      objName;
+            string      objType;
+            long        refCnt;
+        } object_info_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -95,6 +101,9 @@ class LuaObject
         static bool         getLuaBoolean       (lua_State* L, int parm, bool optional=false, bool dfltval=false, bool* provided=NULL);
         static const char*  getLuaString        (lua_State* L, int parm, bool optional=false, const char* dfltval=NULL, bool* provided=NULL);
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
+
+        static void         getGlobalObjects    (vector<object_info_t>& globals);
+        static long         getNumObjects       (void);
 
         static LuaObject*   getLuaObjectByName  (const char* name, const char* object_type);
         bool                releaseLuaObject    (void); // pairs with getLuaObject(..) and getLuaObjectByName(..), returns whether object was deleted
@@ -141,7 +150,7 @@ class LuaObject
         static int          luaDestroy          (lua_State* L);
         static int          luaName             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
-
+        
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -156,6 +165,7 @@ class LuaObject
 
         static Dictionary<global_object_t>  globalObjects;
         static Mutex                        globalMut;
+        static std::atomic<long>            numObjects;
 
         std::atomic<long>                   referenceCount;
         luaUserData_t*                      userData;

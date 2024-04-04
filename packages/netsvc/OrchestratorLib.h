@@ -85,12 +85,14 @@ class OrchestratorLib
         static bool             unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool             health              (void);
         static bool             metric              (const unsigned char* metric_buf, int buf_size);
+        static int              getNodes           (void);
 
         static int              luaUrl              (lua_State* L);
         static int              luaRegisterService  (lua_State* L);
         static int              luaLock             (lua_State* L);
         static int              luaUnlock           (lua_State* L);
         static int              luaHealth           (lua_State* L);
+        static int              luaGetNodes         (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

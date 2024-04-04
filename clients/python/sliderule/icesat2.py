@@ -739,3 +739,136 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     
     # Error Case
     return sliderule.emptyframe()
+
+#
+# ATL24 Gold Standard
+#
+def atl24g (parm, resource):
+    '''
+    Produces gold standard bathymetry photon classification of ATL03 data
+
+    Parameters
+    ----------
+        parms:      dict
+                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        resource:   str
+                    ATL03 HDF5 filename
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL03 extents (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
+    '''
+    return atl03sp(parm, resources=[resource])
+
+#
+#  Parallel  Gold Standard
+#
+def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
+    '''
+    Performs ATL24 gold standard generation in parallel on ATL03 data. Unlike the `atl03s <#atl03s>`_ function,
+    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
+    is used to fetch all available resources from the CMR system automatically.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL03 segments (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#photon-segments>`_)
+    '''
+    try:
+        tstart = time.perf_counter()
+
+        # Build Request
+        rqst = __build_request(parm, resources)
+
+        # Make Request
+        rsps = sliderule.source("atl24gp", rqst, stream=True, callbacks=callbacks)
+
+        # Check for Output Options
+        if "output" in parm:
+            profiles[atl24gp.__name__] = time.perf_counter() - tstart
+            return sliderule.procoutputfile(parm, rsps)
+        else: # Native Output
+            # Flatten Responses
+            tstart_flatten = time.perf_counter()
+            columns = {}
+            sample_photon_record = None
+            photon_records = []
+            num_photons = 0
+            if len(rsps) > 0:
+                # Sort Records
+                for rsp in rsps:
+                    if 'bathyrec' in rsp['__rectype']:
+                        photon_records += rsp,
+                        num_photons += len(rsp['photons'])
+                        if sample_photon_record == None and len(rsp['photons']) > 0:
+                            sample_photon_record = rsp
+                # Build Elevation Columns
+                if num_photons > 0:
+                    # Initialize Columns
+                    for field in sample_photon_record.keys():
+                        fielddef = sliderule.get_definition("bathyrec", field)
+                        if len(fielddef) > 0 and field != "photons":
+                            columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                    for field in sample_photon_record["photons"][0].keys():
+                        fielddef = sliderule.get_definition("bathyrec.photons", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                    # Populate Columns
+                    ph_cnt = 0
+                    for record in photon_records:
+                        # For Each Photon in Extent
+                        for photon in record["photons"]:
+                            # Add per Extent Fields
+                            for field in record.keys():
+                                if field in columns:
+                                    columns[field][ph_cnt] = record[field]
+                            # Add per Photon Fields
+                            for field in photon.keys():
+                                if field in columns:
+                                    columns[field][ph_cnt] = photon[field]
+                            # Goto Next Photon
+                            ph_cnt += 1
+
+                    # Delete Extent ID Column
+                    if "extent_id" in columns and not keep_id:
+                        del columns["extent_id"]
+
+                    # Capture Time to Flatten
+                    profiles["flatten"] = time.perf_counter() - tstart_flatten
+
+                    # Create DataFrame
+                    gdf = sliderule.todataframe(columns, height_key=height_key)
+
+                    # Calculate Spot Column
+                    gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+
+                    # Return Response
+                    profiles[atl24gp.__name__] = time.perf_counter() - tstart
+                    return gdf
+                else:
+                    logger.debug("No photons returned")
+            else:
+                logger.debug("No response returned")
+
+    # Handle Runtime Errors
+    except RuntimeError as e:
+        logger.critical(e)
+        if rethrow_exceptions:
+            raise
+
+    # Error Case
+    return sliderule.emptyframe()
