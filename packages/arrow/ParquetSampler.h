@@ -29,25 +29,39 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __raster_object__
-#define __raster_object__
+#ifndef __parquet_sampler__
+#define __parquet_sampler__
+
+/*
+ * ParquetSampler works on batches of records.  It expects the `batch_rec_type`
+ * passed into the constructor to be the type that defines each of the column headings,
+ * then it expects to receive records that are arrays (or batches) of that record
+ * type.  The field defined as an array is transparent to this class - it just
+ * expects the record to be a single array.
+ */
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <vector>
-#include <ogr_geometry.h>
 #include "LuaObject.h"
-#include "GeoParms.h"
-#include "RasterSample.h"
-#include "RasterSubset.h"
+#include "ArrowParms.h"
+#include "RasterObject.h"
+#include "OsApi.h"
+
+#include <set>
 
 /******************************************************************************
- * RASTER OBJECT CLASS
+ * FORWARD DECLARATIONS
  ******************************************************************************/
 
-class RasterObject: public LuaObject
+class ArrowSamplerImpl; // arrow implementation
+
+/******************************************************************************
+ * PARQUET SAMPLER CLASS
+ ******************************************************************************/
+
+class ParquetSampler: public LuaObject
 {
     public:
 
@@ -60,81 +74,77 @@ class RasterObject: public LuaObject
         static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
-         * Typedefs
+         * Types
          *--------------------------------------------------------------------*/
+        typedef struct
+        {
+            const char*    rkey;
+            RasterObject*  robj;
+        } raster_info_t;
 
-        typedef RasterObject* (*factory_f) (lua_State* L, GeoParms* _parms);
+        typedef struct PointInfo
+        {
+            OGRPoint       point;
+            double         gps_time;
 
-        typedef struct {
-            factory_f   create;
-        } factory_t;
+            explicit PointInfo (double x, double y, double z): point(x, y, z), gps_time(0.0) {}
+        } point_info_t;
+
+        typedef std::vector<RasterSample*> sample_list_t;
+        typedef struct Sampler
+        {
+            const char*                  rkey;
+            RasterObject*                robj;
+            ParquetSampler*              obj;
+            std::vector<sample_list_t*>  samples;
+            std::set<uint64_t>           file_ids;
+            std::vector<std::pair<uint64_t, const char*>> filemap;
+
+            explicit Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj);
+                    ~Sampler (void);
+            void     clearSamples (void);
+        } sampler_t;
+
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void      init            (void);
-        static void      deinit          (void);
-        static int       luaCreate       (lua_State* L);
-        static bool      registerRaster  (const char* _name, factory_f create);
-        virtual uint32_t getSamples      (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) = 0;
-        virtual uint32_t getSubsets      (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) = 0;
-        virtual uint32_t getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param=NULL);
-        virtual         ~RasterObject    (void);
-
-        bool hasZonalStats (void)
-        {
-            return parms->zonal_stats;
-        }
-
-        bool hasFlags (void)
-        {
-            return parms->flags_file;
-        }
-
-        bool usePOItime(void)
-        {
-            return parms->use_poi_time;
-        }
-
-        const Dictionary<uint64_t>& fileDictGet(void)
-        {
-            return fileDict;
-        }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                    RasterObject    (lua_State* L, GeoParms* _parms);
-        uint64_t    fileDictAdd     (const std::string& fileName);
-        static int  luaSamples      (lua_State* L);
-        static int  luaSubset       (lua_State* L);
-        static int  luaPixels       (lua_State *L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        GeoParms* parms;
+        static int               luaCreate       (lua_State* L);
+        static int               luaSample       (lua_State* L);
+        static void              init            (void);
+        static void              deinit          (void);
+        void                     sample          (void);
+        const std::vector<sampler_t*>& getSamplers(void) {return samplers;}
 
     private:
 
         /*--------------------------------------------------------------------
-         * Methods
+         * Constants
          *--------------------------------------------------------------------*/
-
-        int slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static Mutex                    factoryMut;
-        static Dictionary<factory_t>    factories;
-        Dictionary<uint64_t>            fileDict;
+        const char*                inputPath;
+        const char*                outputPath;
+        std::vector<Thread*>       samplerPids;
+        std::vector<point_info_t*> points;
+        std::vector<sampler_t*>    samplers;
+        ArrowSamplerImpl*          impl; // private arrow data
+        bool                       alreadySampled;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                        ParquetSampler          (lua_State* L,
+                                                 const char* input_file, const char* output_file,
+                                                 const std::vector<raster_info_t>& rasters);
+                        ~ParquetSampler         (void);
+        void            Delete                  (void);
+        static void*    samplerThread           (void* parm);
 };
 
-#endif  /* __raster_object__ */
+#endif  /* __parquet_sampler__*/

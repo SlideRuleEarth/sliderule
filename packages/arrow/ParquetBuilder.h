@@ -44,7 +44,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"
@@ -56,7 +55,7 @@
  * FORWARD DECLARATIONS
  ******************************************************************************/
 
-class ArrowImpl; // arrow implementation
+class ArrowBuilderImpl; // arrow implementation
 
 /******************************************************************************
  * PARQUET BUILDER CLASS
@@ -190,7 +189,7 @@ class ParquetBuilder: public LuaObject
         const char*         outputPath; // final destination of the file
         geo_data_t          geoData;
 
-        ArrowImpl* impl; // private arrow data
+        ArrowBuilderImpl*   impl; // private arrow data
 
         /*--------------------------------------------------------------------
          * Methods

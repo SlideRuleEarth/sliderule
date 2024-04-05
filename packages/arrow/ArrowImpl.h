@@ -37,114 +37,25 @@
  ******************************************************************************/
 
 #include <iostream>
+#include <arrow/io/file.h>
 #include <arrow/builder.h>
 #include <arrow/table.h>
-#include <arrow/csv/writer.h>
-#include <arrow/io/file.h>
 #include <arrow/util/key_value_metadata.h>
+#include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
+#include <parquet/arrow/reader.h>
 #include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
 #include <parquet/file_writer.h>
-#include <regex>
 
-#include "MsgQ.h"
-#include "LuaObject.h"
-#include "Ordering.h"
-#include "RecordObject.h"
-#include "ArrowParms.h"
-#include "ParquetBuilder.h"
 #include "OsApi.h"
-#include "MsgQ.h"
 
-/******************************************************************************
- * PARQUET BUILDER CLASS
- ******************************************************************************/
+typedef struct WKBPoint {
+    uint8_t                 byteOrder;
+    uint32_t                wkbType;
+    double                  x;
+    double                  y;
+} ALIGN_PACKED wkbpoint_t;
 
-class ArrowImpl
-{
-    public:
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef ParquetBuilder::batch_list_t batch_list_t;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        explicit ArrowImpl          (ParquetBuilder* _builder);
-        ~ArrowImpl                  (void);
-
-        bool processRecordBatch     (batch_list_t& record_batch, int num_rows, 
-                                     int batch_row_size_bits, bool file_finished=false);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int LIST_BLOCK_SIZE = 32;
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef List<RecordObject::field_t> field_list_t;
-        typedef field_list_t::Iterator field_iterator_t;
-                
-        typedef struct WKBPoint {
-            uint8_t                 byteOrder;
-            uint32_t                wkbType;
-            double                  x;
-            double                  y;
-        } ALIGN_PACKED wkbpoint_t;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        ParquetBuilder*                             parquetBuilder;
-        shared_ptr<arrow::Schema>                   schema;
-        unique_ptr<parquet::arrow::FileWriter>      parquetWriter;
-        shared_ptr<arrow::io::FileOutputStream>     csvWriter;
-        ArrowParms::format_t                        writerFormat;
-        vector<shared_ptr<arrow::Field>>            fieldVector;
-        field_list_t                                fieldList;
-        bool                                        firstTime;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        ArrowParms::format_t createSchema (void);
-        
-        bool buildFieldList         (const char* rec_type, int offset, int flags);
-        void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
-        void processField           (RecordObject::field_t& field, 
-                                     shared_ptr<arrow::Array>* column, 
-                                     batch_list_t& record_batch, 
-                                     int num_rows, 
-                                     int batch_row_size_bits);
-        void processArray           (RecordObject::field_t& field, 
-                                     shared_ptr<arrow::Array>* column, 
-                                     batch_list_t& record_batch, 
-                                     int batch_row_size_bits);
-        void processGeometry        (RecordObject::field_t& x_field, 
-                                     RecordObject::field_t& y_field, 
-                                     shared_ptr<arrow::Array>* column, 
-                                     batch_list_t& record_batch, 
-                                     int num_rows, 
-                                     int batch_row_size_bits);
-        void processAncillaryFields  (vector<shared_ptr<arrow::Array>>& columns,
-                                     batch_list_t& record_batch);
-        void processAncillaryElements(vector<shared_ptr<arrow::Array>>& columns,
-                                     batch_list_t& record_batch);
-};
 
 #endif  /* __arrow_impl__ */

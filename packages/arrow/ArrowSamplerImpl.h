@@ -29,112 +29,70 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __raster_object__
-#define __raster_object__
+#ifndef __arrow_sampler_impl__
+#define __arrow_sampler_impl__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <vector>
-#include <ogr_geometry.h>
+#include "ArrowImpl.h"
 #include "LuaObject.h"
-#include "GeoParms.h"
-#include "RasterSample.h"
-#include "RasterSubset.h"
+#include "ParquetSampler.h"
+#include "OsApi.h"
 
 /******************************************************************************
- * RASTER OBJECT CLASS
+ * ARROW SAMPLER CLASS
  ******************************************************************************/
 
-class RasterObject: public LuaObject
+class ArrowSamplerImpl
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        explicit ArrowSamplerImpl (ParquetSampler* _sampler);
+        ~ArrowSamplerImpl         (void);
+
+        void getPointsFromFile    (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
+        void createParquetFile    (const char* input_file, const char* output_file);
+        bool processSamples       (ParquetSampler::sampler_t* sampler);
+        void clearColumns         (void);
+
+    private:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
-
         /*--------------------------------------------------------------------
-         * Typedefs
+         * Types
          *--------------------------------------------------------------------*/
-
-        typedef RasterObject* (*factory_f) (lua_State* L, GeoParms* _parms);
-
-        typedef struct {
-            factory_f   create;
-        } factory_t;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static void      init            (void);
-        static void      deinit          (void);
-        static int       luaCreate       (lua_State* L);
-        static bool      registerRaster  (const char* _name, factory_f create);
-        virtual uint32_t getSamples      (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) = 0;
-        virtual uint32_t getSubsets      (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) = 0;
-        virtual uint32_t getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param=NULL);
-        virtual         ~RasterObject    (void);
-
-        bool hasZonalStats (void)
-        {
-            return parms->zonal_stats;
-        }
-
-        bool hasFlags (void)
-        {
-            return parms->flags_file;
-        }
-
-        bool usePOItime(void)
-        {
-            return parms->use_poi_time;
-        }
-
-        const Dictionary<uint64_t>& fileDictGet(void)
-        {
-            return fileDict;
-        }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                    RasterObject    (lua_State* L, GeoParms* _parms);
-        uint64_t    fileDictAdd     (const std::string& fileName);
-        static int  luaSamples      (lua_State* L);
-        static int  luaSubset       (lua_State* L);
-        static int  luaPixels       (lua_State *L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        GeoParms* parms;
-
-    private:
+        ParquetSampler*                                   parquetSampler;
+        Mutex                                             mutex;
+        std::vector<std::shared_ptr<arrow::Field>>        new_fields;
+        std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        int slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static Mutex                    factoryMut;
-        static Dictionary<factory_t>    factories;
-        Dictionary<uint64_t>            fileDict;
+        wkbpoint_t                    convertWKBToPoint   (const std::string& wkb_data);
+        std::shared_ptr<arrow::Table> parquetFileToTable  (const char* file_path, const std::vector<const char*>& columnNames = {});
+        void                          tableToParquetFile  (std::shared_ptr<arrow::Table> table, const char* file_path);
+        void                          printParquetMetadata(const char* file_path);
+        std::string                   createFileMap       (void);
 };
 
-#endif  /* __raster_object__ */
+#endif  /* __arrow_sampler_impl__ */

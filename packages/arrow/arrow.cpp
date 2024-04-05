@@ -52,9 +52,10 @@
 int arrow_open (lua_State* L)
 {
     static const struct luaL_Reg arrow_functions[] = {
-        {"parquet",     ParquetBuilder::luaCreate},
-        {"parms",       ArrowParms::luaCreate},
-        {NULL,          NULL}
+        {"parquet",       ParquetBuilder::luaCreate},
+        {"parquetsampler",ParquetSampler::luaCreate},
+        {"parms",         ArrowParms::luaCreate},
+        {NULL,            NULL}
     };
 
     /* Set Library */
@@ -75,6 +76,7 @@ void initarrow (void)
 {
     /* Initialize Modules */
     ParquetBuilder::init();
+    ParquetSampler::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);
@@ -89,5 +91,6 @@ void initarrow (void)
 void deinitarrow (void)
 {
     ParquetBuilder::deinit();
+    ParquetSampler::deinit();
 }
 }

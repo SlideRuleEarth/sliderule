@@ -36,7 +36,7 @@
 #include "core.h"
 #include "ParquetBuilder.h"
 #include "ArrowParms.h"
-#include "ArrowImpl.h"
+#include "ArrowBuilderImpl.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -287,7 +287,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 
     /* Save Time Key */
     timeKey = StringLib::duplicate(rec_meta->time_field);
-    
+
     /* Get Row Size */
     RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
     if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
@@ -305,7 +305,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     fileName = tmp_file.c_str(true);
 
     /* Allocate Implementation */
-    impl = new ArrowImpl(this);
+    impl = new ArrowBuilderImpl(this);
 
     /* Start Builder Thread */
     active = true;
@@ -351,7 +351,7 @@ void* ParquetBuilder::builderThread(void* parm)
         {
             /* Process Record */
             if(ref.size > 0)
-            {               
+            {
                 /* Create Batch Structure */
                 RecordInterface* record = new RecordInterface((unsigned char*)ref.data, ref.size);
                 batch_t* batch = new batch_t(ref, builder->inQ);
@@ -406,7 +406,7 @@ void* ParquetBuilder::builderThread(void* parm)
                         }
                     }
 
-                    /* Check If Primary Record Found 
+                    /* Check If Primary Record Found
                      *  must be after above code to populate
                      *  ancillary record array so that they
                      *  get freed */
@@ -444,8 +444,8 @@ void* ParquetBuilder::builderThread(void* parm)
                     continue;
                 }
 
-                /* Sanity Check Number of Ancillary Rows */                
-                if((batch->anc_fields > 0 && batch->anc_fields != batch->rows) || 
+                /* Sanity Check Number of Ancillary Rows */
+                if((batch->anc_fields > 0 && batch->anc_fields != batch->rows) ||
                    (batch->anc_elements > 0 && batch->anc_elements != batch->rows))
                 {
                     mlog(ERROR, "Attempting to supply ancillary data with mismatched number of rows for %s: %d,%d != %d", batch->pri_record->getRecordType(), batch->anc_fields, batch->anc_elements, batch->rows);

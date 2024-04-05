@@ -33,6 +33,11 @@ if __pistache__ then
     runner.script(td .. "pistache_endpoint.lua")
 end
 
+-- Run Parquet Self Tests --
+if __arrow__ then
+    runner.script(td .. "parquet_sampler.lua")
+end
+
 -- Run Raster Self Tests --
 if __geo__ then
     runner.script(td .. "geojson_raster.lua")

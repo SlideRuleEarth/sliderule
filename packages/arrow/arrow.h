@@ -38,6 +38,7 @@
 
 #include "ArrowParms.h"
 #include "ParquetBuilder.h"
+#include "ParquetSampler.h"
 
 /******************************************************************************
  * PROTOTYPES

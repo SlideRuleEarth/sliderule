@@ -41,9 +41,10 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "ParquetBuilder.h"
-#include "ArrowParms.h"
-#include "ArrowImpl.h"
+#include "ArrowBuilderImpl.h"
+
+#include <arrow/csv/writer.h>
+#include <regex>
 
 #ifdef __aws__
 #include "aws.h"
@@ -54,16 +55,16 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor
+ * Constructors
  *----------------------------------------------------------------------------*/
-ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
+ArrowBuilderImpl::ArrowBuilderImpl (ParquetBuilder* _builder):
     parquetBuilder(_builder),
     schema(NULL),
     writerFormat(ArrowParms::UNSUPPORTED),
     fieldList(LIST_BLOCK_SIZE),
     firstTime(true)
 {
-    /* Build Field List and Iterator */    
+    /* Build Field List and Iterator */
     buildFieldList(parquetBuilder->getRecType(), 0, 0);
     if(parquetBuilder->getAsGeo()) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
 }
@@ -71,14 +72,14 @@ ArrowImpl::ArrowImpl (ParquetBuilder* _builder):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ArrowImpl::~ArrowImpl (void)
+ArrowBuilderImpl::~ArrowBuilderImpl (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * processRecordBatch
  *----------------------------------------------------------------------------*/
-bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, int batch_row_size_bits, bool file_finished)
+bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, int batch_row_size_bits, bool file_finished)
 {
     bool status = false;
 
@@ -88,13 +89,13 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
 
     /* Allocate Columns for this Batch */
     vector<shared_ptr<arrow::Array>> columns;
-    
+
     /* Loop Through Fields in Primary Record */
     for(int i = 0; i < fieldList.length(); i++)
     {
         uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
         RecordObject::field_t& field = fieldList[i];
-        
+
         /* Build Column */
         shared_ptr<arrow::Array> column;
         if(field.elements <= 1) processField(field, &column, record_batch, num_rows, batch_row_size_bits);
@@ -171,7 +172,7 @@ bool ArrowImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, in
 /*----------------------------------------------------------------------------
 * createSchema
 *----------------------------------------------------------------------------*/
-ArrowParms::format_t ArrowImpl::createSchema (void)
+ArrowParms::format_t ArrowBuilderImpl::createSchema (void)
 {
     ArrowParms::format_t writer_format = ArrowParms::UNSUPPORTED;
 
@@ -207,7 +208,7 @@ ArrowParms::format_t ArrowImpl::createSchema (void)
             parquetWriter = std::move(result).ValueOrDie();
             writer_format = ArrowParms::PARQUET;
         }
-        else 
+        else
         {
             mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
         }
@@ -221,7 +222,7 @@ ArrowParms::format_t ArrowImpl::createSchema (void)
             csvWriter = result.ValueOrDie();
             writer_format = ArrowParms::CSV;
         }
-        else 
+        else
         {
             mlog(CRITICAL, "Failed to open csv writer: %s", result.status().ToString().c_str());
         }
@@ -238,7 +239,7 @@ ArrowParms::format_t ArrowImpl::createSchema (void)
 /*----------------------------------------------------------------------------
 * buildFieldList
 *----------------------------------------------------------------------------*/
-bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
+bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int flags)
 {
     /* Loop Through Fields in Record */
     Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
@@ -308,7 +309,7 @@ bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
                                             else mlog(CRITICAL, "User fields that are arrays must be identified as batches: %s", field.exttype);
                                             add_field_to_list = false;
                                             break;
-                                            
+
                 default:                    add_field_to_list = false;
                                             break;
             }
@@ -331,7 +332,7 @@ bool ArrowImpl::buildFieldList (const char* rec_type, int offset, int flags)
 /*----------------------------------------------------------------------------
 * appendGeoMetaData
 *----------------------------------------------------------------------------*/
-void ArrowImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void ArrowBuilderImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Initialize Meta Data String */
     string geostr(R"json({
@@ -394,7 +395,7 @@ void ArrowImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata
 /*----------------------------------------------------------------------------
 * appendServerMetaData
 *----------------------------------------------------------------------------*/
-void ArrowImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Build Launch Time String */
     int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
@@ -453,7 +454,7 @@ void ArrowImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetad
 /*----------------------------------------------------------------------------
 * appendPandasMetaData
 *----------------------------------------------------------------------------*/
-void ArrowImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Initialize Pandas Meta Data String */
     string pandasstr(R"json({
@@ -508,7 +509,7 @@ void ArrowImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetad
         {
             is_last_entry = true;
         }
-        
+
         /* Fill In Column String */
         columnstr = std::regex_replace(columnstr, std::regex("_NAME_"), field_name.c_str());
         columnstr = std::regex_replace(columnstr, std::regex("_PTYPE_"), pandas_type);
@@ -551,7 +552,7 @@ void ArrowImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyValueMetad
 /*----------------------------------------------------------------------------
 * processField
 *----------------------------------------------------------------------------*/
-void ArrowImpl::processField (RecordObject::field_t& field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int num_rows, int batch_row_size_bits)
+void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int num_rows, int batch_row_size_bits)
 {
     switch(field.type)
     {
@@ -926,7 +927,7 @@ void ArrowImpl::processField (RecordObject::field_t& field, shared_ptr<arrow::Ar
 /*----------------------------------------------------------------------------
 * processArray
 *----------------------------------------------------------------------------*/
-void ArrowImpl::processArray (RecordObject::field_t& field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int batch_row_size_bits)
+void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int batch_row_size_bits)
 {
     if(!(field.flags & RecordObject::BATCH))
     {
@@ -1222,7 +1223,7 @@ void ArrowImpl::processArray (RecordObject::field_t& field, shared_ptr<arrow::Ar
 /*----------------------------------------------------------------------------
 * processGeometry
 *----------------------------------------------------------------------------*/
-void ArrowImpl::processGeometry (RecordObject::field_t& x_field, RecordObject::field_t& y_field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int num_rows, int batch_row_size_bits)
+void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordObject::field_t& y_field, shared_ptr<arrow::Array>* column, batch_list_t& record_batch, int num_rows, int batch_row_size_bits)
 {
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
@@ -1257,7 +1258,7 @@ void ArrowImpl::processGeometry (RecordObject::field_t& x_field, RecordObject::f
 /*----------------------------------------------------------------------------
 * processAncillaryFields
 *----------------------------------------------------------------------------*/
-void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
+void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
 {
     vector<string>& ancillary_fields = parquetBuilder->getParms()->ancillary_fields;
     Dictionary<vector<AncillaryFields::field_t*>> field_table;
@@ -1495,7 +1496,7 @@ void ArrowImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& column
 /*----------------------------------------------------------------------------
 * processAncillaryElements
 *----------------------------------------------------------------------------*/
-void ArrowImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
+void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
 {
     int num_rows = 0;
     vector<string>& ancillary_fields = parquetBuilder->getParms()->ancillary_fields;
