@@ -58,9 +58,4 @@ typedef struct WKBPoint {
 } ALIGN_PACKED wkbpoint_t;
 
 
-wkbpoint_t convertWKBToPoint(const std::string& wkb_data);
-std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path, const std::vector<const char*>& columnNames = {});
-void tableToParquetFile(std::shared_ptr<arrow::Table> table, const char* file_path);
-void printParquetMetadata(const char* file_path);
-
 #endif  /* __arrow_impl__ */

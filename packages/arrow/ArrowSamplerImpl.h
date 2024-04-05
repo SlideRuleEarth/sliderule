@@ -84,12 +84,15 @@ class ArrowSamplerImpl
         std::vector<std::shared_ptr<arrow::Field>>        new_fields;
         std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
 
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        std::string createFileMap(void);
+        wkbpoint_t                    convertWKBToPoint   (const std::string& wkb_data);
+        std::shared_ptr<arrow::Table> parquetFileToTable  (const char* file_path, const std::vector<const char*>& columnNames = {});
+        void                          tableToParquetFile  (std::shared_ptr<arrow::Table> table, const char* file_path);
+        void                          printParquetMetadata(const char* file_path);
+        std::string                   createFileMap       (void);
 };
 
 #endif  /* __arrow_sampler_impl__ */
