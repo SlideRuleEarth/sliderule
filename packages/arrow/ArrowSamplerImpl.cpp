@@ -73,8 +73,12 @@ ArrowSamplerImpl::~ArrowSamplerImpl (void)
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::getPointsFromFile(const char* file_path, std::vector<ParquetSampler::point_info_t*>& points)
 {
-    std::shared_ptr<arrow::Table> table = parquetFileToTable(file_path);
-    int geometry_column_index = table->schema()->GetFieldIndex("geometry");
+    const char* geocol  = "geometry";
+    const char* timecol = "time";
+    std::vector<const char*> columnNames = {geocol, timecol};
+
+    std::shared_ptr<arrow::Table> table = parquetFileToTable(file_path, columnNames);
+    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
     if(geometry_column_index == -1)
     {
         throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
@@ -95,7 +99,7 @@ void ArrowSamplerImpl::getPointsFromFile(const char* file_path, std::vector<Parq
         points.push_back(pinfo);
     }
 
-    int time_column_index = table->schema()->GetFieldIndex("time");
+    int time_column_index = table->schema()->GetFieldIndex(timecol);
     if(time_column_index > -1)
     {
         /* If time column exists it will have the same length as the geometry column */

@@ -121,7 +121,7 @@ OGRPoint convertWKBToPoint(const std::string& wkb_data)
 /*----------------------------------------------------------------------------
 * parquetFileToTable
 *----------------------------------------------------------------------------*/
-std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path)
+std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path, const std::vector<const char*>& columnNames)
 {
     std::shared_ptr<arrow::io::ReadableFile> infile;
     PARQUET_ASSIGN_OR_THROW(infile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
@@ -129,9 +129,31 @@ std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path)
     std::unique_ptr<parquet::arrow::FileReader> reader;
     PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &reader));
 
-    std::shared_ptr<arrow::Table> table;
-    PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
 
+    /* If columnNames is empty, read all columns */
+    if(columnNames.size() == 0)
+    {
+        std::shared_ptr<arrow::Table> table;
+        PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
+        return table;
+    }
+
+    /* Read only the specified columns */
+    std::shared_ptr<arrow::Schema> schema;
+    PARQUET_THROW_NOT_OK(reader->GetSchema(&schema));
+    std::vector<int> columnIndices;
+    for(const auto& columnName : columnNames)
+    {
+        auto index = schema->GetFieldIndex(columnName);
+        if(index != -1)
+        {
+            columnIndices.push_back(index);
+        }
+        else mlog(DEBUG, "Column %s not found in parquet file.", columnName);
+    }
+
+    std::shared_ptr<arrow::Table> table;
+    PARQUET_THROW_NOT_OK(reader->ReadTable(columnIndices, &table));
     return table;
 }
 
