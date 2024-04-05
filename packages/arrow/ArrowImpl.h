@@ -48,7 +48,7 @@
 #include <parquet/properties.h>
 #include <parquet/file_writer.h>
 
-#include "RasterObject.h"
+#include "OsApi.h"
 
 typedef struct WKBPoint {
     uint8_t                 byteOrder;
@@ -58,7 +58,7 @@ typedef struct WKBPoint {
 } ALIGN_PACKED wkbpoint_t;
 
 
-OGRPoint convertWKBToPoint(const std::string& wkb_data);
+wkbpoint_t convertWKBToPoint(const std::string& wkb_data);
 std::shared_ptr<arrow::Table> parquetFileToTable(const char* file_path, const std::vector<const char*>& columnNames = {});
 void tableToParquetFile(std::shared_ptr<arrow::Table> table, const char* file_path);
 void printParquetMetadata(const char* file_path);

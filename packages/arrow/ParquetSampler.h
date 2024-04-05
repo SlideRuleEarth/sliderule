@@ -87,7 +87,7 @@ class ParquetSampler: public LuaObject
             OGRPoint       point;
             double         gps_time;
 
-            explicit PointInfo (const OGRPoint& _point): point(_point), gps_time(0.0) {}
+            explicit PointInfo (double x, double y, double z): point(x, y, z), gps_time(0.0) {}
         } point_info_t;
 
         typedef std::vector<RasterSample*> sample_list_t;

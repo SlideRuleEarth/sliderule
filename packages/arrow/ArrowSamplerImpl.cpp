@@ -94,8 +94,8 @@ void ArrowSamplerImpl::getPointsFromFile(const char* file_path, std::vector<Parq
     for(int64_t i = 0; i < binary_array->length(); i++)
     {
         std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        OGRPoint point = convertWKBToPoint(wkb_data);
-        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t(point);
+        wkbpoint_t point = convertWKBToPoint(wkb_data);
+        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t(point.x, point.y, 0.0);
         points.push_back(pinfo);
     }
 

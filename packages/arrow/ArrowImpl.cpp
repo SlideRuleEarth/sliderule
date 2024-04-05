@@ -41,7 +41,7 @@
  ******************************************************************************/
 
 #include "ArrowImpl.h"
-
+#include "core.h"
 
 /*----------------------------------------------------------------------------
 * swap_double - local utility fucntion
@@ -62,7 +62,7 @@ static double swap_double(const double value)
 /*----------------------------------------------------------------------------
 * convertWKBToPoint
 *----------------------------------------------------------------------------*/
-OGRPoint convertWKBToPoint(const std::string& wkb_data)
+wkbpoint_t convertWKBToPoint(const std::string& wkb_data)
 {
     wkbpoint_t point;
 
@@ -114,8 +114,7 @@ OGRPoint convertWKBToPoint(const std::string& wkb_data)
         point.y = swap_double(point.y);
     }
 
-    OGRPoint poi(point.x, point.y, 0);
-    return poi;
+    return point;
 }
 
 /*----------------------------------------------------------------------------
