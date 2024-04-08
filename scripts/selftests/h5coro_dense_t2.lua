@@ -21,12 +21,12 @@ rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 -- Arguments & Call --
 local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc"
 -- "h5ex_d_gzip.h5"
-local dataset_name = "/Temp/add_offset"
+local dataset_name = "/Temp/scale_factor"
 -- "/minimum_fire_area/coordinates"
 -- "/Temp/add_offset" --"/Power/_FillValue" -- "/Temp/add_offset" -- "/geospatial_lat_lon_extent/geospatial_lat_center"  -- "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
 local id = 0
 local raw = true
-local dtype = core.INTEGER -- core.TEXT --core.INTEGER -- vs RecordObject::TEXT) RecordObject::REAL); RecordObject::INTEGER); RecordObject::DYNAMIC);
+local dtype = core.DYNAMIC -- core.TEXT --core.INTEGER -- vs RecordObject::TEXT) RecordObject::REAL); RecordObject::INTEGER); RecordObject::DYNAMIC);
 local col = 0
 local startrow = 0
 local numrows = core.ALL_ROWS
@@ -51,7 +51,7 @@ print("vals recieved with type: ".. type(vals))
 print("len of vals:", #vals)
 print("received string as:", vals)
 
-e1 = string.unpack('I4', vals) -- ('f', vals) -- unpack values with float for FillRange
+e1 = string.unpack('f', vals) -- ('f', vals) -- unpack values with float for FillRange
 
 print("e1 val: " .. e1)
 runner.check(400 == e1, "failed dataset read")
@@ -67,4 +67,3 @@ r2:destroy()
 -- Report Results --
 
 runner.report()
-
