@@ -17,13 +17,16 @@ target_compile_options (slideruleLib PUBLIC -Wall) # turn on "all" warnings
 target_compile_options (slideruleLib PUBLIC -Wextra) # turn on "extra" warnings
 target_compile_options (slideruleLib PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
 target_compile_options (slideruleLib PUBLIC -Wshadow) # turn on warning for inner scope var with same name as outer scope var
-target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-fprofile-arcs>")
-target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-ftest-coverage>")
 target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-fstack-protector-all>")
 target_compile_definitions (slideruleLib PUBLIC "$<$<CONFIG:Debug>:__no_unload__>") # don't unload dynamic modules when in debug so symbols available to address sanitizer postmortem
 
 if(ENABLE_ADDRESS_SANITIZER)
 	target_compile_options (slideruleLib PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+endif()
+
+if(ENABLE_CODE_COVERAGE)
+    target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-fprofile-arcs>")
+    target_compile_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:-ftest-coverage>")
 endif()
 
 # Link Options #
@@ -32,12 +35,14 @@ target_link_libraries (slideruleLib PUBLIC dl)
 target_link_libraries (slideruleLib PUBLIC pthread)
 target_link_libraries (slideruleLib PUBLIC m)
 target_link_libraries (slideruleLib PUBLIC rt)
-target_link_libraries (slideruleLib PUBLIC "$<$<CONFIG:Debug>:gcov>")
-
-target_link_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:--coverage>")
 
 if(ENABLE_ADDRESS_SANITIZER)
 	target_link_options (slideruleLib PUBLIC -fsanitize=address)
+endif()
+
+if(ENABLE_CODE_COVERAGE)
+    target_link_libraries (slideruleLib PUBLIC "$<$<CONFIG:Debug>:gcov>")
+    target_link_options (slideruleLib PUBLIC "$<$<CONFIG:Debug>:--coverage>")
 endif()
 
 # Sources #

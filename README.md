@@ -77,6 +77,9 @@ Options include:
    -DENABLE_ADDRESS_SANITIZER=[ON|OFF] instrument code with for detecting memory errors
                                        default: OFF
 
+   -DENABLE_CODE_COVERAGE=[ON|OFF]     instrument code for reporting code coverage
+                                       default: OFF
+
    -DENABLE_TIME_HEARTBEAT=[ON|OFF]    replace system gettime calls with 1KHz timer (useful for reducing CPU load when timestamping lots of events)
                                        default: OFF
 
