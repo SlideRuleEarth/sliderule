@@ -4,8 +4,8 @@ asset = require("asset")
 local assets = asset.loaddir()
 local td = runner.rootdir(arg[0])
 
-local in_file = td.."atl06_10rows.parquet"
-local out_file = td.."samples.parquet"
+local in_file = td.."atl06_10rows.geoparquet"
+local out_file = td.."samples.geoparquet"
 
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
@@ -27,7 +27,7 @@ runner.check(dem1 ~= nil)
 local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, with_flags=true, use_poi_time=true}))
 runner.check(dem2 ~= nil)
 
-local parquet_sampler = arrow.parquetsampler(in_file, out_file, {["mosaic"] = dem1, ["strips"] = dem2})
+local parquet_sampler = arrow.parquetsampler(arrow.parms({path=out_file, format="parquet", as_geo=true}), in_file, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 print('\n------------------\nTest01: parquetsampler sample \n------------------')

@@ -60,10 +60,13 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ParquetSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void getPointsFromFile    (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
-        void createParquetFile    (const char* input_file, const char* output_file);
+        void openInputFile        (const char* file_path);
+        void getMetadata          (ParquetSampler::record_info_t& recInfo);
+        void getPoints            (ParquetSampler::record_info_t& recInfo, std::vector<ParquetSampler::point_info_t*>& points);
+        void getXYPoints          (ParquetSampler::record_info_t& recInfo, std::vector<ParquetSampler::point_info_t*>& points);
+        void getGeoPoints         (std::vector<ParquetSampler::point_info_t*>& points);
         bool processSamples       (ParquetSampler::sampler_t* sampler);
-        void clearColumns         (void);
+        void createOutpuFile      (void);
 
     private:
 
@@ -81,18 +84,26 @@ class ArrowSamplerImpl
 
         ParquetSampler*                                   parquetSampler;
         Mutex                                             mutex;
-        std::vector<std::shared_ptr<arrow::Field>>        new_fields;
-        std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
+        std::vector<std::shared_ptr<arrow::Field>>        newFields;
+        std::vector<std::shared_ptr<arrow::ChunkedArray>> newColumns;
+
+        std::shared_ptr<arrow::io::ReadableFile>          inputFile;
+        std::unique_ptr<parquet::arrow::FileReader>       reader;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
+        std::shared_ptr<arrow::Table> inputFileToTable    (const std::vector<const char*>& columnNames = {});
+        std::shared_ptr<arrow::Table> appendSamplesColumns(const std::shared_ptr<arrow::Table> table);
+        void                          tableToParquetFile  (const std::shared_ptr<arrow::Table> table, const char* file_path);
+        void                          tableToCsvFile      (const std::shared_ptr<arrow::Table> table, const char* file_path);
+
         wkbpoint_t                    convertWKBToPoint   (const std::string& wkb_data);
-        std::shared_ptr<arrow::Table> parquetFileToTable  (const char* file_path, const std::vector<const char*>& columnNames = {});
-        void                          tableToParquetFile  (std::shared_ptr<arrow::Table> table, const char* file_path);
         void                          printParquetMetadata(const char* file_path);
         std::string                   createFileMap       (void);
+        std::string                   createMetadataFileName (const char* file_path);
+        void                          tableMetadataToJson (const std::shared_ptr<arrow::Table> table, const char* file_path);
 };
 
 #endif  /* __arrow_sampler_impl__ */
