@@ -43,7 +43,7 @@
  ******************************************************************************/
 
 #ifndef H5_VERBOSE
-#define H5_VERBOSE true
+#define H5_VERBOSE false
 #endif
 
 #ifndef H5_EXTRA_DEBUG
@@ -2262,8 +2262,6 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint64_t version = (version_class & 0xF0) >> 4;
     uint64_t databits = version_class >> 8;
 
-    mlog(CRITICAL, "datamessage databits: %lld", (long long) databits);
-
     if(H5_ERROR_CHECKING)
     {
         if(version != 1)
@@ -2962,7 +2960,6 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
         !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
     {
-        mlog(DEBUG, "Shortcut out of attribute occured.");
         return size;
     }
 
@@ -3090,20 +3087,18 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         }
 
         /* Check if Attribute Located Non-Dense, Else Init Dense Search */
-        #ifdef H5CORO_ATTRIBUTE_SUPPORT
-            if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
-            {
-                print2term("Entering dense attribute search; No main attribute message match. \n");
-                H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
-                if (curr_btreev2.found_out) {
-                    readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
-                }
-                else {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
-                }
-
+        if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
+        {
+            print2term("Entering dense attribute search; No main attribute message match. \n");
+            H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
+            if (curr_btreev2.found_out) {
+                readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
             }
-        #endif
+            else {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+            }
+
+        }
     } catch (const RunTimeException& e) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "DENSE ATTR READ FAILURE, FREE ALLOCS");
     }
