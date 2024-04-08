@@ -149,10 +149,13 @@ class ParquetBuilder: public LuaObject
         static int              luaCreate       (lua_State* L);
         static void             init            (void);
         static void             deinit          (void);
-
+        
+        const char*             getSubField     (const char* field_name);
         const char*             getFileName     (void);
         const char*             getRecType      (void);
         const char*             getTimeKey      (void);
+        const char*             getXKey         (void);
+        const char*             getYKey         (void);
         bool                    getAsGeo        (void);
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
@@ -178,6 +181,8 @@ class ParquetBuilder: public LuaObject
         Subscriber*         inQ;
         const char*         recType;
         const char*         timeKey;
+        const char*         xKey;
+        const char*         yKey;
         batch_list_t        recordBatch;
         bool                hasAncillaryFields;
         bool                hasAncillaryElements;

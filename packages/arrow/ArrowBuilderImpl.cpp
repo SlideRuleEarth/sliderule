@@ -123,7 +123,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     /* Create Parquet Writer (on first time) */
     if(firstTime)
     {
-        writerFormat = createSchema();
+        createSchema();
         firstTime = false;
     }
 
@@ -172,10 +172,8 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 /*----------------------------------------------------------------------------
 * createSchema
 *----------------------------------------------------------------------------*/
-ArrowParms::format_t ArrowBuilderImpl::createSchema (void)
+void ArrowBuilderImpl::createSchema (void)
 {
-    ArrowParms::format_t writer_format = ArrowParms::UNSUPPORTED;
-
     /* Create Schema */
     schema = make_shared<arrow::Schema>(fieldVector);
 
@@ -206,7 +204,7 @@ ArrowParms::format_t ArrowBuilderImpl::createSchema (void)
         if(result.ok())
         {
             parquetWriter = std::move(result).ValueOrDie();
-            writer_format = ArrowParms::PARQUET;
+            writerFormat = ArrowParms::PARQUET;
         }
         else
         {
@@ -220,7 +218,7 @@ ArrowParms::format_t ArrowBuilderImpl::createSchema (void)
         if(result.ok())
         {
             csvWriter = result.ValueOrDie();
-            writer_format = ArrowParms::CSV;
+            writerFormat = ArrowParms::CSV;
         }
         else
         {
@@ -231,9 +229,6 @@ ArrowParms::format_t ArrowBuilderImpl::createSchema (void)
     {
         mlog(CRITICAL, "Unsupported format: %d", parquetBuilder->getParms()->format);
     }
-
-    /* Return Status */
-    return writer_format;
 }
 
 /*----------------------------------------------------------------------------
@@ -415,7 +410,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
         int index = 0;
         while(pkg_list[index])
         {
-            packagestr += pkg_list[index];
+            packagestr += FString("\"%s\"", pkg_list[index]).c_str();
             if(pkg_list[index + 1]) packagestr += ", ";
             delete [] pkg_list[index];
             index++;
@@ -425,27 +420,38 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     delete [] pkg_list;
 
     /* Initialize Meta Data String */
-    string metastr(R"json({
+    string metastr(FString(R"json({
         "server":
         {
-            "environment":"_1_",
-            "version":"_2_",
-            "duration":_3_,
-            "packages":_4_,
-            "commit":"_5_",
-            "launch":"_6_"
+            "environment":"%s",
+            "version":"%s",
+            "duration":%s,
+            "packages":%s,
+            "commit":"%s",
+            "launch":"%s"
+        },
+        "recordinfo":
+        {
+            "time": "%s",
+            "as_geo": %s,
+            "x": "%s",
+            "y": "%s"
         }
-    })json");
+    })json",
+        OsApi::getEnvVersion(),
+        LIBID,
+        durationstr.c_str(),
+        packagestr.c_str(),
+        BUILDINFO,
+        timestr.c_str(),
+        parquetBuilder->getTimeKey(),
+        parquetBuilder->getAsGeo() ? "true" : "false",
+        parquetBuilder->getXKey(),
+        parquetBuilder->getYKey()).c_str());
 
-    /* Fill In Meta Data String */
+    /* Clean Up JSON String */
     metastr = std::regex_replace(metastr, std::regex("    "), "");
     metastr = std::regex_replace(metastr, std::regex("\n"), " ");
-    metastr = std::regex_replace(metastr, std::regex("_1_"), OsApi::getEnvVersion());
-    metastr = std::regex_replace(metastr, std::regex("_2_"), LIBID);
-    metastr = std::regex_replace(metastr, std::regex("_3_"), durationstr.c_str());
-    metastr = std::regex_replace(metastr, std::regex("_4_"), packagestr.c_str());
-    metastr = std::regex_replace(metastr, std::regex("_5_"), BUILDINFO);
-    metastr = std::regex_replace(metastr, std::regex("_6_"), timestr.c_str());
 
     /* Append Meta String */
     metadata->Append("sliderule", metastr.c_str());
@@ -458,7 +464,7 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
 {
     /* Initialize Pandas Meta Data String */
     string pandasstr(R"json({
-        "index_columns": [_INDEX_],
+        "index_columns": ["_INDEX_"],
         "column_indexes": [
             {
                 "name": null,
@@ -525,24 +531,10 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
         columns += columnstr;
     }
 
-    /* Build Index String */
-    const char* time_key = parquetBuilder->getTimeKey();
-    if(!time_key) time_key = ""; // replace null with empty string
-    string time_str(time_key);
-    int max_loops = 10; // upper bound the nesting
-    for(int i = 0; i < max_loops; i++)
-    {
-        /* Remove Parent Fields */
-        size_t pos = time_str.find(".");
-        if(pos != string::npos) time_str.replace(0, pos+1, "");
-        else break;
-    }
-    FString formatted_time("\"%s\"", time_str.c_str());
-
     /* Fill In Pandas Meta Data String */
     pandasstr = std::regex_replace(pandasstr, std::regex("    "), "");
     pandasstr = std::regex_replace(pandasstr, std::regex("\n"), " ");
-    pandasstr = std::regex_replace(pandasstr, std::regex("_INDEX_"), time_key[0] ? formatted_time.c_str() : "");
+    pandasstr = std::regex_replace(pandasstr, std::regex("_INDEX_"), parquetBuilder->getTimeKey());
     pandasstr = std::regex_replace(pandasstr, std::regex("_COLUMNS_"), columns.c_str());
 
     /* Append Meta String */

@@ -100,9 +100,8 @@ class ArrowBuilderImpl
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-
-        ArrowParms::format_t createSchema (void);
-
+        
+        void createSchema           (void);
         bool buildFieldList         (const char* rec_type, int offset, int flags);
         void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
@@ -126,8 +125,6 @@ class ArrowBuilderImpl
                                      batch_list_t& record_batch);
         void processAncillaryElements(vector<shared_ptr<arrow::Array>>& columns,
                                      batch_list_t& record_batch);
-
-        void printHelloworld         (void);
 };
 
 #endif  /* __arrow_builder_impl__ */

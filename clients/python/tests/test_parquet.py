@@ -4,8 +4,11 @@ import pytest
 from pathlib import Path
 import numpy
 import geopandas
+import pyarrow.parquet as pq
 import os
 import os.path
+import json
+import ctypes
 import sliderule
 from sliderule import icesat2
 
@@ -25,6 +28,9 @@ class TestParquet:
                   "maxi": 1,
                   "output": { "path": "testfile1.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
+        metadata = pq.read_metadata("testfile1.parquet")
+        sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
+        metadata_dict = json.loads(sliderule_metadata)
         os.remove("testfile1.parquet")
         assert init
         assert len(gdf) == 957
@@ -33,6 +39,9 @@ class TestParquet:
         assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
+        assert metadata_dict["recordinfo"]["time"] == "time", f'invalid time column: {metadata_dict["recordinfo"]["time"]}'
+        assert metadata_dict["recordinfo"]["x"] == "longitude", f'invalid x column: {metadata_dict["recordinfo"]["x"]}'
+        assert metadata_dict["recordinfo"]["y"] == "latitude", f'invalid y column: {metadata_dict["recordinfo"]["y"]}'
 
     def test_atl06_non_geo(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"

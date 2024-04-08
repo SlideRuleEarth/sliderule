@@ -121,6 +121,31 @@ void ParquetBuilder::deinit (void)
 }
 
 /*----------------------------------------------------------------------------
+ * getSubField
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::getSubField (const char* field_name)
+{
+    /* Return Empty String if Null */
+    if(!field_name)
+    {
+        static const char* empty_sub_field = "";
+        return empty_sub_field;
+    }
+
+    /* Find Last '.' */
+    const char* c_ptr = field_name;
+    const char* sub_ptr = field_name;
+    while(*c_ptr != '\0')
+    {
+        if(*c_ptr == '.') sub_ptr = c_ptr + 1;
+        c_ptr++;
+    }
+
+    /* Return Pointer to Subfield */
+    return sub_ptr;
+}
+
+/*----------------------------------------------------------------------------
  * getFileName
  *----------------------------------------------------------------------------*/
 const char* ParquetBuilder::getFileName (void)
@@ -143,8 +168,24 @@ const char* ParquetBuilder::getTimeKey (void)
 {
     return timeKey;
 }
-/*----------------------------------------------------------------------------
 
+/*----------------------------------------------------------------------------
+ * getXKey
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::getXKey (void)
+{
+    return xKey;
+}
+
+/*----------------------------------------------------------------------------
+ * getyKey
+ *----------------------------------------------------------------------------*/
+const char* ParquetBuilder::getYKey (void)
+{
+    return yKey;
+}
+
+/*----------------------------------------------------------------------------
  * getAsGeo
  *----------------------------------------------------------------------------*/
 bool ParquetBuilder::getAsGeo (void)
@@ -285,8 +326,10 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);
 
-    /* Save Time Key */
-    timeKey = StringLib::duplicate(rec_meta->time_field);
+    /* Save Keys */
+    timeKey = StringLib::duplicate(getSubField(rec_meta->time_field));
+    xKey = StringLib::duplicate(getSubField(rec_meta->x_field));
+    yKey = StringLib::duplicate(getSubField(rec_meta->y_field));
 
     /* Get Row Size */
     RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
@@ -324,6 +367,8 @@ ParquetBuilder::~ParquetBuilder(void)
     delete [] outputPath;
     delete [] recType;
     delete [] timeKey;
+    delete [] xKey;
+    delete [] yKey;
     delete outQ;
     delete inQ;
     delete impl;
