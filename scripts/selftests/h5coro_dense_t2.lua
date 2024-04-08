@@ -4,7 +4,7 @@
     -- geospatial_eastbound_longitude (32 float pt)
     -- geospatial_lat_center (32 float pt)
     -- geospatial_lon_center (32 float pt)
-    -- geospatial_lat_units (string)
+    -- geospatial_lat_units (string, dynamic size)
     -- geospatial_lon_nadir (32 float pt)
 
     local runner = require("test_executive")
