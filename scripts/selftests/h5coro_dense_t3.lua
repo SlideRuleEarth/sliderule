@@ -21,7 +21,7 @@
     
     -- Arguments & Call --
     
-    -- SUB TEST 1 - eastbound_longitude -- 
+    -- SUB TEST 1 - latitude_of_projection_origin -- 
     
     local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc"
     local dataset_name = "/goes_imager_projection/latitude_of_projection_origin"
@@ -52,7 +52,7 @@
     rsps2:destroy()
     r2:destroy()
     
-    -- SUB TEST 2 - scale_factor -- 
+    -- SUB TEST 2 - semi_major_axis -- 
     
     asset2 = core.asset("local", "nil", "file", td, "empty.index")
     dataq = "dataq2"
