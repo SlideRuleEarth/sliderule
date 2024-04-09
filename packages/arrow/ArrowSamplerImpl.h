@@ -60,9 +60,7 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ParquetSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void openInputFile        (const char* file_path);
-        void getInputFileMetadata (ParquetSampler::record_info_t& recInfo);
-        void getInputFilePoints   (std::vector<ParquetSampler::point_info_t*>& points);
+        void processInputFile     (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
         bool processSamples       (ParquetSampler::sampler_t* sampler);
         void createOutpuFile      (void);
 
@@ -88,22 +86,35 @@ class ArrowSamplerImpl
         std::shared_ptr<arrow::io::ReadableFile>          inputFile;
         std::unique_ptr<parquet::arrow::FileReader>       reader;
 
+        char* timeKey;
+        char* xKey;
+        char* yKey;
+        bool  asGeo;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        std::shared_ptr<arrow::Table> inputFileToTable    (const std::vector<const char*>& columnNames = {});
-        std::shared_ptr<arrow::Table> appendSamplesColumns(const std::shared_ptr<arrow::Table> table);
-        void                          tableToParquetFile  (const std::shared_ptr<arrow::Table> table, const char* file_path);
-        void                          tableToCsvFile      (const std::shared_ptr<arrow::Table> table, const char* file_path);
-
-        wkbpoint_t                    convertWKBToPoint   (const std::string& wkb_data);
-        void                          printParquetMetadata(const char* file_path);
-        std::string                   createFileMap       (void);
-        std::string                   createMetadataFileName (const char* file_path);
-        void                          tableMetadataToJson (const std::shared_ptr<arrow::Table> table, const char* file_path);
-        void                          getXYPoints         (std::vector<ParquetSampler::point_info_t*>& points);
-        void                          getGeoPoints        (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getMetadata             (void);
+        void                          getPoints               (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getXYPoints             (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getGeoPoints            (std::vector<ParquetSampler::point_info_t*>& points);
+        std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
+        std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table> table);
+        bool                          makeColumnsWithLists    (ParquetSampler::sampler_t* sampler);
+        bool                          makeColumnsWithOneSample(ParquetSampler::sampler_t* sampler);
+        RasterSample*                 getFirstValidSample     (ParquetSampler::sample_list_t* slist);
+        void                          tableToParquetFile      (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
+        void                          tableToCsvFile          (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
+        std::shared_ptr<arrow::Table> removeGeometryColumn    (const std::shared_ptr<arrow::Table> table);
+        wkbpoint_t                    convertWKBToPoint       (const std::string& wkb_data);
+        void                          printParquetMetadata    (const char* file_path);
+        std::string                   createFileMap           (void);
+        std::string                   createMetadataFileName  (const char* file_path);
+        void                          tableMetadataToJson     (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
 };
 
 #endif  /* __arrow_sampler_impl__ */

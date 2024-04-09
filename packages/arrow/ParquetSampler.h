@@ -104,17 +104,6 @@ class ParquetSampler: public LuaObject
             void     clearSamples (void);
         } sampler_t;
 
-        typedef struct RecordInfo
-        {
-            const char* timeKey;
-            const char* xKey;
-            const char* yKey;
-            bool        asGeo;
-
-            explicit RecordInfo (void);
-                    ~RecordInfo (void);
-        } record_info_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -124,10 +113,9 @@ class ParquetSampler: public LuaObject
         static void                    init         (void);
         static void                    deinit       (void);
         void                           sample       (void);
-
         const ArrowParms*              getParms     (void) {return parms;}
         const std::vector<sampler_t*>& getSamplers  (void) {return samplers;}
-        const record_info_t&           getRecInfo   (void) {return recInfo;}
+
     private:
 
         /*--------------------------------------------------------------------
@@ -140,7 +128,6 @@ class ParquetSampler: public LuaObject
 
         ArrowParms*                parms;
         std::vector<Thread*>       samplerPids;
-        record_info_t              recInfo;
         std::vector<point_info_t*> points;
         std::vector<sampler_t*>    samplers;
         ArrowSamplerImpl*          impl; // private arrow data

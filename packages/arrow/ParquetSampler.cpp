@@ -150,27 +150,6 @@ ParquetSampler::Sampler::~Sampler(void)
     robj->releaseLuaObject();
 }
 
-
-/*----------------------------------------------------------------------------
- * RecordInfo Constructor
- *----------------------------------------------------------------------------*/
-ParquetSampler::RecordInfo::RecordInfo(void) :
-    timeKey(NULL), xKey(NULL), yKey(NULL), asGeo(false)
-{
-}
-
-
-/*----------------------------------------------------------------------------
- * RecordInfo Destructor
- *----------------------------------------------------------------------------*/
-ParquetSampler::RecordInfo::~RecordInfo(void)
-{
-    delete[] timeKey;
-    delete[] xKey;
-    delete[] yKey;
-}
-
-
 /*----------------------------------------------------------------------------
  * clearSamples
  *----------------------------------------------------------------------------*/
@@ -264,9 +243,7 @@ ParquetSampler::ParquetSampler(lua_State* L, ArrowParms* _parms, const char* inp
         /* Allocate Implementation */
         impl = new ArrowSamplerImpl(this);
 
-        impl->openInputFile(input_file);
-        impl->getInputFileMetadata(recInfo);
-        impl->getInputFilePoints(points);
+        impl->processInputFile(input_file, points);
     }
     catch(const RunTimeException& e)
     {

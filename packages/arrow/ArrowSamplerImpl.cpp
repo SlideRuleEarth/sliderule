@@ -58,7 +58,13 @@
  * Constructors
  *----------------------------------------------------------------------------*/
 ArrowSamplerImpl::ArrowSamplerImpl (ParquetSampler* _sampler):
-    parquetSampler(_sampler)
+    parquetSampler(_sampler),
+    inputFile(NULL),
+    reader(nullptr),
+    timeKey(NULL),
+    xKey(NULL),
+    yKey(NULL),
+    asGeo(false)
 {
 }
 
@@ -67,23 +73,100 @@ ArrowSamplerImpl::ArrowSamplerImpl (ParquetSampler* _sampler):
  *----------------------------------------------------------------------------*/
 ArrowSamplerImpl::~ArrowSamplerImpl (void)
 {
+    delete[] timeKey;
+    delete[] xKey;
+    delete[] yKey;
 }
 
 /*----------------------------------------------------------------------------
-* openInputFile
+* processInputFile
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::openInputFile(const char* file_path)
+void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<ParquetSampler::point_info_t*>& points)
 {
+    /* Open the input file */
     PARQUET_ASSIGN_OR_THROW(inputFile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
     PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(inputFile, arrow::default_memory_pool(), &reader));
+
+    getMetadata();
+    getPoints(points);
 }
 
 /*----------------------------------------------------------------------------
-* getInputFileMetadata
+* processSamples
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getInputFileMetadata(ParquetSampler::record_info_t& recInfo)
+bool ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
 {
-    bool foundRecInfo = false;
+    const ArrowParms* parms = parquetSampler->getParms();
+    bool  status = false;
+
+    try
+    {
+        if(parms->format == ArrowParms::PARQUET)
+            status = makeColumnsWithLists(sampler);
+
+        /* Arrow csv writer cannot handle columns with lists of samples */
+        if(parms->format == ArrowParms::CSV)
+            status = makeColumnsWithOneSample(sampler);
+    }
+    catch(const RunTimeException& e)
+    {
+        /* No columns will be added */
+        newFields.clear();
+        newColumns.clear();
+        mlog(e.level(), "Error processing samples: %s", e.what());
+    }
+
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+* createOutputFile
+*----------------------------------------------------------------------------*/
+void ArrowSamplerImpl::createOutpuFile(void)
+{
+    const ArrowParms* parms = parquetSampler->getParms();
+
+    if(std::filesystem::exists(parms->path))
+    {
+        int rc = std::remove(parms->path);
+        if(rc != 0)
+        {
+            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, parms->path, strerror(errno));
+        }
+    }
+
+    auto table = inputFileToTable();
+    auto updated_table = addNewColumns(table);
+    table = nullptr;
+
+    if(parms->format == ArrowParms::PARQUET)
+    {
+        tableToParquetFile(updated_table, parms->path);
+    }
+    else if(parms->format == ArrowParms::CSV)
+    {
+        /* Arrow csv writer cannot handle columns with WKB data */
+        table = removeGeometryColumn(updated_table);
+
+        tableToCsvFile(table, parms->path);
+
+        /* Generate metadata file since Arrow csv writer ignores it */
+        std::string mfile = createMetadataFileName(parms->path);
+        tableMetadataToJson(table, mfile.c_str());
+    }
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
+}
+
+/******************************************************************************
+ * PRIVATE METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+* getMetadata
+*----------------------------------------------------------------------------*/
+void ArrowSamplerImpl::getMetadata(void)
+{
+    bool foundIt = false;
 
     std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
 
@@ -105,43 +188,49 @@ void ArrowSamplerImpl::getInputFileMetadata(ParquetSampler::record_info_t& recIn
             {
                 const rapidjson::Value& recordinfo = doc["recordinfo"];
 
-                recInfo.timeKey = StringLib::duplicate(recordinfo["time"].GetString());
-                recInfo.asGeo   = recordinfo["as_geo"].GetBool();
-                recInfo.xKey    = StringLib::duplicate(recordinfo["x"].GetString());
-                recInfo.yKey    = StringLib::duplicate(recordinfo["y"].GetString());
-                foundRecInfo = true;
+                const char* _timeKey = recordinfo["time"].GetString();
+                const char* _xKey    = recordinfo["x"].GetString();
+                const char* _yKey    = recordinfo["y"].GetString();
+                const bool _asGeo    = recordinfo["as_geo"].GetBool();
+
+                /* Make sure the keys are not empty */
+                if(_timeKey[0] == '\0' || _xKey[0] == '\0' || _yKey[0] == '\0')
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid recordinfo in sliderule metadata.");
+                }
+
+                timeKey = StringLib::duplicate(_timeKey);
+                xKey    = StringLib::duplicate(_xKey);
+                yKey    = StringLib::duplicate(_yKey);
+                asGeo   = _asGeo;
+                foundIt = true;
                 break;
             }
             else throw RunTimeException(CRITICAL, RTE_ERROR, "No 'recordinfo' key found in 'sliderule' metadata.");
         }
     }
 
-    if(!foundRecInfo)
+    if(!foundIt)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "No 'sliderule/recordinfo' metadata found in parquet file.");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "No 'sliderule' metadata found in parquet file.");
     }
 }
 
 
 /*----------------------------------------------------------------------------
-* getInputFilePoints
+* getPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getInputFilePoints(std::vector<ParquetSampler::point_info_t*>& points)
+void ArrowSamplerImpl::getPoints(std::vector<ParquetSampler::point_info_t*>& points)
 {
-    const ParquetSampler::record_info_t& recInfo = parquetSampler->getRecInfo();
-
-    if(recInfo.asGeo)
-    {
+    if(asGeo)
         getGeoPoints(points);
-    }
     else
-    {
         getXYPoints(points);
-    }
 
-    std::vector<const char*> columnNames = {recInfo.timeKey};
+    /* Get point's gps from time column */
+    std::vector<const char*> columnNames = {timeKey};
     std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int time_column_index = table->schema()->GetFieldIndex(recInfo.timeKey);
+    int time_column_index = table->schema()->GetFieldIndex(timeKey);
     if(time_column_index > -1)
     {
         auto time_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(time_column_index)->chunk(0));
@@ -149,238 +238,66 @@ void ArrowSamplerImpl::getInputFilePoints(std::vector<ParquetSampler::point_info
 
         /* Update gps time for each point */
         for(int64_t i = 0; i < time_column->length(); i++)
-        {
             points[i]->gps = time_column->Value(i);
-        }
     }
     else mlog(DEBUG, "Time column not found.");
 }
 
 /*----------------------------------------------------------------------------
-* processSamples
+* getXYPoints
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
+void ArrowSamplerImpl::getXYPoints(std::vector<ParquetSampler::point_info_t*>& points)
 {
-    auto pool = arrow::default_memory_pool();
-    RasterObject* robj = sampler->robj;
+    std::vector<const char*> columnNames = {xKey, yKey};
 
-    /* Create list builders for the new columns */
-    arrow::ListBuilder value_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto value_builder = static_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
+    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    int x_column_index = table->schema()->GetFieldIndex(xKey);
+    if(x_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
 
-    arrow::ListBuilder time_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto time_builder = static_cast<arrow::DoubleBuilder*>(time_list_builder.value_builder());
+    int y_column_index = table->schema()->GetFieldIndex(yKey);
+    if(y_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
 
-    arrow::ListBuilder flags_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
-    auto flags_builder = static_cast<arrow::UInt32Builder*>(flags_list_builder.value_builder());
+    auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
+    auto y_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(y_column_index)->chunk(0));
 
-    arrow::ListBuilder fileid_list_builder(pool, std::make_shared<arrow::UInt64Builder>());
-    auto fileid_builder = static_cast<arrow::UInt64Builder*>(fileid_list_builder.value_builder());
-
-    /* Create list builders for zonal stats */
-    arrow::ListBuilder count_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
-    auto count_builder = static_cast<arrow::UInt32Builder*>(count_list_builder.value_builder());
-
-    arrow::ListBuilder min_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto min_builder = static_cast<arrow::DoubleBuilder*>(min_list_builder.value_builder());
-
-    arrow::ListBuilder max_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto max_builder = static_cast<arrow::DoubleBuilder*>(max_list_builder.value_builder());
-
-    arrow::ListBuilder mean_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto mean_builder = static_cast<arrow::DoubleBuilder*>(mean_list_builder.value_builder());
-
-    arrow::ListBuilder median_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto median_builder = static_cast<arrow::DoubleBuilder*>(median_list_builder.value_builder());
-
-    arrow::ListBuilder stdev_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto stdev_builder = static_cast<arrow::DoubleBuilder*>(stdev_list_builder.value_builder());
-
-    arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto mad_builder = static_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
-
-    std::shared_ptr<arrow::Array> value_list_array, time_list_array, fileid_list_array, flags_list_array;
-    std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
-
-    try
+    /* x and y columns are the same longth */
+    for(int64_t i = 0; i < x_column->length(); i++)
     {
-        /* Iterate over each sample in a vector of lists of samples */
-        for(ParquetSampler::sample_list_t* slist : sampler->samples)
-        {
-            /* Start a new lists for each RasterSample */
-            PARQUET_THROW_NOT_OK(value_list_builder.Append());
-            PARQUET_THROW_NOT_OK(time_list_builder.Append());
-            if(robj->hasFlags())
-            {
-                PARQUET_THROW_NOT_OK(flags_list_builder.Append());
-            }
-            PARQUET_THROW_NOT_OK(fileid_list_builder.Append());
-            if(robj->hasZonalStats())
-            {
-                PARQUET_THROW_NOT_OK(count_list_builder.Append());
-                PARQUET_THROW_NOT_OK(min_list_builder.Append());
-                PARQUET_THROW_NOT_OK(max_list_builder.Append());
-                PARQUET_THROW_NOT_OK(mean_list_builder.Append());
-                PARQUET_THROW_NOT_OK(median_list_builder.Append());
-                PARQUET_THROW_NOT_OK(stdev_list_builder.Append());
-                PARQUET_THROW_NOT_OK(mad_list_builder.Append());
-            }
+        double x = x_column->Value(i);
+        double y = y_column->Value(i);
 
-            /* Iterate over each sample */
-            for(RasterSample* sample : *slist)
-            {
-                /* Append the value to the value list */
-                PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
-                PARQUET_THROW_NOT_OK(time_builder->Append(sample->time));
-                if(robj->hasFlags())
-                {
-                    PARQUET_THROW_NOT_OK(flags_builder->Append(sample->flags));
-                }
-                PARQUET_THROW_NOT_OK(fileid_builder->Append(sample->fileId));
-                if(robj->hasZonalStats())
-                {
-                    PARQUET_THROW_NOT_OK(count_builder->Append(sample->stats.count));
-                    PARQUET_THROW_NOT_OK(min_builder->Append(sample->stats.min));
-                    PARQUET_THROW_NOT_OK(max_builder->Append(sample->stats.max));
-                    PARQUET_THROW_NOT_OK(mean_builder->Append(sample->stats.mean));
-                    PARQUET_THROW_NOT_OK(median_builder->Append(sample->stats.median));
-                    PARQUET_THROW_NOT_OK(stdev_builder->Append(sample->stats.stdev));
-                    PARQUET_THROW_NOT_OK(mad_builder->Append(sample->stats.mad));
-                }
-
-                /* Collect all fileIds used by samples - duplicates are ignored */
-                sampler->file_ids.insert(sample->fileId);
-            }
-        }
-
-        /* Finish the list builders */
-        PARQUET_THROW_NOT_OK(value_list_builder.Finish(&value_list_array));
-        PARQUET_THROW_NOT_OK(time_list_builder.Finish(&time_list_array));
-        if(robj->hasFlags())
-        {
-            PARQUET_THROW_NOT_OK(flags_list_builder.Finish(&flags_list_array));
-        }
-        PARQUET_THROW_NOT_OK(fileid_list_builder.Finish(&fileid_list_array));
-        if(robj->hasZonalStats())
-        {
-            PARQUET_THROW_NOT_OK(count_list_builder.Finish(&count_list_array));
-            PARQUET_THROW_NOT_OK(min_list_builder.Finish(&min_list_array));
-            PARQUET_THROW_NOT_OK(max_list_builder.Finish(&max_list_array));
-            PARQUET_THROW_NOT_OK(mean_list_builder.Finish(&mean_list_array));
-            PARQUET_THROW_NOT_OK(median_list_builder.Finish(&median_list_array));
-            PARQUET_THROW_NOT_OK(stdev_list_builder.Finish(&stdev_list_array));
-            PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
-        }
+        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({x, y, 0.0});
+        points.push_back(pinfo);
     }
-    catch(const RunTimeException& e)
-    {
-        /* No columns will be added */
-        mlog(e.level(), "Error processing samples: %s", e.what());
-        return false;
-    }
-
-    const std::string prefix = sampler->rkey;
-
-    /* Create fields for the new columns */
-    auto value_field = std::make_shared<arrow::Field>(prefix + ".value", arrow::list(arrow::float64()));
-    auto time_field = std::make_shared<arrow::Field>(prefix + ".time", arrow::list(arrow::float64()));
-    auto flags_field = std::make_shared<arrow::Field>(prefix + ".flags", arrow::list(arrow::uint32()));
-    auto fileid_field = std::make_shared<arrow::Field>(prefix + ".fileid", arrow::list(arrow::uint64()));
-
-    auto count_field = std::make_shared<arrow::Field>(prefix + ".stats.count", arrow::list(arrow::uint32()));
-    auto min_field = std::make_shared<arrow::Field>(prefix + ".stats.min", arrow::list(arrow::float64()));
-    auto max_field = std::make_shared<arrow::Field>(prefix + ".stats.max", arrow::list(arrow::float64()));
-    auto mean_field = std::make_shared<arrow::Field>(prefix + ".stats.mean", arrow::list(arrow::float64()));
-    auto median_field = std::make_shared<arrow::Field>(prefix + ".stats.median", arrow::list(arrow::float64()));
-    auto stdev_field = std::make_shared<arrow::Field>(prefix + ".stats.stdev", arrow::list(arrow::float64()));
-    auto mad_field = std::make_shared<arrow::Field>(prefix + ".stats.mad", arrow::list(arrow::float64()));
-
-    /* Multiple threads may be updating the new fields and columns */
-    mutex.lock();
-    {
-        /* Add new columns fields */
-        newFields.push_back(value_field);
-        newFields.push_back(time_field);
-        if(robj->hasFlags())
-        {
-            newFields.push_back(flags_field);
-        }
-        newFields.push_back(fileid_field);
-        if(robj->hasZonalStats())
-        {
-            newFields.push_back(count_field);
-            newFields.push_back(min_field);
-            newFields.push_back(max_field);
-            newFields.push_back(mean_field);
-            newFields.push_back(median_field);
-            newFields.push_back(stdev_field);
-            newFields.push_back(mad_field);
-        }
-
-        /* Add new columns data */
-        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(value_list_array));
-        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(time_list_array));
-        if(robj->hasFlags())
-        {
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(flags_list_array));
-        }
-        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(fileid_list_array));
-        if(robj->hasZonalStats())
-        {
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(count_list_array));
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(min_list_array));
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(max_list_array));
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mean_list_array));
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(median_list_array));
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_list_array));
-            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_list_array));
-        }
-    }
-    mutex.unlock();
-
-    return true;
 }
 
 /*----------------------------------------------------------------------------
-* createOutputFile
+* getGeoPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::createOutpuFile(void)
+void ArrowSamplerImpl::getGeoPoints(std::vector<ParquetSampler::point_info_t*>& points)
 {
-    const ArrowParms* parms = parquetSampler->getParms();
+    const char* geocol  = "geometry";
+    std::vector<const char*> columnNames = {geocol};
 
-    if(std::filesystem::exists(parms->path))
+    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
+    if(geometry_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
+
+    auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
+    mlog(DEBUG, "Geometry column elements: %ld", geometry_column->length());
+
+    /* The geometry column is binary type */
+    auto binary_array = std::static_pointer_cast<arrow::BinaryArray>(geometry_column);
+
+    /* Iterate over each item in the geometry column and extract points */
+    for(int64_t i = 0; i < binary_array->length(); i++)
     {
-        int rc = std::remove(parms->path);
-        if(rc != 0)
-        {
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, parms->path, strerror(errno));
-        }
+        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
+        wkbpoint_t point = convertWKBToPoint(wkb_data);
+        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({point.x, point.y, 0.0});
+        points.push_back(pinfo);
     }
-
-    auto table = inputFileToTable();
-    auto updated_table = appendSamplesColumns(table);
-
-    if(parms->format == ArrowParms::PARQUET)
-    {
-        tableToParquetFile(updated_table, parms->path);
-    }
-    else if(parms->format == ArrowParms::CSV)
-    {
-        tableToCsvFile(updated_table, parms->path);
-
-        /* Generate metadata file since arrow csv writer ignores it */
-        std::string mfile = createMetadataFileName(parms->path);
-        tableMetadataToJson(updated_table, mfile.c_str());
-    }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
-
-    mlog(DEBUG, "Table was %ld rows and %d columns.", table->num_rows(), table->num_columns());
-    mlog(DEBUG, "Table is  %ld rows and %d columns.", updated_table->num_rows(), updated_table->num_columns());
 }
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
 
 /*----------------------------------------------------------------------------
 * inputFileToTable
@@ -415,9 +332,9 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::inputFileToTable(const std::vect
 }
 
 /*----------------------------------------------------------------------------
-* appendSamplesColumns
+* addNewColumns
 *----------------------------------------------------------------------------*/
-std::shared_ptr<arrow::Table> ArrowSamplerImpl::appendSamplesColumns(const std::shared_ptr<arrow::Table> table)
+std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_ptr<arrow::Table> table)
 {
     std::vector<std::shared_ptr<arrow::Field>> fields = table->schema()->fields();
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = table->columns();
@@ -461,6 +378,353 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::appendSamplesColumns(const std::
 }
 
 /*----------------------------------------------------------------------------
+* makeColumnsWithLists
+*----------------------------------------------------------------------------*/
+bool ArrowSamplerImpl::makeColumnsWithLists(ParquetSampler::sampler_t* sampler)
+{
+    auto pool = arrow::default_memory_pool();
+    RasterObject* robj = sampler->robj;
+
+    /* Create list builders for the new columns */
+    arrow::ListBuilder value_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto value_builder = static_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
+
+    arrow::ListBuilder time_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto time_builder = static_cast<arrow::DoubleBuilder*>(time_list_builder.value_builder());
+
+    arrow::ListBuilder flags_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
+    auto flags_builder = static_cast<arrow::UInt32Builder*>(flags_list_builder.value_builder());
+
+    arrow::ListBuilder fileid_list_builder(pool, std::make_shared<arrow::UInt64Builder>());
+    auto fileid_builder = static_cast<arrow::UInt64Builder*>(fileid_list_builder.value_builder());
+
+    /* Create list builders for zonal stats */
+    arrow::ListBuilder count_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
+    auto count_builder = static_cast<arrow::UInt32Builder*>(count_list_builder.value_builder());
+
+    arrow::ListBuilder min_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto min_builder = static_cast<arrow::DoubleBuilder*>(min_list_builder.value_builder());
+
+    arrow::ListBuilder max_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto max_builder = static_cast<arrow::DoubleBuilder*>(max_list_builder.value_builder());
+
+    arrow::ListBuilder mean_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto mean_builder = static_cast<arrow::DoubleBuilder*>(mean_list_builder.value_builder());
+
+    arrow::ListBuilder median_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto median_builder = static_cast<arrow::DoubleBuilder*>(median_list_builder.value_builder());
+
+    arrow::ListBuilder stdev_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto stdev_builder = static_cast<arrow::DoubleBuilder*>(stdev_list_builder.value_builder());
+
+    arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto mad_builder = static_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
+
+    std::shared_ptr<arrow::Array> value_list_array, time_list_array, fileid_list_array, flags_list_array;
+    std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
+
+    /* Iterate over each sample in a vector of lists of samples */
+    for(ParquetSampler::sample_list_t* slist : sampler->samples)
+    {
+        /* Start new lists */
+        PARQUET_THROW_NOT_OK(value_list_builder.Append());
+        PARQUET_THROW_NOT_OK(time_list_builder.Append());
+        if(robj->hasFlags())
+        {
+            PARQUET_THROW_NOT_OK(flags_list_builder.Append());
+        }
+        PARQUET_THROW_NOT_OK(fileid_list_builder.Append());
+        if(robj->hasZonalStats())
+        {
+            PARQUET_THROW_NOT_OK(count_list_builder.Append());
+            PARQUET_THROW_NOT_OK(min_list_builder.Append());
+            PARQUET_THROW_NOT_OK(max_list_builder.Append());
+            PARQUET_THROW_NOT_OK(mean_list_builder.Append());
+            PARQUET_THROW_NOT_OK(median_list_builder.Append());
+            PARQUET_THROW_NOT_OK(stdev_list_builder.Append());
+            PARQUET_THROW_NOT_OK(mad_list_builder.Append());
+        }
+
+        /* Iterate over each sample and add it to the list
+         * If slist is empty the column will contain an empty list
+         * to keep the number of rows consistent with the other columns
+         */
+        for(RasterSample* sample : *slist)
+        {
+            /* Append the value to the value list */
+            PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
+            PARQUET_THROW_NOT_OK(time_builder->Append(sample->time));
+            if(robj->hasFlags())
+            {
+                PARQUET_THROW_NOT_OK(flags_builder->Append(sample->flags));
+            }
+            PARQUET_THROW_NOT_OK(fileid_builder->Append(sample->fileId));
+            if(robj->hasZonalStats())
+            {
+                PARQUET_THROW_NOT_OK(count_builder->Append(sample->stats.count));
+                PARQUET_THROW_NOT_OK(min_builder->Append(sample->stats.min));
+                PARQUET_THROW_NOT_OK(max_builder->Append(sample->stats.max));
+                PARQUET_THROW_NOT_OK(mean_builder->Append(sample->stats.mean));
+                PARQUET_THROW_NOT_OK(median_builder->Append(sample->stats.median));
+                PARQUET_THROW_NOT_OK(stdev_builder->Append(sample->stats.stdev));
+                PARQUET_THROW_NOT_OK(mad_builder->Append(sample->stats.mad));
+            }
+
+            /* Collect all fileIds used by samples - duplicates are ignored */
+            sampler->file_ids.insert(sample->fileId);
+        }
+    }
+
+    /* Finish the list builders */
+    PARQUET_THROW_NOT_OK(value_list_builder.Finish(&value_list_array));
+    PARQUET_THROW_NOT_OK(time_list_builder.Finish(&time_list_array));
+    if(robj->hasFlags())
+    {
+        PARQUET_THROW_NOT_OK(flags_list_builder.Finish(&flags_list_array));
+    }
+    PARQUET_THROW_NOT_OK(fileid_list_builder.Finish(&fileid_list_array));
+    if(robj->hasZonalStats())
+    {
+        PARQUET_THROW_NOT_OK(count_list_builder.Finish(&count_list_array));
+        PARQUET_THROW_NOT_OK(min_list_builder.Finish(&min_list_array));
+        PARQUET_THROW_NOT_OK(max_list_builder.Finish(&max_list_array));
+        PARQUET_THROW_NOT_OK(mean_list_builder.Finish(&mean_list_array));
+        PARQUET_THROW_NOT_OK(median_list_builder.Finish(&median_list_array));
+        PARQUET_THROW_NOT_OK(stdev_list_builder.Finish(&stdev_list_array));
+        PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
+    }
+
+    const std::string prefix = sampler->rkey;
+
+    /* Create fields for the new columns */
+    auto value_field = std::make_shared<arrow::Field>(prefix + ".value", arrow::list(arrow::float64()));
+    auto time_field = std::make_shared<arrow::Field>(prefix + ".time", arrow::list(arrow::float64()));
+    auto flags_field = std::make_shared<arrow::Field>(prefix + ".flags", arrow::list(arrow::uint32()));
+    auto fileid_field = std::make_shared<arrow::Field>(prefix + ".fileid", arrow::list(arrow::uint64()));
+
+    auto count_field = std::make_shared<arrow::Field>(prefix + ".stats.count", arrow::list(arrow::uint32()));
+    auto min_field = std::make_shared<arrow::Field>(prefix + ".stats.min", arrow::list(arrow::float64()));
+    auto max_field = std::make_shared<arrow::Field>(prefix + ".stats.max", arrow::list(arrow::float64()));
+    auto mean_field = std::make_shared<arrow::Field>(prefix + ".stats.mean", arrow::list(arrow::float64()));
+    auto median_field = std::make_shared<arrow::Field>(prefix + ".stats.median", arrow::list(arrow::float64()));
+    auto stdev_field = std::make_shared<arrow::Field>(prefix + ".stats.stdev", arrow::list(arrow::float64()));
+    auto mad_field = std::make_shared<arrow::Field>(prefix + ".stats.mad", arrow::list(arrow::float64()));
+
+    /* Multiple threads may be updating the new fields and columns
+     * No throwing exceptions here, since the mutex is locked
+     */
+    mutex.lock();
+    {
+        /* Add new columns fields */
+        newFields.push_back(value_field);
+        newFields.push_back(time_field);
+        if(robj->hasFlags())
+        {
+            newFields.push_back(flags_field);
+        }
+        newFields.push_back(fileid_field);
+        if(robj->hasZonalStats())
+        {
+            newFields.push_back(count_field);
+            newFields.push_back(min_field);
+            newFields.push_back(max_field);
+            newFields.push_back(mean_field);
+            newFields.push_back(median_field);
+            newFields.push_back(stdev_field);
+            newFields.push_back(mad_field);
+        }
+
+        /* Add new columns */
+        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(value_list_array));
+        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(time_list_array));
+        if(robj->hasFlags())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(flags_list_array));
+        }
+        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(fileid_list_array));
+        if(robj->hasZonalStats())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(count_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(min_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(max_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mean_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(median_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_list_array));
+        }
+    }
+    mutex.unlock();
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+* makeColumnsWithOneSample
+*----------------------------------------------------------------------------*/
+bool ArrowSamplerImpl::makeColumnsWithOneSample(ParquetSampler::sampler_t* sampler)
+{
+    auto pool = arrow::default_memory_pool();
+    RasterObject* robj = sampler->robj;
+
+    /* Create builders for the new columns */
+    arrow::DoubleBuilder value_builder(pool);
+    arrow::DoubleBuilder time_builder(pool);
+    arrow::UInt32Builder flags_builder(pool);
+    arrow::UInt64Builder fileid_builder(pool);
+
+    /* Create builders for zonal stats */
+    arrow::UInt32Builder count_builder(pool);
+    arrow::DoubleBuilder min_builder(pool);
+    arrow::DoubleBuilder max_builder(pool);
+    arrow::DoubleBuilder mean_builder(pool);
+    arrow::DoubleBuilder median_builder(pool);
+    arrow::DoubleBuilder stdev_builder(pool);
+    arrow::DoubleBuilder mad_builder(pool);
+
+    std::shared_ptr<arrow::Array> value_array, time_array, fileid_array, flags_array;
+    std::shared_ptr<arrow::Array> count_array, min_array, max_array, mean_array, median_array, stdev_array, mad_array;
+
+    RasterSample fakeSample(0.0, 0);
+    fakeSample.value = std::nan("");
+
+    for(ParquetSampler::sample_list_t* slist : sampler->samples)
+    {
+        RasterSample* sample;
+
+        if(slist->size() > 0)
+        {
+            sample = getFirstValidSample(slist);
+        }
+        else
+        {
+            /* List is empty, no samples but we must have a fake sample
+             * to keep the number of rows consistent with the other columns
+             */
+            sample = &fakeSample;
+        }
+
+        PARQUET_THROW_NOT_OK(value_builder.Append(sample->value));
+        PARQUET_THROW_NOT_OK(time_builder.Append(sample->time));
+        if(robj->hasFlags())
+        {
+            PARQUET_THROW_NOT_OK(flags_builder.Append(sample->flags));
+        }
+        PARQUET_THROW_NOT_OK(fileid_builder.Append(sample->fileId));
+        if(robj->hasZonalStats())
+        {
+            PARQUET_THROW_NOT_OK(count_builder.Append(sample->stats.count));
+            PARQUET_THROW_NOT_OK(min_builder.Append(sample->stats.min));
+            PARQUET_THROW_NOT_OK(max_builder.Append(sample->stats.max));
+            PARQUET_THROW_NOT_OK(mean_builder.Append(sample->stats.mean));
+            PARQUET_THROW_NOT_OK(median_builder.Append(sample->stats.median));
+            PARQUET_THROW_NOT_OK(stdev_builder.Append(sample->stats.stdev));
+            PARQUET_THROW_NOT_OK(mad_builder.Append(sample->stats.mad));
+        }
+
+        /* Collect all fileIds used by samples - duplicates are ignored */
+        sampler->file_ids.insert(sample->fileId);
+    }
+
+    /* Finish the builders */
+    PARQUET_THROW_NOT_OK(value_builder.Finish(&value_array));
+    PARQUET_THROW_NOT_OK(time_builder.Finish(&time_array));
+    if(robj->hasFlags())
+    {
+        PARQUET_THROW_NOT_OK(flags_builder.Finish(&flags_array));
+    }
+    PARQUET_THROW_NOT_OK(fileid_builder.Finish(&fileid_array));
+    if(robj->hasZonalStats())
+    {
+        PARQUET_THROW_NOT_OK(count_builder.Finish(&count_array));
+        PARQUET_THROW_NOT_OK(min_builder.Finish(&min_array));
+        PARQUET_THROW_NOT_OK(max_builder.Finish(&max_array));
+        PARQUET_THROW_NOT_OK(mean_builder.Finish(&mean_array));
+        PARQUET_THROW_NOT_OK(median_builder.Finish(&median_array));
+        PARQUET_THROW_NOT_OK(stdev_builder.Finish(&stdev_array));
+        PARQUET_THROW_NOT_OK(mad_builder.Finish(&mad_array));
+    }
+
+    const std::string prefix = sampler->rkey;
+
+    /* Create fields for the new columns */
+    auto value_field = std::make_shared<arrow::Field>(prefix + ".value", arrow::float64());
+    auto time_field = std::make_shared<arrow::Field>(prefix + ".time", arrow::float64());
+    auto flags_field = std::make_shared<arrow::Field>(prefix + ".flags", arrow::uint32());
+    auto fileid_field = std::make_shared<arrow::Field>(prefix + ".fileid", arrow::uint64());
+
+    auto count_field = std::make_shared<arrow::Field>(prefix + ".stats.count", arrow::uint32());
+    auto min_field = std::make_shared<arrow::Field>(prefix + ".stats.min", arrow::float64());
+    auto max_field = std::make_shared<arrow::Field>(prefix + ".stats.max", arrow::float64());
+    auto mean_field = std::make_shared<arrow::Field>(prefix + ".stats.mean", arrow::float64());
+    auto median_field = std::make_shared<arrow::Field>(prefix + ".stats.median", arrow::float64());
+    auto stdev_field = std::make_shared<arrow::Field>(prefix + ".stats.stdev", arrow::float64());
+    auto mad_field = std::make_shared<arrow::Field>(prefix + ".stats.mad", arrow::float64());
+
+    /* Multiple threads may be updating the new fields and columns
+     * No throwing exceptions here, since the mutex is locked
+     */
+    mutex.lock();
+    {
+        /* Add new columns fields */
+        newFields.push_back(value_field);
+        newFields.push_back(time_field);
+        if(robj->hasFlags())
+        {
+            newFields.push_back(flags_field);
+        }
+        newFields.push_back(fileid_field);
+        if(robj->hasZonalStats())
+        {
+            newFields.push_back(count_field);
+            newFields.push_back(min_field);
+            newFields.push_back(max_field);
+            newFields.push_back(mean_field);
+            newFields.push_back(median_field);
+            newFields.push_back(stdev_field);
+            newFields.push_back(mad_field);
+        }
+
+        /* Add new columns */
+        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(value_array));
+        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(time_array));
+        if(robj->hasFlags())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(flags_array));
+        }
+        newColumns.push_back(std::make_shared<arrow::ChunkedArray>(fileid_array));
+        if(robj->hasZonalStats())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(count_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(min_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(max_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mean_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(median_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_array));
+        }
+    }
+    mutex.unlock();
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+* getFirstValidSample
+*----------------------------------------------------------------------------*/
+RasterSample* ArrowSamplerImpl::getFirstValidSample(ParquetSampler::sample_list_t* slist)
+{
+    for(RasterSample* sample : *slist)
+    {
+        /* GeoRasterr code converts band nodata values to std::nan */
+        if(!std::isnan(sample->value))
+            return sample;
+    }
+
+    /* Return the first sample if no valid samples are found */
+    return slist->front();
+}
+
+/*----------------------------------------------------------------------------
 * tableToParquetFile
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::tableToParquetFile(const std::shared_ptr<arrow::Table> table, const char* file_path)
@@ -501,6 +765,20 @@ void ArrowSamplerImpl::tableToCsvFile(const std::shared_ptr<arrow::Table> table,
 }
 
 /*----------------------------------------------------------------------------
+* removeGeometryColumn
+*----------------------------------------------------------------------------*/
+std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(const std::shared_ptr<arrow::Table> table)
+{
+    int column_index = table->schema()->GetFieldIndex("geometry");
+
+    if(column_index == -1)
+        return table;
+
+    arrow::Result<std::shared_ptr<arrow::Table>> result = table->RemoveColumn(column_index);
+    return result.ValueOrDie();
+}
+
+/*----------------------------------------------------------------------------
 * convertWKBToPoint
 *----------------------------------------------------------------------------*/
 wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
@@ -532,10 +810,7 @@ wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
         // Little endian
         point.wkbType = le32toh(point.wkbType);
     }
-    else
-    {
-        throw std::runtime_error("Unknown byte order.");
-    }
+    else throw std::runtime_error("Unknown byte order.");
 
     // Next eight bytes are x coordinate
     std::memcpy(&point.x, wkb_data.data() + offset, sizeof(double));
@@ -685,67 +960,3 @@ void ArrowSamplerImpl::tableMetadataToJson(const std::shared_ptr<arrow::Table> t
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open metadata file: %s", file_path);
 }
-
-/*----------------------------------------------------------------------------
-* getXYPoints
-*----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getXYPoints(std::vector<ParquetSampler::point_info_t*>& points)
-{
-    const ParquetSampler::record_info_t& recInfo = parquetSampler->getRecInfo();
-    std::vector<const char*> columnNames = {recInfo.xKey, recInfo.yKey};
-
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int x_column_index = table->schema()->GetFieldIndex(recInfo.xKey);
-    if(x_column_index == -1)
-    {
-        throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
-    }
-
-    int y_column_index = table->schema()->GetFieldIndex(recInfo.yKey);
-    if(y_column_index == -1)
-    {
-        throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
-    }
-
-    auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
-    auto y_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(y_column_index)->chunk(0));
-
-    /* x and y columns are the same longth */
-    for(int64_t i = 0; i < x_column->length(); i++)
-    {
-        points[i]->x = x_column->Value(i);
-        points[i]->y = y_column->Value(i);
-    }
-}
-
-/*----------------------------------------------------------------------------
-* getGeoPoints
-*----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getGeoPoints(std::vector<ParquetSampler::point_info_t*>& points)
-{
-    const char* geocol  = "geometry";
-    std::vector<const char*> columnNames = {geocol};
-
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
-    if(geometry_column_index == -1)
-    {
-        throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
-    }
-
-    auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
-    mlog(DEBUG, "Geometry column elements: %ld", geometry_column->length());
-
-    /* The geometry column is binary type */
-    auto binary_array = std::static_pointer_cast<arrow::BinaryArray>(geometry_column);
-
-    /* Iterate over each item in the geometry column and extract points */
-    for(int64_t i = 0; i < binary_array->length(); i++)
-    {
-        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        wkbpoint_t point = convertWKBToPoint(wkb_data);
-        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({point.x, point.y, 0.0});
-        points.push_back(pinfo);
-    }
-}
-
