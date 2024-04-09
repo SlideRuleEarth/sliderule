@@ -110,6 +110,7 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 os.remove(out_geoparquet)
 os.remove(out_parquet)
 os.remove(out_csv)
+os.remove(out_metadata)
 
 -- Report Results --
 
