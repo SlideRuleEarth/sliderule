@@ -82,7 +82,7 @@ class ParquetSampler: public LuaObject
             RasterObject*  robj;
         } raster_info_t;
 
-        typedef struct PointInfo
+        typedef struct
         {
             double        x;
             double        y;
@@ -111,8 +111,8 @@ class ParquetSampler: public LuaObject
             const char* yKey;
             bool        asGeo;
 
-            explicit RecordInfo (void): timeKey(NULL), xKey(NULL), yKey(NULL), asGeo(false) {}
-                    ~RecordInfo (void) {delete [] timeKey; delete [] xKey; delete [] yKey;}
+            explicit RecordInfo (void);
+                    ~RecordInfo (void);
         } record_info_t;
 
         /*--------------------------------------------------------------------
@@ -127,7 +127,7 @@ class ParquetSampler: public LuaObject
 
         const ArrowParms*              getParms     (void) {return parms;}
         const std::vector<sampler_t*>& getSamplers  (void) {return samplers;}
-
+        const record_info_t&           getRecInfo   (void) {return recInfo;}
     private:
 
         /*--------------------------------------------------------------------

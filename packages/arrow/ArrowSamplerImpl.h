@@ -61,10 +61,8 @@ class ArrowSamplerImpl
         ~ArrowSamplerImpl         (void);
 
         void openInputFile        (const char* file_path);
-        void getMetadata          (ParquetSampler::record_info_t& recInfo);
-        void getPoints            (ParquetSampler::record_info_t& recInfo, std::vector<ParquetSampler::point_info_t*>& points);
-        void getXYPoints          (ParquetSampler::record_info_t& recInfo, std::vector<ParquetSampler::point_info_t*>& points);
-        void getGeoPoints         (std::vector<ParquetSampler::point_info_t*>& points);
+        void getInputFileMetadata (ParquetSampler::record_info_t& recInfo);
+        void getInputFilePoints   (std::vector<ParquetSampler::point_info_t*>& points);
         bool processSamples       (ParquetSampler::sampler_t* sampler);
         void createOutpuFile      (void);
 
@@ -104,6 +102,8 @@ class ArrowSamplerImpl
         std::string                   createFileMap       (void);
         std::string                   createMetadataFileName (const char* file_path);
         void                          tableMetadataToJson (const std::shared_ptr<arrow::Table> table, const char* file_path);
+        void                          getXYPoints         (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getGeoPoints        (std::vector<ParquetSampler::point_info_t*>& points);
 };
 
 #endif  /* __arrow_sampler_impl__ */

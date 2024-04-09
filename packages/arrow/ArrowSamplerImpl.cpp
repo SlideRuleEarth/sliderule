@@ -47,6 +47,7 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 #include <regex>
+#include <filesystem>
 
 
 /******************************************************************************
@@ -78,11 +79,12 @@ void ArrowSamplerImpl::openInputFile(const char* file_path)
 }
 
 /*----------------------------------------------------------------------------
-* getMetadata
+* getInputFileMetadata
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getMetadata(ParquetSampler::record_info_t& recInfo)
+void ArrowSamplerImpl::getInputFileMetadata(ParquetSampler::record_info_t& recInfo)
 {
     bool foundRecInfo = false;
+
     std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
 
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
@@ -122,17 +124,19 @@ void ArrowSamplerImpl::getMetadata(ParquetSampler::record_info_t& recInfo)
 
 
 /*----------------------------------------------------------------------------
-* getpoints
+* getInputFilePoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getPoints(ParquetSampler::record_info_t& recInfo, std::vector<ParquetSampler::point_info_t*>& points)
+void ArrowSamplerImpl::getInputFilePoints(std::vector<ParquetSampler::point_info_t*>& points)
 {
+    const ParquetSampler::record_info_t& recInfo = parquetSampler->getRecInfo();
+
     if(recInfo.asGeo)
     {
         getGeoPoints(points);
     }
     else
     {
-        getXYPoints(recInfo, points);
+        getXYPoints(points);
     }
 
     std::vector<const char*> columnNames = {recInfo.timeKey};
@@ -150,68 +154,6 @@ void ArrowSamplerImpl::getPoints(ParquetSampler::record_info_t& recInfo, std::ve
         }
     }
     else mlog(DEBUG, "Time column not found.");
-}
-
-/*----------------------------------------------------------------------------
-* getXYPoints
-*----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getXYPoints(ParquetSampler::record_info_t& recInfo, std::vector<ParquetSampler::point_info_t*>& points)
-{
-    std::vector<const char*> columnNames = {recInfo.xKey, recInfo.yKey};
-
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int x_column_index = table->schema()->GetFieldIndex(recInfo.xKey);
-    if(x_column_index == -1)
-    {
-        throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
-    }
-
-    int y_column_index = table->schema()->GetFieldIndex(recInfo.yKey);
-    if(y_column_index == -1)
-    {
-        throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
-    }
-
-    auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
-    auto y_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(y_column_index)->chunk(0));
-
-    /* x and y columns are the same longth */
-    for(int64_t i = 0; i < x_column->length(); i++)
-    {
-        points[i]->x = x_column->Value(i);
-        points[i]->y = y_column->Value(i);
-    }
-}
-
-/*----------------------------------------------------------------------------
-* getGeoPoints
-*----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getGeoPoints(std::vector<ParquetSampler::point_info_t*>& points)
-{
-    const char* geocol  = "geometry";
-    std::vector<const char*> columnNames = {geocol};
-
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
-    if(geometry_column_index == -1)
-    {
-        throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
-    }
-
-    auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
-    mlog(DEBUG, "Geometry column elements: %ld", geometry_column->length());
-
-    /* The geometry column is binary type */
-    auto binary_array = std::static_pointer_cast<arrow::BinaryArray>(geometry_column);
-
-    /* Iterate over each item in the geometry column and extract points */
-    for(int64_t i = 0; i < binary_array->length(); i++)
-    {
-        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        wkbpoint_t point = convertWKBToPoint(wkb_data);
-        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({point.x, point.y, 0.0});
-        points.push_back(pinfo);
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -405,6 +347,15 @@ bool ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
 void ArrowSamplerImpl::createOutpuFile(void)
 {
     const ArrowParms* parms = parquetSampler->getParms();
+
+    if(std::filesystem::exists(parms->path))
+    {
+        int rc = std::remove(parms->path);
+        if(rc != 0)
+        {
+            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, parms->path, strerror(errno));
+        }
+    }
 
     auto table = inputFileToTable();
     auto updated_table = appendSamplesColumns(table);
@@ -734,3 +685,67 @@ void ArrowSamplerImpl::tableMetadataToJson(const std::shared_ptr<arrow::Table> t
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open metadata file: %s", file_path);
 }
+
+/*----------------------------------------------------------------------------
+* getXYPoints
+*----------------------------------------------------------------------------*/
+void ArrowSamplerImpl::getXYPoints(std::vector<ParquetSampler::point_info_t*>& points)
+{
+    const ParquetSampler::record_info_t& recInfo = parquetSampler->getRecInfo();
+    std::vector<const char*> columnNames = {recInfo.xKey, recInfo.yKey};
+
+    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    int x_column_index = table->schema()->GetFieldIndex(recInfo.xKey);
+    if(x_column_index == -1)
+    {
+        throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
+    }
+
+    int y_column_index = table->schema()->GetFieldIndex(recInfo.yKey);
+    if(y_column_index == -1)
+    {
+        throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
+    }
+
+    auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
+    auto y_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(y_column_index)->chunk(0));
+
+    /* x and y columns are the same longth */
+    for(int64_t i = 0; i < x_column->length(); i++)
+    {
+        points[i]->x = x_column->Value(i);
+        points[i]->y = y_column->Value(i);
+    }
+}
+
+/*----------------------------------------------------------------------------
+* getGeoPoints
+*----------------------------------------------------------------------------*/
+void ArrowSamplerImpl::getGeoPoints(std::vector<ParquetSampler::point_info_t*>& points)
+{
+    const char* geocol  = "geometry";
+    std::vector<const char*> columnNames = {geocol};
+
+    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
+    if(geometry_column_index == -1)
+    {
+        throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
+    }
+
+    auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
+    mlog(DEBUG, "Geometry column elements: %ld", geometry_column->length());
+
+    /* The geometry column is binary type */
+    auto binary_array = std::static_pointer_cast<arrow::BinaryArray>(geometry_column);
+
+    /* Iterate over each item in the geometry column and extract points */
+    for(int64_t i = 0; i < binary_array->length(); i++)
+    {
+        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
+        wkbpoint_t point = convertWKBToPoint(wkb_data);
+        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({point.x, point.y, 0.0});
+        points.push_back(pinfo);
+    }
+}
+

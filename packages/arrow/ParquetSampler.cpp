@@ -36,7 +36,6 @@
 #include "core.h"
 #include "ParquetSampler.h"
 #include "ArrowSamplerImpl.h"
-#include <filesystem>
 
 
 /******************************************************************************
@@ -153,6 +152,26 @@ ParquetSampler::Sampler::~Sampler(void)
 
 
 /*----------------------------------------------------------------------------
+ * RecordInfo Constructor
+ *----------------------------------------------------------------------------*/
+ParquetSampler::RecordInfo::RecordInfo(void) :
+    timeKey(NULL), xKey(NULL), yKey(NULL), asGeo(false)
+{
+}
+
+
+/*----------------------------------------------------------------------------
+ * RecordInfo Destructor
+ *----------------------------------------------------------------------------*/
+ParquetSampler::RecordInfo::~RecordInfo(void)
+{
+    delete[] timeKey;
+    delete[] xKey;
+    delete[] yKey;
+}
+
+
+/*----------------------------------------------------------------------------
  * clearSamples
  *----------------------------------------------------------------------------*/
 void ParquetSampler::Sampler::clearSamples(void)
@@ -176,25 +195,14 @@ void ParquetSampler::sample(void)
     if(alreadySampled) return;
     alreadySampled = true;
 
-    const char* outputPath = parms->path;
-
-    if(std::filesystem::exists(outputPath))
-    {
-        int rc = std::remove(outputPath);
-        if(rc != 0)
-        {
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, outputPath, strerror(errno));
-        }
-    }
-
-    /* Start Sampler Threads */
+    /* Start sampling threads */
     for(sampler_t* sampler : samplers)
     {
         Thread* pid = new Thread(samplerThread, sampler);
         samplerPids.push_back(pid);
     }
 
-    /* Wait for all sampler threads to finish */
+    /* Wait for all sampling threads to finish */
     for(Thread* pid : samplerPids)
     {
         delete pid;
@@ -257,8 +265,8 @@ ParquetSampler::ParquetSampler(lua_State* L, ArrowParms* _parms, const char* inp
         impl = new ArrowSamplerImpl(this);
 
         impl->openInputFile(input_file);
-        impl->getMetadata(recInfo);
-        impl->getPoints(recInfo, points);
+        impl->getInputFileMetadata(recInfo);
+        impl->getInputFilePoints(points);
     }
     catch(const RunTimeException& e)
     {
