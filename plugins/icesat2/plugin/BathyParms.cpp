@@ -44,6 +44,7 @@
 const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::MAX_ALONG_TRACK_SPREAD = "max_along_track_spread";
 const char* BathyParms::BEAM_FILE_PREFIX = "beam_file_prefix";
+const char* BathyParms::ATL09_RESOURCES = "resources09";
 
 const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
 
@@ -74,9 +75,22 @@ int BathyParms::luaCreate (lua_State* L)
     }
 }
 
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
+/*----------------------------------------------------------------------------
+ * getATL09Key
+ *----------------------------------------------------------------------------*/
+void BathyParms::getATL09Key (char* key, const char* name)
+{
+    // Example
+    //  Name: ATL09_20230601012940_10951901_006_01.h5
+    //  Key:                       10951901
+    if(StringLib::size(name) != ATL09_RESOURCE_NAME_LEN)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to process ATL09 resource name: %s", name);
+    }
+    StringLib::copy(key, &name[21], ATL09_RESOURCE_KEY_LEN + 1);
+    key[ATL09_RESOURCE_KEY_LEN] = '\0';
+}
+
 
 /*----------------------------------------------------------------------------
  * Constructor
@@ -108,6 +122,12 @@ BathyParms::BathyParms(lua_State* L, int index):
         beam_file_prefix = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, beam_file_prefix, &provided));
         if(provided) mlog(DEBUG, "Setting %s to %s", BathyParms::BEAM_FILE_PREFIX, beam_file_prefix);
         lua_pop(L, 1);
+
+        /* atl09 resources */
+        lua_getfield(L, index, BathyParms::ATL09_RESOURCES);
+        get_atl09_list(L, -1, &provided);
+        if(provided) mlog(DEBUG, "ATL09 resources set");
+        lua_pop(L, 1);
     }
     catch(const RunTimeException& e)
     {
@@ -130,4 +150,54 @@ BathyParms::~BathyParms (void)
 void BathyParms::cleanup (void) const
 {
     delete [] beam_file_prefix;
+}
+
+/*----------------------------------------------------------------------------
+ * get_atl09_list
+ *----------------------------------------------------------------------------*/
+void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
+{
+    /* Reset provided */
+    if(provided) *provided = false;
+
+    /* Must be table of strings */
+    if(lua_istable(L, index))
+    {
+        /* Get number of item in table */
+        int num_strings = lua_rawlen(L, index);
+        if(num_strings > 0 && provided) *provided = true;
+
+        /* Iterate through each item in table */
+        for(int i = 0; i < num_strings; i++)
+        {
+            /* Get item */
+            lua_rawgeti(L, index, i+1);
+            if(lua_isstring(L, -1))
+            {
+                // Example
+                //  Name: ATL09_20230601012940_10951901_006_01.h5
+                //  Key:                       10951901
+                const char* str = LuaObject::getLuaString(L, -1);
+                char key[ATL09_RESOURCE_KEY_LEN + 1];
+                getATL09Key(key, str); // throws on error
+                string name(str);
+                if(!alt09_index.add(key, name, true))
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Duplicate ATL09 key detected: %s", str);
+                }
+                mlog(DEBUG, "Adding %s to ATL09 index with key: %s", str, key);
+            }
+            else
+            {
+                mlog(ERROR, "Invalid item specified - must be a string");
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "Lists must be provided as a table");
+    }
 }

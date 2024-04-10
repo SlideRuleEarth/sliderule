@@ -4,7 +4,7 @@ import os
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--output',         '-f',   type=str,               default="bathy.csv")
+parser.add_argument('--output',         '-f',   type=str,               default=None)
 parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20181223171641_13150101_006_02.h5")
 parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/bahia_de_jiguey.geojson")
 parser.add_argument('--track',          '-t',   type=int,               default=1)
@@ -48,13 +48,14 @@ parms = {
 gdf = icesat2.atl24gp(parms, resources=[args.granule], keep_id=True)
 
 # Write to CSV Local File
-columns = [
-    "index_ph", "time", "geoid_corr_h", "latitude", "longitude", "x_ph", "y_ph", "x_atc", "y_atc", 
-    "sigma_along", "sigma_across", "ndwi", "yapc_score", "max_signal_conf", "quality_ph",
-    "region", "track", "pair", "sc_orient", "rgt", "cycle", "utm_zone", 
-    "background_rate", "solar_elevation", "wind_v", "pointing_angle", "extent_id" 
-]
-gdf.to_csv(args.output, index=False, columns=columns)
+if(args.output != None):
+    columns = [
+        "index_ph", "time", "geoid_corr_h", "latitude", "longitude", "x_ph", "y_ph", "x_atc", "y_atc", 
+        "sigma_along", "sigma_across", "ndwi", "yapc_score", "max_signal_conf", "quality_ph",
+        "region", "track", "pair", "sc_orient", "rgt", "cycle", "utm_zone", 
+        "background_rate", "solar_elevation", "wind_v", "pointing_angle", "extent_id" 
+    ]
+    gdf.to_csv(args.output, index=False, columns=columns)
 
 # Clean Up Temporary Files
 if not args.preserve:
