@@ -57,8 +57,8 @@
 /*----------------------------------------------------------------------------
  * Constructors
  *----------------------------------------------------------------------------*/
-ArrowSamplerImpl::ArrowSamplerImpl (ParquetSampler* _sampler):
-    parquetSampler(_sampler),
+ArrowSamplerImpl::ArrowSamplerImpl (ArrowSampler* _sampler):
+    arrowSampler(_sampler),
     inputFile(NULL),
     reader(nullptr),
     timeKey(NULL),
@@ -81,7 +81,7 @@ ArrowSamplerImpl::~ArrowSamplerImpl (void)
 /*----------------------------------------------------------------------------
 * processInputFile
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<ParquetSampler::point_info_t*>& points)
+void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<ArrowSampler::point_info_t*>& points)
 {
     /* Open the input file */
     PARQUET_ASSIGN_OR_THROW(inputFile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
@@ -94,9 +94,9 @@ void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<Parqu
 /*----------------------------------------------------------------------------
 * processSamples
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
 {
-    const ArrowParms* parms = parquetSampler->getParms();
+    const ArrowParms* parms = arrowSampler->getParms();
     bool  status = false;
 
     try
@@ -124,7 +124,7 @@ bool ArrowSamplerImpl::processSamples(ParquetSampler::sampler_t* sampler)
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::createOutpuFile(void)
 {
-    const ArrowParms* parms = parquetSampler->getParms();
+    const ArrowParms* parms = arrowSampler->getParms();
 
     if(std::filesystem::exists(parms->path))
     {
@@ -220,7 +220,7 @@ void ArrowSamplerImpl::getMetadata(void)
 /*----------------------------------------------------------------------------
 * getPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getPoints(std::vector<ParquetSampler::point_info_t*>& points)
+void ArrowSamplerImpl::getPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
     if(asGeo)
         getGeoPoints(points);
@@ -246,7 +246,7 @@ void ArrowSamplerImpl::getPoints(std::vector<ParquetSampler::point_info_t*>& poi
 /*----------------------------------------------------------------------------
 * getXYPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getXYPoints(std::vector<ParquetSampler::point_info_t*>& points)
+void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
     std::vector<const char*> columnNames = {xKey, yKey};
 
@@ -266,7 +266,7 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ParquetSampler::point_info_t*>& p
         double x = x_column->Value(i);
         double y = y_column->Value(i);
 
-        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({x, y, 0.0});
+        ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({x, y, 0.0});
         points.push_back(pinfo);
     }
 }
@@ -274,7 +274,7 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ParquetSampler::point_info_t*>& p
 /*----------------------------------------------------------------------------
 * getGeoPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getGeoPoints(std::vector<ParquetSampler::point_info_t*>& points)
+void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
     const char* geocol  = "geometry";
     std::vector<const char*> columnNames = {geocol};
@@ -294,7 +294,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<ParquetSampler::point_info_t*>& 
     {
         std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
         wkbpoint_t point = convertWKBToPoint(wkb_data);
-        ParquetSampler::point_info_t* pinfo = new ParquetSampler::point_info_t({point.x, point.y, 0.0});
+        ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({point.x, point.y, 0.0});
         points.push_back(pinfo);
     }
 }
@@ -380,7 +380,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
 /*----------------------------------------------------------------------------
 * makeColumnsWithLists
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::makeColumnsWithLists(ParquetSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
 {
     auto pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -424,7 +424,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ParquetSampler::sampler_t* sampler)
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
 
     /* Iterate over each sample in a vector of lists of samples */
-    for(ParquetSampler::sample_list_t* slist : sampler->samples)
+    for(ArrowSampler::sample_list_t* slist : sampler->samples)
     {
         /* Start new lists */
         PARQUET_THROW_NOT_OK(value_list_builder.Append());
@@ -561,7 +561,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ParquetSampler::sampler_t* sampler)
 /*----------------------------------------------------------------------------
 * makeColumnsWithOneSample
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::makeColumnsWithOneSample(ParquetSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler)
 {
     auto pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -587,7 +587,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ParquetSampler::sampler_t* sampl
     RasterSample fakeSample(0.0, 0);
     fakeSample.value = std::nan("");
 
-    for(ParquetSampler::sample_list_t* slist : sampler->samples)
+    for(ArrowSampler::sample_list_t* slist : sampler->samples)
     {
         RasterSample* sample;
 
@@ -711,7 +711,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ParquetSampler::sampler_t* sampl
 /*----------------------------------------------------------------------------
 * getFirstValidSample
 *----------------------------------------------------------------------------*/
-RasterSample* ArrowSamplerImpl::getFirstValidSample(ParquetSampler::sample_list_t* slist)
+RasterSample* ArrowSamplerImpl::getFirstValidSample(ArrowSampler::sample_list_t* slist)
 {
     for(RasterSample* sample : *slist)
     {
@@ -883,8 +883,8 @@ std::string ArrowSamplerImpl::createFileMap(void)
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
 
     /* Serialize into JSON */
-    const std::vector<ParquetSampler::sampler_t*>& samplers = parquetSampler->getSamplers();
-    for(ParquetSampler::sampler_t* sampler : samplers)
+    const std::vector<ArrowSampler::sampler_t*>& samplers = arrowSampler->getSamplers();
+    for(ArrowSampler::sampler_t* sampler : samplers)
     {
         rapidjson::Value asset_list_json(rapidjson::kArrayType);
 

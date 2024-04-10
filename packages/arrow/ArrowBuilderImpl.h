@@ -41,7 +41,7 @@
 #include "Ordering.h"
 #include "RecordObject.h"
 #include "ArrowParms.h"
-#include "ParquetBuilder.h"
+#include "ArrowBuilder.h"
 #include "OsApi.h"
 #include "MsgQ.h"
 
@@ -58,13 +58,13 @@ class ArrowBuilderImpl
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef ParquetBuilder::batch_list_t batch_list_t;
+        typedef ArrowBuilder::batch_list_t batch_list_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit ArrowBuilderImpl(ParquetBuilder* _builder);
+        explicit ArrowBuilderImpl(ArrowBuilder* _builder);
         ~ArrowBuilderImpl        (void);
 
         bool processRecordBatch  (batch_list_t& record_batch, int num_rows,
@@ -88,7 +88,7 @@ class ArrowBuilderImpl
          * Data
          *--------------------------------------------------------------------*/
 
-        ParquetBuilder*                             parquetBuilder;
+        ArrowBuilder*                               arrowBuilder;
         shared_ptr<arrow::Schema>                   schema;
         unique_ptr<parquet::arrow::FileWriter>      parquetWriter;
         shared_ptr<arrow::io::FileOutputStream>     csvWriter;
@@ -100,7 +100,7 @@ class ArrowBuilderImpl
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-        
+
         void createSchema           (void);
         bool buildFieldList         (const char* rec_type, int offset, int flags);
         void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);

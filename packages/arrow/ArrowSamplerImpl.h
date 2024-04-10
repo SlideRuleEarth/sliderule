@@ -38,7 +38,7 @@
 
 #include "ArrowImpl.h"
 #include "LuaObject.h"
-#include "ParquetSampler.h"
+#include "ArrowSampler.h"
 #include "OsApi.h"
 
 /******************************************************************************
@@ -57,11 +57,11 @@ class ArrowSamplerImpl
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit ArrowSamplerImpl (ParquetSampler* _sampler);
+        explicit ArrowSamplerImpl (ArrowSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void processInputFile     (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
-        bool processSamples       (ParquetSampler::sampler_t* sampler);
+        void processInputFile     (const char* file_path, std::vector<ArrowSampler::point_info_t*>& points);
+        bool processSamples       (ArrowSampler::sampler_t* sampler);
         void createOutpuFile      (void);
 
     private:
@@ -78,7 +78,7 @@ class ArrowSamplerImpl
          * Data
          *--------------------------------------------------------------------*/
 
-        ParquetSampler*                                   parquetSampler;
+        ArrowSampler*                                     arrowSampler;
         Mutex                                             mutex;
         std::vector<std::shared_ptr<arrow::Field>>        newFields;
         std::vector<std::shared_ptr<arrow::ChunkedArray>> newColumns;
@@ -96,14 +96,14 @@ class ArrowSamplerImpl
          *--------------------------------------------------------------------*/
 
         void                          getMetadata             (void);
-        void                          getPoints               (std::vector<ParquetSampler::point_info_t*>& points);
-        void                          getXYPoints             (std::vector<ParquetSampler::point_info_t*>& points);
-        void                          getGeoPoints            (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getPoints               (std::vector<ArrowSampler::point_info_t*>& points);
+        void                          getXYPoints             (std::vector<ArrowSampler::point_info_t*>& points);
+        void                          getGeoPoints            (std::vector<ArrowSampler::point_info_t*>& points);
         std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
         std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table> table);
-        bool                          makeColumnsWithLists    (ParquetSampler::sampler_t* sampler);
-        bool                          makeColumnsWithOneSample(ParquetSampler::sampler_t* sampler);
-        RasterSample*                 getFirstValidSample     (ParquetSampler::sample_list_t* slist);
+        bool                          makeColumnsWithLists    (ArrowSampler::sampler_t* sampler);
+        bool                          makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler);
+        RasterSample*                 getFirstValidSample     (ArrowSampler::sample_list_t* slist);
         void                          tableToParquetFile      (const std::shared_ptr<arrow::Table> table,
                                                                const char* file_path);
         void                          tableToCsvFile          (const std::shared_ptr<arrow::Table> table,

@@ -32,7 +32,7 @@ local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestN
 runner.check(dem2 ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output geoparquet (geo)\n--------------------------------------')
-local parquet_sampler = arrow.parquetsampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, {["mosaic"] = dem1})
+local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 local in_file_size = getFileSize(in_geoparquet);
@@ -45,7 +45,7 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 
 
 print('\n--------------------------------------\nTest02: input/output parquet (x, y)\n--------------------------------------')
-parquet_sampler = arrow.parquetsampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
@@ -59,7 +59,7 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 --NOTE: generated CSV files are much smaller than the input parquet/geoparquet files
 
 print('\n--------------------------------------\nTest03: input geoparquet, output CSV\n--------------------------------------')
-parquet_sampler = arrow.parquetsampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_geoparquet);
@@ -75,7 +75,7 @@ runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
 
 
 print('\n--------------------------------------\nTest04: input parquet, output CSV \n--------------------------------------')
-parquet_sampler = arrow.parquetsampler(arrow.parms({path=out_csv, format="csv"}), in_parquet, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_parquet, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
@@ -91,7 +91,7 @@ runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
 
 
 print('\n--------------------------------------\nTest05: input/output geoparquet (geo)\n--------------------------------------')
-local parquet_sampler = arrow.parquetsampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, {["mosaic"] = dem1, ["strips"] = dem2})
+local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 local in_file_size = getFileSize(in_geoparquet);

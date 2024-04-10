@@ -29,11 +29,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __parquet_builder__
-#define __parquet_builder__
+#ifndef __arrow_builder__
+#define __arrow_builder__
 
 /*
- * ParquetBuilder works on batches of records.  It expects the `batch_rec_type`
+ * ArrowBuilder works on batches of records.  It expects the `batch_rec_type`
  * passed into the constructor to be the type that defines each of the column headings,
  * then it expects to receive records that are arrays (or batches) of that record
  * type.  The field defined as an array is transparent to this class - it just
@@ -61,7 +61,7 @@ class ArrowBuilderImpl; // arrow implementation
  * PARQUET BUILDER CLASS
  ******************************************************************************/
 
-class ParquetBuilder: public LuaObject
+class ArrowBuilder: public LuaObject
 {
     public:
 
@@ -149,7 +149,7 @@ class ParquetBuilder: public LuaObject
         static int              luaCreate       (lua_State* L);
         static void             init            (void);
         static void             deinit          (void);
-        
+
         const char*             getSubField     (const char* field_name);
         const char*             getFileName     (void);
         const char*             getRecType      (void);
@@ -200,13 +200,13 @@ class ParquetBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ParquetBuilder          (lua_State* L, ArrowParms* parms,
+                        ArrowBuilder            (lua_State* L, ArrowParms* parms,
                                                  const char* outq_name, const char* inq_name,
                                                  const char* rec_type, const char* id);
-                        ~ParquetBuilder         (void);
+                        ~ArrowBuilder           (void);
         static void*    builderThread           (void* parm);
         bool            send2S3                 (const char* s3dst);
         bool            send2Client             (void);
 };
 
-#endif  /* __parquet_builder__ */
+#endif  /* __arrow_builder__ */

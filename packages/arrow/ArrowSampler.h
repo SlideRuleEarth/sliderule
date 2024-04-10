@@ -33,7 +33,7 @@
 #define __parquet_sampler__
 
 /*
- * ParquetSampler works on batches of records.  It expects the `batch_rec_type`
+ * ArrowSampler works on batches of records.  It expects the `batch_rec_type`
  * passed into the constructor to be the type that defines each of the column headings,
  * then it expects to receive records that are arrays (or batches) of that record
  * type.  The field defined as an array is transparent to this class - it just
@@ -61,7 +61,7 @@ class ArrowSamplerImpl; // arrow implementation
  * PARQUET SAMPLER CLASS
  ******************************************************************************/
 
-class ParquetSampler: public LuaObject
+class ArrowSampler: public LuaObject
 {
     public:
 
@@ -94,12 +94,12 @@ class ParquetSampler: public LuaObject
         {
             const char*                  rkey;
             RasterObject*                robj;
-            ParquetSampler*              obj;
+            ArrowSampler*                obj;
             std::vector<sample_list_t*>  samples;
             std::set<uint64_t>           file_ids;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
-            explicit Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj);
+            explicit Sampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
                     ~Sampler (void);
             void     clearSamples (void);
         } sampler_t;
@@ -137,11 +137,11 @@ class ParquetSampler: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ParquetSampler          (lua_State* L, ArrowParms* _parms, const char* input_file,
-                                                 const std::vector<raster_info_t>& rasters);
-                        ~ParquetSampler         (void);
-        void            Delete                  (void);
-        static void*    samplerThread           (void* parm);
+                        ArrowSampler          (lua_State* L, ArrowParms* _parms, const char* input_file,
+                                               const std::vector<raster_info_t>& rasters);
+                        ~ArrowSampler         (void);
+        void            Delete                (void);
+        static void*    samplerThread         (void* parm);
 };
 
 #endif  /* __parquet_sampler__*/

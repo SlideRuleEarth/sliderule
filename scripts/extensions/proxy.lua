@@ -30,14 +30,14 @@ local function proxy(resources, parms, endpoint, rec)
     local terminate_proxy_stream = false
 
     -- Handle Output Options --
-    local parquet_builder = nil
+    local arrow_builder = nil
     if parms[arrow.PARMS] then
         local output_parms = arrow.parms(parms[arrow.PARMS])
-        -- Parquet Writer --
+        -- Arrow Writer --
         if output_parms:isparquet() or output_parms:iscsv() then
-            parquet_builder = arrow.parquet(output_parms, rspq, rspq .. "-parquet", rec, rqstid)
-            if parquet_builder then
-                rsps_from_nodes = rspq .. "-parquet"
+            arrow_builder = arrow.builder(output_parms, rspq, rspq .. "-builder", rec, rqstid)
+            if arrow_builder then
+                rsps_from_nodes = rspq .. "-builder"
                 terminate_proxy_stream = true
             end
         end
@@ -45,7 +45,7 @@ local function proxy(resources, parms, endpoint, rec)
 
     -- Determine Locks per Node --
     local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or netsvc.MAX_LOCKS_PER_NODE
-    
+
     -- Proxy Request --
     local proxy = netsvc.proxy(endpoint, resources, json.encode(parms), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
 
@@ -62,7 +62,7 @@ local function proxy(resources, parms, endpoint, rec)
 
     -- Wait Until Dispatch Completion --
     if terminate_proxy_stream then
-        while (userlog:numsubs() > 0) and not parquet_builder:waiton(interval * 1000) do
+        while (userlog:numsubs() > 0) and not arrow_builder:waiton(interval * 1000) do
             duration = duration + interval
             if timeout >= 0 and duration >= timeout then
                 userlog:sendlog(core.ERROR, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))

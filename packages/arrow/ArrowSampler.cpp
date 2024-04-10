@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "ParquetSampler.h"
+#include "ArrowSampler.h"
 #include "ArrowSamplerImpl.h"
 
 
@@ -42,9 +42,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* ParquetSampler::OBJECT_TYPE   = "ParquetSampler";
-const char* ParquetSampler::LUA_META_NAME = "ParquetSampler";
-const struct luaL_Reg ParquetSampler::LUA_META_TABLE[] = {
+const char* ArrowSampler::OBJECT_TYPE   = "ArrowSampler";
+const char* ArrowSampler::LUA_META_NAME = "ArrowSampler";
+const struct luaL_Reg ArrowSampler::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -53,9 +53,9 @@ const struct luaL_Reg ParquetSampler::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquetsampler(input_file_path, output_file_path, {["mosaic"]: dem1, ["strips"]: dem2})
+ * luaCreate - :arrowsampler(input_file_path, output_file_path, {["mosaic"]: dem1, ["strips"]: dem2})
  *----------------------------------------------------------------------------*/
-int ParquetSampler::luaCreate(lua_State* L)
+int ArrowSampler::luaCreate(lua_State* L)
 {
     ArrowParms* _parms = NULL;
 
@@ -84,7 +84,7 @@ int ParquetSampler::luaCreate(lua_State* L)
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetSampler(L, _parms, input_file, rasters));
+        return createLuaObject(L, new ArrowSampler(L, _parms, input_file, rasters));
     }
     catch(const RunTimeException& e)
     {
@@ -97,12 +97,12 @@ int ParquetSampler::luaCreate(lua_State* L)
 /*----------------------------------------------------------------------------
  * luaSamples - :sample([gps]) --> in|out
  *----------------------------------------------------------------------------*/
-int ParquetSampler::luaSample(lua_State* L)
+int ArrowSampler::luaSample(lua_State* L)
 {
     try
     {
         /* Get Self */
-        ParquetSampler* lua_obj = dynamic_cast<ParquetSampler*>(getLuaSelf(L, 1));
+        ArrowSampler* lua_obj = dynamic_cast<ArrowSampler*>(getLuaSelf(L, 1));
         lua_obj->sample();
     }
     catch(const RunTimeException& e)
@@ -118,21 +118,21 @@ int ParquetSampler::luaSample(lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void ParquetSampler::init(void)
+void ArrowSampler::init(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void ParquetSampler::deinit(void)
+void ArrowSampler::deinit(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Sampler Constructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::Sampler::Sampler(const char* _rkey, RasterObject* _robj, ParquetSampler* _obj) :
+ArrowSampler::Sampler::Sampler(const char* _rkey, RasterObject* _robj, ArrowSampler* _obj) :
     robj(_robj),
     obj(_obj)
 {
@@ -143,7 +143,7 @@ ParquetSampler::Sampler::Sampler(const char* _rkey, RasterObject* _robj, Parquet
 /*----------------------------------------------------------------------------
  * Sampler Destructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::Sampler::~Sampler(void)
+ArrowSampler::Sampler::~Sampler(void)
 {
     clearSamples();
     delete [] rkey;
@@ -153,9 +153,9 @@ ParquetSampler::Sampler::~Sampler(void)
 /*----------------------------------------------------------------------------
  * clearSamples
  *----------------------------------------------------------------------------*/
-void ParquetSampler::Sampler::clearSamples(void)
+void ArrowSampler::Sampler::clearSamples(void)
 {
-    for(ParquetSampler::sample_list_t* slist : samples)
+    for(ArrowSampler::sample_list_t* slist : samples)
     {
         for(RasterSample* sample : *slist)
         {
@@ -169,7 +169,7 @@ void ParquetSampler::Sampler::clearSamples(void)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-void ParquetSampler::sample(void)
+void ArrowSampler::sample(void)
 {
     if(alreadySampled) return;
     alreadySampled = true;
@@ -207,8 +207,8 @@ void ParquetSampler::sample(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::ParquetSampler(lua_State* L, ArrowParms* _parms, const char* input_file,
-                               const std::vector<raster_info_t>& rasters):
+ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_file,
+                           const std::vector<raster_info_t>& rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     alreadySampled(false)
@@ -247,7 +247,7 @@ ParquetSampler::ParquetSampler(lua_State* L, ArrowParms* _parms, const char* inp
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating ParquetSampler: %s", e.what());
+        mlog(e.level(), "Error creating ArrowSampler: %s", e.what());
         Delete();
         throw;
     }
@@ -256,7 +256,7 @@ ParquetSampler::ParquetSampler(lua_State* L, ArrowParms* _parms, const char* inp
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-ParquetSampler::~ParquetSampler(void)
+ArrowSampler::~ArrowSampler(void)
 {
     Delete();
 }
@@ -264,7 +264,7 @@ ParquetSampler::~ParquetSampler(void)
 /*----------------------------------------------------------------------------
  * Delete -
  *----------------------------------------------------------------------------*/
-void ParquetSampler::Delete(void)
+void ArrowSampler::Delete(void)
 {
     parms->releaseLuaObject();
 
@@ -283,7 +283,7 @@ void ParquetSampler::Delete(void)
 /*----------------------------------------------------------------------------
  * samplerThread
  *----------------------------------------------------------------------------*/
-void* ParquetSampler::samplerThread(void* parm)
+void* ArrowSampler::samplerThread(void* parm)
 {
     sampler_t* sampler = static_cast<sampler_t*>(parm);
     RasterObject* robj = sampler->robj;

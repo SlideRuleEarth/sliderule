@@ -34,8 +34,8 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "ParquetBuilder.h"
 #include "ArrowParms.h"
+#include "ArrowBuilder.h"
 #include "ArrowBuilderImpl.h"
 
 #ifdef __aws__
@@ -46,31 +46,31 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* ParquetBuilder::OBJECT_TYPE = "ParquetBuilder";
-const char* ParquetBuilder::LUA_META_NAME = "ParquetBuilder";
-const struct luaL_Reg ParquetBuilder::LUA_META_TABLE[] = {
+const char* ArrowBuilder::OBJECT_TYPE = "ArrowBuilder";
+const char* ArrowBuilder::LUA_META_NAME = "ArrowBuilder";
+const struct luaL_Reg ArrowBuilder::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* ParquetBuilder::metaRecType = "arrowrec.meta";
-const RecordObject::fieldDef_t ParquetBuilder::metaRecDef[] = {
+const char* ArrowBuilder::metaRecType = "arrowrec.meta";
+const RecordObject::fieldDef_t ArrowBuilder::metaRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_meta_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"size",       RecordObject::INT64,    offsetof(arrow_file_meta_t, size),                      1,  NULL, NATIVE_FLAGS}
 };
 
-const char* ParquetBuilder::dataRecType = "arrowrec.data";
-const RecordObject::fieldDef_t ParquetBuilder::dataRecDef[] = {
+const char* ArrowBuilder::dataRecType = "arrowrec.data";
+const RecordObject::fieldDef_t ArrowBuilder::dataRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_data_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"data",       RecordObject::UINT8,    offsetof(arrow_file_data_t, data),                      0,  NULL, NATIVE_FLAGS} // variable length
 };
 
-const char* ParquetBuilder::remoteRecType = "arrowrec.remote";
-const RecordObject::fieldDef_t ParquetBuilder::remoteRecDef[] = {
+const char* ArrowBuilder::remoteRecType = "arrowrec.remote";
+const RecordObject::fieldDef_t ArrowBuilder::remoteRecDef[] = {
     {"url",   RecordObject::STRING,   offsetof(arrow_file_remote_t, url),                URL_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"size",  RecordObject::INT64,    offsetof(arrow_file_remote_t, size),                         1,  NULL, NATIVE_FLAGS}
 };
 
-const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
+const char* ArrowBuilder::TMP_FILE_PREFIX = "/tmp/";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -79,7 +79,7 @@ const char* ParquetBuilder::TMP_FILE_PREFIX = "/tmp/";
 /*----------------------------------------------------------------------------
  * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <id>, [<x_key>, <y_key>], [<time_key>])
  *----------------------------------------------------------------------------*/
-int ParquetBuilder::luaCreate (lua_State* L)
+int ArrowBuilder::luaCreate (lua_State* L)
 {
     ArrowParms* _parms = NULL;
 
@@ -93,7 +93,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
         const char* id              = getLuaString(L, 5);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetBuilder(L, _parms, outq_name, inq_name, rec_type, id));
+        return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id));
     }
     catch(const RunTimeException& e)
     {
@@ -106,7 +106,7 @@ int ParquetBuilder::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void ParquetBuilder::init (void)
+void ArrowBuilder::init (void)
 {
     RECDEF(metaRecType, metaRecDef, sizeof(arrow_file_meta_t), NULL);
     RECDEF(dataRecType, dataRecDef, sizeof(arrow_file_data_t), NULL);
@@ -116,14 +116,14 @@ void ParquetBuilder::init (void)
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void ParquetBuilder::deinit (void)
+void ArrowBuilder::deinit (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * getSubField
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getSubField (const char* field_name)
+const char* ArrowBuilder::getSubField (const char* field_name)
 {
     /* Return Empty String if Null */
     if(!field_name)
@@ -148,7 +148,7 @@ const char* ParquetBuilder::getSubField (const char* field_name)
 /*----------------------------------------------------------------------------
  * getFileName
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getFileName (void)
+const char* ArrowBuilder::getFileName (void)
 {
     return fileName;
 }
@@ -156,7 +156,7 @@ const char* ParquetBuilder::getFileName (void)
 /*----------------------------------------------------------------------------
  * getRecType
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getRecType (void)
+const char* ArrowBuilder::getRecType (void)
 {
     return recType;
 }
@@ -164,7 +164,7 @@ const char* ParquetBuilder::getRecType (void)
 /*----------------------------------------------------------------------------
  * getTimeKey
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getTimeKey (void)
+const char* ArrowBuilder::getTimeKey (void)
 {
     return timeKey;
 }
@@ -172,7 +172,7 @@ const char* ParquetBuilder::getTimeKey (void)
 /*----------------------------------------------------------------------------
  * getXKey
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getXKey (void)
+const char* ArrowBuilder::getXKey (void)
 {
     return xKey;
 }
@@ -180,7 +180,7 @@ const char* ParquetBuilder::getXKey (void)
 /*----------------------------------------------------------------------------
  * getyKey
  *----------------------------------------------------------------------------*/
-const char* ParquetBuilder::getYKey (void)
+const char* ArrowBuilder::getYKey (void)
 {
     return yKey;
 }
@@ -188,7 +188,7 @@ const char* ParquetBuilder::getYKey (void)
 /*----------------------------------------------------------------------------
  * getAsGeo
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::getAsGeo (void)
+bool ArrowBuilder::getAsGeo (void)
 {
     return geoData.as_geo;
 }
@@ -196,7 +196,7 @@ bool ParquetBuilder::getAsGeo (void)
 /*----------------------------------------------------------------------------
  * getXField
  *----------------------------------------------------------------------------*/
-RecordObject::field_t& ParquetBuilder::getXField (void)
+RecordObject::field_t& ArrowBuilder::getXField (void)
 {
     return geoData.x_field;
 }
@@ -204,7 +204,7 @@ RecordObject::field_t& ParquetBuilder::getXField (void)
 /*----------------------------------------------------------------------------
  * getYField
  *----------------------------------------------------------------------------*/
-RecordObject::field_t& ParquetBuilder::getYField (void)
+RecordObject::field_t& ArrowBuilder::getYField (void)
 {
     return geoData.y_field;
 }
@@ -212,7 +212,7 @@ RecordObject::field_t& ParquetBuilder::getYField (void)
 /*----------------------------------------------------------------------------
  * getParms
  *----------------------------------------------------------------------------*/
-ArrowParms* ParquetBuilder::getParms (void)
+ArrowParms* ArrowBuilder::getParms (void)
 {
     return parms;
 }
@@ -220,7 +220,7 @@ ArrowParms* ParquetBuilder::getParms (void)
 /*----------------------------------------------------------------------------
  * hasAncFields
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::hasAncFields (void)
+bool ArrowBuilder::hasAncFields (void)
 {
     return hasAncillaryFields;
 }
@@ -228,7 +228,7 @@ bool ParquetBuilder::hasAncFields (void)
 /*----------------------------------------------------------------------------
  * hasAncElements
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::hasAncElements (void)
+bool ArrowBuilder::hasAncElements (void)
 {
     return hasAncillaryElements;
 }
@@ -240,9 +240,9 @@ bool ParquetBuilder::hasAncElements (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
-                                const char* outq_name, const char* inq_name,
-                                const char* rec_type, const char* id):
+ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
+                            const char* outq_name, const char* inq_name,
+                            const char* rec_type, const char* id):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     hasAncillaryFields(false),
@@ -358,7 +358,7 @@ ParquetBuilder::ParquetBuilder (lua_State* L, ArrowParms* _parms,
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-ParquetBuilder::~ParquetBuilder(void)
+ArrowBuilder::~ArrowBuilder(void)
 {
     active = false;
     delete builderPid;
@@ -377,9 +377,9 @@ ParquetBuilder::~ParquetBuilder(void)
 /*----------------------------------------------------------------------------
  * builderThread
  *----------------------------------------------------------------------------*/
-void* ParquetBuilder::builderThread(void* parm)
+void* ArrowBuilder::builderThread(void* parm)
 {
-    ParquetBuilder* builder = static_cast<ParquetBuilder*>(parm);
+    ArrowBuilder* builder = static_cast<ArrowBuilder*>(parm);
     int row_cnt = 0;
 
     /* Start Trace */
@@ -580,7 +580,7 @@ void* ParquetBuilder::builderThread(void* parm)
 /*----------------------------------------------------------------------------
  * send2S3
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::send2S3 (const char* s3dst)
+bool ArrowBuilder::send2S3 (const char* s3dst)
 {
     #ifdef __aws__
 
@@ -652,7 +652,7 @@ bool ParquetBuilder::send2S3 (const char* s3dst)
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool ParquetBuilder::send2Client (void)
+bool ArrowBuilder::send2Client (void)
 {
     bool status = true;
 
