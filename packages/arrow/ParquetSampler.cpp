@@ -36,14 +36,13 @@
 #include "core.h"
 #include "ParquetSampler.h"
 #include "ArrowSamplerImpl.h"
-#include <filesystem>
 
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* ParquetSampler::OBJECT_TYPE = "ParquetSampler";
+const char* ParquetSampler::OBJECT_TYPE   = "ParquetSampler";
 const char* ParquetSampler::LUA_META_NAME = "ParquetSampler";
 const struct luaL_Reg ParquetSampler::LUA_META_TABLE[] = {
     {NULL,          NULL}
@@ -56,13 +55,15 @@ const struct luaL_Reg ParquetSampler::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - :parquetsampler(input_file_path, output_file_path, {["mosaic"]: dem1, ["strips"]: dem2})
  *----------------------------------------------------------------------------*/
-int ParquetSampler::luaCreate (lua_State* L)
+int ParquetSampler::luaCreate(lua_State* L)
 {
+    ArrowParms* _parms = NULL;
+
     try
     {
         /* Get Parameters */
-        const char* input_file  = getLuaString(L, 1);
-        const char* output_file = getLuaString(L, 2);
+        _parms                  = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
+        const char* input_file  = getLuaString(L, 2);
 
         std::vector<raster_info_t> rasters;
 
@@ -83,7 +84,7 @@ int ParquetSampler::luaCreate (lua_State* L)
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ParquetSampler(L, input_file, output_file, rasters));
+        return createLuaObject(L, new ParquetSampler(L, _parms, input_file, rasters));
     }
     catch(const RunTimeException& e)
     {
@@ -96,7 +97,7 @@ int ParquetSampler::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * luaSamples - :sample([gps]) --> in|out
  *----------------------------------------------------------------------------*/
-int ParquetSampler::luaSample (lua_State* L)
+int ParquetSampler::luaSample(lua_State* L)
 {
     try
     {
@@ -117,21 +118,21 @@ int ParquetSampler::luaSample (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void ParquetSampler::init (void)
+void ParquetSampler::init(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * deinit
  *----------------------------------------------------------------------------*/
-void ParquetSampler::deinit (void)
+void ParquetSampler::deinit(void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Sampler Constructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::Sampler::Sampler (const char* _rkey, RasterObject* _robj, ParquetSampler* _obj):
+ParquetSampler::Sampler::Sampler(const char* _rkey, RasterObject* _robj, ParquetSampler* _obj) :
     robj(_robj),
     obj(_obj)
 {
@@ -142,13 +143,12 @@ ParquetSampler::Sampler::Sampler (const char* _rkey, RasterObject* _robj, Parque
 /*----------------------------------------------------------------------------
  * Sampler Destructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::Sampler::~Sampler (void)
+ParquetSampler::Sampler::~Sampler(void)
 {
     clearSamples();
     delete [] rkey;
     robj->releaseLuaObject();
 }
-
 
 /*----------------------------------------------------------------------------
  * clearSamples
@@ -174,37 +174,27 @@ void ParquetSampler::sample(void)
     if(alreadySampled) return;
     alreadySampled = true;
 
-    if(std::filesystem::exists(outputPath))
-    {
-        int rc = std::remove(outputPath);
-        if(rc != 0)
-        {
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, outputPath, strerror(errno));
-        }
-    }
-
-    /* Start Sampler Threads */
+    /* Start sampling threads */
     for(sampler_t* sampler : samplers)
     {
         Thread* pid = new Thread(samplerThread, sampler);
         samplerPids.push_back(pid);
     }
 
-    /* Wait for all sampler threads to finish */
+    /* Wait for all sampling threads to finish */
     for(Thread* pid : samplerPids)
     {
         delete pid;
     }
     samplerPids.clear();
 
-    /* Create new parquet file with columns/samples from all raster objects */
     try
     {
-        impl->createParquetFile(inputPath, outputPath);
+        impl->createOutpuFile();
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating parquet file: %s", e.what());
+        mlog(e.level(), "Error creating output file: %s", e.what());
         throw;
     }
 }
@@ -217,15 +207,23 @@ void ParquetSampler::sample(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char* output_file, const std::vector<raster_info_t>& rasters):
+ParquetSampler::ParquetSampler(lua_State* L, ArrowParms* _parms, const char* input_file,
+                               const std::vector<raster_info_t>& rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    parms(_parms),
     alreadySampled(false)
 {
     /* Add Lua sample function */
     LuaEngine::setAttrFunc(L, "sample", luaSample);
 
-    if (!input_file)  throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file");
-    if (!output_file) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file");
+    if (parms == NULL)
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid ArrowParms object");
+
+    if ((input_file == NULL) || (input_file[0] == '\0'))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file path");
+
+    if((parms->path == NULL) || (parms->path[0] == '\0'))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file path");
 
     try
     {
@@ -242,13 +240,10 @@ ParquetSampler::ParquetSampler (lua_State* L, const char* input_file, const char
             samplers.push_back(sampler);
         }
 
-        inputPath  = StringLib::duplicate(input_file);
-        outputPath = StringLib::duplicate(output_file);
-
         /* Allocate Implementation */
         impl = new ArrowSamplerImpl(this);
 
-        impl->getPointsFromFile(inputPath, points);
+        impl->processInputFile(input_file, points);
     }
     catch(const RunTimeException& e)
     {
@@ -271,6 +266,8 @@ ParquetSampler::~ParquetSampler(void)
  *----------------------------------------------------------------------------*/
 void ParquetSampler::Delete(void)
 {
+    parms->releaseLuaObject();
+
     for(Thread* pid : samplerPids)
         delete pid;
 
@@ -280,8 +277,6 @@ void ParquetSampler::Delete(void)
     for(point_info_t* pinfo : points)
         delete pinfo;
 
-    delete [] inputPath;
-    delete [] outputPath;
     delete impl;
 }
 
@@ -295,8 +290,8 @@ void* ParquetSampler::samplerThread(void* parm)
 
     for(point_info_t* pinfo : sampler->obj->points)
     {
-        OGRPoint poi = pinfo->point; /* Must make a copy of point for this thread */
-        double   gps = robj->usePOItime() ? pinfo->gps_time : 0;
+        OGRPoint poi(pinfo->x, pinfo->y, 0.0);
+        double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;

@@ -60,10 +60,9 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ParquetSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void getPointsFromFile    (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
-        void createParquetFile    (const char* input_file, const char* output_file);
+        void processInputFile     (const char* file_path, std::vector<ParquetSampler::point_info_t*>& points);
         bool processSamples       (ParquetSampler::sampler_t* sampler);
-        void clearColumns         (void);
+        void createOutpuFile      (void);
 
     private:
 
@@ -81,18 +80,41 @@ class ArrowSamplerImpl
 
         ParquetSampler*                                   parquetSampler;
         Mutex                                             mutex;
-        std::vector<std::shared_ptr<arrow::Field>>        new_fields;
-        std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
+        std::vector<std::shared_ptr<arrow::Field>>        newFields;
+        std::vector<std::shared_ptr<arrow::ChunkedArray>> newColumns;
+
+        std::shared_ptr<arrow::io::ReadableFile>          inputFile;
+        std::unique_ptr<parquet::arrow::FileReader>       reader;
+
+        char* timeKey;
+        char* xKey;
+        char* yKey;
+        bool  asGeo;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        wkbpoint_t                    convertWKBToPoint   (const std::string& wkb_data);
-        std::shared_ptr<arrow::Table> parquetFileToTable  (const char* file_path, const std::vector<const char*>& columnNames = {});
-        void                          tableToParquetFile  (std::shared_ptr<arrow::Table> table, const char* file_path);
-        void                          printParquetMetadata(const char* file_path);
-        std::string                   createFileMap       (void);
+        void                          getMetadata             (void);
+        void                          getPoints               (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getXYPoints             (std::vector<ParquetSampler::point_info_t*>& points);
+        void                          getGeoPoints            (std::vector<ParquetSampler::point_info_t*>& points);
+        std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
+        std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table> table);
+        bool                          makeColumnsWithLists    (ParquetSampler::sampler_t* sampler);
+        bool                          makeColumnsWithOneSample(ParquetSampler::sampler_t* sampler);
+        RasterSample*                 getFirstValidSample     (ParquetSampler::sample_list_t* slist);
+        void                          tableToParquetFile      (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
+        void                          tableToCsvFile          (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
+        std::shared_ptr<arrow::Table> removeGeometryColumn    (const std::shared_ptr<arrow::Table> table);
+        wkbpoint_t                    convertWKBToPoint       (const std::string& wkb_data);
+        void                          printParquetMetadata    (const char* file_path);
+        std::string                   createFileMap           (void);
+        std::string                   createMetadataFileName  (const char* file_path);
+        void                          tableMetadataToJson     (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
 };
 
 #endif  /* __arrow_sampler_impl__ */

@@ -813,7 +813,7 @@ bool GdalRaster::nodataCheck(RasterSample* sample)
 
     if(std::fabs(a-b) < epsilon)
     {
-        sample->value = std::nanf("");
+        sample->value = std::nan("");
         return false;
     }
 
