@@ -60,7 +60,7 @@ class GeoLib: public MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static utm_transform_t  getUTMTransform     (utm_zone_t utm_zone, const char* input_crs=DEFAULT_CRS);
+        static utm_transform_t  getUTMTransform     (utm_zone_t utm, const char* input_crs=DEFAULT_CRS);
         static void             freeUTMTransform    (utm_transform_t transform);
         static utm_zone_t       calcUTMZone         (double latitude, double longitude);
         static bool             calcUTMCoordinates  (utm_transform_t transform, double latitude, double longitude, point_t& coord);

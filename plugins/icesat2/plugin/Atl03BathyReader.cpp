@@ -40,6 +40,7 @@
 #include "core.h"
 #include "h5.h"
 #include "icesat2.h"
+#include "GeoLib.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -560,6 +561,10 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         int32_t photon_in_extent = 0; // the photon index in the current extent
         int32_t bckgrd_in = 0;
 
+        /* Get Set Level Parameters */
+        GeoLib::utm_zone_t utm = GeoLib::calcUTMZone(region.segment_lat[0], region.segment_lon[0]);
+        GeoLib::utm_transform_t utm_transform = GeoLib::getUTMTransform(utm);
+
         /* Traverse All Photons In Dataset */
         while(builder->active && (current_photon < atl03.dist_ph_along.size))
         {
@@ -575,7 +580,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected is %s/%d (%d %ld %ld)!", info->builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", info->builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
@@ -619,15 +624,24 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     }
                 }
 
+                /* Calculate UTM Coordinates */
+                double latitude = atl03.lat_ph[current_photon];
+                double longitude = atl03.lon_ph[current_photon];
+                GeoLib::point_t coord;
+                if(!GeoLib::calcUTMCoordinates(utm_transform, latitude, longitude, coord))
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to convert %ld,%ld to UTM zone %d", latitude, longitude, utm.zone);
+                }
+
                 /* Add Photon to Extent */
                 photon_t ph = {
                     .time_ns = Icesat2Parms::deltatime2timestamp(atl03.delta_time[current_photon]),
                     .index_ph = static_cast<int32_t>(region.first_photon) + current_photon,
                     .geoid_corr_h = 0.0, // TODO
-                    .latitude = atl03.lat_ph[current_photon],
-                    .longitude = atl03.lon_ph[current_photon],
-                    .x_ph = 0.0, // TODO
-                    .y_ph = 0.0, // TODO
+                    .latitude = latitude,
+                    .longitude = longitude,
+                    .x_ph = coord.x,
+                    .y_ph = coord.y,
                     .x_atc = atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon],
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .sigma_along = 0.0, // TODO
@@ -685,7 +699,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     extent->spacecraft_orientation  = atl03.sc_orient[0];
                     extent->reference_ground_track  = builder->start_rgt;
                     extent->cycle                   = builder->start_cycle;
-                    extent->utm_zone                = 0; // TODO
+                    extent->utm_zone                = utm.zone;
                     extent->photon_count            = extent_photons.length();
                     extent->solar_elevation         = atl03.solar_elevation[current_segment];
                     extent->wind_v                  = 0.0; // TODO
