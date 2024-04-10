@@ -176,6 +176,9 @@ class Atl03BathyReader: public LuaObject
                 H5Array<double>     segment_delta_time;
                 H5Array<double>     segment_dist_x;
                 H5Array<float>      solar_elevation;
+                H5Array<float>      sigma_along;
+                H5Array<float>      sigma_across;
+                H5Array<float>      geoid;
                 H5Array<float>      dist_ph_along;
                 H5Array<float>      dist_ph_across;
                 H5Array<float>      h_ph;
@@ -203,6 +206,7 @@ class Atl03BathyReader: public LuaObject
                 /* Read Data */
                 H5Array<float>      met_u10m;
                 H5Array<float>      met_v10m;
+                H5Array<double>     delta_time;
         };
 
         /*--------------------------------------------------------------------
@@ -216,7 +220,8 @@ class Atl03BathyReader: public LuaObject
         int                 numComplete;
         Asset*              asset;
         const char*         resource;
-        char*               resource09;
+        string              resource09;
+        bool                missing09;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
