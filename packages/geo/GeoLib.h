@@ -46,25 +46,28 @@ class GeoLib: public MathLib
         static const char* DEFAULT_CRS;
 
         /*--------------------------------------------------------------------
-         * Typedefs
+         * UTMTransform Subclass
          *--------------------------------------------------------------------*/
 
-        typedef void* utm_transform_t;
-        
-        typedef struct {
-            int zone;
-            bool is_north;
-        } utm_zone_t;
-        
+        class UTMTransform
+        {
+            public:
+                UTMTransform(double initial_latitude, double initial_longitude, const char* input_crs=DEFAULT_CRS);
+                ~UTMTransform(void);
+                point_t calculateCoordinates(double latitude, double longitude);
+                int zone;
+                bool is_north;
+                bool in_error;
+            private:
+                typedef void* utm_transform_t;
+                utm_transform_t transform;
+        };
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static utm_transform_t  getUTMTransform     (utm_zone_t utm, const char* input_crs=DEFAULT_CRS);
-        static void             freeUTMTransform    (utm_transform_t transform);
-        static utm_zone_t       calcUTMZone         (double latitude, double longitude);
-        static bool             calcUTMCoordinates  (utm_transform_t transform, double latitude, double longitude, point_t& coord);
-        static int              luaCalcUTM          (lua_State* L);
+        static int luaCalcUTM (lua_State* L);
 };
 
 #endif /* __geo_lib__ */

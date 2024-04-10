@@ -562,8 +562,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         int32_t bckgrd_in = 0;
 
         /* Get Set Level Parameters */
-        GeoLib::utm_zone_t utm = GeoLib::calcUTMZone(region.segment_lat[0], region.segment_lon[0]);
-        GeoLib::utm_transform_t utm_transform = GeoLib::getUTMTransform(utm);
+        GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
 
         /* Traverse All Photons In Dataset */
         while(builder->active && (current_photon < atl03.dist_ph_along.size))
@@ -627,10 +626,10 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 /* Calculate UTM Coordinates */
                 double latitude = atl03.lat_ph[current_photon];
                 double longitude = atl03.lon_ph[current_photon];
-                GeoLib::point_t coord;
-                if(!GeoLib::calcUTMCoordinates(utm_transform, latitude, longitude, coord))
+                GeoLib::point_t coord = utm_transform.calculateCoordinates(latitude, longitude);
+                if(utm_transform.in_error)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to convert %ld,%ld to UTM zone %d", latitude, longitude, utm.zone);
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to convert %lf,%lf to UTM zone %d", latitude, longitude, utm_transform.zone);
                 }
 
                 /* Add Photon to Extent */
@@ -699,7 +698,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     extent->spacecraft_orientation  = atl03.sc_orient[0];
                     extent->reference_ground_track  = builder->start_rgt;
                     extent->cycle                   = builder->start_cycle;
-                    extent->utm_zone                = utm.zone;
+                    extent->utm_zone                = utm_transform.zone;
                     extent->photon_count            = extent_photons.length();
                     extent->solar_elevation         = atl03.solar_elevation[current_segment];
                     extent->wind_v                  = 0.0; // TODO

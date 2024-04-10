@@ -57,29 +57,32 @@ typedef struct {
 const char* GeoLib::DEFAULT_CRS = "EPSG:7912";  // as opposed to "EPSG:4326"
 
 /******************************************************************************
- * METHODS
+ * UTMTransform Subclass
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * getUTMTransform
+ * Constructor
  *----------------------------------------------------------------------------*/
- GeoLib::utm_transform_t GeoLib::getUTMTransform (utm_zone_t utm, const char* input_crs)
- {
+GeoLib::UTMTransform::UTMTransform(double initial_latitude, double initial_longitude, const char* input_crs)
+{
+    zone = static_cast<int>(ceil((initial_longitude + 180.0) / 6)); // set public member
+    is_north = (initial_latitude >= 0.0); // set public member
+    in_error = false; // set public member
     ogr_trans_t* ogr_trans = new ogr_trans_t;
     ogr_trans->srs_in = OSRNewSpatialReference(NULL);
     ogr_trans->srs_out = OSRNewSpatialReference(NULL);
     OSRSetFromUserInput(ogr_trans->srs_in, input_crs);
     OSRSetProjCS(ogr_trans->srs_out, "UTM");
-    OSRSetUTM(ogr_trans->srs_out, utm.zone, utm.is_north);
+    OSRSetUTM(ogr_trans->srs_out, zone, is_north);
     ogr_trans->transform = OCTNewCoordinateTransformation(ogr_trans->srs_in, ogr_trans->srs_out);
-    return reinterpret_cast<utm_transform_t>(ogr_trans);
- }
+    transform = reinterpret_cast<utm_transform_t>(ogr_trans); // set private member
+}
 
 /*----------------------------------------------------------------------------
- * calcUTMCoordinates
+ * Destructor
  *----------------------------------------------------------------------------*/
- void GeoLib::freeUTMTransform (utm_transform_t transform)
- {
+GeoLib::UTMTransform::~UTMTransform(void)
+{
     ogr_trans_t* ogr_trans = reinterpret_cast<ogr_trans_t*>(transform);
     OSRDestroySpatialReference(ogr_trans->srs_in);
     OSRDestroySpatialReference(ogr_trans->srs_out);
@@ -88,23 +91,14 @@ const char* GeoLib::DEFAULT_CRS = "EPSG:7912";  // as opposed to "EPSG:4326"
 }
 
 /*----------------------------------------------------------------------------
- * calcUTMCoordinates
+ * Destructor
  *----------------------------------------------------------------------------*/
-GeoLib::utm_zone_t GeoLib::calcUTMZone (double latitude, double longitude)
+GeoLib::point_t GeoLib::UTMTransform::calculateCoordinates(double latitude, double longitude)
 {
-    utm_zone_t utm = {
-        .zone = static_cast<int>(ceil((longitude + 180.0) / 6)),
-        .is_north = (latitude >= 0.0)
-    };
-    return utm;
-}
+    point_t coord;
 
-/*----------------------------------------------------------------------------
- * calcUTMCoordinates
- *----------------------------------------------------------------------------*/
-bool GeoLib::calcUTMCoordinates(utm_transform_t transform, double latitude, double longitude, point_t& coord)
-{
-    bool status = false;
+    /* Force In Error To Be Set On Success */
+    in_error = true;
 
     /* Pull Out Transformation */
     ogr_trans_t* ogr_trans = reinterpret_cast<ogr_trans_t*>(transform);
@@ -118,12 +112,16 @@ bool GeoLib::calcUTMCoordinates(utm_transform_t transform, double latitude, doub
     {
         coord.x = x;
         coord.y = y;
-        status = true;
+        in_error = false;
     }
 
-    /* Return Status */
-    return status;
+    /* Return Coordinates */
+    return coord;
 }
+
+/******************************************************************************
+ * METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * luaCalcUTM
@@ -144,24 +142,18 @@ int GeoLib::luaCalcUTM (lua_State* L)
         return 0;
     }
 
-    utm_zone_t utm = calcUTMZone(latitude, longitude);
-    utm_transform_t transform = getUTMTransform(utm);
-
-    int num_ret = 0;
-    point_t coord;
-    if(calcUTMCoordinates(transform, latitude, longitude, coord))
+    UTMTransform transform(latitude, longitude);
+    point_t coord = transform.calculateCoordinates(latitude, longitude);
+    if(!transform.in_error)
     {
-        lua_pushinteger(L, utm.zone);
+        lua_pushinteger(L, transform.zone);
         lua_pushnumber(L, coord.x);
         lua_pushnumber(L, coord.y);
-        num_ret = 3;
+        return 3;
     }
     else
     {
         mlog(CRITICAL, "Failed to perform UTM transformation on %lf, %lf", latitude, longitude);
+        return 0;
     }
-
-    freeUTMTransform(transform);
-
-    return num_ret;
 }
