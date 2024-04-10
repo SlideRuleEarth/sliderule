@@ -33,10 +33,6 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "GeoIndexedRaster.h"
-#include "GeoJsonRaster.h"
-#include "GeoUserRaster.h"
-#include "RasterSampler.h"
 #include "geo.h"
 
 #include <gdal.h>
@@ -246,6 +242,7 @@ int geo_open (lua_State* L)
         {"raster",      RasterObject::luaCreate},
         {"sampler",     RasterSampler::luaCreate},
         {"parms",       GeoParms::luaCreate},
+        {"calcutm",     GeoLib::luaCalcUTM},
         {NULL,          NULL}
     };
 

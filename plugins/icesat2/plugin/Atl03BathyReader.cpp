@@ -81,7 +81,6 @@ const RecordObject::fieldDef_t Atl03BathyReader::exRecDef[] = {
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
-
 const char* Atl03BathyReader::OBJECT_TYPE = "Atl03BathyReader";
 const char* Atl03BathyReader::LUA_META_NAME = "Atl03BathyReader";
 const struct luaL_Reg Atl03BathyReader::LUA_META_TABLE[] = {

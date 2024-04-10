@@ -29,35 +29,42 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geopkg__
-#define __geopkg__
+#ifndef __geo_lib__
+#define __geo_lib__
 
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
+#include "LuaEngine.h"
+#include "MathLib.h"
 
-#include "GdalRaster.h"
-#include "GeoIndexedRaster.h"
-#include "GeoJsonRaster.h"
-#include "GeoLib.h"
-#include "GeoParms.h"
-#include "GeoRaster.h"
-#include "GeoUserRaster.h"
-#include "RasterObject.h"
-#include "RasterObject.h"
-#include "RasterSample.h"
-#include "RasterSampler.h"
-#include "RasterSubset.h"
+class GeoLib: public MathLib
+{
+    public:
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-extern "C" {
-void initgeo(void);
-void deinitgeo(void);
-}
+        static const char* DEFAULT_CRS;
 
-#endif  /* __geopkg__*/
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
 
+        typedef void* utm_transform_t;
+        
+        typedef struct {
+            int zone;
+            bool is_north;
+        } utm_zone_t;
+        
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
+        static utm_transform_t  getUTMTransform     (utm_zone_t utm_zone, const char* input_crs=DEFAULT_CRS);
+        static void             freeUTMTransform    (utm_transform_t transform);
+        static utm_zone_t       calcUTMZone         (double latitude, double longitude);
+        static bool             calcUTMCoordinates  (utm_transform_t transform, double latitude, double longitude, point_t& coord);
+        static int              luaCalcUTM          (lua_State* L);
+};
+
+#endif /* __geo_lib__ */
