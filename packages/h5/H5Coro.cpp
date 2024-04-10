@@ -55,18 +55,10 @@
 #endif
 
 /******************************************************************************
- * B-TREE STRUCTS
- ******************************************************************************/
-
-
-#define H5T_NCSET H5T_CSET_RESERVED_2 /*Number of character sets actually defined  */
-
-/******************************************************************************
  * MACROS
  ******************************************************************************/
 
 #define H5_INVALID(var)  (var == (0xFFFFFFFFFFFFFFFFllu >> (64 - (sizeof(var) * 8))))
-#define NC_FILLVAL_NAME "_FillValue"
 
 /******************************************************************************
  * H5 FUTURE CLASS
@@ -1136,6 +1128,9 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
         .dlvl               = dlvl
         
     };
+
+    // NOTE: reasoning for this is that the above only populates for a local copy
+    // Option: eliminate the above style or modify to sustain values for outside use
 
     if (heap_info_ptr != NULL) // Populate passed struct
     {
@@ -2340,9 +2335,8 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 print2term("Exponent Location:                                               %d\n", (int)exp_location);
                 print2term("Exponent Size:                                                   %d\n", (int)exp_size);
                 print2term("Mantissa Location:                                               %d\n", (int)mant_location);
-                print2term("Mantissa Size:                                                   %u\n", (unsigned int)mant_size);
+                print2term("Mantissa Size:                                                   %d\n", (int)mant_size);
                 print2term("Exponent Bias:                                                   %d\n", (int)exp_bias);
-
             }
             break;
         }
@@ -2615,7 +2609,6 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             {
                 highestDataLevel = dlvl + 1;
                 readObjHdr(object_header_addr, highestDataLevel);
-
             }
         }
     }
@@ -2898,7 +2891,6 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Get Sizes */
-
     uint64_t name_size = readField(2, &pos);
     uint64_t datatype_size = readField(2, &pos);
     uint64_t dataspace_size = readField(2, &pos);
@@ -2908,7 +2900,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
     }
-    uint8_t attr_name[STR_BUFF_SIZE]; // = {0};
+    uint8_t attr_name[STR_BUFF_SIZE];
 
     /* Set attr_name: version 3 bumps by 4 bytes*/
     if (version == 1) {
@@ -2953,9 +2945,6 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         print2term("Dataspace Message Bytes:                                         %d\n", (int)dataspace_size);
     }
 
-    /* _FillAtribute ID for NetCDF */
-    // TODO
-
     /* Shortcut Out if Not Desired Attribute */
     if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
         !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
@@ -2984,7 +2973,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
     }
-    
+
     pos += dataspace_bytes_read;
     if (version == 1) {
         // dataspace padding, align to next 8-byte boundary
@@ -3056,10 +3045,6 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)name_bt2_address);
     }
-    else
-    {
-        pos += metaData.offsetsize;
-    }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
@@ -3087,6 +3072,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         }
 
         /* Check if Attribute Located Non-Dense, Else Init Dense Search */
+        
         if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
         {
             print2term("Entering dense attribute search; No main attribute message match. \n");
@@ -3582,8 +3568,6 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
     /* Open Resource and Read Dataset */
     H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
-    // h5file.setup()
-    // etc. 
     
     if(info.data)
     {
@@ -3649,10 +3633,9 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* String to Int - assumes ASCII encoding */
             else if(info.datatype == RecordObject::STRING)
             {
-                // char* dptr = (char*)info.data;
                 uint8_t* dptr = (uint8_t*)info.data;
 
-                // TODO this is redundant, but metaData not visible to scope
+                // NOTE this len calc is redundant, but metaData not visible to scope
                 uint8_t* len_cnt = dptr;
                 uint32_t length = 0;
                 while (*len_cnt != '\0') {

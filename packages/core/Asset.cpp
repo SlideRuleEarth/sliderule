@@ -151,13 +151,13 @@ const Asset* Asset::assetFactory(lua_State* L, std::vector<const char*> attrs) {
     // force rebuild
     attributes_t _attributes;
 
-    _attributes.name       = attrs[0]; // getLuaString(L, 1);
-    _attributes.identity   = attrs[1]; // getLuaString(L, 2);
-    _attributes.driver     = attrs[2]; // getLuaString(L, 3);
-    _attributes.path       = attrs[3]; // getLuaString(L, 4);
-    _attributes.index      = attrs[4]; // getLuaString(L, 5, true, NULL);
-    _attributes.region     = attrs[5]; // getLuaString(L, 6, true, NULL);
-    _attributes.endpoint   = attrs[6]; // getLuaString(L, 7, true, NULL);
+    _attributes.name       = attrs[0]; 
+    _attributes.identity   = attrs[1]; 
+    _attributes.driver     = attrs[2]; 
+    _attributes.path       = attrs[3]; 
+    _attributes.index      = attrs[4];
+    _attributes.region     = attrs[5];
+    _attributes.endpoint   = attrs[6];
 
     io_driver_t _driver;
     bool found = false;
@@ -169,8 +169,6 @@ const Asset* Asset::assetFactory(lua_State* L, std::vector<const char*> attrs) {
 
     if(!found)
     {
-        // triggering error -> remove mssg for now
-        // mlog(CRITICAL, "Failed to find I/O driver for %s, using default driver", _attributes.driver);
         _driver.factory = Asset::IODriver::create; // set it to the default
     }
 

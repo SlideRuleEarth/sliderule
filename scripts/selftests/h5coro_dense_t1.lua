@@ -123,7 +123,7 @@ dataq = "dataq4"
 rsps2s4 = msg.subscribe(dataq)
 
 dataset_name = "/Temp/coordinates"
-dtype = core.DYNAMIC -- NOTE: TEXT not valid 
+dtype = core.STRING -- NOTE: TEXT not valid --> use DYNAMIC or STRING
 
 f4 = h5.dataset(core.READER, 
                 asset4, 

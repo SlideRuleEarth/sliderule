@@ -120,13 +120,11 @@ class H5FileBuffer
         static const int MAX_NDIMS      = 2;
         static const int FLAT_NDIMS     = 3;
 
-
         /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
 
         typedef H5Future::info_t info_t;
-
 
         /*--------------------------------------------------------------------
         * I/O Context (subclass)
@@ -163,10 +161,6 @@ class H5FileBuffer
                             H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only=false);
         virtual             ~H5FileBuffer       (void);
 
-
-        /* KAT ADDED - CHANGE VISIBILITY */
-        // static uint64_t readField(int64_t size, uint64_t* pos);
-
         typedef enum {
             DATASPACE_MSG           = 0x1,
             LINK_INFO_MSG           = 0x2,
@@ -196,14 +190,12 @@ class H5FileBuffer
             uint16_t                max_heap_size;
             uint8_t                 hdr_flags;
             
-            uint8_t                 heap_off_size;  /* uint32_t Size of heap offsets (in bytes) */
-            uint8_t                 heap_len_size;  /* Size of heap ID lengths (in bytes) */
+            uint8_t                 heap_off_size; // uint32_t Size of heap offsets (in bytes)
+            uint8_t                 heap_len_size; // size of heap ID lengths (in bytes)
 
-            int                     dlvl; /* Pass down to found message for dense */
+            int                     dlvl; // pass down to found message for dense
 
         } heap_info_t;
-
-        /* END OF KAT MODIFIED */
 
     protected:
 
@@ -269,20 +261,6 @@ class H5FileBuffer
         * Typedefs
         *--------------------------------------------------------------------*/
 
-        // typedef enum {
-        //     DATASPACE_MSG           = 0x1,
-        //     LINK_INFO_MSG           = 0x2,
-        //     DATATYPE_MSG            = 0x3,
-        //     FILL_VALUE_MSG          = 0x5,
-        //     LINK_MSG                = 0x6,
-        //     DATA_LAYOUT_MSG         = 0x8,
-        //     FILTER_MSG              = 0xB,
-        //     ATTRIBUTE_MSG           = 0xC,
-        //     HEADER_CONT_MSG         = 0x10,
-        //     SYMBOL_TABLE_MSG        = 0x11,
-        //     ATTRIBUTE_INFO_MSG      = 0x15
-        // } msg_type_t;
-
         typedef enum {
             FIXED_POINT_TYPE        = 0,
             FLOATING_POINT_TYPE     = 1,
@@ -315,29 +293,6 @@ class H5FileBuffer
             SCALEOFFSET_FILTER      = 6,
             NUM_FILTERS             = 7
         } filter_t;
-
-        /* KAT MODIFIED */
-        // typedef struct {
-        //     int                     table_width;
-        //     int                     curr_num_rows;
-        //     int                     starting_blk_size;
-        //     int                     max_dblk_size;
-        //     int                     blk_offset_size;  // size in bytes of block offset field
-        //     bool                    dblk_checksum;
-        //     msg_type_t              msg_type;
-        //     int                     num_objects;
-        //     int                     cur_objects; // mutable
-        //     uint64_t                root_blk_addr;
-        //     uint32_t                max_size_mg_obj;
-        //     uint16_t                max_heap_size;
-        //     uint8_t                 hdr_flags;
-            
-        //     uint8_t                 heap_off_size;  /* uint32_t Size of heap offsets (in bytes) */
-        //     uint8_t                 heap_len_size;  /* Size of heap ID lengths (in bytes) */
-
-        //     int                     dlvl; /* Pass down to found message for dense */
-
-        // } heap_info_t;
 
         typedef struct {
             uint32_t                chunk_size;

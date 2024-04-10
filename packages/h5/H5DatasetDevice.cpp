@@ -142,7 +142,6 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     }
     catch (const RunTimeException& e)
     {
-        // can repalace e.level() with CRITICAL
         mlog(e.level(), "Failed to create H5DatasetDevice for %s/%s: %s", asset->getName(), dataset_name, e.what());
         dataBuffer = NULL;
         dataSize = false;
