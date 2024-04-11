@@ -93,7 +93,7 @@ class Atl03BathyReader: public LuaObject
             float           sigma_across;           // across track aerial uncertainty
             float           ndwi;                   // normalized difference water index using HLS data
             uint8_t         yapc_score;
-            uint8_t         max_signal_conf;        // maximum value in the atl03 confidence table
+            int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
             int8_t          quality_ph;
         } photon_t;
 
@@ -226,6 +226,7 @@ class Atl03BathyReader: public LuaObject
         const int           read_timeout_ms;
         Publisher*          outQ;
         BathyParms*         parms;
+        int                 signalConfColIndex;
 
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file

@@ -148,7 +148,7 @@ class Icesat2Parms: public NetsvcParms
 
         /* Signal Confidence per Photon */
         typedef enum {
-            SIGNAL_CONF_OFFSET = 2, // added to value to get index
+            ATL03_INVALID_CONFIDENCE = -3,
             CNF_POSSIBLE_TEP = -2,
             CNF_NOT_CONSIDERED = -1,
             CNF_BACKGROUND = 0,
@@ -157,7 +157,7 @@ class Icesat2Parms: public NetsvcParms
             CNF_SURFACE_MEDIUM = 3,
             CNF_SURFACE_HIGH = 4,
             NUM_SIGNAL_CONF = 7,
-            ATL03_INVALID_CONFIDENCE = 8
+            SIGNAL_CONF_OFFSET = 2 // added to value to get index
         } signal_conf_t;
 
         /* Quality Level per Photon */
@@ -172,11 +172,13 @@ class Icesat2Parms: public NetsvcParms
 
         /* Surface Types for Signal Confidence */
         typedef enum {
+            SRT_DYNAMIC = -1, // select surface type with maximum confidence
             SRT_LAND = 0,
             SRT_OCEAN = 1,
             SRT_SEA_ICE = 2,
             SRT_LAND_ICE = 3,
-            SRT_INLAND_WATER = 4
+            SRT_INLAND_WATER = 4,
+            NUM_SURFACE_TYPES = 5
         } surface_type_t;
 
         /* ATL08 Surface Classification */

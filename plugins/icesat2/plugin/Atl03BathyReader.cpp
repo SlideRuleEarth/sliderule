@@ -61,7 +61,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
     {"ndwi",            RecordObject::FLOAT,    offsetof(photon_t, ndwi),           1,  NULL, NATIVE_FLAGS},
     {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"max_signal_conf", RecordObject::UINT8,    offsetof(photon_t, max_signal_conf),1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"max_signal_conf", RecordObject::INT8,     offsetof(photon_t, max_signal_conf),1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
 };
 
@@ -150,6 +150,16 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     asset = _asset;
     resource = StringLib::duplicate(_resource);
     parms = _parms;
+
+    /* Set Signal Confidence Index */
+    if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+    {
+        signalConfColIndex = H5Coro::ALL_COLS;
+    }
+    else
+    {
+        signalConfColIndex = static_cast<int>(parms->surface_type);
+    }
 
     /* Generate ATL09 Resource Name */
     try
@@ -470,11 +480,11 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     solar_elevation     (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->builder->context, 0, region.first_segment, region.num_segments),
     sigma_along         (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->builder->context, 0, region.first_segment, region.num_segments),
     sigma_across        (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->builder->context, 0, region.first_segment, region.num_segments),
-    geoid               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),    &info->builder->context, 0, region.first_segment, region.num_segments),
+    geoid               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->builder->context, 0, region.first_segment, region.num_segments),
     dist_ph_along       (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->builder->context, 0, region.first_photon,  region.num_photons),
     dist_ph_across      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->builder->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->builder->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->builder->context, info->builder->parms->surface_type, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->builder->context, info->builder->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->builder->context, 0, region.first_photon,  region.num_photons),
     weight_ph           (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->builder->context, 0, region.first_photon,  region.num_photons),
     lat_ph              (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->builder->context, 0, region.first_photon,  region.num_photons),
@@ -600,8 +610,29 @@ void* Atl03BathyReader::subsettingThread (void* parm)
 
             do
             {
-                /* Check and Set Signal Confidence Level */
-                int8_t atl03_cnf = atl03.signal_conf_ph[current_photon];
+                /* Set Signal Confidence Level */
+                int8_t atl03_cnf;
+                if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+                {
+                    /* When dynamic, the signal_conf_ph contains all 5 columns; and the
+                     * code below chooses the signal confidence that is the highest
+                     * value of the five */
+                    int32_t conf_index = current_photon * Icesat2Parms::NUM_SURFACE_TYPES;
+                    atl03_cnf = Icesat2Parms::ATL03_INVALID_CONFIDENCE;
+                    for(int i = 0; i < Icesat2Parms::NUM_SURFACE_TYPES; i++)
+                    {
+                        if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
+                        {
+                            atl03_cnf = atl03.signal_conf_ph[conf_index + i];
+                        }
+                    }
+                }
+                else
+                {
+                    atl03_cnf = atl03.signal_conf_ph[current_photon];
+                }
+
+                /* Check Signal Confidence Level */
                 if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
@@ -611,7 +642,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     break;
                 }
 
-                /* Check and Set ATL03 Photon Quality Level */
+                /* Set and Check ATL03 Photon Quality Level */
                 int8_t quality_ph = atl03.quality_ph[current_photon];
                 if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
                 {
@@ -622,7 +653,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     break;
                 }
 
-                /* Check and Set YAPC Score */
+                /* Set and Check YAPC Score */
                 uint8_t yapc_score = atl03.weight_ph[current_photon];
                 if(yapc_score < parms->yapc.score)
                 {
@@ -662,7 +693,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .sigma_across = atl03.sigma_across[current_segment],
                     .ndwi = 0.0, // TODO
                     .yapc_score = yapc_score,
-                    .max_signal_conf = 0, // TODO
+                    .max_signal_conf = atl03_cnf,
                     .quality_ph = (int8_t)quality_ph,
                 };
                 extent_photons.add(ph);
@@ -762,7 +793,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         if(out_file == NULL)
                         {
                             /* Open JSON File */
-                            FString json_filename("%s_beam_%d.json", parms->beam_file_prefix, info->beam);
+                            FString json_filename("%sbeam_%d.json", parms->beam_file_prefix, info->beam);
                             fileptr_t json_file = fopen(json_filename.c_str(), "w");
                             if(json_file == NULL)
                             {
@@ -801,7 +832,7 @@ FString json_contents(R"json({
                             fclose(json_file);
 
                             /* Open Data File */
-                            FString filename("%s_beam_%d.csv", parms->beam_file_prefix, info->beam);
+                            FString filename("%sbeam_%d.csv", parms->beam_file_prefix, info->beam);
                             out_file = fopen(filename.c_str(), "w");
                             if(out_file == NULL)
                             {

@@ -150,6 +150,16 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     resource = StringLib::duplicate(_resource);
     parms = _parms;
 
+    /* Set Signal Confidence Index */
+    if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+    {
+        signalConfColIndex = H5Coro::ALL_COLS;
+    }
+    else
+    {
+        signalConfColIndex = static_cast<int>(parms->surface_type);
+    }
+
     /* Generate ATL08 Resource Name */
     resource08 = StringLib::duplicate(resource);
     resource08[4] = '8';
@@ -470,7 +480,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     dist_ph_along       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
     dist_ph_across      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->parms->surface_type, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
     lat_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
     lon_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
@@ -1293,8 +1303,29 @@ void* Atl03Reader::subsettingThread (void* parm)
                 {
                     do
                     {
-                        /* Check and Set Signal Confidence Level */
-                        int8_t atl03_cnf = atl03.signal_conf_ph[current_photon];
+                        /* Set Signal Confidence Level */
+                        int8_t atl03_cnf;
+                        if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+                        {
+                            /* When dynamic, the signal_conf_ph contains all 5 columns; and the
+                            * code below chooses the signal confidence that is the highest
+                            * value of the five */
+                            int32_t conf_index = current_photon * Icesat2Parms::NUM_SURFACE_TYPES;
+                            atl03_cnf = Icesat2Parms::ATL03_INVALID_CONFIDENCE;
+                            for(int i = 0; i < Icesat2Parms::NUM_SURFACE_TYPES; i++)
+                            {
+                                if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
+                                {
+                                    atl03_cnf = atl03.signal_conf_ph[conf_index + i];
+                                }
+                            }
+                        }
+                        else
+                        {
+                            atl03_cnf = atl03.signal_conf_ph[current_photon];
+                        }
+
+                        /* Check Signal Confidence Level */
                         if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
@@ -1304,7 +1335,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             break;
                         }
 
-                        /* Check and Set ATL03 Photon Quality Level */
+                        /* Set and Check ATL03 Photon Quality Level */
                         int8_t quality_ph = atl03.quality_ph[current_photon];
                         if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
                         {
@@ -1315,7 +1346,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             break;
                         }
 
-                        /* Check and Set ATL08 Classification */
+                        /* Set and Check ATL08 Classification */
                         Icesat2Parms::atl08_classification_t atl08_class = Icesat2Parms::ATL08_UNCLASSIFIED;
                         if(atl08.classification)
                         {
@@ -1330,7 +1361,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             }
                         }
 
-                        /* Check and Set YAPC Score */
+                        /* Set and Check YAPC Score */
                         uint8_t yapc_score = 0;
                         if(yapc.score)
                         {

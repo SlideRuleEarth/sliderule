@@ -33,9 +33,10 @@ region = sliderule.toregion(args.aoi)
 # Set Parameters
 parms = { 
     "poly": region['poly'],
+    "srt": icesat2.SRT_DYNAMIC,
     "cnf": "atl03_not_considered",
     "pass_invalid": True,
-    "beam_file_prefix": "bathy",
+    "beam_file_prefix": "/tmp/bathy_",
     "output": { 
         "path": args.serverfile, 
         "format": "csv", 
