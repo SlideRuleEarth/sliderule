@@ -33,6 +33,8 @@
  * INCLUDES
  ******************************************************************************/
 
+#define _USE_MATH_DEFINES
+
 #include <math.h>
 #include <float.h>
 #include <stdarg.h>
@@ -40,6 +42,7 @@
 #include "core.h"
 #include "h5.h"
 #include "icesat2.h"
+#include "GeoLib.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -49,38 +52,38 @@ const char* Atl03BathyReader::phRecType = "bathyrec.photons";
 const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
     {"index_ph",        RecordObject::INT32,    offsetof(photon_t, index_ph),       1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"index_seg",       RecordObject::INT32,    offsetof(photon_t, index_seg),      1,  NULL, NATIVE_FLAGS},
     {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"x_ph",            RecordObject::DOUBLE,   offsetof(photon_t, x_ph),           1,  NULL, NATIVE_FLAGS},
     {"y_ph",            RecordObject::DOUBLE,   offsetof(photon_t, y_ph),           1,  NULL, NATIVE_FLAGS},
     {"x_atc",           RecordObject::DOUBLE,   offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
     {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
+    {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
+    {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
     {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
+    {"solar_elevation", RecordObject::FLOAT,    offsetof(photon_t, solar_elevation),1,  NULL, NATIVE_FLAGS},
+    {"wind_v",          RecordObject::FLOAT,    offsetof(photon_t, wind_v),         1,  NULL, NATIVE_FLAGS},
+    {"pointing_angle",  RecordObject::FLOAT,    offsetof(photon_t, pointing_angle), 1,  NULL, NATIVE_FLAGS},
     {"ndwi",            RecordObject::FLOAT,    offsetof(photon_t, ndwi),           1,  NULL, NATIVE_FLAGS},
-    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"max_signal_conf", RecordObject::UINT8,    offsetof(photon_t, max_signal_conf),1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS},
+    {"max_signal_conf", RecordObject::INT8,     offsetof(photon_t, max_signal_conf),1,  NULL, NATIVE_FLAGS},
+    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS},
 };
 
 const char* Atl03BathyReader::exRecType = "bathyrec";
 const RecordObject::fieldDef_t Atl03BathyReader::exRecDef[] = {
-    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS},
+    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS},
+    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS},
+    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
     {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
-    {"background_rate", RecordObject::DOUBLE,   offsetof(extent_t, background_rate),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"solar_elevation", RecordObject::FLOAT,    offsetof(extent_t, solar_elevation),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"wind_v",          RecordObject::FLOAT,    offsetof(extent_t, wind_v),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"pointing_angle",  RecordObject::FLOAT,    offsetof(extent_t, pointing_angle),         1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
-
 
 const char* Atl03BathyReader::OBJECT_TYPE = "Atl03BathyReader";
 const char* Atl03BathyReader::LUA_META_NAME = "Atl03BathyReader";
@@ -93,12 +96,13 @@ const struct luaL_Reg Atl03BathyReader::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <ndwi_raster>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Atl03BathyReader::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
     BathyParms* parms = NULL;
+    RasterObject* raster = NULL;
 
     try
     {
@@ -107,15 +111,17 @@ int Atl03BathyReader::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 4, BathyParms::OBJECT_TYPE));
-        bool send_terminator = getLuaBoolean(L, 5, true, true);
+        raster = dynamic_cast<RasterObject*>(getLuaObject(L, 5, RasterObject::OBJECT_TYPE, true, NULL));
+        bool send_terminator = getLuaBoolean(L, 6, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, raster, send_terminator));
     }
     catch(const RunTimeException& e)
     {
         if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
+        if(raster) raster->releaseLuaObject();
         mlog(e.level(), "Error creating Atl03BathyReader: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -133,8 +139,9 @@ void Atl03BathyReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, bool _send_terminator):
+Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, RasterObject* _ndwi_raster, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    missing09(false),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
     assert(_asset);
@@ -149,13 +156,30 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     asset = _asset;
     resource = StringLib::duplicate(_resource);
     parms = _parms;
+    ndwiRaster = _ndwi_raster;
+
+    /* Set Signal Confidence Index */
+    if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+    {
+        signalConfColIndex = H5Coro::ALL_COLS;
+    }
+    else
+    {
+        signalConfColIndex = static_cast<int>(parms->surface_type);
+    }
 
     /* Generate ATL09 Resource Name */
-    resource09 = StringLib::duplicate(resource);
-    resource09[4] = '9';
-    // TODO: need to change the name to the first ATL03 granule for the orbit (region = 1)
-    resource09[27] = '0';
-    resource09[28] = '1';
+    try
+    {
+        char atl09_key[BathyParms::ATL09_RESOURCE_KEY_LEN + 1];
+        BathyParms::getATL09Key(atl09_key, resource);
+        resource09 = parms->alt09_index[atl09_key];
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(WARNING, "Unable to locate ATL09 granule for: %s", resource);
+        missing09 = true;
+    }
 
     /* Create Publisher and File Pointer */
     outQ = new Publisher(outq_name);
@@ -229,9 +253,10 @@ Atl03BathyReader::~Atl03BathyReader (void)
     parms->releaseLuaObject();
 
     delete [] resource;
-    delete [] resource09;
-
+    
     asset->releaseLuaObject();
+
+    if(ndwiRaster) ndwiRaster->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -462,10 +487,14 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     segment_delta_time  (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->builder->context, 0, region.first_segment, region.num_segments),
     segment_dist_x      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->builder->context, 0, region.first_segment, region.num_segments),
     solar_elevation     (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->builder->context, 0, region.first_segment, region.num_segments),
+    sigma_along         (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->builder->context, 0, region.first_segment, region.num_segments),
+    sigma_across        (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->builder->context, 0, region.first_segment, region.num_segments),
+    ref_elev            (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->builder->context, 0, region.first_segment, region.num_segments),
+    geoid               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->builder->context, 0, region.first_segment, region.num_segments),
     dist_ph_along       (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->builder->context, 0, region.first_photon,  region.num_photons),
     dist_ph_across      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->builder->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->builder->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->builder->context, info->builder->parms->surface_type, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->builder->context, info->builder->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->builder->context, 0, region.first_photon,  region.num_photons),
     weight_ph           (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->builder->context, 0, region.first_photon,  region.num_photons),
     lat_ph              (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->builder->context, 0, region.first_photon,  region.num_photons),
@@ -479,6 +508,10 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     segment_delta_time.join(info->builder->read_timeout_ms, true);
     segment_dist_x.join(info->builder->read_timeout_ms, true);
     solar_elevation.join(info->builder->read_timeout_ms, true);
+    sigma_along.join(info->builder->read_timeout_ms, true);
+    sigma_across.join(info->builder->read_timeout_ms, true);
+    ref_elev.join(info->builder->read_timeout_ms, true);
+    geoid.join(info->builder->read_timeout_ms, true);
     dist_ph_along.join(info->builder->read_timeout_ms, true);
     dist_ph_across.join(info->builder->read_timeout_ms, true);
     h_ph.join(info->builder->read_timeout_ms, true);
@@ -504,18 +537,20 @@ Atl03BathyReader::Atl03Data::~Atl03Data (void)
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     valid       (false),
-    met_u10m    (info->builder->asset, info->builder->resource09, FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->builder->context09),
-    met_v10m    (info->builder->asset, info->builder->resource09, FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->builder->context09)
+    met_u10m    (info->builder->missing09 ? NULL : info->builder->asset, info->builder->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->builder->context09),
+    met_v10m    (info->builder->missing09 ? NULL : info->builder->asset, info->builder->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->builder->context09),
+    delta_time  (info->builder->missing09 ? NULL : info->builder->asset, info->builder->resource09.c_str(), FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->builder->context09)
 {
     try
     {
         met_u10m.join(info->builder->read_timeout_ms, true);
         met_v10m.join(info->builder->read_timeout_ms, true);
+        delta_time.join(info->builder->read_timeout_ms, true);
         valid = true;
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable for %s", info->builder->resource09);
+        mlog(CRITICAL, "ATL09 data unavailable for %s", info->builder->resource09.c_str());
     }
 }
 
@@ -552,14 +587,24 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         Atl03Data atl03(info, region);
         Atl09Class atl09(info);
 
-        /* Initialize Extent Counter */
-        List<photon_t> extent_photons;     // list of individual photons in extent
+        /* Initialize Extent State */
+        List<photon_t> extent_photons; // list of individual photons in extent
         uint32_t extent_counter = 0;
         int32_t current_photon = 0; // index into the photon rate variables 
         int32_t current_segment = 0; // index into the segment rate variables
+        int32_t previous_segment = -1; // previous index used to determine when segment has changed (and segment level variables need to be changed)
         int32_t photon_in_segment = 0; // the photon number in the current segment
         int32_t photon_in_extent = 0; // the photon index in the current extent
-        int32_t bckgrd_in = 0;
+        int32_t bckgrd_index = 0; // background 50Hz group
+        int32_t low_rate_index = 0; // ATL09 low rate group
+
+        /* Initialize Segment Level Fields */
+        float wind_v = 0.0;
+        float pointing_angle = 90.0;
+        float ndwi = std::numeric_limits<float>::quiet_NaN();
+
+        /* Get Set Level Parameters */
+        GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
 
         /* Traverse All Photons In Dataset */
         while(builder->active && (current_photon < atl03.dist_ph_along.size))
@@ -576,14 +621,44 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected is %s/%d (%d %ld %ld)!", info->builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", info->builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
             do
             {
-                /* Check and Set Signal Confidence Level */
-                int8_t atl03_cnf = atl03.signal_conf_ph[current_photon];
+                /* Check Region */
+                if(region.inclusion_ptr)
+                {
+                    if(!region.inclusion_ptr[current_segment])
+                    {
+                        break;
+                    }
+                }
+
+                /* Set Signal Confidence Level */
+                int8_t atl03_cnf;
+                if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+                {
+                    /* When dynamic, the signal_conf_ph contains all 5 columns; and the
+                     * code below chooses the signal confidence that is the highest
+                     * value of the five */
+                    int32_t conf_index = current_photon * Icesat2Parms::NUM_SURFACE_TYPES;
+                    atl03_cnf = Icesat2Parms::ATL03_INVALID_CONFIDENCE;
+                    for(int i = 0; i < Icesat2Parms::NUM_SURFACE_TYPES; i++)
+                    {
+                        if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
+                        {
+                            atl03_cnf = atl03.signal_conf_ph[conf_index + i];
+                        }
+                    }
+                }
+                else
+                {
+                    atl03_cnf = atl03.signal_conf_ph[current_photon];
+                }
+
+                /* Check Signal Confidence Level */
                 if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
@@ -593,7 +668,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     break;
                 }
 
-                /* Check and Set ATL03 Photon Quality Level */
+                /* Set and Check ATL03 Photon Quality Level */
                 int8_t quality_ph = atl03.quality_ph[current_photon];
                 if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
                 {
@@ -604,38 +679,81 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     break;
                 }
 
-                /* Check and Set YAPC Score */
+                /* Set and Check YAPC Score */
                 uint8_t yapc_score = atl03.weight_ph[current_photon];
                 if(yapc_score < parms->yapc.score)
                 {
                     break;
                 }
 
-                /* Check Region */
-                if(region.inclusion_ptr)
+                /* Calculate UTM Coordinates */
+                double latitude = atl03.lat_ph[current_photon];
+                double longitude = atl03.lon_ph[current_photon];
+                GeoLib::point_t coord = utm_transform.calculateCoordinates(latitude, longitude);
+                if(utm_transform.in_error)
                 {
-                    if(!region.inclusion_ptr[current_segment])
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to convert %lf,%lf to UTM zone %d", latitude, longitude, utm_transform.zone);
+                }
+
+                /* Save Off Latest Delta Time */
+                double current_delta_time = atl03.delta_time[current_photon];
+
+                /* Calculate Segment Level Fields */
+                if(previous_segment != current_segment)
+                {
+                    previous_segment = current_segment;
+
+                    /* Calculate Wind Speed */
+                    if(atl09.valid)
                     {
-                        break;
+                        /* Find Closest ATL09 Low Rate Entry */
+                        while((low_rate_index < (atl09.delta_time.size - 1)) && (atl09.delta_time[low_rate_index+1] < current_delta_time))
+                        {
+                            low_rate_index++;
+                        }
+                        wind_v = sqrt(pow(atl09.met_u10m[low_rate_index], 2.0) + pow(atl09.met_v10m[low_rate_index], 2.0));                    
+                    }
+                    
+                    /* Calculate Pointing Angle */
+                    pointing_angle = 90.0 - ((180.0 / M_PI) * atl03.ref_elev[current_segment]);
+
+                    /* Sample Raster for NDWI */
+                    if(builder->ndwiRaster)
+                    {
+                        double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
+                        MathLib::point_3d_t geo = {
+                            .x = region.segment_lon[current_segment],
+                            .y = region.segment_lat[current_segment],
+                            .z = 0.0 // since we are not sampling elevation data, this should be fine at zero
+                        };
+                        List<RasterSample*> slist;
+                        uint32_t err = builder->ndwiRaster->getSamples(geo, gps, slist);
+                        if(slist.length() > 0) ndwi = static_cast<float>(slist[0]->value);
+                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, geo.y, geo.x, err);
                     }
                 }
 
                 /* Add Photon to Extent */
                 photon_t ph = {
-                    .time_ns = Icesat2Parms::deltatime2timestamp(atl03.delta_time[current_photon]),
+                    .time_ns = Icesat2Parms::deltatime2timestamp(current_delta_time),
                     .index_ph = static_cast<int32_t>(region.first_photon) + current_photon,
-                    .geoid_corr_h = 0.0, // TODO
-                    .latitude = atl03.lat_ph[current_photon],
-                    .longitude = atl03.lon_ph[current_photon],
-                    .x_ph = 0.0, // TODO
-                    .y_ph = 0.0, // TODO
+                    .index_seg = static_cast<int32_t>(region.first_segment) + current_segment,
+                    .latitude = latitude,
+                    .longitude = longitude,
+                    .x_ph = coord.x,
+                    .y_ph = coord.y,
                     .x_atc = atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon],
                     .y_atc = atl03.dist_ph_across[current_photon],
-                    .sigma_along = 0.0, // TODO
-                    .sigma_across = 0.0, // TODO
-                    .ndwi = 0.0, // TODO
+                    .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
+                    .geoid_corr_h = atl03.h_ph[current_photon] + atl03.geoid[current_segment],
+                    .sigma_along = atl03.sigma_along[current_segment],
+                    .sigma_across = atl03.sigma_across[current_segment],
+                    .solar_elevation = atl03.solar_elevation[current_segment],
+                    .wind_v = wind_v,
+                    .pointing_angle = pointing_angle,
+                    .ndwi = ndwi,
                     .yapc_score = yapc_score,
-                    .max_signal_conf = 0, // TODO
+                    .max_signal_conf = atl03_cnf,
                     .quality_ph = (int8_t)quality_ph,
                 };
                 extent_photons.add(ph);
@@ -661,7 +779,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 {
                     int32_t last = extent_photons.length() - 1;
                     double along_track_spread = extent_photons[last].x_atc - extent_photons[0].x_atc;
-                    if(along_track_spread < parms->max_along_track_spread)
+                    if(along_track_spread >= parms->max_along_track_spread)
                     {
                         extent_valid = false;
                     }
@@ -686,12 +804,8 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     extent->spacecraft_orientation  = atl03.sc_orient[0];
                     extent->reference_ground_track  = builder->start_rgt;
                     extent->cycle                   = builder->start_cycle;
-                    extent->utm_zone                = 0; // TODO
+                    extent->utm_zone                = utm_transform.zone;
                     extent->photon_count            = extent_photons.length();
-                    extent->solar_elevation         = atl03.solar_elevation[current_segment];
-                    extent->wind_v                  = 0.0; // TODO
-                    extent->pointing_angle          = 0.0; // TODO
-                    extent->background_rate         = calculateBackground(current_segment, bckgrd_in, atl03);
                     extent->extent_id               = extent_id;
 
                     /* Populate Photons */
@@ -718,7 +832,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         if(out_file == NULL)
                         {
                             /* Open JSON File */
-                            FString json_filename("%s_beam_%d.json", parms->beam_file_prefix, info->beam);
+                            FString json_filename("%sbeam_%d.json", parms->beam_file_prefix, info->beam);
                             fileptr_t json_file = fopen(json_filename.c_str(), "w");
                             if(json_file == NULL)
                             {
@@ -737,9 +851,7 @@ FString json_contents(R"json({
     "region": %d,
     "rgt": %d,
     "cycle": %d,
-    "utm_zone": %d,
-    "wind_v": %f,
-    "pointing_angle": %f
+    "utm_zone": %d
 })json",
     extent->track, 
     extent->pair, 
@@ -748,16 +860,14 @@ FString json_contents(R"json({
     extent->region, 
     extent->reference_ground_track,
     extent->cycle,
-    extent->utm_zone,
-    extent->wind_v,
-    extent->pointing_angle);
+    extent->utm_zone);
 
                             /* Write and Close JSON File */
                             fprintf(json_file, "%s", json_contents.c_str());
                             fclose(json_file);
 
                             /* Open Data File */
-                            FString filename("%s_beam_%d.csv", parms->beam_file_prefix, info->beam);
+                            FString filename("%sbeam_%d.csv", parms->beam_file_prefix, info->beam);
                             out_file = fopen(filename.c_str(), "w");
                             if(out_file == NULL)
                             {
@@ -765,7 +875,7 @@ FString json_contents(R"json({
                             }
 
                             /* Write Header */
-                            fprintf(out_file, "index_ph,time,geoid_corr_h,latitude,longitude,x_ph,y_ph,x_atc,y_atc,sigma_along,sigma_across,ndwi,yapc_score,max_signal_conf,quality_ph,background_rate,solar_elevation\n");
+                            fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,geoid_corr_h,sigma_along,sigma_across,solar_elevation,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph\n");
                         }
 
                         /* Write Data */
@@ -773,21 +883,23 @@ FString json_contents(R"json({
                         {
                             fprintf(out_file, "%d,", extent->photons[i].index_ph);
                             fprintf(out_file, "%ld,", extent->photons[i].time_ns);
-                            fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
                             fprintf(out_file, "%lf,", extent->photons[i].latitude);
                             fprintf(out_file, "%lf,", extent->photons[i].longitude);
                             fprintf(out_file, "%lf,", extent->photons[i].x_ph);
                             fprintf(out_file, "%lf,", extent->photons[i].y_ph);
                             fprintf(out_file, "%lf,", extent->photons[i].x_atc);
                             fprintf(out_file, "%lf,", extent->photons[i].y_atc);
+                            fprintf(out_file, "%lf,", extent->photons[i].background_rate);
+                            fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
                             fprintf(out_file, "%f,", extent->photons[i].sigma_along);
                             fprintf(out_file, "%f,", extent->photons[i].sigma_across);
-                            fprintf(out_file, "%f,", extent->photons[i].ndwi);
+                            fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
+                            fprintf(out_file, "%f,", extent->photons[i].wind_v);
+                            fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
+                            fprintf(out_file, "%f", extent->photons[i].ndwi);
                             fprintf(out_file, "%d,", extent->photons[i].yapc_score);
                             fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
                             fprintf(out_file, "%d,", extent->photons[i].quality_ph);
-                            fprintf(out_file, "%lf,", extent->background_rate);
-                            fprintf(out_file, "%f", extent->solar_elevation);
                             fprintf(out_file, "\n");
                         }
                     }
@@ -856,21 +968,21 @@ FString json_contents(R"json({
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03)
+double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
 {
     double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
-    while(bckgrd_in < atl03.bckgrd_rate.size)
+    while(bckgrd_index < atl03.bckgrd_rate.size)
     {
-        double curr_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_in];
+        double curr_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index];
         double segment_time = atl03.segment_delta_time[current_segment];
         if(curr_bckgrd_time >= segment_time)
         {
             /* Interpolate Background Rate */
-            if(bckgrd_in > 0)
+            if(bckgrd_index > 0)
             {
-                double prev_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_in - 1];
-                double prev_bckgrd_rate = atl03.bckgrd_rate[bckgrd_in - 1];
-                double curr_bckgrd_rate = atl03.bckgrd_rate[bckgrd_in];
+                double prev_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index - 1];
+                double prev_bckgrd_rate = atl03.bckgrd_rate[bckgrd_index - 1];
+                double curr_bckgrd_rate = atl03.bckgrd_rate[bckgrd_index];
 
                 double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
                 double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
@@ -887,7 +999,7 @@ double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& 
         }
 
         /* Go To Next Background Rate */
-        bckgrd_in++;
+        bckgrd_index++;
     }
     return background_rate;
 }

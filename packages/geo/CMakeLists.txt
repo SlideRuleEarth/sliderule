@@ -29,6 +29,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoLib.cpp
     )
 
     target_include_directories (slideruleLib
@@ -50,6 +51,7 @@ if (GDAL_FOUND AND PROJ_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/RasterSample.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.h
+            ${CMAKE_CURRENT_LIST_DIR}/GeoLib.h
         DESTINATION
             ${INCDIR}
     )

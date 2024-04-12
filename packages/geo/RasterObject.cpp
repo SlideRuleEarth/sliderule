@@ -156,6 +156,21 @@ RasterObject::~RasterObject(void)
     parms->releaseLuaObject();
 }
 
+/*----------------------------------------------------------------------------
+ * getSamples - abstracted
+ *----------------------------------------------------------------------------*/
+uint32_t RasterObject::getSamples (MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param)
+{
+    std::vector<RasterSample*> vector_list;
+    OGRPoint poi(geo.x, geo.y, geo.z);
+    uint32_t err = getSamples(&poi, gps, vector_list, param);
+    for(unsigned i = 0; i < vector_list.size(); i++)
+    {
+        slist.add(vector_list.at(i));
+    }
+    return err;
+}
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
