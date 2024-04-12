@@ -145,7 +145,7 @@ bool send2User (const char* fileName, const char* outputPath,
              (_path[5] == '/') &&
              (_path[6] == '/'))
     {
-        /* Rename the file - very fast if both files are on the same partiotion */
+        /* Rename the file - very fast if both files are on the same partition */
         renameFile(fileName, &_path[7]);
         status = true;
     }
