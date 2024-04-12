@@ -36,10 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArrowImpl.h"
+#include "ArrowCommon.h"
 #include "LuaObject.h"
 #include "ArrowSampler.h"
 #include "OsApi.h"
+
+#include <arrow/table.h>
+#include <parquet/arrow/reader.h>
 
 /******************************************************************************
  * ARROW SAMPLER CLASS
@@ -62,7 +65,7 @@ class ArrowSamplerImpl
 
         void processInputFile     (const char* file_path, std::vector<ArrowSampler::point_info_t*>& points);
         bool processSamples       (ArrowSampler::sampler_t* sampler);
-        void createOutpuFile      (void);
+        void createOutpuFiles     (void);
 
     private:
 
@@ -109,10 +112,9 @@ class ArrowSamplerImpl
         void                          tableToCsvFile          (const std::shared_ptr<arrow::Table> table,
                                                                const char* file_path);
         std::shared_ptr<arrow::Table> removeGeometryColumn    (const std::shared_ptr<arrow::Table> table);
-        wkbpoint_t                    convertWKBToPoint       (const std::string& wkb_data);
+        ArrowCommon::wkbpoint_t       convertWKBToPoint       (const std::string& wkb_data);
         void                          printParquetMetadata    (const char* file_path);
         std::string                   createFileMap           (void);
-        std::string                   createMetadataFileName  (const char* file_path);
         void                          tableMetadataToJson     (const std::shared_ptr<arrow::Table> table,
                                                                const char* file_path);
 };

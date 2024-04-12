@@ -29,33 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_impl__
-#define __arrow_impl__
+#ifndef __arrow_common__
+#define __arrow_common__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include <iostream>
-#include <arrow/io/file.h>
-#include <arrow/builder.h>
-#include <arrow/table.h>
-#include <arrow/util/key_value_metadata.h>
-#include <parquet/arrow/schema.h>
-#include <parquet/arrow/writer.h>
-#include <parquet/arrow/reader.h>
-#include <parquet/arrow/schema.h>
-#include <parquet/properties.h>
-#include <parquet/file_writer.h>
-
 #include "OsApi.h"
-
-typedef struct WKBPoint {
-    uint8_t                 byteOrder;
-    uint32_t                wkbType;
-    double                  x;
-    double                  y;
-} ALIGN_PACKED wkbpoint_t;
+#include "MsgQ.h"
+#include "ArrowParms.h"
 
 
-#endif  /* __arrow_impl__ */
+/******************************************************************************
+ * NAMESPACES
+ ******************************************************************************/
+namespace ArrowCommon
+{
+
+    /******************************************************************************
+     * CONSTANTS
+     ******************************************************************************/
+
+    /******************************************************************************
+     * TYPES
+     ******************************************************************************/
+
+    typedef struct WKBPoint {
+        uint8_t                 byteOrder;
+        uint32_t                wkbType;
+        double                  x;
+        double                  y;
+    } ALIGN_PACKED wkbpoint_t;
+
+
+    /******************************************************************************
+     * METHODS
+     ******************************************************************************/
+
+    void        init       (void);
+    bool        send2User  (const char* fileName, const char* outputPath,
+                            uint32_t traceId, ArrowParms* parms, Publisher* outQ);
+    bool        send2S3    (const char* fileName, const char* s3dst, const char* outputPath,
+                            ArrowParms* parms, Publisher* outQ);
+    bool        send2Client(const char* fileName, ArrowParms* parms, Publisher* outQ);
+
+    const char* getOutputPath(ArrowParms* parms);
+    const char* getUniqueFileName(const char* id = NULL);
+
+    void        removeFile (const char* fileName);
+    void        renameFile (const char* oldName, const char* newName);
+}
+
+#endif  /* __arrow_common__ */

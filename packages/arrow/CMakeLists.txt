@@ -16,6 +16,7 @@ if (Arrow_FOUND AND Parquet_FOUND)
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/arrow.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowParms.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/ArrowCommon.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilderImpl.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowSamplerImpl.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilder.cpp
@@ -32,7 +33,7 @@ if (Arrow_FOUND AND Parquet_FOUND)
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/arrow.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowParms.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowImpl.h
+            ${CMAKE_CURRENT_LIST_DIR}/ArrowCommon.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilderImpl.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowSamplerImpl.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilder.h

@@ -108,13 +108,15 @@ class ArrowSampler: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int                     luaCreate    (lua_State* L);
-        static int                     luaSample    (lua_State* L);
-        static void                    init         (void);
-        static void                    deinit       (void);
-        void                           sample       (void);
-        const ArrowParms*              getParms     (void) {return parms;}
-        const std::vector<sampler_t*>& getSamplers  (void) {return samplers;}
+        static int                     luaCreate      (lua_State* L);
+        static int                     luaSample      (lua_State* L);
+        static void                    init           (void);
+        static void                    deinit         (void);
+        void                           sample         (void);
+        const ArrowParms*              getParms       (void) {return parms;}
+        const char*                    getParquetFile (void) {return parquetFile;}
+        const char*                    getMetadataFile(void) {return metadataFile;}
+        const std::vector<sampler_t*>& getSamplers    (void) {return samplers;}
 
     private:
 
@@ -127,10 +129,15 @@ class ArrowSampler: public LuaObject
          *--------------------------------------------------------------------*/
 
         ArrowParms*                parms;
+        Publisher*                 outQ;
         std::vector<Thread*>       samplerPids;
         std::vector<point_info_t*> points;
         std::vector<sampler_t*>    samplers;
-        ArrowSamplerImpl*          impl; // private arrow data
+        ArrowSamplerImpl*          impl;
+        const char*                parquetFile;        // used locally to build parquet file
+        const char*                metadataFile;       // used locally to build json metadata file
+        const char*                outputPath;         // final destination of the data file
+        const char*                outputMetadataPath; // final destination of the metadata file
         bool                       alreadySampled;
 
         /*--------------------------------------------------------------------
@@ -138,9 +145,10 @@ class ArrowSampler: public LuaObject
          *--------------------------------------------------------------------*/
 
                         ArrowSampler          (lua_State* L, ArrowParms* _parms, const char* input_file,
-                                               const std::vector<raster_info_t>& rasters);
+                                               const char* outq_name, const std::vector<raster_info_t>& rasters);
                         ~ArrowSampler         (void);
         void            Delete                (void);
+        char*           createMetadataFileName(const char* file_path);
         static void*    samplerThread         (void* parm);
 };
 

@@ -4,12 +4,23 @@ asset = require("asset")
 local assets = asset.loaddir()
 local td = runner.rootdir(arg[0])
 
+local outq_name = "outq-luatest"
+
 local in_geoparquet  = td.."atl06_10rows.geoparquet"
 local in_parquet     = td.."atl06_10rows.parquet"
-local out_geoparquet = td.."samples.geoparquet"
-local out_parquet    = td.."samples.parquet"
-local out_csv        = td.."samples.csv"
-local out_metadata   = td.."samples_metadata.json"
+
+-- Indicates local file system (no s3 or client)
+local prefix = "file://"
+
+local _out_geoparquet = "/tmp/samples.geoparquet"
+local _out_parquet    = "/tmp/samples.parquet"
+local _out_csv        = "/tmp/samples.csv"
+local _out_metadata   = "/tmp/samples_metadata.json"
+
+local out_geoparquet = prefix .. _out_geoparquet
+local out_parquet    = prefix .. _out_parquet
+local out_csv        = prefix .. _out_csv
+local out_metadata   = prefix .. _out_metadata
 
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
@@ -32,73 +43,73 @@ local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestN
 runner.check(dem2 ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output geoparquet (geo)\n--------------------------------------')
-local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, {["mosaic"] = dem1})
+local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 local in_file_size = getFileSize(in_geoparquet);
 print("Input  geoparquet file size: " .. in_file_size .. " bytes")
 
 local status = parquet_sampler:sample()
-local out_file_size = getFileSize(out_geoparquet);
+local out_file_size = getFileSize(_out_geoparquet);
 print("Output geoparquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
 
 print('\n--------------------------------------\nTest02: input/output parquet (x, y)\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
 print("Input  parquet file size: "  .. in_file_size .. " bytes")
 
 status = parquet_sampler:sample()
-out_file_size = getFileSize(out_parquet);
+out_file_size = getFileSize(_out_parquet);
 print("Output parquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
 --NOTE: generated CSV files are much smaller than the input parquet/geoparquet files
 
 print('\n--------------------------------------\nTest03: input geoparquet, output CSV\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_geoparquet);
 print("Input geoparquet file size: " .. in_file_size .. " bytes")
 
 status = parquet_sampler:sample()
-out_file_size = getFileSize(out_csv);
+out_file_size = getFileSize(_out_csv);
 print("Output CSV file size:        " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output CSV file size is not smaller than input file size: ")
-meta_file_size = getFileSize(out_metadata);
+meta_file_size = getFileSize(_out_metadata);
 print("Output metadata file size:   " .. meta_file_size .. " bytes")
 runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
 
 
 print('\n--------------------------------------\nTest04: input parquet, output CSV \n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_parquet, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_parquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
 print("Input parquet file size: "  .. in_file_size .. " bytes")
 
 status = parquet_sampler:sample()
-out_file_size = getFileSize(out_csv);
+out_file_size = getFileSize(_out_csv);
 print("Output CSV file size:     " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output CSV file size is not smaller than input file size: ")
-meta_file_size = getFileSize(out_metadata);
+meta_file_size = getFileSize(_out_metadata);
 print("Output metadata file size: " .. meta_file_size .. " bytes")
 runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
 
 
 print('\n--------------------------------------\nTest05: input/output geoparquet (geo)\n--------------------------------------')
-local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, {["mosaic"] = dem1, ["strips"] = dem2})
+local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 local in_file_size = getFileSize(in_geoparquet);
 print("Input  geoparquet file size: " .. in_file_size .. " bytes")
 
 local status = parquet_sampler:sample()
-local out_file_size = getFileSize(out_geoparquet);
+local out_file_size = getFileSize(_out_geoparquet);
 print("Output geoparquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
@@ -107,10 +118,10 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 -- the files were tested with python scripts
 
 -- Remove the output files
-os.remove(out_geoparquet)
-os.remove(out_parquet)
-os.remove(out_csv)
-os.remove(out_metadata)
+os.remove(_out_geoparquet)
+os.remove(_out_parquet)
+os.remove(_out_csv)
+os.remove(_out_metadata)
 
 -- Report Results --
 

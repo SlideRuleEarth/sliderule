@@ -43,6 +43,15 @@
 #include "core.h"
 #include "ArrowBuilderImpl.h"
 
+#include <parquet/arrow/schema.h>
+#include <parquet/arrow/writer.h>
+#include <parquet/arrow/schema.h>
+#include <parquet/properties.h>
+#include <arrow/table.h>
+#include <arrow/util/key_value_metadata.h>
+#include <arrow/io/file.h>
+#include <arrow/builder.h>
+#include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
 #include <regex>
 
@@ -1219,7 +1228,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
 {
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
-    (void)builder.ReserveData(num_rows * sizeof(wkbpoint_t));
+    (void)builder.ReserveData(num_rows * sizeof(ArrowCommon::wkbpoint_t));
     for(int i = 0; i < record_batch.length(); i++)
     {
         ArrowBuilder::batch_t* batch = record_batch[i];
@@ -1227,7 +1236,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
         int32_t starting_y_offset = y_field.offset;
         for(int row = 0; row < batch->rows; row++)
         {
-            wkbpoint_t point = {
+            ArrowCommon::wkbpoint_t point = {
                 #ifdef __be__
                 .byteOrder = 0,
                 #else
@@ -1237,7 +1246,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
                 .x = batch->pri_record->getValueReal(x_field),
                 .y = batch->pri_record->getValueReal(y_field)
             };
-            (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(wkbpoint_t));
+            (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(ArrowCommon::wkbpoint_t));
             if(x_field.flags & RecordObject::BATCH) x_field.offset += batch_row_size_bits;
             if(y_field.flags & RecordObject::BATCH) y_field.offset += batch_row_size_bits;
         }

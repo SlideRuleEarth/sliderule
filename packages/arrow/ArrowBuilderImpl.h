@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArrowImpl.h"
+#include "ArrowCommon.h"
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"
@@ -45,6 +45,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 
+#include <parquet/arrow/schema.h>
 
 /******************************************************************************
  * ARROW BUILDER CLASS

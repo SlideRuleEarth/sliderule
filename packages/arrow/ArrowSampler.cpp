@@ -64,16 +64,17 @@ int ArrowSampler::luaCreate(lua_State* L)
         /* Get Parameters */
         _parms                  = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
         const char* input_file  = getLuaString(L, 2);
+        const char* outq_name   = getLuaString(L, 3);
 
         std::vector<raster_info_t> rasters;
 
-        /* Check if the third parameter is a table */
-        luaL_checktype(L, 3, LUA_TTABLE);
+        /* Check if the parameter is a table */
+        luaL_checktype(L, 4, LUA_TTABLE);
 
         /* first key for iteration */
         lua_pushnil(L);
 
-        while(lua_next(L, 3) != 0)
+        while(lua_next(L, 4) != 0)
         {
             const char*   rkey = getLuaString(L, -2);
             RasterObject* robj = dynamic_cast<RasterObject*>(getLuaObject(L, -1, RasterObject::OBJECT_TYPE));
@@ -84,7 +85,7 @@ int ArrowSampler::luaCreate(lua_State* L)
         }
 
         /* Create Dispatch */
-        return createLuaObject(L, new ArrowSampler(L, _parms, input_file, rasters));
+        return createLuaObject(L, new ArrowSampler(L, _parms, input_file, outq_name, rasters));
     }
     catch(const RunTimeException& e)
     {
@@ -174,6 +175,10 @@ void ArrowSampler::sample(void)
     if(alreadySampled) return;
     alreadySampled = true;
 
+    /* Start Trace */
+    uint32_t trace_id = start_trace(INFO, traceId, "arrow_sampler", "{\"filename\":\"%s\"}", parquetFile);
+    EventLib::stashId(trace_id);
+
     /* Start sampling threads */
     for(sampler_t* sampler : samplers)
     {
@@ -190,13 +195,28 @@ void ArrowSampler::sample(void)
 
     try
     {
-        impl->createOutpuFile();
+        impl->createOutpuFiles();
+
+        /* Send Parquet File to User */
+        ArrowCommon::send2User(parquetFile, outputPath, trace_id, parms, outQ);
+        ArrowCommon::removeFile(parquetFile);
+
+        if(metadataFile)
+        {
+            /* Send Metadata File to User */
+            ArrowCommon::send2User(metadataFile, outputMetadataPath, trace_id, parms, outQ);
+            ArrowCommon::removeFile(metadataFile);
+        }
+
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating output file: %s", e.what());
+        stop_trace(INFO, trace_id);
         throw;
     }
+
+    stop_trace(INFO, trace_id);
 }
 
 
@@ -208,9 +228,10 @@ void ArrowSampler::sample(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_file,
-                           const std::vector<raster_info_t>& rasters):
+                           const char* outq_name, const std::vector<raster_info_t>& rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
+    metadataFile(NULL),
     alreadySampled(false)
 {
     /* Add Lua sample function */
@@ -219,11 +240,14 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
     if (parms == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid ArrowParms object");
 
+    if((parms->path == NULL) || (parms->path[0] == '\0'))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file path");
+
     if ((input_file == NULL) || (input_file[0] == '\0'))
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file path");
 
-    if((parms->path == NULL) || (parms->path[0] == '\0'))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file path");
+    if ((outq_name == NULL) || (outq_name[0] == '\0'))
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input queue name");
 
     try
     {
@@ -243,6 +267,19 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
         /* Allocate Implementation */
         impl = new ArrowSamplerImpl(this);
 
+        /* Get Paths */
+        outputPath = ArrowCommon::getOutputPath(parms);
+        outputMetadataPath = createMetadataFileName(outputPath);
+
+        /* Create Unique Temporary Filenames */
+        parquetFile = ArrowCommon::getUniqueFileName();
+        metadataFile = createMetadataFileName(parquetFile);
+
+        /* Initialize Queues */
+        const int qdepth = 0x4000000;   // 64MB
+        outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
+
+        /* Process Input File */
         impl->processInputFile(input_file, points);
     }
     catch(const RunTimeException& e)
@@ -277,7 +314,27 @@ void ArrowSampler::Delete(void)
     for(point_info_t* pinfo : points)
         delete pinfo;
 
+    delete [] parquetFile;
+    delete [] metadataFile;
+    delete [] outputPath;
+    delete [] outputMetadataPath;
+    delete outQ;
     delete impl;
+}
+
+/*----------------------------------------------------------------------------
+* createMetadataFileName
+*----------------------------------------------------------------------------*/
+char* ArrowSampler::createMetadataFileName(const char* file_path)
+{
+    std::string path(file_path);
+    size_t dotIndex = path.find_last_of(".");
+    if(dotIndex != std::string::npos)
+    {
+        path = path.substr(0, dotIndex);
+    }
+    path.append("_metadata.json");
+    return StringLib::duplicate(path.c_str());
 }
 
 /*----------------------------------------------------------------------------

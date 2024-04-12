@@ -69,26 +69,12 @@ class ArrowBuilder: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int FILE_NAME_MAX_LEN = 128;
-        static const int URL_MAX_LEN = 512;
-        static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
         static const int ROW_GROUP_SIZE = 0x4000000; // 64MB
         static const int QUEUE_BUFFER_FACTOR = 3;
 
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
-
-        static const char* metaRecType;
-        static const RecordObject::fieldDef_t metaRecDef[];
-
-        static const char* dataRecType;
-        static const RecordObject::fieldDef_t dataRecDef[];
-
-        static const char* remoteRecType;
-        static const RecordObject::fieldDef_t remoteRecDef[];
-
-        static const char* TMP_FILE_PREFIX;
 
         /*--------------------------------------------------------------------
          * Types
@@ -126,21 +112,6 @@ class ArrowBuilder: public LuaObject
             RecordObject::field_t   x_field;
             RecordObject::field_t   y_field;
         } geo_data_t;
-
-        typedef struct {
-            char    filename[FILE_NAME_MAX_LEN];
-            long    size;
-        } arrow_file_meta_t;
-
-        typedef struct {
-            char    filename[FILE_NAME_MAX_LEN];
-            uint8_t data[FILE_BUFFER_RSPS_SIZE];
-        } arrow_file_data_t;
-
-        typedef struct {
-            char    url[URL_MAX_LEN];
-            long    size;
-        } arrow_file_remote_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -205,8 +176,6 @@ class ArrowBuilder: public LuaObject
                                                  const char* rec_type, const char* id);
                         ~ArrowBuilder           (void);
         static void*    builderThread           (void* parm);
-        bool            send2S3                 (const char* s3dst);
-        bool            send2Client             (void);
 };
 
 #endif  /* __arrow_builder__ */

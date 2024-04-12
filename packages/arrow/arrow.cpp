@@ -35,6 +35,7 @@
 
 #include "core.h"
 #include "arrow.h"
+#include "ArrowCommon.h"
 
 /******************************************************************************
  * DEFINES
@@ -75,6 +76,7 @@ extern "C" {
 void initarrow (void)
 {
     /* Initialize Modules */
+    ArrowCommon::init();
     ArrowBuilder::init();
     ArrowSampler::init();
 

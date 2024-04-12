@@ -42,12 +42,17 @@
 
 #include "ArrowSamplerImpl.h"
 
+#include <parquet/arrow/schema.h>
+#include <parquet/arrow/writer.h>
+#include <parquet/arrow/schema.h>
+#include <parquet/properties.h>
+#include <arrow/util/key_value_metadata.h>
+#include <arrow/io/file.h>
+#include <arrow/builder.h>
 #include <arrow/csv/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
-#include <regex>
-#include <filesystem>
 
 
 /******************************************************************************
@@ -120,20 +125,12 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
 }
 
 /*----------------------------------------------------------------------------
-* createOutputFile
+* createOutputFiles
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::createOutpuFile(void)
+void ArrowSamplerImpl::createOutpuFiles(void)
 {
     const ArrowParms* parms = arrowSampler->getParms();
-
-    if(std::filesystem::exists(parms->path))
-    {
-        int rc = std::remove(parms->path);
-        if(rc != 0)
-        {
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, parms->path, strerror(errno));
-        }
-    }
+    const char* parquetFile = arrowSampler->getParquetFile();
 
     auto table = inputFileToTable();
     auto updated_table = addNewColumns(table);
@@ -141,18 +138,19 @@ void ArrowSamplerImpl::createOutpuFile(void)
 
     if(parms->format == ArrowParms::PARQUET)
     {
-        tableToParquetFile(updated_table, parms->path);
+        tableToParquetFile(updated_table, parquetFile);
     }
     else if(parms->format == ArrowParms::CSV)
     {
         /* Arrow csv writer cannot handle columns with WKB data */
         table = removeGeometryColumn(updated_table);
 
-        tableToCsvFile(table, parms->path);
+        tableToCsvFile(table, parquetFile);
 
         /* Generate metadata file since Arrow csv writer ignores it */
-        std::string mfile = createMetadataFileName(parms->path);
-        tableMetadataToJson(table, mfile.c_str());
+        const char* metadataFile = arrowSampler->getMetadataFile();
+        ArrowCommon::removeFile(metadataFile);
+        tableMetadataToJson(table, metadataFile);
     }
     else throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
 }
@@ -293,7 +291,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& po
     for(int64_t i = 0; i < binary_array->length(); i++)
     {
         std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        wkbpoint_t point = convertWKBToPoint(wkb_data);
+        ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({point.x, point.y, 0.0});
         points.push_back(pinfo);
     }
@@ -781,11 +779,11 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(const std::
 /*----------------------------------------------------------------------------
 * convertWKBToPoint
 *----------------------------------------------------------------------------*/
-wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
+ArrowCommon::wkbpoint_t ArrowSamplerImpl::convertWKBToPoint(const std::string& wkb_data)
 {
-    wkbpoint_t point;
+    ArrowCommon::wkbpoint_t point;
 
-    if(wkb_data.size() < sizeof(wkbpoint_t))
+    if(wkb_data.size() < sizeof(ArrowCommon::wkbpoint_t))
     {
         throw std::runtime_error("Invalid WKB data size.");
     }
@@ -905,29 +903,6 @@ std::string ArrowSamplerImpl::createFileMap(void)
     std::string serialized_json = buffer.GetString();
     return serialized_json;
 }
-
-/*----------------------------------------------------------------------------
-* createMetadataFileName
-*----------------------------------------------------------------------------*/
-std::string ArrowSamplerImpl::createMetadataFileName(const char* file_path)
-{
-    /* If file has extension .csv or .txt replace it with _metadata.json else append it */
-
-    std::vector<std::string> extensions = {".csv", ".CSV", ".txt", ".TXT"};
-    std::string path(file_path);
-    size_t dotIndex = path.find_last_of(".");
-    if(dotIndex != std::string::npos)
-    {
-        std::string extension = path.substr(dotIndex);
-        if(std::find(extensions.begin(), extensions.end(), extension) != extensions.end())
-        {
-            path = path.substr(0, dotIndex);
-        }
-    }
-    path += "_metadata.json";
-    return path;
-}
-
 
 /*----------------------------------------------------------------------------
 * tableMetadataToJson
