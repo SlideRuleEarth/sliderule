@@ -176,7 +176,7 @@ void ArrowSampler::sample(void)
     alreadySampled = true;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, traceId, "arrow_sampler", "{\"filename\":\"%s\"}", parquetFile);
+    uint32_t trace_id = start_trace(INFO, traceId, "arrow_sampler", "{\"filename\":\"%s\"}", dataFile);
     EventLib::stashId(trace_id);
 
     /* Start sampling threads */
@@ -197,17 +197,16 @@ void ArrowSampler::sample(void)
     {
         impl->createOutpuFiles();
 
-        /* Send Parquet File to User */
-        ArrowCommon::send2User(parquetFile, outputPath, trace_id, parms, outQ);
-        ArrowCommon::removeFile(parquetFile);
+        /* Send Data File to User */
+        ArrowCommon::send2User(dataFile, outputPath, trace_id, parms, outQ);
+        ArrowCommon::removeFile(dataFile);
 
+        /* Send Metadata File to User */
         if(metadataFile)
         {
-            /* Send Metadata File to User */
             ArrowCommon::send2User(metadataFile, outputMetadataPath, trace_id, parms, outQ);
             ArrowCommon::removeFile(metadataFile);
         }
-
     }
     catch(const RunTimeException& e)
     {
@@ -219,6 +218,37 @@ void ArrowSampler::sample(void)
     stop_trace(INFO, trace_id);
 }
 
+/*----------------------------------------------------------------------------
+ * getParms
+ *----------------------------------------------------------------------------*/
+const ArrowParms* ArrowSampler::getParms(void)
+{
+    return parms;
+}
+
+/*----------------------------------------------------------------------------
+ * getDataFile
+ *----------------------------------------------------------------------------*/
+const char* ArrowSampler::getDataFile(void)
+{
+    return dataFile;
+}
+
+/*----------------------------------------------------------------------------
+ * getMetadataFile
+ *----------------------------------------------------------------------------*/
+const char* ArrowSampler::getMetadataFile(void)
+{
+    return metadataFile;
+}
+
+/*----------------------------------------------------------------------------
+ * getSamplers
+ *----------------------------------------------------------------------------*/
+const std::vector<ArrowSampler::sampler_t*>& ArrowSampler::getSamplers(void)
+{
+    return samplers;
+}
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -272,8 +302,8 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
         outputMetadataPath = createMetadataFileName(outputPath);
 
         /* Create Unique Temporary Filenames */
-        parquetFile = ArrowCommon::getUniqueFileName();
-        metadataFile = createMetadataFileName(parquetFile);
+        dataFile = ArrowCommon::getUniqueFileName();
+        metadataFile = createMetadataFileName(dataFile);
 
         /* Initialize Queues */
         const int qdepth = 0x4000000;   // 64MB
@@ -314,7 +344,7 @@ void ArrowSampler::Delete(void)
     for(point_info_t* pinfo : points)
         delete pinfo;
 
-    delete [] parquetFile;
+    delete [] dataFile;
     delete [] metadataFile;
     delete [] outputPath;
     delete [] outputMetadataPath;

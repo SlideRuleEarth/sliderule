@@ -107,15 +107,17 @@ class ArrowSamplerImpl
         bool                          makeColumnsWithLists    (ArrowSampler::sampler_t* sampler);
         bool                          makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler);
         RasterSample*                 getFirstValidSample     (ArrowSampler::sample_list_t* slist);
-        void                          tableToParquetFile      (const std::shared_ptr<arrow::Table> table,
+        void                          tableToParquet          (const std::shared_ptr<arrow::Table> table,
                                                                const char* file_path);
-        void                          tableToCsvFile          (const std::shared_ptr<arrow::Table> table,
+        void                          tableToCsv              (const std::shared_ptr<arrow::Table> table,
+                                                               const char* file_path);
+        void                          tableToFeather          (const std::shared_ptr<arrow::Table> table,
                                                                const char* file_path);
         std::shared_ptr<arrow::Table> removeGeometryColumn    (const std::shared_ptr<arrow::Table> table);
         ArrowCommon::wkbpoint_t       convertWKBToPoint       (const std::string& wkb_data);
         void                          printParquetMetadata    (const char* file_path);
         std::string                   createFileMap           (void);
-        void                          tableMetadataToJson     (const std::shared_ptr<arrow::Table> table,
+        void                          metadataToJson          (const std::shared_ptr<arrow::Table> table,
                                                                const char* file_path);
 };
 

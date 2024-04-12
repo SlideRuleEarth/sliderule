@@ -48,6 +48,8 @@
 #include <parquet/properties.h>
 #include <arrow/util/key_value_metadata.h>
 #include <arrow/io/file.h>
+#include <arrow/io/api.h>
+#include <arrow/ipc/api.h>
 #include <arrow/builder.h>
 #include <arrow/csv/writer.h>
 #include <rapidjson/document.h>
@@ -130,29 +132,38 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
 void ArrowSamplerImpl::createOutpuFiles(void)
 {
     const ArrowParms* parms = arrowSampler->getParms();
-    const char* parquetFile = arrowSampler->getParquetFile();
+    const char* dataFile = arrowSampler->getDataFile();
 
     auto table = inputFileToTable();
     auto updated_table = addNewColumns(table);
     table = nullptr;
 
-    if(parms->format == ArrowParms::PARQUET)
+    switch (parms->format)
     {
-        tableToParquetFile(updated_table, parquetFile);
+        case ArrowParms::PARQUET:
+            tableToParquet(updated_table, dataFile);
+            break;
+
+        case ArrowParms::CSV:
+            /* Remove geometry column before writing to csv */
+            table = removeGeometryColumn(updated_table);
+            tableToCsv(table, dataFile);
+            break;
+
+        case ArrowParms::FEATHER:
+            tableToFeather(updated_table, dataFile);
+            break;
+
+        default:
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
     }
-    else if(parms->format == ArrowParms::CSV)
+
+    /* Generate metadata file since csv/feather writers ignores it */
+    if(parms->format == ArrowParms::CSV || parms->format == ArrowParms::FEATHER)
     {
-        /* Arrow csv writer cannot handle columns with WKB data */
-        table = removeGeometryColumn(updated_table);
-
-        tableToCsvFile(table, parquetFile);
-
-        /* Generate metadata file since Arrow csv writer ignores it */
         const char* metadataFile = arrowSampler->getMetadataFile();
-        ArrowCommon::removeFile(metadataFile);
-        tableMetadataToJson(table, metadataFile);
+        metadataToJson(updated_table, metadataFile);
     }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
 }
 
 /******************************************************************************
@@ -723,9 +734,9 @@ RasterSample* ArrowSamplerImpl::getFirstValidSample(ArrowSampler::sample_list_t*
 }
 
 /*----------------------------------------------------------------------------
-* tableToParquetFile
+* tableToParquet
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::tableToParquetFile(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::tableToParquet(const std::shared_ptr<arrow::Table> table, const char* file_path)
 {
     std::shared_ptr<arrow::io::FileOutputStream> outfile;
     PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
@@ -745,9 +756,9 @@ void ArrowSamplerImpl::tableToParquetFile(const std::shared_ptr<arrow::Table> ta
 }
 
 /*----------------------------------------------------------------------------
-* tableToCsvFile
+* tableToCsv
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::tableToCsvFile(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::tableToCsv(const std::shared_ptr<arrow::Table> table, const char* file_path)
 {
     std::shared_ptr<arrow::io::FileOutputStream> outfile;
     PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
@@ -757,6 +768,21 @@ void ArrowSamplerImpl::tableToCsvFile(const std::shared_ptr<arrow::Table> table,
 
     /* Write the table to the CSV file */
     PARQUET_THROW_NOT_OK(arrow::csv::WriteCSV(*table, write_options, outfile.get()));
+
+    /* Close the output file */
+    PARQUET_THROW_NOT_OK(outfile->Close());
+}
+
+/*----------------------------------------------------------------------------
+* tableToFeather
+*----------------------------------------------------------------------------*/
+void ArrowSamplerImpl::tableToFeather(const std::shared_ptr<arrow::Table> table, const char* file_path)
+{
+    std::shared_ptr<arrow::io::FileOutputStream> outfile;
+    PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
+
+    /* Write the table to the Feather file */
+    PARQUET_THROW_NOT_OK(arrow::ipc::feather::WriteTable(*table, outfile.get()));
 
     /* Close the output file */
     PARQUET_THROW_NOT_OK(outfile->Close());
@@ -905,9 +931,9 @@ std::string ArrowSamplerImpl::createFileMap(void)
 }
 
 /*----------------------------------------------------------------------------
-* tableMetadataToJson
+* metadataToJson
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::tableMetadataToJson(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::metadataToJson(const std::shared_ptr<arrow::Table> table, const char* file_path)
 {
     rapidjson::Document doc;
     doc.SetObject();

@@ -14,11 +14,13 @@ local prefix = "file://"
 
 local _out_geoparquet = "/tmp/samples.geoparquet"
 local _out_parquet    = "/tmp/samples.parquet"
+local _out_feather    = "/tmp/samples.feather"
 local _out_csv        = "/tmp/samples.csv"
 local _out_metadata   = "/tmp/samples_metadata.json"
 
 local out_geoparquet = prefix .. _out_geoparquet
 local out_parquet    = prefix .. _out_parquet
+local out_feather    = prefix .. _out_feather
 local out_csv        = prefix .. _out_csv
 local out_metadata   = prefix .. _out_metadata
 
@@ -67,9 +69,33 @@ out_file_size = getFileSize(_out_parquet);
 print("Output parquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
---NOTE: generated CSV files are much smaller than the input parquet/geoparquet files
+--NOTE: generated CSV and FEATHER files are much smaller than the input parquet/geoparquet files
 
-print('\n--------------------------------------\nTest03: input geoparquet, output CSV\n--------------------------------------')
+print('\n--------------------------------------\nTest03: input geoparquet, output feather\n--------------------------------------')
+parquet_sampler = arrow.sampler(arrow.parms({path=out_feather, format="feather"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
+runner.check(parquet_sampler ~= nil)
+
+in_file_size = getFileSize(in_geoparquet);
+print("Input geoparquet file size: "  .. in_file_size .. " bytes")
+
+status = parquet_sampler:sample()
+out_file_size = getFileSize(_out_feather);
+print("Output parquet file size:    " .. out_file_size .. " bytes")
+runner.check(out_file_size < in_file_size, "Output file size is not smaller than input file size: ")
+
+print('\n--------------------------------------\nTest04: input parquet, output feather\n--------------------------------------')
+parquet_sampler = arrow.sampler(arrow.parms({path=out_feather, format="feather"}), in_parquet, outq_name, {["mosaic"] = dem1})
+runner.check(parquet_sampler ~= nil)
+
+in_file_size = getFileSize(in_parquet);
+print("Input geoparquet file size: "  .. in_file_size .. " bytes")
+
+status = parquet_sampler:sample()
+out_file_size = getFileSize(_out_feather);
+print("Output parquet file size:    " .. out_file_size .. " bytes")
+runner.check(out_file_size < in_file_size, "Output file size is not smaller than input file size: ")
+
+print('\n--------------------------------------\nTest05: input geoparquet, output CSV\n--------------------------------------')
 parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
@@ -85,7 +111,7 @@ print("Output metadata file size:   " .. meta_file_size .. " bytes")
 runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
 
 
-print('\n--------------------------------------\nTest04: input parquet, output CSV \n--------------------------------------')
+print('\n--------------------------------------\nTest06: input parquet, output CSV \n--------------------------------------')
 parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_parquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
@@ -101,7 +127,7 @@ print("Output metadata file size: " .. meta_file_size .. " bytes")
 runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
 
 
-print('\n--------------------------------------\nTest05: input/output geoparquet (geo)\n--------------------------------------')
+print('\n--------------------------------------\nTest07: input/output geoparquet (geo)\n--------------------------------------')
 local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
@@ -120,6 +146,7 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 -- Remove the output files
 os.remove(_out_geoparquet)
 os.remove(_out_parquet)
+os.remove(_out_feather)
 os.remove(_out_csv)
 os.remove(_out_metadata)
 

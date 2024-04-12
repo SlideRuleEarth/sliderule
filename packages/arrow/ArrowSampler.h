@@ -113,10 +113,10 @@ class ArrowSampler: public LuaObject
         static void                    init           (void);
         static void                    deinit         (void);
         void                           sample         (void);
-        const ArrowParms*              getParms       (void) {return parms;}
-        const char*                    getParquetFile (void) {return parquetFile;}
-        const char*                    getMetadataFile(void) {return metadataFile;}
-        const std::vector<sampler_t*>& getSamplers    (void) {return samplers;}
+        const ArrowParms*              getParms       (void);
+        const char*                    getDataFile    (void);
+        const char*                    getMetadataFile(void);
+        const std::vector<sampler_t*>& getSamplers    (void);
 
     private:
 
@@ -134,7 +134,7 @@ class ArrowSampler: public LuaObject
         std::vector<point_info_t*> points;
         std::vector<sampler_t*>    samplers;
         ArrowSamplerImpl*          impl;
-        const char*                parquetFile;        // used locally to build parquet file
+        const char*                dataFile;           // used locally to build parquet file
         const char*                metadataFile;       // used locally to build json metadata file
         const char*                outputPath;         // final destination of the data file
         const char*                outputMetadataPath; // final destination of the metadata file
