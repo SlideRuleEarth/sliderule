@@ -78,6 +78,13 @@ class MathLib
             double  y;
         } point_t;
 
+        /* 3d Point */
+        typedef struct {
+            double  x;
+            double  y;
+            double  z;
+        } point_3d_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/

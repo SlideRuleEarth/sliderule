@@ -39,6 +39,8 @@
 #include <vector>
 #include <ogr_geometry.h>
 #include "LuaObject.h"
+#include "MathLib.h"
+#include "List.h"
 #include "GeoParms.h"
 #include "RasterSample.h"
 #include "RasterSubset.h"
@@ -101,6 +103,12 @@ class RasterObject: public LuaObject
         {
             return fileDict;
         }
+
+        /*--------------------------------------------------------------------
+         * Abstracted Interface
+         *--------------------------------------------------------------------*/
+
+        uint32_t getSamples (MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param=NULL);
 
     protected:
 
