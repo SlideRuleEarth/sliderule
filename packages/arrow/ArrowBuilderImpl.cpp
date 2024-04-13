@@ -50,6 +50,7 @@
 #include <arrow/table.h>
 #include <arrow/util/key_value_metadata.h>
 #include <arrow/io/file.h>
+#include <arrow/ipc/api.h>
 #include <arrow/builder.h>
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
@@ -152,6 +153,22 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)parquetWriter->Close();
         }
     }
+    else if(writerFormat == ArrowParms::FEATHER)
+    {
+        /* Write the Table to a FEATHER file */
+        uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+        arrow::Status s = arrow::ipc::feather::WriteTable(*table, featherWriter.get());
+        if(s.ok()) status = true;
+        else mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
+        stop_trace(INFO, write_trace_id);
+
+        /* Close Feather Writer */
+        if(file_finished)
+        {
+            (void)featherWriter->Close();
+        }
+    }
     else if(writerFormat == ArrowParms::CSV)
     {
         /* Write the Table to a CSV file */
@@ -218,6 +235,20 @@ void ArrowBuilderImpl::createSchema (void)
         else
         {
             mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+        }
+    }
+    else if(arrowBuilder->getParms()->format == ArrowParms::FEATHER)
+    {
+        /* Create FEATHER Writer */
+        auto result = arrow::io::FileOutputStream::Open(arrowBuilder->getFileName());
+        if(result.ok())
+        {
+            featherWriter = result.ValueOrDie();
+            writerFormat = ArrowParms::FEATHER;
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed to open feather writer: %s", result.status().ToString().c_str());
         }
     }
     else if(arrowBuilder->getParms()->format == ArrowParms::CSV)

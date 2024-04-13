@@ -158,11 +158,10 @@ void ArrowSamplerImpl::createOutpuFiles(void)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
     }
 
-    /* Generate metadata file since csv/feather writers ignores it */
+    /* Generate metadata file since csv/feather writers ignore it */
     if(parms->format == ArrowParms::CSV || parms->format == ArrowParms::FEATHER)
     {
-        const char* metadataFile = arrowSampler->getMetadataFile();
-        metadataToJson(updated_table, metadataFile);
+        metadataToJson(updated_table, arrowSampler->getMetadataFile());
     }
 }
 

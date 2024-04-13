@@ -267,6 +267,9 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     /* Get Path */
     outputPath = ArrowCommon::getOutputPath(parms);
 
+    /* Create Unique Temporary Filename */
+    fileName = ArrowCommon::getUniqueFileName(id);
+
     /*
      * NO THROWING BEYOND THIS POINT
      */
@@ -290,9 +293,6 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
     outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
-
-    /* Create Unique Temporary Filename */
-     fileName = ArrowCommon::getUniqueFileName(id);
 
     /* Allocate Implementation */
     impl = new ArrowBuilderImpl(this);

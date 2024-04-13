@@ -361,6 +361,21 @@ const char* getUniqueFileName(const char* id)
 }
 
 /*----------------------------------------------------------------------------
+* createMetadataFileName
+*----------------------------------------------------------------------------*/
+char* createMetadataFileName(const char* fileName)
+{
+    std::string path(fileName);
+    size_t dotIndex = path.find_last_of(".");
+    if(dotIndex != std::string::npos)
+    {
+        path = path.substr(0, dotIndex);
+    }
+    path.append("_metadata.json");
+    return StringLib::duplicate(path.c_str());
+}
+
+/*----------------------------------------------------------------------------
  * removeFile
  *----------------------------------------------------------------------------*/
 void removeFile(const char* fileName)
@@ -388,6 +403,14 @@ void renameFile (const char* oldName, const char* newName)
             mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, oldName, newName, strerror(errno));
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * fileExists
+ *----------------------------------------------------------------------------*/
+bool fileExists(const char* fileName)
+{
+    return std::filesystem::exists(fileName);
 }
 
 } /* namespace ArrowCommon */

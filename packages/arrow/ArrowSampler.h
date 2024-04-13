@@ -148,7 +148,6 @@ class ArrowSampler: public LuaObject
                                                const char* outq_name, const std::vector<raster_info_t>& rasters);
                         ~ArrowSampler         (void);
         void            Delete                (void);
-        char*           createMetadataFileName(const char* file_path);
         static void*    samplerThread         (void* parm);
 };
 

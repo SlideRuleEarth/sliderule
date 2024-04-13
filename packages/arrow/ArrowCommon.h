@@ -71,9 +71,11 @@ namespace ArrowCommon
 
     const char* getOutputPath(ArrowParms* parms);
     const char* getUniqueFileName(const char* id = NULL);
+    char*       createMetadataFileName(const char* fileName);
 
     void        removeFile (const char* fileName);
     void        renameFile (const char* oldName, const char* newName);
+    bool        fileExists (const char* fileName);
 }
 
 #endif  /* __arrow_common__ */

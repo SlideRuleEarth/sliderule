@@ -92,6 +92,7 @@ class ArrowBuilderImpl
         ArrowBuilder*                               arrowBuilder;
         shared_ptr<arrow::Schema>                   schema;
         unique_ptr<parquet::arrow::FileWriter>      parquetWriter;
+        shared_ptr<arrow::io::FileOutputStream>     featherWriter;
         shared_ptr<arrow::io::FileOutputStream>     csvWriter;
         ArrowParms::format_t                        writerFormat;
         vector<shared_ptr<arrow::Field>>            fieldVector;

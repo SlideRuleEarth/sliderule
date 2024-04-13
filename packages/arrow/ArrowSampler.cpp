@@ -202,7 +202,7 @@ void ArrowSampler::sample(void)
         ArrowCommon::removeFile(dataFile);
 
         /* Send Metadata File to User */
-        if(metadataFile)
+        if(ArrowCommon::fileExists(metadataFile))
         {
             ArrowCommon::send2User(metadataFile, outputMetadataPath, trace_id, parms, outQ);
             ArrowCommon::removeFile(metadataFile);
@@ -299,11 +299,11 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
 
         /* Get Paths */
         outputPath = ArrowCommon::getOutputPath(parms);
-        outputMetadataPath = createMetadataFileName(outputPath);
+        outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
 
         /* Create Unique Temporary Filenames */
         dataFile = ArrowCommon::getUniqueFileName();
-        metadataFile = createMetadataFileName(dataFile);
+        metadataFile = ArrowCommon::createMetadataFileName(dataFile);
 
         /* Initialize Queues */
         const int qdepth = 0x4000000;   // 64MB
@@ -350,21 +350,6 @@ void ArrowSampler::Delete(void)
     delete [] outputMetadataPath;
     delete outQ;
     delete impl;
-}
-
-/*----------------------------------------------------------------------------
-* createMetadataFileName
-*----------------------------------------------------------------------------*/
-char* ArrowSampler::createMetadataFileName(const char* file_path)
-{
-    std::string path(file_path);
-    size_t dotIndex = path.find_last_of(".");
-    if(dotIndex != std::string::npos)
-    {
-        path = path.substr(0, dotIndex);
-    }
-    path.append("_metadata.json");
-    return StringLib::duplicate(path.c_str());
 }
 
 /*----------------------------------------------------------------------------
