@@ -1,32 +1,46 @@
-/*
- * Copyright (c) 2021, University of Washington
- * All rights reserved.
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Board of Trustees of the University of Illinois.         *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of HDF5.  The full HDF5 copyright notice, including     *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the files COPYING and Copyright.html.  COPYING can be found at the root   *
+ * of the source code distribution tree; Copyright.html can be found at the  *
+ * root level of an installed copy of the electronic HDF5 document set and   *
+ * is linked from the top-level documents page.  It can also be found at     *
+ * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
+ * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* MODIFICATIONS 
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the University of Washington nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * This code adapts the HDF5 H5A__dense_open reading mechanism into C++.
+ * 
+ * SUPPORTED SEARCH / STRUCTURES:
+ * - ONLY Type 8 Records - "Attribute Name for Indexed Attributes"
+ * - ONLY Managed objects in the Fractal Heap
+ * 
+ * RELEVANT HD5 DOCUMENTATION: 
+ * https://docs.hdfgroup.org/hdf5/v1_10/_f_m_t3.html#Btrees:~:text=III.A.2.%20Disk%20Format%3A%20Level%201A2%20%2D%20Version%202%20B%2Dtrees
+ * 
+ * CONTROL FLOW:
+ * Externally, if regular attribute message reading fails in H5coro to locate the object,
+ * H5Dense generates a temporary H5BTreeV2 object representing a Version 2 B-Tree.
+ * V2 B-Tree contains a root node, which links to Internal Nodes (points to child nodes) 
+ * and Leaf Nodes (contains Records). Nodes are organized under a Binary Search Tree (BST) 
+ * style; the value used for the search is the "Hash of Name" in the Type 8 record. 
+ * Once a matching "Hash of Name" is found for the desired attribute name, the Heap ID
+ * is extracted from the record to search the fractal heap for the actual attribute message. 
+ * An object in the fractal heap is identified by means of a heap ID.
+ * 
+ * The fractal heap stores an object in one of three ways, depending on the object’s size:
+ * Managed, Tiny, Huge. Managed (Supported) uses a Doubling Table structure which uses the heap ID
+ * to identify at what offset the object is located at.
+ * 
+ * Finally, the H5Dense returns control flow to the H5Coro progra via the H5BTreeV2 structure
+ * On success, the structure provides the address of the Attribute Message.
+ * 
  */
 
 /******************************************************************************
