@@ -139,9 +139,9 @@ class TestParquet:
             "srt": icesat2.SRT_LAND,
             "len": 30,
             "res": 30,
-            "pass_invalid": True, 
+            "pass_invalid": True,
             "atl08_class": ["atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
-            "atl08_fields": ancillary_fields, 
+            "atl08_fields": ancillary_fields,
             "phoreal": {"binsize": 1.0, "geoloc": "center", "above_classifier": True, "use_abs_h": False, "send_waveform": False},
             "output": {
                 "path": "testfile6.parquet",
@@ -205,7 +205,7 @@ class TestParquet:
         # sort values
         gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')
         gdf_from_csv = gdf_from_csv.sort_values('extent_id')
-        
+
         # checks
         assert init
         assert len(gdf_from_parquet) == 957
@@ -218,4 +218,50 @@ class TestParquet:
                 parquet_val = gdf_from_parquet[column].iloc[row]
                 csv_val = gdf_from_csv[column].iloc[row]
                 assert abs(parquet_val - csv_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {csv_val}'
-            
+
+
+    # def test_atl06_feather(self, init):
+    #     resource = "ATL03_20190314093716_11600203_005_01.h5"
+    #     region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+    #     parms = { "poly": region['poly'],
+    #               "cnf": "atl03_high",
+    #               "ats": 20.0,
+    #               "cnt": 10,
+    #               "len": 40.0,
+    #               "res": 20.0,
+    #               "maxi": 1,
+    #               "output": { "path": "", "format": "", "open_on_complete": True, "as_geo": False } }
+
+    #     # create parquet file
+    #     parms["output"]["path"] = "testfile8.parquet"
+    #     parms["output"]["format"] = "parquet"
+    #     gdf_from_parquet = icesat2.atl06p(parms, resources=[resource], keep_id=True)
+    #     os.remove("testfile8.parquet")
+
+    #     # create feather file
+    #     parms["output"]["path"] = "testfile8.feather"
+    #     parms["output"]["format"] = "feather"
+    #     gdf_from_feather = icesat2.atl06p(parms, resources=[resource], keep_id=True)
+    #     print(gdf_from_feather)
+    #     os.remove("testfile8.feather")
+
+    #     # sort values
+    #     gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')
+    #     gdf_from_feather = gdf_from_feather.sort_values('extent_id')
+
+    #     # checks
+    #     assert init
+    #     assert len(gdf_from_parquet) == 957
+    #     assert len(gdf_from_parquet.keys()) == 18, f'keys are {list(gdf_from_parquet.keys())}'
+    #     assert len(gdf_from_feather) == 957
+    #     assert len(gdf_from_feather.keys()) == 18, f'keys are {list(gdf_from_feather.keys())}'
+    #     columns_to_check = ["dh_fit_dx","n_fit_photons","longitude"]
+    #     for column in columns_to_check:
+    #         for row in range(len(gdf_from_parquet)):
+    #             parquet_val = gdf_from_parquet[column].iloc[row]
+    #             feather_val = gdf_from_feather[column].iloc[row]
+    #             assert abs(parquet_val - feather_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {feather_val}'
+
+
+
+### TODO: for CSV and Feather, check that the metadata files are created

@@ -123,6 +123,8 @@ class ArrowBuilder: public LuaObject
 
         const char*             getSubField     (const char* field_name);
         const char*             getFileName     (void);
+        const char*             getDataFile     (void);
+        const char*             getMetadataFile (void);
         const char*             getRecType      (void);
         const char*             getTimeKey      (void);
         const char*             getXKey         (void);
@@ -161,9 +163,11 @@ class ArrowBuilder: public LuaObject
         int                 rowSizeBytes;
         int                 batchRowSizeBytes;
         int                 maxRowsInGroup;
-        const char*         fileName; // used locally to build file
-        const char*         outputPath; // final destination of the file
         geo_data_t          geoData;
+        const char*         dataFile;           // used locally to build data file
+        const char*         metadataFile;       // used locally to build json metadata file
+        const char*         outputPath;         // final destination of the data file
+        const char*         outputMetadataPath; // final destination of the metadata file
 
         ArrowBuilderImpl*   impl; // private arrow data
 

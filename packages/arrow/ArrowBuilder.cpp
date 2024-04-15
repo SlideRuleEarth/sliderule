@@ -124,11 +124,19 @@ const char* ArrowBuilder::getSubField (const char* field_name)
 }
 
 /*----------------------------------------------------------------------------
- * getFileName
+ * getDataFile
  *----------------------------------------------------------------------------*/
-const char* ArrowBuilder::getFileName (void)
+const char* ArrowBuilder::getDataFile(void)
 {
-    return fileName;
+    return dataFile;
+}
+
+/*----------------------------------------------------------------------------
+ * getMetadataFile
+ *----------------------------------------------------------------------------*/
+const char* ArrowBuilder::getMetadataFile(void)
+{
+    return metadataFile;
 }
 
 /*----------------------------------------------------------------------------
@@ -264,11 +272,13 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
         }
     }
 
-    /* Get Path */
+    /* Get Paths */
     outputPath = ArrowCommon::getOutputPath(parms);
+    outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
 
-    /* Create Unique Temporary Filename */
-    fileName = ArrowCommon::getUniqueFileName(id);
+    /* Create Unique Temporary Filenames */
+    dataFile = ArrowCommon::getUniqueFileName(id);
+    metadataFile = ArrowCommon::createMetadataFileName(dataFile);
 
     /*
      * NO THROWING BEYOND THIS POINT
@@ -310,8 +320,10 @@ ArrowBuilder::~ArrowBuilder(void)
     active = false;
     delete builderPid;
     parms->releaseLuaObject();
-    delete [] fileName;
+    delete [] dataFile;
+    delete [] metadataFile;
     delete [] outputPath;
+    delete [] outputMetadataPath;
     delete [] recType;
     delete [] timeKey;
     delete [] xKey;
@@ -330,7 +342,7 @@ void* ArrowBuilder::builderThread(void* parm)
     int row_cnt = 0;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->fileName);
+    uint32_t trace_id = start_trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
     EventLib::stashId(trace_id);
 
     /* Loop Forever */
@@ -486,8 +498,15 @@ void* ArrowBuilder::builderThread(void* parm)
     builder->recordBatch.clear();
 
     /* Send File to User */
-    ArrowCommon::send2User(builder->fileName, builder->outputPath, trace_id, builder->parms, builder->outQ);
-    ArrowCommon::removeFile(builder->fileName);
+    ArrowCommon::send2User(builder->dataFile, builder->outputPath, trace_id, builder->parms, builder->outQ);
+    ArrowCommon::removeFile(builder->dataFile);
+
+    /* Send Metadata File to User */
+    if(ArrowCommon::fileExists(builder->metadataFile))
+    {
+        ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, builder->parms, builder->outQ);
+        ArrowCommon::removeFile(builder->metadataFile);
+    }
 
     /* Signal Completion */
     builder->signalComplete();

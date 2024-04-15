@@ -55,6 +55,9 @@
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
 #include <regex>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 #ifdef __aws__
 #include "aws.h"
@@ -207,7 +210,7 @@ void ArrowBuilderImpl::createSchema (void)
     {
         /* Set Arrow Output Stream */
         shared_ptr<arrow::io::FileOutputStream> file_output_stream;
-        PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(arrowBuilder->getFileName()));
+        PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(arrowBuilder->getDataFile()));
 
         /* Set Writer Properties */
         parquet::WriterProperties::Builder writer_props_builder;
@@ -239,8 +242,10 @@ void ArrowBuilderImpl::createSchema (void)
     }
     else if(arrowBuilder->getParms()->format == ArrowParms::FEATHER)
     {
+        createMetadataFile();
+
         /* Create FEATHER Writer */
-        auto result = arrow::io::FileOutputStream::Open(arrowBuilder->getFileName());
+        auto result = arrow::io::FileOutputStream::Open(arrowBuilder->getDataFile());
         if(result.ok())
         {
             featherWriter = result.ValueOrDie();
@@ -253,8 +258,10 @@ void ArrowBuilderImpl::createSchema (void)
     }
     else if(arrowBuilder->getParms()->format == ArrowParms::CSV)
     {
+        createMetadataFile();
+
         /* Create CSV Writer */
-        auto result = arrow::io::FileOutputStream::Open(arrowBuilder->getFileName());
+        auto result = arrow::io::FileOutputStream::Open(arrowBuilder->getDataFile());
         if(result.ok())
         {
             csvWriter = result.ValueOrDie();
@@ -579,6 +586,42 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
 
     /* Append Meta String */
     metadata->Append("pandas", pandasstr.c_str());
+}
+
+/*----------------------------------------------------------------------------
+* createMetadataFile
+*----------------------------------------------------------------------------*/
+void ArrowBuilderImpl::createMetadataFile(void)
+{
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+    appendServerMetaData(metadata);
+
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    for (int i = 0; i < metadata->size(); ++i)
+    {
+        print2term("Key: %s, Value: %s\n", metadata->key(i).c_str(), metadata->value(i).c_str());
+        rapidjson::Value key(metadata->key(i).c_str(), allocator);
+        rapidjson::Value value(metadata->value(i).c_str(), allocator);
+        doc.AddMember(key, value, allocator);
+    }
+
+    /* Serialize the JSON document to string */
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    /* Write the JSON string to a file */
+    const char* file_path = arrowBuilder->getMetadataFile();
+    FILE* jsonFile = fopen(file_path, "w");
+    if(jsonFile)
+    {
+        fwrite(buffer.GetString(), 1, buffer.GetSize(), jsonFile);
+        fclose(jsonFile);
+    }
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open metadata file: %s", file_path);
 }
 
 /*----------------------------------------------------------------------------

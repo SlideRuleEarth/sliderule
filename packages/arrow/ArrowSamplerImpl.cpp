@@ -108,12 +108,16 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
 
     try
     {
-        if(parms->format == ArrowParms::PARQUET)
+        if(parms->format == ArrowParms::PARQUET || parms->format == ArrowParms::FEATHER)
+        {
             status = makeColumnsWithLists(sampler);
-
-        /* Arrow csv writer cannot handle columns with lists of samples */
-        if(parms->format == ArrowParms::CSV)
+        }
+        else if(parms->format == ArrowParms::CSV)
+        {
+            /* Arrow csv writer cannot handle columns with lists of samples */
             status = makeColumnsWithOneSample(sampler);
+        }
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
     }
     catch(const RunTimeException& e)
     {
@@ -938,9 +942,15 @@ void ArrowSamplerImpl::metadataToJson(const std::shared_ptr<arrow::Table> table,
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
+    std::vector<const char*> keys2include = {"sliderule", "filemap"};
+
     const auto& metadata = table->schema()->metadata();
     for (int i = 0; i < metadata->size(); ++i)
     {
+        // print2term("Key: %s, Value: %s\n", metadata->key(i).c_str(), metadata->value(i).c_str());
+        if(std::find(keys2include.begin(), keys2include.end(), metadata->key(i)) == keys2include.end())
+            continue;
+
         rapidjson::Value key(metadata->key(i).c_str(), allocator);
         rapidjson::Value value(metadata->value(i).c_str(), allocator);
         doc.AddMember(key, value, allocator);

@@ -108,6 +108,7 @@ class ArrowBuilderImpl
         void appendGeoMetaData      (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendPandasMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+        void createMetadataFile     (void);
         void processField           (RecordObject::field_t& field,
                                      shared_ptr<arrow::Array>* column,
                                      batch_list_t& record_batch,

@@ -564,6 +564,9 @@ def procoutputfile(parm, rsps):
             else:
                 # Return GeoParquet File as GeoDataFrame
                 return geopandas.read_parquet(path)
+        elif output["format"] == "feather":
+            # Return Feather File as DataFrame
+            return geopandas.pd.read_feather(path)
         elif output["format"] == "csv":
             # Return CSV File as DataFrame
             return geopandas.pd.read_csv(path)
@@ -602,7 +605,7 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 
     # Set Default Keyword Arguments
     kwargs['index_key'] = "time"
-    kwargs['crs'] = SLIDERULE_EPSG 
+    kwargs['crs'] = SLIDERULE_EPSG
 
     # Check Empty Columns
     if len(columns) <= 0:
@@ -832,7 +835,7 @@ def set_verbose (enable, loglevel=logging.INFO):
     '''
     Sets up a console logger to print log messages to screen
 
-    If you want more control over the behavior of the log messages being captured, do not call this function but instead 
+    If you want more control over the behavior of the log messages being captured, do not call this function but instead
     create and configure a Python log handler of your own and attach it to `sliderule.logger`.
 
     Parameters
@@ -1297,10 +1300,10 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         region = {
 
             "gdf": <GeoDataFrame of region>
-            
-            "poly": [{"lat": <lat1>, "lon": <lon1> }, ...], 
-            
-            "raster": {"data": <geojson file as string>, 
+
+            "poly": [{"lat": <lat1>, "lon": <lon1> }, ...],
+
+            "raster": {"data": <geojson file as string>,
 
             "clusters": [[{"lat": <lat1>, "lon": <lon1>}, ...], [{"lat": <lat1>, "lon": <lon1>}, ...]] }
 
@@ -1346,7 +1349,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             "lon": -108.20772968780051,
             "lat": 38.8232055291981
         }
-    ]    
+    ]
     '''
 
     tstart = time.perf_counter()

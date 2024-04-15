@@ -152,7 +152,7 @@ bool send2User (const char* fileName, const char* outputPath,
     else
     {
         /* Stream File Back to Client */
-        status = send2Client(fileName, parms, outQ);
+        status = send2Client(fileName, outputPath, outQ);
     }
 
     stop_trace(INFO, send_trace_id);
@@ -235,11 +235,11 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool send2Client (const char* fileName, ArrowParms* parms, Publisher* outQ)
+bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
 {
     bool status = true;
 
-    /* Reopen Parquet File to Stream Back as Response */
+    /* Reopen File to Stream Back as Response */
     FILE* fp = fopen(fileName, "r");
     if(fp)
     {
@@ -256,7 +256,7 @@ bool send2Client (const char* fileName, ArrowParms* parms, Publisher* outQ)
             /* Send Meta Record */
             RecordObject meta_record(metaRecType);
             arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
-            StringLib::copy(&meta->filename[0], parms->path, FILE_NAME_MAX_LEN);
+            StringLib::copy(&meta->filename[0], outPath, FILE_NAME_MAX_LEN);
             meta->size = file_size;
             if(!meta_record.post(outQ))
             {
@@ -270,7 +270,7 @@ bool send2Client (const char* fileName, ArrowParms* parms, Publisher* outQ)
             {
                 RecordObject data_record(dataRecType, 0, false);
                 arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData();
-                StringLib::copy(&data->filename[0], parms->path, FILE_NAME_MAX_LEN);
+                StringLib::copy(&data->filename[0], outPath, FILE_NAME_MAX_LEN);
                 size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
                 if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))
                 {

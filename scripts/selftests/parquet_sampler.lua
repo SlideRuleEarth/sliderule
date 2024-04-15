@@ -82,6 +82,11 @@ status = parquet_sampler:sample()
 out_file_size = getFileSize(_out_feather);
 print("Output parquet file size:    " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output file size is not smaller than input file size: ")
+meta_file_size = getFileSize(_out_metadata);
+print("Output metadata file size:   " .. meta_file_size .. " bytes")
+runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
+os.remove(_out_metadata)
+
 
 print('\n--------------------------------------\nTest04: input parquet, output feather\n--------------------------------------')
 parquet_sampler = arrow.sampler(arrow.parms({path=out_feather, format="feather"}), in_parquet, outq_name, {["mosaic"] = dem1})
@@ -94,6 +99,11 @@ status = parquet_sampler:sample()
 out_file_size = getFileSize(_out_feather);
 print("Output parquet file size:    " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output file size is not smaller than input file size: ")
+meta_file_size = getFileSize(_out_metadata);
+print("Output metadata file size:   " .. meta_file_size .. " bytes")
+runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
+os.remove(_out_metadata)
+
 
 print('\n--------------------------------------\nTest05: input geoparquet, output CSV\n--------------------------------------')
 parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
@@ -109,6 +119,7 @@ runner.check(out_file_size < in_file_size, "Output CSV file size is not smaller 
 meta_file_size = getFileSize(_out_metadata);
 print("Output metadata file size:   " .. meta_file_size .. " bytes")
 runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
+os.remove(_out_metadata)
 
 
 print('\n--------------------------------------\nTest06: input parquet, output CSV \n--------------------------------------')
@@ -125,6 +136,7 @@ runner.check(out_file_size < in_file_size, "Output CSV file size is not smaller 
 meta_file_size = getFileSize(_out_metadata);
 print("Output metadata file size: " .. meta_file_size .. " bytes")
 runner.check(meta_file_size > 0, "Output metadata json file size is empty: ")
+os.remove(_out_metadata)
 
 
 print('\n--------------------------------------\nTest07: input/output geoparquet (geo)\n--------------------------------------')
