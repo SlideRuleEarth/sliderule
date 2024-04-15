@@ -353,7 +353,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
     /* Must be table of strings */
     if((lua_gettop(L) >= index) && lua_istable(L, index))
     {
-        /* Iterate through each item in table */
+        /* Iterate through each listed item in table */
         int num_strings = lua_rawlen(L, index);
         for(int i = 0; i < num_strings; i++)
         {
@@ -367,6 +367,18 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
             }
 
             /* Clean up stack */
+            lua_pop(L, 1);
+        }
+
+        /* Iterate through each keyed item in table */
+        lua_pushnil(L);  // Push nil to start the iteration
+        while (lua_next(L, -2) != 0) 
+        { 
+            const char* key = lua_tostring(L, -2);
+            const char* value = lua_tostring(L, -1);
+            string* header = new string(FString("%s: %s", key, value).c_str());
+            header_list.add(header);
+            num_hdrs++;
             lua_pop(L, 1);
         }
     }
