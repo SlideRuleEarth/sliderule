@@ -21,7 +21,7 @@ rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 -- Arguments & Call --
 local resource_path = "SNDR.J1.CRIS.20240414T2330.m06.g236.L1B.std.v02_11.G.240415051652.nc"
 -- "h5ex_d_gzip.h5"
-local dataset_name = "/lat_geoid/description"
+local dataset_name = "/view_ang/long_name"
 -- "/minimum_fire_area/coordinates"
 -- "/Temp/add_offset" --"/Power/_FillValue" -- "/Temp/add_offset" -- "/geospatial_lat_lon_extent/geospatial_lat_center"  -- "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
 local id = 0
