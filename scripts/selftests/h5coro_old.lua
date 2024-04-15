@@ -19,9 +19,9 @@ dataq = "dataq" -- stream based: data comes in, then consumed/produced
 rsps2 = msg.subscribe(dataq) -- responses posted to dataq
 
 -- Arguments & Call --
-local resource_path = "OR_ABI-L2-FDCC-M3_G17_s20182390052191_e20182390054564_c20182390055159.nc"
+local resource_path = "SNDR.J1.CRIS.20240414T2330.m06.g236.L1B.std.v02_11.G.240415051652.nc"
 -- "h5ex_d_gzip.h5"
-local dataset_name = "/Temp/add_offset"
+local dataset_name = "/lat_geoid/description"
 -- "/minimum_fire_area/coordinates"
 -- "/Temp/add_offset" --"/Power/_FillValue" -- "/Temp/add_offset" -- "/geospatial_lat_lon_extent/geospatial_lat_center"  -- "/Power/_FillValue" -- "/Power/valid_range" -- attributes on -> pass in attr -- "DS1" --
 local id = 0

@@ -1103,73 +1103,46 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint64_t check_sum = readField(4, &pos);
     (void)check_sum; // unused
 
-    /* Build Heap Info Structure */
-    heap_info_t heap_info;
     
     /* for heap len size - follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199 */
     uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2_gen((uint64_t) max_size_mg_obj) / 8) + 1));
 
-    heap_info = {
-        .table_width        = table_width,
-        .curr_num_rows      = curr_num_rows,
-        .starting_blk_size  = (int)starting_blk_size,
-        .max_dblk_size      = (int)max_dblk_size,
-        .blk_offset_size    = ((max_heap_size + 7) / 8),
-        .dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0),
-        .msg_type           = msg_type,
-        .num_objects        = (int)mg_objs,
-        .cur_objects        = 0, // updated as objects are read
-        .root_blk_addr      = root_blk_addr, 
-        .max_size_mg_obj    = max_size_mg_obj,
-        .max_heap_size      = max_heap_size,
-        .hdr_flags          = hdr_flags,
-        .heap_off_size      = (uint8_t) H5BTreeV2::H5HF_SIZEOF_OFFSET_BITS(max_heap_size),
-        .heap_len_size      = min_calc,
-        .dlvl               = dlvl
-        
-    };
-
-    // NOTE: reasoning for this is that the above only populates for a local copy
-    // Option: eliminate the above style or modify to sustain values for outside use
-
-    if (heap_info_ptr != NULL) // Populate passed struct
-    {
-        heap_info_ptr->table_width        = table_width;
-        heap_info_ptr->curr_num_rows      = curr_num_rows;
-        heap_info_ptr->starting_blk_size  = (int)starting_blk_size;
-        heap_info_ptr->max_dblk_size      = (int)max_dblk_size;
-        heap_info_ptr->blk_offset_size    = ((max_heap_size + 7) / 8);
-        heap_info_ptr->dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0);
-        heap_info_ptr->msg_type           = msg_type;
-        heap_info_ptr->num_objects        = (int)mg_objs;
-        heap_info_ptr->cur_objects        = 0; // updated as objects are read
-        heap_info_ptr->root_blk_addr      = root_blk_addr;
-        heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
-        heap_info_ptr->max_heap_size      = max_heap_size;
-        heap_info_ptr->hdr_flags          = hdr_flags;
-        heap_info_ptr->heap_off_size      = (uint8_t) H5BTreeV2::H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
-        heap_info_ptr->heap_len_size      = min_calc;
-        heap_info_ptr->dlvl               = dlvl;
-    }
+    /* Build Heap Info Structure */
+    heap_info_ptr->table_width        = table_width;
+    heap_info_ptr->curr_num_rows      = curr_num_rows;
+    heap_info_ptr->starting_blk_size  = (int)starting_blk_size;
+    heap_info_ptr->max_dblk_size      = (int)max_dblk_size;
+    heap_info_ptr->blk_offset_size    = ((max_heap_size + 7) / 8);
+    heap_info_ptr->dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0);
+    heap_info_ptr->msg_type           = msg_type;
+    heap_info_ptr->num_objects        = (int)mg_objs;
+    heap_info_ptr->cur_objects        = 0; // updated as objects are read
+    heap_info_ptr->root_blk_addr      = root_blk_addr;
+    heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
+    heap_info_ptr->max_heap_size      = max_heap_size;
+    heap_info_ptr->hdr_flags          = hdr_flags;
+    heap_info_ptr->heap_off_size      = (uint8_t) H5BTreeV2::H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
+    heap_info_ptr->heap_len_size      = min_calc;
+    heap_info_ptr->dlvl               = dlvl;
 
     /* Process Blocks */
-    if(heap_info.curr_num_rows == 0)
+    if(heap_info_ptr->curr_num_rows == 0)
     {
         /* Direct Blocks */
-        int bytes_read = readDirectBlock(&heap_info, heap_info.starting_blk_size, root_blk_addr, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read > heap_info.starting_blk_size))
+        int bytes_read = readDirectBlock(heap_info_ptr, heap_info_ptr->starting_blk_size, root_blk_addr, hdr_flags, dlvl);
+        if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
-        pos += heap_info.starting_blk_size;
+        pos += heap_info_ptr->starting_blk_size;
     }
     else
     {
         /* Indirect Blocks */
-        int bytes_read = readIndirectBlock(&heap_info, 0, root_blk_addr, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read > heap_info.starting_blk_size))
+        int bytes_read = readIndirectBlock(heap_info_ptr, 0, root_blk_addr, hdr_flags, dlvl);
+        if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
         pos += bytes_read;
     }
@@ -2231,10 +2204,13 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
+    // TODO: redundant, could be expelled in future 
+    heap_info_t heap_info_dense;
+
     /* Follow Heap Address if Provided */
     if((int)heap_address != -1)
     {
-        readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl, NULL);
+        readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
     }
 
     /* Return Bytes Read */
