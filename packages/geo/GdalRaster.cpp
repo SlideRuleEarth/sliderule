@@ -961,7 +961,16 @@ RasterSubset* GdalRaster::getRasterSubset(uint32_t ulx, uint32_t uly, double map
             OGRErr err = CE_None;
             do
             {
-                err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, NULL);
+                GDALRasterIOExtraArg* argsPtr = NULL;
+                GDALRasterIOExtraArg  args;
+
+                if(parms->sampling_algo != GRIORA_NearestNeighbour)
+                {
+                    INIT_RASTERIO_EXTRA_ARG(args);
+                    args.eResampleAlg = parms->sampling_algo;
+                    argsPtr = &args;
+                }
+                err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, argsPtr);
             }
             while(err != CE_None && cnt--);
 

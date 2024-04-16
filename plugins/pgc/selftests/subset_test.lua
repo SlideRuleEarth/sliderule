@@ -22,7 +22,7 @@ local ury =  -69.95
 local demTypes = {"rema-mosaic", "rema-strips"}
 for i = 1, #demTypes do
     local demType = demTypes[i];
-    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
+    local dem = geo.raster(geo.parms({asset=demType, algorithm="Cubic"}))  -- Resample the subset data with cubic algorithm
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s AOI subset\n--------------------------------", demType))
 
@@ -62,7 +62,7 @@ for i = 1, #demTypes do
                     mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
 
             -- NOTE: mosaic and strips read the same 'area' the difference is the actual data
-            --       this test does not have any subset area clipping, only one strips out of 12 was out of bounds
+            --       this test does not have any subset area clipping, only one strip out of 12 was out of bounds
             runner.check(cols == 1915)
             runner.check(rows == 4343)
             runner.check(math.abs(ulx -  1100044.752507064) < sigma)
