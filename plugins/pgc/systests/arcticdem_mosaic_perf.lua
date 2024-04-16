@@ -1,7 +1,7 @@
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
+local console = require("console")
+local asset = require("asset")
+local csv = require("csv")
+local json = require("json")
 
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
@@ -29,7 +29,7 @@ local dtime = stoptime - starttime
 
 if err ~= 0 then
     failedSamples = failedSamples + 1
-    print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
+    print(string.format("Point: (%7.2f, %.2f) ======> FAILED to read", lon, lat))
 else
     for j, v in ipairs(tbl) do
         local el = v["value"]
@@ -51,7 +51,7 @@ do
     tbl, err = dem:sample(lon, lat, height)
     if err ~= 0 then
         failedSamples = failedSamples + 1
-        print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
+        print(string.format("Point: %d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     end
 end
 
@@ -101,7 +101,7 @@ do
     tbl, err = dem:sample(lon, lat, height)
     if err ~= 0 then
         failedSamples = failedSamples + 1
-        print(string.format("Point: %d, (%7.2, %.2) ======> FAILED to read",i, lon, lat))
+        print(string.format("Point: %d, (%7.2f, %.2f) ======> FAILED to read",i, lon, lat))
     else
         if verbose then
             for j, v in ipairs(tbl) do

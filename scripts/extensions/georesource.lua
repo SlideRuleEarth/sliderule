@@ -39,7 +39,7 @@ local function initialize(resource, parms, algo, args)
     -- Raster Sampler --
     local sampler_disp = nil
     if parms[geo.PARMS] then
-        rsps_bridge = core.bridge(args.result_q, rspq)
+        local rsps_bridge = core.bridge(args.result_q, rspq)
         sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required because GeoRaster is not thread safe
         for key,settings in pairs(parms[geo.PARMS]) do
             local robj = geo.raster(geo.parms(settings):keyspace(args.shard))

@@ -64,6 +64,12 @@ STAC_PAGE_SIZE = 100
 -- upper limit on resources returned from TNM query per request
 TNM_PAGE_SIZE = 100
 
+-- response codes for all of the package functions
+RC_SUCCESS = 0
+RC_CMR_RQST_FAILED = -1
+RC_CMR_RSPS_UNPARSEABLE = -2
+RC_CMR_RSPS_UNEXPECTED = -3
+
 --
 -- Build GeoJSON
 --
@@ -100,8 +106,110 @@ end
 --
 -- CMR
 --
-local function cmr ()
+local function cmr (parms)
+
+    local urls = {}
+
+    -- get parameters of request
+    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset = DATASETS[short_name] or {}
+    local provider = dataset["provider"] or error("unable to determine provider for query")
+    local version = parms["version"] or dataset["version"]
+    local polygon = parms["polygon_for_cmr"] or parms["polygon"]
+    local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
+    local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
+    local name_filter = parms["name_filter"]
+
+    -- flatten polygon
+    local polystr = ""
+    if polygon then
+        for i,coord in ipairs(polygon) do
+            if i < #polygon then
+                polystr = polystr .. string.format("%f,%f,", coord["lon"], coord["lat"]) -- with trailing comma
+            else
+                polystr = polystr .. string.format("%f,%f", coord["lon"], coord["lat"]) -- without trailing comma
+            end
+        end
+    end
+
+    -- build query request
+    local cmr_query_url = table.concat({
+        "https://cmr.earthdata.nasa.gov/search/granules.json",
+        string.format("?provider=%s", provider),
+        "&sort_key[]=start_date&sort_key[]=producer_granule_id&scroll=true",
+        string.format("&page_size=%s", CMR_PAGE_SIZE),
+        string.format("&short_name=%s", short_name),
+        version and string.format("&version=%s", version) or "",
+        (t0 and t1) and string.format("&temporal[]=%s,%s", t0, t1) or "",
+        polygon and string.format("&polygon=%s", polystr) or "",
+        name_filter and string.format("&options[producer_granule_id][pattern]=true&producer_granule_id[]=%s", name_filter) or "",
+    })
+
+    -- make requests and page through responses
+    local headers = {}
+    while true do
+
+        -- issue http request
+        local rsps, hdrs, status = netsvc.get(cmr_query_url, nil, headers, false, false, true)
+        if not status then
+            return RC_CMR_RQST_FAILED, "http request to CMR failed"
+        end
+
+        -- add scroll id for future page requests
+        if not headers["cmr-scroll-id"] then
+            headers["cmr-scroll-id"] = hdrs["cmr-scroll-id"]
+        end
+
+        -- decode response text (json) into lua table
+        local rc, results = pcall(json.decode, rsps)
+        if not rc then
+            return RC_CMR_RSPS_UNPARSEABLE, "could not parse json in response from cmr"
+        end
+
+        -- confirm necessary fields are present in the response
+        if not results["feed"] or not results["feed"]["entry"] then
+            return RC_CMR_RSPS_UNEXPECTED, "could not find expected fields in response from cmr"
+        end
+
+        -- loop through each response entry and pull out the desired links
+        local num_links = 0
+        for _,e in ipairs(results["feed"]["entry"]) do
+            local links = e["links"]
+            if links then
+                for _,l in ipairs(links) do
+                    local link = l["href"]
+                    if link then
+                        -- grab only links with the desired format (checks extension match)
+                        for _,format in ipairs(dataset["formats"]) do
+                            if link:sub(-#format) == format then
+                                -- split link over '/' and grab last element
+                                local url = link
+                                for token in link:gmatch("[^" .. "/"  .. "]+") do
+                                    url = token
+                                end
+                                -- add url to list of urls to return
+                                table.insert(urls, url)
+                                num_links = num_links + 1
+                                break;
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        -- check if any links added with last request (else all done)
+        if num_links == 0 then
+            break
+        end
+    end
+
+    prettyprint.display(urls)
+
+    -- return urls
+    return RC_SUCCESS, urls
 end
+
 
 --
 -- STAC
@@ -159,8 +267,14 @@ local function stac (parms)
     geotable["context"]["limit"] = DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- return response
-    return geotable
+    return RC_SUCCESS, geotable
     
+end
+
+--
+-- TNM
+--
+local function tnm ()
 end
 
 --
@@ -168,5 +282,10 @@ end
 --
 return {
     cmr = cmr,
-    stac = stac
+    stac = stac,
+    tnm = tnm,
+    SUCCESS = RC_SUCCESS,
+    CMR_RQST_FAILED = RC_CMR_RQST_FAILED,
+    CMR_RSPS_UNPARSEABLE = RC_CMR_RSPS_UNPARSEABLE,
+    CMR_RSPS_UNEXPECTED = RC_CMR_RSPS_UNEXPECTED,
 }

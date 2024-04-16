@@ -1,5 +1,5 @@
 
-function _display (var, indent)
+local function _display (var, indent)
 
     local toprint = ""
 
@@ -28,7 +28,7 @@ function _display (var, indent)
     return toprint
 end
 
-function display (var)
+local function display (var)
     if (type(var) ~= "table") then
         print(var)
     else

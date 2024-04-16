@@ -6,8 +6,8 @@ if not icesat2.UNITTEST then return end
 
 -- Setup --
 
-atl06_dispatch = icesat2.ut_atl06()
-atl03_reader = icesat2.ut_atl03()
+local atl06_dispatch = icesat2.ut_atl06()
+local atl03_reader = icesat2.ut_atl03()
 
 -- Unit Test --
 

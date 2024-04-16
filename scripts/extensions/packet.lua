@@ -8,7 +8,7 @@ local function computeChecksum(pkt)
     local cs = 0xFF
 
     for c in pkt:gmatch(".") do
-        b = string.byte(c, 1)
+        local b = string.byte(c, 1)
         cs = cs ~ b
     end
 
@@ -23,8 +23,8 @@ end
 --------------------------------------------------------------------------------------
 local function setChecksum(rud,fld)
 
-	raw = rud:serialize()
-	cs = computeChecksum(raw)
+	local raw = rud:serialize()
+	local cs = computeChecksum(raw)
 	rud:setvalue(fld, cs)
 
 	return rud
@@ -43,9 +43,9 @@ local function printPacket(pkt,align)
 
     local lc = 0
 
-	num_bytes_to_align = align or 16
+	local num_bytes_to_align = align or 16
 
-    bytes = {string.byte(pkt, 0, -1)}
+    local bytes = {string.byte(pkt, 0, -1)}
     for i=1,#bytes do
         io.write(string.format('%02X', bytes[i]))
 
@@ -68,8 +68,8 @@ local function comparePacket(pkt1, pkt2)
 
     if not pkt1 or not pkt2 then return false end
 
-    bytes1 = {string.byte(pkt1, 0, -1)}
-    bytes2 = {string.byte(pkt2, 0, -1)}
+    local bytes1 = {string.byte(pkt1, 0, -1)}
+    local bytes2 = {string.byte(pkt2, 0, -1)}
 
     if #bytes1 ~= #bytes2 then
         return false

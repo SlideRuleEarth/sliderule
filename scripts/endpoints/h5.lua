@@ -30,16 +30,16 @@ local startrow = parm["startrow"] or 0
 local numrows = parm["numrows"] or h5.ALL_ROWS
 local id = parm["id"] or 0
 
-asset = core.getbyname(asset_name)
+local asset = core.getbyname(asset_name)
 if not asset then
     local userlog = msg.publish(rspq)
     userlog:sendlog(core.ERROR, string.format("invalid asset specified: %s", asset_name))
     return
 end
 
-f = h5.dataset(core.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
+local f = h5.dataset(core.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
 if f:connected() then
-    r = core.reader(f, rspq)
+    local r = core.reader(f, rspq)
     r:waiton() -- waits until reader completes
 end
 

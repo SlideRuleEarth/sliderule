@@ -1,6 +1,6 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
+local console = require("console")
+local asset = require("asset")
 
 -- Setup --
 

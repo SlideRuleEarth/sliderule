@@ -5,9 +5,9 @@ local td = sys.cwd() .. "/" .. runner.rootdir(arg[0])
 
 -- Setup --
 
-assets = asset.loaddir("./asset_directory.csv")
+local assets = asset.loaddir("./asset_directory.csv")
 
-expected = {
+local expected = {
     dataset1={driver="file", url="/data/1"},
     dataset2={driver="file", url="/data/2"},
     dataset3={driver="s3",   url="/data/3"}
@@ -15,7 +15,7 @@ expected = {
 
 local function check_query(act, exp)
     for _, e in pairs(exp) do
-        found = false
+        local found = false
         for _, v in pairs(act) do
             if tostring(e) == v then
                 found = true
@@ -29,7 +29,7 @@ end
 
 print('\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do
-    name, identity, driver, url, index_filename, region, endpoint, status = v:info()
+    local name, identity, driver, url, index_filename, region, endpoint, status = v:info()
     runner.compare(driver, expected[name]["driver"])
     runner.compare(url, expected[name]["url"])
     runner.check(status)
@@ -37,7 +37,7 @@ end
 
 print('\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
 local a2 = core.getbyname("dataset1")
-name, identity, driver, url, index_filename, region, endpoint, status = a2:info()
+local name, identity, driver, url, index_filename, region, endpoint, status = a2:info()
 runner.compare(name, "dataset1")
 runner.compare(driver, expected["dataset1"]["driver"])
 runner.compare(url, expected["dataset1"]["url"])
@@ -75,11 +75,11 @@ print('\n------------------\nTest07: Test Sptial Index\n------------------\n')
 local a7 = core.getbyname("dataset3")
 local i7 = core.spatialindex(a7, core.SOUTH_POLAR)
 
-lat = -80.0
-lon = 45.0
+local lat = -80.0
+local lon = 45.0
 while lat < 80.0 do
-    x, y = i7:project(lon, lat)
-    nlon, nlat = i7:sphere(x, y)
+    local x, y = i7:project(lon, lat)
+    local nlon, nlat = i7:sphere(x, y)
     runner.check(runner.cmpfloat(math.abs(x), math.abs(y), 0.0000001))
     runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
     runner.check(runner.cmpfloat(lon, nlon, 0.0000001))
@@ -89,8 +89,8 @@ end
 lat = -60.0
 lon = -170.0
 while lon < 170.0 do
-    x, y = i7:project(lon, lat)
-    nlon, nlat = i7:sphere(x, y)
+    local x, y = i7:project(lon, lat)
+    local nlon, nlat = i7:sphere(x, y)
     runner.check(runner.cmpfloat(lon, nlon, 0.0000001))
     runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
     lon = lon + 10.0
@@ -99,9 +99,9 @@ end
 print('\n------------------\nTest08: Query Dataset1 with Spatial Index\n------------------\n')
 local a8 = core.getbyname("dataset1")
 local i8 = core.spatialindex(a8, core.SOUTH_POLAR):name("spatialindex"):display()
-local r5 = i8:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
-local e5 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45}
-check_query(r5, e5)
+local r8 = i8:query({lat0=-83.2, lon0=45.0, lat1=-73.2, lon1=55.0})
+local e8 = { 1, 4, 7, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45}
+check_query(r8, e8)
 
 -- Clean Up --
 

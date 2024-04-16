@@ -7,11 +7,11 @@ local console = require("console")
 runner.command("NEW CFS_INTERFACE cfsif cfstlmq cfscmdq 127.0.0.1 5001 127.0.0.1 5002")
 runner.command("cfsif::DROP_INVALID FALSE")
 
-ground_tlmq = msg.subscribe("cfstlmq")
-ground_cmdq = msg.publish("cfscmdq")
+local ground_tlmq = msg.subscribe("cfstlmq")
+local ground_cmdq = msg.publish("cfscmdq")
 
-flight_tlmsock = core.udp("127.0.0.1", 5001, core.CLIENT)
-flight_cmdsock = core.udp("127.0.0.1", 5002, core.SERVER)
+local flight_tlmsock = core.udp("127.0.0.1", 5001, core.CLIENT)
+local flight_cmdsock = core.udp("127.0.0.1", 5002, core.SERVER)
 
 --[[
 *****************************
@@ -19,9 +19,9 @@ Test1: Invalid Telemetry
 *****************************
 --]]
 
-testtlm = "BOGUS_TELEMETRY_PACKET"
+local testtlm = "BOGUS_TELEMETRY_PACKET"
 flight_tlmsock:send(testtlm)
-val = ground_tlmq:recvstring(3000) -- 3 second timeout
+local val = ground_tlmq:recvstring(3000) -- 3 second timeout
 runner.check('val == testtlm')
 print(string.format('TLM: |%s|', val))
 
@@ -31,7 +31,7 @@ Test2: Invalid Command
 *****************************
 --]]
 
-testcmd = "BOGUS_COMMAND_PACKET"
+local testcmd = "BOGUS_COMMAND_PACKET"
 ground_cmdq:sendstring(testcmd)
 val = flight_cmdsock:receive()
 runner.check('string.match(val, testcmd) == testcmd')
@@ -47,7 +47,7 @@ cmd.exec("CCSDS::DEFINE_TELEMETRY test.tlm NULL 0x421 12 2")
 cmd.exec("ADD_FIELD test.tlm days UINT16 6 1 LE")
 cmd.exec("ADD_FIELD test.tlm ms UINT32 8 1 LE")
 testtlm = msg.create("/test.tlm days=4 ms=300")
-raw = testtlm:serialize()
+local raw = testtlm:serialize()
 io.write("RAW_TLM: ")
 packet.printPacket(raw)
 flight_tlmsock:send(raw)
@@ -67,7 +67,7 @@ cmd.exec("ADD_FIELD test.cmd CS UINT8 7 1 NA")
 cmd.exec("ADD_FIELD test.cmd counter UINT32 8 1 LE")
 testcmd = msg.create("/test.cmd counter=0x12345678")
 raw = testcmd:serialize()
-cs = packet.computeChecksum(raw)
+local cs = packet.computeChecksum(raw)
 print(string.format('CS: %02X', cs))
 testcmd:setvalue("CS", cs)
 raw = testcmd:serialize()

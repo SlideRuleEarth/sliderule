@@ -62,7 +62,11 @@ void CurlLib::deinit (void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<string*>* headers, const char* unix_socket)
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
+                       bool verify_peer, bool verify_hostname, 
+                       List<string*>* headers, 
+                       const char* unix_socket, 
+                       List<string*>* rsps_headers)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -103,6 +107,12 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         if(unix_socket)
         {
             curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, (char*)unix_socket);
+        }
+
+        if(rsps_headers)
+        {
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, CurlLib::writerHeader);
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, rsps_headers);
         }
 
         if(verb == EndpointObject::GET && rqst.size > 0)
@@ -372,10 +382,10 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
 
         /* Iterate through each keyed item in table */
         lua_pushnil(L);  // Push nil to start the iteration
-        while (lua_next(L, -2) != 0) 
+        while(lua_next(L, index) != 0) 
         { 
-            const char* key = lua_tostring(L, -2);
-            const char* value = lua_tostring(L, -1);
+            const char* key = LuaObject::getLuaString(L, -2);
+            const char* value = LuaObject::getLuaString(L, -1);
             string* header = new string(FString("%s: %s", key, value).c_str());
             header_list.add(header);
             num_hdrs++;
@@ -393,6 +403,7 @@ int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
     List<string*> header_list(EXPECTED_MAX_HEADERS);
+    List<string*>* rsps_headers = NULL;
 
     try
     {
@@ -402,19 +413,53 @@ int CurlLib::luaGet (lua_State* L)
         int         num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
         bool        verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
         bool        verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
+        bool        get_rsps_hdrs   = LuaObject::getLuaBoolean(L, 6, true, false);
+
+        /* Optionally Allocate List to Hold Response Headers */
+        if(get_rsps_hdrs) rsps_headers = new List<string*>();
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, &header_list);
+        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, &header_list, NULL, rsps_headers);
         if(response)
         {
+            /* get status and push response */
             status = (http_code >= 200 && http_code < 300);
             lua_pushlstring(L, response, size);
             delete [] response;
+
+            /* build and push headers */
+            if(get_rsps_hdrs && rsps_headers)
+            {
+                /* push table of header key:value pairs */
+                lua_newtable(L);
+
+                /* push pair for each header */
+                for(int i = 0; i < rsps_headers->length(); i++)
+                {
+                    string* hdr_str = rsps_headers->get(i);
+                    size_t pos = hdr_str->find(':');
+                    string key = hdr_str->substr(0,pos);
+                    string value = hdr_str->substr(pos+1);
+                    size_t c1 = value.find_first_not_of(" \t\n\r");
+                    if(string::npos != c1)
+                    {
+                        size_t c2 = value.find_last_not_of(" \t\n\r");
+                        value = value.substr(c1, (c2 - c1 + 1));
+                        for (char &c: key) c = std::tolower(c); // convert key to lower case
+                        LuaEngine::setAttrStr(L, key.c_str(), value.c_str());
+                    }
+                }
+            }
+            else
+            {
+                lua_pushnil(L);
+            }
         }
         else
         {
+            lua_pushnil(L);
             lua_pushnil(L);
         }
     }
@@ -422,11 +467,15 @@ int CurlLib::luaGet (lua_State* L)
     {
         mlog(e.level(), "Error performing netsvc GET: %s", e.what());
         lua_pushnil(L);
+        lua_pushnil(L);
     }
+
+    /* Free Response Headers */
+    delete rsps_headers;
 
     /* Return Status */
     lua_pushboolean(L, status);
-    return 2;
+    return 3;
 }
 
 /*----------------------------------------------------------------------------
@@ -672,3 +721,14 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
     return bytes_to_copy;
 }
 
+/*----------------------------------------------------------------------------
+ * CurlLib::writerHeader
+ *----------------------------------------------------------------------------*/
+size_t CurlLib::writerHeader(void* buffer, size_t size, size_t nmemb, void *userp) 
+{
+    List<string*>* rsps_headers = reinterpret_cast<List<string*>*>(userp);
+    string* header = new string((char*)buffer);
+    rsps_headers->add(header);
+    size_t total_size = size * nmemb;
+    return total_size;
+}
