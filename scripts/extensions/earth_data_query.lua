@@ -132,6 +132,7 @@ local function cmr (parms)
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local name_filter = parms["name_filter"]
+    local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build name filter
     if (not name_filter) and parms["asset"] and (parms["asset"] == "icesat2") then
@@ -183,6 +184,7 @@ local function cmr (parms)
 
     -- make requests and page through responses
     local headers = {}
+    local total_links = 0
     while true do
 
         -- issue http request
@@ -214,7 +216,7 @@ local function cmr (parms)
             if links then
                 for _,l in ipairs(links) do
                     local link = l["href"]
-                    if link then
+                    if link and (total_links < max_resources) then
                         -- grab only links with the desired format (checks extension match)
                         for _,format in ipairs(dataset["formats"]) do
                             if link:sub(-#format) == format then
@@ -226,6 +228,7 @@ local function cmr (parms)
                                 -- add url to list of urls to return
                                 table.insert(urls, url)
                                 num_links = num_links + 1
+                                total_links = total_links + 1
                                 break
                             end
                         end
@@ -236,6 +239,9 @@ local function cmr (parms)
 
         -- check if any links added with last request (else all done)
         if num_links == 0 then
+            break
+        elseif total_links >= max_resources then
+            sys.log(core.WARNING, string.format("Number of matched resources truncated from to %d", total_links))
             break
         end
     end
@@ -260,6 +266,7 @@ local function stac (parms)
     local polygon = parms["poly"]
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
+    local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build stac request
     local url = string.format("https://cmr.earthdata.nasa.gov/stac/%s/search", provider)
@@ -273,7 +280,7 @@ local function stac (parms)
     -- add polygon if provided
     if polygon then
         local coordinates = {}
-        for k,v in pairs(polygon) do
+        for _,v in pairs(polygon) do
             table.insert(coordinates, {v["lon"], v["lat"]})
         end
         rqst["intersects"] = {
@@ -297,9 +304,9 @@ local function stac (parms)
     -- iterate through additional pages if not all returned
     local num_returned = geotable["context"]["returned"]
     local num_matched = geotable["context"]["matched"]
-    if num_matched > DEFAULT_MAX_REQUESTED_RESOURCES then
-        sys.log(core.WARNING, string.format("Number of matched resources truncated from %d to %d",num_matched, DEFAULT_MAX_REQUESTED_RESOURCES))
-        num_matched = DEFAULT_MAX_REQUESTED_RESOURCES
+    if num_matched > max_resources then
+        sys.log(core.WARNING, string.format("Number of matched resources truncated from %d to %d",num_matched, max_resources))
+        num_matched = max_resources
     end
     local num_pages = math.floor((num_matched  + (num_returned - 1)) / num_returned)
     for page = 2, num_pages do
@@ -319,7 +326,7 @@ local function stac (parms)
         table.move(paged_geotable["features"], 1, #paged_geotable["features"], #geotable["features"] + 1, geotable["features"])
     end
     geotable["context"]["returned"] = num_matched
-    geotable["context"]["limit"] = DEFAULT_MAX_REQUESTED_RESOURCES
+    geotable["context"]["limit"] = max_resources
 
     -- return response
     return RC_SUCCESS, geotable 
@@ -341,6 +348,7 @@ local function tnm (parms)
     local polygon = parms["poly"]
     local t0 = parms["t0"] or '2018-01-01'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
+    local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- flatten polygon
     local polystr = ""
@@ -410,6 +418,9 @@ local function tnm (parms)
         -- check if complete
         num_items = num_items + #results["items"]
         if num_items == results["total"] then
+            break
+        elseif num_items >= max_resources then
+            sys.log(core.WARNING, string.format("Number of matched resources truncated from %d to %d", results["total"], num_items))
             break
         end
     end

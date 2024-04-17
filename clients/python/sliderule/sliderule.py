@@ -40,6 +40,7 @@ import warnings
 import numpy
 import geopandas
 from shapely.geometry import Polygon
+from shapely.geometry.multipolygon import MultiPolygon
 from datetime import datetime
 from sliderule import version
 
@@ -105,6 +106,15 @@ eventlogger = {
     4: logger.critical
 }
 
+exceptioncodes = {
+    "INFO": 0,
+    "ERROR": -1,
+    "TIMEOUT": -2,
+    "RESOURCE_DOES_NOT_EXIST": -3,
+    "EMPTY_SUBSET": -4,
+    "SIMPLIFY": -5
+}
+
 datatypes = {
     "TEXT":     0,
     "REAL":     1,
@@ -152,6 +162,9 @@ class FatalError(RuntimeError):
     pass
 
 class TransientError(RuntimeError):
+    pass
+
+class RetryRequest(RuntimeError):
     pass
 
 ###############################################################################
@@ -441,13 +454,15 @@ socket.getaddrinfo = __override_getaddrinfo
 #  __logeventrec
 #
 def __logeventrec(rec):
-    eventlogger[rec['level']]('%s' % (rec["attr"]))
+    eventlogger[rec['level']]('Log <%s, %d>: %s' % (rec["name"], rec["time"], rec["attr"]))
 
 #
 #  __exceptrec
 #
 def __exceptrec(rec):
-    if rec["code"] >= 0:
+    if rec["code"] == exceptioncodes["SIMPLIFY"]:
+        raise RetryRequest("cmr simplification requested")
+    elif rec["code"] < 0:
         eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
     else:
         eventlogger[rec["level"]]("%s", rec["text"])
@@ -643,6 +658,38 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
     # Return GeoDataFrame
     return gdf
 
+#
+# Simplify Polygon
+#
+def simplifypolygon(parm):
+    if "parms" not in parm:
+        return
+    
+    if "cmr" in parm["parms"]:
+        polygon = parm["parms"]["cmr"]["polygon"]
+    elif "poly" in parm["parms"]:
+        polygon = parm["parms"]["poly"]
+    else:
+        return
+
+    tolerance = 0.01
+    raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
+    shape = MultiPolygon(*raw_multi_polygon)
+    buffered_shape = shape.buffer(tolerance)
+    simplified_shape = buffered_shape.simplify(tolerance)
+    simplified_coords = list(simplified_shape.exterior.coords)
+
+    simplified_polygon = []
+    for coord in simplified_coords:
+        point = {"lon": coord[0], "lat": coord[1]}
+        simplified_polygon.insert(0, point)
+
+    if "cmr" not in parm["parms"]:
+        parm["parms"]["cmr"] = {}                    
+    parm["parms"]["cmr"]["polygon"] = simplified_polygon
+    
+    logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -735,7 +782,6 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
     global service_url, service_org
-    rqst = json.dumps(parm)
     rsps = {}
     headers = None
     # Build Callbacks
@@ -748,6 +794,8 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
     while not complete and attempts > 0:
         attempts -= 1
         try:
+            # Dump Parameters to Request JSON String
+            rqst = json.dumps(parm)
             # Construct Request URL and Authorization
             if service_org:
                 url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
@@ -773,6 +821,9 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
                 raise FatalError('unsupported content type: %s' % (format))
             # Success
             complete = True
+        except RetryRequest as e:
+            logger.info("Retry requested by {}: {}".format(url, e))
+            simplifypolygon(parm)
         except requests.exceptions.SSLError as e:
             logger.debug("Exception in request to {}: {}".format(url, e))
             if not silence:

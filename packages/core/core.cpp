@@ -144,6 +144,12 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CHECK",                    IO_CHECK);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_OPPORUNITY", MsgQ::SUBSCRIBER_OF_OPPORTUNITY);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_CONFIDENCE", MsgQ::SUBSCRIBER_OF_CONFIDENCE);
+    LuaEngine::setAttrInt   (L, "RTE_INFO",                 RTE_INFO);
+    LuaEngine::setAttrInt   (L, "RTE_ERROR",                RTE_ERROR);
+    LuaEngine::setAttrInt   (L, "RTE_TIMEOUT",              RTE_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST",  RTE_RESOURCE_DOES_NOT_EXIST);
+    LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);
+    LuaEngine::setAttrInt   (L, "RTE_SIMPLIFY",             RTE_SIMPLIFY);
 
     return 1;
 }

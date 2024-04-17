@@ -114,6 +114,16 @@ typedef enum {
     INVALID_EVENT_LEVEL = 5
 } event_level_t;
 
+/* Exceptions */
+typedef enum {
+    RTE_INFO                    =  0,
+    RTE_ERROR                   = -1,
+    RTE_TIMEOUT                 = -2,
+    RTE_RESOURCE_DOES_NOT_EXIST = -3,
+    RTE_EMPTY_SUBSET            = -4,
+    RTE_SIMPLIFY                = -5
+} rte_t;
+
 /* Ordered Key */
 typedef unsigned long okey_t;
 

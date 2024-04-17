@@ -250,7 +250,7 @@ if source["type"] == "ATL00" then
     -- Wait for Readers to Finish Reading --
     for index,filepath in ipairs(filelist) do
         sourceFileReaders[filepath]:waiton(core.PEND)
-        userlog:sendlog(core.INFO, "Finished reading "..filepath.." ["..tostring(index).."]")
+        userlog:alert(core.INFO, core.RTE_INFO, "Finished reading "..filepath.." ["..tostring(index).."]")
     end
     -- Wait for Parsers to Finish Parsing --
     for index,filepath in ipairs(filelist) do
@@ -258,9 +258,9 @@ if source["type"] == "ATL00" then
             if ccsdsParsers[filepath]:waiton(5000) then
                 break
             end
-            userlog:sendlog(core.INFO, "Waiting on parser for "..filepath)
+            userlog:alert(core.INFO, core.RTE_INFO, "Waiting on parser for "..filepath)
         end
-        userlog:sendlog(core.INFO, "Finished parsing "..filepath.." ["..tostring(index).."]")
+        userlog:alert(core.INFO, core.RTE_INFO, "Finished parsing "..filepath.." ["..tostring(index).."]")
     end
 end
 
@@ -279,6 +279,6 @@ if rqst["postterm"] then
 end
 
 -- Notify User of Processing Completion --
-userlog:sendlog(core.INFO, string.format("ATL00 processing complete"))
+userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL00 processing complete"))
 
 return

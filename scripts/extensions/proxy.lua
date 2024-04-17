@@ -49,14 +49,13 @@ local function proxy(resources, parms, endpoint, rec)
 
     -- Populate Resources via CMR Request --
     if not resources then
-        print("MAKING REQUEST")
         local rc, rsps = earthdata.cmr(parms)
-        print("REQUEST RETURNED", rc)
         if rc == earthdata.SUCCESS then
             resources = rsps
-            userlog:sendlog(core.INFO, string.format("proxy request <%s> retrieved %d resources from CMR", rspq, #resources))
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> retrieved %d resources from CMR", rspq, #resources))
         else
-            userlog:sendlog(core.CRITICAL, string.format("proxy request <%s> failed to make CMR <%d>: %s", rspq, rc, rsps))
+            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("proxy request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
+            return
         end
     end
 
@@ -79,7 +78,7 @@ local function proxy(resources, parms, endpoint, rec)
     while (userlog:numsubs() > 0) and not endpoint_proxy:waiton(interval * 1000) do
         duration = duration + interval
         if timeout >= 0 and duration >= timeout then
-            userlog:sendlog(core.ERROR, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))
             do return end
         end
     end
@@ -89,7 +88,7 @@ local function proxy(resources, parms, endpoint, rec)
         while (userlog:numsubs() > 0) and not arrow_builder:waiton(interval * 1000) do
             duration = duration + interval
             if timeout >= 0 and duration >= timeout then
-                userlog:sendlog(core.ERROR, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
                 do return end
             end
         end
