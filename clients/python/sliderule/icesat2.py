@@ -272,9 +272,6 @@ def __build_request(parm, resources, default_asset='icesat2'):
     if "asset" not in rqst_parm:
         rqst_parm["asset"] = default_asset
 
-    # Get List of Resources
-    resources = earthdata.search(rqst_parm, resources)
-
     # Build Request
     return {
         "resources": resources,
@@ -789,16 +786,6 @@ def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     '''
     try:
         tstart = time.perf_counter()
-
-        # Get ATL09 Resources #
-        atl09_parm = parm.copy()
-        atl09_parm["asset"] = "icesat2-atl09"
-        parm["resources09"] = earthdata.search(atl09_parm)
-
-        # Provide HLS Sampling #
-        t0 = "2018-10-01T00:00:00Z"
-        t1 = "2018-10-31T00:00:00Z"
-        parm["samples"] = {"ndwi": {"asset": "landsat-hls", "t0": t0, "t1": t1, "use_poi_time": True, "bands": ["NDWI"]}}
 
         # Build Request
         rqst = __build_request(parm, resources)

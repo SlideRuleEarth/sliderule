@@ -1,11 +1,10 @@
 --
--- Provides functions to query CMR
+-- Provides functions to query CMR, STAC, TNM
 --
 --  NOTES:  The code below uses libcurl (via the netsvc package) to
---          issue a requests
+--          issue http requests
 
 local json = require("json")
-local prettyprint = require("prettyprint")
 
 --
 -- Constants
@@ -66,9 +65,10 @@ TNM_PAGE_SIZE = 100
 
 -- response codes for all of the package functions
 RC_SUCCESS = 0
-RC_RQST_FAILED = -1
-RC_RSPS_UNPARSEABLE = -2
-RC_RSPS_UNEXPECTED = -3
+RC_FAILURE = -1
+RC_RQST_FAILED = -2
+RC_RSPS_UNPARSEABLE = -3
+RC_RSPS_UNEXPECTED = -4
 
 --
 -- Build GeoJSON
@@ -125,12 +125,36 @@ local function cmr (parms)
     -- get parameters of request
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset = DATASETS[short_name] or {}
+    local cmr_parms = parms["cmr"] or {}
     local provider = dataset["provider"] or error("unable to determine provider for query")
     local version = parms["version"] or dataset["version"]
-    local polygon = parms["polygon_for_cmr"] or parms["polygon"]
+    local polygon = cmr_parms["polygon"] or parms["poly"]
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local name_filter = parms["name_filter"]
+
+    -- build name filter
+    if (not name_filter) and parms["asset"] and (parms["asset"] == "icesat2") then
+        local name_filter_enabled = false
+        local rgt_filter = '????'
+        if parms["rgt"] then
+            rgt_filter = string.format("%04d", parms["rgt"])
+            name_filter_enabled = true
+        end
+        local cycle_filter = '??'
+        if parms["cycle"] then
+            cycle_filter = string.format("%02d", parms["cycle"])
+            name_filter_enabled = true
+        end
+        local region_filter = '??'
+        if parms["region"] then
+            region_filter = string.format("%02d", parms["region"])
+            name_filter_enabled = true
+        end
+        if name_filter_enabled then
+            name_filter = '*_' .. rgt_filter .. cycle_filter .. region_filter .. '_*'
+        end
+    end
 
     -- flatten polygon
     local polystr = ""
@@ -202,7 +226,7 @@ local function cmr (parms)
                                 -- add url to list of urls to return
                                 table.insert(urls, url)
                                 num_links = num_links + 1
-                                break;
+                                break
                             end
                         end
                     end
@@ -218,6 +242,7 @@ local function cmr (parms)
 
     -- return urls
     return RC_SUCCESS, urls
+
 end
 
 --
@@ -232,7 +257,7 @@ local function stac (parms)
     local dataset = DATASETS[short_name] or {}
     local provider = dataset["provider"] or error("unable to determine provider for query")
     local collections = parms["collections"] or dataset["collections"]
-    local polygon = parms["polygon"]
+    local polygon = parms["poly"]
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
 
@@ -298,6 +323,7 @@ local function stac (parms)
 
     -- return response
     return RC_SUCCESS, geotable 
+
 end
 
 --
@@ -312,7 +338,7 @@ local function tnm (parms)
 
     -- get parameters of request
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local polygon = parms["polygon"]
+    local polygon = parms["poly"]
     local t0 = parms["t0"] or '2018-01-01'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
 
@@ -390,6 +416,27 @@ local function tnm (parms)
 
     -- return geotable
     return RC_SUCCESS, geotable
+
+end
+
+--
+-- search
+--
+local function search (parms)
+
+    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset = DATASETS[short_name] or {}
+    local api = dataset["api"]
+    if api == "cmr" then
+        return cmr(parms)
+    elseif api == "stac" then
+        return stac(parms)
+    elseif api == "tnm" then
+        return tnm(parms)
+    else
+        return RC_FAILURE, string.format("unsupport api: %s", api)
+    end
+
 end
 
 --
@@ -399,7 +446,9 @@ return {
     cmr = cmr,
     stac = stac,
     tnm = tnm,
+    search = search,
     SUCCESS = RC_SUCCESS,
+    FAILURE = RC_FAILURE,
     RQST_FAILED = RC_RQST_FAILED,
     RSPS_UNPARSEABLE = RC_RSPS_UNPARSEABLE,
     RSPS_UNEXPECTED = RC_RSPS_UNEXPECTED,

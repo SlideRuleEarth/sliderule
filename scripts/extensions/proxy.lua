@@ -15,6 +15,7 @@
 --
 
 local json = require("json")
+local earthdata = require("earth_data_query")
 
 local function proxy(resources, parms, endpoint, rec)
     -- Create User Status --
@@ -46,13 +47,36 @@ local function proxy(resources, parms, endpoint, rec)
     -- Determine Locks per Node --
     local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or netsvc.MAX_LOCKS_PER_NODE
 
+    -- Populate Resources via CMR Request --
+    if not resources then
+        print("MAKING REQUEST")
+        local rc, rsps = earthdata.cmr(parms)
+        print("REQUEST RETURNED", rc)
+        if rc == earthdata.SUCCESS then
+            resources = rsps
+            userlog:sendlog(core.INFO, string.format("proxy request <%s> retrieved %d resources from CMR", rspq, #resources))
+        else
+            userlog:sendlog(core.CRITICAL, string.format("proxy request <%s> failed to make CMR <%d>: %s", rspq, rc, rsps))
+        end
+    end
+
+    -- Populate Catalogs via STAC and TNM Requests --
+    local geo_parms = parms[geo.PARMS]
+    if geo_parms then
+        for _,raster_parms in pairs(geo_parms) do
+            if not raster_parms["catalog"] then
+                raster_parms["catalog"] = earthdata.search(raster_parms)
+            end
+        end
+    end
+
     -- Proxy Request --
-    local proxy = netsvc.proxy(endpoint, resources, json.encode(parms), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
+    local endpoint_proxy = netsvc.proxy(endpoint, resources, json.encode(parms), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
 
     -- Wait Until Proxy Completes --
     local duration = 0
     local interval = 10 < timeout and 10 or timeout -- seconds
-    while (userlog:numsubs() > 0) and not proxy:waiton(interval * 1000) do
+    while (userlog:numsubs() > 0) and not endpoint_proxy:waiton(interval * 1000) do
         duration = duration + interval
         if timeout >= 0 and duration >= timeout then
             userlog:sendlog(core.ERROR, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))
@@ -61,7 +85,7 @@ local function proxy(resources, parms, endpoint, rec)
     end
 
     -- Wait Until Dispatch Completion --
-    if terminate_proxy_stream then
+    if arrow_builder then
         while (userlog:numsubs() > 0) and not arrow_builder:waiton(interval * 1000) do
             duration = duration + interval
             if timeout >= 0 and duration >= timeout then
