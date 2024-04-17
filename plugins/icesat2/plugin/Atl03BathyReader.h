@@ -44,7 +44,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "StringLib.h"
-
+#include "RasterObject.h"
 #include "H5Array.h"
 #include "Icesat2Parms.h"
 #include "BathyParms.h"
@@ -254,6 +254,10 @@ class Atl03BathyReader: public LuaObject
 
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
+
+        // to be removed once abstracted interface available in RasterObject
+        static uint32_t     getSamples                  (RasterObject* robj, MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param=NULL);
+
 };
 
 #endif  /* __atl03_table_builder__ */

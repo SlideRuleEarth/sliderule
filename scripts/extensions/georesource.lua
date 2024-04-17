@@ -18,8 +18,6 @@
 --              3. The output is a raw binary blob containing serialized RecordObjects
 --
 
-local json = require("json")
-
 --
 -- Initialize Processing of Resource
 --

@@ -62,9 +62,14 @@ local function proxy(resources, parms, endpoint, rec)
     -- Populate Catalogs via STAC and TNM Requests --
     local geo_parms = parms[geo.PARMS]
     if geo_parms then
-        for _,raster_parms in pairs(geo_parms) do
+        for dataset,raster_parms in pairs(geo_parms) do
             if not raster_parms["catalog"] then
-                raster_parms["catalog"] = earthdata.search(raster_parms)
+                local rc, rsps = earthdata.search(raster_parms, parms["poly"])
+                if rc == earthdata.SUCCESS then
+                    parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
+                else
+                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("proxy request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
+                end
             end
         end
     end

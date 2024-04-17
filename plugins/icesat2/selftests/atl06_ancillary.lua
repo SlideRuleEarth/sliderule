@@ -33,7 +33,7 @@ algo_disp:run()
 local reader = icesat2.atl03s(nsidc_s3, "ATL03_20181017222812_02950102_005_01.h5", "atl06-ancillary-recq", parms)
 
 while true do
-    local rec = resultq:recvrecord(15000)
+    local rec = resultq:recvrecord(20000)
     if rec == nil then
         break
     end

@@ -29,6 +29,10 @@ if proc then
     local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
     local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
     local hls_parms = {ndwi = {asset = "landsat-hls", t0 = t0, t1 = t1, use_poi_time = true, bands = {"NDWI"}}}
+
+    -- need a polygon for the granule
+    -- need to then get the catalog
+
     local hls       = geo.raster(geo.parms(hls_parms))
     local reader    = icesat2.atl03bathy(proc.asset, resource, args.result_q, rqst_parms, hls, false)
     local status    = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)

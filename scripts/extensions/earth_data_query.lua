@@ -118,7 +118,7 @@ end
 --
 -- CMR
 --
-local function cmr (parms)
+local function cmr (parms, poly)
 
     local urls = {}
 
@@ -128,7 +128,7 @@ local function cmr (parms)
     local cmr_parms = parms["cmr"] or {}
     local provider = dataset["provider"] or error("unable to determine provider for query")
     local version = parms["version"] or dataset["version"]
-    local polygon = cmr_parms["polygon"] or parms["poly"]
+    local polygon = cmr_parms["polygon"] or parms["poly"] or poly
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local name_filter = parms["name_filter"]
@@ -254,7 +254,7 @@ end
 --
 -- STAC
 --
-local function stac (parms)
+local function stac (parms, poly)
 
     local geotable = {}
 
@@ -263,7 +263,7 @@ local function stac (parms)
     local dataset = DATASETS[short_name] or {}
     local provider = dataset["provider"] or error("unable to determine provider for query")
     local collections = parms["collections"] or dataset["collections"]
-    local polygon = parms["poly"]
+    local polygon = parms["poly"] or poly
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
@@ -336,7 +336,7 @@ end
 --
 -- TNM
 --
-local function tnm (parms)
+local function tnm (parms, poly)
 
     local geotable = {
         ["type"] = "FeatureCollection",
@@ -345,7 +345,7 @@ local function tnm (parms)
 
     -- get parameters of request
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local polygon = parms["poly"]
+    local polygon = parms["poly"] or poly
     local t0 = parms["t0"] or '2018-01-01'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
@@ -433,17 +433,17 @@ end
 --
 -- search
 --
-local function search (parms)
+local function search (parms, poly)
 
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset = DATASETS[short_name] or {}
     local api = dataset["api"]
     if api == "cmr" then
-        return cmr(parms)
+        return cmr(parms, poly)
     elseif api == "stac" then
-        return stac(parms)
+        return stac(parms, poly)
     elseif api == "tnm" then
-        return tnm(parms)
+        return tnm(parms, poly)
     else
         return RC_FAILURE, string.format("unsupport api: %s", api)
     end

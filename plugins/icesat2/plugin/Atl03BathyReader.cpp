@@ -43,6 +43,7 @@
 #include "h5.h"
 #include "icesat2.h"
 #include "GeoLib.h"
+#include "RasterObject.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -727,7 +728,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                             .z = 0.0 // since we are not sampling elevation data, this should be fine at zero
                         };
                         List<RasterSample*> slist;
-                        uint32_t err = builder->ndwiRaster->getSamples(geo, gps, slist);
+                        uint32_t err = getSamples(builder->ndwiRaster, geo, gps, slist);
                         if(slist.length() > 0) ndwi = static_cast<float>(slist[0]->value);
                         else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, geo.y, geo.x, err);
                     }
@@ -1071,4 +1072,19 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * getSamples - abstracted
+ *----------------------------------------------------------------------------*/
+uint32_t Atl03BathyReader::getSamples (RasterObject* robj, MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param)
+{
+    std::vector<RasterSample*> vector_list;
+    OGRPoint poi(geo.x, geo.y, geo.z);
+    uint32_t err = robj->getSamples(&poi, gps, vector_list, param);
+    for(unsigned i = 0; i < vector_list.size(); i++)
+    {
+        slist.add(vector_list.at(i));
+    }
+    return err;
 }
