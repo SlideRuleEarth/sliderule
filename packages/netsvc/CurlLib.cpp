@@ -381,15 +381,18 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
         }
 
         /* Iterate through each keyed item in table */
-        lua_pushnil(L);  // Push nil to start the iteration
-        while(lua_next(L, index) != 0) 
-        { 
-            const char* key = LuaObject::getLuaString(L, -2);
-            const char* value = LuaObject::getLuaString(L, -1);
-            string* header = new string(FString("%s: %s", key, value).c_str());
-            header_list.add(header);
-            num_hdrs++;
-            lua_pop(L, 1);
+        if(num_strings == 0)
+        {
+            lua_pushnil(L);  // push nil to start the iteration
+            while(lua_next(L, index) != 0) 
+            { 
+                const char* key = LuaObject::getLuaString(L, -2);
+                const char* value = LuaObject::getLuaString(L, -1);
+                string* header = new string(FString("%s: %s", key, value).c_str());
+                header_list.add(header);
+                num_hdrs++;
+                lua_pop(L, 1);
+            }
         }
     }
 
@@ -402,6 +405,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
 int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
+    int num_ret = 2;
     List<string*> header_list(EXPECTED_MAX_HEADERS);
     List<string*>* rsps_headers = NULL;
 
@@ -416,7 +420,11 @@ int CurlLib::luaGet (lua_State* L)
         bool        get_rsps_hdrs   = LuaObject::getLuaBoolean(L, 6, true, false);
 
         /* Optionally Allocate List to Hold Response Headers */
-        if(get_rsps_hdrs) rsps_headers = new List<string*>();
+        if(get_rsps_hdrs)
+        {
+            rsps_headers = new List<string*>();
+            num_ret++;
+        }
 
         /* Perform Request */
         const char* response = NULL;
@@ -452,21 +460,16 @@ int CurlLib::luaGet (lua_State* L)
                     }
                 }
             }
-            else
-            {
-                lua_pushnil(L);
-            }
         }
         else
         {
-            lua_pushnil(L);
+            if(get_rsps_hdrs) lua_pushnil(L);
             lua_pushnil(L);
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error performing netsvc GET: %s", e.what());
-        lua_pushnil(L);
         lua_pushnil(L);
     }
 
@@ -475,7 +478,7 @@ int CurlLib::luaGet (lua_State* L)
 
     /* Return Status */
     lua_pushboolean(L, status);
-    return 3;
+    return num_ret;
 }
 
 /*----------------------------------------------------------------------------

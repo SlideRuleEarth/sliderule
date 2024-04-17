@@ -25,6 +25,15 @@ RUN dnf update \
 # set working directory to root
 WORKDIR /
 
+# install luacheck
+# RUN wget https://luarocks.github.io/luarocks/releases/luarocks-3.11.0.tar.gz && \
+#     tar -xvzf luarocks-3.11.0.tar.gz && \
+#     cd luarocks-3.11.0/ && \
+#     ./configure --with-lua-include=/usr/include && \
+#     make && \
+#     make install && \
+#     luarocks install luacheck
+
 # install rapidjson dependency
 RUN git clone https://github.com/Tencent/rapidjson.git && \
     cd rapidjson && \

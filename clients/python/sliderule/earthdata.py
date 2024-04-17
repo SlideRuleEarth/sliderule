@@ -738,6 +738,7 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
         # Make request
         rsps = context.get(url, params=rqst)
         rsps.raise_for_status()
+        print(rsps.content)
         data = json.loads(rsps.content)
         items += data['items']
         if len(items) == data['total']:
