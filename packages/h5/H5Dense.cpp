@@ -59,7 +59,6 @@
  *----------------------------------------------------------------------------*/
 H5BTreeV2::H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
-    // TODO: init list; sequnece of init before body entered 
     found_out = false;
     h5filePtr_ = h5file;
     readDenseAttrs(fheap_addr, name_bt2_addr, name, heap_info_ptr);
@@ -935,7 +934,7 @@ void H5BTreeV2::openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr
 void H5BTreeV2::openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr) {
     /* Set up internal node structure from given addr start: internal_pos */
 
-    uint8_t *native = nullptr;  
+    uint8_t *native = NULL;  
     unsigned u = 0;
     int node_nrec = 0;
 
@@ -1020,7 +1019,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
     /* given pointer to lead node, set *leaf struct and deserialize the records contained at the node */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2cache.c#L988 */
 
-    uint8_t *native = nullptr;  
+    uint8_t *native = NULL;  
     unsigned u = 0; 
     leaf->hdr = hdr;
 
@@ -1075,7 +1074,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node
     /* Given start of btreev2, search for matching udata */
     /* HDF5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2.c#L429 */
 
-    btree2_node_ptr_t* curr_node_ptr = nullptr; // node ptr info for curr
+    btree2_node_ptr_t* curr_node_ptr = NULL; // node ptr info for curr
     uint16_t depth = 0;                         // of tree
     int cmp = 0;                          // comparison value of records (0 if found, else -1 or 1 for search direction)
     unsigned idx = 0;                     // location (index) of record which matches key
