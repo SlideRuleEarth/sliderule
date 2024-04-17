@@ -336,14 +336,11 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
 
 
 /*----------------------------------------------------------------------------
- * subsetAOI
+ * getPixels
  *----------------------------------------------------------------------------*/
-RasterSubset* GdalRaster::subsetAOI(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
+uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
 {
-    RasterSubset* subset = NULL;
-
-    /* Clear sample/subset error status */
-    ssError = SS_NO_ERRORS;
+    uint8_t* data = NULL;
 
     try
     {
@@ -374,18 +371,49 @@ RasterSubset* GdalRaster::subsetAOI(uint32_t ulx, uint32_t uly, uint32_t _xsize,
         if(uly + _ysize > ysize)
             throw RunTimeException(CRITICAL, RTE_ERROR, "rows out of bounds");
 
-        double map_ulx, map_uly;
-        pixel2map(ulx, uly, map_ulx, map_uly);
-        // mlog(DEBUG, "upleft pixel:   (%13d, %13d) (%.6lf, %.6lf)", ulx, uly, map_ulx, map_uly);
+        GDALDataType dtype = band->GetRasterDataType();
 
-        subset = getRasterSubset(ulx, uly, map_ulx, map_uly, _xsize, _ysize);
+        /* Make all uint64_t, with uint32_t got an overflow */
+        uint64_t typeSize  = GDALGetDataTypeSizeBytes(dtype);
+        uint64_t longXsize = static_cast<uint64_t>(_xsize);
+        uint64_t longYsize = static_cast<uint64_t>(_ysize);
+        uint64_t size      = longXsize * longYsize * typeSize;
+        data = new uint8_t[size];
+        CHECKPTR(data);
+
+        int cnt = 1;
+        OGRErr err = CE_None;
+        do
+        {
+            GDALRasterIOExtraArg* argsPtr = NULL;
+            GDALRasterIOExtraArg  args;
+
+            if(parms->sampling_algo != GRIORA_NearestNeighbour)
+            {
+                INIT_RASTERIO_EXTRA_ARG(args);
+                args.eResampleAlg = parms->sampling_algo;
+                argsPtr = &args;
+            }
+            err = band->RasterIO(GF_Read, ulx, uly, _xsize, _ysize, data, _xsize, _ysize, dtype, 0, 0, argsPtr);
+        } while(err != CE_None && cnt--);
+
+        if(err != CE_None)
+        {
+            ssError |= SS_AOI_FAILED_TO_READ_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+        }
+
+        mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %d, rows2read: %d, datatype %s\n",
+             size, (float)size/(1024*1024), ulx, uly, _xsize, _ysize, GDALGetDataTypeName(dtype));
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error subsetting: %s", e.what());
+        delete [] data;
+        data = NULL;
     }
 
-    return subset;
+    return data;
 }
 
 

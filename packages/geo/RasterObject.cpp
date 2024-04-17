@@ -135,16 +135,15 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param)
+uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
 {
     std::ignore = ulx;
     std::ignore = uly;
     std::ignore = xsize;
     std::ignore = ysize;
-    std::ignore = slist;
     std::ignore = param;
 
-    return 0;
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -170,7 +169,6 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
     LuaEngine::setAttrFunc(L, "subset", luaSubset);
-    LuaEngine::setAttrFunc(L, "pixels", luaPixels);
 }
 
 /*----------------------------------------------------------------------------
@@ -342,48 +340,6 @@ int RasterObject::luaSubset(lua_State *L)
 
     return num_ret;
 }
-
-
-/*----------------------------------------------------------------------------
- * luaPixels - :pixels(ulx, uly, xsize, ysize) --> in|out
- *----------------------------------------------------------------------------*/
-int RasterObject::luaPixels(lua_State *L)
-{
-    uint32_t err = SS_NO_ERRORS;
-    int num_ret = 1;
-
-    RasterObject *lua_obj = NULL;
-    std::vector<RasterSubset*> slist;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
-
-        /* Get extent */
-        uint32_t ulx = getLuaInteger(L, 2);
-        uint32_t uly = getLuaInteger(L, 3);
-        uint32_t xsize = getLuaInteger(L, 4);
-        uint32_t ysize = getLuaInteger(L, 5);
-
-        /* Get pixels  */
-        err = lua_obj->getPixels(ulx, uly, xsize, ysize, slist, NULL);
-        num_ret += lua_obj->slist2table(slist, err, L);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Failed to subset raster: %s", e.what());
-    }
-
-    /* Free subsets */
-    for (const RasterSubset* subset : slist)
-        delete subset;
-
-    /* Return Errors and Table of Samples */
-    lua_pushinteger(L, err);
-    return num_ret;
-}
-
 
 /******************************************************************************
  * PRIVATE METHODS

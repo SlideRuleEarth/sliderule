@@ -59,6 +59,13 @@ class GeoJsonRaster: public GeoRaster
         static const char* CELLSIZE_KEY;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        /* import bbox_t into this namespace from GeoParms.h */
+        using bbox_t=GeoParms::bbox_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -74,7 +81,7 @@ class GeoJsonRaster: public GeoRaster
 
         bool rawPixel (const uint32_t row, const uint32_t col)
         {
-            return static_cast<int>(subset->data[(row * subset->cols) + col]) == RASTER_PIXEL_ON;
+            return static_cast<int>(data[(row * cols) + col]) == RASTER_PIXEL_ON;
         }
 
     protected:
@@ -91,8 +98,12 @@ class GeoJsonRaster: public GeoRaster
          * Data
          *--------------------------------------------------------------------*/
 
-         std::string   rasterFileName;
-         RasterSubset* subset;
+         std::string rasterFileName;
+         uint8_t*    data;
+         double      cellsize;
+         uint32_t    cols;
+         uint32_t    rows;
+         bbox_t      bbox;
 };
 
 #endif  /* __geojson_raster__ */

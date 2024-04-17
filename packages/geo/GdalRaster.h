@@ -106,7 +106,7 @@ class GdalRaster
         void               open           (void);
         RasterSample*      samplePOI      (OGRPoint* poi);
         RasterSubset*      subsetAOI      (OGRPolygon* poly);
-        RasterSubset*      subsetAOI      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize);
+        uint8_t*           getPixels      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize);
         const std::string& getFileName    (void) const { return fileName;}
         int                getRows        (void) const { return ysize; }
         int                getCols        (void) const { return xsize; }

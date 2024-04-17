@@ -48,13 +48,25 @@ class GeoRaster: public RasterObject
     public:
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        /* import bbox_t into this namespace from GeoParms.h */
+        using bbox_t=GeoParms::bbox_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         virtual      ~GeoRaster  (void);
         uint32_t      getSamples (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
         uint32_t      getSubsets (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
-        uint32_t      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param=NULL) override;
+        uint8_t*      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL) override;
+
+        uint32_t      getRows    (void) const { return raster.getRows(); }
+        uint32_t      getCols    (void) const { return raster.getCols(); }
+        const bbox_t& getBbox    (void) const { return raster.getBbox(); }
+        double        getCellSize(void) const { return raster.getCellSize(); }
 
     protected:
 
