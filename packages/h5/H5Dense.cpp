@@ -57,27 +57,41 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5BTreeV2::H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
+H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
     /* Init outputs */
+    pos_out = 0; 
+    hdr_flags_out = 0; 
+    hdr_dlvl_out = 0; 
+    msg_size_out = 0;
     found_attr = false;
 
-    /* Init private */
+    /* Init H5FileBuff Ptr */
     h5filePtr_ = h5file;
-    addr = name_bt2_addr;
-    // dtable_t _dtable;
-    // dtable = &_dtable;
 
-    readDenseAttrs(fheap_addr, name, heap_info_ptr);
+    /* Init portion of BTree Hdr */
+    addr = name_bt2_addr;
+    node_size = 0;
+
+    /* Init Udata */
+    fheap_addr = _fheap_addr;
+    fheap_info = heap_info_ptr;
+    name = _name;
+    name_hash = checksumLookup3(_name, strlen(_name), 0);
+    
+    /* Begin Dense Attr Search + Read */
+    readDenseAttrs(heap_info_ptr);
 }
 
 /*----------------------------------------------------------------------------
  * readDenseAttributes
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::readDenseAttrs(uint64_t fheap_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr) {
+void H5BTreeV2::readDenseAttrs(H5FileBuffer::heap_info_t* heap_info_ptr) {
     /* Open an attribute in dense storage structures for an object*/
     /* See hdf5 source implementation https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
+    btree2_node_ptr_t root_node_ptr;
+
     /* TODO: shared Attr Support */
     print2term("WARNING: isTypeSharedAttrs is NOT implemented for dense attr reading \n");
     bool shared_attributes = isTypeSharedAttrs(H5FileBuffer::ATTRIBUTE_MSG);
@@ -86,23 +100,8 @@ void H5BTreeV2::readDenseAttrs(uint64_t fheap_addr, const char *name, H5FileBuff
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
     }
 
-    btree2_ud_common_t udata; // struct to pass useful info e.g. name, hash
-    // bool attr_exists = false;
-
-    btree2_node_ptr_t root_node_ptr;
-
-    node_size = 0;
-
-    /* Set udata - passed to findBTree interally */
-    udata.fheap_addr = fheap_addr;
-    udata.fheap_info = heap_info_ptr;
-    udata.name = name;
-    udata.name_hash = checksumLookup3(name, strlen(name), 0);
-    udata.flags = 0;
-    udata.corder = 0;
-
     /* openBTreeV2 - populates header info and allocates btree space */
-    openBTreeV2(&root_node_ptr, heap_info_ptr, &udata);
+    openBTreeV2(&root_node_ptr, heap_info_ptr);
 
     if (!found_attr) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
@@ -668,32 +667,31 @@ void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
  /*----------------------------------------------------------------------------
  * compareType8Record
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result)
+void H5BTreeV2::compareType8Record(const void *_bt2_rec, int *result)
 {
     /* Implementation of H5A__dense_btree2_name_compare with type 8 - H5B2_GRP_DENSE_NAME_ID*/
     /* See: https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L220 */
 
-    const btree2_ud_common_t *bt2_udata = (const btree2_ud_common_t *)_bt2_udata;
     const btree2_type8_densename_rec_t *bt2_rec   = (const btree2_type8_densename_rec_t *)_bt2_rec;
 
     /* Check hash value - influence btree search direction */
-    if (bt2_udata->name_hash < bt2_rec->hash)
+    if (name_hash < bt2_rec->hash)
         *result = (-1);
-    else if (bt2_udata->name_hash > bt2_rec->hash)
+    else if (name_hash > bt2_rec->hash)
         *result = 1;
     else {
         /* Hash match */
         H5FileBuffer::heap_info_t *fheap; // equiv to: pointer to internal fractal heap header info
 
         /* Sanity check */
-        assert(bt2_udata->name_hash == bt2_rec->hash);
+        assert(name_hash == bt2_rec->hash);
 
         if (bt2_rec->flags & H5O_MSG_FLAG_SHARED) {
-            // TODO: shared fractal heap support, see OG implementation; fheap = bt2_udata->shared_fheap;
+            // TODO: shared fractal heap support, see OG implementation; fheap = shared_fheap;
             throw RunTimeException(CRITICAL, RTE_ERROR, "No support implemented for shared fractal heaps");
         }
         else {
-            fheap = bt2_udata->fheap_info;
+            fheap = fheap_info;
         }
 
         /* Locate object in fractal heap */
@@ -706,7 +704,7 @@ void H5BTreeV2::compareType8Record(const void *_bt2_udata, const void *_bt2_rec,
  /*----------------------------------------------------------------------------
  * locateRecordBTreeV2
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp) {
+void H5BTreeV2::locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, unsigned *idx, int *cmp) {
     /* Performs a binary search to locate a record in a sorted array of records 
     sets *idx to location of record greater than or equal to record to locate */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2int.c#L89 */
@@ -721,7 +719,7 @@ void H5BTreeV2::locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_
         my_idx = (lo + hi) / 2;
         switch(type) {
             case H5B2_ATTR_DENSE_NAME_ID:
-                compareType8Record(udata, native + rec_off[my_idx], cmp);
+                compareType8Record(native + rec_off[my_idx], cmp);
                 break;
             default:
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type compare: %d", type);
@@ -900,7 +898,7 @@ void H5BTreeV2::initNodeInfo() {
  /*----------------------------------------------------------------------------
  * openBTreeV2
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::heap_info_t* heap_info_ptr, void* udata) {
+void H5BTreeV2::openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::heap_info_t* heap_info_ptr) {
     /* Opens an existing v2 B-tree in the file; initiates: btreev2 header, double table, array of node info structs, pointers to internal nodes, internal node info, offsets */
     /* openBtree HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2.c#L186 */
     /* header_init HDF5 reference implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2hdr.c#L94*/
@@ -927,7 +925,7 @@ void H5BTreeV2::openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::hea
     initDTable(heap_info_ptr, row_block_size, row_block_off, row_tot_dblock_free, row_max_dblock_free);
 
     /* Attempt to locate record with matching name */
-    findBTreeV2(udata);
+    findBTreeV2();
     
 }
 
@@ -1072,8 +1070,8 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
  /*----------------------------------------------------------------------------
  * findBTreeV2
  *----------------------------------------------------------------------------*/
- void H5BTreeV2::findBTreeV2 (void* udata) {
-    /* Given start of btreev2, search for matching udata */
+ void H5BTreeV2::findBTreeV2 () {
+    /* Given start of btreev2, search for matching udata (priv vars) */
     /* HDF5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2.c#L429 */
 
     btree2_node_ptr_t* curr_node_ptr = NULL; // node ptr info for curr
@@ -1113,7 +1111,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
         openInternalNode(&internal, internal_pos, curr_node_ptr); // internal set with all info for locate record
 
         /* LOCATE RECORD - via type compare method */
-        locateRecordBTreeV2(internal.nrec, nat_off.data(), internal.int_native.data(), udata, &idx, &cmp);
+        locateRecordBTreeV2(internal.nrec, nat_off.data(), internal.int_native.data(), &idx, &cmp);
 
         if (cmp > 0) {
             idx++;
@@ -1162,7 +1160,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
         openLeafNode(curr_node_ptr, &leaf, curr_node_ptr->addr);
 
         /* Locate record */
-        locateRecordBTreeV2(leaf.nrec, nat_off.data(), leaf.leaf_native.data(), udata, &idx, &cmp);
+        locateRecordBTreeV2(leaf.nrec, nat_off.data(), leaf.leaf_native.data(), &idx, &cmp);
 
         if (cmp != 0) {
             found_attr = false;

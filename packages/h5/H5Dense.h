@@ -14,7 +14,7 @@ class H5BTreeV2
         uint64_t msg_size_out = 0;
         bool     found_attr = false;
 
-        H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
+        H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
 
         static unsigned log2_gen(uint64_t n);
         static uint16_t H5HF_SIZEOF_OFFSET_BITS(uint16_t b);
@@ -34,15 +34,6 @@ class H5BTreeV2
             H5B2_METADATA_PREFIX_SIZE = 10, // used for h5btree v2 nrecord sizing
             H5B2_SIZEOF_RECORDS_PER_NODE = 2 // h5btree v2 records per node
         };
-
-        typedef struct {
-            uint64_t                fheap_addr = 0;
-            H5FileBuffer::heap_info_t *fheap_info = nullptr; // TODO null ptr suggested // fractalH pointer
-            const char              *name = nullptr; // attr name we are searching for
-            uint32_t                name_hash = 0; // hash of attr name
-            uint8_t                 flags = 0; // attr storage location
-            uint32_t                corder = 0; // creation order value of attribute to compare
-        } btree2_ud_common_t;
 
         /* A "node pointer" to another B-tree node */
         typedef struct {
@@ -109,20 +100,18 @@ class H5BTreeV2
 
         /* B-tree leaf node information */
         typedef struct {
-            // btree2_hdr_t            *hdr = nullptr;         // ptr to pinned header
             vector<uint8_t>         leaf_native;  // ptr to native records
             uint16_t                nrec = 0;         // num records in this node 
-            void                    *parent = nullptr;      // dependency for leaf  
+            void                    *parent = NULL;      // dependency for leaf  
         } btree2_leaf_t;
 
         /* B-tree internal node information */
         typedef struct {
-            // btree2_hdr_t              *hdr = nullptr; // ptr to pinned header
             vector<uint8_t>           int_native; // ptr native records               
             vector<btree2_node_ptr_t> node_ptrs;  // ptr to node ptrs
             uint16_t                  nrec = 0; // num records in node
             uint16_t                  depth = 0; // depth of node
-            void                      *parent = nullptr;
+            void                      *parent = NULL;
         } btree2_internal_t;
 
         /* Fractal heap ID type for shared message & attribute heap IDs. */
@@ -146,7 +135,7 @@ class H5BTreeV2
         } btree2_type5_densename_rec_t;
 
         /* Main Dense entry point */
-        void                readDenseAttrs(uint64_t fheap_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr);
+        void                readDenseAttrs(H5FileBuffer::heap_info_t* heap_info_ptr);
 
         /* Helpers */
         bool                isTypeSharedAttrs (unsigned type_id);
@@ -163,7 +152,7 @@ class H5BTreeV2
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
-        void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
+        void                compareType8Record(const void *_bt2_rec, int *result);
 
         /* Fheap Navigation*/
         void                fheapLocate(H5FileBuffer::heap_info_t *heap_info_ptr, const void * _id);
@@ -171,13 +160,13 @@ class H5BTreeV2
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
         /* Btreev2 setting and navigation */
-        void                locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
+        void                locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, unsigned *idx, int *cmp);
         void                initHdrBTreeV2(btree2_node_ptr_t *root_node_ptr);
         void                initDTable(H5FileBuffer::heap_info_t* heap_info_ptr, vector<uint64_t>& row_block_size, vector<uint64_t>& row_block_off, vector<uint64_t>& row_tot_dblock_free, vector<uint64_t>& row_max_dblock_free);
         void                initNodeInfo();
-        void                openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::heap_info_t* heap_info_ptr, void* udata);
+        void                openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::heap_info_t* heap_info_ptr);
         void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
-        void                findBTreeV2 (void* udata);
+        void                findBTreeV2 ();
         uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
         
         /* dtable search */
@@ -187,20 +176,25 @@ class H5BTreeV2
 
     private:
 
-        /* H5FileBuffer "This" pointer */
+        /* H5FILEBUFFER POINTER*/
         /* NOTE: external instance H5FileBuffer is incomplete in construction */
         H5FileBuffer* h5filePtr_;
 
-        /* B-tree header information */
+        /* B-TREE V2 HEADER */
+        /* Modifications / Removed: hdr_size, node_refc, file_refc, sizeof_size, sizeof_addr */
+
         /* Tracking */
         uint64_t                addr = 0; // addr of btree 
+
+        // TODO: before removing verify this work is not done elsewhere
         // size_t                  hdr_size = 0; // size (bytes) of btree on disk
         // size_t                  node_refc = 0; // ref count of nodes using header
         // size_t                  file_refc = 0; // ref count of files using header
         // uint8_t                 sizeof_size = 0; // size of file sizes
         // uint8_t                 sizeof_addr = 0; // size of file addresses
+
         uint8_t                 max_nrec_size = 0; // size to store max. # of records in any node (in bytes)
-        void                    *parent = nullptr; // potentially remove
+        void                    *parent = NULL; // potentially remove
 
         /* Properties */
         btree2_subid_t          type; // "class" H5B2_class_t under hdf5 title
@@ -218,5 +212,11 @@ class H5BTreeV2
         uint64_t                check_sum = 0;
         dtable_t                dtable; // doubling table
 
+        /* UDATA - Modifications: flags (attr storage location) and corder (creation order) removed */
+
+        uint64_t                fheap_addr = 0;
+        H5FileBuffer::heap_info_t *fheap_info = NULL; // fractalH pointer
+        const char              *name = NULL;         // attr name we are searching for
+        uint32_t                name_hash = 0;        // hash of attr name
 
 };
