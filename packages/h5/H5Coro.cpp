@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "H5Coro.h"
+#include "H5Dense.h"
 #include "core.h"
 
 #include <zlib.h>
