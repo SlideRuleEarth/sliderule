@@ -7,11 +7,11 @@ local console = require("console")
 runner.command("NEW CFS_INTERFACE cfsif cfstlmq cfscmdq 127.0.0.1 5001 127.0.0.1 5002")
 runner.command("cfsif::DROP_INVALID FALSE")
 
-ground_tlmq = msg.subscribe("cfstlmq")
-ground_cmdq = msg.publish("cfscmdq")
+local ground_tlmq = msg.subscribe("cfstlmq")
+local ground_cmdq = msg.publish("cfscmdq")
 
-flight_tlmsock = core.udp("127.0.0.1", 5001, core.CLIENT)
-flight_cmdsock = core.udp("127.0.0.1", 5002, core.SERVER)
+local flight_tlmsock = core.udp("127.0.0.1", 5001, core.CLIENT)
+local flight_cmdsock = core.udp("127.0.0.1", 5002, core.SERVER)
 
 --[[
 *****************************
@@ -19,11 +19,11 @@ Test1: Invalid Telemetry
 *****************************
 --]]
 
-testtlm = "BOGUS_TELEMETRY_PACKET"
-flight_tlmsock:send(testtlm)
-val = ground_tlmq:recvstring(3000) -- 3 second timeout
-runner.check('val == testtlm')
-print(string.format('TLM: |%s|', val))
+TestTlm = "BOGUS_TELEMETRY_PACKET"
+flight_tlmsock:send(TestTlm)
+Val = ground_tlmq:recvstring(3000) -- 3 second timeout
+runner.check('Val == TestTlm')
+print(string.format('TLM: |%s|', Val))
 
 --[[
 *****************************
@@ -31,11 +31,11 @@ Test2: Invalid Command
 *****************************
 --]]
 
-testcmd = "BOGUS_COMMAND_PACKET"
-ground_cmdq:sendstring(testcmd)
-val = flight_cmdsock:receive()
-runner.check('string.match(val, testcmd) == testcmd')
-print(string.format('CMD: |%s|', val))
+TestCmd = "BOGUS_COMMAND_PACKET"
+ground_cmdq:sendstring(TestCmd)
+Val = flight_cmdsock:receive()
+runner.check('string.match(Val, TestCmd) == TestCmd')
+print(string.format('CMD: |%s|', Val))
 
 --[[
 *****************************
@@ -46,15 +46,15 @@ Test3: Valid Ccsds Telemetry
 cmd.exec("CCSDS::DEFINE_TELEMETRY test.tlm NULL 0x421 12 2")
 cmd.exec("ADD_FIELD test.tlm days UINT16 6 1 LE")
 cmd.exec("ADD_FIELD test.tlm ms UINT32 8 1 LE")
-testtlm = msg.create("/test.tlm days=4 ms=300")
-raw = testtlm:serialize()
+TestTlm = msg.create("/test.tlm days=4 ms=300")
+local raw = TestTlm:serialize()
 io.write("RAW_TLM: ")
 packet.printPacket(raw)
 flight_tlmsock:send(raw)
-val = ground_tlmq:recvstring(3000) -- 3 second timeout
-runner.check(packet.comparePacket(raw, val), "Failed to compare packets")
+Val = ground_tlmq:recvstring(3000) -- 3 second timeout
+runner.check(packet.comparePacket(raw, Val), "Failed to compare packets")
 io.write("VAL_TLM: ")
-packet.printPacket(val)
+packet.printPacket(Val)
 
 --[[
 *****************************
@@ -65,19 +65,19 @@ Test4: Valid Ccsds Command
 cmd.exec("CCSDS::DEFINE_COMMAND test.cmd NULL 0x420 0 12 2")
 cmd.exec("ADD_FIELD test.cmd CS UINT8 7 1 NA")
 cmd.exec("ADD_FIELD test.cmd counter UINT32 8 1 LE")
-testcmd = msg.create("/test.cmd counter=0x12345678")
-raw = testcmd:serialize()
-cs = packet.computeChecksum(raw)
+TestCmd = msg.create("/test.cmd counter=0x12345678")
+raw = TestCmd:serialize()
+local cs = packet.computeChecksum(raw)
 print(string.format('CS: %02X', cs))
-testcmd:setvalue("CS", cs)
-raw = testcmd:serialize()
+TestCmd:setvalue("CS", cs)
+raw = TestCmd:serialize()
 io.write("RAW_CMD: ")
 packet.printPacket(raw)
-ground_cmdq:sendrecord(testcmd)
-val = flight_cmdsock:receive()
-runner.check(packet.comparePacket(raw, val), "Failed to compare packets")
+ground_cmdq:sendrecord(TestCmd)
+Val = flight_cmdsock:receive()
+runner.check(packet.comparePacket(raw, Val), "Failed to compare packets")
 io.write("VAL_CMD: ")
-packet.printPacket(val)
+packet.printPacket(Val)
 
 -- Clean Up --
 

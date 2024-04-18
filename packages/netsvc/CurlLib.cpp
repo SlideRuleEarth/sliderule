@@ -62,7 +62,11 @@ void CurlLib::deinit (void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, bool verify_peer, bool verify_hostname, List<string*>* headers, const char* unix_socket)
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
+                       bool verify_peer, bool verify_hostname, 
+                       List<string*>* headers, 
+                       const char* unix_socket, 
+                       List<string*>* rsps_headers)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -103,6 +107,12 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         if(unix_socket)
         {
             curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, (char*)unix_socket);
+        }
+
+        if(rsps_headers)
+        {
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, CurlLib::writerHeader);
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, rsps_headers);
         }
 
         if(verb == EndpointObject::GET && rqst.size > 0)
@@ -353,7 +363,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
     /* Must be table of strings */
     if((lua_gettop(L) >= index) && lua_istable(L, index))
     {
-        /* Iterate through each item in table */
+        /* Iterate through each listed item in table */
         int num_strings = lua_rawlen(L, index);
         for(int i = 0; i < num_strings; i++)
         {
@@ -369,6 +379,21 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
             /* Clean up stack */
             lua_pop(L, 1);
         }
+
+        /* Iterate through each keyed item in table */
+        if(num_strings == 0)
+        {
+            lua_pushnil(L);  // push nil to start the iteration
+            while(lua_next(L, index) != 0) 
+            { 
+                const char* key = LuaObject::getLuaString(L, -2);
+                const char* value = LuaObject::getLuaString(L, -1);
+                string* header = new string(FString("%s: %s", key, value).c_str());
+                header_list.add(header);
+                num_hdrs++;
+                lua_pop(L, 1);
+            }
+        }
     }
 
     return num_hdrs;
@@ -380,7 +405,9 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
 int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
+    int num_ret = 2;
     List<string*> header_list(EXPECTED_MAX_HEADERS);
+    List<string*>* rsps_headers = NULL;
 
     try
     {
@@ -390,19 +417,53 @@ int CurlLib::luaGet (lua_State* L)
         int         num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
         bool        verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
         bool        verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
+        bool        get_rsps_hdrs   = LuaObject::getLuaBoolean(L, 6, true, false);
+
+        /* Optionally Allocate List to Hold Response Headers */
+        if(get_rsps_hdrs)
+        {
+            rsps_headers = new List<string*>();
+            num_ret++;
+        }
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, &header_list);
+        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, &header_list, NULL, rsps_headers);
         if(response)
         {
+            /* get status and push response */
             status = (http_code >= 200 && http_code < 300);
             lua_pushlstring(L, response, size);
             delete [] response;
+
+            /* build and push headers */
+            if(get_rsps_hdrs && rsps_headers)
+            {
+                /* push table of header key:value pairs */
+                lua_newtable(L);
+
+                /* push pair for each header */
+                for(int i = 0; i < rsps_headers->length(); i++)
+                {
+                    string* hdr_str = rsps_headers->get(i);
+                    size_t pos = hdr_str->find(':');
+                    string key = hdr_str->substr(0,pos);
+                    string value = hdr_str->substr(pos+1);
+                    size_t c1 = value.find_first_not_of(" \t\n\r");
+                    if(string::npos != c1)
+                    {
+                        size_t c2 = value.find_last_not_of(" \t\n\r");
+                        value = value.substr(c1, (c2 - c1 + 1));
+                        for (char &c: key) c = std::tolower(c); // convert key to lower case
+                        LuaEngine::setAttrStr(L, key.c_str(), value.c_str());
+                    }
+                }
+            }
         }
         else
         {
+            if(get_rsps_hdrs) lua_pushnil(L);
             lua_pushnil(L);
         }
     }
@@ -412,9 +473,12 @@ int CurlLib::luaGet (lua_State* L)
         lua_pushnil(L);
     }
 
+    /* Free Response Headers */
+    delete rsps_headers;
+
     /* Return Status */
     lua_pushboolean(L, status);
-    return 2;
+    return num_ret;
 }
 
 /*----------------------------------------------------------------------------
@@ -660,3 +724,14 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
     return bytes_to_copy;
 }
 
+/*----------------------------------------------------------------------------
+ * CurlLib::writerHeader
+ *----------------------------------------------------------------------------*/
+size_t CurlLib::writerHeader(void* buffer, size_t size, size_t nmemb, void *userp) 
+{
+    List<string*>* rsps_headers = reinterpret_cast<List<string*>*>(userp);
+    string* header = new string((char*)buffer);
+    rsps_headers->add(header);
+    size_t total_size = size * nmemb;
+    return total_size;
+}

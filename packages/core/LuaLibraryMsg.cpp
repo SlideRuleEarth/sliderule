@@ -57,7 +57,7 @@ const struct luaL_Reg LuaLibraryMsg::msgLibsF [] = {
 const struct luaL_Reg LuaLibraryMsg::pubLibsM [] = {
     {"sendstring",    LuaLibraryMsg::lmsg_sendstring},
     {"sendrecord",    LuaLibraryMsg::lmsg_sendrecord},
-    {"sendlog",       LuaLibraryMsg::lmsg_sendlog},
+    {"alert",         LuaLibraryMsg::lmsg_alert},
     {"numsubs",       LuaLibraryMsg::lmsg_numsubs},
     {"destroy",       LuaLibraryMsg::lmsg_deletepub},
     {"__gc",          LuaLibraryMsg::lmsg_deletepub},
@@ -440,9 +440,9 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lmsg_sendlog - .sendlog(<lvl>, <msg>)
+ * lmsg_alert - :alert(<lvl>, <msg>)
  *----------------------------------------------------------------------------*/
-int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
+int LuaLibraryMsg::lmsg_alert (lua_State* L)
 {
     /* Get Publisher */
     msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
@@ -457,47 +457,38 @@ int LuaLibraryMsg::lmsg_sendlog (lua_State* L)
     {
         lvl = (event_level_t)lua_tointeger(L, 2);
     }
-
-    /* Check Event Level */
-    if(lvl == INVALID_EVENT_LEVEL)
+    else
     {
         mlog(CRITICAL, "Invalid event level: %d", lvl);
         return 0;
     }
 
-    /* Get Message */
-    size_t attr_size = 0;
-    const char* attr = lua_tolstring(L, 3, &attr_size);
-    if(attr_size == 0)
+    /* Get Exception Code */
+    rte_t code = RTE_INFO;
+    if(lua_isinteger(L, 3))
     {
-        mlog(CRITICAL, "Invalid length of message: %lu", attr_size);
+        code = (rte_t)lua_tointeger(L, 3);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid exception code: %d", code);
         return 0;
     }
 
-    /* Construct Log Record */
-    EventLib::event_t event;
-    memset(&event, 0, sizeof(event));
-    event.systime = TimeLib::gpstime();
-    event.tid     = Thread::getId();
-    event.id      = ORIGIN;
-    event.parent  = ORIGIN;
-    event.flags   = 0;
-    event.type    = EventLib::LOG;
-    event.level   = lvl;
-    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
-    StringLib::copy(event.name, "sendlog", EventLib::MAX_NAME_SIZE);
-    StringLib::copy(event.attr, attr, attr_size + 1);
+    /* Get Message */
+    size_t msg_size = 0;
+    const char* msg = lua_tolstring(L, 4, &msg_size);
+    if(msg_size == 0)
+    {
+        mlog(CRITICAL, "Invalid length of message: %lu", msg_size);
+        return 0;
+    }
 
-    /* Post Record */
-    int rec_size = offsetof(EventLib::event_t, attr) + attr_size + 1;
-    RecordObject record(EventLib::eventRecType, rec_size);
-    memcpy(record.getRecordData(), &event, rec_size);
-    uint8_t* rec_buf = NULL;
-    int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-    int bytes_sent = msg_data->pub->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT);
+    /* Generate Exception */
+    alert(lvl, code, msg_data->pub, NULL, "%s", msg);
 
     /* Return Results */
-    lua_pushboolean(L, bytes_sent > 0);
+    lua_pushboolean(L, true);
     return 1;
 }
 

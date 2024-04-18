@@ -44,6 +44,11 @@ if __geo__ then
     runner.script(td .. "geouser_raster.lua")
 end
 
+-- Run Network Services Self Tests
+if __netsvc__ then
+    runner.script(td .. "earth_data.lua")
+end
+
 -- Run Legacy Self Tests --
 if __legacy__ then
     runner.script(td .. "message_queue.lua")

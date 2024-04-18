@@ -176,12 +176,6 @@ To enable PhoREAL functionality, the ``"phoreal"`` parameter must be populated i
     - ``"send_waveform"``: boolean whether to send to the client the photon height histograms in addition to the vegetation statistics
     - ``"above_classifier"``: boolean whether to use the ABoVE photon classifier when determining top of canopy photons
 
-Note: when PhoREAL is enabled, the ATL03 extent records (_atl03rec_) are enhanced to include the following populated fields:
-
-* ``"relief"``: ATL08 normalized photon heights
-* ``"landcover"``: ATL08 landcover flags
-* ``"snowcover"``: ATL08 snowcover flags
-
 
 2.7 Parameter reference table
 ------------------------------
@@ -210,7 +204,7 @@ To obtain fewer false-positive returns, this set of parameters can be modified w
      - 20.0
    * - ``"cnf"``
      - Integer/List or String/List
-     - 1 (within 10m)
+     - -1 (not considered)
    * - ``"cnt"``
      - Integer
      - 10
@@ -319,6 +313,7 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"latitude"``: latitude (-90.0 to 90.0)
 - ``"longitude"``: longitude (-180.0 to 180.0)
 - ``"x_atc"``: along track distance of the photon in meters (with respect to the center of the segment)
+- ``"y_atc"``: across track distance of the photon in meters
 - ``"across"``: across track distance of the photon in meters
 - ``"height"``: height of the photon in meters
 - ``"solar_elevation"``: solar elevation from ATL03 at time of measurement, in degrees
@@ -328,6 +323,11 @@ The GeoDataFrame for each photon extent has the following columns:
 - ``"quality_ph"``: the photon's quality classification (0: nominal, 1: possible after pulse, 2: possible impulse responpse effect, 3: possible tep)
 - ``"yapc_score"``: the photon's YAPC classification (0 - 255, the larger the number the higher the confidence in surface reflection)
 
+Note: when PhoREAL is enabled, the ATL03 extent records (_atl03rec_) are enhanced to include the following populated fields:
+
+- ``"relief"``: ATL08 normalized photon heights
+- ``"landcover"``: ATL08 landcover flags
+- ``"snowcover"``: ATL08 snowcover flags
 
 3.2 Elevations (ATL06)
 ----------------------

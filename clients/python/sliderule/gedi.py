@@ -157,9 +157,6 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_ar
         if "asset" not in rqst_parm:
             rqst_parm["asset"] = asset
 
-        # Get List of Resources from CMR (if not supplied)
-        resources = earthdata.search(rqst_parm, resources)
-
         # Build GEDI Request
         rqst = {
             "resources": resources,

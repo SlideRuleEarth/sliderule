@@ -18,8 +18,6 @@
 --              3. The output is a raw binary blob containing serialized RecordObjects
 --
 
-local json = require("json")
-
 --
 -- Initialize Processing of Resource
 --
@@ -32,14 +30,14 @@ local function initialize(resource, parms, algo, args)
     local asset_name = parms["asset"] or args.default_asset
     local asset = core.getbyname(asset_name)
     if not asset then
-        userlog:sendlog(core.INFO, string.format("invalid asset specified: %s", asset_name))
+        userlog:alert(core.INFO, core.RTE_ERROR, string.format("invalid asset specified: %s", asset_name))
         do return nil end
     end
 
     -- Raster Sampler --
     local sampler_disp = nil
     if parms[geo.PARMS] then
-        rsps_bridge = core.bridge(args.result_q, rspq)
+        local rsps_bridge = core.bridge(args.result_q, rspq)
         sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required because GeoRaster is not thread safe
         for key,settings in pairs(parms[geo.PARMS]) do
             local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
@@ -48,10 +46,10 @@ local function initialize(resource, parms, algo, args)
                 if sampler then
                     sampler_disp:attach(sampler, args.result_rec)
                 else
-                    userlog:sendlog(core.CRITICAL, string.format("request <%s> failed to create sampler %s for %s", rspq, key, resource))
+                    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create sampler %s for %s", rspq, key, resource))
                 end
             else
-                userlog:sendlog(core.CRITICAL, string.format("request <%s> failed to create raster %s for %s", rspq, key, resource))
+                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create raster %s for %s", rspq, key, resource))
             end
         end
         sampler_disp:run()
@@ -76,7 +74,7 @@ local function initialize(resource, parms, algo, args)
     end
 
     -- Post Initial Status Progress --
-    userlog:sendlog(core.INFO, string.format("request <%s> processing initialized on %s ...", rspq, resource))
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing initialized on %s ...", rspq, resource))
 
     -- Return Needed Objects to Continue Processing Request --
     return {asset=asset, source_q=source_q, algo_disp=algo_disp, sampler_disp=sampler_disp, userlog=userlog}
@@ -97,16 +95,16 @@ local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, us
         duration = duration + interval
         -- Check for Timeout --
         if timeout >= 0 and duration >= timeout then
-            userlog:sendlog(core.ERROR, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
             do return false end
         end
-        userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
+        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
     end
 
     -- Resource Processing Complete --
     if with_stats and reader then
         local reader_stats = reader:stats(false)
-        userlog:sendlog(core.INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, reader_stats.read, reader_stats.filtered, reader_stats.dropped))
+        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, reader_stats.read, reader_stats.filtered, reader_stats.dropped))
     end
 
     -- Wait Until Algorithm Dispatch Completion --
@@ -115,10 +113,10 @@ local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, us
             duration = duration + interval
             -- Check for Timeout --
             if timeout >= 0 and duration >= timeout then
-                userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds", rspq, duration))
                 do return false end
             end
-            userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to process source records (after %d seconds)", rspq, duration))
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to process source records (after %d seconds)", rspq, duration))
         end
     end
 
@@ -129,17 +127,17 @@ local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, us
             duration = duration + interval
             -- Check for Timeout --
             if timeout >= 0 and duration >= timeout then
-                userlog:sendlog(core.ERROR, string.format("request <%s> timed-out after %d seconds", rspq, duration))
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds", rspq, duration))
                 do return false end
             end
-            userlog:sendlog(core.INFO, string.format("request <%s> ... continuing to sample records (after %d seconds)", rspq, duration))
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to sample records (after %d seconds)", rspq, duration))
         end
     end
 
     -- Request Processing Complete --
     if with_stats and algo then
         local algo_stats = algo:stats(false)
-        userlog:sendlog(core.INFO, string.format("request <%s> processing complete (%d/%d/%d/%d)", rspq, algo_stats.read, algo_stats.filtered, algo_stats.sent, algo_stats.dropped))
+        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing complete (%d/%d/%d/%d)", rspq, algo_stats.read, algo_stats.filtered, algo_stats.sent, algo_stats.dropped))
     end
 
     -- Return Success --

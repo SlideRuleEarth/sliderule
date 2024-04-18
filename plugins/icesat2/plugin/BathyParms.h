@@ -55,6 +55,10 @@ class BathyParms: public Icesat2Parms
         static const char* PH_IN_EXTENT;
         static const char* MAX_ALONG_TRACK_SPREAD;
         static const char* BEAM_FILE_PREFIX;
+        static const char* ATL09_RESOURCES;
+
+        static const int ATL09_RESOURCE_NAME_LEN = 39;
+        static const int ATL09_RESOURCE_KEY_LEN = 6;
 
         static const int DEFAULT_PH_IN_EXTENT = 8192;
         static const double DEFAULT_MAX_ALONG_TRACK_SPREAD;
@@ -64,6 +68,7 @@ class BathyParms: public Icesat2Parms
          *--------------------------------------------------------------------*/
 
         static int  luaCreate       (lua_State* L);
+        static void getATL09Key     (char* key, const char* name);
 
         /*--------------------------------------------------------------------
          * Data
@@ -72,6 +77,7 @@ class BathyParms: public Icesat2Parms
         int         ph_in_extent;
         double      max_along_track_spread;
         const char* beam_file_prefix;
+        Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -81,6 +87,7 @@ class BathyParms: public Icesat2Parms
                     ~BathyParms     (void);
 
         void        cleanup         (void) const;
+        void        get_atl09_list  (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __bathy_parms__ */

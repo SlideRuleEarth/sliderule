@@ -29,7 +29,7 @@ local resources = rqst["resources"]
 local timeout = rqst["timeout"] or netsvc.RQST_TIMEOUT
 
 -- Post Initial Status Progress --
-userlog:sendlog(core.DEBUG, string.format("atl03 indexing initiated on %s data...", atl03_asset))
+userlog:alert(core.DEBUG, core.RTE_INFO, string.format("atl03 indexing initiated on %s data...", atl03_asset))
 
 -- Index Asset --
 local atl03 = core.getbyname(atl03_asset)
@@ -43,15 +43,15 @@ while (userlog:numsubs() > 0) and not indexer:waiton(interval * 1000) do
     duration = duration + interval
     -- Check for Timeout --
     if timeout > 0 and duration == timeout then
-        userlog:sendlog(core.ERROR, string.format("request timed-out after %d seconds", duration))
+        userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request timed-out after %d seconds", duration))
         return
     end
     -- Get Stats --
     local stats = indexer:stats()
     -- Dispay Progress --
-    userlog:sendlog(core.DEBUG, string.format("processed %d entries from %d threads", stats.processed, stats.threads))
+    userlog:alert(core.DEBUG, core.RTE_INFO, string.format("processed %d entries from %d threads", stats.processed, stats.threads))
 end
 
 -- Processing Complete
-userlog:sendlog(core.DEBUG, string.format("processing complete"))
+userlog:alert(core.DEBUG, core.RTE_INFO, string.format("processing complete"))
 return

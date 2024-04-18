@@ -35,6 +35,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/iam_role_auth.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/earth_data_auth.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/earth_data_query.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/json.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/packet.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/prettyprint.lua

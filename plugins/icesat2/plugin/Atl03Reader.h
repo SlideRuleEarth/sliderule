@@ -304,6 +304,7 @@ class Atl03Reader: public LuaObject
         const int           read_timeout_ms;
         Publisher*          outQ;
         Icesat2Parms*       parms;
+        int                 signalConfColIndex;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file

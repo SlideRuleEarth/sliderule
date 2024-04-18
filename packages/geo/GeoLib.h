@@ -29,34 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __runtime_exception__
-#define __runtime_exception__
+#ifndef __geo_lib__
+#define __geo_lib__
 
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
+#include "LuaEngine.h"
+#include "MathLib.h"
 
-#include <stdexcept>
-
-/******************************************************************************
- * EXCEPTION
- ******************************************************************************/
-
-class RunTimeException : public std::runtime_error
+class GeoLib: public MathLib
 {
     public:
 
-        RunTimeException(event_level_t _lvl, int _rc, const char* _errmsg, ...) VARG_CHECK(printf, 4, 5);
-        char const* what() const throw();
-        event_level_t level (void) const;
-        int code (void) const;
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-    private:
+        static const char* DEFAULT_CRS;
 
-        static const int ERROR_MSG_LEN = 128;
-        char errmsg[ERROR_MSG_LEN];
-        const event_level_t lvl;
-        const int rc;
+        /*--------------------------------------------------------------------
+         * UTMTransform Subclass
+         *--------------------------------------------------------------------*/
+
+        class UTMTransform
+        {
+            public:
+                UTMTransform(double initial_latitude, double initial_longitude, const char* input_crs=DEFAULT_CRS);
+                ~UTMTransform(void);
+                point_t calculateCoordinates(double latitude, double longitude);
+                int zone;
+                bool is_north;
+                bool in_error;
+            private:
+                typedef void* utm_transform_t;
+                utm_transform_t transform;
+        };
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int luaCalcUTM (lua_State* L);
 };
 
-#endif // __runtime_exception__
+#endif /* __geo_lib__ */

@@ -14,6 +14,6 @@
 local json = require("json")
 local parm = json.decode(arg[1])
 
-def = msg.definition(parm["rectype"])
+local def = msg.definition(parm["rectype"])
 
 return json.encode(def)

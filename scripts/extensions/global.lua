@@ -10,6 +10,7 @@ local function eval (attribute, package)
 end
 
 local function check (expression)
+    local result = nil
     if type(expression) == "string" then
         local f = assert(load("return " .. expression))
         result = f() -- execute expression

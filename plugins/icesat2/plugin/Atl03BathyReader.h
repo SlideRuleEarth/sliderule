@@ -44,7 +44,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "StringLib.h"
-
+#include "RasterObject.h"
 #include "H5Array.h"
 #include "Icesat2Parms.h"
 #include "BathyParms.h"
@@ -82,18 +82,23 @@ class Atl03BathyReader: public LuaObject
         typedef struct {
             int64_t         time_ns;                // nanoseconds since GPS epoch
             int32_t         index_ph;               // unique index of photon in granule
-            float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
+            int32_t         index_seg;              // index into segment level groups in source ATL03 granule
             double          latitude;
             double          longitude;
             double          x_ph;                   // the easting coordinate in meters of the photon for the given UTM zone
             double          y_ph;                   // the northing coordinate in meters of the photon for the given UTM zone 
             double          x_atc;                  // along track distance calculated from segment_dist_x and dist_ph_along 
             double          y_atc;                  // dist_ph_across
+            double          background_rate;        // PE per second
+            float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
             float           sigma_along;            // along track aerial uncertainty
             float           sigma_across;           // across track aerial uncertainty
+            float           solar_elevation;
+            float           wind_v;                 // the wind speed at the center photon of the subsetted granule; calculated from met_u10m and met_v10m
+            float           pointing_angle;         // angle of beam as measured from nadir (TBD - how to get this)
             float           ndwi;                   // normalized difference water index using HLS data
             uint8_t         yapc_score;
-            uint8_t         max_signal_conf;        // maximum value in the atl03 confidence table
+            int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
             int8_t          quality_ph;
         } photon_t;
 
@@ -106,12 +111,8 @@ class Atl03BathyReader: public LuaObject
             uint16_t        reference_ground_track;
             uint8_t         cycle;
             uint8_t         utm_zone;
-            uint32_t        photon_count;
-            float           solar_elevation;
-            float           wind_v;                 // the wind speed at the center photon of the subsetted granule; calculated from met_u10m and met_v10m
-            float           pointing_angle;         // angle of beam as measured from nadir (TBD - how to get this)
-            double          background_rate;        // PE per second
             uint64_t        extent_id;
+            uint32_t        photon_count;
             photon_t        photons[];              // zero length field
         } extent_t;
 
@@ -130,7 +131,7 @@ class Atl03BathyReader: public LuaObject
 
 
         typedef struct {
-            Atl03BathyReader*  builder;
+            Atl03BathyReader*   builder;
             char                prefix[7];
             int                 track;
             int                 pair;
@@ -176,6 +177,10 @@ class Atl03BathyReader: public LuaObject
                 H5Array<double>     segment_delta_time;
                 H5Array<double>     segment_dist_x;
                 H5Array<float>      solar_elevation;
+                H5Array<float>      sigma_along;
+                H5Array<float>      sigma_across;
+                H5Array<float>      ref_elev;
+                H5Array<float>      geoid;
                 H5Array<float>      dist_ph_along;
                 H5Array<float>      dist_ph_across;
                 H5Array<float>      h_ph;
@@ -203,6 +208,7 @@ class Atl03BathyReader: public LuaObject
                 /* Read Data */
                 H5Array<float>      met_u10m;
                 H5Array<float>      met_v10m;
+                H5Array<double>     delta_time;
         };
 
         /*--------------------------------------------------------------------
@@ -216,11 +222,14 @@ class Atl03BathyReader: public LuaObject
         int                 numComplete;
         Asset*              asset;
         const char*         resource;
-        char*               resource09;
+        string              resource09;
+        bool                missing09;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
         BathyParms*         parms;
+        RasterObject*       ndwiRaster;
+        int                 signalConfColIndex;
 
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file
@@ -233,13 +242,22 @@ class Atl03BathyReader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03BathyReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, bool _send_terminator=true);
+                            Atl03BathyReader           (lua_State* L, 
+                                                        Asset* _asset, const char* _resource, 
+                                                        const char* outq_name, 
+                                                        BathyParms* _parms, 
+                                                        RasterObject* _ndwi_raster, 
+                                                        bool _send_terminator=true);
                             ~Atl03BathyReader          (void);
 
         static void*        subsettingThread            (void* parm);
 
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
+
+        // to be removed once abstracted interface available in RasterObject
+        static uint32_t     getSamples                  (RasterObject* robj, MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param=NULL);
+
 };
 
 #endif  /* __atl03_table_builder__ */

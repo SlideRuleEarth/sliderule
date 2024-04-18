@@ -52,6 +52,7 @@ CNF_WITHIN_10M = 1
 CNF_SURFACE_LOW = 2
 CNF_SURFACE_MEDIUM = 3
 CNF_SURFACE_HIGH = 4
+SRT_DYNAMIC = -1
 SRT_LAND = 0
 SRT_OCEAN = 1
 SRT_SEA_ICE = 2
@@ -270,9 +271,6 @@ def __build_request(parm, resources, default_asset='icesat2'):
     rqst_parm = parm.copy()
     if "asset" not in rqst_parm:
         rqst_parm["asset"] = default_asset
-
-    # Get List of Resources
-    resources = earthdata.search(rqst_parm, resources)
 
     # Build Request
     return {
@@ -759,16 +757,14 @@ def atl24g (parm, resource):
     GeoDataFrame
         ATL03 extents (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
     '''
-    return atl03sp(parm, resources=[resource])
+    return atl24gp(parm, resources=[resource])
 
 #
-#  Parallel  Gold Standard
+#  Parallel ATL24 Gold Standard
 #
 def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     '''
-    Performs ATL24 gold standard generation in parallel on ATL03 data. Unlike the `atl03s <#atl03s>`_ function,
-    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
-    is used to fetch all available resources from the CMR system automatically.
+    Performs ATL24 gold standard generation in parallel on ATL03 data.
 
     Parameters
     ----------

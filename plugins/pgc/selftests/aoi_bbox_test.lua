@@ -1,8 +1,8 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
+local console = require("console")
+local asset = require("asset")
+local csv = require("csv")
+local json = require("json")
 
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
@@ -18,7 +18,7 @@ local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 --One sample run with extent limit
 local lons = {-150}
 local lats = {  70}
-height = 0
+local height = 0
 
 local extentbox = {-151, 69, -149, 71}
 

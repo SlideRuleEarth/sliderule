@@ -130,9 +130,6 @@ def swotl2p(parm, callbacks={}, resources=None):
         if "asset" not in rqst_parm:
             rqst_parm["asset"] = "swot-sim-ecco-llc4320"
 
-        # Get List of Resources from CMR (if not supplied)
-        resources = earthdata.search(rqst_parm, resources)
-
         # Build GEDI Request
         rqst = {
             "resources": resources,
