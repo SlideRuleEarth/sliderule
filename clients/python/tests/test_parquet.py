@@ -201,6 +201,7 @@ class TestParquet:
         parms["output"]["format"] = "csv"
         gdf_from_csv = icesat2.atl06p(parms, resources=[resource], keep_id=True)
         os.remove("testfile7.csv")
+        os.remove("testfile7_metadata.json")
 
         # sort values
         gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')

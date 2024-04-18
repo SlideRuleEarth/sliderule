@@ -5,7 +5,7 @@
 --          issue http requests
 
 local json = require("json")
---local prettyprint = require("prettyprint")
+local prettyprint = require("prettyprint")
 
 --
 -- Constants
@@ -214,14 +214,16 @@ local function cmr (parms, poly, with_meta)
         local num_links = 0
         for _,e in ipairs(results["feed"]["entry"]) do
             -- build metadata with polygon and time stamps
-            local polygon_list = {}
-            local pattern = string.format("([^%s]+)", " ") -- builds a delimeter (' ')
-            e["polygons"][1][1]:gsub(pattern, function(substring) -- splits string over delimeter
-                table.insert(polygon_list, substring)
-            end)
             local poly_table = {}
-            for i = 1,#polygon_list,2 do
-                table.insert(poly_table, {lat=polygon_list[i], lon=polygon_list[i+1]})
+            if e["polygons"] then
+                local polygon_list = {}
+                local pattern = string.format("([^%s]+)", " ") -- builds a delimeter (' ')
+                e["polygons"][1][1]:gsub(pattern, function(substring) -- splits string over delimeter
+                    table.insert(polygon_list, substring)
+                end)
+                for i = 1,#polygon_list,2 do
+                    table.insert(poly_table, {lat=polygon_list[i], lon=polygon_list[i+1]})
+                end
             end
             local metadata = { poly = poly_table, t0 = e["time_start"], t1 = e["time_end"] }
             -- loop through links
