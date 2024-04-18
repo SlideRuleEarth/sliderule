@@ -88,6 +88,7 @@ option (ENABLE_CODE_COVERAGE "Instrument code with gcov for reporting code cover
 option (ENABLE_TIME_HEARTBEAT "Instruct TimeLib to use a 1KHz heart beat timer to set millisecond time resolution" OFF)
 option (ENABLE_CUSTOM_ALLOCATOR "Override new and delete operators globally for debug purposes" OFF)
 option (ENABLE_H5CORO_ATTRIBUTE_SUPPORT "H5Coro will read and process attribute messages" OFF)
+option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 
 # Package Options #
 

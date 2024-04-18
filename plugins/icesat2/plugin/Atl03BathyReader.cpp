@@ -719,6 +719,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     pointing_angle = 90.0 - ((180.0 / M_PI) * atl03.ref_elev[current_segment]);
 
                     /* Sample Raster for NDWI */
+                    ndwi = std::numeric_limits<float>::quiet_NaN();
                     if(builder->ndwiRaster)
                     {
                         double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;

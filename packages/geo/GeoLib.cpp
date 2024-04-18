@@ -35,6 +35,7 @@
 
 #include <cmath>
 #include <proj.h>
+#include <tiffio.h>
 #include "ogr_spatialref.h"
 
 #include "GeoLib.h"
@@ -156,4 +157,47 @@ int GeoLib::luaCalcUTM (lua_State* L)
         mlog(CRITICAL, "Failed to perform UTM transformation on %lf, %lf", latitude, longitude);
         return 0;
     }
+}
+
+/******************************************************************************
+ * TIFFImage Subclass
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GeoLib::TIFFImage::TIFFImage(const char* filename)
+{
+    TIFF* tif = TIFFOpen(filename, "r");
+    if(!tif) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
+
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &length);
+    mlog(CRITICAL, "Reading image %s which is %u` x %u pixels", filename, width, length);
+
+    raster = new uint32_t[width * length];
+
+    if(!TIFFReadRGBAImage(tif, width, length, raster, 0)) 
+    {
+        delete [] raster;
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+    }
+
+    TIFFClose(tif);    
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoLib::TIFFImage::~TIFFImage(void)
+{
+    delete [] raster;
+}
+
+/*----------------------------------------------------------------------------
+ * getPixel
+ *----------------------------------------------------------------------------*/
+uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
+{
+    return raster[(y * width) + x];
 }

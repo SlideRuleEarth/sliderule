@@ -64,6 +64,22 @@ class GeoLib: public MathLib
         };
 
         /*--------------------------------------------------------------------
+         * TIFFImage Subclass
+         *--------------------------------------------------------------------*/
+
+        class TIFFImage
+        {
+            public:
+                explicit TIFFImage(const char* filename);
+                ~TIFFImage(void);
+                uint32_t getPixel(uint32_t x, uint32_t y);
+            private:
+                uint32_t width;
+                uint32_t length;
+                uint32_t* raster;
+        };
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 

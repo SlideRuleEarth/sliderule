@@ -63,6 +63,11 @@ if (${ENABLE_H5CORO_ATTRIBUTE_SUPPORT})
     target_compile_definitions (slideruleLib PUBLIC H5CORO_ATTRIBUTE_SUPPORT)
 endif ()
 
+if (${ENABLE_GDAL_ERROR_REPORTING})
+    message (STATUS "Enabling error reporting to message log")
+    target_compile_definitions (slideruleLib PUBLIC GDAL_ERROR_REPORTING)
+endif ()
+
 # Platform File #
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")

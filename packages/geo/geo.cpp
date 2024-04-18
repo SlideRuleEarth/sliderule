@@ -269,8 +269,17 @@ int geo_open (lua_State* L)
  *----------------------------------------------------------------------------*/
 void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
 {
-    (void)eErrClass;  /* Silence compiler warning */
-    mlog(CRITICAL, "GDAL ERROR %d: %s", err_no, msg);
+    event_level_t lvl;
+    switch(eErrClass)
+    {
+        case CE_None:       lvl = INFO; break;
+        case CE_Debug:      lvl = DEBUG; break;
+        case CE_Warning:    lvl = WARNING; break;
+        case CE_Failure:    lvl = ERROR; break;
+        case CE_Fatal:      lvl = CRITICAL; break;
+        default:            lvl = CRITICAL; break;
+    }
+    mlog(lvl, "GDAL ERROR %d: %s", err_no, msg);
 }
 
 /******************************************************************************
@@ -292,8 +301,12 @@ void initgeo (void)
     RasterSampler::init();
 
     /* Register GDAL custom error handler */
-    void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
-    CPLSetErrorHandler(fptrGdalErrorHandler);
+    #ifdef GDAL_ERROR_REPORTING
+        void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
+        CPLSetErrorHandler(fptrGdalErrorHandler);
+    #else
+        CPLSetErrorHandler(NULL);
+    #endif
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEO_LIBNAME, geo_open);
