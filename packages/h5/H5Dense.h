@@ -5,7 +5,6 @@
  ******************************************************************************/
 class H5BTreeV2
 {
-
     public:
         /* key return values for outside */
 
@@ -13,7 +12,7 @@ class H5BTreeV2
         uint8_t  hdr_flags_out = 0; 
         int      hdr_dlvl_out = 0; 
         uint64_t msg_size_out = 0;
-        bool     found_out = false;
+        bool     found_attr = false;
 
         H5BTreeV2(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
 
@@ -108,39 +107,9 @@ class H5BTreeV2
             vector<uint64_t>        row_max_dblock_free; // max. free space in dblocks for this row (For indirect block rows, it's the maximum free space in a direct block referenced  from the indirect block)
         } dtable_t;
 
-        /* B-tree header information */
-        typedef struct {
-            /* Tracking */
-            uint64_t                addr = 0; // addr of btree 
-            size_t                  hdr_size = 0; // size (bytes) of btree on disk
-            size_t                  node_refc = 0; // ref count of nodes using header
-            size_t                  file_refc = 0; // ref count of files using header
-            uint8_t                 sizeof_size = 0; // size of file sizes
-            uint8_t                 sizeof_addr = 0; // size of file addresses
-            uint8_t                 max_nrec_size = 0; // size to store max. # of records in any node (in bytes)
-            void                    *parent = nullptr; // potentially remove
-
-            /* Properties */
-            btree2_subid_t          type; // "class" H5B2_class_t under hdf5 title
-            size_t                  nrec_size = 0; // native record size
-
-            uint32_t                node_size = 0; // size in bytes of all B-tree nodes
-            uint16_t                rrec_size = 0; // size in bytes of the B-tree record
-            uint16_t                depth = 0;
-            uint8_t                 split_percent = 0; // percent full that a node needs to increase above before it is split
-            uint8_t                 merge_percent = 0; // percent full that a node needs to be decrease below before it is split
-            
-            vector<btree2_node_info_t> node_info;  // table of node info structs for current depth of B-tree
-            btree2_node_ptr_t       *root; // root struct
-            vector<size_t>          nat_off;
-            uint64_t                check_sum = 0;
-            dtable_t*               dtable = nullptr; // doubling table
-
-        } btree2_hdr_t;
-
         /* B-tree leaf node information */
         typedef struct {
-            btree2_hdr_t            *hdr = nullptr;         // ptr to pinned header
+            // btree2_hdr_t            *hdr = nullptr;         // ptr to pinned header
             vector<uint8_t>         leaf_native;  // ptr to native records
             uint16_t                nrec = 0;         // num records in this node 
             void                    *parent = nullptr;      // dependency for leaf  
@@ -148,7 +117,7 @@ class H5BTreeV2
 
         /* B-tree internal node information */
         typedef struct {
-            btree2_hdr_t              *hdr = nullptr; // ptr to pinned header
+            // btree2_hdr_t              *hdr = nullptr; // ptr to pinned header
             vector<uint8_t>           int_native; // ptr native records               
             vector<btree2_node_ptr_t> node_ptrs;  // ptr to node ptrs
             uint16_t                  nrec = 0; // num records in node
@@ -177,12 +146,12 @@ class H5BTreeV2
         } btree2_type5_densename_rec_t;
 
         /* Main Dense entry point */
-        void                readDenseAttrs(uint64_t fheap_addr, uint64_t name_bt2_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr);
+        void                readDenseAttrs(uint64_t fheap_addr, const char *name, H5FileBuffer::heap_info_t* heap_info_ptr);
 
         /* Helpers */
         bool                isTypeSharedAttrs (unsigned type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
-        template<typename T, typename V> bool checkAssigned(const T& type, const V& value); 
+        template<typename T, typename V> bool checkAssigned(const T& type_verify, const V& value); 
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int n, uint8_t l);
         unsigned            log2_of2(uint32_t n);
@@ -194,29 +163,60 @@ class H5BTreeV2
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
-        void                compareType8Record(btree2_hdr_t* hdr, const void *_bt2_udata, const void *_bt2_rec, int *result);
+        void                compareType8Record(const void *_bt2_udata, const void *_bt2_rec, int *result);
 
         /* Fheap Navigation*/
-        void                fheapLocate(btree2_hdr_t* hdr_og,  H5FileBuffer::heap_info_t *hdr, const void * _id);
-        void                fheapLocate_Managed(btree2_hdr_t* hdr_og,  H5FileBuffer::heap_info_t* hdr, uint8_t* id);
+        void                fheapLocate(H5FileBuffer::heap_info_t *heap_info_ptr, const void * _id);
+        void                fheapLocate_Managed(H5FileBuffer::heap_info_t* heap_info_ptr, uint8_t* id);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
         /* Btreev2 setting and navigation */
-        void                locateRecordBTreeV2(btree2_hdr_t* hdr, unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
-        void                initHdrBTreeV2(btree2_hdr_t *hdr, uint64_t addr, btree2_node_ptr_t *root_node_ptr);
-        void                initDTable(btree2_hdr_t *hdr,  H5FileBuffer::heap_info_t* heap_info_ptr,  dtable_t* dt_curr, vector<uint64_t>& row_block_size, vector<uint64_t>& row_block_off, vector<uint64_t>& row_tot_dblock_free, vector<uint64_t>& row_max_dblock_free);
-        void                initNodeInfo(btree2_hdr_t *hdr, vector<btree2_node_info_t>& node_info, vector<size_t>& nat_off);
-        void                openBTreeV2 (btree2_hdr_t *hdr, btree2_node_ptr_t *root_node_ptr, uint64_t addr,  H5FileBuffer::heap_info_t* heap_info_ptr, void* udata, bool *found, dtable_t* dt_curr);
-        void                openInternalNode(btree2_internal_t *internal, btree2_hdr_t* hdr, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
-        void                findBTreeV2 (btree2_hdr_t* hdr, void* udata, bool *found);
-        uint64_t            openLeafNode(btree2_hdr_t* hdr, btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
+        void                locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, const void *udata, unsigned *idx, int *cmp);
+        void                initHdrBTreeV2(btree2_node_ptr_t *root_node_ptr);
+        void                initDTable(H5FileBuffer::heap_info_t* heap_info_ptr, vector<uint64_t>& row_block_size, vector<uint64_t>& row_block_off, vector<uint64_t>& row_tot_dblock_free, vector<uint64_t>& row_max_dblock_free);
+        void                initNodeInfo();
+        void                openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::heap_info_t* heap_info_ptr, void* udata);
+        void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
+        void                findBTreeV2 (void* udata);
+        uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
         
         /* dtable search */
-        void                dtableLookup( H5FileBuffer::heap_info_t* hdr, dtable_t* dtable, uint64_t off, unsigned *row, unsigned *col);
+        void                dtableLookup(H5FileBuffer::heap_info_t* heap_info_ptr, uint64_t off, unsigned *row, unsigned *col);
         uint64_t            buildEntries_Indirect( H5FileBuffer::heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents);
-        void                man_dblockLocate(btree2_hdr_t* hdr_og,  H5FileBuffer::heap_info_t* hdr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
+        void                man_dblockLocate(H5FileBuffer::heap_info_t* heap_info_ptr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
 
     private:
+
+        /* H5FileBuffer "This" pointer */
+        /* NOTE: external instance H5FileBuffer is incomplete in construction */
         H5FileBuffer* h5filePtr_;
+
+        /* B-tree header information */
+        /* Tracking */
+        uint64_t                addr = 0; // addr of btree 
+        // size_t                  hdr_size = 0; // size (bytes) of btree on disk
+        // size_t                  node_refc = 0; // ref count of nodes using header
+        // size_t                  file_refc = 0; // ref count of files using header
+        // uint8_t                 sizeof_size = 0; // size of file sizes
+        // uint8_t                 sizeof_addr = 0; // size of file addresses
+        uint8_t                 max_nrec_size = 0; // size to store max. # of records in any node (in bytes)
+        void                    *parent = nullptr; // potentially remove
+
+        /* Properties */
+        btree2_subid_t          type; // "class" H5B2_class_t under hdf5 title
+        size_t                  nrec_size = 0; // native record size
+
+        uint32_t                node_size = 0; // size in bytes of all B-tree nodes
+        uint16_t                rrec_size = 0; // size in bytes of the B-tree record
+        uint16_t                depth = 0;
+        uint8_t                 split_percent = 0; // percent full that a node needs to increase above before it is split
+        uint8_t                 merge_percent = 0; // percent full that a node needs to be decrease below before it is split
+        
+        vector<btree2_node_info_t> node_info;  // table of node info structs for current depth of B-tree
+        btree2_node_ptr_t       *root; // root struct
+        vector<size_t>          nat_off;
+        uint64_t                check_sum = 0;
+        dtable_t                dtable; // doubling table
+
 
 };

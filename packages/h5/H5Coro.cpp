@@ -3054,7 +3054,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         {
             print2term("Entering dense attribute search; No main attribute message match. \n");
             H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
-            if (curr_btreev2.found_out) {
+            if (curr_btreev2.found_attr) {
                 readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
             }
             else {
