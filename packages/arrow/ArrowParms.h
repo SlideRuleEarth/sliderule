@@ -125,6 +125,7 @@ class ArrowParms: public LuaObject
         static int      luaIsFeather        (lua_State* L);
         static int      luaIsParquet        (lua_State* L);
         static int      luaIsCSV            (lua_State* L);
+        static int      luaIsArrow          (lua_State* L);
         static int      luaPath             (lua_State* L);
         void            luaGetAncillary     (lua_State* L, int index, bool* provided);
 };

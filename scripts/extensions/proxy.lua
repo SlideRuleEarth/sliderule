@@ -35,7 +35,7 @@ local function proxy(resources, parms, endpoint, rec)
     if parms[arrow.PARMS] then
         local output_parms = arrow.parms(parms[arrow.PARMS])
         -- Arrow Writer --
-        if output_parms:isparquet() or output_parms:iscsv() then
+        if output_parms:isarrow() then
             arrow_builder = arrow.builder(output_parms, rspq, rspq .. "-builder", rec, rqstid)
             if arrow_builder then
                 rsps_from_nodes = rspq .. "-builder"

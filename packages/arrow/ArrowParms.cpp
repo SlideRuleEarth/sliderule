@@ -57,6 +57,7 @@ const struct luaL_Reg ArrowParms::LUA_META_TABLE[] = {
     {"isfeather",   luaIsFeather},
     {"isparquet",   luaIsParquet},
     {"iscsv",       luaIsCSV},
+    {"isarrow",     luaIsArrow}, // combination of isfeather, iscsv, isparquet
     {"path",        luaPath},
     {NULL,          NULL}
 };
@@ -289,6 +290,24 @@ int ArrowParms::luaIsCSV (lua_State* L)
     {
         ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == CSV);
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaIsArrow
+ *----------------------------------------------------------------------------*/
+int ArrowParms::luaIsArrow (lua_State* L)
+{
+    try
+    {
+        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        return returnLuaStatus(L, (lua_obj->format == PARQUET) ||
+                                  (lua_obj->format == CSV) ||
+                                  (lua_obj->format == FEATHER));
     }
     catch(const RunTimeException& e)
     {
