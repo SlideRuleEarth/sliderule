@@ -6,8 +6,8 @@ local json = require("json")
 
 -- Setup --
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+--console.monitor:config(core.LOG, core.DEBUG)
+--sys.setlvl(core.LOG, core.DEBUG)
 
 -- Unit Test --
 
