@@ -16,6 +16,7 @@ parser.add_argument('--verbose',        '-v',   action='store_true',    default=
 parser.add_argument('--loglvl',         '-l',   type=str,               default="INFO")
 parser.add_argument('--preserve',       '-p',   action='store_true',    default=False)
 parser.add_argument('--serverfile',     '-s',   type=str,               default="/tmp/bathyfile.csv")
+parser.add_argument('--local_prefix',   '-x',   type=str,               default="/tmp/bathy_")
 args,_ = parser.parse_known_args()
 
 # Initialize Organization
@@ -35,15 +36,17 @@ parms = {
     "poly": region['poly'],
     "srt": icesat2.SRT_DYNAMIC,
     "cnf": "atl03_not_considered",
-    "pass_invalid": True,
-    "beam_file_prefix": "/tmp/bathy_",
-    "output": { 
+    "pass_invalid": True
+}
+if args.local_prefix != "None":
+    parms["beam_file_prefix"] = args.local_prefix
+else:
+    parms["output"] = { 
         "path": args.serverfile, 
         "format": "csv", 
         "open_on_complete": True, 
         "as_geo": False 
-    } 
-}
+    }
 
 # Make ATL24G Processing Request
 gdf = icesat2.atl24gp(parms, resources=[args.granule], keep_id=True)
@@ -59,5 +62,5 @@ if(args.output != None):
     gdf.to_csv(args.output, index=False, columns=columns)
 
 # Clean Up Temporary Files
-if not args.preserve:
+if args.local_prefix == "None" and not args.preserve:
     os.remove(args.serverfile)
