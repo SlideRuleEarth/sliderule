@@ -629,7 +629,14 @@ void* GeoIndexedRaster::readingThread(void *param)
             if(GdalRaster::ispoint(reader->geo))
                 entry->sample = entry->raster->samplePOI((OGRPoint*)reader->geo);
             else if(GdalRaster::ispoly(reader->geo))
+            {
                 entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
+                //TODO: create GeoRaster object - see GeoRaster class code
+                // GdalRaster::overrideCRS_t cb = raster.getOverrideCRS();
+                // bool dataIsElevation = raster.isElevation();
+                // subset->robj = new GeoRaster(LuaState, parms, subset->rasterName, gps, dataIsElevation, cb);
+                // slist.push_back(subset);
+            }
             entry->enabled = false; /* raster samples/subsetted */
 
             reader->sync.lock();

@@ -44,33 +44,32 @@
  * RASTER SUBSET CLASS
  ******************************************************************************/
 
+class RasterObject;
 class RasterSubset
 {
     public:
-
+        RasterObject*               robj;
         uint8_t*                    data;
         uint64_t                    size;
         uint64_t                    cols;
         uint64_t                    rows;
         RecordObject::fieldType_t   datatype;
-        double                      map_ulx;
-        double                      map_uly;
-        double                      cellsize;
-        GeoParms::bbox_t            bbox;
-        std::string                 wkt;
         double                      time;     // gps seconds
-        uint64_t                    fileId;
 
         static const uint64_t       oneGB    = 0x40000000;
         static const uint64_t       MAX_SIZE = oneGB * 6;
 
         static uint64_t             poolsize;
         static Mutex                mutex;
+        std::string                 rasterName;
 
         RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                     double ulx, double uly, double _cellsize, GeoParms::bbox_t& _bbox, const char* _wkt,
-                     double _time, double _fileId);
+                     double _time, const std::string& vsiFile);
         ~RasterSubset(void);
+
+        void releaseData(void);
+
+    private:
 };
 
 #endif /* __raster_subset__ */

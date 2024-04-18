@@ -77,9 +77,15 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
 
     try
     {
-        /* Get samples, if none found, return */
+        /* Get subset rasters, if none found, return */
         RasterSubset* subset = raster.subsetAOI(geo->toPolygon());
-        if(subset) slist.push_back(subset);
+        if(subset)
+        {
+            GdalRaster::overrideCRS_t cb = raster.getOverrideCRS();
+            bool dataIsElevation = raster.isElevation();
+            subset->robj = new GeoRaster(LuaState, parms, subset->rasterName, gps, dataIsElevation, cb);
+            slist.push_back(subset);
+        }
     }
     catch (const RunTimeException &e)
     {

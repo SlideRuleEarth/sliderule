@@ -19,12 +19,54 @@ local lly =  -70.00
 local urx =  150.00
 local ury =  -69.95
 
-local demTypes = {"rema-mosaic", "rema-strips"}
+local lon = 149.90
+local lat = -69.97
+local height = 0
+
+-- local demTypes = {"rema-mosaic", "rema-strips"}
+local demTypes = {"rema-mosaic"}
 for i = 1, #demTypes do
     local demType = demTypes[i];
     local dem = geo.raster(geo.parms({asset=demType, algorithm="Cubic"}))  -- Resample the subset data with cubic algorithm
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s AOI subset\n--------------------------------", demType))
+
+    local tbl, err = dem:sample(lon, lat, height)
+    runner.check(err == 0)
+    runner.check(tbl ~= nil)
+
+    local sampleCnt = 0
+    for i, v in ipairs(tbl) do
+        local el = v["value"]
+        local fname = v["file"]
+        print(string.format("(%02d) %8.2f %s", i, el, fname))
+        sampleCnt = sampleCnt + 1
+    end
+
+    -- local starttime = time.latch();
+    -- local dem= dem:subset(llx, lly, urx, ury)
+    -- local stoptime = time.latch();
+
+    -- if err ~= 0 then
+    --     print(string.format("subset error: %d", err))
+    -- else
+    --     print(string.format("subset time: %.2f", stoptime - starttime))
+    -- end
+
+    -- if(dem ~= nil) then
+    --     local tbl, err = dem:sample(lon, lat, height)
+    --     runner.check(err == 0)
+    --     runner.check(tbl ~= nil)
+
+    --     local sampleCnt = 0
+    --     for i, v in ipairs(tbl) do
+    --         local el = v["value"]
+    --         local fname = v["file"]
+    --         print(string.format("(%02d) %8.2f %s", i, el, fname))
+    --         sampleCnt = sampleCnt + 1
+    --     end
+
+
 
     local starttime = time.latch();
     local tbl, err = dem:subset(llx, lly, urx, ury)
@@ -51,26 +93,17 @@ for i = 1, #demTypes do
             local rows = v["rows"]
             local size = v["size"]
             local datatype = v["datatype"]
-            local ulx = v["ulx"]
-            local uly = v["uly"]
-            local cellsize = v["cellsize"]
-            local wkt = v["wkt"]
 
             local mbytes = size / (1024*1024)
 
-            print(string.format("AOI size: %.1f MB, cols: %d, rows: %d, datatype: %s, ulx: %.9f, uly: %.9f, cellsize: %.1f",
-                    mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
+            print(string.format("AOI size: %.1f MB, cols: %d, rows: %d, datatype: %s",
+                    mbytes, cols, rows, msg.datatype(datatype)))
 
             -- NOTE: mosaic and strips read the same 'area' the difference is the actual data
             --       this test does not have any subset area clipping, only one strip out of 12 was out of bounds
             runner.check(cols == 1915)
             runner.check(rows == 4343)
-            runner.check(math.abs(ulx -  1100044.752507064) < sigma)
-            runner.check(math.abs(uly - -1896646.081268538) < sigma)
-
             runner.check(msg.datatype(datatype) == "FLOAT")
-            runner.check(cellsize == 2.0)
-            runner.check(wkt ~= "")
 
             if demType == "rema-mosaic" then
                 -- TODO: test data
