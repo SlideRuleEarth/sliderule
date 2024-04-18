@@ -897,10 +897,10 @@ FString json_contents(R"json({
                             fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
                             fprintf(out_file, "%f,", extent->photons[i].wind_v);
                             fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
-                            fprintf(out_file, "%f", extent->photons[i].ndwi);
+                            fprintf(out_file, "%f,", extent->photons[i].ndwi);
                             fprintf(out_file, "%d,", extent->photons[i].yapc_score);
                             fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
-                            fprintf(out_file, "%d,", extent->photons[i].quality_ph);
+                            fprintf(out_file, "%d", extent->photons[i].quality_ph);
                             fprintf(out_file, "\n");
                         }
                     }
