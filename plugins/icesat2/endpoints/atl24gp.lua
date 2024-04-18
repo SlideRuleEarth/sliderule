@@ -12,7 +12,10 @@ local parms = rqst["parms"]
 
 local original_asset = parms["asset"]
 parms["asset"] = "icesat2-atl09"
-parms["resources09"] = earthdata.search(parms)
+local rc, rsps = earthdata.search(parms)
+if rc == earthdata.SUCCESS then
+    parms["resources09"] = rsps
+end
 parms["asset"] = original_asset
 
 proxy.proxy(resources, parms, "atl24g", "bathyrec")

@@ -189,7 +189,7 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
             }
             else
             {
-                mlog(ERROR, "Invalid item specified - must be a string");
+                mlog(ERROR, "Invalid ATL09 item specified - must be a string");
             }
 
             /* Clean up stack */
@@ -198,6 +198,6 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
     }
     else if(!lua_isnil(L, index))
     {
-        mlog(ERROR, "Lists must be provided as a table");
+        mlog(ERROR, "ATL09 lists must be provided as a table");
     }
 }

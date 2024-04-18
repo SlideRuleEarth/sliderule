@@ -551,7 +551,7 @@ Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable for %s", info->builder->resource09.c_str());
+        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->builder->resource09.c_str());
     }
 }
 

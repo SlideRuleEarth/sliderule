@@ -5,6 +5,7 @@
 --          issue http requests
 
 local json = require("json")
+--local prettyprint = require("prettyprint")
 
 --
 -- Constants
@@ -118,9 +119,9 @@ end
 --
 -- CMR
 --
-local function cmr (parms, poly)
+local function cmr (parms, poly, with_meta)
 
-    local urls = {}
+    local link_table = {}
 
     -- get parameters of request
     local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
@@ -212,6 +213,18 @@ local function cmr (parms, poly)
         -- loop through each response entry and pull out the desired links
         local num_links = 0
         for _,e in ipairs(results["feed"]["entry"]) do
+            -- build metadata with polygon and time stamps
+            local polygon_list = {}
+            local pattern = string.format("([^%s]+)", " ") -- builds a delimeter (' ')
+            e["polygons"][1][1]:gsub(pattern, function(substring) -- splits string over delimeter
+                table.insert(polygon_list, substring)
+            end)
+            local poly_table = {}
+            for i = 1,#polygon_list,2 do
+                table.insert(poly_table, {lat=polygon_list[i], lon=polygon_list[i+1]})
+            end
+            local metadata = { poly = poly_table, t0 = e["time_start"], t1 = e["time_end"] }
+            -- loop through links
             local links = e["links"]
             if links then
                 for _,l in ipairs(links) do
@@ -225,10 +238,12 @@ local function cmr (parms, poly)
                                 for token in link:gmatch("[^" .. "/"  .. "]+") do
                                     url = token
                                 end
-                                -- add url to list of urls to return
-                                table.insert(urls, url)
-                                num_links = num_links + 1
-                                total_links = total_links + 1
+                                -- add url to table of links with metadata
+                                if not link_table[url] then
+                                    link_table[url] = metadata 
+                                    num_links = num_links + 1
+                                    total_links = total_links + 1
+                                end
                                 break
                             end
                         end
@@ -241,13 +256,21 @@ local function cmr (parms, poly)
         if num_links == 0 then
             break
         elseif total_links >= max_resources then
-            sys.log(core.WARNING, string.format("Number of matched resources truncated from to %d", total_links))
+            sys.log(core.WARNING, string.format("Number of matched resources truncated to %d for %s", total_links, short_name))
             break
         end
     end
 
-    -- return urls
-    return RC_SUCCESS, urls
+    -- return results
+    if with_meta then
+        return RC_SUCCESS, link_table
+    else
+        local urls = {}
+        for link,_ in pairs(link_table) do
+            table.insert(urls, link)
+        end
+        return RC_SUCCESS, urls
+    end
 
 end
 
