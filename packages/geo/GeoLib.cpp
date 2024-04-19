@@ -338,9 +338,8 @@ bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filena
     }
 
     /* populate attributes */
-    uint8_t pixel_size = 8; // 8-bits
-	uint32_t palette_size = 1024; // 2^(pixelsize) * 4
-	uint32_t image_size	= height * modup(width, 4) * (pixel_size / 8);
+    uint32_t palette_size = 1024; // 2^(pixelsize) * 4
+	uint32_t image_size	= height * modup(width, 4);
 	uint32_t data_offset  = 0x36 + palette_size; // header plus palette
 	uint32_t file_size	= data_offset + image_size;
 
@@ -354,7 +353,7 @@ bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filena
         .image_width        = width,
         .image_height       = height,
         .color_planes       = 1,
-        .color_depth        = pixel_size,
+        .color_depth        = 8,
         .compression        = 0,
         .image_size         = image_size,
         .hor_res            = 1,
@@ -378,6 +377,7 @@ bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filena
         } value = {
             .b = {b, b, b, b}
         };
+        (void)value.b; // silence static analysis "unused variable"
         fwrite(&value.v, 4, 1, bmp_file);
     }
 
