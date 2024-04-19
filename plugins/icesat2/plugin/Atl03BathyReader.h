@@ -46,6 +46,7 @@
 #include "StringLib.h"
 #include "RasterObject.h"
 #include "H5Array.h"
+#include "GeoLib.h"
 #include "Icesat2Parms.h"
 #include "BathyParms.h"
 
@@ -62,6 +63,12 @@ class Atl03BathyReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int32_t INVALID_INDICE = -1;
+
+        static const char* GLOBAL_BATHYMETRY_MASK_FILE_PATH;
+        static const double GLOBAL_BATHYMETRY_MASK_MAX_LAT;
+        static const double GLOBAL_BATHYMETRY_MASK_MIN_LAT;
+        static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+        static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
 
         static const char* phRecType;
         static const RecordObject::fieldDef_t phRecDef[];
@@ -234,9 +241,11 @@ class Atl03BathyReader: public LuaObject
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file
 
-        uint16_t             start_rgt;
-        uint8_t              start_cycle;
-        uint8_t              start_region;
+        uint16_t            start_rgt;
+        uint8_t             start_cycle;
+        uint8_t             start_region;
+
+        GeoLib::TIFFImage*  bathyMask;
 
         /*--------------------------------------------------------------------
          * Methods

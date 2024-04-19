@@ -33,6 +33,7 @@
 #define __geo_lib__
 
 #include "LuaEngine.h"
+#include "LuaObject.h"
 #include "MathLib.h"
 
 class GeoLib: public MathLib
@@ -67,15 +68,26 @@ class GeoLib: public MathLib
          * TIFFImage Subclass
          *--------------------------------------------------------------------*/
 
-        class TIFFImage
+        class TIFFImage: public LuaObject
         {
             public:
-                explicit TIFFImage(const char* filename);
-                ~TIFFImage(void);
-                uint32_t getPixel(uint32_t x, uint32_t y);
+                static const char* OBJECT_TYPE;
+                static const char* LUA_META_NAME;
+                static const struct luaL_Reg LUA_META_TABLE[];
+                static const uint32_t INVALID_PIXEL = 0xFFFFFFFF;
+                static int luaCreate (lua_State* L);
+                TIFFImage (lua_State* L, const char* filename);
+                ~TIFFImage (void);
+                uint32_t getPixel (uint32_t x, uint32_t y);
+                uint32_t getWidth (void);
+                uint32_t getLength (void);
             private:
+                static int luaDimensions (lua_State* L);
+                static int luaPixel (lua_State* L);
+                static int luaConvertToBMP (lua_State* L);
                 uint32_t width;
                 uint32_t length;
+                uint32_t size;
                 uint32_t* raster;
         };
 
@@ -83,7 +95,40 @@ class GeoLib: public MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void init (void);
         static int luaCalcUTM (lua_State* L);
+        static bool writeBMP (uint32_t* data, int width, int length, const char* filename);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            uint32_t file_size;         // total file size
+            uint16_t reserved1;         // application dependent
+            uint16_t reserved2;         // application dependent
+            uint32_t data_offset;       // start of image data after DIB header
+            uint32_t hdr_size;          // must be 40 - start of DIB v3 header
+            int32_t  image_width;       // signed
+            int32_t  image_height;      // signed
+            uint16_t color_planes;      // must be 1
+            uint16_t color_depth;       // bits per pixel
+            uint32_t compression;       // 0 - none, 1 - rle 8 bits, 2 - rle 4 bits, 3 - bit field 16/32 bits, 4 - jpeg, 5 - png
+            uint32_t image_size;        // only image, not file
+            uint32_t hor_res;           // horizontal pixels per meter
+            uint32_t ver_res;           // vertical pixels per meter
+            uint32_t palette_colors;    // 0 defaults to 2^n
+            uint32_t important_colors;  // 0 defaults to all
+        } bmp_hdr_t;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int modup (int val, int mod) { return (mod - (val % mod)) % mod; }
+
 };
 
 #endif /* __geo_lib__ */

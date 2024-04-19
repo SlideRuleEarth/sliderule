@@ -243,6 +243,7 @@ int geo_open (lua_State* L)
         {"sampler",     RasterSampler::luaCreate},
         {"parms",       GeoParms::luaCreate},
         {"calcutm",     GeoLib::luaCalcUTM},
+        {"tiff",        GeoLib::TIFFImage::luaCreate},
         {NULL,          NULL}
     };
 
@@ -299,6 +300,7 @@ void initgeo (void)
     /* Initialize Modules */
     GeoIndexedRaster::init();
     RasterSampler::init();
+    GeoLib::init();
 
     /* Register GDAL custom error handler */
     #ifdef GDAL_ERROR_REPORTING

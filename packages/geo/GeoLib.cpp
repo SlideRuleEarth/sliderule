@@ -121,8 +121,173 @@ GeoLib::point_t GeoLib::UTMTransform::calculateCoordinates(double latitude, doub
 }
 
 /******************************************************************************
+ * TIFFImage Subclass
+ ******************************************************************************/
+
+const char* GeoLib::TIFFImage::OBJECT_TYPE = "TIFFImage";
+const char* GeoLib::TIFFImage::LUA_META_NAME = "TIFFImage";
+const struct luaL_Reg GeoLib::TIFFImage::LUA_META_TABLE[] = {
+    {"dimensions",  GeoLib::TIFFImage::luaDimensions},
+    {"pixel",       GeoLib::TIFFImage::luaPixel},
+    {"tobmp",       GeoLib::TIFFImage::luaConvertToBMP},
+    {NULL,          NULL}
+};
+
+/*----------------------------------------------------------------------------
+ * luaCreate
+ *----------------------------------------------------------------------------*/
+int GeoLib::TIFFImage::luaCreate (lua_State* L)
+{
+    try
+    {
+        const char* filename = getLuaString(L, 1);
+        return createLuaObject(L, new TIFFImage(L, filename));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+{
+    TIFF* tif = TIFFOpen(filename, "r");
+    if(!tif) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
+
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &length);
+    mlog(INFO, "Reading image %s which is %u x %u pixels", filename, width, length);
+
+    size = width * length;
+    raster = new uint32_t[size];
+
+    if(!TIFFReadRGBAImage(tif, width, length, raster, 0)) 
+    {
+        delete [] raster;
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+    }
+
+    TIFFClose(tif);    
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoLib::TIFFImage::~TIFFImage(void)
+{
+    delete [] raster;
+}
+
+/*----------------------------------------------------------------------------
+ * getPixel
+ *----------------------------------------------------------------------------*/
+uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
+{
+    uint32_t offset = (y * width) + x;
+    if(offset < size) return raster[offset];
+    return INVALID_PIXEL;
+}
+
+/*----------------------------------------------------------------------------
+ * getWidth
+ *----------------------------------------------------------------------------*/
+uint32_t GeoLib::TIFFImage::getWidth(void)
+{
+    return width;
+}
+
+/*----------------------------------------------------------------------------
+ * getLength
+ *----------------------------------------------------------------------------*/
+uint32_t GeoLib::TIFFImage::getLength()
+{
+    return length;
+}
+
+/*----------------------------------------------------------------------------
+ * luaDimensions
+ *----------------------------------------------------------------------------*/
+int GeoLib::TIFFImage::luaDimensions (lua_State* L)
+{
+    try
+    {
+        GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
+        lua_pushnumber(L, lua_obj->width);
+        lua_pushnumber(L, lua_obj->length);
+        return returnLuaStatus(L, true, 3);
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaPixel
+ *----------------------------------------------------------------------------*/
+int GeoLib::TIFFImage::luaPixel (lua_State* L)
+{
+    bool status = false;
+    try
+    {
+        GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
+        int x = getLuaInteger(L, 2);
+        int y = getLuaInteger(L, 3);
+        if(x < 0 || x >= (int)lua_obj->width || y < 0 || y >= (int)lua_obj->length)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->length);
+        }
+        lua_pushnumber(L, lua_obj->getPixel(x, y));
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "failed to get pixel: %s", e.what());
+        lua_pushnil(L);
+    }
+    return returnLuaStatus(L, status, 2);
+}
+
+/*----------------------------------------------------------------------------
+ * luaConvertToBMP
+ *----------------------------------------------------------------------------*/
+int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
+{
+    bool status = false;
+    try
+    {
+        GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
+        const char* bmp_filename = getLuaString(L, 2);
+        status = GeoLib::writeBMP(lua_obj->raster, lua_obj->width, lua_obj->length, bmp_filename);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "failed to convert to BMP: %s", e.what());
+    }
+    return returnLuaStatus(L, status);
+}
+
+/******************************************************************************
  * METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+
+void customTIFFErrorHandler(const char* , const char* , va_list ) {
+    // Ignore or suppress error messages here
+}
+void GeoLib::init (void)
+{
+    TIFFSetErrorHandler(NULL); // disables error messages
+    TIFFSetWarningHandler(NULL); // disables warning messages
+}
 
 /*----------------------------------------------------------------------------
  * luaCalcUTM
@@ -159,45 +324,83 @@ int GeoLib::luaCalcUTM (lua_State* L)
     }
 }
 
-/******************************************************************************
- * TIFFImage Subclass
- ******************************************************************************/
-
 /*----------------------------------------------------------------------------
- * Constructor
+ * writeBMP
  *----------------------------------------------------------------------------*/
-GeoLib::TIFFImage::TIFFImage(const char* filename)
+bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filename)
 {
-    TIFF* tif = TIFFOpen(filename, "r");
-    if(!tif) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
-
-    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
-    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &length);
-    mlog(CRITICAL, "Reading image %s which is %u` x %u pixels", filename, width, length);
-
-    raster = new uint32_t[width * length];
-
-    if(!TIFFReadRGBAImage(tif, width, length, raster, 0)) 
+    /* open file */
+    FILE* bmp_file = fopen(filename, "w");
+    if(!bmp_file)
     {
-        delete [] raster;
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+        mlog(CRITICAL, "Failed to open file %s: %s", filename, strerror(errno));
+        return false;
     }
 
-    TIFFClose(tif);    
-}
+    /* populate attributes */
+    uint8_t pixel_size = 8; // 8-bits
+	uint32_t palette_size = 1024; // 2^(pixelsize) * 4
+	uint32_t image_size	= height * modup(width, 4) * (pixel_size / 8);
+	uint32_t data_offset  = 0x36 + palette_size; // header plus palette
+	uint32_t file_size	= data_offset + image_size;
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoLib::TIFFImage::~TIFFImage(void)
-{
-    delete [] raster;
-}
+    /* populate header */
+    bmp_hdr_t bmp_hdr = {
+        .file_size          = file_size,
+        .reserved1          = 0,
+        .reserved2          = 0,
+        .data_offset        = data_offset,
+        .hdr_size           = 40,
+        .image_width        = width,
+        .image_height       = height,
+        .color_planes       = 1,
+        .color_depth        = pixel_size,
+        .compression        = 0,
+        .image_size         = image_size,
+        .hor_res            = 1,
+        .ver_res            = 1,
+        .palette_colors     = 0,
+        .important_colors   = 0,
+    };
 
-/*----------------------------------------------------------------------------
- * getPixel
- *----------------------------------------------------------------------------*/
-uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
-{
-    return raster[(y * width) + x];
+    /* write header */
+    fwrite("B", 1, 1, bmp_file); // magic numbers written first to avoid alignment issues
+    fwrite("M", 1, 1, bmp_file); // "
+    fwrite(&bmp_hdr, sizeof(bmp_hdr_t), 1, bmp_file);
+    
+    /* write color palette */
+    for(int i = 0; i < 256; i++)
+    {
+        uint8_t b = static_cast<uint8_t>(i);
+        union {
+            uint8_t b[4];
+            uint32_t v;
+        } value = {
+            .b = {b, b, b, b}
+        };
+        fwrite(&value.v, 4, 1, bmp_file);
+    }
+
+    /* write image data */
+    for(int y = 0; y < height; y++)
+    {
+        for(int x = 0; x < width; x++)
+        {
+            int offset = (y * width) + x;
+            double normalized_pixel = (static_cast<double>(data[offset]) / static_cast<double>(0xFFFFFFFF)) * 256.0;
+            uint8_t scaled_pixel = static_cast<uint8_t>(normalized_pixel);
+            fwrite(&scaled_pixel, 1, 1, bmp_file);
+        }
+        for(int padding = 0; padding < modup(width, 4); padding++)
+        {
+            uint8_t zero = 0;
+            fwrite(&zero, 1, 1, bmp_file);
+        }
+    }
+
+    /* close file */
+    fclose(bmp_file);
+
+    /* return success */
+    return true;
 }

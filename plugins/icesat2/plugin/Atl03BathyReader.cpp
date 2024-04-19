@@ -49,6 +49,12 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
+const uint32_t Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
+
 const char* Atl03BathyReader::phRecType = "bathyrec.photons";
 const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
@@ -143,7 +149,8 @@ void Atl03BathyReader::init (void)
 Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, RasterObject* _ndwi_raster, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     missing09(false),
-    read_timeout_ms(_parms->read_timeout * 1000)
+    read_timeout_ms(_parms->read_timeout * 1000),
+    bathyMask(NULL)
 {
     assert(_asset);
     assert(_resource);
@@ -185,6 +192,12 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     /* Create Publisher and File Pointer */
     outQ = new Publisher(outq_name);
     sendTerminator = _send_terminator;
+
+    /* Create Global Bathymetry Mask */
+    if(parms->use_bathy_mask)
+    {
+        bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
+    }
 
     /* Initialize Readers */
     active = true;
@@ -248,6 +261,8 @@ Atl03BathyReader::~Atl03BathyReader (void)
     {
         delete readerPid[pid];
     }
+
+    delete bathyMask;
 
     delete outQ;
 
@@ -576,7 +591,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     fileptr_t out_file = NULL;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, builder->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->builder->asset->getName(), info->builder->resource, info->track);
+    uint32_t trace_id = start_trace(INFO, builder->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", builder->asset->getName(), builder->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -622,12 +637,29 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", info->builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
             do
             {
+                /* Check Global Bathymetry Mask */
+                if(builder->bathyMask)
+                {
+                    double degrees_of_latitude = GLOBAL_BATHYMETRY_MASK_MAX_LAT - region.segment_lat[current_segment];
+                    double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+                    uint32_t y = static_cast<uint32_t>(latitude_pixels);
+
+                    double degrees_of_longitude = 180 + region.segment_lon[current_segment];
+                    double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+                    uint32_t x = static_cast<uint32_t>(longitude_pixels);
+
+                    if(builder->bathyMask->getPixel(x, y) == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+                    {
+                        break;
+                    }
+                }
+
                 /* Check Region */
                 if(region.inclusion_ptr)
                 {
@@ -720,7 +752,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
 
                     /* Sample Raster for NDWI */
                     ndwi = std::numeric_limits<float>::quiet_NaN();
-                    if(builder->ndwiRaster)
+                    if(builder->ndwiRaster && parms->generate_ndwi)
                     {
                         double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
                         MathLib::point_3d_t geo = {
@@ -916,7 +948,7 @@ FString json_contents(R"json({
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), builder->outQ, &builder->active, "Failure on resource %s track %d: %s", info->builder->resource, info->track, e.what());
+        alert(e.level(), e.code(), builder->outQ, &builder->active, "Failure on resource %s track %d: %s", builder->resource, info->track, e.what());
     }
 
     /* Close Output File (if open) */
@@ -932,7 +964,7 @@ FString json_contents(R"json({
         builder->numComplete++;
         if(builder->numComplete == builder->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->builder->resource);
+            mlog(INFO, "Completed processing resource %s", builder->resource);
 
             /* Indicate End of Data */
             if(builder->sendTerminator)
@@ -943,12 +975,12 @@ FString json_contents(R"json({
                     status = builder->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->builder->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, builder->resource);
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->builder->resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", builder->resource);
                     }
                 }
             }
