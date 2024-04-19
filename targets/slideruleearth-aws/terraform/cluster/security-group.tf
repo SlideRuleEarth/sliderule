@@ -91,14 +91,6 @@ resource "aws_security_group" "sliderule-sg" {
     protocol    = "tcp"
   }
 
-  # SlideRule (from Prometheus) - TCP
-  ingress {
-    cidr_blocks = [var.vpcCIDRblock]
-    from_port   = 10081
-    to_port     = 10081
-    protocol    = "tcp"
-  }
-
   # Node Exporter (from Prometheus) - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]

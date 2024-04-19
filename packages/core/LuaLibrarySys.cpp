@@ -38,6 +38,7 @@
 #include "core.h"
 
 #include <unistd.h>
+#include <filesystem>
 
 /******************************************************************************
  * STATIC DATA
@@ -67,6 +68,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
+    {"fileexists",  LuaLibrarySys::lsys_fileexists},
     {"memu",        LuaLibrarySys::lsys_memu},
     {"setmemlimit", LuaLibrarySys::lsys_setmemlimit},
     {"lsdev",       DeviceObject::luaList},
@@ -582,6 +584,23 @@ int LuaLibrarySys::lsys_cwd (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_fileexists - check if a file exists
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_fileexists (lua_State* L)
+{
+    if(lua_isstring(L, 1))
+    {
+        const char* filename = lua_tostring(L, 1);
+        lua_pushboolean(L, std::filesystem::exists(filename));
+    }
+    else
+    {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

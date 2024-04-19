@@ -23,7 +23,6 @@ end
 local event_format              = global.eval(cfgtbl["event_format"]) or core.FMT_TEXT
 local event_level               = global.eval(cfgtbl["event_level"]) or core.INFO
 local app_port                  = cfgtbl["app_port"] or 9081
-local probe_port                = cfgtbl["probe_port"] or 10081
 local authenticate_to_nsidc     = cfgtbl["authenticate_to_nsidc"] -- nil is false
 local authenticate_to_ornldaac  = cfgtbl["authenticate_to_ornldaac"] -- nil is false
 local authenticate_to_lpdaac    = cfgtbl["authenticate_to_lpdaac"] -- nil is false
@@ -40,6 +39,7 @@ local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PR
 local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
 local container_registry        = cfgtbl["container_registry"] or os.getenv("CONTAINER_REGISTRY")
 local is_public                 = cfgtbl["is_public"] or os.getenv("IS_PUBLIC") or "False"
+local post_startup_scripts      = cfgtbl["post_startup_scripts"] or {}
 
 --------------------------------------------------
 -- System Configuration
@@ -137,4 +137,13 @@ app_server:attach(source_endpoint, "/source")
 netsvc.orchurl(orchestrator_url)
 if register_as_service then
     local service_script = core.script("service_registry", "http://"..sys.ipv4()..":"..tostring(app_port)):name("ServiceScript")
+end
+
+--------------------------------------------------
+-- Post Startup
+--------------------------------------------------
+
+-- Scripts --
+for _,script in ipairs(post_startup_scripts) do
+    core.script(script)
 end

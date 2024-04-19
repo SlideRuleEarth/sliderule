@@ -5,8 +5,8 @@ import os
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
 parser.add_argument('--output',         '-f',   type=str,               default=None)
-parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20181223171641_13150101_006_02.h5")
-parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/bahia_de_jiguey.geojson")
+parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20181223171641_13150101_006_02.h5") # "ATL03_20190604044922_10220307_006_02.h5"
+parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/bahia_de_jiguey.geojson") # "tests/data/tarawa.geojson"
 parser.add_argument('--track',          '-t',   type=int,               default=1)
 parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   '-o',   type=str,               default="bathy")
@@ -33,6 +33,7 @@ region = sliderule.toregion(args.aoi)
 
 # Set Parameters
 parms = { 
+    "beam": "gt1l",
     "poly": region['poly'],
     "srt": icesat2.SRT_DYNAMIC,
     "cnf": "atl03_not_considered",

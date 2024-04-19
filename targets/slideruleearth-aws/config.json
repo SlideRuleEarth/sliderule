@@ -2,12 +2,12 @@
     "event_format": "FMT_TEXT",
     "event_level": "INFO",
     "app_port": 9081,
-    "probe_port": 10081,
     "authenticate_to_nsidc": true,
     "authenticate_to_ornldaac": true,
     "authenticate_to_lpdaac": true,
     "authenticate_to_podaac": true,
     "register_as_service": true,
     "authenticate_to_ps": false,
-    "container_registry": "742127912612.dkr.ecr.us-west-2.amazonaws.com"
+    "container_registry": "742127912612.dkr.ecr.us-west-2.amazonaws.com",
+    "post_startup_scripts": ["atl24_init"]
 }

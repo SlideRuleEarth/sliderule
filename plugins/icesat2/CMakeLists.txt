@@ -66,7 +66,7 @@ target_include_directories (icesat2
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
 )
 
-# Script Installation #
+# API Script Installation #
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03s.lua
@@ -82,6 +82,14 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
     DESTINATION
         ${CONFDIR}/api
+)
+
+# API Script Installation #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/atl24_init.lua
+    DESTINATION
+        ${CONFDIR}
 )
 
 # Plugin Installation #
