@@ -520,8 +520,7 @@ class widgets:
 
         # dropdown menu for selecting variable to draw on map
         variable_list = ['h_mean', 'h_sigma', 'dh_fit_dx', 'dh_fit_dy',
-            'rms_misfit', 'w_surface_window_final', 'delta_time',
-            'cycle', 'rgt']
+            'rms_misfit', 'w_surface_window_final', 'cycle', 'rgt']
         self.variable = ipywidgets.Dropdown(
             options=variable_list,
             value='h_mean',
@@ -2210,7 +2209,7 @@ class leaflet:
         kwargs.setdefault('stride', None)
         kwargs.setdefault('max_plot_points', 10000)
         kwargs.setdefault('tooltip', True)
-        kwargs.setdefault('fields', self.default_atl06_fields())
+        kwargs.setdefault('fields', [])
         kwargs.setdefault('colorbar', True)
         kwargs.setdefault('position', 'topright')
         # add warning that function is deprecated
@@ -2377,41 +2376,6 @@ class leaflet:
         self.map.add(self.colorbar)
         plt.close()
 
-    @staticmethod
-    def default_atl03_fields():
-        """List of ATL03 tooltip fields
-        """
-        return ['atl03_cnf', 'atl08_class', 'cycle', 'height',
-            'pair', 'rgt', 'segment_id', 'track', 'yapc_score']
-
-    @staticmethod
-    def default_atl06_fields():
-        """List of ATL06-SR tooltip fields
-        """
-        return ['cycle', 'dh_fit_dx', 'gt', 'h_mean',
-            'h_sigma', 'rgt', 'rms_misfit', 'w_surface_window_final']
-
-    @staticmethod
-    def default_atl08_fields():
-        """List of ATL08-SR tooltip fields
-        """
-        return ['canopy_openness', 'cycle', 'gt', 'h_canopy',
-            'h_min_canopy', 'h_mean_canopy',
-            'h_max_canopy', 'h_te_median', 'rgt']
-
-    @staticmethod
-    def default_mosaic_fields(**kwargs):
-        kwargs.setdefault('with_flags', False)
-        kwargs.setdefault('zonal_stats', False)
-        """List of mosaic tooltip fields
-        """
-        columns = ['time','value']
-        if kwargs['with_flags']:
-            columns += ['flags']
-        if kwargs['zonal_stats']:
-            columns += ['count','min','max','mean','median','stdev','mad']
-        return [f'mosaic.{c}' for c in columns]
-
 @gpd.pd.api.extensions.register_dataframe_accessor("leaflet")
 class LeafletMap:
     """A geopandas GeoDataFrame extension for interactive map plotting,
@@ -2425,12 +2389,12 @@ class LeafletMap:
         # initialize geodataframe
         self._gdf = gdf
         # initialize data and colorbars
-        self.geojson = None
-        self.tooltip = None
-        self.tooltip_width = None
-        self.tooltip_height = None
-        self.fields = []
-        self.colorbar = None
+        self._geojson = None
+        self._tooltip = None
+        self._tooltip_width = None
+        self._tooltip_height = None
+        self._fields = []
+        self._colorbar = None
         # initialize hover control
         self.hover_control = None
         # initialize selected feature
@@ -2478,8 +2442,8 @@ class LeafletMap:
         self.map = m
         self.crs = m.crs['name']
         # remove any prior instances of a data layer
-        if self.geojson is not None:
-            self.map.remove(self.geojson)
+        if self._geojson is not None:
+            self.map.remove(self._geojson)
         if kwargs['stride'] is not None:
             stride = np.copy(kwargs['stride'])
         elif (self._gdf.shape[0] > kwargs['max_plot_points']):
@@ -2487,62 +2451,65 @@ class LeafletMap:
         else:
             stride = 1
         # sliced geodataframe for plotting
-        geodataframe = self._gdf[slice(None,None,stride)]
+        self._gdf_selected = self._gdf[slice(None,None,stride)]
         self.column_name = copy.copy(kwargs['column_name'])
-        geodataframe['data'] = geodataframe[self.column_name]
-        # set colorbar limits to 2-98 percentile
-        # if not using a defined plot range
-        clim = geodataframe['data'].quantile((0.02, 0.98)).values
-        if kwargs['vmin'] is None:
-            vmin = clim[0]
-        else:
-            vmin = np.copy(kwargs['vmin'])
-        if kwargs['vmax'] is None:
-            vmax = clim[-1]
-        else:
-            vmax = np.copy(kwargs['vmax'])
+        self._gdf_selected['data'] = self._gdf_selected[self.column_name]
+        # get the normalization bounds
+        self.get_norm_bounds(**kwargs)
         # create matplotlib normalization
         if kwargs['norm'] is None:
-            norm = colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
+            self.norm = colors.Normalize(vmin=self.vmin, vmax=self.vmax, clip=True)
         else:
-            norm = copy.copy(kwargs['norm'])
+            self.norm = copy.copy(kwargs['norm'])
         # normalize data to be within vmin and vmax
-        normalized = norm(geodataframe['data'])
+        normalized = self.norm(self._gdf_selected['data'])
+        # get colormap
+        self.cmap = copy.copy(cm.get_cmap(kwargs['cmap']))
         # create HEX colors for each point in the dataframe
-        geodataframe["color"] = np.apply_along_axis(colors.to_hex, 1,
-            cm.get_cmap(kwargs['cmap'], 256)(normalized))
+        self._gdf_selected["color"] = np.apply_along_axis(colors.to_hex, 1,
+            cm.get_cmap(self.cmap.name, 256)(normalized))
         # leaflet map point style
-        point_style = {key:kwargs[key] for key in ['radius','fillOpacity','weight']}
+        self._point_style = {
+            key:kwargs[key] for key in ['radius','fillOpacity','weight']
+        }
         # convert to GeoJSON object
-        self.geojson = ipyleaflet.GeoJSON(data=geodataframe.__geo_interface__,
-            point_style=point_style, style_callback=self.style_callback)
+        self._geojson = ipyleaflet.GeoJSON(
+            data=self._gdf_selected.__geo_interface__,
+            point_style=self._point_style,
+            style_callback=self.style_callback
+        )
         # add GeoJSON object to map
-        self.map.add(self.geojson)
+        self.map.add(self._geojson)
         # fields for tooltip views
         if kwargs['fields'] is None:
-            self.fields = geodataframe.columns.drop(
-                [geodataframe.geometry.name, "data", "color"])
+            self._fields = self._gdf_selected.columns.drop(
+                [self._gdf_selected.geometry.name, "data", "color"])
         else:
-            self.fields = copy.copy(kwargs['fields'])
+            self._fields = copy.copy(kwargs['fields'])
         # add hover tooltips
         if kwargs['tooltip']:
-            self.tooltip = ipywidgets.HTML()
-            self.tooltip.layout.margin = "0px 20px 20px 20px"
-            self.tooltip.layout.visibility = 'hidden'
-            self.tooltip_height = kwargs['tooltip_height']
-            self.tooltip_width = kwargs['tooltip_width']
+            self._tooltip = ipywidgets.HTML()
+            self._tooltip.layout.margin = "0px 20px 20px 20px"
+            self._tooltip.layout.visibility = 'hidden'
+            self._tooltip_height = kwargs['tooltip_height']
+            self._tooltip_width = kwargs['tooltip_width']
             # create widget for hover tooltips
             self.hover_control = ipyleaflet.WidgetControl(
-                widget=self.tooltip,
+                widget=self._tooltip,
                 position='bottomright')
-            self.geojson.on_hover(self.handle_hover)
-            self.geojson.on_msg(self.handle_mouseout)
-            self.geojson.on_click(self.handle_click)
+            self._geojson.on_hover(self.handle_hover)
+            self._geojson.on_msg(self.handle_mouseout)
+            self._geojson.on_click(self.handle_click)
         # add colorbar
-        if kwargs['colorbar']:
-            self.add_colorbar(column_name=self.column_name,
-                cmap=kwargs['cmap'], norm=norm,
-                position=kwargs['position'])
+        self.colorbar = kwargs['colorbar']
+        self.colorbar_position = kwargs['position']
+        if self.colorbar:
+            self.add_colorbar(
+                column_name=self.column_name,
+                cmap=self.cmap,
+                norm=self.norm,
+                position=self.colorbar_position
+            )
 
     # functional call for setting colors of each point
     def style_callback(self, feature):
@@ -2558,12 +2525,12 @@ class LeafletMap:
         """callback for creating hover tooltips
         """
         # combine html strings for hover tooltip
-        self.tooltip.value = '<b>{0}:</b> {1}<br>'.format('id',feature['id'])
-        self.tooltip.value += '<br>'.join(['<b>{0}:</b> {1}'.format(field,
-            feature["properties"][field]) for field in self.fields])
-        self.tooltip.layout.width = self.tooltip_width
-        self.tooltip.layout.height = self.tooltip_height
-        self.tooltip.layout.visibility = 'visible'
+        self._tooltip.value = '<b>{0}:</b> {1}<br>'.format('id',feature['id'])
+        self._tooltip.value += '<br>'.join(['<b>{0}:</b> {1}'.format(field,
+            feature["properties"][field]) for field in self._fields])
+        self._tooltip.layout.width = self._tooltip_width
+        self._tooltip.layout.height = self._tooltip_height
+        self._tooltip.layout.visibility = 'visible'
         self.map.add(self.hover_control)
 
     def handle_mouseout(self, _, content, buffers):
@@ -2571,10 +2538,10 @@ class LeafletMap:
         """
         event_type = content.get('type', '')
         if event_type == 'mouseout':
-            self.tooltip.value = ''
-            self.tooltip.layout.width = "0px"
-            self.tooltip.layout.height = "0px"
-            self.tooltip.layout.visibility = 'hidden'
+            self._tooltip.value = ''
+            self._tooltip.layout.width = "0px"
+            self._tooltip.layout.height = "0px"
+            self._tooltip.layout.visibility = 'hidden'
             self.map.remove(self.hover_control)
 
     # functional calls for click events
@@ -2593,13 +2560,13 @@ class LeafletMap:
         """callback for handling region deletions
         """
         # remove any prior instances of a data layer
-        if (action == 'deleted') and self.geojson is not None:
-            self.remove(self.geojson)
-            self.geojson = None
+        if (action == 'deleted') and self._geojson is not None:
+            self.remove(self._geojson)
+            self._geojson = None
         # remove any prior instances of a colorbar
-        if (action == 'deleted') and self.colorbar is not None:
-            self.remove(self.colorbar)
-            self.colorbar = None
+        if (action == 'deleted') and self._colorbar is not None:
+            self.remove(self._colorbar)
+            self._colorbar = None
 
     # remove map layers
     def remove(self, layer):
@@ -2618,6 +2585,121 @@ class LeafletMap:
             logger.critical(f"Could not remove layer {layer}")
             logger.error(traceback.format_exc())
             pass
+
+    def get_norm_bounds(self, **kwargs):
+        # set default keyword arguments
+        kwargs.setdefault('vmin', None)
+        kwargs.setdefault('vmax', None)
+        # set colorbar limits to 2-98 percentile
+        # if not using a defined plot range
+        clim = self._gdf_selected['data'].quantile((0.02, 0.98)).values
+        # set minimum for normalization
+        fmin = np.finfo(np.float64).min
+        if (kwargs['vmin'] is None) or np.isclose(kwargs['vmin'], fmin):
+            self.vmin = clim[0]
+            self._dynamic = True
+        else:
+            self.vmin = np.copy(kwargs['vmin'])
+            self._dynamic = False
+        # set maximum for normalization
+        fmax = np.finfo(np.float64).max
+        if (kwargs['vmax'] is None) or np.isclose(kwargs['vmax'], fmax):
+            self.vmax = clim[-1]
+            self._dynamic = True
+        else:
+            self.vmax = np.copy(kwargs['vmax'])
+            self._dynamic = False
+
+    def redraw(self, *args, **kwargs):
+        """
+        Redraw the GeoJSON on the map
+        """
+        # normalize data to be within vmin and vmax
+        normalized = self.norm(self._gdf_selected['data'])
+        # create HEX colors for each point in the dataframe
+        self._gdf_selected["color"] = np.apply_along_axis(colors.to_hex, 1,
+            cm.get_cmap(self.cmap.name, 256)(normalized))
+        # update data within GeoJSON object
+        self._geojson.data = self._gdf_selected.__geo_interface__
+
+    def redraw_colorbar(self, *args, **kwargs):
+        """
+        Redraw the colorbar on the map
+        """
+        try:
+            if self.colorbar:
+                self.add_colorbar(
+                    column_name=self.column_name,
+                    cmap=self.cmap,
+                    norm=self.norm,
+                    position=self.colorbar_position
+                )
+        except Exception as exc:
+            pass
+
+    # observe changes in widget parameters
+    def set_observables(self, widget, **kwargs):
+        """observe changes in widget parameters
+        """
+        # set default keyword arguments
+        # to map widget changes to functions
+        kwargs.setdefault('variable', [self.set_column_name])
+        kwargs.setdefault('cmap', [self.set_colormap])
+        kwargs.setdefault('reverse', [self.set_colormap])
+        # connect each widget with a set function
+        for key, val in kwargs.items():
+            # try to retrieve the functional
+            try:
+                observable = getattr(widget, key)
+            except AttributeError as exc:
+                continue
+            # assert that observable is an ipywidgets object
+            assert isinstance(observable, ipywidgets.widgets.widget.Widget)
+            assert hasattr(observable, 'observe')
+            # for each functional to map
+            for i, functional in enumerate(val):
+                # try to connect the widget to the functional
+                try:
+                    observable.observe(functional)
+                except (AttributeError, NameError, ValueError) as exc:
+                    pass
+
+    def set_column_name(self, sender):
+        """update the dataframe variable for a new selected column
+        """
+        # only update variable if a new final
+        if isinstance(sender['new'], str):
+            self.column_name = sender['new']
+        else:
+            return
+        # reduce to variable
+        self._gdf_selected['data'] = self._gdf_selected[self.column_name]
+        # check if dynamic normalization is enabled
+        if self._dynamic:
+            self.get_norm_bounds()
+            self.norm.vmin = self.vmin
+            self.norm.vmax = self.vmax
+        # try to redraw the selected dataset
+        self.redraw()
+        self.redraw_colorbar()
+
+    def set_colormap(self, sender):
+        """update the colormap for the selected variable
+        """
+        # only update colormap if a new final
+        if isinstance(sender['new'], str):
+            cmap_name = self.cmap.name
+            cmap_reverse_flag = '_r' if cmap_name.endswith('_r') else ''
+            self.cmap = cm.get_cmap(sender['new'] + cmap_reverse_flag)
+        elif isinstance(sender['new'], bool):
+            cmap_name = self.cmap.name.strip('_r')
+            cmap_reverse_flag = '_r' if sender['new'] else ''
+            self.cmap = cm.get_cmap(cmap_name + cmap_reverse_flag)
+        else:
+            return
+        # try to redraw the selected dataset
+        self.redraw()
+        self.redraw_colorbar()
 
     # add colorbar widget to leaflet map
     def add_colorbar(self, **kwargs):
@@ -2643,16 +2725,17 @@ class LeafletMap:
         kwargs.setdefault('width', 6.0)
         kwargs.setdefault('height', 0.4)
         # remove any prior instances of a colorbar
-        if self.colorbar is not None:
-            self.map.remove(self.colorbar)
-        # colormap for colorbar
-        cmap = cm.get_cmap(kwargs['cmap'])
+        if self._colorbar is not None:
+            self.map.remove(self._colorbar)
         # create matplotlib colorbar
         _, ax = plt.subplots(figsize=(kwargs['width'], kwargs['height']))
-        cbar = matplotlib.colorbar.ColorbarBase(ax, cmap=cmap,
-            norm=kwargs['norm'], alpha=kwargs['alpha'],
+        cbar = matplotlib.colorbar.ColorbarBase(ax,
+            cmap=kwargs['cmap'],
+            norm=kwargs['norm'],
+            alpha=kwargs['alpha'],
             orientation=kwargs['orientation'],
-            label=kwargs['column_name'])
+            label=kwargs['column_name']
+        )
         cbar.solids.set_rasterized(True)
         cbar.ax.tick_params(which='both', width=1, direction='in')
         # save colorbar to in-memory png object
@@ -2661,11 +2744,49 @@ class LeafletMap:
         png.seek(0)
         # create output widget
         output = ipywidgets.Image(value=png.getvalue(), format='png')
-        self.colorbar = ipyleaflet.WidgetControl(widget=output,
-            transparent_bg=True, position=kwargs['position'])
+        self._colorbar = ipyleaflet.WidgetControl(
+            widget=output,
+            transparent_bg=True,
+            position=kwargs['position']
+        )
         # add colorbar
-        self.map.add(self.colorbar)
+        self.map.add(self._colorbar)
         plt.close()
+
+    @staticmethod
+    def default_atl03_fields():
+        """List of ATL03 tooltip fields
+        """
+        return ['atl03_cnf', 'atl08_class', 'cycle', 'height',
+            'pair', 'rgt', 'segment_id', 'track', 'yapc_score']
+
+    @staticmethod
+    def default_atl06_fields():
+        """List of ATL06-SR tooltip fields
+        """
+        return ['cycle', 'dh_fit_dx', 'gt', 'h_mean',
+            'h_sigma', 'rgt', 'rms_misfit', 'w_surface_window_final']
+
+    @staticmethod
+    def default_atl08_fields():
+        """List of ATL08-SR tooltip fields
+        """
+        return ['canopy_openness', 'cycle', 'gt', 'h_canopy',
+            'h_min_canopy', 'h_mean_canopy',
+            'h_max_canopy', 'h_te_median', 'rgt']
+
+    @staticmethod
+    def default_mosaic_fields(**kwargs):
+        kwargs.setdefault('with_flags', False)
+        kwargs.setdefault('zonal_stats', False)
+        """List of mosaic tooltip fields
+        """
+        columns = ['time','value']
+        if kwargs['with_flags']:
+            columns += ['flags']
+        if kwargs['zonal_stats']:
+            columns += ['count','min','max','mean','median','stdev','mad']
+        return [f'mosaic.{c}' for c in columns]
 
 @gpd.pd.api.extensions.register_dataframe_accessor("icesat2")
 class ICESat2:
