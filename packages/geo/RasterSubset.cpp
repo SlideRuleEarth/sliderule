@@ -52,26 +52,13 @@ Mutex RasterSubset::mutex;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                           double _time, const std::string& vsiFile):
+RasterSubset::RasterSubset(uint64_t _size, const std::string& vsiFile):
     robj(NULL),
+    rasterName(vsiFile),
     data(NULL),
-    size(0),
-    cols(_cols),
-    rows(_rows),
-    datatype(_datatype),
-    time(_time),
-    rasterName(vsiFile)
+    size(0)
 {
-    /* Calculate Size of Buffer */
-    if(datatype >= 0 && datatype <= RecordObject::INVALID_FIELD)
-    {
-        size = cols * rows * RecordObject::FIELD_TYPE_BYTES[datatype];
-    }
-    else
-    {
-        size = 0;
-    }
+    size = _size;
 
     /* Check for Available Memory */
     bool allocate = false;
@@ -115,7 +102,7 @@ void RasterSubset::releaseData(void)
 {
     /*
      * NOTE: do not decrease 'poolsize' by 'size'
-     * memory was copied to RasterObject so it is still being used
+     * data was copied into subsetted raster in vsimem, we need count it as used
      */
     mutex.lock();
     {

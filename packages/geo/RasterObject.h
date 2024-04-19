@@ -111,8 +111,8 @@ class RasterObject: public LuaObject
                     RasterObject    (lua_State* L, GeoParms* _parms);
         uint64_t    fileDictAdd     (const std::string& fileName);
         static int  luaSamples      (lua_State* L);
-        static int  luaSubset       (lua_State* L);
         static int  luaPixels       (lua_State *L);
+        static int  luaSubsetTest   (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -126,7 +126,7 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        int slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L);
+        int subsetTest(RasterObject* robj, const GeoParms::bbox_t& bbox, const std::vector<RasterSubset*>& slist);
 
         /*--------------------------------------------------------------------
          * Data

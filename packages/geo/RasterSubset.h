@@ -48,28 +48,35 @@ class RasterObject;
 class RasterSubset
 {
     public:
-        RasterObject*               robj;
-        uint8_t*                    data;
-        uint64_t                    size;
-        uint64_t                    cols;
-        uint64_t                    rows;
-        RecordObject::fieldType_t   datatype;
-        double                      time;     // gps seconds
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
         static const uint64_t       oneGB    = 0x40000000;
         static const uint64_t       MAX_SIZE = oneGB * 6;
 
-        static uint64_t             poolsize;
-        static Mutex                mutex;
-        std::string                 rasterName;
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                     double _time, const std::string& vsiFile);
+        RasterSubset(uint64_t _size, const std::string& vsiFile);
         ~RasterSubset(void);
 
-        void releaseData(void);
+        const uint8_t* getData    (void) const {return data;}
+        uint64_t       getSize    (void) const {return size;}
+        uint64_t       getPoolSize(void) const {return poolsize;}
+        void           releaseData(void);
+
+        RasterObject*               robj;
+        const std::string           rasterName;
 
     private:
+        uint8_t*                    data;
+        uint64_t                    size;
+
+        static uint64_t             poolsize;
+        static Mutex                mutex;
 };
 
 #endif /* __raster_subset__ */

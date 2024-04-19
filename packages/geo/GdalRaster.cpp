@@ -966,31 +966,31 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
     try
     {
-        GDALDataType dtype = band->GetRasterDataType();
-        RecordObject::fieldType_t datatype = RecordObject::INVALID_FIELD;
-        switch (dtype) {
-            case GDT_Byte:      datatype = RecordObject::UINT8;     break;
-            case GDT_Int8:      datatype = RecordObject::UINT8;     break;
-            case GDT_UInt16:    datatype = RecordObject::UINT16;    break;
-            case GDT_Int16:     datatype = RecordObject::INT16;     break;
-            case GDT_UInt32:    datatype = RecordObject::UINT32;    break;
-            case GDT_Int32:     datatype = RecordObject::INT32;     break;
-            case GDT_UInt64:    datatype = RecordObject::UINT64;    break;
-            case GDT_Int64:     datatype = RecordObject::INT64;     break;
-            case GDT_Float32:   datatype = RecordObject::FLOAT;     break;
-            case GDT_Float64:   datatype = RecordObject::DOUBLE;    break;
-            default:            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported GDT Datatype: %d", dtype);
-        }
+        std::string vsiName = "/vsimem/" + GdalRaster::getUUID() + fileName;
 
-        std::string vsiName = "/vsimem/" + GdalRaster::getUUID() + ".tif";
-        subset = new RasterSubset(_xsize, _ysize, datatype, gpsTime, vsiName);
-        if(subset->data)
+        /* If parentPath is a vrt rename it to .tif */
+        if (vsiName.substr(vsiName.length() - 4) == ".vrt")
+            vsiName = vsiName.substr(0, vsiName.length() - 4) + "_vrt.tif";
+
+        GDALDataType dtype = band->GetRasterDataType();
+
+        /* Calculate size of subset */
+        uint64_t cols = _xsize;
+        uint64_t rows = _ysize;
+        uint64_t dataSize = GDALGetDataTypeSizeBytes(dtype);
+        uint64_t size = cols * rows * dataSize;
+
+        subset = new RasterSubset(size, vsiName);
+        const uint8_t* data = subset->getData();
+        if(data)
         {
+            void* _data = const_cast<void*>(reinterpret_cast<const void*>(data));
+
             int cnt = 1;
             OGRErr err = CE_None;
             do
             {
-                err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, NULL);
+                err = band->RasterIO(GF_Read, ulx, uly, _xsize, _ysize, _data, _xsize, _ysize, dtype, 0, 0, NULL);
             }
             while(err != CE_None && cnt--);
 
@@ -1000,20 +1000,20 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
                 throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
             }
 
-            mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %ld, rows2read: %ld, datatype %s",
-                 subset->size, (float)subset->size/(1024*1024), ulx, uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
+            mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %u, rows2read: %u, datatype %s",
+                 subset->getSize(), (float)subset->getSize()/(1024*1024), ulx, uly, _xsize, _ysize, GDALGetDataTypeName(dtype));
 
             /* Create subraster */
             options = CSLSetNameValue(options, "COMPRESS", "DEFLATE");
 
             GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
             CHECKPTR(driver);
-            subDset = (GDALDataset*)driver->Create(subset->rasterName.c_str(), subset->cols, subset->rows, 1, dtype, options);
+            subDset = (GDALDataset*)driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options);
             CHECKPTR(subDset);
 
-            /* Copy data to new subraster */
+            /* Copy data to subraster */
             GDALRasterBand* _band = subDset->GetRasterBand(1);
-            err = _band->RasterIO(GF_Write, 0, 0, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0);
+            err = _band->RasterIO(GF_Write, 0, 0, _xsize, _ysize, _data, _xsize, _ysize, dtype, 0, 0);
             if(err != CE_None)
             {
                 ssError |= SS_WRITE_ERROR;
@@ -1022,6 +1022,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
             mlog(DEBUG, "Created new subraster %s", subset->rasterName.c_str());
 
+            /* Release data after copying into subraster */
             subset->releaseData();
 
             /* Set geotransform */
@@ -1056,9 +1057,8 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
         else
         {
             ssError |= SS_MEMPOOL_ERROR;
-            uint64_t size = _xsize * _ysize * GDALGetDataTypeSizeBytes(dtype);
             mlog(ERROR, "RasterSubset requested memory: %lu MB, available: %lu MB, max: %lu MB", size / (1024*1024),
-                RasterSubset::poolsize / (1024*1024),
+                subset->getPoolSize()  / (1024*1024),
                 RasterSubset::MAX_SIZE / (1024*1024));
         }
     }

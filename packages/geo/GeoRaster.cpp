@@ -81,9 +81,15 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
         RasterSubset* subset = raster.subsetAOI(geo->toPolygon());
         if(subset)
         {
-            GdalRaster::overrideCRS_t cb = raster.getOverrideCRS();
-            bool dataIsElevation = raster.isElevation();
-            subset->robj = new GeoRaster(LuaState, parms, subset->rasterName, gps, dataIsElevation, cb);
+            /* Create new GeoRaster object for subsetted raster */
+            subset->robj = new GeoRaster(LuaState, parms,
+                                         subset->rasterName,
+                                         raster.getGpsTime(),
+                                         raster.isElevation(),
+                                         raster.getOverrideCRS());
+
+            /* GeoParms are shared with subsseted raster */
+            referenceLuaObject(parms);
             slist.push_back(subset);
         }
     }
@@ -125,18 +131,6 @@ uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoRaster::~GeoRaster(void)
-{
-}
-
-
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb):
@@ -152,6 +146,17 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileNam
     GdalRaster::initAwsAccess(_parms);
 }
 
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoRaster::~GeoRaster(void)
+{
+}
+
+
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
 
 /******************************************************************************
  * PRIVATE METHODS

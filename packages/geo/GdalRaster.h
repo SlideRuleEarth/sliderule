@@ -115,6 +115,7 @@ class GdalRaster
         uint32_t           getSSerror     (void) const { return ssError; }
         bool               isElevation    (void) const { return dataIsElevation; }
         overrideCRS_t      getOverrideCRS (void) const { return overrideCRS; }
+        double             getGpsTime     (void) const { return gpsTime; }
 
         /*--------------------------------------------------------------------
          * Static Methods
