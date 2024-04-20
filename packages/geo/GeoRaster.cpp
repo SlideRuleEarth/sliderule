@@ -81,8 +81,11 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
         RasterSubset* subset = raster.subsetAOI(geo->toPolygon());
         if(subset)
         {
-            /* Create new GeoRaster object for subsetted raster */
-            subset->robj = new GeoRaster(LuaState, parms,
+            /* Create new GeoRaster object for subsetted raster
+             * Use NULL for LuaState, using parent's causes memory corruption
+             */
+            subset->robj = new GeoRaster(NULL,
+                                         parms,
                                          subset->rasterName,
                                          raster.getGpsTime(),
                                          raster.isElevation(),

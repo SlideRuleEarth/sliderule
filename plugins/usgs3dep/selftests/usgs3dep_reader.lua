@@ -91,20 +91,15 @@ print(string.format("subset time: %.2f   (%d threads)", stoptime - starttime, th
 runner.check(threadCnt == 4)
 
 for i, v in ipairs(tbl) do
-    local cols = v["cols"]
-    local rows = v["rows"]
     local size = v["size"]
-    local datatype = v["datatype"]
 
     local mbytes = size / (1024*1024)
     -- This results in 4 threads, all the same size, cols, buffs data type. Print only first one
     if i == 1 then
-        print(string.format("AOI subset datasize: %.1f MB, cols: %d, rows: %d, datatype: %s", mbytes, cols, rows, msg.datatype(datatype)))
+        print(string.format("AOI subset datasize: %.1f MB", mbytes))
     end
 
-    runner.check(cols > 0)
-    runner.check(rows > 0)
-    runner.check(datatype > 0)
+    runner.check(size > 0)
 end
 
 

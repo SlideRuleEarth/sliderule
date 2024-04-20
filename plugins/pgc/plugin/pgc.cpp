@@ -36,6 +36,7 @@
 #include "core.h"
 #include "pgc.h"
 #include "PgcWkt.h"
+#include "UT_RasterSubset.h"
 
 /******************************************************************************
  * DEFINES
@@ -69,11 +70,20 @@ int pgc_open (lua_State *L)
 {
     static const struct luaL_Reg pgc_functions[] = {
         {"version",         pgc_version},
+#ifdef WITH_UNITTESTS
+        {"ut_subset",       UT_RasterSubset::luaCreate},
+#endif
         {NULL,              NULL}
     };
 
     /* Set Library */
     luaL_newlib(L, pgc_functions);
+
+#ifdef WITH_UNITTESTS
+    LuaEngine::setAttrBool(L, "UNITTEST", true);
+#else
+    LuaEngine::setAttrBool(L, "UNITTEST", false);
+#endif
 
     return 1;
 }

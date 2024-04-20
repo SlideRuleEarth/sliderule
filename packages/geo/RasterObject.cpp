@@ -167,8 +167,8 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     parms(_parms)
 {
     /* Add Lua Functions */
-    LuaEngine::setAttrFunc(L, "sample",     luaSamples);
-    LuaEngine::setAttrFunc(L, "subsettest", luaSubsetTest);
+    LuaEngine::setAttrFunc(L, "sample", luaSamples);
+    LuaEngine::setAttrFunc(L, "subset", luaSubsets);
 }
 
 /*----------------------------------------------------------------------------
@@ -290,11 +290,10 @@ int RasterObject::luaSamples(lua_State *L)
     return num_ret;
 }
 
-
 /*----------------------------------------------------------------------------
- * luaSubsetTest - :subsettest(lon_min, lat_min, lon_max, lat_max) --> in|out
+ * luaSubsets - :subset(lon_min, lat_min, lon_max, lat_max) --> in|out
  *----------------------------------------------------------------------------*/
-int RasterObject::luaSubsetTest(lua_State *L)
+int RasterObject::luaSubsets(lua_State *L)
 {
     uint32_t err = SS_NO_ERRORS;
     int num_ret = 1;
@@ -321,23 +320,10 @@ int RasterObject::luaSubsetTest(lua_State *L)
             gps = TimeLib::str2gpstime(closest_time_str);
         }
 
-        GeoParms::bbox_t bbox = {lon_min, lat_min, lon_max, lat_max};
-
         /* Get subset */
         OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
         err = lua_obj->getSubsets(&poly, gps, slist, NULL);
-        if(err == SS_NO_ERRORS)
-        {
-            err = lua_obj->subsetTest(lua_obj, bbox, slist);
-        }
-        else if(err & SS_THREADS_LIMIT_ERROR)
-        {
-            mlog(CRITICAL, "Too many rasters to subset, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
-        }
-        else if(err & SS_MEMPOOL_ERROR)
-        {
-            mlog(CRITICAL, "Some rasters could not be subset, requested memory size > max allowed: %ld MB", RasterSubset::MAX_SIZE / (1024 * 1024));
-        }
+        num_ret += lua_obj->slist2table(slist, err, L);
     }
     catch (const RunTimeException &e)
     {
@@ -354,146 +340,53 @@ int RasterObject::luaSubsetTest(lua_State *L)
     return num_ret;
 }
 
+
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
 
-const char* getRasterName(RasterObject* robj, uint64_t fileId)
-{
-    const char* fileName = "";
-
-    /* Find fileName from fileId */
-    Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
-    for(int i = 0; i < iterator.length; i++)
-    {
-        if(iterator[i].value == fileId)
-        {
-            fileName = iterator[i].key;
-            break;
-        }
-    }
-
-    return fileName;
-}
-
 /*----------------------------------------------------------------------------
- * subsetTest
+ * slist2table
  *----------------------------------------------------------------------------*/
-int RasterObject::subsetTest(RasterObject* robj, const GeoParms::bbox_t& bbox, const std::vector<RasterSubset*>& subsetsList)
+int RasterObject::slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L)
 {
-    uint32_t errors = 0;
+    int num_ret = 0;
 
-    if(subsetsList.empty())
+    bool listvalid = true;
+    if(errors & SS_THREADS_LIMIT_ERROR)
     {
-        mlog(DEBUG, "No subsets read");
-        return 0;
+        listvalid = false;
+        mlog(CRITICAL, "Too many rasters to subset, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
     }
 
-    double lon = bbox.lon_min + (bbox.lon_max - bbox.lon_min) / 2.0;
-    double lat = bbox.lat_min + (bbox.lat_max - bbox.lat_min) / 2.0;
-    double height = 0.0;
-
-    typedef struct
+    if(errors & SS_MEMPOOL_ERROR)
     {
-        RasterSample  sample;
-        const char*   fileName;
-    } SampleInfo_t;
-
-    std::vector<SampleInfo_t> rasterSamples;
-    std::vector<SampleInfo_t> subRasterSamples;
-
-    /* Get samples from parent RasterObject */
-    std::vector<RasterSample*> samplesList;
-
-    OGRPoint poi(lon, lat, height);
-    errors += robj->getSamples(&poi, 0, samplesList, NULL);
-    for(uint32_t i = 0; i < samplesList.size(); i++)
-    {
-        const RasterSample* sample = samplesList[i];
-        SampleInfo_t si = { *sample, getRasterName(robj, sample->fileId) };
-        rasterSamples.push_back(si);
-        delete sample;
+        listvalid = false;
+        mlog(CRITICAL, "Some rasters could not be subset, requested memory size > max allowed: %ld MB", RasterSubset::MAX_SIZE / (1024 * 1024));
     }
 
-    /* Get samples from subsets */
-    for(uint32_t i = 0; i < subsetsList.size(); i++)
+    /* Create return table */
+    lua_createtable(L, slist.size(), 0);
+    num_ret++;
+
+    /* Populate subsets */
+    if(listvalid && !slist.empty())
     {
-        const RasterSubset* subset = subsetsList[i];
-        RasterObject* srobj = dynamic_cast<RasterObject*>(subset->robj);
-
-        /* Get samples */
-        samplesList.clear();
-
-        OGRPoint _poi(lon, lat, height);
-        errors += srobj->getSamples(&_poi, 0, samplesList, NULL);
-
-        for(uint32_t j = 0; j < samplesList.size(); j++)
+        for(uint32_t i = 0; i < slist.size(); i++)
         {
-            const RasterSample* sample = samplesList[j];
-            SampleInfo_t si = { *sample, getRasterName(srobj, sample->fileId) };
-            subRasterSamples.push_back(si);
-            delete sample;
+            const RasterSubset* subset = slist[i];
+
+            /* Populate Return Results */
+            lua_createtable(L, 0, 2);
+            LuaEngine::setAttrStr(L, "robj", "", 0);  /* For now, figure out how to return RasterObject* */
+            LuaEngine::setAttrStr(L, "file",     subset->rasterName.c_str());
+            LuaEngine::setAttrInt(L, "size",     subset->getSize());
+            LuaEngine::setAttrInt(L, "poolsize", subset->getPoolSize());
+            lua_rawseti(L, -2, i + 1);
         }
     }
+    else mlog(DEBUG, "No subsets read");
 
-    // for(uint32_t indx = 0; indx < subRasterSamples.size(); indx++)
-    // {
-    //     const RasterSample& srsample = subRasterSamples[indx].sample;
-    //     const char* srfileName = subRasterSamples[indx].fileName;
-    //     print2term("SRSample: %lf, %lf, %lf, %lf, %lf, %s\n", srsample.time, srsample.value, srsample.stats.mean, srsample.stats.stdev, srsample.stats.mad, srfileName);
-    // }
-
-    /* Compare samples */
-    if(rasterSamples.size() != subRasterSamples.size())
-    {
-        mlog(ERROR, "Number of samples differ: %lu != %lu", rasterSamples.size(), subRasterSamples.size());
-        errors++;
-        return errors;
-    }
-
-    for(uint32_t i = 0; i < rasterSamples.size(); i++)
-    {
-        const RasterSample& rsample = rasterSamples[i].sample;
-        const char* rfileName = rasterSamples[i].fileName;
-
-        const RasterSample& srsample = subRasterSamples[i].sample;
-        const char* srfileName = subRasterSamples[i].fileName;
-
-        print2term("RSample:  %lf, %lf, %lf, %lf, %lf, %s\n", rsample.time, rsample.value, rsample.stats.mean, rsample.stats.stdev, rsample.stats.mad, rfileName);
-        print2term("SRSample: %lf, %lf, %lf, %lf, %lf, %s\n", srsample.time, srsample.value, srsample.stats.mean, srsample.stats.stdev, srsample.stats.mad, srfileName);
-
-        if(rsample.time != srsample.time)
-        {
-            print2term("Time differ: %lf != %lf\n", rsample.time, srsample.time);
-            errors++;
-        }
-
-        if(rsample.value != srsample.value)
-        {
-            print2term("Value differ: %lf != %lf\n", rsample.value, srsample.value);
-            errors++;
-        }
-
-        if(rsample.stats.mean != srsample.stats.mean)
-        {
-            print2term("Mean differ: %lf != %lf\n", rsample.stats.mean, srsample.stats.mean);
-            errors++;
-        }
-
-        if(rsample.stats.stdev != srsample.stats.stdev)
-        {
-            print2term("Stdev differ: %lf != %lf\n", rsample.stats.stdev, srsample.stats.stdev);
-            errors++;
-        }
-
-        if(rsample.stats.mad != srsample.stats.mad)
-        {
-            print2term("Mad differ: %lf != %lf\n", rsample.stats.mad, srsample.stats.mad);
-            errors++;
-        }
-        print2term("\n");
-    }
-
-    return errors;
+    return num_ret;
 }
-

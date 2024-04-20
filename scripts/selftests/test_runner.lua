@@ -79,6 +79,7 @@ end
 -- Run PGC Plugin Self Tests
 if __pgc__ and incloud then
     local pgc_td = td .. "../../plugins/pgc/selftests/"
+    runner.script(pgc_td .. "plugin_unittest.lua")
     runner.script(pgc_td .. "arcticdem_reader.lua")
     runner.script(pgc_td .. "temporal_filter_test.lua")
     runner.script(pgc_td .. "url_filter_test.lua")

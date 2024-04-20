@@ -29,85 +29,62 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __ut_raster_subset__
+#define __ut_raster_subset__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "EventLib.h"
+#include "LuaObject.h"
 #include "RasterObject.h"
-#include "RasterSubset.h"
 
 /******************************************************************************
- * STATIC DATA
+ * ATL03 READER UNIT TEST CLASS
  ******************************************************************************/
 
-uint64_t RasterSubset::poolsize = RasterSubset::MAX_SIZE;
-Mutex RasterSubset::mutex;
-
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-RasterSubset::RasterSubset(uint64_t _size, const std::string& vsiFile):
-    robj(NULL),
-    rasterName(vsiFile),
-    data(NULL),
-    size(0)
+class UT_RasterSubset: public LuaObject
 {
-    size = _size;
+    public:
 
-    /* Check for Available Memory */
-    bool allocate = false;
-    mutex.lock();
-    {
-        if(size > 0 && size <= poolsize)
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct
         {
-            poolsize -= size;
-            allocate = true;
-        }
-    }
-    mutex.unlock();
+            RasterSample  sample;
+            const char* fileName;
+        } SampleInfo_t;
 
-    if(allocate)
-    {
-        /* Allocate Buffer */
-        data = new uint8_t[size];
-    }
-    else size = 0;
-}
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-RasterSubset::~RasterSubset( void )
-{
-    mutex.lock();
-    {
-        poolsize += size;
-    }
-    mutex.unlock();
-    delete [] data;
-    delete robj;
-    VSIUnlink(rasterName.c_str());
-}
+        static const char* OBJECT_TYPE;
 
-/*----------------------------------------------------------------------------
- * releaseData
- *----------------------------------------------------------------------------*/
-void RasterSubset::releaseData(void)
-{
-    /*
-     * NOTE: do not decrease 'poolsize' by 'size'
-     * data was copied into subsetted raster in vsimem, we need to count it as used
-     */
-    mutex.lock();
-    {
-        delete[] data;
-        data = NULL;
-    }
-    mutex.unlock();
-}
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int  luaCreate   (lua_State* L);
+
+    private:
+
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                        explicit UT_RasterSubset (lua_State* L);
+                        ~UT_RasterSubset         (void);
+
+        static int         luaSubsetTest         (lua_State* L);
+        static const char* getRasterName         (RasterObject* robj, uint64_t fileId);
+};
+
+#endif  /* __ut_raster_subset__*/

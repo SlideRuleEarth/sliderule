@@ -636,8 +636,10 @@ void* GeoIndexedRaster::readingThread(void *param)
                 entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
                 if(entry->subset)
                 {
-                    /* Create new GeoRaster object for subsetted raster */
-                    entry->subset->robj = new GeoRaster(reader->obj->LuaState,
+                    /* Create new GeoRaster object for subsetted raster
+                     * Use NULL for LuaState, using parent's causes memory corruption
+                     */
+                    entry->subset->robj = new GeoRaster(NULL,
                                                         reader->obj->parms,
                                                         entry->subset->rasterName,
                                                         entry->raster->getGpsTime(),
