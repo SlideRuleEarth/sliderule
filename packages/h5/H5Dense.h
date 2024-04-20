@@ -8,11 +8,11 @@ class H5BTreeV2
     public:
         /* key return values for outside */
 
-        uint64_t pos_out = 0; 
-        uint8_t  hdr_flags_out = 0; 
-        int      hdr_dlvl_out = 0; 
-        uint64_t msg_size_out = 0;
-        bool     found_attr = false;
+        uint64_t pos_out; 
+        uint8_t  hdr_flags_out; 
+        int      hdr_dlvl_out; 
+        uint64_t msg_size_out;
+        bool     found_attr;
 
         H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
 
@@ -181,42 +181,35 @@ class H5BTreeV2
         H5FileBuffer* h5filePtr_;
 
         /* B-TREE V2 HEADER */
-        /* Modifications / Removed: hdr_size, node_refc, file_refc, sizeof_size, sizeof_addr */
+        /* Removed: hdr_size, node_refc, file_refc, sizeof_size, sizeof_addr */
 
         /* Tracking */
-        uint64_t                addr = 0; // addr of btree 
+        uint64_t                addr;          // addr of btree 
 
-        // TODO: before removing verify this work is not done elsewhere
-        // size_t                  hdr_size = 0; // size (bytes) of btree on disk
-        // size_t                  node_refc = 0; // ref count of nodes using header
-        // size_t                  file_refc = 0; // ref count of files using header
-        // uint8_t                 sizeof_size = 0; // size of file sizes
-        // uint8_t                 sizeof_addr = 0; // size of file addresses
-
-        uint8_t                 max_nrec_size = 0; // size to store max. # of records in any node (in bytes)
-        void                    *parent = NULL; // potentially remove
+        uint8_t                 max_nrec_size; // size to store max. # of records in any node (in bytes)
+        void                    *parent;       // potentially remove
 
         /* Properties */
-        btree2_subid_t          type; // "class" H5B2_class_t under hdf5 title
-        size_t                  nrec_size = 0; // native record size
+        btree2_subid_t          type;          // "class" H5B2_class_t under hdf5 title
+        size_t                  nrec_size;     // native record size
 
-        uint32_t                node_size = 0; // size in bytes of all B-tree nodes
-        uint16_t                rrec_size = 0; // size in bytes of the B-tree record
-        uint16_t                depth = 0;
-        uint8_t                 split_percent = 0; // percent full that a node needs to increase above before it is split
-        uint8_t                 merge_percent = 0; // percent full that a node needs to be decrease below before it is split
+        uint32_t                node_size;     // size in bytes of all B-tree nodes
+        uint16_t                rrec_size;     // size in bytes of the B-tree record
+        uint16_t                depth;
+        uint8_t                 split_percent; // percent full that a node needs to increase above before it is split
+        uint8_t                 merge_percent; // percent full that a node needs to be decrease below before it is split
         
         vector<btree2_node_info_t> node_info;  // table of node info structs for current depth of B-tree
-        btree2_node_ptr_t       *root; // root struct
+        btree2_node_ptr_t       *root;         // root struct
         vector<size_t>          nat_off;
-        uint64_t                check_sum = 0;
-        dtable_t                dtable; // doubling table
+        uint64_t                check_sum;
+        dtable_t                dtable;        // doubling table
 
-        /* UDATA - Modifications: flags (attr storage location) and corder (creation order) removed */
-
-        uint64_t                fheap_addr = 0;
-        H5FileBuffer::heap_info_t *fheap_info = NULL; // fractalH pointer
-        const char              *name = NULL;         // attr name we are searching for
-        uint32_t                name_hash = 0;        // hash of attr name
+        /* UDATA */
+        /* Removed: flags (attr storage location) and corder (creation order) */
+        uint64_t                fheap_addr;
+        H5FileBuffer::heap_info_t *fheap_info; // fractalH pointer
+        const char              *name;         // attr name we are searching for
+        uint32_t                name_hash;     // hash of attr name
 
 };

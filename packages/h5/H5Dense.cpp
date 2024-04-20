@@ -71,7 +71,16 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
 
     /* Init portion of BTree Hdr */
     addr = name_bt2_addr;
+    max_nrec_size = 0;
+    parent = NULL;
+    nrec_size = 0;
     node_size = 0;
+    rrec_size = 0;
+    depth = 0;
+    split_percent = 0; 
+    merge_percent = 0;
+    root = NULL;
+    check_sum = 0;
 
     /* Init Udata */
     fheap_addr = _fheap_addr;
