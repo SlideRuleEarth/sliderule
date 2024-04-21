@@ -52,10 +52,20 @@ class UT_RasterSubset: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct
+        typedef struct SampleInfo
         {
             RasterSample  sample;
             const char* fileName;
+
+            SampleInfo (const RasterSample* _sample, const char* _fileName):
+                sample(*_sample),
+                fileName(_fileName)
+            {}
+
+            ~SampleInfo (void)
+            {
+                delete [] fileName;
+            }
         } SampleInfo_t;
 
         /*--------------------------------------------------------------------
@@ -80,11 +90,13 @@ class UT_RasterSubset: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        explicit UT_RasterSubset (lua_State* L);
-                        ~UT_RasterSubset         (void);
+        explicit         UT_RasterSubset (lua_State* L, RasterObject* _raster);
+                        ~UT_RasterSubset (void);
 
-        static int         luaSubsetTest         (lua_State* L);
-        static const char* getRasterName         (RasterObject* robj, uint64_t fileId);
+        static int         luaSubsetTest (lua_State* L);
+        static const char* getRasterName (RasterObject* robj, uint64_t fileId);
+
+        RasterObject*      raster;
 };
 
 #endif  /* __ut_raster_subset__*/

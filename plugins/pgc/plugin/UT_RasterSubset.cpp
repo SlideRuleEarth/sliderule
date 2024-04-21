@@ -54,16 +54,21 @@ const struct luaL_Reg UT_RasterSubset::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :UT_RasterSubset()
+ * luaCreate - :test(<raster>)
  *----------------------------------------------------------------------------*/
 int UT_RasterSubset::luaCreate (lua_State* L)
 {
+    RasterObject* _raster = NULL;
     try
     {
-        return createLuaObject(L, new UT_RasterSubset(L));
+        /* Get Parameters */
+        _raster = dynamic_cast<RasterObject*>(getLuaObject(L, 1, RasterObject::OBJECT_TYPE));
+
+        return createLuaObject(L, new UT_RasterSubset(L, _raster));
     }
     catch(const RunTimeException& e)
     {
+        if(_raster) _raster->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -76,9 +81,11 @@ int UT_RasterSubset::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-UT_RasterSubset::UT_RasterSubset (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+UT_RasterSubset::UT_RasterSubset (lua_State* L, RasterObject* _raster):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    raster(_raster)
 {
+    assert(raster);
 }
 
 /*----------------------------------------------------------------------------
@@ -86,6 +93,7 @@ UT_RasterSubset::UT_RasterSubset (lua_State* L):
  *----------------------------------------------------------------------------*/
 UT_RasterSubset::~UT_RasterSubset(void)
 {
+    raster->releaseLuaObject();
 }
 
 
@@ -97,15 +105,11 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
     bool status = false;
     uint32_t errors = 0;
 
-    RasterObject* robj = NULL;
+    UT_RasterSubset* lua_obj = NULL;
+
     try
     {
-        UT_RasterSubset* lua_obj = dynamic_cast<UT_RasterSubset*>(getLuaSelf(L, 1));
-        if(lua_obj == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create UT_RasterObject object");
-
-        /* Get Parameters */
-        robj = dynamic_cast<RasterObject*>(getLuaObject(L, 2, RasterObject::OBJECT_TYPE));
-        if(robj == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create RasterObject object");
+        lua_obj = dynamic_cast<UT_RasterSubset*>(getLuaSelf(L, 1));
 
         const double llx = 149.80;
         const double lly = -70.00;
@@ -115,10 +119,10 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
         /* Get subsets */
         std::vector<RasterSubset*> subsetsList;
         OGRPolygon poly = GdalRaster::makeRectangle(llx, lly, urx, ury);
-        robj->getSubsets(&poly, 0, subsetsList, NULL);
+        lua_obj->raster->getSubsets(&poly, 0, subsetsList, NULL);
 
-        std::vector<SampleInfo_t>  rasterSamples;
-        std::vector<SampleInfo_t>  subRasterSamples;
+        std::vector<SampleInfo_t*>  rasterSamples;
+        std::vector<SampleInfo_t*>  subRasterSamples;
 
         /* Get samples from parent RasterObject */
         std::vector<RasterSample*> samplesList;
@@ -126,13 +130,14 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
         const double lon = (llx + urx) / 2.0;
         const double lat = (lly + ury) / 2.0;
         const double height = 0.0;
+        print2term("Point: %.2lf, %.2lf, %.2lf\n", lon, lat, height);
 
         OGRPoint poi(lon, lat, height);
-        errors += robj->getSamples(&poi, 0, samplesList, NULL);
+        errors += lua_obj->raster->getSamples(&poi, 0, samplesList, NULL);
         for(uint32_t i = 0; i < samplesList.size(); i++)
         {
             const RasterSample* sample = samplesList[i];
-            SampleInfo_t si = { *sample, getRasterName(robj, sample->fileId) };
+            SampleInfo_t* si = new SampleInfo_t(sample, getRasterName(lua_obj->raster, sample->fileId));
             rasterSamples.push_back(si);
             delete sample;
         }
@@ -152,20 +157,17 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
             for(uint32_t j = 0; j < samplesList.size(); j++)
             {
                 const RasterSample* sample = samplesList[j];
-                SampleInfo_t si = { *sample, getRasterName(srobj, sample->fileId) };
+                SampleInfo_t* si = new SampleInfo_t(sample, getRasterName(srobj, sample->fileId));
                 subRasterSamples.push_back(si);
                 delete sample;
             }
+            delete subset;
         }
 
-        // for(uint32_t indx = 0; indx < subRasterSamples.size(); indx++)
-        // {
-        //     const RasterSample& srsample = subRasterSamples[indx].sample;
-        //     const char* srfileName = subRasterSamples[indx].fileName;
-        //     print2term("SRSample: %lf, %lf, %lf, %lf, %lf, %s\n", srsample.time, srsample.value, srsample.stats.mean, srsample.stats.stdev, srsample.stats.mad, srfileName);
-        // }
-
-        /* Compare samples */
+        /*
+         * Compare samples - the number of samples should be the same as long as 'with_flags' is not set
+         * If it is bimask (flags rasters) will be included in subsetted rasters and this test will fail
+         */
         if(rasterSamples.size() != subRasterSamples.size())
         {
             mlog(ERROR, "Number of samples differ: %lu != %lu", rasterSamples.size(), subRasterSamples.size());
@@ -175,14 +177,14 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
 
         for(uint32_t i = 0; i < rasterSamples.size(); i++)
         {
-            const RasterSample& rsample = rasterSamples[i].sample;
-            const char* rfileName = rasterSamples[i].fileName;
+            const RasterSample& rsample = rasterSamples[i]->sample;
+            const char* rfileName = rasterSamples[i]->fileName;
 
-            const RasterSample& srsample = subRasterSamples[i].sample;
-            const char* srfileName = subRasterSamples[i].fileName;
+            const RasterSample& srsample = subRasterSamples[i]->sample;
+            const char* srfileName = subRasterSamples[i]->fileName;
 
-            print2term("RSample:  %lf, %lf, %lf, %lf, %lf, %s\n", rsample.time, rsample.value, rsample.stats.mean, rsample.stats.stdev, rsample.stats.mad, rfileName);
-            print2term("SRSample: %lf, %lf, %lf, %lf, %lf, %s\n", srsample.time, srsample.value, srsample.stats.mean, srsample.stats.stdev, srsample.stats.mad, srfileName);
+            print2term("RSample:  %.2lf, %.2lf, %.2lf, %.2lf, %s\n", rsample.value, rsample.stats.mean, rsample.stats.stdev, rsample.stats.mad, rfileName);
+            print2term("SRSample: %.2lf, %.2lf, %.2lf, %.2lf, %s\n", srsample.value, srsample.stats.mean, srsample.stats.stdev, srsample.stats.mad, srfileName);
 
             if(rsample.time != srsample.time)
             {
@@ -214,14 +216,14 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
                 errors++;
             }
             print2term("\n");
+            delete rasterSamples[i];
+            delete subRasterSamples[i];
         }
-
-
-
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        errors++;
     }
 
 
@@ -229,7 +231,6 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
     else status = false;
 
     /* Return Status */
-    if(robj) robj->releaseLuaObject();
     return returnLuaStatus(L, status);
 }
 
@@ -239,7 +240,7 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
  *----------------------------------------------------------------------------*/
 const char* UT_RasterSubset::getRasterName(RasterObject* robj, uint64_t fileId)
 {
-    const char* fileName = "";
+    const char* fileName = NULL;
 
     /* Find fileName from fileId */
     Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
@@ -252,5 +253,5 @@ const char* UT_RasterSubset::getRasterName(RasterObject* robj, uint64_t fileId)
         }
     }
 
-    return fileName;
+    return StringLib::duplicate(fileName);
 }
