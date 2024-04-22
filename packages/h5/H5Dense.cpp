@@ -24,6 +24,9 @@
  * RELEVANT HD5 DOCUMENTATION: 
  * https://docs.hdfgroup.org/hdf5/v1_10/_f_m_t3.html#Btrees:~:text=III.A.2.%20Disk%20Format%3A%20Level%201A2%20%2D%20Version%202%20B%2Dtrees
  * 
+ * RELEVANT HDF5 SRC LIBRARY
+ * https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322
+ * 
  * CONTROL FLOW:
  * Externally, if regular attribute message reading fails in H5coro to locate the object,
  * H5Dense generates a temporary H5BTreeV2 object representing a Version 2 B-Tree.
@@ -100,11 +103,8 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     nat_off = _nat_off;
     
     /* BEGIN DENSE ATTRIBUTE READ */
-
-    /* Open an attribute in dense storage structures for an object */
-    /* See hdf5 source implementation https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322 */
     
-    /* Shared Attr Support - NOT IMPLEMENTED */
+    /* NOT IMPLEMENTED: SHARED ATTR SUPPORT */
     print2term("WARNING: isTypeSharedAttrs is NOT implemented for dense attr reading \n");
     bool shared_attributes = isTypeSharedAttrs(H5FileBuffer::ATTRIBUTE_MSG);
     if (shared_attributes)
@@ -112,15 +112,18 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
     }
 
-    /* Btreev2 header  - TODO insert body */
+    /*** INIT BTREE HDR ***/
+
     initHdrBTreeV2(&root_node_ptr);
 
-    /* INIT NODE INFO */
+    /*** END BTREE HDR ***/
+
+    /*** INIT NODE INFO ***/
 
     /* Main node info hdr */
     node_info.resize(depth + 1);
 
-    /* Init leaf node info */
+    /* Leaf node info */
     sz_max_nrec = (((node_size) - H5B2_METADATA_PREFIX_SIZE) / (rrec_size));  
 
     bool checkA = checkAssigned(node_info[0].max_nrec, sz_max_nrec);
@@ -141,7 +144,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
         }
     }
     else {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "critical failure");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Critical natural offset init failure");
     }
 
     /* Compute size to compute num records in each record */
@@ -152,9 +155,9 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     max_nrec_size = (uint8_t) u_max_nrec_size;
     assert(max_nrec_size <= H5B2_SIZEOF_RECORDS_PER_NODE);
 
-    /* END INIT NODE INFO */
+    /*** END NODE INFO ***/
 
-    /* INIT DOUBLE TABLE  */
+    /*** INIT DOUBLE TABLE  ***/
 
     /* offsets and sizes */
     dtable.start_bits = log2_of2((uint32_t)fheap_info->starting_blk_size);
@@ -190,15 +193,19 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
         acc_block_off *= 2;
     }
 
-    /* END DTABLE */
+    /*** END DTABLE ***/
 
-    /* Attempt to locate record with matching name */
+    /*** INIT FIND ALGORITHM ***/
+
     findBTreeV2();
 
-    /* Found Attribute Success Status */
+    /*** END FIND ALGORITHM ***/
+
+    /*** ATTRIBUTE STATUS SUCCESS ***/
     if (!found_attr) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
     }
+    /*** END ***/
 }
 
  /*----------------------------------------------------------------------------
