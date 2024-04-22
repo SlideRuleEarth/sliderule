@@ -341,7 +341,7 @@ int RasterObject::luaSubsets(lua_State *L)
 /*----------------------------------------------------------------------------
  * slist2table
  *----------------------------------------------------------------------------*/
-int RasterObject::slist2table(List<RasterSubset*>& slist, uint32_t errors, lua_State *L)
+int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State *L)
 {
     int num_ret = 0;
 
@@ -365,9 +365,10 @@ int RasterObject::slist2table(List<RasterSubset*>& slist, uint32_t errors, lua_S
     /* Populate subsets */
     if(listvalid && !slist.empty())
     {
-        for(int i = 0; i < slist.length(); i++)
+        List<RasterSubset*>::Iterator lit(slist);
+        for(int i = 0; i < lit.length; i++)
         {
-            const RasterSubset* subset = slist[i];
+            const RasterSubset* subset = lit[i];
 
             /* Populate Return Results */
             lua_createtable(L, 0, 2);
