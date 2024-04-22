@@ -972,10 +972,18 @@ def to_file(gdf, filename, format='hdf', **kwargs):
         to_hdf(gdf, filename, **kwargs)
     elif format.lower() in ('netcdf','nc'):
         to_nc(gdf, filename, **kwargs)
+    elif format.lower() in ('geojson','csv','shp'):
+        gdf.to_file(filename, **kwargs)
+    elif format.lower() in ('geoparquet','parquet'):
+        gdf.to_parquet(filename, **kwargs)
 
 # input formats wrapper
 def from_file(filename, format='hdf', **kwargs):
     if format.lower() in ('hdf','hdf5','h5'):
         return from_hdf(filename, **kwargs)
-    elif format.lower() in ('netcdf','nc'):
+    elif format.lower() in ('netcdf','netcdf4','nc'):
         return from_nc(filename, **kwargs)
+    elif format.lower() in ('geojson','csv','shp'):
+        return geopandas.from_file(filename, **kwargs)
+    elif format.lower() in ('geoparquet','parquet'):
+        return geopandas.read_parquet(filename, **kwargs)

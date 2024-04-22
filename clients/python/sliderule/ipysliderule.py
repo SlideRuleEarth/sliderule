@@ -658,6 +658,16 @@ class widgets:
         # watch plot kind widgets for changes
         self.plot_kind.observe(self.set_plot_kind)
 
+        # selection for output file format
+        format_options = ["GeoJSON","csv","geoparquet","netCDF4","HDF5"]
+        self.file_format = ipywidgets.Dropdown(
+            options=format_options,
+            value="HDF5",
+            description="Format:",
+            description_tooltip="Format: Output file format",
+            disabled=False
+        )
+
         # button and label for output file selection
         self.file = copy.copy(self.atl06_filename)
         self.savebutton = ipywidgets.Button(
@@ -1045,8 +1055,8 @@ class widgets:
         """
         # get sliderule submission time
         now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        args = (now, self.release.value)
-        return "ATL03-SR_{0}_{1}.h5".format(*args)
+        args = (now, self.release.value, self.suffix)
+        return "ATL03-SR_{0}_{1}.{2}".format(*args)
 
     @property
     def atl06_filename(self):
@@ -1054,8 +1064,8 @@ class widgets:
         """
         # get sliderule submission time
         now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        args = (now, self.release.value)
-        return "ATL06-SR_{0}_{1}.h5".format(*args)
+        args = (now, self.release.value, self.suffix)
+        return "ATL06-SR_{0}_{1}.{2}".format(*args)
 
     @property
     def atl08_filename(self):
@@ -1063,8 +1073,8 @@ class widgets:
         """
         # get sliderule submission time
         now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        args = (now, self.release.value)
-        return "ATL08-SR_{0}_{1}.h5".format(*args)
+        args = (now, self.release.value, self.suffix)
+        return "ATL08-SR_{0}_{1}.{2}".format(*args)
 
     @property
     def format(self):
@@ -1078,6 +1088,30 @@ class widgets:
             return 'netcdf'
         else:
             return ''
+        
+    @property
+    def suffix(self):
+        """return the file suffix
+        """
+        sfx = {"GeoJSON":"geojson",
+            "csv":"csv",
+            "geoparquet":"parquet",
+            "netCDF4":"nc",
+            "HDF5":"h5"
+        }
+        return sfx[self.file_format.value]
+
+    @property
+    def media_type(self):
+        """return the internet media type (MIME type) of the file format
+        """
+        media = {"GeoJSON":"text/json",
+            "csv":"text/csv",
+            "geoparquet":"application/vnd.apache.parquet",
+            "netCDF4":"application/x-netcdf",
+            "HDF5":"application/x-hdf5"
+        }
+        return media[self.file_format.value]
 
     @property
     def _r(self):
