@@ -81,37 +81,37 @@ class H5BTreeV2
         typedef struct {
             /* Derived information (stored, varies during lifetime of table) */
             uint64_t                table_addr = 0; // addr of first block for table u ndefined if no space allocated for table */
-            unsigned                curr_root_rows = 0; // curr number of rows in the root indirect block; 0 indicates that the TABLE_ADDR field points to direct block (of START_BLOCK_SIZE) instead of indirect root block.
+            uint64_t                num_id_first_row = 0; // num of IDs in first row of table
 
-            /* Computed information (not stored) */
+            vector<uint64_t>        row_block_size; // block size per row of indirect block
+            vector<uint64_t>        row_block_off; // cumulative offset per row of indirect block
+            vector<uint64_t>        row_tot_dblock_free; // total free space in dblocks for this row  (For indirect block rows, it's the total free space in all direct blocks referenced from the indirect block)
+            vector<uint64_t>        row_max_dblock_free; // max. free space in dblocks for this row (For indirect block rows, it's the maximum free space in a direct block referenced  from the indirect block)
+
+            unsigned                curr_root_rows = 0; // curr number of rows in the root indirect block; 0 indicates that the TABLE_ADDR field points to direct block (of START_BLOCK_SIZE) instead of indirect root block.
             unsigned                max_root_rows = 0; // max # of rows in root indirect block
             unsigned                max_direct_rows = 0; // max # of direct rows in any indirect block
             unsigned                start_bits = 0; // # of bits for starting block size (i.e. log2(start_block_size))
             unsigned                max_direct_bits = 0; // # of bits for max. direct block size (i.e. log2(max_direct_size))
             unsigned                max_dir_blk_off_size = 0; // max size of offsets in direct blocks
             unsigned                first_row_bits = 0; // # of bits in address of first row
-            uint64_t                num_id_first_row = 0; // num of IDs in first row of table
             
-            vector<uint64_t>        row_block_size; // block size per row of indirect block
-            vector<uint64_t>        row_block_off; // cumulative offset per row of indirect block
-            vector<uint64_t>        row_tot_dblock_free; // total free space in dblocks for this row  (For indirect block rows, it's the total free space in all direct blocks referenced from the indirect block)
-            vector<uint64_t>        row_max_dblock_free; // max. free space in dblocks for this row (For indirect block rows, it's the maximum free space in a direct block referenced  from the indirect block)
         } dtable_t;
 
         /* B-tree leaf node information */
         typedef struct {
-            vector<uint8_t>         leaf_native;  // ptr to native records
-            uint16_t                nrec = 0;         // num records in this node 
-            void                    *parent = NULL;      // dependency for leaf  
+            vector<uint8_t>         leaf_native;    // ptr to native records
+            void                    *parent = NULL; // dependency for leaf
+            uint16_t                nrec = 0;       // num records in this node   
         } btree2_leaf_t;
 
         /* B-tree internal node information */
         typedef struct {
+            void                      *parent = NULL;
             vector<uint8_t>           int_native; // ptr native records               
             vector<btree2_node_ptr_t> node_ptrs;  // ptr to node ptrs
             uint16_t                  nrec = 0; // num records in node
             uint16_t                  depth = 0; // depth of node
-            void                      *parent = NULL;
         } btree2_internal_t;
 
         /* Fractal heap ID type for shared message & attribute heap IDs. */
@@ -123,21 +123,21 @@ class H5BTreeV2
         /* Type 8 Record Representation */
         typedef struct {
             fheap_id_t              id; // heap ID for attribute
-            uint8_t                 flags = 0;  // object header message flags for attribute
             uint32_t                corder = 0; // 'creation order' field value
             uint32_t                hash = 0; // hash of 'name' field value
+            uint8_t                 flags = 0;  // object header message flags for attribute
         } btree2_type8_densename_rec_t;
 
         /* Type 5 Record Representation -  native 'name' field index records in the v2 B-tree */
         typedef struct {
-            uint8_t                 id[7] = {0}; // heap ID for link, 7 stolen from H5G_DENSE_FHEAP_ID_LEN
             uint32_t                hash = 0; // hash of 'name' field value 
+            uint8_t                 id[7] = {0}; // heap ID for link, 7 stolen from H5G_DENSE_FHEAP_ID_LEN
         } btree2_type5_densename_rec_t;
 
         /* Helpers */
         bool                isTypeSharedAttrs (unsigned type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
-        template<typename T, typename V> bool checkAssigned(const T& type_verify, const V& value); 
+        template<typename T, typename V> void safeAssigned(T& type_verify, V& value); 
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int n, uint8_t l);
         unsigned            log2_of2(uint32_t n);
@@ -178,9 +178,8 @@ class H5BTreeV2
 
         /* Tracking */
         uint64_t                addr;          // addr of btree 
-
-        uint8_t                 max_nrec_size; // size to store max. # of records in any node (in bytes)
         void                    *parent;       // potentially remove
+        uint8_t                 max_nrec_size; // size to store max. # of records in any node (in bytes)
 
         /* Properties */
         btree2_subid_t          type;          // "class" H5B2_class_t under hdf5 title

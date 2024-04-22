@@ -167,8 +167,8 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     /* Leaf node info */
     sz_max_nrec = (((node_size) - H5B2_METADATA_PREFIX_SIZE) / (rrec_size));  
 
-    bool checkA = checkAssigned(node_info[0].max_nrec, sz_max_nrec);
-    assert(checkA && "Failed checkAssigned for initNodeInfo: sz_max_nrec overflows type of of node_info[0].max_nrec"); 
+    safeAssigned(node_info[0].max_nrec, sz_max_nrec);
+    // assert(checkA && "Failed safeAssigned for initNodeInfo: sz_max_nrec overflows type of of node_info[0].max_nrec"); 
     node_info[0].max_nrec = (unsigned) sz_max_nrec;
     node_info[0].split_nrec = (node_info[0].max_nrec * split_percent) / 100;
     node_info[0].merge_nrec = (node_info[0].max_nrec * merge_percent) / 100;
@@ -191,8 +191,8 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     /* Compute size to compute num records in each record */
     u_max_nrec_size = (log2_gen((uint64_t)node_info[0].max_nrec) / 8) + 1;
 
-    checkA = checkAssigned(max_nrec_size, u_max_nrec_size);
-    assert(checkA && "Failed checkAssigned for initNodeInfo: u_max_nrec_size exceeds uint8 rep limit"); 
+    safeAssigned(max_nrec_size, u_max_nrec_size);
+    // assert(checkA && "Failed safeAssigned for initNodeInfo: u_max_nrec_size exceeds uint8 rep limit"); 
     max_nrec_size = (uint8_t) u_max_nrec_size;
     assert(max_nrec_size <= H5B2_SIZEOF_RECORDS_PER_NODE);
 
@@ -465,12 +465,16 @@ uint32_t H5BTreeV2::checksumLookup3(const void *key, size_t length, uint32_t ini
 }
 
 /*----------------------------------------------------------------------------
- * checkAssigned - verify that value doesn't overflow when casted to type T
+ * safeAssigned - verify that value doesn't overflow when casted to type T
  *----------------------------------------------------------------------------*/
 template<typename T, typename V>
-bool H5BTreeV2::checkAssigned(const T& type_verify, const V& value) {
-    print2term("Recieved type for assignment check: %u", (unsigned) type_verify);
-    return value <= std::numeric_limits<T>::max();
+void H5BTreeV2::safeAssigned(T& type_verify, V& value) {
+    if (value <= std::numeric_limits<T>::max()) {
+        type_verify = (T)value;
+    }
+    else {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Type V value exceeds maximum representation of type T");
+    }
 }
 
  /*----------------------------------------------------------------------------
@@ -609,13 +613,13 @@ void H5BTreeV2::fheapLocate(const void * _id) {
  *----------------------------------------------------------------------------*/
 void H5BTreeV2::dtableLookup(uint64_t off, unsigned *row, unsigned *col) {
 
-    bool checkA = false;
+    uint64_t eval;
 
     /* Check for offset in first row */
     if (off < dtable.num_id_first_row) {
         *row = 0;
-        checkA = checkAssigned(*col, off / fheap_info->starting_blk_size);
-        assert(checkA && "Failed checkAssigned for dtableLookup"); 
+        eval = (off / fheap_info->starting_blk_size);
+        safeAssigned(*col, eval);
         *col = (unsigned) (off / fheap_info->starting_blk_size);
     }
     else {
@@ -623,8 +627,9 @@ void H5BTreeV2::dtableLookup(uint64_t off, unsigned *row, unsigned *col) {
         uint64_t off_mask = ((uint64_t)1) << high_bit; // compute mask for determining column
 
         *row = (high_bit - dtable.first_row_bits) + 1;
-        checkA = checkAssigned(*col, ((off - off_mask) / dtable.row_block_size[*row]));
-        assert(checkA && "Failed checkAssigned for dtableLookup"); 
+        eval = ((off - off_mask) / dtable.row_block_size[*row]);
+        safeAssigned(*col, eval);
+        // assert(checkA && "Failed safeAssigned for dtableLookup"); 
         *col = ((off - off_mask) / dtable.row_block_size[*row]);
     } 
 
@@ -935,8 +940,8 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
         addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)); // internal pos value should change
         varDecode((uint8_t *)internal_pos, node_nrec, max_nrec_size);
 
-        bool checkA = checkAssigned(int_node_ptr->node_nrec, node_nrec);
-        assert(checkA && "node_nrec exceeds uint16 rep limit");
+        safeAssigned(int_node_ptr->node_nrec, node_nrec);
+        // assert(checkA && "node_nrec exceeds uint16 rep limit");
         int_node_ptr->node_nrec = (uint16_t) node_nrec;
 
         if (internal->depth > 1) {
@@ -1054,8 +1059,8 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
 
             unsigned b2_int_ptr_size = (unsigned)(h5filePtr_->metaData.offsetsize) + max_nrec_size + (node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
             sz_max_nrec = ((node_size - (H5B2_METADATA_PREFIX_SIZE + b2_int_ptr_size)) / (rrec_size + b2_int_ptr_size)); // = H5B2_NUM_INT_REC(hdr, u);
-            bool checkA = checkAssigned(node_info[u].max_nrec, sz_max_nrec);
-            assert(checkA && "Failed checkAssigned for findBTreeV2: sz_max_nrec exceeds unsigned rep limit");
+            safeAssigned(node_info[u].max_nrec, sz_max_nrec);
+            // assert(checkA && "Failed safeAssigned for findBTreeV2: sz_max_nrec exceeds unsigned rep limit");
             node_info[u].max_nrec = sz_max_nrec;
 
             assert(node_info[u].max_nrec <= node_info[u - 1].max_nrec);
@@ -1064,8 +1069,8 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
             node_info[u].cum_max_nrec = ((node_info[u].max_nrec + 1) * node_info[u - 1].cum_max_nrec) + node_info[u].max_nrec;
             u_max_nrec_size = (log2_gen((uint64_t)node_info[u].cum_max_nrec) / 8) + 1;
 
-            checkA = checkAssigned(node_info[u].cum_max_nrec_size, u_max_nrec_size);
-            assert(checkA && "Failed checkAssigned for findBTreeV2: u_max_nrec_size exceeds uint8 rep limit");
+            safeAssigned(node_info[u].cum_max_nrec_size, u_max_nrec_size);
+            // assert(checkA && "Failed safeAssigned for findBTreeV2: u_max_nrec_size exceeds uint8 rep limit");
             node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;
         
         }
