@@ -29,74 +29,74 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __geo_raster__
-#define __geo_raster__
+#ifndef __ut_raster_subset__
+#define __ut_raster_subset__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GdalRaster.h"
+#include "OsApi.h"
+#include "LuaObject.h"
 #include "RasterObject.h"
 
 /******************************************************************************
- * GEO RASTER CLASS
+ * ATL03 READER UNIT TEST CLASS
  ******************************************************************************/
 
-class GeoRaster: public RasterObject
+class UT_RasterSubset: public LuaObject
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Typedefs
+         * Types
          *--------------------------------------------------------------------*/
 
-        /* import bbox_t into this namespace from GeoParms.h */
-        using bbox_t=GeoParms::bbox_t;
+        typedef struct SampleInfo
+        {
+            RasterSample  sample;
+            const char* fileName;
+
+            SampleInfo (const RasterSample* _sample, const char* _fileName):
+                sample(*_sample),
+                fileName(_fileName)
+            {}
+
+            ~SampleInfo (void)
+            {
+                delete [] fileName;
+            }
+        } SampleInfo_t;
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                      GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
-        virtual      ~GeoRaster  (void);
-        uint32_t      getSamples (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
-        uint32_t      getSubsets (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
-        uint8_t*      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL) override;
-
-        uint32_t      getRows    (void) const { return raster.getRows(); }
-        uint32_t      getCols    (void) const { return raster.getCols(); }
-        const bbox_t& getBbox    (void) const { return raster.getBbox(); }
-        double        getCellSize(void) const { return raster.getCellSize(); }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-
-         std::string getFileName(void)
-         {
-             return raster.getFileName();
-         }
+        static int  luaCreate   (lua_State* L);
 
     private:
 
-        /*--------------------------------------------------------------------
-        * Data
-        *--------------------------------------------------------------------*/
-
-        Mutex      samplingMutex;
-        GdalRaster raster;
 
         /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        static int luaDimensions(lua_State* L);
-        static int luaBoundingBox(lua_State* L);
-        static int luaCellSize(lua_State* L);
+        explicit         UT_RasterSubset (lua_State* L, RasterObject* _raster);
+                        ~UT_RasterSubset (void);
+
+        static int         luaSubsetTest (lua_State* L);
+        static const char* getRasterName (RasterObject* robj, uint64_t fileId);
+
+        RasterObject*      raster;
 };
 
-#endif  /* __geo_raster__ */
+#endif  /* __ut_raster_subset__*/

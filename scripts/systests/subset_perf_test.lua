@@ -160,28 +160,12 @@ for i = 1, #demTypes do
 
     if tbl ~= nil then
         for i, v in ipairs(tbl) do
-            local cols = v["cols"]
-            local rows = v["rows"]
             local size = v["size"]
-            local datatype = v["datatype"]
-            local ulx = v["ulx"]
-            local uly = v["uly"]
-            local cellsize = v["cellsize"]
-            local wkt = v["wkt"]
-
             local mbytes = size / (1024*1024)
 
             -- This results in 20 threads, all the same size, cols, buffs data type. Print only first one
-            print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.2f, uly: %.2f, cellsize: %.1f",
-                    mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
-
-            runner.check(cols > 0)
-            runner.check(rows > 0)
-            runner.check(ulx > 0)
-            runner.check(uly < 0)  -- REMA has it flipped
-            runner.check(msg.datatype(datatype) == "FLOAT")
-            runner.check(cellsize == 2.0)
-            runner.check(wkt ~= "")
+            print(string.format("AOI size: %6.1f MB", mbytes))
+            runner.check(size > 0)
         end
     end
 end
@@ -230,27 +214,11 @@ runner.check(threadCnt == 2)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
         local size = v["size"]
-        local datatype = v["datatype"]
-        local ulx = v["ulx"]
-        local uly = v["uly"]
-        local cellsize = v["cellsize"]
-        local wkt = v["wkt"]
-
         local mbytes = size / (1024*1024)
 
-        print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.2f, uly: %.2f, cellsize: %.1f",
-                mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
-
-        runner.check(cols > 0)
-        runner.check(rows > 0)
-        runner.check(ulx > 0)
-        runner.check(uly > 0)
-        runner.check(msg.datatype(datatype) == "FLOAT")
-        runner.check(cellsize == 1.0)
-        runner.check(wkt ~= "")
+        print(string.format("AOI size: %6.1f MB", mbytes))
+        runner.check(size > 0)
     end
 end
 
@@ -313,30 +281,16 @@ runner.check(threadCnt == 59)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
-        local cols = v["cols"]
-        local rows = v["rows"]
         local size = v["size"]
-        local datatype = v["datatype"]
-        local ulx = v["ulx"]
-        local uly = v["uly"]
-        local cellsize = v["cellsize"]
-        local wkt = v["wkt"]
-
         local mbytes = size / (1024*1024)
+        runner.check(size > 0)
 
         -- This results in 59 threads, all the same size, cols, buffs data type. Print only first one
         if i == 1 then
-            print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.9f, uly: %.9f, cellsize: %.1f",
-                    mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
+            print(string.format("AOI size: %6.1f MB", mbytes))
         end
 
-        runner.check(cols == 3660)
-        runner.check(rows == 3564)
-        runner.check(math.abs(ulx - 300000.0) < sigma)
-        runner.check(math.abs(uly - 5699521.415844312) < sigma)
-        runner.check(msg.datatype(datatype) == "INT16" or msg.datatype(datatype) == "UINT16")
-        runner.check(cellsize == 30.0)
-        runner.check(wkt ~= "")
+        runner.check(size > 0)
     end
 end
 
@@ -380,27 +334,11 @@ print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime
 runner.check(threadCnt == 1)
 
 for i, v in ipairs(tbl) do
-    local cols = v["cols"]
-    local rows = v["rows"]
     local size = v["size"]
-    local datatype = v["datatype"]
-    local ulx = v["ulx"]
-    local uly = v["uly"]
-    local cellsize = v["cellsize"]
-    local wkt = v["wkt"]
-
     local mbytes = size / (1024*1024)
 
-    print(string.format("AOI size: %6.1f MB,  cols: %6d,  rows: %6d, datatype: %s, ulx: %.2f, uly: %.2f, cellsize: %.9f",
-            mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
-
-    runner.check(cols == 7344)
-    runner.check(rows == 4464)
-    runner.check(math.abs(ulx - gm_llx) < sigma)
-    runner.check(math.abs(uly - gm_ury) < sigma)
-    runner.check(msg.datatype(datatype) == "UINT8")
-    runner.check(math.abs(cellsize - 0.000083333) < sigma)
-    runner.check(wkt ~= "")
+    print(string.format("AOI size: %6.1f MB", mbytes))
+    runner.check(size > 0)
 end
 
 

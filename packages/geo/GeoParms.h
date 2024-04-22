@@ -52,14 +52,14 @@
 #include "TimeLib.h"
 
 /* Error codes for raster Sampling, Subsetting (SS) */
-#define SS_NO_ERRORS                0
-#define SS_THREADS_LIMIT_ERROR      (1 << 0)
-#define SS_MEMPOOL_ERROR            (1 << 1)
-#define SS_POI_OUT_OF_BOUNDS_ERROR  (1 << 2)
-#define SS_AOI_OUT_OF_BOUNDS_ERROR  (1 << 3)
-#define SS_POI_FAILED_TO_READ_ERROR (1 << 4)
-#define SS_AOI_FAILED_TO_READ_ERROR (1 << 5)
-#define SS_INDEX_FILE_ERROR         (1 << 6)
+#define SS_NO_ERRORS              0
+#define SS_THREADS_LIMIT_ERROR    (1 << 0)
+#define SS_MEMPOOL_ERROR          (1 << 1)
+#define SS_OUT_OF_BOUNDS_ERROR    (1 << 2)
+#define SS_READ_ERROR             (1 << 3)
+#define SS_WRITE_ERROR            (1 << 4)
+#define SS_SUBRASTER_ERROR        (1 << 5)
+#define SS_INDEX_FILE_ERROR       (1 << 6)
 
 
 /******************************************************************************

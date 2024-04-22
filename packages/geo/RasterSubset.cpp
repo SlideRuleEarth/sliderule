@@ -35,6 +35,7 @@
 
 #include "OsApi.h"
 #include "EventLib.h"
+#include "RasterObject.h"
 #include "RasterSubset.h"
 
 /******************************************************************************
@@ -51,31 +52,13 @@ Mutex RasterSubset::mutex;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterSubset::RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                           double ulx, double uly, double _cellsize, GeoParms::bbox_t& _bbox, const char* _wkt,
-                           double _time, double _fileId):
+RasterSubset::RasterSubset(uint64_t _size, const std::string& vsiFile):
+    robj(NULL),
+    rasterName(vsiFile),
     data(NULL),
-    size(0),
-    cols(_cols),
-    rows(_rows),
-    datatype(_datatype),
-    map_ulx(ulx),
-    map_uly(uly),
-    cellsize(_cellsize),
-    bbox(_bbox),
-    wkt(_wkt),
-    time(_time),
-    fileId(_fileId)
+    size(0)
 {
-    /* Calculate Size of Buffer */
-    if(datatype >= 0 && datatype <= RecordObject::INVALID_FIELD)
-    {
-        size = cols * rows * RecordObject::FIELD_TYPE_BYTES[datatype];
-    }
-    else
-    {
-        size = 0;
-    }
+    size = _size;
 
     /* Check for Available Memory */
     bool allocate = false;
@@ -108,4 +91,23 @@ RasterSubset::~RasterSubset( void )
     }
     mutex.unlock();
     delete [] data;
+    delete robj;
+    VSIUnlink(rasterName.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * releaseData
+ *----------------------------------------------------------------------------*/
+void RasterSubset::releaseData(void)
+{
+    /*
+     * NOTE: do not decrease 'poolsize' by 'size'
+     * data was copied into subsetted raster in vsimem, we need to count it as used
+     */
+    mutex.lock();
+    {
+        delete[] data;
+        data = NULL;
+    }
+    mutex.unlock();
 }

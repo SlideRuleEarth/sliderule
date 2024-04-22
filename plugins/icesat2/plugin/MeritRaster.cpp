@@ -132,7 +132,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
         y_offset < 0 || y_offset >= Y_MAX )
     {
         mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", poi->getX(), poi->getY(), x_offset, y_offset);
-        return SS_POI_OUT_OF_BOUNDS_ERROR;
+        return SS_OUT_OF_BOUNDS_ERROR;
     }
 
     /* Handle Negative Longitudes */

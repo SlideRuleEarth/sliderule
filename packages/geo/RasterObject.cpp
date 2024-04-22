@@ -135,16 +135,15 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param)
+uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
 {
     std::ignore = ulx;
     std::ignore = uly;
     std::ignore = xsize;
     std::ignore = ysize;
-    std::ignore = slist;
     std::ignore = param;
 
-    return 0;
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -169,8 +168,7 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
-    LuaEngine::setAttrFunc(L, "subset", luaSubset);
-    LuaEngine::setAttrFunc(L, "pixels", luaPixels);
+    LuaEngine::setAttrFunc(L, "subset", luaSubsets);
 }
 
 /*----------------------------------------------------------------------------
@@ -292,11 +290,10 @@ int RasterObject::luaSamples(lua_State *L)
     return num_ret;
 }
 
-
 /*----------------------------------------------------------------------------
- * luaSubset - :subset(lon_min, lat_min, lon_max, lat_max) --> in|out
+ * luaSubsets - :subset(lon_min, lat_min, lon_max, lat_max) --> in|out
  *----------------------------------------------------------------------------*/
-int RasterObject::luaSubset(lua_State *L)
+int RasterObject::luaSubsets(lua_State *L)
 {
     uint32_t err = SS_NO_ERRORS;
     int num_ret = 1;
@@ -344,46 +341,6 @@ int RasterObject::luaSubset(lua_State *L)
 }
 
 
-/*----------------------------------------------------------------------------
- * luaPixels - :pixels(ulx, uly, xsize, ysize) --> in|out
- *----------------------------------------------------------------------------*/
-int RasterObject::luaPixels(lua_State *L)
-{
-    uint32_t err = SS_NO_ERRORS;
-    int num_ret = 1;
-
-    RasterObject *lua_obj = NULL;
-    std::vector<RasterSubset*> slist;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
-
-        /* Get extent */
-        uint32_t ulx = getLuaInteger(L, 2);
-        uint32_t uly = getLuaInteger(L, 3);
-        uint32_t xsize = getLuaInteger(L, 4);
-        uint32_t ysize = getLuaInteger(L, 5);
-
-        /* Get pixels  */
-        err = lua_obj->getPixels(ulx, uly, xsize, ysize, slist, NULL);
-        num_ret += lua_obj->slist2table(slist, err, L);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Failed to subset raster: %s", e.what());
-    }
-
-    /* Free subsets */
-    for (const RasterSubset* subset : slist)
-        delete subset;
-
-    /* Return Errors and Table of Samples */
-    lua_pushinteger(L, err);
-    return num_ret;
-}
-
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -394,7 +351,6 @@ int RasterObject::luaPixels(lua_State *L)
  *----------------------------------------------------------------------------*/
 int RasterObject::slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L)
 {
-    RasterObject* lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
     int num_ret = 0;
 
     bool listvalid = true;
@@ -420,45 +376,13 @@ int RasterObject::slist2table(const std::vector<RasterSubset*>& slist, uint32_t 
         for(uint32_t i = 0; i < slist.size(); i++)
         {
             const RasterSubset* subset = slist[i];
-            const char* fileName = "";
-
-            /* Find fileName from fileId */
-            Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
-            for(int j = 0; j < iterator.length; j++)
-            {
-                if(iterator[j].value == subset->fileId)
-                {
-                    fileName = iterator[j].key;
-                    break;
-                }
-            }
 
             /* Populate Return Results */
-            lua_createtable(L, 0, 8);
-            LuaEngine::setAttrStr(L, "file", fileName);
-            LuaEngine::setAttrInt(L, "fileid", subset->fileId);
-            LuaEngine::setAttrNum(L, "time", subset->time);
-            if(subset->size < 0x1000000) // 16MB
-            {
-                std::string data_b64_str = MathLib::b64encode(subset->data, subset->size);
-                LuaEngine::setAttrStr(L, "data", data_b64_str.c_str(), data_b64_str.size());
-            }
-            else
-            {
-                LuaEngine::setAttrStr(L, "data", "", 0);
-            }
-            LuaEngine::setAttrInt(L, "cols", subset->cols);
-            LuaEngine::setAttrInt(L, "rows", subset->rows);
-            LuaEngine::setAttrInt(L, "size", subset->size);
-            LuaEngine::setAttrNum(L, "datatype", subset->datatype);
-            LuaEngine::setAttrNum(L, "ulx", subset->map_ulx);
-            LuaEngine::setAttrNum(L, "uly", subset->map_uly);
-            LuaEngine::setAttrNum(L, "cellsize", subset->cellsize);
-            LuaEngine::setAttrNum(L, "bbox.lonmin", subset->bbox.lon_min);
-            LuaEngine::setAttrNum(L, "bbox.latmin", subset->bbox.lat_min);
-            LuaEngine::setAttrNum(L, "bbox.lonmax", subset->bbox.lon_max);
-            LuaEngine::setAttrNum(L, "bbox.latmax", subset->bbox.lat_max);
-            LuaEngine::setAttrStr(L, "wkt", subset->wkt.c_str());
+            lua_createtable(L, 0, 2);
+            LuaEngine::setAttrStr(L, "robj", "", 0);  /* For now, figure out how to return RasterObject* */
+            LuaEngine::setAttrStr(L, "file",     subset->rasterName.c_str());
+            LuaEngine::setAttrInt(L, "size",     subset->getSize());
+            LuaEngine::setAttrInt(L, "poolsize", subset->getPoolSize());
             lua_rawseti(L, -2, i + 1);
         }
     }
@@ -466,4 +390,3 @@ int RasterObject::slist2table(const std::vector<RasterSubset*>& slist, uint32_t 
 
     return num_ret;
 }
-

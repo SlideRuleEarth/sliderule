@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
 
 #include <algorithm>
@@ -627,9 +628,28 @@ void* GeoIndexedRaster::readingThread(void *param)
         if(entry != NULL)
         {
             if(GdalRaster::ispoint(reader->geo))
+            {
                 entry->sample = entry->raster->samplePOI((OGRPoint*)reader->geo);
+            }
             else if(GdalRaster::ispoly(reader->geo))
+            {
                 entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
+                if(entry->subset)
+                {
+                    /* Create new GeoRaster object for subsetted raster
+                     * Use NULL for LuaState, using parent's causes memory corruption
+                     */
+                    entry->subset->robj = new GeoRaster(NULL,
+                                                        reader->obj->parms,
+                                                        entry->subset->rasterName,
+                                                        entry->raster->getGpsTime(),
+                                                        entry->raster->isElevation(),
+                                                        entry->raster->getOverrideCRS());
+
+                    /* GeoParms are shared with subsseted raster and other readers */
+                    reader->obj->referenceLuaObject(reader->obj->parms);
+                }
+            }
             entry->enabled = false; /* raster samples/subsetted */
 
             reader->sync.lock();

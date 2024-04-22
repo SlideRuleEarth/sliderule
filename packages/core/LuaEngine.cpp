@@ -277,6 +277,7 @@ const char* LuaEngine::mode2str(mode_t _mode)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setAttrBool (lua_State* l, const char* name, bool val)
 {
+    if(l == NULL) return;
     lua_pushstring(l, name);
     lua_pushboolean(l, val);
     lua_settable(l, -3);
@@ -287,6 +288,7 @@ void LuaEngine::setAttrBool (lua_State* l, const char* name, bool val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setAttrInt (lua_State* l, const char* name, long val)
 {
+    if(l == NULL) return;
     lua_pushstring(l, name);
     lua_pushinteger(l, val);
     lua_settable(l, -3);
@@ -297,6 +299,7 @@ void LuaEngine::setAttrInt (lua_State* l, const char* name, long val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setAttrNum (lua_State* l, const char* name, double val)
 {
+    if(l == NULL) return;
     lua_pushstring(l, name);
     lua_pushnumber(l, val);
     lua_settable(l, -3);
@@ -307,6 +310,7 @@ void LuaEngine::setAttrNum (lua_State* l, const char* name, double val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::setAttrStr (lua_State* l, const char* name, const char* val, int size)
 {
+    if(l == NULL) return;
     lua_pushstring(l, name);
     if(size > 0)    lua_pushlstring(l, val, size);
     else            lua_pushstring(l, val);
@@ -318,6 +322,7 @@ void LuaEngine::setAttrStr (lua_State* l, const char* name, const char* val, int
  *----------------------------------------------------------------------------*/
 void LuaEngine::setAttrFunc (lua_State* l, const char* name, lua_CFunction val)
 {
+    if(l == NULL) return;
     lua_pushstring(l, name);
     lua_pushcfunction(l, val);
     lua_settable(l, -3);
@@ -330,6 +335,7 @@ void LuaEngine::setAttrFunc (lua_State* l, const char* name, lua_CFunction val)
  *----------------------------------------------------------------------------*/
 void LuaEngine::showStack (lua_State* l, const char* prefix)
 {
+    if(l == NULL) return;
     int top = lua_gettop(l);
 
     if( prefix ) print2term("%s, stack depth is: %d\n", prefix, top );
@@ -377,6 +383,7 @@ const char* LuaEngine::sanitize (const char* filename)
  *----------------------------------------------------------------------------*/
 void LuaEngine::abortHook (lua_State *L, lua_Debug *ar)
 {
+    if(L == NULL) return;
     (void)ar;
     lua_pushstring(L, LUA_SELFKEY);
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */

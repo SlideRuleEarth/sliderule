@@ -44,33 +44,39 @@
  * RASTER SUBSET CLASS
  ******************************************************************************/
 
+class RasterObject;
 class RasterSubset
 {
     public:
 
-        uint8_t*                    data;
-        uint64_t                    size;
-        uint64_t                    cols;
-        uint64_t                    rows;
-        RecordObject::fieldType_t   datatype;
-        double                      map_ulx;
-        double                      map_uly;
-        double                      cellsize;
-        GeoParms::bbox_t            bbox;
-        std::string                 wkt;
-        double                      time;     // gps seconds
-        uint64_t                    fileId;
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
         static const uint64_t       oneGB    = 0x40000000;
         static const uint64_t       MAX_SIZE = oneGB * 6;
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        RasterSubset(uint64_t _size, const std::string& vsiFile);
+        ~RasterSubset(void);
+
+        const uint8_t* getData    (void) const {return data;}
+        uint64_t       getSize    (void) const {return size;}
+        uint64_t       getPoolSize(void) const {return poolsize;}
+        void           releaseData(void);
+
+        RasterObject*               robj;
+        const std::string           rasterName;
+
+    private:
+        uint8_t*                    data;
+        uint64_t                    size;
+
         static uint64_t             poolsize;
         static Mutex                mutex;
-
-        RasterSubset(uint32_t _cols, uint32_t _rows, RecordObject::fieldType_t _datatype,
-                     double ulx, double uly, double _cellsize, GeoParms::bbox_t& _bbox, const char* _wkt,
-                     double _time, double _fileId);
-        ~RasterSubset(void);
 };
 
 #endif /* __raster_subset__ */

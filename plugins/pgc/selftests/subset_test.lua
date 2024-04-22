@@ -22,7 +22,7 @@ local ury =  -69.95
 local demTypes = {"rema-mosaic", "rema-strips"}
 for i = 1, #demTypes do
     local demType = demTypes[i];
-    local dem = geo.raster(geo.parms({asset=demType, algorithm="Cubic"}))  -- Resample the subset data with cubic algorithm
+    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=50, zonal_stats=true}))
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s AOI subset\n--------------------------------", demType))
 
@@ -47,36 +47,18 @@ for i = 1, #demTypes do
 
     if tbl ~= nil then
         for j, v in ipairs(tbl) do
-            local cols = v["cols"]
-            local rows = v["rows"]
-            local size = v["size"]
-            local datatype = v["datatype"]
-            local ulx = v["ulx"]
-            local uly = v["uly"]
-            local cellsize = v["cellsize"]
-            local wkt = v["wkt"]
+            local size     = v["size"]
+            local poolsize = v["poolsize"]
+            local size_mbytes = size / (1024*1024)
+            local poolsize_mbytes = poolsize / (1024*1024)
 
-            local mbytes = size / (1024*1024)
-
-            print(string.format("AOI size: %.1f MB, cols: %d, rows: %d, datatype: %s, ulx: %.9f, uly: %.9f, cellsize: %.1f",
-                    mbytes, cols, rows, msg.datatype(datatype), ulx, uly, cellsize))
+            print(string.format("AOI size: %d bytes (%.1f MB), poolsize: %.1f MB", size, size_mbytes, poolsize_mbytes))
 
             -- NOTE: mosaic and strips read the same 'area' the difference is the actual data
             --       this test does not have any subset area clipping, only one strip out of 12 was out of bounds
-            runner.check(cols == 1915)
-            runner.check(rows == 4343)
-            runner.check(math.abs(ulx -  1100044.752507064) < sigma)
-            runner.check(math.abs(uly - -1896646.081268538) < sigma)
+            runner.check(size ==  33267380)
 
-            runner.check(msg.datatype(datatype) == "FLOAT")
-            runner.check(cellsize == 2.0)
-            runner.check(wkt ~= "")
-
-            if demType == "rema-mosaic" then
-                -- TODO: test data
-            else
-                -- TODO: test data
-            end
+            -- TODO: get the raster object and sample it
         end
     end
 end
@@ -85,4 +67,3 @@ end
 -- Report Results --
 
 runner.report()
-

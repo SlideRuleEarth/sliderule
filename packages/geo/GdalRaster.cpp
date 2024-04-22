@@ -177,7 +177,7 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
         }
         else
         {
-            ssError |= SS_POI_OUT_OF_BOUNDS_ERROR;
+            ssError |= SS_OUT_OF_BOUNDS_ERROR;
         }
     }
     catch (const RunTimeException &e)
@@ -267,7 +267,7 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         if(aoi_miny > raster_maxy)
             throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_miny  > raster_maxy");
 
-        /* Adjust AOI to the raster */
+        /* AOI intersects with raster, adjust AOI if needed */
         if(aoi_minx < raster_minx)
         {
             if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "Clipped aoi_minx %.04lf to raster_minx %.04lf", aoi_minx, raster_minx);
@@ -309,18 +309,18 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         map2pixel(raster_minx, raster_maxy, raster_ulx, raster_uly);
         if(raster_ulx != 0 || raster_uly != 0)
         {
-            ssError |= SS_AOI_OUT_OF_BOUNDS_ERROR;
+            ssError |= SS_OUT_OF_BOUNDS_ERROR;
             throw RunTimeException(CRITICAL, RTE_ERROR, "Raster's upleft pixel (%d, %d) is not (0, 0)", raster_ulx, raster_uly);
         }
 
         /* Sanity check for AOI top left corner pixel, must be < raster */
         if(ulx < raster_ulx || uly < raster_uly)
         {
-            ssError |= SS_AOI_OUT_OF_BOUNDS_ERROR;
+            ssError |= SS_OUT_OF_BOUNDS_ERROR;
             throw RunTimeException(CRITICAL, RTE_ERROR, "AOI upleft pixel (%d, %d) < raster upleft pixel (%d, %d)", ulx, uly, raster_ulx, raster_uly);
         }
 
-        subset = getRasterSubset(ulx, uly, aoi_minx, aoi_maxy, _xsize, _ysize);
+        subset = getSubset(ulx, uly, _xsize, _ysize);
     }
     catch (const RunTimeException &e)
     {
@@ -336,14 +336,14 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
 
 
 /*----------------------------------------------------------------------------
- * subsetAOI
+ * getPixels
  *----------------------------------------------------------------------------*/
-RasterSubset* GdalRaster::subsetAOI(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
+uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
 {
-    RasterSubset* subset = NULL;
-
-    /* Clear sample/subset error status */
+    /* Clear error status */
     ssError = SS_NO_ERRORS;
+
+    uint8_t* data = NULL;
 
     try
     {
@@ -374,18 +374,49 @@ RasterSubset* GdalRaster::subsetAOI(uint32_t ulx, uint32_t uly, uint32_t _xsize,
         if(uly + _ysize > ysize)
             throw RunTimeException(CRITICAL, RTE_ERROR, "rows out of bounds");
 
-        double map_ulx, map_uly;
-        pixel2map(ulx, uly, map_ulx, map_uly);
-        // mlog(DEBUG, "upleft pixel:   (%13d, %13d) (%.6lf, %.6lf)", ulx, uly, map_ulx, map_uly);
+        GDALDataType dtype = band->GetRasterDataType();
 
-        subset = getRasterSubset(ulx, uly, map_ulx, map_uly, _xsize, _ysize);
+        /* Make all uint64_t, with uint32_t got an overflow */
+        uint64_t typeSize  = GDALGetDataTypeSizeBytes(dtype);
+        uint64_t longXsize = static_cast<uint64_t>(_xsize);
+        uint64_t longYsize = static_cast<uint64_t>(_ysize);
+        uint64_t size      = longXsize * longYsize * typeSize;
+        data = new uint8_t[size];
+        CHECKPTR(data);
+
+        int cnt = 1;
+        OGRErr err = CE_None;
+        do
+        {
+            GDALRasterIOExtraArg* argsPtr = NULL;
+            GDALRasterIOExtraArg  args;
+
+            if(parms->sampling_algo != GRIORA_NearestNeighbour)
+            {
+                INIT_RASTERIO_EXTRA_ARG(args);
+                args.eResampleAlg = parms->sampling_algo;
+                argsPtr = &args;
+            }
+            err = band->RasterIO(GF_Read, ulx, uly, _xsize, _ysize, data, _xsize, _ysize, dtype, 0, 0, argsPtr);
+        } while(err != CE_None && cnt--);
+
+        if(err != CE_None)
+        {
+            ssError |= SS_READ_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+        }
+
+        mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %d, rows2read: %d, datatype %s\n",
+             size, (float)size/(1024*1024), ulx, uly, _xsize, _ysize, GDALGetDataTypeName(dtype));
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error subsetting: %s", e.what());
+        delete [] data;
+        data = NULL;
     }
 
-    return subset;
+    return data;
 }
 
 
@@ -599,7 +630,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
     }
     catch (const RunTimeException &e)
     {
-        ssError |= SS_POI_FAILED_TO_READ_ERROR;
+        ssError |= SS_READ_ERROR;
         mlog(e.level(), "Error reading from raster: %s", e.what());
         throw;
     }
@@ -657,7 +688,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
         bool validWindow = containsWindow(_x, _y, xsize, ysize, windowSize);
         if(validWindow)
         {
-            readRasterWithRetry(_x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
+            readWithRetry(_x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
             if(nodataCheck(sample) && dataIsElevation)
             {
                 sample->value += sample->verticalShift;
@@ -701,7 +732,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
         bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);
         if(validWindow)
         {
-            readRasterWithRetry(newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            readWithRetry(newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
 
             /* One of the windows (raster or index data set) was valid. Compute zonal stats */
             double min = std::numeric_limits<double>::max();
@@ -904,9 +935,9 @@ bool GdalRaster::containsWindow(int x, int y, int maxx, int maxy, int windowSize
 }
 
 /*----------------------------------------------------------------------------
- * RasterIoWithRetry
+ * readWithRetry
  *----------------------------------------------------------------------------*/
-void GdalRaster::readRasterWithRetry(int x, int y, int _xsize, int _ysize, void *data, int dataXsize, int dataYsize, GDALRasterIOExtraArg *args)
+void GdalRaster::readWithRetry(int x, int y, int _xsize, int _ysize, void *data, int dataXsize, int dataYsize, GDALRasterIOExtraArg *args)
 {
     /*
      * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
@@ -925,75 +956,116 @@ void GdalRaster::readRasterWithRetry(int x, int y, int _xsize, int _ysize, void 
 
 
 /*----------------------------------------------------------------------------
- * getRasterSubset
+ * getSubset
  *----------------------------------------------------------------------------*/
-RasterSubset* GdalRaster::getRasterSubset(uint32_t ulx, uint32_t uly, double map_ulx, double map_uly, uint32_t _xsize, uint32_t _ysize)
+RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
 {
     RasterSubset* subset = NULL;
+    char** options = NULL;
+    GDALDataset* subDset = NULL;
 
     try
     {
+        std::string vsiName = "/vsimem/" + GdalRaster::getUUID() + fileName;
+
+        /* If parentPath is a vrt rename it to .tif */
+        if (vsiName.substr(vsiName.length() - 4) == ".vrt")
+            vsiName = vsiName.substr(0, vsiName.length() - 4) + "_vrt.tif";
+
         GDALDataType dtype = band->GetRasterDataType();
-        RecordObject::fieldType_t datatype = RecordObject::INVALID_FIELD;
-        switch (dtype) {
-            case GDT_Byte:      datatype = RecordObject::UINT8;     break;
-            case GDT_Int8:      datatype = RecordObject::UINT8;     break;
-            case GDT_UInt16:    datatype = RecordObject::UINT16;    break;
-            case GDT_Int16:     datatype = RecordObject::INT16;     break;
-            case GDT_UInt32:    datatype = RecordObject::UINT32;    break;
-            case GDT_Int32:     datatype = RecordObject::INT32;     break;
-            case GDT_UInt64:    datatype = RecordObject::UINT64;    break;
-            case GDT_Int64:     datatype = RecordObject::INT64;     break;
-            case GDT_Float32:   datatype = RecordObject::FLOAT;     break;
-            case GDT_Float64:   datatype = RecordObject::DOUBLE;    break;
-            default:            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported GDT Datatype: %d", dtype);
-        }
 
-        char* wkt;
-        targetCRS.exportToWkt(&wkt);
+        /* Calculate size of subset */
+        uint64_t cols = _xsize;
+        uint64_t rows = _ysize;
+        uint64_t dataSize = GDALGetDataTypeSizeBytes(dtype);
+        uint64_t size = cols * rows * dataSize;
 
-        subset = new RasterSubset(_xsize, _ysize, datatype, map_ulx, map_uly, cellSize, bbox, wkt, gpsTime, fileId);
-        CPLFree(wkt);
-
-        if(subset->data)
+        subset = new RasterSubset(size, vsiName);
+        const uint8_t* data = subset->getData();
+        if(data)
         {
+            void* _data = const_cast<void*>(reinterpret_cast<const void*>(data));
+
             int cnt = 1;
             OGRErr err = CE_None;
             do
             {
-                GDALRasterIOExtraArg* argsPtr = NULL;
-                GDALRasterIOExtraArg  args;
-
-                if(parms->sampling_algo != GRIORA_NearestNeighbour)
-                {
-                    INIT_RASTERIO_EXTRA_ARG(args);
-                    args.eResampleAlg = parms->sampling_algo;
-                    argsPtr = &args;
-                }
-                err = band->RasterIO(GF_Read, ulx, uly, subset->cols, subset->rows, subset->data, subset->cols, subset->rows, dtype, 0, 0, argsPtr);
+                err = band->RasterIO(GF_Read, ulx, uly, _xsize, _ysize, _data, _xsize, _ysize, dtype, 0, 0, NULL);
             }
             while(err != CE_None && cnt--);
 
             if(err != CE_None)
             {
-                ssError |= SS_AOI_FAILED_TO_READ_ERROR;
+                ssError |= SS_READ_ERROR;
                 throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
             }
 
-            // mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, map_ulx: %.6lf, map_uly: %.6lf, cols2read: %ld, rows2read: %ld, datatype %s\n",
-            //      subset->size, (float)subset->size/(1024*1024), ulx, uly, subset->map_ulx, subset->map_uly, subset->cols, subset->rows, GDALGetDataTypeName(dtype));
+            mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %u, rows2read: %u, datatype %s",
+                 subset->getSize(), (float)subset->getSize()/(1024*1024), ulx, uly, _xsize, _ysize, GDALGetDataTypeName(dtype));
+
+            /* Create subraster */
+            options = CSLSetNameValue(options, "COMPRESS", "DEFLATE");
+
+            GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
+            CHECKPTR(driver);
+            subDset = (GDALDataset*)driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options);
+            CHECKPTR(subDset);
+
+            /* Copy data to subraster */
+            GDALRasterBand* _band = subDset->GetRasterBand(1);
+            err = _band->RasterIO(GF_Write, 0, 0, _xsize, _ysize, _data, _xsize, _ysize, dtype, 0, 0);
+            if(err != CE_None)
+            {
+                ssError |= SS_WRITE_ERROR;
+                throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+            }
+
+            mlog(DEBUG, "Created new subraster %s", subset->rasterName.c_str());
+
+            /* Release data after copying into subraster */
+            subset->releaseData();
+
+            /* Set geotransform */
+            double newGeoTransform[6];
+            newGeoTransform[0] = geoTransform[0] + ulx * geoTransform[1];
+            newGeoTransform[1] = geoTransform[1];
+            newGeoTransform[2] = geoTransform[2];
+            newGeoTransform[3] = geoTransform[3] + uly * geoTransform[5];
+            newGeoTransform[4] = geoTransform[4];
+            newGeoTransform[5] = geoTransform[5];
+            err = subDset->SetGeoTransform(newGeoTransform);
+            if(err != CE_None)
+            {
+                ssError |= SS_SUBRASTER_ERROR;
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set geotransform: %d", err);
+            }
+
+            /* Set projection */
+            const char* projref = dset->GetProjectionRef();
+            CHECKPTR(projref);
+            err = subDset->SetProjection(projref);
+            if(err != CE_None)
+            {
+                ssError |= SS_SUBRASTER_ERROR;
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set projection: %d", err);
+            }
+
+            /* Cleanup */
+            GDALClose(subDset);
+            CSLDestroy(options);
         }
         else
         {
             ssError |= SS_MEMPOOL_ERROR;
-            uint64_t size = _xsize * _ysize * GDALGetDataTypeSizeBytes(dtype);
             mlog(ERROR, "RasterSubset requested memory: %lu MB, available: %lu MB, max: %lu MB", size / (1024*1024),
-                RasterSubset::poolsize / (1024*1024),
+                subset->getPoolSize()  / (1024*1024),
                 RasterSubset::MAX_SIZE / (1024*1024));
         }
     }
     catch (const RunTimeException &e)
     {
+        GDALClose(subDset);
+        CSLDestroy(options);
         delete subset;
         subset = NULL;
         mlog(e.level(), "Error subsetting: %s", e.what());

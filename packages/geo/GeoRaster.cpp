@@ -77,9 +77,24 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
 
     try
     {
-        /* Get samples, if none found, return */
+        /* Get subset rasters, if none found, return */
         RasterSubset* subset = raster.subsetAOI(geo->toPolygon());
-        if(subset) slist.push_back(subset);
+        if(subset)
+        {
+            /* Create new GeoRaster object for subsetted raster
+             * Use NULL for LuaState, using parent's causes memory corruption
+             */
+            subset->robj = new GeoRaster(NULL,
+                                         parms,
+                                         subset->rasterName,
+                                         raster.getGpsTime(),
+                                         raster.isElevation(),
+                                         raster.getOverrideCRS());
+
+            /* GeoParms are shared with subsseted raster */
+            referenceLuaObject(parms);
+            slist.push_back(subset);
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -98,44 +113,25 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, std::vector<RasterSubset*>& slist, void* param)
+uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
 {
     std::ignore = param;
+    uint8_t* data = NULL;
 
     samplingMutex.lock();
 
     /* Enable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
 
-    try
-    {
-        RasterSubset* subset = raster.subsetAOI(ulx, uly, xsize, ysize);
-        if(subset) slist.push_back(subset);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error subsetting raster: %s", e.what());
-    }
+    data = raster.getPixels(ulx, uly, xsize, ysize);
 
     /* Disable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");
 
     samplingMutex.unlock();
 
-    return raster.getSSerror();
+    return data;
 }
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoRaster::~GeoRaster(void)
-{
-}
-
-
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
@@ -153,6 +149,17 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileNam
     GdalRaster::initAwsAccess(_parms);
 }
 
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoRaster::~GeoRaster(void)
+{
+}
+
+
+/******************************************************************************
+ * PROTECTED METHODS
+ ******************************************************************************/
 
 /******************************************************************************
  * PRIVATE METHODS
