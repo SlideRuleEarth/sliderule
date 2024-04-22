@@ -89,7 +89,7 @@ class ArrowSampler: public LuaObject
             double        gps;
         } point_info_t;
 
-        typedef std::vector<RasterSample*> sample_list_t;
+        typedef List<RasterSample*> sample_list_t;
         typedef struct Sampler
         {
             const char*                  rkey;

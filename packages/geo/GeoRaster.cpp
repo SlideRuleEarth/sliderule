@@ -42,7 +42,7 @@
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -50,8 +50,9 @@ uint32_t GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<Raster
     samplingMutex.lock();
     try
     {
-        RasterSample* sample = raster.samplePOI(geo->toPoint());
-        if(sample) slist.push_back(sample);
+        OGRPoint ogr_point(point.x, point.y, point.z);
+        RasterSample* sample = raster.samplePOI(&ogr_point);
+        if(sample) slist.add(sample);
     }
     catch (const RunTimeException &e)
     {
@@ -65,7 +66,7 @@ uint32_t GeoRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<Raster
 /*----------------------------------------------------------------------------
  * getSubsets
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
 {
     std::ignore = gps;
     std::ignore = param;
@@ -77,8 +78,10 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
 
     try
     {
+        OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
+
         /* Get subset rasters, if none found, return */
-        RasterSubset* subset = raster.subsetAOI(geo->toPolygon());
+        RasterSubset* subset = raster.subsetAOI(&poly);
         if(subset)
         {
             /* Create new GeoRaster object for subsetted raster
@@ -93,7 +96,7 @@ uint32_t GeoRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<Raster
 
             /* GeoParms are shared with subsseted raster */
             referenceLuaObject(parms);
-            slist.push_back(subset);
+            slist.add(subset);
         }
     }
     catch (const RunTimeException &e)

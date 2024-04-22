@@ -84,7 +84,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
         bool    findRasters      (const OGRGeometry* geo) override;
-        void    getGroupSamples  (const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags) final;
+        void    getGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final;
 
 
     private:

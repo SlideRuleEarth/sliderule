@@ -79,8 +79,8 @@ class RasterObject: public LuaObject
         static void      deinit          (void);
         static int       luaCreate       (lua_State* L);
         static bool      registerRaster  (const char* _name, factory_f create);
-        virtual uint32_t getSamples      (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) = 0;
-        virtual uint32_t getSubsets      (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) = 0;
+        virtual uint32_t getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
+        virtual uint32_t getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t* getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
         virtual         ~RasterObject    (void);
 
@@ -128,7 +128,7 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        int slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State* L);
+        int slist2table(List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

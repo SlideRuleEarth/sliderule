@@ -269,7 +269,7 @@ Atl03BathyReader::~Atl03BathyReader (void)
     parms->releaseLuaObject();
 
     delete [] resource;
-    
+
     asset->releaseLuaObject();
 
     if(ndwiRaster) ndwiRaster->releaseLuaObject();
@@ -595,7 +595,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
-    {        
+    {
         /* Subset to Region of Interest */
         Region region(info);
 
@@ -606,7 +606,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         /* Initialize Extent State */
         List<photon_t> extent_photons; // list of individual photons in extent
         uint32_t extent_counter = 0;
-        int32_t current_photon = 0; // index into the photon rate variables 
+        int32_t current_photon = 0; // index into the photon rate variables
         int32_t current_segment = 0; // index into the segment rate variables
         int32_t previous_segment = -1; // previous index used to determine when segment has changed (and segment level variables need to be changed)
         int32_t photon_in_segment = 0; // the photon number in the current segment
@@ -744,9 +744,9 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         {
                             low_rate_index++;
                         }
-                        wind_v = sqrt(pow(atl09.met_u10m[low_rate_index], 2.0) + pow(atl09.met_v10m[low_rate_index], 2.0));                    
+                        wind_v = sqrt(pow(atl09.met_u10m[low_rate_index], 2.0) + pow(atl09.met_v10m[low_rate_index], 2.0));
                     }
-                    
+
                     /* Calculate Pointing Angle */
                     pointing_angle = 90.0 - ((180.0 / M_PI) * atl03.ref_elev[current_segment]);
 
@@ -755,15 +755,15 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     if(builder->ndwiRaster && parms->generate_ndwi)
                     {
                         double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
-                        MathLib::point_3d_t geo = {
+                        MathLib::point_3d_t point = {
                             .x = region.segment_lon[current_segment],
                             .y = region.segment_lat[current_segment],
                             .z = 0.0 // since we are not sampling elevation data, this should be fine at zero
                         };
                         List<RasterSample*> slist;
-                        uint32_t err = getSamples(builder->ndwiRaster, geo, gps, slist);
+                        uint32_t err = builder->ndwiRaster->getSamples(point, gps, slist);
                         if(slist.length() > 0) ndwi = static_cast<float>(slist[0]->value);
-                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, geo.y, geo.x, err);
+                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, point.y, point.x, err);
                     }
                 }
 
@@ -797,7 +797,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             current_photon++;
             photon_in_extent++;
 
-            if((photon_in_extent >= parms->ph_in_extent) || 
+            if((photon_in_extent >= parms->ph_in_extent) ||
                (current_photon >= atl03.dist_ph_along.size))
             {
                 bool extent_valid = true;
@@ -873,9 +873,9 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                                 throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror(errno));
                             }
 
-/* 
+/*
  * Build JSON File
- *  block indentation to preserve tabs in destination file 
+ *  block indentation to preserve tabs in destination file
  */
 FString json_contents(R"json({
     "track": "%d",
@@ -887,11 +887,11 @@ FString json_contents(R"json({
     "cycle": %d,
     "utm_zone": %d
 })json",
-    extent->track, 
-    extent->pair, 
-    extent->track, extent->pair == 0 ? 'l' : 'r', 
-    extent->spacecraft_orientation == Icesat2Parms::SC_BACKWARD ? "backward" : "forward", 
-    extent->region, 
+    extent->track,
+    extent->pair,
+    extent->track, extent->pair == 0 ? 'l' : 'r',
+    extent->spacecraft_orientation == Icesat2Parms::SC_BACKWARD ? "backward" : "forward",
+    extent->region,
     extent->reference_ground_track,
     extent->cycle,
     extent->utm_zone);
@@ -1105,19 +1105,4 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
     }
-}
-
-/*----------------------------------------------------------------------------
- * getSamples - abstracted
- *----------------------------------------------------------------------------*/
-uint32_t Atl03BathyReader::getSamples (RasterObject* robj, MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param)
-{
-    std::vector<RasterSample*> vector_list;
-    OGRPoint poi(geo.x, geo.y, geo.z);
-    uint32_t err = robj->getSamples(&poi, gps, vector_list, param);
-    for(unsigned i = 0; i < vector_list.size(); i++)
-    {
-        slist.add(vector_list.at(i));
-    }
-    return err;
 }

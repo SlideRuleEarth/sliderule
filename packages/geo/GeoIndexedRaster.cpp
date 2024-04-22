@@ -104,7 +104,7 @@ void GeoIndexedRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
 {
     std::ignore = param;
 
@@ -113,8 +113,10 @@ uint32_t GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector
     {
         ssError = SS_NO_ERRORS;
 
+        OGRPoint ogr_point(point.x, point.y, point.z);
+
         /* Sample Rasters */
-        if(sample(geo, gps))
+        if(sample(&ogr_point, gps))
         {
             /* Populate Return Vector of Samples (slist) */
             GroupOrdering::Iterator iter(groupList);
@@ -161,7 +163,7 @@ uint32_t GeoIndexedRaster::getSamples(OGRGeometry* geo, int64_t gps, std::vector
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
 {
     std::ignore = param;
 
@@ -170,8 +172,10 @@ uint32_t GeoIndexedRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector
     {
         ssError = SS_NO_ERRORS;
 
+        OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
+
         /* Sample Subsets */
-        if(sample(geo, gps))
+        if(sample(&poly, gps))
         {
             /* Populate Return Vector of Subsets (slist) */
             GroupOrdering::Iterator iter(groupList);
@@ -230,7 +234,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags)
+void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags)
 {
     for(const auto& rinfo: rgroup->infovect)
     {
@@ -244,7 +248,7 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vecto
                 if(sample)
                 {
                     sample->flags = flags;
-                    slist.push_back(sample);
+                    slist.add(sample);
                     item->sample = NULL;
                 }
 
@@ -259,7 +263,7 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, std::vecto
 /*----------------------------------------------------------------------------
  * getGroupSubsets
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vector<RasterSubset*>& slist)
+void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, List<RasterSubset*>& slist)
 {
     for(const auto& rinfo: rgroup->infovect)
     {
@@ -270,7 +274,7 @@ void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, std::vecto
             RasterSubset* subset = item->subset;
             if(subset)
             {
-                slist.push_back(subset);
+                slist.add(subset);
                 item->subset = NULL;
             }
 

@@ -100,8 +100,8 @@ class GeoIndexedRaster: public RasterObject
 
         static void     init              (void);
         static void     deinit            (void);
-        uint32_t        getSamples        (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param=NULL) final;
-        uint32_t        getSubsets        (OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param=NULL) final;
+        uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
+        uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
         virtual        ~GeoIndexedRaster  (void);
 
     protected:
@@ -111,8 +111,8 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
-        virtual void    getGroupSamples       (const rasters_group_t* rgroup, std::vector<RasterSample*>& slist, uint32_t flags);
-        virtual void    getGroupSubsets       (const rasters_group_t* rgroup, std::vector<RasterSubset*>& slist);
+        virtual void    getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
+        virtual void    getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         static double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         virtual bool    openGeoIndex          (const OGRGeometry* geo);

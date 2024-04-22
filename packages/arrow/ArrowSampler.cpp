@@ -158,10 +158,7 @@ void ArrowSampler::Sampler::clearSamples(void)
 {
     for(ArrowSampler::sample_list_t* slist : samples)
     {
-        for(RasterSample* sample : *slist)
-        {
-            delete sample;
-        }
+        slist->clear();
         delete slist;
     }
     samples.clear();
@@ -362,12 +359,12 @@ void* ArrowSampler::samplerThread(void* parm)
 
     for(point_info_t* pinfo : sampler->obj->points)
     {
-        OGRPoint poi(pinfo->x, pinfo->y, 0.0);
+        MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
         double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
-        uint32_t err = robj->getSamples(&poi, gps, *slist, NULL);
+        uint32_t err = robj->getSamples(point, gps, *slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
@@ -377,13 +374,8 @@ void* ArrowSampler::samplerThread(void* parm)
 
         if(!listvalid)
         {
-            /* Clear sample list */
-            for( RasterSample* sample : *slist)
-                delete sample;
-
             /* Clear the list but don't delete it, empty slist indicates no samples for this point */
             slist->clear();
-            slist->shrink_to_fit();
         }
 
         /* Add sample list to sampler */

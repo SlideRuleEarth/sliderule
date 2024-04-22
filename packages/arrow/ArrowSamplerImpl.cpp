@@ -461,8 +461,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
          * If slist is empty the column will contain an empty list
          * to keep the number of rows consistent with the other columns
          */
-        for(RasterSample* sample : *slist)
+        for(int i = 0; i < slist->length(); i++)
         {
+            const RasterSample* sample = slist->get(i);
+
             /* Append the value to the value list */
             PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
             PARQUET_THROW_NOT_OK(time_builder->Append(sample->time));
@@ -603,7 +605,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler
     {
         RasterSample* sample;
 
-        if(slist->size() > 0)
+        if(slist->length() > 0)
         {
             sample = getFirstValidSample(slist);
         }
@@ -725,15 +727,15 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler
 *----------------------------------------------------------------------------*/
 RasterSample* ArrowSamplerImpl::getFirstValidSample(ArrowSampler::sample_list_t* slist)
 {
-    for(RasterSample* sample : *slist)
+    for(int i = 0; i < slist->length(); i++)
     {
-        /* GeoRasterr code converts band nodata values to std::nan */
+        RasterSample* sample = slist->get(i);
         if(!std::isnan(sample->value))
             return sample;
     }
 
     /* Return the first sample if no valid samples are found */
-    return slist->front();
+    return slist->get(0);
 }
 
 /*----------------------------------------------------------------------------

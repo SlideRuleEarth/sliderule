@@ -117,33 +117,32 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
         const double ury = -69.95;
 
         /* Get subsets */
-        std::vector<RasterSubset*> subsetsList;
-        OGRPolygon poly = GdalRaster::makeRectangle(llx, lly, urx, ury);
-        lua_obj->raster->getSubsets(&poly, 0, subsetsList, NULL);
+        List<RasterSubset*> subsetsList;
+        MathLib::extent_t extent = {{llx, lly}, {urx, ury}};
+        lua_obj->raster->getSubsets(extent, 0, subsetsList, NULL);
 
         std::vector<SampleInfo_t*>  rasterSamples;
         std::vector<SampleInfo_t*>  subRasterSamples;
 
         /* Get samples from parent RasterObject */
-        std::vector<RasterSample*> samplesList;
+        List<RasterSample*> samplesList;
 
         const double lon = (llx + urx) / 2.0;
         const double lat = (lly + ury) / 2.0;
         const double height = 0.0;
         print2term("Point: %.2lf, %.2lf, %.2lf\n", lon, lat, height);
 
-        OGRPoint poi(lon, lat, height);
-        errors += lua_obj->raster->getSamples(&poi, 0, samplesList, NULL);
-        for(uint32_t i = 0; i < samplesList.size(); i++)
+        MathLib::point_3d_t point = {lon, lat, height};
+        errors += lua_obj->raster->getSamples(point, 0, samplesList, NULL);
+        for(int i = 0; i < samplesList.length(); i++)
         {
             const RasterSample* sample = samplesList[i];
             SampleInfo_t* si = new SampleInfo_t(sample, getRasterName(lua_obj->raster, sample->fileId));
             rasterSamples.push_back(si);
-            delete sample;
         }
 
         /* Get samples from subsets */
-        for(uint32_t i = 0; i < subsetsList.size(); i++)
+        for(int i = 0; i < subsetsList.length(); i++)
         {
             const RasterSubset* subset = subsetsList[i];
             RasterObject* srobj = dynamic_cast<RasterObject*>(subset->robj);
@@ -151,17 +150,15 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
             /* Get samples */
             samplesList.clear();
 
-            OGRPoint _poi(lon, lat, height);
-            errors += srobj->getSamples(&_poi, 0, samplesList, NULL);
+            MathLib::point_3d_t _point = {lon, lat, height};
+            errors += srobj->getSamples(_point, 0, samplesList, NULL);
 
-            for(uint32_t j = 0; j < samplesList.size(); j++)
+            for(int j = 0; j < samplesList.length(); j++)
             {
                 const RasterSample* sample = samplesList[j];
                 SampleInfo_t* si = new SampleInfo_t(sample, getRasterName(srobj, sample->fileId));
                 subRasterSamples.push_back(si);
-                delete sample;
             }
-            delete subset;
         }
 
         /*

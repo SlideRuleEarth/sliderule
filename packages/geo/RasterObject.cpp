@@ -196,7 +196,7 @@ int RasterObject::luaSamples(lua_State *L)
     int num_ret = 1;
 
     RasterObject *lua_obj = NULL;
-    std::vector<RasterSample*> slist;
+    List<RasterSample*> slist;
 
     try
     {
@@ -218,8 +218,8 @@ int RasterObject::luaSamples(lua_State *L)
 
         /* Get samples */
         bool listvalid = true;
-        OGRPoint poi(lon, lat, height);
-        err = lua_obj->getSamples(&poi, gps, slist, NULL);
+        MathLib::point_3d_t point = {lon, lat, height};
+        err = lua_obj->getSamples(point, gps, slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
@@ -228,13 +228,13 @@ int RasterObject::luaSamples(lua_State *L)
         }
 
         /* Create return table */
-        lua_createtable(L, slist.size(), 0);
+        lua_createtable(L, slist.length(), 0);
         num_ret++;
 
         /* Populate samples */
         if(listvalid && !slist.empty())
         {
-            for(uint32_t i = 0; i < slist.size(); i++)
+            for(int i = 0; i < slist.length(); i++)
             {
                 const RasterSample* sample = slist[i];
                 const char* fileName = "";
@@ -281,10 +281,6 @@ int RasterObject::luaSamples(lua_State *L)
         mlog(e.level(), "Failed to read samples: %s", e.what());
     }
 
-    /* Free samples */
-    for (const RasterSample* sample : slist)
-        delete sample;
-
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);
     return num_ret;
@@ -299,7 +295,7 @@ int RasterObject::luaSubsets(lua_State *L)
     int num_ret = 1;
 
     RasterObject *lua_obj = NULL;
-    std::vector<RasterSubset*> slist;
+    List<RasterSubset*> slist;
 
     try
     {
@@ -321,18 +317,14 @@ int RasterObject::luaSubsets(lua_State *L)
         }
 
         /* Get subset */
-        OGRPolygon poly = GdalRaster::makeRectangle(lon_min, lat_min, lon_max, lat_max);
-        err = lua_obj->getSubsets(&poly, gps, slist, NULL);
+        const MathLib::extent_t extent = {{lon_min, lat_min}, {lon_max, lat_max}};
+        err = lua_obj->getSubsets(extent, gps, slist, NULL);
         num_ret += lua_obj->slist2table(slist, err, L);
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Failed to subset raster: %s", e.what());
     }
-
-    /* Free subsets */
-    for (const RasterSubset* subset : slist)
-        delete subset;
 
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);
@@ -349,7 +341,7 @@ int RasterObject::luaSubsets(lua_State *L)
 /*----------------------------------------------------------------------------
  * slist2table
  *----------------------------------------------------------------------------*/
-int RasterObject::slist2table(const std::vector<RasterSubset*>& slist, uint32_t errors, lua_State *L)
+int RasterObject::slist2table(List<RasterSubset*>& slist, uint32_t errors, lua_State *L)
 {
     int num_ret = 0;
 
@@ -367,13 +359,13 @@ int RasterObject::slist2table(const std::vector<RasterSubset*>& slist, uint32_t 
     }
 
     /* Create return table */
-    lua_createtable(L, slist.size(), 0);
+    lua_createtable(L, slist.length(), 0);
     num_ret++;
 
     /* Populate subsets */
     if(listvalid && !slist.empty())
     {
-        for(uint32_t i = 0; i < slist.size(); i++)
+        for(int i = 0; i < slist.length(); i++)
         {
             const RasterSubset* subset = slist[i];
 

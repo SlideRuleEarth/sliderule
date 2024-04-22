@@ -188,7 +188,7 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
         if(timeField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get time field <%s> for %s", rec_meta->time_field, rec_type);
     }
 
-    /* Get Height Field 
+    /* Get Height Field
      *  code below lets it be invalid if no height field is present */
     heightField = RecordObject::getDefinedField(rec_type, rec_meta->z_field);
 
@@ -278,10 +278,10 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         }
 
         /* Sample Raster */
-        std::vector<RasterSample*> slist;
-        OGRPoint poi(lon_val, lat_val, height_val);
-        uint32_t err = raster->getSamples(&poi, gps, slist);
-        int num_samples = slist.size();
+        List<RasterSample*> slist;
+        MathLib::point_3d_t point = {lon_val, lat_val, height_val};
+        uint32_t err = raster->getSamples(point, gps, slist);
+        int num_samples = slist.length();
 
         /* Generate Error Messages */
         if(err & SS_THREADS_LIMIT_ERROR)
@@ -307,7 +307,6 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 data->samples[i].file_id    = slist[i]->fileId;
                 data->samples[i].flags      = slist[i]->flags;
                 data->samples[i].stats      = slist[i]->stats;
-                delete slist[i]; // free sample
             }
             if(!stats_rec.post(outQ))
             {

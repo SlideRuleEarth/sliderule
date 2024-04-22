@@ -93,8 +93,8 @@ class Atl03BathyReader: public LuaObject
             double          latitude;
             double          longitude;
             double          x_ph;                   // the easting coordinate in meters of the photon for the given UTM zone
-            double          y_ph;                   // the northing coordinate in meters of the photon for the given UTM zone 
-            double          x_atc;                  // along track distance calculated from segment_dist_x and dist_ph_along 
+            double          y_ph;                   // the northing coordinate in meters of the photon for the given UTM zone
+            double          x_atc;                  // along track distance calculated from segment_dist_x and dist_ph_along
             double          y_atc;                  // dist_ph_across
             double          background_rate;        // PE per second
             float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
@@ -251,11 +251,11 @@ class Atl03BathyReader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03BathyReader           (lua_State* L, 
-                                                        Asset* _asset, const char* _resource, 
-                                                        const char* outq_name, 
-                                                        BathyParms* _parms, 
-                                                        RasterObject* _ndwi_raster, 
+                            Atl03BathyReader           (lua_State* L,
+                                                        Asset* _asset, const char* _resource,
+                                                        const char* outq_name,
+                                                        BathyParms* _parms,
+                                                        RasterObject* _ndwi_raster,
                                                         bool _send_terminator=true);
                             ~Atl03BathyReader          (void);
 
@@ -263,10 +263,6 @@ class Atl03BathyReader: public LuaObject
 
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
-
-        // to be removed once abstracted interface available in RasterObject
-        static uint32_t     getSamples                  (RasterObject* robj, MathLib::point_3d_t& geo, int64_t gps, List<RasterSample*>& slist, void* param=NULL);
-
 };
 
 #endif  /* __atl03_table_builder__ */

@@ -112,26 +112,24 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<RasterSample*>& slist, void* param)
+uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
 {
     (void)param;
     (void)gps;
 
-    OGRPoint* poi = geo->toPoint();
-
     /* Determine Upper Left Coordinates */
-    int left_lon = ((int)floor(poi->getX() / 5.0)) * 5;
-    int upper_lat = ((int)ceil(poi->getY() / 5.0)) * 5;
+    int left_lon = ((int)floor(point.x / 5.0)) * 5;
+    int upper_lat = ((int)ceil(point.y / 5.0)) * 5;
 
     /* Calculate Pixel Location */
-    int x_offset = (int)(((double)poi->getX() - left_lon) / X_SCALE);
-    int y_offset = (int)(((double)poi->getY() - upper_lat) / Y_SCALE);
+    int x_offset = (int)(((double)point.x - left_lon) / X_SCALE);
+    int y_offset = (int)(((double)point.y - upper_lat) / Y_SCALE);
 
     /* Check Pixel Location */
     if( x_offset < 0 || x_offset >= X_MAX ||
         y_offset < 0 || y_offset >= Y_MAX )
     {
-        mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", poi->getX(), poi->getY(), x_offset, y_offset);
+        mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", point.x, point.y, x_offset, y_offset);
         return SS_OUT_OF_BOUNDS_ERROR;
     }
 
@@ -197,7 +195,7 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
         sample->value = value;
 
         /* Return Sample */
-        slist.push_back(sample);
+        slist.add(sample);
     }
     catch(const RunTimeException& e)
     {
@@ -210,9 +208,9 @@ uint32_t MeritRaster::getSamples (OGRGeometry* geo, int64_t gps, std::vector<Ras
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSubsets(OGRGeometry* geo, int64_t gps, std::vector<RasterSubset*>& slist, void* param)
+uint32_t MeritRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
 {
-    std::ignore = geo;
+    std::ignore = extent;
     std::ignore = gps;
     std::ignore = slist;
     std::ignore = param;
