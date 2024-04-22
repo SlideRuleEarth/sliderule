@@ -367,7 +367,7 @@ int RasterObject::slist2table(List<RasterSubset*>& slist, uint32_t errors, lua_S
     {
         for(int i = 0; i < slist.length(); i++)
         {
-            const RasterSubset* subset = slist[i];
+            RasterSubset* subset =  slist[i];
 
             /* Populate Return Results */
             lua_createtable(L, 0, 2);
