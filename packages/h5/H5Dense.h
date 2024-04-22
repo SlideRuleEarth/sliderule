@@ -9,9 +9,9 @@ class H5BTreeV2
         /* key return values for outside */
 
         uint64_t pos_out; 
-        uint8_t  hdr_flags_out; 
-        int      hdr_dlvl_out; 
         uint64_t msg_size_out;
+        int      hdr_dlvl_out; 
+        uint8_t  hdr_flags_out; 
         bool     found_attr;
 
         H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
@@ -38,16 +38,16 @@ class H5BTreeV2
         /* A "node pointer" to another B-tree node */
         typedef struct {
             uint64_t                addr = 0; // address of pointed node
-            uint16_t                node_nrec = 0; // num records in pointed node
             uint64_t                all_nrec = 0; // num records in pointed AND in children
+            uint16_t                node_nrec = 0; // num records in pointed node
         } btree2_node_ptr_t;
 
         /* Information about a node at a given depth */
         typedef struct {
+            uint64_t                cum_max_nrec = 0; // cumulative max. # of records below node's depth
             unsigned                max_nrec = 0; // max num records in node
             unsigned                split_nrec = 0; // num records to split node at 
             unsigned                merge_nrec = 0; // num records to merge node at
-            uint64_t                cum_max_nrec = 0; // cumulative max. # of records below node's depth
             uint8_t                 cum_max_nrec_size = 0; // size to store cumulative max. # of records for this node (in bytes)
         } btree2_node_info_t;
 
@@ -158,7 +158,6 @@ class H5BTreeV2
         
         /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, unsigned *idx, int *cmp);
-        void                initHdrBTreeV2(btree2_node_ptr_t *root_node_ptr);
         void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 ();
         uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
@@ -194,7 +193,7 @@ class H5BTreeV2
         uint8_t                 merge_percent; // percent full that a node needs to be decrease below before it is split
         
         vector<btree2_node_info_t> node_info;  // table of node info structs for current depth of B-tree
-        btree2_node_ptr_t       *root;         // root struct
+        btree2_node_ptr_t       root;          // root struct
         vector<size_t>          nat_off;
         uint64_t                check_sum;
         dtable_t                dtable;        // doubling table
@@ -209,4 +208,4 @@ class H5BTreeV2
         size_t sz_max_nrec;
         unsigned u_max_nrec_size;
 
-}  __attribute__((packed));
+};

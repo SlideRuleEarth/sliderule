@@ -63,7 +63,7 @@
 H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
     /* Stack */
-    btree2_node_ptr_t root_node_ptr;
+    // btree2_node_ptr_t root_node_ptr;
     vector<btree2_node_info_t> _node_info;
     vector<size_t> _nat_off;
     vector<uint64_t> row_block_size;
@@ -97,7 +97,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     depth = 0;
     split_percent = 0; 
     merge_percent = 0;
-    root = NULL;
+    // root = NULL;
     check_sum = 0;
     node_info = _node_info;
     nat_off = _nat_off;
@@ -114,7 +114,48 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
 
     /*** INIT BTREE HDR ***/
 
-    initHdrBTreeV2(&root_node_ptr);
+    /* Populate header */
+    uint64_t pos = addr;
+    uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
+
+    /* Signature check */
+    if(signature != H5FileBuffer::H5_V2TREE_SIGNATURE_LE)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
+    }
+    /* Version check */
+    uint8_t version = (uint8_t) h5filePtr_->readField(1, &pos);
+    if(version != 0)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
+    }
+
+    /* Record type extraction */
+    type = (btree2_subid_t) h5filePtr_->readField(1, &pos);
+
+    /* Cont. parse Btreev2 header */
+    node_size = (uint32_t) h5filePtr_->readField(4, &pos);
+    rrec_size = (uint16_t) h5filePtr_->readField(2, &pos);
+    depth = (uint16_t) h5filePtr_->readField(2, &pos);
+    split_percent = (uint8_t) h5filePtr_->readField(1, &pos);
+    merge_percent = (uint8_t) h5filePtr_->readField(1, &pos);
+    root.addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
+    root.node_nrec = (uint16_t)h5filePtr_->readField(2, &pos);
+    root.all_nrec = h5filePtr_->readField(h5filePtr_->metaData.lengthsize, &pos);
+    check_sum = h5filePtr_->readField(4, &pos);
+
+    /* allocate native record size using type found */
+    switch(type) {
+        case H5B2_ATTR_DENSE_NAME_ID:
+            nrec_size = sizeof(btree2_type8_densename_rec_t);
+            break;
+        default:
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for nrec_size: %d", type);
+    }
+
+    if (node_size == 0) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "0 return in bt2_node_size, failure suspect in openBtreeV2");
+    }
 
     /*** END BTREE HDR ***/
 
@@ -834,57 +875,6 @@ void H5BTreeV2::locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_
     *idx = my_idx;
 }
 
-
- /*----------------------------------------------------------------------------
- * initHdrBTreeV2
- *----------------------------------------------------------------------------*/
-void H5BTreeV2::initHdrBTreeV2(btree2_node_ptr_t *root_node_ptr) {
-
-    /* populate header */
-    uint64_t pos = addr;
-    uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
-
-    /* Signature check */
-    if(signature != H5FileBuffer::H5_V2TREE_SIGNATURE_LE)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
-    }
-    /* Version check */
-    uint8_t version = (uint8_t) h5filePtr_->readField(1, &pos);
-    if(version != 0)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
-    }
-
-    /* Record type extraction */
-    type = (btree2_subid_t) h5filePtr_->readField(1, &pos);
-
-    /* Cont. parse Btreev2 header */
-    node_size = (uint32_t) h5filePtr_->readField(4, &pos);
-    rrec_size = (uint16_t) h5filePtr_->readField(2, &pos);
-    depth = (uint16_t) h5filePtr_->readField(2, &pos);
-    split_percent = (uint8_t) h5filePtr_->readField(1, &pos);
-    merge_percent = (uint8_t) h5filePtr_->readField(1, &pos);
-    root_node_ptr->addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
-    root_node_ptr->node_nrec = (uint16_t)h5filePtr_->readField(2, &pos);
-    root_node_ptr->all_nrec = h5filePtr_->readField(h5filePtr_->metaData.lengthsize, &pos);
-    root = root_node_ptr;
-    check_sum = h5filePtr_->readField(4, &pos);
-
-    /* allocate native record size using type found */
-    switch(type) {
-        case H5B2_ATTR_DENSE_NAME_ID:
-            nrec_size = sizeof(btree2_type8_densename_rec_t);
-            break;
-        default:
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for nrec_size: %d", type);
-    }
-
-    if (node_size == 0) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "0 return in bt2_node_size, failure suspect in openBtreeV2");
-    }
-}
-
  /*----------------------------------------------------------------------------
  * openInternalNode
  *----------------------------------------------------------------------------*/
@@ -1037,7 +1027,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
     btree2_nodepos_t curr_pos;               // address of curr node
 
     /* Copy root ptr - exit if empty tree */
-    curr_node_ptr = root;
+    curr_node_ptr = &root;
 
     /* Sanity check: no records at node imply finished search */
     if (curr_node_ptr->node_nrec == 0) {
