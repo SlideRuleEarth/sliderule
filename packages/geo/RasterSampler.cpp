@@ -328,7 +328,6 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 data->samples[i].time       = slist[i]->time;
                 data->samples[i].file_id    = slist[i]->fileId;
                 data->samples[i].flags      = slist[i]->flags;
-                delete slist[i]; // free sample
             }
             if(!sample_rec.post(outQ))
             {
