@@ -34,8 +34,8 @@
  ******************************************************************************/
 
 #include "core.h"
+#include "GdalRaster.h"
 #include "UT_RasterSubset.h"
-#include "RemaDemMosaicRaster.h"
 
 /******************************************************************************
  * STATIC DATA

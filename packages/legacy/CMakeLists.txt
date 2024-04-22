@@ -18,13 +18,13 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/CosmosInterface.cpp
         ${CMAKE_CURRENT_LIST_DIR}/LuaInterpreter.cpp
         ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryCmd.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_Table.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UT_String.cpp
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Table.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_String.cpp>
 )
 
 target_include_directories (slideruleLib
@@ -50,13 +50,13 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/LuaInterpreter.h
         ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryCmd.h
         ${CMAKE_CURRENT_LIST_DIR}/StatisticRecord.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_List.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_Table.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/UT_String.h
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Table.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_String.h>
     DESTINATION
         ${INCDIR}
 )

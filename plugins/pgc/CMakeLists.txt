@@ -44,7 +44,6 @@ target_sources(pgc
         ${CMAKE_CURRENT_LIST_DIR}/plugin/pgc.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcWkt.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/PgcDemStripsRaster.cpp
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_RasterSubset.cpp>
 )
 
 # Include Directories #
@@ -68,7 +67,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemMosaicRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/ArcticDemStripsRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/RemaDemStripsRaster.h
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/plugin/UT_RasterSubset.h>
     DESTINATION
         ${INSTALLDIR}/include/sliderule/pgc
 )

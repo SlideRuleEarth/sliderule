@@ -73,6 +73,10 @@ endif ()
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
 set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${RUNTIMEDIR}\"\n")
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set_property(GLOBAL APPEND PROPERTY platform "#define __unittesting__\n")
+endif()
+
 if(${ENABLE_TRACING})
     message (STATUS "Enabling trace points")
     set_property(GLOBAL APPEND PROPERTY platform "#define __tracing__\n")

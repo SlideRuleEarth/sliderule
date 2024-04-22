@@ -49,7 +49,7 @@
 #include "Icesat2Parms.h"
 #include "MeritRaster.h"
 
-#ifdef WITH_UNITTESTS
+#ifdef __unittesting__
 #include "UT_Atl03Reader.h"
 #include "UT_Atl06Dispatch.h"
 #endif

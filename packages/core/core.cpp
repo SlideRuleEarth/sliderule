@@ -151,6 +151,13 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);
     LuaEngine::setAttrInt   (L, "RTE_SIMPLIFY",             RTE_SIMPLIFY);
 
+    #ifdef __unittesting__
+    LuaEngine::setAttrBool(L, "UNITTEST",                   true);
+    #else
+    LuaEngine::setAttrBool(L, "UNITTEST",                   false);
+    #endif
+
+
     return 1;
 }
 

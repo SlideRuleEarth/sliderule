@@ -2,7 +2,7 @@ local runner = require("test_executive")
 local console = require("console")
 
 -- Check If Present --
-if not icesat2.UNITTEST then return end
+if not core.UNITTEST then return end
 
 -- Setup --
 

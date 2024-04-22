@@ -70,7 +70,7 @@ int icesat2_open (lua_State *L)
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
-#ifdef WITH_UNITTESTS
+#ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
         {"ut_atl03",            UT_Atl03Reader::luaCreate},
 #endif
@@ -108,12 +108,6 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Parms::ATL08_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Parms::ATL08_TOP_OF_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Parms::ATL08_UNCLASSIFIED);
-
-    #ifdef WITH_UNITTESTS
-    LuaEngine::setAttrBool(L, "UNITTEST",                   true);
-    #else
-    LuaEngine::setAttrBool(L, "UNITTEST",                   false);
-    #endif
 
     return 1;
 }

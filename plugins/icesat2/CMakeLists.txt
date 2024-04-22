@@ -25,7 +25,6 @@ target_compile_definitions (icesat2 PUBLIC BUILDINFO="${BUILDINFO}")
 
 # Compile Definitions #
 target_compile_definitions (icesat2 PUBLIC BINID="${TGTVER}")
-target_compile_options (icesat2 PUBLIC "$<$<CONFIG:Debug>:-DWITH_UNITTESTS>")
 target_compile_options (icesat2 PUBLIC -Wall) # turn on "all" warnings
 target_compile_options (icesat2 PUBLIC -Wextra) # turn on "extra" warnings
 target_compile_options (icesat2 PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement

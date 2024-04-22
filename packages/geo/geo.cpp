@@ -35,6 +35,10 @@
 
 #include "geo.h"
 
+#ifdef __unittesting__
+#include "UT_RasterSubset.h"
+#endif
+
 #include <gdal.h>
 #include <cpl_conv.h>
 #include <proj.h>
@@ -244,6 +248,9 @@ int geo_open (lua_State* L)
         {"parms",       GeoParms::luaCreate},
         {"calcutm",     GeoLib::luaCalcUTM},
         {"tiff",        GeoLib::TIFFImage::luaCreate},
+#ifdef __unittesting__
+        {"ut_subset",       UT_RasterSubset::luaCreate},
+#endif
         {NULL,          NULL}
     };
 
