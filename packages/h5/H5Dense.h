@@ -134,9 +134,6 @@ class H5BTreeV2
             uint32_t                hash = 0; // hash of 'name' field value 
         } btree2_type5_densename_rec_t;
 
-        /* Main Dense entry point */
-        void                readDenseAttrs(H5FileBuffer::heap_info_t* heap_info_ptr);
-
         /* Helpers */
         bool                isTypeSharedAttrs (unsigned type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
@@ -155,24 +152,21 @@ class H5BTreeV2
         void                compareType8Record(const void *_bt2_rec, int *result);
 
         /* Fheap Navigation*/
-        void                fheapLocate(H5FileBuffer::heap_info_t *heap_info_ptr, const void * _id);
-        void                fheapLocate_Managed(H5FileBuffer::heap_info_t* heap_info_ptr, uint8_t* id);
+        void                fheapLocate(const void * _id);
+        void                fheapLocate_Managed(uint8_t* id);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
         /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, unsigned *idx, int *cmp);
         void                initHdrBTreeV2(btree2_node_ptr_t *root_node_ptr);
-        void                initDTable(H5FileBuffer::heap_info_t* heap_info_ptr, vector<uint64_t>& row_block_size, vector<uint64_t>& row_block_off, vector<uint64_t>& row_tot_dblock_free, vector<uint64_t>& row_max_dblock_free);
-        void                initNodeInfo();
-        void                openBTreeV2 (btree2_node_ptr_t *root_node_ptr, H5FileBuffer::heap_info_t* heap_info_ptr);
         void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 ();
         uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
         
         /* dtable search */
-        void                dtableLookup(H5FileBuffer::heap_info_t* heap_info_ptr, uint64_t off, unsigned *row, unsigned *col);
-        uint64_t            buildEntries_Indirect( H5FileBuffer::heap_info_t* heap_info, int nrows, uint64_t pos, uint64_t* ents);
-        void                man_dblockLocate(H5FileBuffer::heap_info_t* heap_info_ptr, uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
+        void                dtableLookup(uint64_t off, unsigned *row, unsigned *col);
+        uint64_t            buildEntries_Indirect(int nrows, uint64_t pos, uint64_t* ents);
+        void                man_dblockLocate(uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
 
     private:
 
@@ -212,4 +206,7 @@ class H5BTreeV2
         const char              *name;         // attr name we are searching for
         uint32_t                name_hash;     // hash of attr name
 
-};
+        size_t sz_max_nrec;
+        unsigned u_max_nrec_size;
+
+}  __attribute__((packed));
