@@ -544,7 +544,7 @@ def from_parquet(filename, **kwargs):
     # validate sliderule metadata
     if b'sliderule' not in metadata.keys():
         logger.error("No sliderule metadata found in Parquet file")
-        return gdf
+        return output
     # decode sliderule metadata from JSON
     parms = json.loads(metadata[b'sliderule'].decode('utf-8'))
     # create a list of regions
