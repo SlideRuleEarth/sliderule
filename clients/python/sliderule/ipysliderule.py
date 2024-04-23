@@ -1939,6 +1939,7 @@ def _load_dict(data):
 basemaps = _load_dict(providers)
 # set default map dimensions
 _default_layout = ipywidgets.Layout(width='100%', height='600px')
+_default_max_area = 500e3
 
 # draw ipyleaflet map
 class leaflet:
@@ -2210,6 +2211,7 @@ class leaflet:
         creating SlideRule region objects
         """
         kwargs.setdefault('check_valid', True)
+        kwargs.setdefault('maximum_area', _default_max_area)
         lon,lat = np.transpose(geo_json['geometry']['coordinates'])
         lon = sliderule.io.wrap_longitudes(lon)
         cx,cy = sliderule.io.centroid(lon,lat)
@@ -2220,7 +2222,7 @@ class leaflet:
             lat = lat[::-1]
         # calculate area of region
         area = sliderule.io.area(lon,lat)
-        if kwargs['check_valid'] and (area > 500e3):
+        if kwargs['check_valid'] and (area > kwargs['maximum_area']):
             logger.warning(f"Region is too large: {area:0.0f} km^2")
             return
         # create sliderule region from list
