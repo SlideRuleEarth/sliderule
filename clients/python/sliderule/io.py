@@ -31,15 +31,20 @@ import sys
 import json
 import warnings
 import datetime
-import geopandas
 import numpy as np
-from sliderule import logger
+from sliderule import logger, SLIDERULE_EPSG
 
 # imports with warnings if not present
 try:
     import scipy.io
 except ModuleNotFoundError as e:
     sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+try:
+    import geopandas
+    from geopandas.io.arrow import _geopandas_to_arrow
+    from geopandas._compat import import_optional_dependency
+except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))  
 try:
     import h5py
 except ModuleNotFoundError as e:
@@ -337,6 +342,25 @@ def winding(x,y):
     wind = np.sum([(x[i+1] - x[i])*(y[i+1] + y[i]) for i in range(npts - 1)])
     return wind
 
+# geodesic area of a polygon in square kilometers
+def area(lon, lat, a=6378.1370):
+    assert len(lon) == len(lat), "Longitude and Latitude arrays must be the same length"
+    assert len(lon) > 2, "Need at least 3 points to calculate area"
+    # factor for converting to radians
+    dtr = np.pi/180.0
+    # initialize area
+    area = 0.0
+    npts = len(lon)
+    # for each point in the polygon
+    for i in range(npts):
+        # wrap coordinates
+        ii = (i + 1) % npts
+        # calculate geodesic area in square kilometers
+        area += (a**2)*(lon[ii]*dtr - lon[i]*dtr) * \
+            (2.0 + np.sin(lat[i]*dtr) + np.sin(lat[ii]*dtr))/2.0
+    # return absolute value of area
+    return np.abs(area).squeeze()
+
 # fix longitudes to be -180:180
 def wrap_longitudes(lon):
     phi = np.arctan2(np.sin(lon*np.pi/180.0),np.cos(lon*np.pi/180.0))
@@ -361,7 +385,7 @@ def from_region(polygon):
 # convert geodataframe vector object to a list of sliderule regions
 def from_geodataframe(gdf):
     # verify that geodataframe is in latitude/longitude
-    geodataframe = gdf.to_crs(epsg=4326)
+    geodataframe = gdf.to_crs(SLIDERULE_EPSG)
     # create a list of regions
     regions = []
     # for each region
@@ -375,7 +399,11 @@ def to_json(filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    # import optional dependencies
+    pyproj = import_optional_dependency(
+        "pyproj", extra="pyproj is required for CRS conversion."
+    )
     # add each parameter as an attribute
     SRparams = ['H_min_win', 'atl08_class', 'atl03_quality', 'ats', 'cnf',
         'cnt', 'len', 'maxi', 'res', 'sigma_r_max', 'srt', 'yapc']
@@ -388,7 +416,7 @@ def to_json(filename, **kwargs):
         except:
             pass
     # save CRS to JSON
-    crs = geopandas.tools.crs.CRS.from_string(kwargs['crs'])
+    crs = pyproj.CRS.from_string(kwargs['crs'])
     output['crs'] = crs.to_string()
     # save each region following GeoJSON specification
     output['type'] = 'FeatureCollection'
@@ -437,12 +465,110 @@ def from_json(filename, **kwargs):
     # return the sliderule parameters and regions
     return (parms, regions)
 
+def to_parquet(gdf, filename, **kwargs):
+    # set default keyword arguments
+    kwargs.setdefault('index',None)
+    kwargs.setdefault('compression','snappy')
+    kwargs.setdefault('schema_version',None)
+    kwargs.setdefault('parameters',dict())
+    kwargs.setdefault('regions',[])
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    # import optional dependencies
+    pyproj = import_optional_dependency(
+        "pyproj", extra="pyproj is required for CRS conversion."
+    )
+    parquet = import_optional_dependency(
+        "pyarrow.parquet", extra="pyarrow is required for Parquet support."
+    )
+    # output metadata
+    output = {}
+    # for each adjustable sliderule parameter
+    [kwargs['parameters'].pop(p) for p in ['poly']]
+    for p,val in kwargs['parameters'].items():
+        # try to convert the parameter if available
+        try:
+            output[p] = attributes_encoder(val)
+        except:
+            pass
+    # save CRS to JSON
+    crs = pyproj.CRS.from_string(kwargs['crs'])
+    output['crs'] = crs.to_string()
+    # save each region following GeoJSON specification
+    output['type'] = 'FeatureCollection'
+    output['features'] = []
+    for i,poly in enumerate(kwargs['regions']):
+        lon, lat = from_region(poly)
+        lon = attributes_encoder(lon)
+        lat = attributes_encoder(lat)
+        geometry=dict(type="polygon", coordinates=[])
+        geometry['coordinates'].append([[ln,lt] for ln,lt in zip(lon,lat)])
+        output['features'].append(dict(type="Feature", geometry=geometry))
+    # dump the attributes to encoded JSON-format
+    sliderule_metadata = json.dumps(output).encode('utf-8') 
+    # convert geodataframe to arrow table
+    table = _geopandas_to_arrow(gdf,
+        index=kwargs['index'],
+        schema_version=kwargs['schema_version']
+    )
+    # store sliderule specific file-level metadata
+    metadata = table.schema.metadata
+    metadata.update({b"sliderule": sliderule_metadata})
+    # replace schema metadata with updated
+    table = table.replace_schema_metadata(metadata)
+    # write arrow table to parquet file
+    parquet.write_table(table, filename,
+        compression=kwargs['compression']
+    )
+
+def from_parquet(filename, **kwargs):
+    # set default keyword arguments
+    kwargs.setdefault('return_parameters',False)
+    kwargs.setdefault('return_regions',False)
+    # import optional dependencies
+    pyproj = import_optional_dependency(
+        "pyproj", extra="pyproj is required for CRS conversion."
+    )
+    parquet = import_optional_dependency(
+        "pyarrow.parquet", extra="pyarrow is required for Parquet support."
+    )
+    # read arrow table from parquet file
+    gdf = geopandas.read_parquet(filename)
+    # if not returning the query parameters or polygon
+    if not (kwargs['return_parameters'] or kwargs['return_regions']):
+        # return geodataframe
+        return gdf
+    # create tuple with returns
+    output = (gdf,)
+    # get sliderule metadata
+    metadata = parquet.read_metadata(filename).metadata
+    parms = json.loads(metadata[b'sliderule'].decode('utf-8'))
+    # create a list of regions
+    regions = []
+    # for each feature in the JSON file
+    for feature in parms.pop('features'):
+        # for each coordinate set in the feature
+        for coords in feature['geometry']['coordinates']:
+            # append to sliderule regions
+            regions.append([{'lon':ln,'lat':lt} for ln,lt in coords])
+    # if returning the parameters
+    if kwargs['return_parameters']:
+        # add parameters to output tuple
+        output += (parms,)
+    # if returning the regions
+    if kwargs['return_regions']:
+        # add regions to output tuple
+        output += (regions,)
+    # return the combined tuple
+    return output
+
 # output geodataframe to netCDF (version 3)
 def to_nc(gdf, filename, **kwargs):
+    # add warning that function is deprecated
+    logger.critical(f"Deprecated. Will be removed in a future release")
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
@@ -492,7 +618,7 @@ def to_nc(gdf, filename, **kwargs):
     # save geodataframe coordinate system
     fileID.crs = kwargs['crs']
     # add geospatial attributes
-    if (kwargs['crs'] == 'EPSG:4326'):
+    if kwargs['crs'] in ('EPSG:4326', SLIDERULE_EPSG):
         fileID.geospatial_lat_units = \
             attributes['geospatial_lat_units']
         fileID.geospatial_lon_units = \
@@ -535,8 +661,10 @@ def to_nc(gdf, filename, **kwargs):
 
 # input geodataframe from netCDF (version 3)
 def from_nc(filename, **kwargs):
+    # add warning that function is deprecated
+    logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
@@ -631,7 +759,7 @@ def to_hdf(gdf, filename, **kwargs):
     kwargs.setdefault('driver','pytables')
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
@@ -658,10 +786,12 @@ def to_hdf(gdf, filename, **kwargs):
 
 # write pandas dataframe to pytables HDF5
 def write_pytables(df, filename, attributes, **kwargs):
+    # add warning that function is deprecated
+    logger.critical(f"Deprecated. Will be removed in a future release")
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     # write data to a pytables HDF5 file
     df.to_hdf(filename, 'sliderule_segments', format="table", mode="w")
     # add file attributes
@@ -674,7 +804,7 @@ def write_pytables(df, filename, attributes, **kwargs):
     # set coordinate reference system as attribute
     fileID.root._v_attrs.crs = kwargs['crs']
     # add geospatial attributes
-    if (kwargs['crs'] == 'EPSG:4326'):
+    if kwargs['crs'] in ('EPSG:4326', SLIDERULE_EPSG):
         fileID.root._v_attrs.geospatial_lat_units = \
             attributes['geospatial_lat_units']
         fileID.root._v_attrs.geospatial_lon_units = \
@@ -716,10 +846,12 @@ def write_pytables(df, filename, attributes, **kwargs):
 
 # write pandas dataframe to h5py HDF5
 def write_h5py(df, filename, attributes, **kwargs):
+    # add warning that function is deprecated
+    logger.critical(f"Deprecated. Will be removed in a future release")
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
     # open HDF5 file object
     fileID = h5py.File(filename, mode='w')
@@ -755,7 +887,7 @@ def write_h5py(df, filename, attributes, **kwargs):
     # set coordinate reference system as attribute
     fileID.attrs['crs'] = kwargs['crs']
     # add geospatial attributes
-    if (kwargs['crs'] == 'EPSG:4326'):
+    if kwargs['crs'] in ('EPSG:4326', SLIDERULE_EPSG):
         fileID.attrs['geospatial_lat_units'] = \
             attributes['geospatial_lat_units']
         fileID.attrs['geospatial_lon_units'] = \
@@ -799,7 +931,7 @@ def write_h5py(df, filename, attributes, **kwargs):
 def from_hdf(filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('driver','pytables')
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
@@ -815,8 +947,10 @@ def from_hdf(filename, **kwargs):
 
 # read pandas dataframe from pytables HDF5
 def read_pytables(filename, **kwargs):
+    # add warning that function is deprecated
+    logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
@@ -883,8 +1017,10 @@ def read_pytables(filename, **kwargs):
 
 # read pandas dataframe from h5py HDF5
 def read_h5py(filename, **kwargs):
+    # add warning that function is deprecated
+    logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs','EPSG:4326')
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
@@ -967,7 +1103,7 @@ def read_h5py(filename, **kwargs):
     return output
 
 # output formats wrapper
-def to_file(gdf, filename, format='hdf', **kwargs):
+def to_file(gdf, filename, format='parquet', **kwargs):
     if format.lower() in ('hdf','hdf5','h5'):
         to_hdf(gdf, filename, **kwargs)
     elif format.lower() in ('netcdf','nc'):
@@ -975,10 +1111,10 @@ def to_file(gdf, filename, format='hdf', **kwargs):
     elif format.lower() in ('geojson','csv','shp'):
         gdf.to_file(filename, **kwargs)
     elif format.lower() in ('geoparquet','parquet'):
-        gdf.to_parquet(filename, **kwargs)
+        to_parquet(gdf, filename, **kwargs)
 
 # input formats wrapper
-def from_file(filename, format='hdf', **kwargs):
+def from_file(filename, format='parquet', **kwargs):
     if format.lower() in ('hdf','hdf5','h5'):
         return from_hdf(filename, **kwargs)
     elif format.lower() in ('netcdf','netcdf4','nc'):
@@ -986,4 +1122,4 @@ def from_file(filename, format='hdf', **kwargs):
     elif format.lower() in ('geojson','csv','shp'):
         return geopandas.from_file(filename, **kwargs)
     elif format.lower() in ('geoparquet','parquet'):
-        return geopandas.read_parquet(filename, **kwargs)
+        return from_parquet(filename, **kwargs)

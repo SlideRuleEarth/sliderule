@@ -659,10 +659,10 @@ class widgets:
         self.plot_kind.observe(self.set_plot_kind)
 
         # selection for output file format
-        format_options = ["GeoJSON","csv","geoparquet","netCDF4","HDF5"]
+        format_options = ["GeoJSON","csv","geoparquet","netCDF","HDF5"]
         self.file_format = ipywidgets.Dropdown(
             options=format_options,
-            value="HDF5",
+            value="geoparquet",
             description="Format:",
             description_tooltip="Format: Output file format",
             disabled=False
@@ -1010,12 +1010,16 @@ class widgets:
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', True)
-        filetypes = (("HDF5 file", "*.h5"),
+        filetypes = (
+            ("geoparquet file", "*.parquet"),
+            ("GeoJSON file", "*.geojson"),
+            ("csv file", "*.csv"),
             ("netCDF file", "*.nc"),
+            ("HDF5 file", "*.h5"),
             ("All Files", "*.*"))
         b.files = tkinter.filedialog.asksaveasfilename(
             initialfile=self.file,
-            defaultextension='h5',
+            defaultextension='parquet',
             filetypes=filetypes)
         self.savelabel.value = b.files
         self.file = b.files
@@ -1033,8 +1037,12 @@ class widgets:
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', True)
-        filetypes = (("HDF5 file", "*.h5"),
+        filetypes = (
+            ("geoparquet file", "*.parquet"),
+            ("GeoJSON file", "*.geojson"),
+            ("csv file", "*.csv"),
             ("netCDF file", "*.nc"),
+            ("HDF5 file", "*.h5"),
             ("All Files", "*.*"))
         b.files = tkinter.filedialog.askopenfilename(
             defaultextension='h5',
@@ -1050,7 +1058,7 @@ class widgets:
         self.file = self.loadlabel.value
 
     @property
-    def atl03_filename(self):
+    def atl03_filename(self) -> str:
         """default input and output file string for ATL03 requests
         """
         # get sliderule submission time
@@ -1059,7 +1067,7 @@ class widgets:
         return "ATL03-SR_{0}_{1}.{2}".format(*args)
 
     @property
-    def atl06_filename(self):
+    def atl06_filename(self) -> str:
         """default input and output file string for ATL06 requests
         """
         # get sliderule submission time
@@ -1068,7 +1076,7 @@ class widgets:
         return "ATL06-SR_{0}_{1}.{2}".format(*args)
 
     @property
-    def atl08_filename(self):
+    def atl08_filename(self) -> str:
         """default input and output file string for ATL08 requests
         """
         # get sliderule submission time
@@ -1077,51 +1085,62 @@ class widgets:
         return "ATL08-SR_{0}_{1}.{2}".format(*args)
 
     @property
-    def format(self):
+    def format(self) -> str:
         """return the file format from file string
         """
-        hdf = ('h5','hdf5','hdf')
-        netcdf = ('nc','netcdf','nc3')
-        if self.file.endswith(hdf):
-            return 'hdf'
-        elif self.file.endswith(netcdf):
-            return 'netcdf'
-        else:
-            return ''
+        types = {}
+        types['hdf'] = ('h5','hdf5','hdf')
+        types['netcdf'] = ('nc','netcdf','nc3')
+        types['csv'] = ('csv','txt')
+        types['geojson'] = ('geojson','json')
+        types['parquet'] = ('geoparquet','parquet','pq')
+        for key, val in types.items():
+            if self.file.endswith(val):
+                return key
+        # return empty string if no match
+        return ''
         
     @property
-    def suffix(self):
+    def suffix(self) -> str:
         """return the file suffix
         """
-        sfx = {"GeoJSON":"geojson",
+        SUFFIX = {
+            "GeoJSON":"geojson",
             "csv":"csv",
             "geoparquet":"parquet",
-            "netCDF4":"nc",
+            "netCDF":"nc",
             "HDF5":"h5"
         }
-        return sfx[self.file_format.value]
+        try:
+            return SUFFIX[self.file_format.value]
+        except KeyError:
+            return ""
 
     @property
-    def media_type(self):
-        """return the internet media type (MIME type) of the file format
+    def mime_type(self) -> str:
+        """return the internet media type of the file format
         """
-        media = {"GeoJSON":"text/json",
+        MIME = {
+            "GeoJSON":"text/json",
             "csv":"text/csv",
             "geoparquet":"application/vnd.apache.parquet",
-            "netCDF4":"application/x-netcdf",
+            "netCDF":"application/x-netcdf",
             "HDF5":"application/x-hdf5"
         }
-        return media[self.file_format.value]
+        try:
+            return MIME[self.file_format.value]
+        except KeyError:
+            return ""
 
     @property
-    def _r(self):
+    def _r(self) -> str:
         """return string for reversed Matplotlib colormaps
         """
         cmap_reverse_flag = '_r' if self.reverse.value else ''
         return cmap_reverse_flag
 
     @property
-    def colormap(self):
+    def colormap(self) -> str:
         """return string for Matplotlib colormaps
         """
         return self.cmap.value + self._r
@@ -1918,12 +1937,15 @@ def _load_dict(data):
 
 # create traitlets of basemap providers
 basemaps = _load_dict(providers)
+# set default map dimensions
+_default_layout = ipywidgets.Layout(width='100%', height='600px')
 
 # draw ipyleaflet map
 class leaflet:
     def __init__(self, projection, **kwargs):
         # set default keyword arguments
         kwargs.setdefault('map',None)
+        kwargs.setdefault('layout', _default_layout)
         kwargs.setdefault('prefer_canvas', False)
         kwargs.setdefault('attribution', False)
         kwargs.setdefault('zoom_control', False)
@@ -1934,13 +1956,14 @@ class leaflet:
         kwargs.setdefault('color', 'green')
         # create basemap in projection
         if (projection == 'Global'):
-            kwargs.setdefault('center', (39,-108))
-            kwargs.setdefault('zoom', 9)
+            kwargs.setdefault('center', (40,-100))
+            kwargs.setdefault('zoom', 4)
             self.map = ipyleaflet.Map(center=kwargs['center'],
                 zoom=kwargs['zoom'], max_zoom=15, world_copy_jump=True,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
-                basemap=ipyleaflet.basemaps.Esri.WorldTopoMap)
+                basemap=ipyleaflet.basemaps.Esri.WorldTopoMap,
+                layout=kwargs['layout'])
             self.crs = 'EPSG:3857'
         elif (projection == 'North'):
             kwargs.setdefault('center', (90,0))
@@ -1950,20 +1973,22 @@ class leaflet:
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
                 basemap=basemaps.Esri.ArcticOceanBase,
-                crs=projections.EPSG5936.ESRIBasemap)
+                crs=projections.EPSG5936.ESRIBasemap,
+                layout=kwargs['layout'])
             # add arctic ocean reference basemap
             reference = basemaps.Esri.ArcticOceanReference
             self.map.add(ipyleaflet.basemap_to_tiles(reference))
             self.crs = 'EPSG:5936'
         elif (projection == 'South'):
             kwargs.setdefault('center', (-90,0))
-            kwargs.setdefault('zoom', 2)
+            kwargs.setdefault('zoom', 3)
             self.map = ipyleaflet.Map(center=kwargs['center'],
                 zoom=kwargs['zoom'], max_zoom=9,
                 prefer_canvas=kwargs['prefer_canvas'],
                 attribution_control=kwargs['attribution'],
                 basemap=basemaps.Esri.AntarcticBasemap,
-                crs=projections.EPSG3031.ESRIBasemap)
+                crs=projections.EPSG3031.ESRIBasemap,
+                layout=kwargs['layout'])
             self.crs = 'EPSG:3031'
         else:
             # use a predefined ipyleaflet map
@@ -2006,7 +2031,7 @@ class leaflet:
         draw_control.rectangle = dict(shapeOptions=shapeOptions,
             metric=['km','m'])
         draw_control.polygon = dict(shapeOptions=shapeOptions,
-            allowIntersection=False,showArea=True,metric=['km','m'])
+            allowIntersection=False, showArea=True, metric=['km','m'])
         # create regions
         self.regions = []
         draw_control.on_draw(self.handle_draw)
@@ -2180,10 +2205,11 @@ class leaflet:
                 Longitude: {d[1]:8.4f}\u00B0""".format(d=[lat,lon])
 
     # keep track of rectangles and polygons drawn on map
-    def handle_draw(self, obj, action, geo_json):
+    def handle_draw(self, obj, action, geo_json, **kwargs):
         """callback for handling draw events and interactively
         creating SlideRule region objects
         """
+        kwargs.setdefault('check_valid', True)
         lon,lat = np.transpose(geo_json['geometry']['coordinates'])
         lon = sliderule.io.wrap_longitudes(lon)
         cx,cy = sliderule.io.centroid(lon,lat)
@@ -2192,6 +2218,11 @@ class leaflet:
         if (wind > 0):
             lon = lon[::-1]
             lat = lat[::-1]
+        # calculate area of region
+        area = sliderule.io.area(lon,lat)
+        if kwargs['check_valid'] and (area > 500e3):
+            logger.warning(f"Region is too large: {area:0.0f} km^2")
+            return
         # create sliderule region from list
         region = sliderule.io.to_region(lon,lat)
         # append coordinates to list
