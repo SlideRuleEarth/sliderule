@@ -2785,10 +2785,10 @@ class LeafletMap:
         kwargs.setdefault('cmap', 'viridis')
         kwargs.setdefault('norm', None)
         kwargs.setdefault('alpha', 1.0)
-        kwargs.setdefault('orientation', 'horizontal')
+        kwargs.setdefault('orientation', 'vertical')
         kwargs.setdefault('position', 'topright')
-        kwargs.setdefault('width', 6.0)
-        kwargs.setdefault('height', 0.4)
+        kwargs.setdefault('width', 0.2)
+        kwargs.setdefault('height', 3.0)
         # remove any prior instances of a colorbar
         if self._colorbar is not None:
             self.map.remove(self._colorbar)
