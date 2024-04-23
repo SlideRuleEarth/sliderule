@@ -640,8 +640,11 @@ void* GeoIndexedRaster::readingThread(void *param)
                 entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
                 if(entry->subset)
                 {
-                    /* Create new GeoRaster object for subsetted raster
+                    /*
+                     * Create new GeoRaster object for subsetted raster
                      * Use NULL for LuaState, using parent's causes memory corruption
+                     * NOTE: cannot use RasterObject::cppCreate(parms) here, it would create
+                     * new GeoIndexRaster with the same file path as parent raster.
                      */
                     entry->subset->robj = new GeoRaster(NULL,
                                                         reader->obj->parms,

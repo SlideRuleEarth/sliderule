@@ -84,8 +84,11 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
         RasterSubset* subset = raster.subsetAOI(&poly);
         if(subset)
         {
-            /* Create new GeoRaster object for subsetted raster
+            /*
+             * Create new GeoRaster object for subsetted raster
              * Use NULL for LuaState, using parent's causes memory corruption
+             * NOTE: cannot use RasterObject::cppCreate(parms) here,
+             * it would create subsetted raster with the same file path as parent raster.
              */
             subset->robj = new GeoRaster(NULL,
                                          parms,

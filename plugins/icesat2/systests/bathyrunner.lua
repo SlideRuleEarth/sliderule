@@ -16,7 +16,7 @@ local poly = {
 }
 
 -- request parameters
-local parms = { 
+local parms = {
     asset = "icesat2",
     poly = poly,
     srt = icesat2.SRT_DYNAMIC,
@@ -74,11 +74,12 @@ local hls_parms = {
 }
 rc, rsps = earthdata.stac(hls_parms)
 hls_parms["catalog"] = (rc == earthdata.SUCCESS) and json.encode(rsps) or nil
-local hls = geo.raster(geo.parms(hls_parms))
+local hls_parms_obj = geo.parms(hls_parms)
 
 -- create bathy reader
+local starttime = time.latch();
 local bathy_parms = icesat2.bathyparms(parms)
-local reader = icesat2.atl03bathy(nsidc_s3, resource, "resultq", bathy_parms, hls, false)
+local reader = icesat2.atl03bathy(nsidc_s3, resource, "resultq", bathy_parms, hls_parms_obj, false)
 
 -- wait until bathy reader completes
 local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
@@ -92,6 +93,11 @@ while not reader:waiton(interval * 1000) do
     end
     sys.log(core.INFO, string.format("bathy reader continuing to read %s (after %d seconds)", resource, duration))
 end
+
+local stoptime = time.latch();
+local dtime = stoptime - starttime
+print(string.format("\nBathyReader run time: %.4f", dtime))
+
 
 -- exit
 sys.quit()

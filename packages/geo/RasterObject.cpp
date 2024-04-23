@@ -116,6 +116,43 @@ int RasterObject::luaCreate( lua_State* L )
 }
 
 /*----------------------------------------------------------------------------
+ * cppCreate
+ *----------------------------------------------------------------------------*/
+RasterObject* RasterObject::cppCreate(GeoParms* _parms)
+{
+    /* Get Factory */
+    factory_t factory;
+    bool found = false;
+
+    factoryMut.lock();
+    {
+        found = factories.find(_parms->asset_name, &factory);
+    }
+    factoryMut.unlock();
+
+    /* Check Factory */
+    if(!found)
+    {
+        mlog(CRITICAL, "Failed to find registered raster for %s", _parms->asset_name);
+        return NULL;
+    }
+
+    /* Create Raster */
+    RasterObject* _raster = factory.create(NULL, _parms);
+    if(!_raster)
+    {
+        mlog(CRITICAL, "Failed to create raster for %s", _parms->asset_name);
+        return NULL;
+    }
+
+    /* Bump Lua Reference (for releasing in destructor) */
+    referenceLuaObject(_parms);
+
+    /* Return Raster */
+    return _raster;
+}
+
+/*----------------------------------------------------------------------------
  * registerDriver
  *----------------------------------------------------------------------------*/
 bool RasterObject::registerRaster (const char* _name, factory_f create)

@@ -180,6 +180,13 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
             const RasterSample& srsample = subRasterSamples[i]->sample;
             const char* srfileName = subRasterSamples[i]->fileName;
 
+            /* Subraster cannot have the same file name/path as parent raster */
+            if(StringLib::match(rfileName, srfileName))
+            {
+                print2term("Parent raster and subraster have the same filename: %s\n", rfileName);
+                errors++;
+            }
+
             print2term("RSample:  %.2lf, %.2lf, %.2lf, %.2lf, %s\n", rsample.value, rsample.stats.mean, rsample.stats.stdev, rsample.stats.mad, rfileName);
             print2term("SRSample: %.2lf, %.2lf, %.2lf, %.2lf, %s\n", srsample.value, srsample.stats.mean, srsample.stats.stdev, srsample.stats.mad, srfileName);
 

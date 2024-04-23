@@ -137,12 +137,15 @@ class Atl03BathyReader: public LuaObject
          *--------------------------------------------------------------------*/
 
 
-        typedef struct {
+        typedef struct Info {
             Atl03BathyReader*   builder;
+            RasterObject*       ndwiRaster;
             char                prefix[7];
             int                 track;
             int                 pair;
             int                 beam;
+
+            ~Info(void) { delete ndwiRaster;}
         } info_t;
 
         /* Region Subclass */
@@ -235,7 +238,7 @@ class Atl03BathyReader: public LuaObject
         const int           read_timeout_ms;
         Publisher*          outQ;
         BathyParms*         parms;
-        RasterObject*       ndwiRaster;
+        GeoParms*           geoparms;
         int                 signalConfColIndex;
 
         H5Coro::context_t   context; // for ATL03 file
@@ -255,7 +258,7 @@ class Atl03BathyReader: public LuaObject
                                                         Asset* _asset, const char* _resource,
                                                         const char* outq_name,
                                                         BathyParms* _parms,
-                                                        RasterObject* _ndwi_raster,
+                                                        GeoParms* _geoparms,
                                                         bool _send_terminator=true);
                             ~Atl03BathyReader          (void);
 

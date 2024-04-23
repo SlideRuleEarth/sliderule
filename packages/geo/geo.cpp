@@ -149,7 +149,7 @@ static void configGDAL(void)
      * Default GDAL block cache. The value can be either in Mb, bytes or percent of the physical RAM
      * Recommended 200Mb
      */
-    CPLSetConfigOption("GDAL_CACHEMAX", "200");
+    CPLSetConfigOption("GDAL_CACHEMAX", "600");
 
     /*
      * A global least-recently-used cache shared among all downloaded content and may be reused after a file handle has been closed and reopen
