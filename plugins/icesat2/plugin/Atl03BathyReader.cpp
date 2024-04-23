@@ -760,10 +760,9 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                             .y = region.segment_lat[current_segment],
                             .z = 0.0 // since we are not sampling elevation data, this should be fine at zero
                         };
-                        List<RasterSample*> slist;
+                        List<RasterSample*> slist(1);
                         uint32_t err = info->ndwiRaster->getSamples(point, gps, slist);
                         if(slist.length() > 0) ndwi = static_cast<float>(slist[0]->value);
-                        // ndwi = 0.5;
                         else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, point.y, point.x, err);
                     }
                 }
