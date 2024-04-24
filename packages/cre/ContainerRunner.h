@@ -60,10 +60,7 @@ class ContainerRunner: public LuaObject
         static const int RESULT_SIGNAL = 0;
         static const int DEFAULT_TIMEOUT = 600;
 
-        static const char* INPUT_CONTROL_FILENAME;
-        static const char* OUTPUT_CONTROL_FILENAME;
         static const char* HOST_SHARED_DIRECTORY;
-        static const char* CONTAINER_SCRIPT_RUNTIME_DIRECTORY;
 
         /*--------------------------------------------------------------------
          * Methods

@@ -41,6 +41,8 @@
 #include <rapidjson/document.h>
 #include <cstdlib>
 #include <filesystem>
+#include <sstream>
+#include <iostream>
 
 /******************************************************************************
  * STATIC DATA
@@ -52,10 +54,7 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* ContainerRunner::INPUT_CONTROL_FILENAME = "in.json";
-const char* ContainerRunner::OUTPUT_CONTROL_FILENAME = "out.json";
 const char* ContainerRunner::HOST_SHARED_DIRECTORY = "/usr/local/share/applications";
-const char* ContainerRunner::CONTAINER_SCRIPT_RUNTIME_DIRECTORY = "/usr/local/etc";
 
 const char* ContainerRunner::REGISTRY = NULL;
 
@@ -142,14 +141,12 @@ int ContainerRunner::luaList (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaSettings - settings() -> shared directory, input control filename, output control filename
+ * luaSettings - settings() -> shared directory
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaSettings (lua_State* L)
 {
     lua_pushstring(L, HOST_SHARED_DIRECTORY);
-    lua_pushstring(L, INPUT_CONTROL_FILENAME);
-    lua_pushstring(L, OUTPUT_CONTROL_FILENAME);
-    return returnLuaStatus(L, true, 4);
+    return returnLuaStatus(L, true, 2);
 }
 
 /*----------------------------------------------------------------------------
@@ -285,10 +282,29 @@ void* ContainerRunner::controlThread (void* parm)
     string* content_type = new string("Content-Type: application/json");
     headers.add(content_type);
 
+    /* Build Container Command Parameter */
+    string token;
+    vector<string> tokens;
+    std::istringstream cmd_str_iss(cr->parms->command);
+    while(std::getline(cmd_str_iss, token, ' '))
+    {
+        if(token.length() > 0)
+        {
+            tokens.push_back(token);
+        }
+    }
+    string cmd_str = "";
+    for(unsigned i = 0; i < tokens.size(); i++)
+    {
+        FString elem_str("\"%s\"", tokens[i].c_str());
+        cmd_str += elem_str.c_str();
+        if(i < (tokens.size() - 1)) cmd_str += ", ";
+    }    
+    FString cmd("\"Cmd\": [%s]}", cmd_str.c_str());
+
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
     FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->uniqueSharedDirectory, HOST_SHARED_DIRECTORY);
-    FString cmd("\"Cmd\": [\"python\", \"%s/%s\"]}", CONTAINER_SCRIPT_RUNTIME_DIRECTORY, cr->parms->script);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
     /* Create Container */

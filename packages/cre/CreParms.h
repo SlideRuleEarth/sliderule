@@ -53,7 +53,7 @@ class CreParms: public LuaObject
 
         static const char* SELF;
         static const char* IMAGE;
-        static const char* SCRIPT;
+        static const char* COMMAND;
         static const char* TIMEOUT;
 
         static const char* OBJECT_TYPE;
@@ -67,7 +67,7 @@ class CreParms: public LuaObject
         *--------------------------------------------------------------------*/
 
         const char* image; // container image
-        const char* script; // python file
+        const char* command; // container command
         int timeout;
 
         /*--------------------------------------------------------------------
