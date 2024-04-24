@@ -5,60 +5,96 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local earthdata     = require("earth_data_query")
+local runner        = require("container_runtime")
 
+-- get inputs 
 local rqst          = json.decode(arg[1])
 local resource      = rqst["resource"]
 local parms         = rqst["parms"]
 
+-- intialize processing environment
 local args = {
     shard           = rqst["shard"] or 0, -- key space
     default_asset   = "icesat2",
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     result_rec      = "bathyrec",
 }
+local proc = georesource.initialize(resource, parms, nil, args)
 
-local rqst_parms    = icesat2.bathyparms(parms)
-local proc          = georesource.initialize(resource, parms, nil, args)
+-- abort if failed to initialize
+if not proc then return end
 
-if proc then
-    -- build hls polygon
-    local hls_poly = parms["poly"]
-    if not hls_poly then
-        local original_name_filter = parms["name_filter"]
-        parms["name_filter"] = "*" .. resource
-        local rc, rsps = earthdata.cmr(parms, nil, true)
-        if rc == earthdata.SUCCESS then
-            hls_poly = rsps[resource] and rsps[resource]["poly"]
-        end
-        parms["name_filter"] = original_name_filter
-    end
-
-    -- build hls parameters
-    local year      = resource:sub(7,10)
-    local month     = resource:sub(11,12)
-    local day       = resource:sub(13,14)
-    local rdate     = string.format("%04d-%02d-%02dT00:00:00Z", year, month, day)
-    local rgps      = time.gmt2gps(rdate)
-    local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
-    local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
-    local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
-    local hls_parms = {
-        asset       = "landsat-hls",
-        t0          = t0,
-        t1          = t1,
-        use_poi_time = true,
-        bands       = {"NDWI"},
-        poly        = hls_poly
-    }
-
-    -- build hls raster object
-    local geo_parms = nil
-    local rc, rsps = earthdata.stac(hls_parms)
+-- build hls polygon
+local hls_poly = parms["poly"]
+if not hls_poly then
+    local original_name_filter = parms["name_filter"]
+    parms["name_filter"] = "*" .. resource
+    local rc, rsps = earthdata.cmr(parms, nil, true)
     if rc == earthdata.SUCCESS then
-        hls_parms["catalog"] = json.encode(rsps)
-        geo_parms = geo.parms(hls_parms)
+        hls_poly = rsps[resource] and rsps[resource]["poly"]
     end
-
-    local reader    = icesat2.atl03bathy(proc.asset, resource, args.result_q, rqst_parms, geo_parms, false)
-    local status    = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
+    parms["name_filter"] = original_name_filter
 end
+
+-- build hls parameters
+local year      = resource:sub(7,10)
+local month     = resource:sub(11,12)
+local day       = resource:sub(13,14)
+local rdate     = string.format("%04d-%02d-%02dT00:00:00Z", year, month, day)
+local rgps      = time.gmt2gps(rdate)
+local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
+local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
+local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
+local hls_parms = {
+    asset       = "landsat-hls",
+    t0          = t0,
+    t1          = t1,
+    use_poi_time = true,
+    bands       = {"NDWI"},
+    poly        = hls_poly
+}
+
+-- build hls raster object
+local geo_parms = nil
+local rc, rsps = earthdata.stac(hls_parms)
+if rc == earthdata.SUCCESS then
+    hls_parms["catalog"] = json.encode(rsps)
+    geo_parms = geo.parms(hls_parms)
+end
+
+-- initialize container runtime environment
+local shared_directory = runner.setup()
+
+-- abort if container runtime environment failed to initialize
+if not shared_directory then return end
+
+-- read ICESat-2 inputs
+local bathy_parms   = icesat2.bathyparms(parms)
+local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, shared_directory, false)
+local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
+
+while true do
+    -- abort if failed to generate atl03 bathy inputs
+    if not status then break end
+
+
+    -- TODO - put this in a loop for all 6 beams
+    -- TODO - update the oceaneyes.py script to take in the command line parameter of the bathy_beam (csv and json file)
+    -- execute openoceans
+    local openoceans_parms = parms["cre"] or {
+        image =  "openoceans", 
+        command = string.format("/env/bin/python /usr/local/etc/oceaneyes.py %s/%s_%d.csv %s/%s_%d.json", shared_directory, icesat2.BATHY_PREFIX, 1, shared_directory, icesat2.BATHY_PREFIX, 1),
+        parms = {
+            ["settings.json"] = {
+                var1 = 1
+            }
+        }
+    }
+    local openoceans_status = runner.execute(openoceans_parms, shared_directory)
+
+    -- exit loop
+    break
+end
+
+-- cleanup container runtime environment
+runner.cleanup(shared_directory)

@@ -54,9 +54,9 @@ class BathyParms: public Icesat2Parms
 
         static const char* PH_IN_EXTENT;
         static const char* MAX_ALONG_TRACK_SPREAD;
-        static const char* BEAM_FILE_PREFIX;
         static const char* GENERATE_NDWI;
         static const char* USE_BATHY_MASK;
+        static const char* RETURN_INPUTS;
         static const char* ATL09_RESOURCES;
 
         static const int ATL09_RESOURCE_NAME_LEN = 39;
@@ -78,9 +78,9 @@ class BathyParms: public Icesat2Parms
 
         int         ph_in_extent;
         double      max_along_track_spread;
-        const char* beam_file_prefix;
         bool        generate_ndwi;
         bool        use_bathy_mask;
+        bool        return_inputs; // return the atl03 bathy records back to client
         Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------

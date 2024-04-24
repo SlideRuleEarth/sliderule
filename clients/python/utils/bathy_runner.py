@@ -16,7 +16,7 @@ parser.add_argument('--verbose',        '-v',   action='store_true',    default=
 parser.add_argument('--loglvl',         '-l',   type=str,               default="INFO")
 parser.add_argument('--preserve',       '-p',   action='store_true',    default=False)
 parser.add_argument('--serverfile',     '-s',   type=str,               default="/tmp/bathyfile.csv")
-parser.add_argument('--local_prefix',   '-x',   type=str,               default="/tmp/bathy_")
+parser.add_argument('--return2client',  '-c',   action='store_true',    default=False)
 parser.add_argument('--generate_ndwi',  '-w',   action='store_true',    default=False)
 parser.add_argument('--use_bathy_mask', '-b',   action='store_true',    default=False)
 args,_ = parser.parse_known_args()
@@ -40,11 +40,18 @@ parms = {
     "cnf": "atl03_not_considered",
     "pass_invalid": True,
     "generate_ndwi": args.generate_ndwi,
-    "use_bathy_mask": args.use_bathy_mask
+    "use_bathy_mask": args.use_bathy_mask,
+    "cre": {
+        "image": "openoceans", 
+        "command": "/env/bin/python /usr/local/etc/oceaneyes.py",
+        "parms": {
+            "settings.json": {
+                "var1": 1
+            }
+        }
+    }
 }
-if args.local_prefix != "None":
-    parms["beam_file_prefix"] = args.local_prefix
-else:
+if args.return2client:
     parms["output"] = { 
         "path": args.serverfile, 
         "format": "csv", 

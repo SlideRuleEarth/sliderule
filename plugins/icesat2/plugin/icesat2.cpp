@@ -108,6 +108,7 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Parms::ATL08_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Parms::ATL08_TOP_OF_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Parms::ATL08_UNCLASSIFIED);
+    LuaEngine::setAttrStr(L, "BATHY_PREFIX",                Atl03BathyReader::OUTPUT_FILE_PREFIX);
 
     return 1;
 }

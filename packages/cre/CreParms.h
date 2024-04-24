@@ -52,6 +52,7 @@ class CreParms: public LuaObject
         *--------------------------------------------------------------------*/
 
         static const char* SELF;
+        static const char* PARMS;
         static const char* IMAGE;
         static const char* COMMAND;
         static const char* TIMEOUT;

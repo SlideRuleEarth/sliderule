@@ -64,6 +64,8 @@ class Atl03BathyReader: public LuaObject
 
         static const int32_t INVALID_INDICE = -1;
 
+        static const char* OUTPUT_FILE_PREFIX;
+
         static const char* GLOBAL_BATHYMETRY_MASK_FILE_PATH;
         static const double GLOBAL_BATHYMETRY_MASK_MAX_LAT;
         static const double GLOBAL_BATHYMETRY_MASK_MIN_LAT;
@@ -237,6 +239,7 @@ class Atl03BathyReader: public LuaObject
         BathyParms*         parms;
         GeoParms*           geoparms;
         int                 signalConfColIndex;
+        const char*         sharedDirectory;
 
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file
@@ -256,6 +259,7 @@ class Atl03BathyReader: public LuaObject
                                                         const char* outq_name,
                                                         BathyParms* _parms,
                                                         GeoParms* _geoparms,
+                                                        const char* shared_directory,
                                                         bool _send_terminator=true);
                             ~Atl03BathyReader          (void);
 

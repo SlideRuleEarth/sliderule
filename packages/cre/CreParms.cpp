@@ -40,7 +40,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CreParms::SELF                = "output";
+const char* CreParms::PARMS               = "cre";
 const char* CreParms::IMAGE               = "image";
 const char* CreParms::COMMAND             = "command";
 const char* CreParms::TIMEOUT             = "timeout";
@@ -116,7 +116,7 @@ CreParms::CreParms (lua_State* L, int index):
             }
             lua_pop(L, 1);
 
-            /* Script */
+            /* Command */
             lua_getfield(L, index, COMMAND);
             command = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, command, &field_provided));
             if(field_provided) mlog(DEBUG, "Setting %s to %s", COMMAND, COMMAND);

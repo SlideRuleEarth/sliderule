@@ -43,9 +43,9 @@
 
 const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::MAX_ALONG_TRACK_SPREAD = "max_along_track_spread";
-const char* BathyParms::BEAM_FILE_PREFIX = "beam_file_prefix";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
 const char* BathyParms::USE_BATHY_MASK = "use_bathy_mask";
+const char* BathyParms::RETURN_INPUTS = "return_iputs";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
 
 const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
@@ -101,9 +101,9 @@ BathyParms::BathyParms(lua_State* L, int index):
     Icesat2Parms (L, index),
     ph_in_extent (DEFAULT_PH_IN_EXTENT),
     max_along_track_spread (DEFAULT_MAX_ALONG_TRACK_SPREAD),
-    beam_file_prefix(NULL),
     generate_ndwi(true),
-    use_bathy_mask(true)
+    use_bathy_mask(true),
+    return_inputs(false)
 {
     bool provided = false;
 
@@ -121,12 +121,6 @@ BathyParms::BathyParms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_ALONG_TRACK_SPREAD, max_along_track_spread);
         lua_pop(L, 1);
 
-        /* beam file prefix */
-        lua_getfield(L, index, BathyParms::BEAM_FILE_PREFIX);
-        beam_file_prefix = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, beam_file_prefix, &provided));
-        if(provided) mlog(DEBUG, "Setting %s to %s", BathyParms::BEAM_FILE_PREFIX, beam_file_prefix);
-        lua_pop(L, 1);
-
         /* generate ndwi */
         lua_getfield(L, index, BathyParms::GENERATE_NDWI);
         generate_ndwi = LuaObject::getLuaBoolean(L, -1, true, generate_ndwi, &provided);
@@ -137,6 +131,12 @@ BathyParms::BathyParms(lua_State* L, int index):
         lua_getfield(L, index, BathyParms::USE_BATHY_MASK);
         use_bathy_mask = LuaObject::getLuaBoolean(L, -1, true, use_bathy_mask, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::USE_BATHY_MASK, use_bathy_mask);
+        lua_pop(L, 1);
+
+        /* return inputs */
+        lua_getfield(L, index, BathyParms::RETURN_INPUTS);
+        return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::RETURN_INPUTS, return_inputs);
         lua_pop(L, 1);
 
         /* atl09 resources */
@@ -165,7 +165,6 @@ BathyParms::~BathyParms (void)
  *----------------------------------------------------------------------------*/
 void BathyParms::cleanup (void) const
 {
-    delete [] beam_file_prefix;
 }
 
 /*----------------------------------------------------------------------------

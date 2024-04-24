@@ -49,6 +49,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Atl03BathyReader::OUTPUT_FILE_PREFIX = "bathy_beam";
 const char* Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
@@ -119,10 +120,11 @@ int Atl03BathyReader::luaCreate (lua_State* L)
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 4, BathyParms::OBJECT_TYPE));
         geoparms = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
+        const char* shared_directory = getLuaString(L, 6);
         bool send_terminator = getLuaBoolean(L, 6, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, send_terminator));
+        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, shared_directory, send_terminator));
     }
     catch(const RunTimeException& e)
     {
@@ -146,7 +148,7 @@ void Atl03BathyReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, GeoParms* _geoparms, bool _send_terminator):
+Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, GeoParms* _geoparms, const char* shared_directory, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     missing09(false),
     read_timeout_ms(_parms->read_timeout * 1000),
@@ -166,6 +168,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     resource = StringLib::duplicate(_resource);
     parms = _parms;
     geoparms = _geoparms;
+    sharedDirectory = StringLib::duplicate(shared_directory);
 
     /* Set Signal Confidence Index */
     if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
@@ -263,8 +266,8 @@ Atl03BathyReader::~Atl03BathyReader (void)
         delete readerPid[pid];
     }
 
+    delete [] sharedDirectory;
     delete bathyMask;
-
     delete outQ;
 
     parms->releaseLuaObject();
@@ -850,7 +853,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     }
 
                     /* Export Data */
-                    if(parms->beam_file_prefix == NULL)
+                    if(parms->return_inputs)
                     {
                         /* Post Record */
                         uint8_t* rec_buf = NULL;
@@ -867,7 +870,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         if(out_file == NULL)
                         {
                             /* Open JSON File */
-                            FString json_filename("%sbeam_%d.json", parms->beam_file_prefix, info->beam);
+                            FString json_filename("%s/%s_%d.json", OUTPUT_FILE_PREFIX, builder->sharedDirectory, info->beam);
                             fileptr_t json_file = fopen(json_filename.c_str(), "w");
                             if(json_file == NULL)
                             {
@@ -902,7 +905,7 @@ FString json_contents(R"json({
                             fclose(json_file);
 
                             /* Open Data File */
-                            FString filename("%sbeam_%d.csv", parms->beam_file_prefix, info->beam);
+                            FString filename("%s/%s_%d.csv", OUTPUT_FILE_PREFIX, builder->sharedDirectory, info->beam);
                             out_file = fopen(filename.c_str(), "w");
                             if(out_file == NULL)
                             {
