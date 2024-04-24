@@ -22,24 +22,24 @@ local parms = rqst["parms"]
 local result = "{}"
 
 -- get settings
-local shared_directory, input_ctrl_filename, output_ctrl_filename = cre.settings()
+local shared_directory = cre.settings()
 local unique_shared_directory = string.format("%s/%s", shared_directory, rqstid)
-local unique_input_ctrl_filename = string.format("%s/%s", unique_shared_directory, input_ctrl_filename)
-local unique_output_ctrl_filename = string.format("%s/%s", unique_shared_directory, output_ctrl_filename)
 
 -- create unique shared directory
 if not cre.createunique(unique_shared_directory) then goto cleanup end
 
--- write input file
-do
-    local input_file, msg = io.open(unique_input_ctrl_filename, "w")
-    if not input_file then 
-        sys.log(core.CRITICAL, string.format("Failed to open input file %s: %s", unique_input_ctrl_filename, msg))
-        goto cleanup 
+-- write input parameter files
+if parms["parms"] then
+    for filename,contents in pairs(parms["parms"]) do
+        local unique_filename = string.format("%s/%s", unique_shared_directory, filename)
+        local input_file, msg = io.open(unique_filename, "w")
+        if not input_file then 
+            sys.log(core.CRITICAL, string.format("Failed to open input file %s: %s", unique_filename, msg))
+            goto cleanup
+        end
+        input_file:write(json.encode(contents))
+        input_file:close()
     end
-    local input_parms = { rqst_parms=parms, input_files={} }
-    input_file:write(json.encode(input_parms))
-    input_file:close()
 end
 
 -- execute container

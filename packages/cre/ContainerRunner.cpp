@@ -54,7 +54,7 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* ContainerRunner::HOST_SHARED_DIRECTORY = "/usr/local/share/applications";
+const char* ContainerRunner::HOST_SHARED_DIRECTORY = "/data";
 
 const char* ContainerRunner::REGISTRY = NULL;
 
