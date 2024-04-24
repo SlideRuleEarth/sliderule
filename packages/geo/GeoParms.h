@@ -122,24 +122,25 @@ class GeoParms: public LuaObject
         * Data
         *--------------------------------------------------------------------*/
 
-        GDALRIOResampleAlg  sampling_algo;
-        int                 sampling_radius;
-        bool                zonal_stats;
-        bool                flags_file;
-        bool                filter_time;
-        TimeLib::gmt_time_t start_time;
-        TimeLib::gmt_time_t stop_time;
-        const char*         url_substring;
-        bool                filter_closest_time;
-        TimeLib::gmt_time_t closest_time;
-        bool                use_poi_time;
-        const char*         proj_pipeline;
-        bbox_t              aoi_bbox;
-        const char*         catalog;
-        band_list_t         bands;
-        const char*         asset_name;
-        Asset*              asset;
-        uint64_t            key_space;
+        GDALRIOResampleAlg      sampling_algo;
+        int                     sampling_radius;
+        bool                    zonal_stats;
+        bool                    flags_file;
+        bool                    filter_time;
+        TimeLib::gmt_time_t     start_time;
+        TimeLib::gmt_time_t     stop_time;
+        const char*             url_substring;
+        bool                    filter_closest_time;
+        TimeLib::gmt_time_t     closest_time;
+        bool                    use_poi_time;
+        const char*             proj_pipeline;
+        bbox_t                  aoi_bbox;
+        const char*             catalog;
+        band_list_t             bands_list;
+        band_list_t::Iterator*  bands;
+        const char*             asset_name;
+        Asset*                  asset;
+        uint64_t                key_space;
 
         /*--------------------------------------------------------------------
         * Methods

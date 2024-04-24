@@ -120,7 +120,8 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     proj_pipeline       (NULL),
     aoi_bbox            {0, 0, 0, 0},
     catalog             (NULL),
-    bands               (8),
+    bands_list          (8),
+    bands               (NULL),
     asset_name          (NULL),
     asset               (NULL),
     key_space           (0)
@@ -254,7 +255,11 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             /* Bands */
             lua_getfield(L, index, BANDS);
             getLuaBands(L, -1, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to user provided selection", BANDS);
+            if(field_provided)
+            {
+                bands = new band_list_t::Iterator(bands_list);
+                mlog(DEBUG, "Setting %s to user provided selection", BANDS);                
+            }
             lua_pop(L, 1);
 
             /* Asset */
@@ -324,6 +329,12 @@ void GeoParms::cleanup (void)
         delete [] proj_pipeline;
         proj_pipeline = NULL;
     }
+
+    if(bands)
+    {
+        delete bands;
+        bands = NULL;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -363,7 +374,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
             /* Add band */
             lua_rawgeti(L, index, i+1);
             string band_str(LuaObject::getLuaString(L, -1));
-            bands.add(band_str);
+            bands_list.add(band_str);
             lua_pop(L, 1);
         }
     }
@@ -373,7 +384,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
 
         /* Add band */
         string band_str(LuaObject::getLuaString(L, -1));
-        bands.add(band_str);
+        bands_list.add(band_str);
     }
     else if(!lua_isnil(L, index))
     {

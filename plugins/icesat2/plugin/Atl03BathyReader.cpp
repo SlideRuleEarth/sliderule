@@ -119,7 +119,7 @@ int Atl03BathyReader::luaCreate (lua_State* L)
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 4, BathyParms::OBJECT_TYPE));
         geoparms = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
-        bool send_terminator = getLuaBoolean(L, 11, true, true);
+        bool send_terminator = getLuaBoolean(L, 6, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, send_terminator));
@@ -224,7 +224,6 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
                 {
                     info_t* info = new info_t;
                     info->builder = this;
-                    info->ndwiRaster = RasterObject::cppCreate(geoparms);
                     info->track = track;
                     info->pair = pair;
                     info->beam = gt_index + 1;
@@ -269,6 +268,7 @@ Atl03BathyReader::~Atl03BathyReader (void)
     delete outQ;
 
     parms->releaseLuaObject();
+    geoparms->releaseLuaObject();
 
     delete [] resource;
 
@@ -586,6 +586,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     info_t* info = (info_t*)parm;
     Atl03BathyReader* builder = info->builder;
     BathyParms* parms = builder->parms;
+    RasterObject* ndwiRaster = RasterObject::cppCreate(builder->geoparms);
 
     /* Thread Variables */
     fileptr_t out_file = NULL;
@@ -752,7 +753,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
 
                     /* Sample Raster for NDWI */
                     ndwi = std::numeric_limits<float>::quiet_NaN();
-                    if(info->ndwiRaster && parms->generate_ndwi)
+                    if(ndwiRaster && parms->generate_ndwi)
                     {
                         double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
                         MathLib::point_3d_t point = {
@@ -761,7 +762,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                             .z = 0.0 // since we are not sampling elevation data, this should be fine at zero
                         };
                         List<RasterSample*> slist(1);
-                        uint32_t err = info->ndwiRaster->getSamples(point, gps, slist);
+                        uint32_t err = ndwiRaster->getSamples(point, gps, slist);
                         if(slist.length() > 0) ndwi = static_cast<float>(slist[0]->value);
                         else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, point.y, point.x, err);
                     }
@@ -989,8 +990,9 @@ FString json_contents(R"json({
     }
     builder->threadMut.unlock();
 
-    /* Clean Up Info */
+    /* Clean Up */
     delete info;
+    delete ndwiRaster;
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);

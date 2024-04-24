@@ -90,7 +90,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
-    if(_parms->bands.length() == 0)
+    if(_parms->bands->length == 0)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
 
     /* Create in memory index file (geojson) */
@@ -100,9 +100,9 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
 
     /* Create dictionary of bands and algo names to process */
     bool returnBandSample;
-    for(int i = 0; i < _parms->bands.length(); i++)
+    for(int i = 0; i < _parms->bands->length; i++)
     {
-        const char* name = _parms->bands[i].c_str();
+        const char* name = (*_parms->bands)[i].c_str();
         if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
         {
             if(!bandsDict.find(name, &returnBandSample))
@@ -111,9 +111,9 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
                 bandsDict.add(name, returnBandSample);
             }
 
-            if(strcasecmp(_parms->bands[i].c_str(), "NDSI") == 0) ndsi = true;
-            if(strcasecmp(_parms->bands[i].c_str(), "NDVI") == 0) ndvi = true;
-            if(strcasecmp(_parms->bands[i].c_str(), "NDWI") == 0) ndwi = true;
+            if(strcasecmp((*_parms->bands)[i].c_str(), "NDSI") == 0) ndsi = true;
+            if(strcasecmp((*_parms->bands)[i].c_str(), "NDVI") == 0) ndvi = true;
+            if(strcasecmp((*_parms->bands)[i].c_str(), "NDWI") == 0) ndwi = true;
         }
     }
 

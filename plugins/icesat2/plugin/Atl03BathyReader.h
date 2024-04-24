@@ -139,13 +139,10 @@ class Atl03BathyReader: public LuaObject
 
         typedef struct Info {
             Atl03BathyReader*   builder;
-            RasterObject*       ndwiRaster;
             char                prefix[7];
             int                 track;
             int                 pair;
             int                 beam;
-
-            ~Info(void) { delete ndwiRaster;}
         } info_t;
 
         /* Region Subclass */

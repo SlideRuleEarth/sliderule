@@ -52,13 +52,13 @@ if proc then
     }
 
     -- build hls raster object
-    local hls = nil -- populated below upon successfully retrieving catalog
+    local geo_parms = nil
     local rc, rsps = earthdata.stac(hls_parms)
     if rc == earthdata.SUCCESS then
         hls_parms["catalog"] = json.encode(rsps)
-        hls = geo.raster(geo.parms(hls_parms))
+        geo_parms = geo.parms(hls_parms)
     end
 
-    local reader    = icesat2.atl03bathy(proc.asset, resource, args.result_q, rqst_parms, hls, false)
+    local reader    = icesat2.atl03bathy(proc.asset, resource, args.result_q, rqst_parms, geo_parms, false)
     local status    = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
 end
