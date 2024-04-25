@@ -522,24 +522,23 @@ def to_parquet(gdf, filename, **kwargs):
 
 def from_parquet(filename, **kwargs):
     # set default keyword arguments
+    kwargs.setdefault('crs',SLIDERULE_EPSG)
     kwargs.setdefault('return_parameters',False)
     kwargs.setdefault('return_regions',False)
     # import optional dependencies
-    pyproj = import_optional_dependency(
-        "pyproj", extra="pyproj is required for CRS conversion."
-    )
     parquet = import_optional_dependency(
         "pyarrow.parquet", extra="pyarrow is required for Parquet support."
     )
     # read arrow table from parquet file
-    gdf = geopandas.read_parquet(filename)
+    # and convert to coordinate reference system
+    gdf = geopandas.read_parquet(filename).to_crs(kwargs['crs'])
     # if not returning the query parameters or polygon
     if not (kwargs['return_parameters'] or kwargs['return_regions']):
         # return geodataframe
         return gdf
     # create tuple with returns
     output = (gdf,)
-    # get sliderule metadata
+    # get parquet file metadata
     metadata = parquet.read_metadata(filename).metadata
     # validate sliderule metadata
     if b'sliderule' not in metadata.keys():
@@ -558,6 +557,7 @@ def from_parquet(filename, **kwargs):
     # if returning the parameters
     if kwargs['return_parameters']:
         # add parameters to output tuple
+        [parms.pop(v) for v in ('version','commit','type')]
         output += (parms,)
     # if returning the regions
     if kwargs['return_regions']:
