@@ -36,8 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <vector>
-#include <ogr_geometry.h>
 #include "LuaObject.h"
 #include "MathLib.h"
 #include "List.h"

@@ -39,6 +39,11 @@
 #include "UT_RasterSubset.h"
 #endif
 
+#include "GeoRaster.h"
+#include "GeoIndexedRaster.h"
+#include "GeoJsonRaster.h"
+#include "GeoUserRaster.h"
+
 #include <gdal.h>
 #include <cpl_conv.h>
 #include <proj.h>
@@ -305,6 +310,7 @@ void initgeo (void)
     test_projlib();
 
     /* Initialize Modules */
+    GeoRaster::init();
     GeoIndexedRaster::init();
     RasterSampler::init();
     GeoLib::init();
@@ -329,6 +335,7 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
+    GeoRaster::deinit();
     GeoIndexedRaster::deinit();
     RasterSampler::deinit();
     GDALDestroy();

@@ -37,6 +37,7 @@
 #include "EventLib.h"
 #include "RasterObject.h"
 #include "RasterSubset.h"
+#include <ogr_geometry.h>
 
 /******************************************************************************
  * STATIC DATA

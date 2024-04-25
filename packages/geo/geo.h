@@ -36,16 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GdalRaster.h"
-#include "GeoIndexedRaster.h"
-#include "GeoJsonRaster.h"
 #include "GeoLib.h"
 #include "GeoParms.h"
-#include "GeoRaster.h"
-#include "GeoUserRaster.h"
 #include "RasterObject.h"
-#include "RasterObject.h"
-#include "RasterSample.h"
 #include "RasterSampler.h"
 #include "RasterSubset.h"
 

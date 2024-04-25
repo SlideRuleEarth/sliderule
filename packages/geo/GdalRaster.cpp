@@ -394,7 +394,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
             if(parms->sampling_algo != GRIORA_NearestNeighbour)
             {
                 INIT_RASTERIO_EXTRA_ARG(args);
-                args.eResampleAlg = parms->sampling_algo;
+                args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
                 argsPtr = &args;
             }
             err = band->RasterIO(GF_Read, ulx, uly, _xsize, _ysize, data, _xsize, _ysize, dtype, 0, 0, argsPtr);
@@ -683,7 +683,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = parms->sampling_algo;
+        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
 
         bool validWindow = containsWindow(_x, _y, xsize, ysize, windowSize);
         if(validWindow)
@@ -726,7 +726,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = parms->sampling_algo;
+        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
         samplesArray = new double[windowSize*windowSize];
 
         bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);

@@ -258,7 +258,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             if(field_provided)
             {
                 bands = new band_list_t::Iterator(bands_list);
-                mlog(DEBUG, "Setting %s to user provided selection", BANDS);                
+                mlog(DEBUG, "Setting %s to user provided selection", BANDS);
             }
             lua_pop(L, 1);
 
@@ -340,17 +340,17 @@ void GeoParms::cleanup (void)
 /*----------------------------------------------------------------------------
  * str2algo
  *----------------------------------------------------------------------------*/
-GDALRIOResampleAlg GeoParms::str2algo (const char* str)
+int GeoParms::str2algo (const char* str)
 {
-    if(!str)                                            return GRIORA_NearestNeighbour;
-    if(StringLib::match(str, NEARESTNEIGHBOUR_ALGO))    return GRIORA_NearestNeighbour;
-    if(StringLib::match(str, BILINEAR_ALGO))            return GRIORA_Bilinear;
-    if(StringLib::match(str, CUBIC_ALGO))               return GRIORA_Cubic;
-    if(StringLib::match(str, CUBICSPLINE_ALGO))         return GRIORA_CubicSpline;
-    if(StringLib::match(str, LANCZOS_ALGO))             return GRIORA_Lanczos;
-    if(StringLib::match(str, AVERAGE_ALGO))             return GRIORA_Average;
-    if(StringLib::match(str, MODE_ALGO))                return GRIORA_Mode;
-    if(StringLib::match(str, GAUSS_ALGO))               return GRIORA_Gauss;
+    if(!str)                                         return static_cast<int>(GRIORA_NearestNeighbour);
+    if(StringLib::match(str, NEARESTNEIGHBOUR_ALGO)) return static_cast<int>(GRIORA_NearestNeighbour);
+    if(StringLib::match(str, BILINEAR_ALGO))         return static_cast<int>(GRIORA_Bilinear);
+    if(StringLib::match(str, CUBIC_ALGO))            return static_cast<int>(GRIORA_Cubic);
+    if(StringLib::match(str, CUBICSPLINE_ALGO))      return static_cast<int>(GRIORA_CubicSpline);
+    if(StringLib::match(str, LANCZOS_ALGO))          return static_cast<int>(GRIORA_Lanczos);
+    if(StringLib::match(str, AVERAGE_ALGO))          return static_cast<int>(GRIORA_Average);
+    if(StringLib::match(str, MODE_ALGO))             return static_cast<int>(GRIORA_Mode);
+    if(StringLib::match(str, GAUSS_ALGO))            return static_cast<int>(GRIORA_Gauss);
     throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
 }
 
