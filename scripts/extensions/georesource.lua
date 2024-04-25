@@ -38,7 +38,7 @@ local function initialize(resource, parms, algo, args)
     local sampler_disp = nil
     if parms[geo.PARMS] then
         local rsps_bridge = core.bridge(args.result_q, rspq)
-        sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required because GeoRaster is not thread safe
+        sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
         for key,settings in pairs(parms[geo.PARMS]) do
             local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
             if robj then
@@ -53,7 +53,7 @@ local function initialize(resource, parms, algo, args)
             end
         end
         sampler_disp:run()
-    end
+     end
 
     -- Dispatcher --
     local source_q = nil
