@@ -58,6 +58,9 @@ class GeoRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void   init       (void);
+        static void   deinit     (void);
+
                       GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
         virtual      ~GeoRaster  (void);
         uint32_t      getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;

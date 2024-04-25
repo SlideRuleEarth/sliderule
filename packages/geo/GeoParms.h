@@ -44,8 +44,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <gdal.h>
-
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "Asset.h"
@@ -122,7 +120,7 @@ class GeoParms: public LuaObject
         * Data
         *--------------------------------------------------------------------*/
 
-        GDALRIOResampleAlg      sampling_algo;
+        int                     sampling_algo;
         int                     sampling_radius;
         bool                    zonal_stats;
         bool                    flags_file;
@@ -156,14 +154,14 @@ class GeoParms: public LuaObject
         * Methods
         *--------------------------------------------------------------------*/
 
-        void                        cleanup         (void);
-        static GDALRIOResampleAlg   str2algo        (const char* str);
-        void                        getLuaBands     (lua_State* L, int index, bool* provided);
-        void                        getAoiBbox      (lua_State* L, int index, bool* provided);
+        void       cleanup         (void);
+        static int str2algo        (const char* str);
+        void       getLuaBands     (lua_State* L, int index, bool* provided);
+        void       getAoiBbox      (lua_State* L, int index, bool* provided);
 
-        static int                  luaAssetName    (lua_State* L);
-        static int                  luaAssetRegion  (lua_State* L);
-        static int                  luaSetKeySpace  (lua_State* L);
+        static int luaAssetName    (lua_State* L);
+        static int luaAssetRegion  (lua_State* L);
+        static int luaSetKeySpace  (lua_State* L);
 };
 
 #endif  /* __geo_parms__ */

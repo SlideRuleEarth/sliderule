@@ -40,6 +40,44 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void GeoRaster::init (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+void GeoRaster::deinit (void)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb):
+    RasterObject(L, _parms),
+    raster(_parms, _fileName, _gpsTime, fileDictAdd(_fileName), dataIsElevation, cb)
+{
+    /* Add Lua Functions */
+    LuaEngine::setAttrFunc(L, "dim", luaDimensions);
+    LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
+    LuaEngine::setAttrFunc(L, "cell", luaCellSize);
+
+    /* Establish Credentials */
+    GdalRaster::initAwsAccess(_parms);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoRaster::~GeoRaster(void)
+{
+}
+
+
+/*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
@@ -115,7 +153,6 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     return raster.getSSerror();
 }
 
-
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
@@ -138,30 +175,6 @@ uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32
 
     return data;
 }
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb):
-    RasterObject(L, _parms),
-    raster(_parms, _fileName, _gpsTime, fileDictAdd(_fileName), dataIsElevation, cb)
-{
-    /* Add Lua Functions */
-    LuaEngine::setAttrFunc(L, "dim", luaDimensions);
-    LuaEngine::setAttrFunc(L, "bbox", luaBoundingBox);
-    LuaEngine::setAttrFunc(L, "cell", luaCellSize);
-
-    /* Establish Credentials */
-    GdalRaster::initAwsAccess(_parms);
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoRaster::~GeoRaster(void)
-{
-}
-
 
 /******************************************************************************
  * PROTECTED METHODS
