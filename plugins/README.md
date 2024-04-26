@@ -9,4 +9,5 @@
 | gedi      | GEDI sampling support                |
 | usgs3dep  | USGS 3DEP sampling support           |
 | opendata  | World Cover sampling support         |
+| gebco     | GEBCO sampling support               |
 | swot      | SWOT subsetting (prototype)          |

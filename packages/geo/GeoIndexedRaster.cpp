@@ -381,7 +381,11 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         /* Open new vector data set*/
         dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
         if (dset == NULL)
+        {
+            const char* error_message = CPLGetLastErrorMsg();
+            mlog(CRITICAL, "Error opening dataset: %s", error_message);
             throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file: %s:", newFile.c_str());
+        }
 
         indexFile = newFile;
         OGRLayer* layer = dset->GetLayer(0);

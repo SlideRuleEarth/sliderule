@@ -554,6 +554,13 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
             }
             break;
 
+            case GDT_Int8:
+            {
+                int8_t* p   = static_cast<int8_t*>(data);
+                sample->value = p[offset];
+            }
+            break;
+
             case GDT_UInt16:
             {
                 uint16_t* p  = static_cast<uint16_t*>(data);
@@ -615,7 +622,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
                  * Complex numbers are supported but not needed at this point.
                  */
                 block->DropLock();
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported data type in raster: %s:", fileName.c_str());
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported data type %d, in raster: %s:", band->GetRasterDataType(), fileName.c_str());
         }
 
         /* Done reading, release block lock */
