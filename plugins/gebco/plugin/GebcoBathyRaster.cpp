@@ -67,7 +67,6 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, GeoParms* _parms):
  *----------------------------------------------------------------------------*/
 GebcoBathyRaster::~GebcoBathyRaster(void)
 {
-    VSIUnlink(indexFile.c_str());
 }
 
 /*----------------------------------------------------------------------------
