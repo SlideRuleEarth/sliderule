@@ -73,5 +73,5 @@ if(args.output != None):
     gdf.to_csv(args.output, index=False, columns=columns)
 
 # Clean Up Temporary Files
-if args.local_prefix == "None" and not args.preserve:
+if args.return2client and not args.preserve:
     os.remove(args.serverfile)

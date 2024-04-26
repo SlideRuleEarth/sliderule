@@ -100,6 +100,7 @@ class Atl03BathyReader: public LuaObject
             double          y_atc;                  // dist_ph_across
             double          background_rate;        // PE per second
             float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
+            float           dem_h;                  // best available dem height
             float           sigma_along;            // along track aerial uncertainty
             float           sigma_across;           // across track aerial uncertainty
             float           solar_elevation;
@@ -190,6 +191,7 @@ class Atl03BathyReader: public LuaObject
                 H5Array<float>      sigma_across;
                 H5Array<float>      ref_elev;
                 H5Array<float>      geoid;
+                H5Array<float>      dem_h;
                 H5Array<float>      dist_ph_along;
                 H5Array<float>      dist_ph_across;
                 H5Array<float>      h_ph;

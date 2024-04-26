@@ -69,6 +69,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
     {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
     {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(photon_t, solar_elevation),1,  NULL, NATIVE_FLAGS},
@@ -121,7 +122,7 @@ int Atl03BathyReader::luaCreate (lua_State* L)
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 4, BathyParms::OBJECT_TYPE));
         geoparms = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
         const char* shared_directory = getLuaString(L, 6);
-        bool send_terminator = getLuaBoolean(L, 6, true, true);
+        bool send_terminator = getLuaBoolean(L, 7, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, shared_directory, send_terminator));
@@ -510,6 +511,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sigma_across        (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->builder->context, 0, region.first_segment, region.num_segments),
     ref_elev            (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->builder->context, 0, region.first_segment, region.num_segments),
     geoid               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->builder->context, 0, region.first_segment, region.num_segments),
+    dem_h               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          &info->builder->context, 0, region.first_segment, region.num_segments),
     dist_ph_along       (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->builder->context, 0, region.first_photon,  region.num_photons),
     dist_ph_across      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->builder->context, 0, region.first_photon,  region.num_photons),
     h_ph                (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->builder->context, 0, region.first_photon,  region.num_photons),
@@ -531,6 +533,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sigma_across.join(info->builder->read_timeout_ms, true);
     ref_elev.join(info->builder->read_timeout_ms, true);
     geoid.join(info->builder->read_timeout_ms, true);
+    dem_h.join(info->builder->read_timeout_ms, true);
     dist_ph_along.join(info->builder->read_timeout_ms, true);
     dist_ph_across.join(info->builder->read_timeout_ms, true);
     h_ph.join(info->builder->read_timeout_ms, true);
@@ -723,6 +726,13 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     break;
                 }
 
+                /* Check Maximum DEM Delta */
+                double dem_delta = abs(atl03.dem_h[current_segment] - atl03.h_ph[current_photon]);
+                if(dem_delta > parms->max_dem_delta)
+                {
+                    break;
+                }
+
                 /* Calculate UTM Coordinates */
                 double latitude = atl03.lat_ph[current_photon];
                 double longitude = atl03.lon_ph[current_photon];
@@ -784,6 +794,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
                     .geoid_corr_h = atl03.h_ph[current_photon] + atl03.geoid[current_segment],
+                    .dem_h = atl03.dem_h[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
                     .solar_elevation = atl03.solar_elevation[current_segment],
@@ -870,7 +881,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         if(out_file == NULL)
                         {
                             /* Open JSON File */
-                            FString json_filename("%s/%s_%d.json", OUTPUT_FILE_PREFIX, builder->sharedDirectory, info->beam);
+                            FString json_filename("%s/%s_%d.json", builder->sharedDirectory, OUTPUT_FILE_PREFIX, info->beam);
                             fileptr_t json_file = fopen(json_filename.c_str(), "w");
                             if(json_file == NULL)
                             {
@@ -905,7 +916,7 @@ FString json_contents(R"json({
                             fclose(json_file);
 
                             /* Open Data File */
-                            FString filename("%s/%s_%d.csv", OUTPUT_FILE_PREFIX, builder->sharedDirectory, info->beam);
+                            FString filename("%s/%s_%d.csv", builder->sharedDirectory, OUTPUT_FILE_PREFIX, info->beam);
                             out_file = fopen(filename.c_str(), "w");
                             if(out_file == NULL)
                             {
@@ -913,7 +924,7 @@ FString json_contents(R"json({
                             }
 
                             /* Write Header */
-                            fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,geoid_corr_h,sigma_along,sigma_across,solar_elevation,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph\n");
+                            fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,geoid_corr_h,dem_h,sigma_along,sigma_across,solar_elevation,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph\n");
                         }
 
                         /* Write Data */
@@ -929,6 +940,7 @@ FString json_contents(R"json({
                             fprintf(out_file, "%lf,", extent->photons[i].y_atc);
                             fprintf(out_file, "%lf,", extent->photons[i].background_rate);
                             fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
+                            fprintf(out_file, "%f,", extent->photons[i].dem_h);
                             fprintf(out_file, "%f,", extent->photons[i].sigma_along);
                             fprintf(out_file, "%f,", extent->photons[i].sigma_across);
                             fprintf(out_file, "%f,", extent->photons[i].solar_elevation);

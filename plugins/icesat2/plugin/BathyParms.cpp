@@ -49,6 +49,7 @@ const char* BathyParms::RETURN_INPUTS = "return_iputs";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
 
 const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
+const double BathyParms::DEFAULT_MAX_DEM_DELTA = 10000.0;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -99,8 +100,9 @@ void BathyParms::getATL09Key (char* key, const char* name)
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
     Icesat2Parms (L, index),
-    ph_in_extent (DEFAULT_PH_IN_EXTENT),
     max_along_track_spread (DEFAULT_MAX_ALONG_TRACK_SPREAD),
+    max_dem_delta (DEFAULT_MAX_DEM_DELTA),
+    ph_in_extent (DEFAULT_PH_IN_EXTENT),
     generate_ndwi(true),
     use_bathy_mask(true),
     return_inputs(false)
@@ -109,16 +111,22 @@ BathyParms::BathyParms(lua_State* L, int index):
 
     try
     {
-        /* photons in extent */
-        lua_getfield(L, index, BathyParms::PH_IN_EXTENT);
-        ph_in_extent = LuaObject::getLuaInteger(L, -1, true, ph_in_extent, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::PH_IN_EXTENT, ph_in_extent);
-        lua_pop(L, 1);
-
         /* maximum along track spread */
         lua_getfield(L, index, BathyParms::MAX_ALONG_TRACK_SPREAD);
         max_along_track_spread = LuaObject::getLuaFloat(L, -1, true, max_along_track_spread, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_ALONG_TRACK_SPREAD, max_along_track_spread);
+        lua_pop(L, 1);
+
+        /* maximum DEM delta */
+        lua_getfield(L, index, BathyParms::MAX_DEM_DELTA);
+        max_dem_delta = LuaObject::getLuaFloat(L, -1, true, max_dem_delta, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_DEM_DELTA, max_dem_delta);
+        lua_pop(L, 1);
+
+        /* photons in extent */
+        lua_getfield(L, index, BathyParms::PH_IN_EXTENT);
+        ph_in_extent = LuaObject::getLuaInteger(L, -1, true, ph_in_extent, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::PH_IN_EXTENT, ph_in_extent);
         lua_pop(L, 1);
 
         /* generate ndwi */

@@ -63,8 +63,38 @@
 import pandas as pd
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
 from modeling_parallel import ModelMakerP # classes for modeling bathymetry from the profile
+import sys
+import json
+
+###################
+# GET INPUTS
+###################
+
+if len(sys.argv) > 3:
+    ph_data_all = pd.read_csv(sys.argv[1])
+    with open(sys.argv[2], 'r') as json_file:
+        ph_info_all = json.load(json_file)
+    output_filename = sys.argv[3]
+else:
+    print("Not enough parameters: python oceaneyes.py <input csv beam file> <input json beam file> <output csv beam file>")
+    sys.exit()
+
+# read in the csv file
+print(ph_data_all.columns)
+
+# photon index - integer position of photon within the h5 file
+# x_ph - total along track distance, normalized to the minimum value
+# z_ph - geoid-corrected photon height
+input_variables = ['photon_index', 'x_ph', 'z_ph']
+
+# storing photon classifications 
+openoceans_prepopulated = ['classification',
+       'conf_background', 'conf_surface', 'conf_column', 'conf_bathymetry',
+       'subsurface_flag', 'weight_surface', 'weight_bathymetry']
+
+# subset the example dataframe
+ph_data = ph_data_all.loc[:, input_variables + openoceans_prepopulated]
 
 
 class Profile:
@@ -85,40 +115,14 @@ class Profile:
     def label_help(self, user_input=None):
         return self.class_labels[user_input]
 
-# read in the csv file
-ph_data_all = pd.read_csv('/data/ATLAS/ATL03_20220627212342_00911607_006_01.csv')
-print(ph_data_all.columns)
-
-# photon index - integer position of photon within the h5 file
-# x_ph - total along track distance, normalized to the minimum value
-# z_ph - geoid-corrected photon height
-input_variables = ['photon_index', 'x_ph', 'z_ph']
-
-# for demonstration
-filtering_variables = ['quality_ph', 'dem_h', 'h_ph']
-
-# storing photon classifications 
-openoceans_prepopulated = ['classification',
-       'conf_background', 'conf_surface', 'conf_column', 'conf_bathymetry',
-       'subsurface_flag', 'weight_surface', 'weight_bathymetry']
-
-# subset the example dataframe
-ph_data = ph_data_all.loc[:, input_variables + filtering_variables + openoceans_prepopulated]
-p_sr = Profile(data=ph_data, info={'beam_strength': 'strong'})
+p_sr = Profile(data=ph_data, info=ph_info_all)
 print(p_sr.data.head())
-
-# retain only photons within 100m of the DEM
-mask = (p_sr.data['h_ph'] < (p_sr.data['dem_h'] + 100)) & (p_sr.data['h_ph'] > (p_sr.data['dem_h'] - 100))
-
-# afterpulsing or tep filtering
-mask &= p_sr.data.quality_ph == 0
 
 # if ndwi is available, filter out land
 if 'ndwi' in p_sr.data.columns:
-    mask &= p_sr.data.ndwi > 0
+    p_sr.data = p_sr.data[p_sr.data.ndwi > 0]
 
 # filter dataframe 
-p_sr.data = p_sr.data[mask]
 print(p_sr.data.shape)
 
 # input parameters may vary for different models
@@ -135,3 +139,8 @@ Mp = ModelMakerP(res_along_track=10,
 # It can also run in serial (try 'process_orig' instead of 'process' for the original, serial version), but that's unmanageably slow for my laptop
 m = Mp.process(p_sr, n_cpu_cores=10)
 print(m.profile.data.classification)
+
+# write classifications to output file
+p_sr.data["class_ph"] = m.profile.data.classification
+columns = ["photon_index", "class_ph"]
+p_sr.data.to_csv(output_filename, index=False, columns=columns)

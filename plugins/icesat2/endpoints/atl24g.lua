@@ -78,7 +78,7 @@ local function genfilenames(shared_directory, i, prefix)
     return string.format("%s/%s_%d.csv %s/%s_%d.json %s/%s_%s_%d.csv", shared_directory, icesat2.BATHY_PREFIX, i, shared_directory, icesat2.BATHY_PREFIX, i, shared_directory, prefix, icesat2.BATHY_PREFIX, i)
 end
 
-while true do
+while false do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
 
@@ -102,4 +102,4 @@ while true do
 end
 
 -- cleanup container runtime environment
-runner.cleanup(shared_directory)
+--runner.cleanup(shared_directory)
