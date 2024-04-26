@@ -41,8 +41,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::MAX_ALONG_TRACK_SPREAD = "max_along_track_spread";
+const char* BathyParms::MAX_DEM_DELTA = "max_dem_delta";
+const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
 const char* BathyParms::USE_BATHY_MASK = "use_bathy_mask";
 const char* BathyParms::RETURN_INPUTS = "return_iputs";

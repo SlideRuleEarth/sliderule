@@ -67,9 +67,15 @@ from modeling_parallel import ModelMakerP # classes for modeling bathymetry from
 import sys
 import json
 
-###################
-# GET INPUTS
-###################
+############
+# CONSTANTS
+############
+
+NO_VALUE = -9999
+
+##############
+# READ INPUTS
+##############
 
 if len(sys.argv) > 3:
     ph_data_all = pd.read_csv(sys.argv[1])
@@ -80,25 +86,54 @@ else:
     print("Not enough parameters: python oceaneyes.py <input csv beam file> <input json beam file> <output csv beam file>")
     sys.exit()
 
-# read in the csv file
-print(ph_data_all.columns)
+##################
+# BUILD DATAFRAME
+##################
 
-# photon index - integer position of photon within the h5 file
-# x_ph - total along track distance, normalized to the minimum value
-# z_ph - geoid-corrected photon height
-input_variables = ['photon_index', 'x_ph', 'z_ph']
+ph_data = pd.DataFrame()
 
-# storing photon classifications 
-openoceans_prepopulated = ['classification',
-       'conf_background', 'conf_surface', 'conf_column', 'conf_bathymetry',
-       'subsurface_flag', 'weight_surface', 'weight_bathymetry']
+ph_data["photon_index"] = ph_data_all["index_ph"] # integer position of photon within the h5 file
+ph_data["x_ph"] = ph_data_all["x_atc"] - min(ph_data_all["x_atc"]) # total along track distance, normalized to the minimum value
+ph_data["z_ph"] = ph_data_all["geoid_corr_h"] # geoid-corrected photon height
 
-# subset the example dataframe
-ph_data = ph_data_all.loc[:, input_variables + openoceans_prepopulated]
+ph_data["quality_ph"] = ph_data_all["quality_ph"] # modelling_parallel.py needs thiss
 
+ph_data["classification"] = NO_VALUE
+ph_data["conf_background"] = NO_VALUE
+ph_data["conf_surface"] = NO_VALUE
+ph_data["conf_column"] = NO_VALUE
+ph_data["conf_bathymetry"] = NO_VALUE
+ph_data["subsurface_flag"] = NO_VALUE
+ph_data["weight_surface"] = NO_VALUE
+ph_data["weight_bathymetry"] = NO_VALUE
+
+# if ndwi is available, filter out land
+# if 'ndwi' in ph_data_all:
+#    ph_data = ph_data[ph_data_all.ndwi > 0]
+
+print(ph_data.columns)
+
+########################
+# BUILD INFO DICTIONARY
+########################
+
+beam_strength = {
+    1: "strong",
+    2: "weak",
+    3: "strong", 
+    4: "weak",
+    5: "strong",
+    6: "weak"
+}
+
+ph_info = {'beam_strength': beam_strength[ph_info_all["spot"]]}
+print(ph_info)
+
+################
+# PROFILE CLASS
+################
 
 class Profile:
-
     def __init__(self, data=None, info=None):
         self.info = info
         self.data = data
@@ -111,36 +146,34 @@ class Profile:
             "unclassified": -1,
             "none": -9999,
         }
-
     def label_help(self, user_input=None):
         return self.class_labels[user_input]
 
-p_sr = Profile(data=ph_data, info=ph_info_all)
-print(p_sr.data.head())
+p_sr = Profile(data=ph_data, info=ph_info)
 
-# if ndwi is available, filter out land
-if 'ndwi' in p_sr.data.columns:
-    p_sr.data = p_sr.data[p_sr.data.ndwi > 0]
+################
+# EXECUTE MODEL
+################
 
-# filter dataframe 
-print(p_sr.data.shape)
+mmp = ModelMakerP(res_along_track=10, 
+                  res_z=0.2,
+                  window_size=11, # 3x overlap is not enough to filter bad daytime noise
+                  range_z=[-50, 30], # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
+                  verbose=False, # not really fully integrated, it's still going to print some recent debugging statements
+                  photon_bins=False,
+                  parallel=True)
 
-# input parameters may vary for different models
-Mp = ModelMakerP(res_along_track=10, 
-                    res_z=0.2,
-                    window_size=11, # 3x overlap is not enough to filter bad daytime noise
-                    range_z=[-50, 30], # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
-                    verbose=False, # not really fully integrated, it's still going to print some recent debugging statements
-                    photon_bins=False,
-                    parallel=True)
+m = mmp.process(p_sr, n_cpu_cores=10)
 
-# for reference, this takes about 1.5 minutes on my Apple Silicon Macbook Pro using all 10 cores for parallel processing
-# I'm not sure how/if the parallelization will work on SlideRule's servers? 
-# It can also run in serial (try 'process_orig' instead of 'process' for the original, serial version), but that's unmanageably slow for my laptop
-m = Mp.process(p_sr, n_cpu_cores=10)
-print(m.profile.data.classification)
+print(m.profile.data)
 
-# write classifications to output file
-p_sr.data["class_ph"] = m.profile.data.classification
-columns = ["photon_index", "class_ph"]
-p_sr.data.to_csv(output_filename, index=False, columns=columns)
+################
+# WRITE OUTPUTS
+################
+
+ph_out = pd.DataFrame()
+
+ph_out["index_ph"] = m.profile.data.photon_index
+ph_out["class_ph"] = m.profile.data.classification
+
+ph_out.to_csv(output_filename, index=False, columns=["index_ph", "class_ph"])

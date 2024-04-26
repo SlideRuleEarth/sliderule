@@ -230,7 +230,6 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
                     info->builder = this;
                     info->track = track;
                     info->pair = pair;
-                    info->beam = gt_index + 1;
                     StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
                     readerPid[threadCount++] = new Thread(subsettingThread, info);
                 }
@@ -626,8 +625,9 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         float pointing_angle = 90.0;
         float ndwi = std::numeric_limits<float>::quiet_NaN();
 
-        /* Get Set Level Parameters */
+        /* Get Dataset Level Parameters */
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
+        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
 
         /* Traverse All Photons In Dataset */
         while(builder->active && (current_photon < atl03.dist_ph_along.size))
@@ -851,6 +851,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     extent->track                   = info->track;
                     extent->pair                    = info->pair;
                     extent->spacecraft_orientation  = atl03.sc_orient[0];
+                    extent->spot                    = spot;
                     extent->reference_ground_track  = builder->start_rgt;
                     extent->cycle                   = builder->start_cycle;
                     extent->utm_zone                = utm_transform.zone;
@@ -881,7 +882,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         if(out_file == NULL)
                         {
                             /* Open JSON File */
-                            FString json_filename("%s/%s_%d.json", builder->sharedDirectory, OUTPUT_FILE_PREFIX, info->beam);
+                            FString json_filename("%s/%s_%d.json", builder->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
                             fileptr_t json_file = fopen(json_filename.c_str(), "w");
                             if(json_file == NULL)
                             {
@@ -896,6 +897,7 @@ FString json_contents(R"json({
     "track": "%d",
     "pair": %d,
     "beam": "gt%d%c",
+    "spot": %d,
     "sc_orient": "%s",
     "region": %d,
     "rgt": %d,
@@ -905,6 +907,7 @@ FString json_contents(R"json({
     extent->track,
     extent->pair,
     extent->track, extent->pair == 0 ? 'l' : 'r',
+    extent->spot,
     extent->spacecraft_orientation == Icesat2Parms::SC_BACKWARD ? "backward" : "forward",
     extent->region,
     extent->reference_ground_track,
@@ -916,7 +919,7 @@ FString json_contents(R"json({
                             fclose(json_file);
 
                             /* Open Data File */
-                            FString filename("%s/%s_%d.csv", builder->sharedDirectory, OUTPUT_FILE_PREFIX, info->beam);
+                            FString filename("%s/%s_%d.csv", builder->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
                             out_file = fopen(filename.c_str(), "w");
                             if(out_file == NULL)
                             {
