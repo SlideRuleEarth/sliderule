@@ -50,6 +50,7 @@ LANDSAT_BUILD_DIR = $(BUILD)/landsat
 GEDI_BUILD_DIR = $(BUILD)/gedi
 USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
 OPENDATA_BUILD_DIR = $(BUILD)/opendata
+GEBCO_BUILD_DIR = $(BUILD)/gebco
 SWOT_BUILD_DIR = $(BUILD)/swot
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
@@ -129,6 +130,7 @@ prep: ## create temporary directories needed for build
 	mkdir -p $(GEDI_BUILD_DIR)
 	mkdir -p $(USGS3DEP_BUILD_DIR)
 	mkdir -p $(OPENDATA_BUILD_DIR)
+	mkdir -p $(GEBCO_BUILD_DIR)
 	mkdir -p $(SWOT_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
@@ -140,6 +142,7 @@ config-debug: prep ## configure the server for running locally with debug symbol
 	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gedi
 	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/usgs3dep
 	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/opendata
+	cd $(GEBCO_BUILD_DIR)     && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gebco
 	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/swot
 
 config-release: prep ## configure server to run a release version locally
@@ -151,6 +154,7 @@ config-release: prep ## configure server to run a release version locally
 	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/gedi
 	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/usgs3dep
 	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/opendata
+	cd $(GEBCO_BUILD_DIR)     && cmake $(RELEASE_CFG) $(ROOT)/plugins/gebco
 	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
 
 sliderule: ## build the server using the local configuration
@@ -170,6 +174,8 @@ sliderule: ## build the server using the local configuration
 	make -C $(USGS3DEP_BUILD_DIR) install
 	make -j4 -C $(OPENDATA_BUILD_DIR)
 	make -C $(OPENDATA_BUILD_DIR) install
+	make -j4 -C $(GEBCO_BUILD_DIR)
+	make -C $(GEBCO_BUILD_DIR) install
 	make -j4 -C $(SWOT_BUILD_DIR)
 	make -C $(SWOT_BUILD_DIR) install
 
@@ -181,7 +187,7 @@ run-buildenv: ## run the build environment docker container
 
 manager-package: ## create the lambda python package for the manager
 	cd terraform/manager/python && ./package.sh
-	
+
 manager-deploy: ## deploy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform init
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager || terraform workspace new $(DOMAIN)-manager
@@ -203,7 +209,7 @@ container-runtime-python-docker: ## create the container runtime environment bas
 	cd $(PYTHON_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/python-container:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(VERSION)
 	docker tag $(ECR)/python-container:latest $(ECR)/python-container:$(MAJOR_VERSION)
-	
+
 container-runtime-python-run: ## run the build environment docker container
 	docker run -it --rm -v /usr/local/share/applications:/usr/local/share/applications --name cre $(ECR)/python-container:$(VERSION) python /usr/local/etc/helloworld.py
 
@@ -233,12 +239,12 @@ static-website-export: ## export static website to local host directory
 
 static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
-	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*" 
+	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
 static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT) 
+	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
@@ -404,6 +410,6 @@ help: ## That's me!
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)
-	@echo DOMAIN: $(DOMAIN)	
+	@echo DOMAIN: $(DOMAIN)
 	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
 	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)

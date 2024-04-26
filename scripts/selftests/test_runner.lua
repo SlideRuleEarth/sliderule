@@ -108,6 +108,12 @@ if __usgs3dep__ and incloud then
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 
+-- Run GEBCO Plugin Self Tests
+if __gebco__ and incloud then
+    local gebco_td = td .. "../../plugins/gebco/selftests/"
+    runner.script(gebco_td .. "gebco_reader.lua")
+end
+
 -- Report Results --
 local errors = runner.report()
 
