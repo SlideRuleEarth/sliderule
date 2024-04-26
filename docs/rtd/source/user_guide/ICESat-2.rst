@@ -135,22 +135,22 @@ For example:
     }
 
 2.5.1 ATL03 Subsetted Ancillary Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+####################################
 
 Ancillary data returned from the ``"atl03s"`` and ``"atl03sp"`` APIs are per-photon values that are read from the ATL03 granules.  No processing is performed on the data read out of the ATL03 granule.  The fields must come from either a per-photon variable (atl03_ph_fields), or a per-segment variable (atl03_geo_fields).
 
 2.5.2 ATL06-SR Ancillary Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#############################
 
 Ancillary data returned from the ``"atl06"`` and ``"atl06p"`` APIs come from the ancillary fields specified for ATL03, but instead of being returned as-is, they are processed using the ATL06 least-squares-fit algorithm, and only the result is returned.  In other words, ancillary data points from ATL03 to be included in an ATL06-SR result are treated just like the h_mean, latitude, and longitude variables, and returned as a fitted double-precision floating point value.
 
 2.5.3 ATL06 Subsetted Ancillary Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+####################################
 
 Ancillary data returned from the ``"atl06s"`` and ``"atl06sp"`` APIs come from the land_ice_segments group of the ATL06 granules. The data is mostly returned as-is, with one exception.  Double-precision and single-precision floating point variables are checked to see if they contain the maximum value of their respective encodings, and if so, a floating point NaN (not-a-number) is returned instead.  This check is not performed for integer variables because the maximum value of an encoded integer can sometimes be a valid value (e.g. bit masks).
 
 2.5.4 ATL08-PhoREAL Ancillary Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+##################################
 
 Ancillary data returned from the ``"atl08"`` and ``"atl08p"`` APIs come from the land_segments group of the ATL08 granules.  The data goes through a series of processing steps before being returned back to the user as per-extent (i.e. variable-length segment) result values.
 
@@ -390,7 +390,7 @@ The vegetation GeoDataFrame has the following columns:
 
 
 4. Callbacks
-=============
+============
 For large processing requests, it is possible that the data returned from the API is too large or impractical to fit in the local memory of the Python interpreter making the request.
 In these cases, certain APIs in the SlideRule Python client allow the calling application to provide a callback function that is called for every result that is returned by the servers.
 If a callback is supplied, the API will not return back to the calling application anything associated with the supplied record types, but assumes the callback fully handles processing the data.
@@ -420,7 +420,7 @@ Here is an example of a callback being used for the ``atl03sp`` function:
 
 
 5. Endpoints
-=============
+============
 
 atl06
 -----
