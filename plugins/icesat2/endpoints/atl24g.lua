@@ -73,6 +73,11 @@ local bathy_parms   = icesat2.bathyparms(parms)
 local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, shared_directory, false)
 local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
 
+-- function: generate input filenames
+local function genfilenames(shared_directory, i, prefix)
+    return string.format("%s/%s_%d.csv %s/%s_%d.json %s/%s_%s_%d.csv", shared_directory, icesat2.BATHY_PREFIX, i, shared_directory, icesat2.BATHY_PREFIX, i, shared_directory, prefix, icesat2.BATHY_PREFIX, i)
+end
+
 while true do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
@@ -83,7 +88,7 @@ while true do
     -- execute openoceans
     local openoceans_parms = parms["cre"] or {
         image =  "openoceans", 
-        command = string.format("/env/bin/python /usr/local/etc/oceaneyes.py %s/%s_%d.csv %s/%s_%d.json", shared_directory, icesat2.BATHY_PREFIX, 1, shared_directory, icesat2.BATHY_PREFIX, 1),
+        command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(shared_directory, 1, "openoceans"),
         parms = {
             ["settings.json"] = {
                 var1 = 1

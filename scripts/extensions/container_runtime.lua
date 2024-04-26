@@ -1,7 +1,7 @@
 local json  = require("json")
 
 --
--- Setup for Container
+-- Setup Container Runtime Environment
 --
 local function setup ()
 
@@ -36,14 +36,23 @@ local function execute (parms, unique_shared_directory)
     local cre_parms = cre.parms(parms)
     local cre_runner = cre.container(cre_parms, unique_shared_directory)
 
-    -- wait for container runner to complete
+    -- return container runner
+    return cre_runner
+
+end
+
+--
+-- Wait for Container
+--
+local function wait (parms, cre_runner)
+
     local timeout = parms["timeout"] or netsvc.NODE_TIMEOUT
     return cre_runner:waiton(timeout * 1000)
 
 end
 
 --
--- Cleanup for Container
+-- Cleanup Container Runtime Environment
 --
 local function cleanup (unique_shared_directory)
 
@@ -57,5 +66,6 @@ end
 return {
     setup = setup,
     execute = execute,
+    wait = wait,
     cleanup = cleanup
 }
