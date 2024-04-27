@@ -773,7 +773,7 @@ bool GeoIndexedRaster::updateCache(void)
 bool GeoIndexedRaster::filterRasters(int64_t gps)
 {
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
-    if(parms->url_substring || parms->filter_time )
+    if(parms->url_substring || parms->filter_time || parms->filter_doy_range)
     {
         GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
@@ -800,6 +800,28 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
                     {
                         removeGroup = true;
                         break;
+                    }
+                }
+
+                /* Day Of Year filter */
+                if(parms->filter_doy_range)
+                {
+                    bool inrange = TimeLib::doyinrange(rgroup->gmtDate, parms->doy_start, parms->doy_end);
+                    if(parms->doy_keep_inrange)
+                    {
+                        if(!inrange)
+                        {
+                            removeGroup = true;
+                            break;
+                        }
+                    }
+                    else /* Filter out rasters in doy range */
+                    {
+                        if(inrange)
+                        {
+                            removeGroup = true;
+                            break;
+                        }
                     }
                 }
             }

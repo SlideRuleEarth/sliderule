@@ -52,6 +52,7 @@ const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
 const char* GeoParms::USE_POI_TIME          = "use_poi_time";
+const char* GeoParms::DOY_RANGE             = "doy_range";
 const char* GeoParms::PROJ_PIPELINE         = "proj_pipeline";
 const char* GeoParms::AOI_BBOX              = "aoi_bbox";
 const char* GeoParms::CATALOG               = "catalog";
@@ -117,6 +118,10 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     url_substring       (NULL),
     filter_closest_time (false),
     use_poi_time        (false),
+    filter_doy_range    (false),
+    doy_keep_inrange    (true),
+    doy_start           (0),
+    doy_end             (0),
     proj_pipeline       (NULL),
     aoi_bbox            {0, 0, 0, 0},
     catalog             (NULL),
@@ -231,6 +236,30 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             lua_getfield(L, index, USE_POI_TIME);
             use_poi_time = LuaObject::getLuaBoolean(L, -1, true, use_poi_time, &field_provided);
             if(field_provided) mlog(DEBUG, "Setting %s to %d", USE_POI_TIME, (int)use_poi_time);
+            lua_pop(L, 1);
+
+            /* Day Of Year Range Filter */
+            lua_getfield(L, index, DOY_RANGE);
+            const char* doy_range_str = LuaObject::getLuaString(L, -1, true, NULL);
+            if(doy_range_str)
+            {
+                /* Do we keep in range 'dd:dd' or remove '!dd:dd' */
+                if(doy_range_str[0] == '!')
+                {
+                    doy_keep_inrange = false;
+                    doy_range_str++;
+                }
+                if(!TimeLib::str2doyrange(doy_range_str, doy_start, doy_end))
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse day of year range supplied: %s", doy_range_str);
+
+                if((doy_start > doy_end) || (doy_start == doy_end) ||
+                   (doy_start < 1 || doy_start > 366) ||
+                   (doy_end   < 1 || doy_end   > 366))
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid day of year range: %d:%d", doy_start, doy_end);
+
+                filter_doy_range = true;
+                mlog(DEBUG, "Setting %s to %02d:%02d, doy_keep_inrange: %s", DOY_RANGE, doy_start, doy_end, doy_keep_inrange ? "true" : "false");
+            }
             lua_pop(L, 1);
 
             /* PROJ pipeline for projection transform */

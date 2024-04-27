@@ -710,6 +710,59 @@ bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start
    return ((gpsTime >= gpsStart) && (gpsTime <= gpsEnd));
 }
 
+/*----------------------------------------------------------------------------
+ * str2doyrange
+ *  range string is 'dd:dd'
+ *----------------------------------------------------------------------------*/
+bool TimeLib::str2doyrange(const char* doy_range_str, int& doy_start, int& doy_end)
+{
+    const char* colon_ptr = strchr(doy_range_str, ':');
+    if(colon_ptr == NULL)
+    {
+        /* Missing colon */
+        return false;
+    }
+
+    /* Colon cannot be first or last */
+    if(colon_ptr == doy_range_str || colon_ptr[1] == '\0')
+    {
+        return false;
+    }
+
+    /* Range string must contain only digits and colon */
+    uint32_t colon_cnt = 0;
+    for (const char* ptr = doy_range_str; *ptr != '\0'; ++ptr)
+    {
+        if (!isdigit(*ptr) && (*ptr != ':'))
+        {
+            /* Invalid character */
+            return false;
+        }
+
+        if(*ptr == ':') colon_cnt++;
+    }
+
+    /* Only one colon allowed */
+    if(colon_cnt != 1)
+    {
+        return false;
+    }
+
+    doy_start = strtol(doy_range_str, NULL, 10);
+    doy_end   = strtol(colon_ptr + 1, NULL, 10);
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * doyinrange
+ *----------------------------------------------------------------------------*/
+bool TimeLib::doyinrange(const gmt_time_t& gmt_time, int doy_start, int doy_end)
+{
+    const date_t date = gmt2date(gmt_time);
+    int doy = dayofyear(date.year, date.month, date.day);
+    return ((doy >= doy_start) && (doy <= doy_end));
+}
 
 /******************************************************************************
  * PRIVATE METHODS
