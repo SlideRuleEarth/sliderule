@@ -79,6 +79,7 @@ end
 if __opendata__ and incloud then
     local opendata_td = td .. "../../plugins/opendata/selftests/"
     runner.script(opendata_td .. "worldcover_reader.lua")
+    runner.script(opendata_td .. "globalcanopy_reader.lua")
 end
 
 -- Run PGC Plugin Self Tests
