@@ -40,8 +40,9 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_OPENDATA_LIBNAME                   "opendata"
-#define LUA_ESA_WORLDCOVER_10METER_RASTER_NAME "esa-worldcover-10meter"
+#define LUA_OPENDATA_LIBNAME                      "opendata"
+#define LUA_ESA_WORLDCOVER_10METER_RASTER_NAME    "esa-worldcover-10meter"
+#define LUA_META_GLOBAL_CANOPY_1METER_RASTER_NAME "meta-globalcanopy-1meter"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -85,6 +86,7 @@ void initopendata(void)
 
     /* Register Rasters */
     RasterObject::registerRaster(LUA_ESA_WORLDCOVER_10METER_RASTER_NAME, EsaWorldCover10meterRaster::create);
+    RasterObject::registerRaster(LUA_META_GLOBAL_CANOPY_1METER_RASTER_NAME, MetaGlobalCanopy1meterRaster::create);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_OPENDATA_LIBNAME, opendata_open);
@@ -100,5 +102,6 @@ void deinitopendata (void)
 {
     /* Uninitialize Modules */
     EsaWorldCover10meterRaster::deinit();
+    MetaGlobalCanopy1meterRaster::deinit();
 }
 }
