@@ -63,7 +63,6 @@
 H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
     /* Stack */
-    // btree2_node_ptr_t root_node_ptr;
     vector<btree2_node_info_t> _node_info;
     vector<size_t> _nat_off;
     vector<uint64_t> row_block_size;
@@ -188,7 +187,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     }
 
     /* Compute size to compute num records in each record */
-    u_max_nrec_size = (log2_gen((uint64_t)node_info[0].max_nrec) / 8) + 1;
+    u_max_nrec_size = (log2Gen((uint64_t)node_info[0].max_nrec) / 8) + 1;
 
     safeAssigned(max_nrec_size, u_max_nrec_size);
     max_nrec_size = (uint8_t) u_max_nrec_size;
@@ -199,13 +198,13 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     /*** INIT DOUBLE TABLE  ***/
 
     /* offsets and sizes */
-    dtable.start_bits = log2_of2((uint32_t)fheap_info->starting_blk_size);
-    dtable.first_row_bits = dtable.start_bits + log2_of2((uint32_t)fheap_info->table_width);
+    dtable.start_bits = log2Of2((uint32_t)fheap_info->starting_blk_size);
+    dtable.first_row_bits = dtable.start_bits + log2Of2((uint32_t)fheap_info->table_width);
     dtable.max_root_rows = (fheap_info->max_heap_size - dtable.first_row_bits) + 1;
-    dtable.max_direct_bits = log2_of2((uint32_t)fheap_info->max_dblk_size);
+    dtable.max_direct_bits = log2Of2((uint32_t)fheap_info->max_dblk_size);
     dtable.max_direct_rows = (dtable.max_direct_bits - dtable.start_bits) + 2;
     dtable.num_id_first_row = (uint64_t) (fheap_info->starting_blk_size * fheap_info->table_width);
-    dtable.max_dir_blk_off_size = H5HF_SIZEOF_OFFSET_LEN(fheap_info->max_dblk_size);
+    dtable.max_dir_blk_off_size = sizeOffsetLen(fheap_info->max_dblk_size);
     dtable.curr_root_rows = (uint32_t) fheap_info->curr_num_rows;
     dtable.table_addr = fheap_info->root_blk_addr;
 
@@ -257,9 +256,9 @@ bool H5BTreeV2::isTypeSharedAttrs (uint32_t type_id) {
 }
 
 /*----------------------------------------------------------------------------
- * log2_gen - helper determines the log base two of a number
+ * log2Gen - helper determines the log base two of a number
  *----------------------------------------------------------------------------*/
-uint32_t H5BTreeV2::log2_gen(uint64_t n) {
+uint32_t H5BTreeV2::log2Gen(uint64_t n) {
     /* Taken from https://github.com/HDFGroup/hdf5/blob/develop/src/H5VMprivate.h#L357 */
     uint32_t r; // r will be log2(n)
     uint32_t t, tt, ttt; // temporaries
@@ -295,7 +294,7 @@ uint32_t H5BTreeV2::log2_gen(uint64_t n) {
 /*----------------------------------------------------------------------------
  * log2of2 - helper replicating H5VM_log2_of2
  *----------------------------------------------------------------------------*/
-uint32_t H5BTreeV2::log2_of2(uint32_t n) {
+uint32_t H5BTreeV2::log2Of2(uint32_t n) {
     assert((!(n & (n - 1)) && n));
 
     static constexpr const uint32_t MultiplyDeBruijnBitPosition[32] = {
@@ -308,73 +307,73 @@ uint32_t H5BTreeV2::log2_of2(uint32_t n) {
 }
 
 /*----------------------------------------------------------------------------
- * H5HF_SIZEOF_OFFSET_BITS
+ * sizeOffsetBits
  *----------------------------------------------------------------------------*/
-uint16_t H5BTreeV2::H5HF_SIZEOF_OFFSET_BITS(uint16_t b) {
+uint16_t H5BTreeV2::sizeOffsetBits(uint16_t b) {
     /* Compute the # of bytes required to store an offset into a given buffer size - taken from h5 macro */
     return (((b) + 7) / 8);
 }
 
 
 /*----------------------------------------------------------------------------
- * H5HF_SIZEOF_OFFSET_LEN
+ * sizeOffsetLen
  *----------------------------------------------------------------------------*/
-uint16_t H5BTreeV2::H5HF_SIZEOF_OFFSET_LEN(int32_t l) {
+uint16_t H5BTreeV2::sizeOffsetLen(int32_t l) {
     /* Offset Len spinning off bit size - taken from h5 macro */
-    return H5HF_SIZEOF_OFFSET_BITS((uint16_t) log2_of2((uint32_t) l));
+    return sizeOffsetBits((uint16_t) log2Of2((uint32_t) l));
 
 }
 
 /*----------------------------------------------------------------------------
- * H5_lookup3_rot
+ * lookup3Rot
  *----------------------------------------------------------------------------*/
-uint32_t H5BTreeV2::H5_lookup3_rot(uint32_t x, uint32_t k) {
+uint32_t H5BTreeV2::lookup3Rot(uint32_t x, uint32_t k) {
     return (((x) << (k)) ^ ((x) >> (32 - (k))));
 
 }
 
 /*----------------------------------------------------------------------------
- * H5_lookup3_mix
+ * lookup3Mix
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::H5_lookup3_mix(uint32_t& a,uint32_t& b, uint32_t& c) {
+void H5BTreeV2::lookup3Mix(uint32_t& a,uint32_t& b, uint32_t& c) {
     a -= c;                                                                                              
-    a ^= H5_lookup3_rot(c, 4);                                                                           
+    a ^= lookup3Rot(c, 4);                                                                           
     c += b;                                                                                              
     b -= a;                                                                                              
-    b ^= H5_lookup3_rot(a, 6);                                                                           
+    b ^= lookup3Rot(a, 6);                                                                           
     a += c;                                                                                              
     c -= b;                                                                                              
-    c ^= H5_lookup3_rot(b, 8);                                                                           
+    c ^= lookup3Rot(b, 8);                                                                           
     b += a;                                                                                              
     a -= c;                                                                                              
-    a ^= H5_lookup3_rot(c, 16);                                                                          
+    a ^= lookup3Rot(c, 16);                                                                          
     c += b;                                                                                              
     b -= a;                                                                                              
-    b ^= H5_lookup3_rot(a, 19);                                                                          
+    b ^= lookup3Rot(a, 19);                                                                          
     a += c;                                                                                              
     c -= b;                                                                                              
-    c ^= H5_lookup3_rot(b, 4);                                                                           
+    c ^= lookup3Rot(b, 4);                                                                           
     b += a;
 }
 
 /*----------------------------------------------------------------------------
- * H5_lookup3_final
+ * lookup3Final
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::H5_lookup3_final(uint32_t& a, uint32_t& b, uint32_t& c) {
+void H5BTreeV2::lookup3Final(uint32_t& a, uint32_t& b, uint32_t& c) {
     c ^= b;                                                                                              
-    c -= H5_lookup3_rot(b, 14);                                                                          
+    c -= lookup3Rot(b, 14);                                                                          
     a ^= c;                                                                                              
-    a -= H5_lookup3_rot(c, 11);                                                                          
+    a -= lookup3Rot(c, 11);                                                                          
     b ^= a;                                                                                              
-    b -= H5_lookup3_rot(a, 25);                                                                          
+    b -= lookup3Rot(a, 25);                                                                          
     c ^= b;                                                                                              
-    c -= H5_lookup3_rot(b, 16);                                                                          
+    c -= lookup3Rot(b, 16);                                                                          
     a ^= c;                                                                                              
-    a -= H5_lookup3_rot(c, 4);                                                                           
+    a -= lookup3Rot(c, 4);                                                                           
     b ^= a;                                                                                              
-    b -= H5_lookup3_rot(a, 14);                                                                          
+    b -= lookup3Rot(a, 14);                                                                          
     c ^= b;                                                                                              
-    c -= H5_lookup3_rot(b, 24);
+    c -= lookup3Rot(b, 24);
 
 }
 
@@ -406,7 +405,7 @@ uint32_t H5BTreeV2::checksumLookup3(const void *key, size_t length, uint32_t ini
         c += ((uint32_t)k[9]) << 8;
         c += ((uint32_t)k[10]) << 16;
         c += ((uint32_t)k[11]) << 24;
-        H5_lookup3_mix(a, b, c);
+        lookup3Mix(a, b, c);
         length -= 12;
         k += 12;
     }
@@ -456,7 +455,7 @@ uint32_t H5BTreeV2::checksumLookup3(const void *key, size_t length, uint32_t ini
             assert(0 && "This should never be executed!");
     }
 
-    H5_lookup3_final(a, b, c);
+    lookup3Final(a, b, c);
 
     return c;
 
@@ -590,7 +589,7 @@ void H5BTreeV2::fheapLocate(const void * _id) {
     /* Check type of object in heap */
     if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
         /* Operate on object from managed heap blocks */
-        fheapLocate_Managed(id);
+        fheapLocateManaged(id);
     } 
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
         /* NOT IMPLEMENTED - Operate on 'huge' object from file */
@@ -621,7 +620,7 @@ void H5BTreeV2::dtableLookup(uint64_t off, uint32_t *row, uint32_t *col) {
         *col = (uint32_t) (off / fheap_info->starting_blk_size);
     }
     else {
-        uint32_t high_bit = log2_gen(off); // determine the high bit in the offset
+        uint32_t high_bit = log2Gen(off); // determine the high bit in the offset
         uint64_t off_mask = ((uint64_t)1) << high_bit; // compute mask for determining column
 
         *row = (high_bit - dtable.first_row_bits) + 1;
@@ -633,9 +632,9 @@ void H5BTreeV2::dtableLookup(uint64_t off, uint32_t *row, uint32_t *col) {
 }
 
 /*----------------------------------------------------------------------------
- * buildEntries_Indirect
+ * buildEntriesIndirect
  *----------------------------------------------------------------------------*/
-uint64_t H5BTreeV2::buildEntries_Indirect(int32_t nrows, uint64_t pos, uint64_t* ents) {
+uint64_t H5BTreeV2::buildEntriesIndirect(int32_t nrows, uint64_t pos, uint64_t* ents) {
     /* Build array of addresses (ent) for this indirect block - follow H5HF__cache_iblock_deserialize x readIndirectBlock */
     uint32_t idx = 0;       // track indx in ents
     uint64_t block_off = 0; // iblock->block_off for moving offset
@@ -690,9 +689,9 @@ uint64_t H5BTreeV2::buildEntries_Indirect(int32_t nrows, uint64_t pos, uint64_t*
 }
 
 /*----------------------------------------------------------------------------
- * man_dblockLocate
+ * manualDblockLocate
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::man_dblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret_entry) {
+void H5BTreeV2::manualDblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret_entry) {
     /* Mock implementation of H5HF__man_dblock_locate */
     // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
 
@@ -708,20 +707,20 @@ void H5BTreeV2::man_dblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret
     
     /* Read indirect - set up ents array */
     int32_t nrows = fheap_info->curr_num_rows;
-    block_off = buildEntries_Indirect(nrows, iblock_addr, ents);
+    block_off = buildEntriesIndirect(nrows, iblock_addr, ents);
 
     /* Check for indirect block row - iterates till direct hit */
     while (row >= dtable.max_direct_rows) {
         uint32_t entry;
         /* Compute # of rows in child indirect block */
-        nrows = (log2_gen(dtable.row_block_size[row]) - dtable.first_row_bits) + 1;
+        nrows = (log2Gen(dtable.row_block_size[row]) - dtable.first_row_bits) + 1;
         entry = (row * (uint32_t)fheap_info->table_width) + col;
         /* Locate child indirect block */
         iblock_addr = ents[entry];
         /* new iblock search and set - row col - remove offset worht of iblock*/
         dtableLookup((obj_off - block_off), &row, &col);
         /* Switch to new block - new ents list */
-        block_off = buildEntries_Indirect(nrows, iblock_addr, ents);
+        block_off = buildEntriesIndirect(nrows, iblock_addr, ents);
 
     }
 
@@ -731,9 +730,9 @@ void H5BTreeV2::man_dblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret
 }
 
 /*----------------------------------------------------------------------------
- * fheapLocate_Managed
+ * fheapLocateManaged
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::fheapLocate_Managed(uint8_t* id){
+void H5BTreeV2::fheapLocateManaged(uint8_t* id){
     /* Operate on managed heap - eqiv to hdf5 ref functions: H5HF__man_op, H5HF__man_op_real*/
 
     uint64_t dblock_addr = 0; // found direct block to apply offset on
@@ -760,7 +759,7 @@ void H5BTreeV2::fheapLocate_Managed(uint8_t* id){
         uint32_t entry; // entry of block
         
         /* Search for direct block using double table and offset */
-        man_dblockLocate(obj_off, ents, &entry); 
+        manualDblockLocate(obj_off, ents, &entry); 
         dblock_addr = ents[entry];
 
     }
@@ -1062,7 +1061,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
             node_info[u].split_nrec = (node_info[u].max_nrec * split_percent) / 100;
             node_info[u].merge_nrec = (node_info[u].max_nrec * merge_percent) / 100;
             node_info[u].cum_max_nrec = ((node_info[u].max_nrec + 1) * node_info[u - 1].cum_max_nrec) + node_info[u].max_nrec;
-            u_max_nrec_size = (log2_gen((uint64_t)node_info[u].cum_max_nrec) / 8) + 1;
+            u_max_nrec_size = (log2Gen((uint64_t)node_info[u].cum_max_nrec) / 8) + 1;
 
             safeAssigned(node_info[u].cum_max_nrec_size, u_max_nrec_size);
             node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;
@@ -1073,7 +1072,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
 
     while (_depth > 0) {
 
-        print2term("WARNING: UNTESTS IMPLEMENTATION FOR INTERNAL NODE \n");
+        print2term("WARNING: UNTESTED IMPLEMENTATION FOR INTERNAL NODE \n");
 
         /* INTERNAL NODE SET UP - Write into internal */
         uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start

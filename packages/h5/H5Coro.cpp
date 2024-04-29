@@ -1106,7 +1106,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
 
     
     /* for heap len size - follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199 */
-    uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2_gen((uint64_t) max_size_mg_obj) / 8) + 1));
+    uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2Gen((uint64_t) max_size_mg_obj) / 8) + 1));
 
     /* Build Heap Info Structure */
     heap_info_ptr->table_width        = table_width;
@@ -1122,7 +1122,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
     heap_info_ptr->max_heap_size      = max_heap_size;
     heap_info_ptr->hdr_flags          = hdr_flags;
-    heap_info_ptr->heap_off_size      = (uint8_t) H5BTreeV2::H5HF_SIZEOF_OFFSET_BITS(max_heap_size);
+    heap_info_ptr->heap_off_size      = (uint8_t) H5BTreeV2::sizeOffsetBits(max_heap_size);
     heap_info_ptr->heap_len_size      = min_calc;
     heap_info_ptr->dlvl               = dlvl;
 

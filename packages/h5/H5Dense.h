@@ -16,8 +16,8 @@ class H5BTreeV2
 
         H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
 
-        static uint32_t log2_gen(uint64_t n);
-        static uint16_t H5HF_SIZEOF_OFFSET_BITS(uint16_t b);
+        static uint32_t log2Gen(uint64_t n);
+        static uint16_t sizeOffsetBits(uint16_t b);
 
     protected:
 
@@ -140,11 +140,11 @@ class H5BTreeV2
         template<typename T, typename V> void safeAssigned(T& type_verify, V& value); 
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int32_t n, uint8_t l);
-        uint32_t            log2_of2(uint32_t n);
-        uint16_t            H5HF_SIZEOF_OFFSET_LEN(int32_t l);
-        uint32_t            H5_lookup3_rot(uint32_t x, uint32_t k);
-        void                H5_lookup3_mix(uint32_t& a, uint32_t& b, uint32_t& c);
-        void                H5_lookup3_final(uint32_t& a, uint32_t& b, uint32_t& c);
+        uint32_t            log2Of2(uint32_t n);
+        uint16_t            sizeOffsetLen(int32_t l);
+        uint32_t            lookup3Rot(uint32_t x, uint32_t k);
+        void                lookup3Mix(uint32_t& a, uint32_t& b, uint32_t& c);
+        void                lookup3Final(uint32_t& a, uint32_t& b, uint32_t& c);
 
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
@@ -153,19 +153,19 @@ class H5BTreeV2
 
         /* Fheap Navigation*/
         void                fheapLocate(const void * _id);
-        void                fheapLocate_Managed(uint8_t* id);
+        void                fheapLocateManaged(uint8_t* id);
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
         /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp);
         void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
-        void                findBTreeV2 ();
+        void                findBTreeV2();
         uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
         
         /* dtable search */
         void                dtableLookup(uint64_t off, uint32_t *row, uint32_t *col);
-        uint64_t            buildEntries_Indirect(int32_t nrows, uint64_t pos, uint64_t* ents);
-        void                man_dblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret_entry);
+        uint64_t            buildEntriesIndirect(int32_t nrows, uint64_t pos, uint64_t* ents);
+        void                manualDblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret_entry);
 
     private:
 
