@@ -10,13 +10,13 @@ class H5BTreeV2
 
         uint64_t pos_out; 
         uint64_t msg_size_out;
-        int      hdr_dlvl_out; 
+        int32_t  hdr_dlvl_out; 
         uint8_t  hdr_flags_out; 
         bool     found_attr;
 
         H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
 
-        static unsigned log2_gen(uint64_t n);
+        static uint32_t log2_gen(uint64_t n);
         static uint16_t H5HF_SIZEOF_OFFSET_BITS(uint16_t b);
 
     protected:
@@ -45,9 +45,9 @@ class H5BTreeV2
         /* Information about a node at a given depth */
         typedef struct {
             uint64_t                cum_max_nrec = 0; // cumulative max. # of records below node's depth
-            unsigned                max_nrec = 0; // max num records in node
-            unsigned                split_nrec = 0; // num records to split node at 
-            unsigned                merge_nrec = 0; // num records to merge node at
+            uint32_t                max_nrec = 0; // max num records in node
+            uint32_t                split_nrec = 0; // num records to split node at 
+            uint32_t                merge_nrec = 0; // num records to merge node at
             uint8_t                 cum_max_nrec_size = 0; // size to store cumulative max. # of records for this node (in bytes)
         } btree2_node_info_t;
 
@@ -88,13 +88,13 @@ class H5BTreeV2
             vector<uint64_t>        row_tot_dblock_free; // total free space in dblocks for this row  (For indirect block rows, it's the total free space in all direct blocks referenced from the indirect block)
             vector<uint64_t>        row_max_dblock_free; // max. free space in dblocks for this row (For indirect block rows, it's the maximum free space in a direct block referenced  from the indirect block)
 
-            unsigned                curr_root_rows = 0; // curr number of rows in the root indirect block; 0 indicates that the TABLE_ADDR field points to direct block (of START_BLOCK_SIZE) instead of indirect root block.
-            unsigned                max_root_rows = 0; // max # of rows in root indirect block
-            unsigned                max_direct_rows = 0; // max # of direct rows in any indirect block
-            unsigned                start_bits = 0; // # of bits for starting block size (i.e. log2(start_block_size))
-            unsigned                max_direct_bits = 0; // # of bits for max. direct block size (i.e. log2(max_direct_size))
-            unsigned                max_dir_blk_off_size = 0; // max size of offsets in direct blocks
-            unsigned                first_row_bits = 0; // # of bits in address of first row
+            uint32_t                curr_root_rows = 0; // curr number of rows in the root indirect block; 0 indicates that the TABLE_ADDR field points to direct block (of START_BLOCK_SIZE) instead of indirect root block.
+            uint32_t                max_root_rows = 0; // max # of rows in root indirect block
+            uint32_t                max_direct_rows = 0; // max # of direct rows in any indirect block
+            uint32_t                start_bits = 0; // # of bits for starting block size (i.e. log2(start_block_size))
+            uint32_t                max_direct_bits = 0; // # of bits for max. direct block size (i.e. log2(max_direct_size))
+            uint32_t                max_dir_blk_off_size = 0; // max size of offsets in direct blocks
+            uint32_t                first_row_bits = 0; // # of bits in address of first row
             
         } dtable_t;
 
@@ -135,13 +135,13 @@ class H5BTreeV2
         } btree2_type5_densename_rec_t;
 
         /* Helpers */
-        bool                isTypeSharedAttrs (unsigned type_id);
+        bool                isTypeSharedAttrs (uint32_t type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
         template<typename T, typename V> void safeAssigned(T& type_verify, V& value); 
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
-        void                varDecode(uint8_t* p, int n, uint8_t l);
-        unsigned            log2_of2(uint32_t n);
-        uint16_t            H5HF_SIZEOF_OFFSET_LEN(int l);
+        void                varDecode(uint8_t* p, int32_t n, uint8_t l);
+        uint32_t            log2_of2(uint32_t n);
+        uint16_t            H5HF_SIZEOF_OFFSET_LEN(int32_t l);
         uint32_t            H5_lookup3_rot(uint32_t x, uint32_t k);
         void                H5_lookup3_mix(uint32_t& a, uint32_t& b, uint32_t& c);
         void                H5_lookup3_final(uint32_t& a, uint32_t& b, uint32_t& c);
@@ -149,7 +149,7 @@ class H5BTreeV2
         /* Type Specific Decode/Comparators */
         void                decodeType5Record(const uint8_t *raw, void *_nrecord);
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
-        void                compareType8Record(const void *_bt2_rec, int *result);
+        void                compareType8Record(const void *_bt2_rec, int32_t *result);
 
         /* Fheap Navigation*/
         void                fheapLocate(const void * _id);
@@ -157,15 +157,15 @@ class H5BTreeV2
         void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
         
         /* Btreev2 setting and navigation */
-        void                locateRecordBTreeV2(unsigned nrec, size_t *rec_off, const uint8_t *native, unsigned *idx, int *cmp);
+        void                locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp);
         void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2 ();
         uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
         
         /* dtable search */
-        void                dtableLookup(uint64_t off, unsigned *row, unsigned *col);
-        uint64_t            buildEntries_Indirect(int nrows, uint64_t pos, uint64_t* ents);
-        void                man_dblockLocate(uint64_t obj_off, uint64_t* ents, unsigned *ret_entry);
+        void                dtableLookup(uint64_t off, uint32_t *row, uint32_t *col);
+        uint64_t            buildEntries_Indirect(int32_t nrows, uint64_t pos, uint64_t* ents);
+        void                man_dblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *ret_entry);
 
     private:
 
@@ -204,7 +204,7 @@ class H5BTreeV2
         const char              *name;         // attr name we are searching for
         uint32_t                name_hash;     // hash of attr name
 
-        size_t sz_max_nrec;
-        unsigned u_max_nrec_size;
+        size_t                  sz_max_nrec;   // tmp variable for range checking
+        uint32_t                u_max_nrec_size; // tmp variable for range checking
 
 };
