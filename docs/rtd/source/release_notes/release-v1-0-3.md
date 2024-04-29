@@ -16,6 +16,6 @@ Version description of the v1.0.3 release of ICESat-2 SlideRule
 
 ## Getting this release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.0.3](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.0.3)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.0.3](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.0.3)
 
 

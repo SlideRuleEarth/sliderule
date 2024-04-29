@@ -92,7 +92,7 @@ html_theme_options = {
 html_logo = "../../jekyll/assets/images/SlideRule-blueBG.png"
 html_favicon = "../../jekyll/favicon.ico"
 html_static_path = ['_static']
-repository_url = f"https://github.com/ICESat2-SlideRule/sliderule"
+repository_url = f"https://github.com/SlideRuleEarth/sliderule"
 html_context = {
     "menu_links": [
         (
@@ -109,7 +109,7 @@ html_context = {
         )
     ],
     "build_id": f' {release}',
-    "build_url": "https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.0.1"
+    "build_url": "https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.0.1"
 }
 
 # Load the custom CSS files (needs sphinx >= 1.6 for this to work)

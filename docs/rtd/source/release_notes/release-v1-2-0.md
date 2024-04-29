@@ -16,25 +16,25 @@ Version description of the v1.2.0 release of ICESat-2 SlideRule.
 
 ## Major Issues Resolved
 
-* H5Coro supports reading metadata of dataset without reading the data [#96](https://github.com/ICESat2-SlideRule/sliderule/issues/96)
+* H5Coro supports reading metadata of dataset without reading the data [#96](https://github.com/SlideRuleEarth/sliderule/issues/96)
 
-* H5Coro supports reading attributes [#97](https://github.com/ICESat2-SlideRule/sliderule/issues/97)
+* H5Coro supports reading attributes [#97](https://github.com/SlideRuleEarth/sliderule/issues/97)
 
 ## Minor Issues Resolved
 
-* Python config makefile target now works without first a full standard install of sliderule [#81](https://github.com/ICESat2-SlideRule/sliderule/issues/81)
+* Python config makefile target now works without first a full standard install of sliderule [#81](https://github.com/SlideRuleEarth/sliderule/issues/81)
 
-* Runtime exceptions caught by PyBind11 when using parallel H5Coro API [#82](https://github.com/ICESat2-SlideRule/sliderule/issues/82)
+* Runtime exceptions caught by PyBind11 when using parallel H5Coro API [#82](https://github.com/SlideRuleEarth/sliderule/issues/82)
 
-* Fixed bug in H5Coro processing of BTrees when symbols spanned multiple leaf nodes [4805819](https://github.com/ICESat2-SlideRule/sliderule/commit/4805819dac3029c4767f9957271f73548c46748f)
+* Fixed bug in H5Coro processing of BTrees when symbols spanned multiple leaf nodes [4805819](https://github.com/SlideRuleEarth/sliderule/commit/4805819dac3029c4767f9957271f73548c46748f)
 
-* Fixed memory leak in PyBind11 wrapper for H5Coro [1206fc5](https://github.com/ICESat2-SlideRule/sliderule/commit/1206fc5864eb965dec2aa34f10116cc74ba7f2b7)
+* Fixed memory leak in PyBind11 wrapper for H5Coro [1206fc5](https://github.com/SlideRuleEarth/sliderule/commit/1206fc5864eb965dec2aa34f10116cc74ba7f2b7)
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.2.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.2.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.2.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.2.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.2.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.2.0)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.2.0](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.2.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.2.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.2.0)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.2.0](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.2.0)
 

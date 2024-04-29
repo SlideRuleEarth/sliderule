@@ -27,7 +27,7 @@ jobs:
   analyze_server:
     name: Analyze SlideRule
     runs-on: ubuntu-latest
-    container: ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
+    container: ghcr.io/SlideRuleEarth/sliderule-buildenv:latest
 
     strategy:
       fail-fast: false

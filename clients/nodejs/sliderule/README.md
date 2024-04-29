@@ -9,8 +9,8 @@ Please read [CONTRIBUTING](https://slideruleearth.io/web/rtd/user_guide/Contribu
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [releases for this repository](https://github.com/ICESat2-SlideRule/sliderule/releases).
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [releases for this repository](https://github.com/SlideRuleEarth/sliderule/releases).
 
 ## License
 
-This project is licensed under the BSD 3-Clause License - see the [LICENSE](https://github.com/ICESat2-SlideRule/sliderule/blob/main/LICENSE) file for details.
+This project is licensed under the BSD 3-Clause License - see the [LICENSE](https://github.com/SlideRuleEarth/sliderule/blob/main/LICENSE) file for details.

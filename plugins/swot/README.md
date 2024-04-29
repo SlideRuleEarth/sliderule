@@ -4,7 +4,7 @@ This SlideRule plugin includes modules for subsetting and sampling the SWOT data
 
 ## I. Prerequisites
 
-The base build environment must be setup as described in the [SlideRule](https://github.com/ICESat2-SlideRule/sliderule) readme.  Follow the first three steps in the Quick Start section to install the necessary system packages.  See [SlideRule Readme: III. Quick Start](https://github.com/ICESat2-SlideRule/sliderule/blob/master/README.md#iii-quick-start).
+The base build environment must be setup as described in the [SlideRule](https://github.com/SlideRuleEarth/sliderule) readme.  Follow the first three steps in the Quick Start section to install the necessary system packages.  See [SlideRule Readme: III. Quick Start](https://github.com/SlideRuleEarth/sliderule/blob/master/README.md#iii-quick-start).
 
 ## II. Building
 

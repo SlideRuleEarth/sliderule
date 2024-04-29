@@ -65,9 +65,9 @@ while available_servers < num_desired:
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v2.0.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v2.0.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v2.0.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v2.0.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v2.0.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v2.0.0)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v2.0.0](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v2.0.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v2.0.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v2.0.0)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v2.0.0](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v2.0.0)
 

@@ -29,7 +29,7 @@ This version contains a number of backward-incompatible changes, specifically to
 
 * Added new `opendata` plugin that supports sampling the ESA World Cover 10m dataset.
 
-* The Python client supports returning a GeoDataFrame with 3D point geometry.  The user must supply a "height" column name in the API call in order to receive back a GeoDataFrame with the 3D point geometry; note there is a performance impact when selected. (See [#272](https://github.com/ICESat2-SlideRule/sliderule/pull/272)).
+* The Python client supports returning a GeoDataFrame with 3D point geometry.  The user must supply a "height" column name in the API call in order to receive back a GeoDataFrame with the 3D point geometry; note there is a performance impact when selected. (See [#272](https://github.com/SlideRuleEarth/sliderule/pull/272)).
 
 * User's can supply their own PROJ pipeline in raster sampling requests. To use this feature, add a "proj_pipeline" string to your request dictionary:
 ```Python
@@ -74,7 +74,7 @@ parms = { "poly": region['poly'],
 
 * SlideRule Python bindings (srpy) have been updated to support building them inside a conda managed OS package environment.
 
-* The Python bindings for H5Coro are superseded by the new pure Python implementation effort: [h5coro](https://github.com/ICESat2-SlideRule/h5coro)
+* The Python bindings for H5Coro are superseded by the new pure Python implementation effort: [h5coro](https://github.com/SlideRuleEarth/h5coro)
 
 * Major rewrite of GDAL raster sampling code: new class structure has GdalRaster as a stand-alone class, with RasterObject parenting a GeoRaster and a GeoIndexedRaster for mosaic and strip datasets respectively.
 
@@ -82,45 +82,45 @@ parms = { "poly": region['poly'],
 
 ## Issues Resolved
 
-* [#182](https://github.com/ICESat2-SlideRule/sliderule/issues/182) - Across track slope not calculated for ATL06
+* [#182](https://github.com/SlideRuleEarth/sliderule/issues/182) - Across track slope not calculated for ATL06
 
-* [#202](https://github.com/ICESat2-SlideRule/sliderule/issues/202) - Feature request: export x_atc and y_atc
+* [#202](https://github.com/SlideRuleEarth/sliderule/issues/202) - Feature request: export x_atc and y_atc
 
-* [#226](https://github.com/ICESat2-SlideRule/sliderule/issues/226) - Migrate ps-web documentation to provisioning system
+* [#226](https://github.com/SlideRuleEarth/sliderule/issues/226) - Migrate ps-web documentation to provisioning system
 
-* [#233](https://github.com/ICESat2-SlideRule/sliderule/issues/233) - Create performance PyTests
+* [#233](https://github.com/SlideRuleEarth/sliderule/issues/233) - Create performance PyTests
 
-* [#235](https://github.com/ICESat2-SlideRule/sliderule/issues/235) - Need PyTests for raster sampling of strips
+* [#235](https://github.com/SlideRuleEarth/sliderule/issues/235) - Need PyTests for raster sampling of strips
 
-* [#246](https://github.com/ICESat2-SlideRule/sliderule/issues/246) - Add PyTest for file_directory raster code
+* [#246](https://github.com/SlideRuleEarth/sliderule/issues/246) - Add PyTest for file_directory raster code
 
-* [#262](https://github.com/ICESat2-SlideRule/sliderule/issues/262) - Replace "nodata" value with NaN as sampled value in GeoRaster
+* [#262](https://github.com/SlideRuleEarth/sliderule/issues/262) - Replace "nodata" value with NaN as sampled value in GeoRaster
 
-* [#268](https://github.com/ICESat2-SlideRule/sliderule/issues/268) - Mismatch in pyH5Coro declarations
+* [#268](https://github.com/SlideRuleEarth/sliderule/issues/268) - Mismatch in pyH5Coro declarations
 
-* [#270](https://github.com/ICESat2-SlideRule/sliderule/issues/270) - Using H5Coro in stand alone mode
+* [#270](https://github.com/SlideRuleEarth/sliderule/issues/270) - Using H5Coro in stand alone mode
 
-* [#280](https://github.com/ICESat2-SlideRule/sliderule/issues/280) - Make default number of ATL06 iterations 6
+* [#280](https://github.com/SlideRuleEarth/sliderule/issues/280) - Make default number of ATL06 iterations 6
 
-* [#283](https://github.com/ICESat2-SlideRule/sliderule/issues/283) - feature request: report y_atc in ATL06-SR
+* [#283](https://github.com/SlideRuleEarth/sliderule/issues/283) - feature request: report y_atc in ATL06-SR
 
-* [#284](https://github.com/ICESat2-SlideRule/sliderule/issues/284) - Feature idea : extract arbitrary fields from ATL03 to ATL06-SR
+* [#284](https://github.com/SlideRuleEarth/sliderule/issues/284) - Feature idea : extract arbitrary fields from ATL03 to ATL06-SR
 
-* [#293](https://github.com/ICESat2-SlideRule/sliderule/issues/293) - Add ESA WorldCover plugin
+* [#293](https://github.com/SlideRuleEarth/sliderule/issues/293) - Add ESA WorldCover plugin
 
-* [#295](https://github.com/ICESat2-SlideRule/sliderule/issues/295) - Requests to TNM for 3DEP 1m is timing out
+* [#295](https://github.com/SlideRuleEarth/sliderule/issues/295) - Requests to TNM for 3DEP 1m is timing out
 
-* [#299](https://github.com/ICESat2-SlideRule/sliderule/issues/299) - Errors reading ArcticDEM mosaic
+* [#299](https://github.com/SlideRuleEarth/sliderule/issues/299) - Errors reading ArcticDEM mosaic
 
-* [#300](https://github.com/ICESat2-SlideRule/sliderule/issues/300) - Put querying the catalog for raster datasets inside the API functions in the client
+* [#300](https://github.com/SlideRuleEarth/sliderule/issues/300) - Put querying the catalog for raster datasets inside the API functions in the client
 
-* [#309](https://github.com/ICESat2-SlideRule/sliderule/issues/309) - GeoUserRaster causes use after free
+* [#309](https://github.com/SlideRuleEarth/sliderule/issues/309) - GeoUserRaster causes use after free
 
-* [#312](https://github.com/ICESat2-SlideRule/sliderule/issues/312) - Bitmask/flags rasters should only be read when flags param is set
+* [#312](https://github.com/SlideRuleEarth/sliderule/issues/312) - Bitmask/flags rasters should only be read when flags param is set
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.0.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.0.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.0.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.0.0)
 
 ## Benchmarks
 

@@ -10,7 +10,7 @@ This tutorial walks you through the steps necessary to make your first request t
 
 ## Background
 
-While it is possible to directly access all of ICESat-2 SlideRule's services using any client that communicates over HTTP, it is more practical to use the supplied [Python client](https://github.com/ICESat2-SlideRule/sliderule), which hides much of the complexity of interacting with each of the services and provides a high-level Python interface for most use-cases.
+While it is possible to directly access all of ICESat-2 SlideRule's services using any client that communicates over HTTP, it is more practical to use the supplied [Python client](https://github.com/SlideRuleEarth/sliderule), which hides much of the complexity of interacting with each of the services and provides a high-level Python interface for most use-cases.
 
 For this reason, _"using"_ SlideRule is, in practice, the same as writing a Python script that uses the SlideRule Python client package.  The Python client is used to issue science processing requests to `slideruleearth.io` and then analyze the responses that come back.
 
@@ -20,7 +20,7 @@ These processing requests will typically specify a geospatial region of interest
 
 __Step 1__: Clone the SlideRule Python examples repository
 ```bash
-$ git clone https://github.com/ICESat2-SlideRule/sliderule-python.git
+$ git clone https://github.com/SlideRuleEarth/sliderule-python.git
 ```
 
 __Step 2__: Create a conda environment with all the necessary dependencies
@@ -110,4 +110,4 @@ The resulting plot should look something like:
 
 Once you've completed this walk-through and are comfortable issuing processing requests to SlideRule, you should take a look at the [Documentation](../../) and the example [Jupyter Notebooks](../../getting_started/Examples.html).
 
-There is also a [Demo Application](https://demo.slideruleearth.io/) which renders a simple [widgets-based notebook](https://github.com/ICESat2-SlideRule/sliderule-python/blob/main/examples/voila_demo.ipynb) using *voila* that allows you to try different processing parameters and see the output on an interactive map.
+There is also a [Demo Application](https://demo.slideruleearth.io/) which renders a simple [widgets-based notebook](https://github.com/SlideRuleEarth/sliderule-python/blob/main/examples/voila_demo.ipynb) using *voila* that allows you to try different processing parameters and see the output on an interactive map.

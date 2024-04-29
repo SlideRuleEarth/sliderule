@@ -26,9 +26,9 @@ Version description of the v3.2.0 release of ICESat-2 SlideRule.
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v3.2.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v3.2.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v3.2.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v3.2.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v3.2.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v3.2.0)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v3.2.0](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v3.2.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v3.2.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v3.2.0)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v3.2.0](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v3.2.0)
 
