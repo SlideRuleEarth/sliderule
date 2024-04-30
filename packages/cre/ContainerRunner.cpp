@@ -38,6 +38,7 @@
 #include "EventLib.h"
 #include "CurlLib.h" // netsvc package dependency
 #include "EndpointObject.h"
+#include "TimeLib.h"
 #include <rapidjson/document.h>
 #include <cstdlib>
 #include <filesystem>
@@ -312,9 +313,9 @@ void* ContainerRunner::controlThread (void* parm)
     const char* create_response = NULL;
     long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, cr->parms->timeout, &headers, unix_socket);
     if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->image, create_http_code, create_response);
-    else mlog(INFO, "Created container <%s>", cr->parms->image);
+    else mlog(INFO, "Created container <%s> with parameters: %s", cr->parms->image, data.c_str());
 
-    /* Wait for Completion and Get Result */
+    /* Run Container */
     if(create_http_code == EndpointObject::Created)
     {
         /* Get Container ID */
@@ -322,41 +323,113 @@ void* ContainerRunner::controlThread (void* parm)
         json.Parse(create_response);
         const char* container_id = json["Id"].GetString();
 
+        /* Build Container Name String */
+        char subid[8];
+        StringLib::copy(subid, container_id, 8);
+        FString container_name_str("%s:%s", cr->parms->image, subid);
+
+        /* Latch Start Time */
+        int64_t logs_since = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000;
+
         /* Start Container */
         FString start_url("http://localhost/%s/containers/%s/start", api_version, container_id);
         const char* start_response = NULL;
         long start_http_code = CurlLib::request(EndpointObject::POST, start_url.c_str(), NULL, &start_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-        if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", cr->parms->image, start_http_code, start_response);
-        else mlog(INFO, "Started container <%s> with Id %s", cr->parms->image, container_id);
+        if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", container_name_str.c_str(), start_http_code, start_response);
+        else mlog(INFO, "Started container <%s>", container_name_str.c_str());
         delete [] start_response;
 
-        /* Poll Completion of Container */
-        FString wait_url("http://localhost/%s/containers/%s/wait", api_version, container_id);
-        const char* wait_response = NULL;
-        long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, cr->parms->timeout, NULL, unix_socket);
-        if(wait_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", cr->parms->image, wait_http_code, wait_response);
-        else mlog(INFO, "Waited for container <%s> with Id %s", cr->parms->image, container_id);
-        delete [] wait_response;
+        /* Wait Until Container Has Completed */
+        bool done = false;
+        bool in_error = false;
+        int time_left = cr->parms->timeout;
+        while(!done && !in_error)
+        {
+            /* Check Time Left */
+            time_left -= WAIT_TIMEOUT;
+            if(time_left <= 0)
+            {
+                mlog(ERROR, "Timeout reached for container <%s> after %d seconds", container_name_str.c_str(), cr->parms->timeout);
+                done = true;
+                in_error = true;
+            }
+
+            /* Poll Completion of Container */
+            FString wait_url("http://localhost/%s/containers/%s/wait", api_version, container_id);
+            const char* wait_response = NULL;
+            long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
+            if(wait_http_code == EndpointObject::OK)
+            {
+                mlog(INFO, "Container <%s> completed", cr->parms->image);
+                done = true;
+            }
+            else if(wait_http_code != EndpointObject::Service_Unavailable) // curl timed out which is normal if container is still running
+            {
+                alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", container_name_str.c_str(), wait_http_code, wait_response);
+                done = true;
+                in_error = true;
+            }
+            delete [] wait_response;
+
+            /* Get Logs for Container */
+            int64_t logs_now = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000;
+            FString log_url("http://localhost/%s/containers/%s/logs?stdout=1&stderr=1&since=%ld", api_version, container_id, logs_since);
+            logs_since = logs_now;
+            const char* log_response = NULL;
+            int log_response_size = 0;
+            long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, WAIT_TIMEOUT, NULL, unix_socket);
+            if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", container_name_str.c_str(), log_http_code, log_response);
+            else cr->processContainerLogs(log_response, log_response_size, container_id);
+            delete [] log_response;
+
+            /* Get Status of Container */
+            if(!done)
+            {
+                FString status_url("http://localhost/%s/containers/%s/json", api_version, container_id);
+                const char* status_response = NULL;
+                long status_http_code = CurlLib::request(EndpointObject::GET, status_url.c_str(), NULL, &status_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
+                if(status_http_code != EndpointObject::OK)
+                {
+                    alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get status of container <%s>: %ld - %s", container_name_str.c_str(), status_http_code, status_response);
+                    done = true;
+                    in_error = true;
+                }
+                else
+                {
+                    rapidjson::Document status_json;
+                    status_json.Parse(status_response);
+                    const char* container_status = status_json["State"]["Status"].GetString();
+                    if(StringLib::match(container_status, "running"))
+                    {
+                        bool rspq_status = alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> still running... %d seconds left", container_name_str.c_str(), time_left);
+                        if(!rspq_status) in_error = true;
+                    }
+                    else if(StringLib::match(container_status, "stopped"))
+                    {
+                        alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> has stopped", container_name_str.c_str());
+                        done = true;
+                    }
+                    else
+                    {
+                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> has is in an unexpected state: %s", container_name_str.c_str(), container_status);
+                        done = true;
+                        in_error = true;
+                    }
+                }
+                delete [] status_response;
+            }
+        }
 
         /* (If Necessary) Force Stop Container */
-        if(wait_http_code != EndpointObject::OK)
+        if(in_error)
         {
             FString stop_url("http://localhost/%s/containers/%s/stop", api_version, container_id);
             const char* stop_response = NULL;
             long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-            if(stop_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
+            if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
             else mlog(INFO, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
             delete [] stop_response;
         }
-
-        /* Get Logs for Container */
-        FString log_url("http://localhost/%s/containers/%s/logs?stdout=1&stderr=1", api_version, container_id);
-        const char* log_response = NULL;
-        int log_response_size = 0;
-        long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-        if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", cr->parms->image, log_http_code, log_response);
-        else cr->processContainerLogs(log_response, log_response_size, container_id);
-        delete [] log_response;
 
         /* Remove Container */
         FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
@@ -425,6 +498,9 @@ void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size,
         if      (pipe == 1) lvl = INFO;
         else if (pipe == 2) lvl = ERROR;
         else                lvl = CRITICAL;
+
+        /* Remove Trialing White Space */
+        if(message[log_message_length-1] == '\n') message[log_message_length-1] = '\0';
 
         /* Log Message */
         mlog(lvl, "%s - %s", id_str, message);

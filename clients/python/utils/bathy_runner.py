@@ -41,15 +41,6 @@ parms = {
     "pass_invalid": True,
     "generate_ndwi": args.generate_ndwi,
     "use_bathy_mask": args.use_bathy_mask,
-    "cre": {
-        "image": "openoceans", 
-        "command": "/env/bin/python /usr/local/etc/oceaneyes.py",
-        "parms": {
-            "settings.json": {
-                "var1": 1
-            }
-        }
-    }
 }
 if args.return2client:
     parms["output"] = { 

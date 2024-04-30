@@ -5,23 +5,23 @@ local json  = require("json")
 --
 local function setup ()
 
-    local shared_directory = cre.settings()
-    local unique_shared_directory = string.format("%s/%s", shared_directory, rqstid)
+    local host_shared_directory = cre.settings()
+    local unique_shared_directory = string.format("%s/%s", host_shared_directory, rqstid)
     if cre.createunique(unique_shared_directory) then
-        return unique_shared_directory
+        sys.log(core.WARNING, "Overwriting existing unique shared directory "..unique_shared_directory)
     end
-
+    return {unique_shared_directory=unique_shared_directory, host_shared_directory=host_shared_directory}
 end
 
 --
 -- Execute Container
 --
-local function execute (parms, unique_shared_directory)
+local function execute (parms, shared_directory, response_queue)
 
     -- write input parameter files
     if parms["parms"] then
         for filename,contents in pairs(parms["parms"]) do
-            local unique_filename = string.format("%s/%s", unique_shared_directory, filename)
+            local unique_filename = string.format("%s/%s", shared_directory, filename)
             local input_file, msg = io.open(unique_filename, "w")
             if not input_file then 
                 sys.log(core.CRITICAL, string.format("Failed to create input file %s: %s", unique_filename, msg))
@@ -34,7 +34,7 @@ local function execute (parms, unique_shared_directory)
 
     -- create container runner (automatically executes container)
     local cre_parms = cre.parms(parms)
-    local cre_runner = cre.container(cre_parms, unique_shared_directory)
+    local cre_runner = cre.container(cre_parms, shared_directory, response_queue)
 
     -- return container runner
     return cre_runner
@@ -54,9 +54,9 @@ end
 --
 -- Cleanup Container Runtime Environment
 --
-local function cleanup (unique_shared_directory)
+local function cleanup (crenv)
 
-    cre.deleteunique(unique_shared_directory)
+    cre.deleteunique(crenv.unique_shared_directory)
 
 end
 

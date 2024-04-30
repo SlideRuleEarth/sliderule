@@ -63,14 +63,14 @@ if rc == earthdata.SUCCESS then
 end
 
 -- initialize container runtime environment
-local shared_directory = runner.setup()
+local crenv = runner.setup()
 
 -- abort if container runtime environment failed to initialize
-if not shared_directory then return end
+if not crenv.unique_shared_directory then return end
 
 -- read ICESat-2 inputs
 local bathy_parms   = icesat2.bathyparms(parms)
-local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, shared_directory, false)
+local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.unique_shared_directory, false)
 local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
 
 -- function: generate input filenames
@@ -78,28 +78,29 @@ local function genfilenames(shared_directory, i, prefix)
     return string.format("%s/%s_%d.csv %s/%s_%d.json %s/%s_%s_%d.csv", shared_directory, icesat2.BATHY_PREFIX, i, shared_directory, icesat2.BATHY_PREFIX, i, shared_directory, prefix, icesat2.BATHY_PREFIX, i)
 end
 
-while false do
+while true do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
 
-
     -- TODO - put this in a loop for all 6 beams
-    -- TODO - update the oceaneyes.py script to take in the command line parameter of the bathy_beam (csv and json file)
+
     -- execute openoceans
-    local openoceans_parms = parms["cre"] or {
-        image =  "openoceans", 
-        command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(shared_directory, 1, "openoceans"),
+    local openoceans_parms = {
+        image =  "openoceans",
+        command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.host_shared_directory, 1, "openoceans"),
         parms = {
             ["settings.json"] = {
                 var1 = 1
             }
         }
     }
-    local openoceans_status = runner.execute(openoceans_parms, shared_directory)
+
+    local openoceans_runner = runner.execute(openoceans_parms, crenv.unique_shared_directory, rspq)
+    local openoceans_status = runner.wait(openoceans_parms, openoceans_runner)
 
     -- exit loop
     break
 end
 
 -- cleanup container runtime environment
---runner.cleanup(shared_directory)
+--runner.cleanup(unique_shared_directory)

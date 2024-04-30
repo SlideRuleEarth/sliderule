@@ -58,7 +58,7 @@ class ContainerRunner: public LuaObject
         static const struct luaL_Reg LUA_META_TABLE[];
 
         static const int RESULT_SIGNAL = 0;
-        static const int DEFAULT_TIMEOUT = 600;
+        static const int WAIT_TIMEOUT = 10;
 
         static const char* HOST_SHARED_DIRECTORY;
 

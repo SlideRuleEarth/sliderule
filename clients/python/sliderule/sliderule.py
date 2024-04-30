@@ -460,6 +460,7 @@ def __logeventrec(rec):
 #  __exceptrec
 #
 def __exceptrec(rec):
+    print("Received", rec["text"])
     if rec["code"] == exceptioncodes["SIMPLIFY"]:
         raise RetryRequest("cmr simplification requested")
     elif rec["code"] < 0:
