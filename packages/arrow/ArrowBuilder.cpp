@@ -72,9 +72,11 @@ int ArrowBuilder::luaCreate (lua_State* L)
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
         const char* id              = getLuaString(L, 5);
+        const char* parms_str       = getLuaString(L, 6);
+        const char* endpoint        = getLuaString(L, 7);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id));
+        return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id, parms_str, endpoint));
     }
     catch(const RunTimeException& e)
     {
@@ -219,6 +221,22 @@ bool ArrowBuilder::hasAncElements (void)
     return hasAncillaryElements;
 }
 
+/*----------------------------------------------------------------------------
+ * getParmsString
+ *----------------------------------------------------------------------------*/
+const char* ArrowBuilder::getParmsAsString (void)
+{
+    return parmsAsString;
+}
+
+/*----------------------------------------------------------------------------
+ * getEndpoint
+ *----------------------------------------------------------------------------*/
+const char* ArrowBuilder::getEndpoint (void)
+{
+    return endpoint;
+}
+
 /******************************************************************************
  * PRIVATE METHODS
  *******************************************************************************/
@@ -228,7 +246,8 @@ bool ArrowBuilder::hasAncElements (void)
  *----------------------------------------------------------------------------*/
 ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
                             const char* outq_name, const char* inq_name,
-                            const char* rec_type, const char* id):
+                            const char* rec_type, const char* id,
+                            const char* parms_str, const char* _endpoint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     hasAncillaryFields(false),
@@ -239,6 +258,12 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     assert(inq_name);
     assert(rec_type);
     assert(id);
+    assert(parms_str);
+    assert(_endpoint);
+
+    /* Save Parameters */
+    parmsAsString = StringLib::duplicate(parms_str);
+    endpoint      = StringLib::duplicate(_endpoint);
 
     /* Get Record Meta Data */
     RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
@@ -324,6 +349,8 @@ ArrowBuilder::~ArrowBuilder(void)
     delete [] metadataFile;
     delete [] outputPath;
     delete [] outputMetadataPath;
+    delete [] parmsAsString;
+    delete [] endpoint;
     delete [] recType;
     delete [] timeKey;
     delete [] xKey;
