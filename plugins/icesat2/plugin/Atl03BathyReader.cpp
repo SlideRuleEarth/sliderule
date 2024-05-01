@@ -894,7 +894,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
  *  block indentation to preserve tabs in destination file
  */
 FString json_contents(R"json({
-    "track": "%d",
+    "track": %d,
     "pair": %d,
     "beam": "gt%d%c",
     "spot": %d,
