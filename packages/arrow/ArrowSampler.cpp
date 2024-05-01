@@ -196,13 +196,11 @@ void ArrowSampler::sample(void)
 
         /* Send Data File to User */
         ArrowCommon::send2User(dataFile, outputPath, trace_id, parms, outQ);
-        ArrowCommon::removeFile(dataFile);
 
         /* Send Metadata File to User */
         if(ArrowCommon::fileExists(metadataFile))
         {
             ArrowCommon::send2User(metadataFile, outputMetadataPath, trace_id, parms, outQ);
-            ArrowCommon::removeFile(metadataFile);
         }
     }
     catch(const RunTimeException& e)

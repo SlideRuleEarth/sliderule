@@ -145,7 +145,7 @@ bool send2User (const char* fileName, const char* outputPath,
              (_path[5] == '/') &&
              (_path[6] == '/'))
     {
-        /* Rename the file - very fast if both files are on the same partition */
+        /* Rename File - very fast if both files are on the same partition */
         renameFile(fileName, &_path[7]);
         status = true;
     }
@@ -154,6 +154,9 @@ bool send2User (const char* fileName, const char* outputPath,
         /* Stream File Back to Client */
         status = send2Client(fileName, outputPath, outQ);
     }
+
+    /* Delete File Locally */
+    removeFile(fileName);
 
     stop_trace(INFO, send_trace_id);
     return status;
