@@ -55,7 +55,7 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* ContainerRunner::HOST_SHARED_DIRECTORY = "/data";
+const char* ContainerRunner::SHARED_DIRECTORY = "/data";
 
 const char* ContainerRunner::REGISTRY = NULL;
 
@@ -64,7 +64,7 @@ const char* ContainerRunner::REGISTRY = NULL;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :container(<parms>, unique_shared_directory, [<outq_name>])
+ * luaCreate - :container(<parms>, host_shared_directory, [<outq_name>])
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaCreate (lua_State* L)
 {
@@ -74,7 +74,7 @@ int ContainerRunner::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         _parms = dynamic_cast<CreParms*>(getLuaObject(L, 1, CreParms::OBJECT_TYPE));
-        const char* unique_shared_directory = getLuaString(L, 2);
+        const char* host_shared_directory = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3, true, NULL);
 
         /* Check Environment */
@@ -84,7 +84,7 @@ int ContainerRunner::luaCreate (lua_State* L)
         }
 
         /* Create Container Runner */
-        return createLuaObject(L, new ContainerRunner(L, _parms, unique_shared_directory, outq_name));
+        return createLuaObject(L, new ContainerRunner(L, _parms, host_shared_directory, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -146,7 +146,7 @@ int ContainerRunner::luaList (lua_State* L)
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaSettings (lua_State* L)
 {
-    lua_pushstring(L, HOST_SHARED_DIRECTORY);
+    lua_pushstring(L, SHARED_DIRECTORY);
     return returnLuaStatus(L, true, 2);
 }
 
@@ -158,8 +158,8 @@ int ContainerRunner::luaCreateUnique (lua_State* L)
     bool status = false;
     try
     {
-        const char* unique_shared_directory = getLuaString(L, 1);
-        if(!std::filesystem::create_directory(unique_shared_directory))
+        const char* host_shared_directory = getLuaString(L, 1);
+        if(!std::filesystem::create_directory(host_shared_directory))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create unique shared directory: %s", strerror(errno));
         }
@@ -186,8 +186,8 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
     bool status = false;
     try
     {
-        const char* unique_shared_directory = getLuaString(L, 1);
-        if(!std::filesystem::remove_all(unique_shared_directory))
+        const char* host_shared_directory = getLuaString(L, 1);
+        if(!std::filesystem::remove_all(host_shared_directory))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to delete unique shared directory: %s", strerror(errno));
         }
@@ -241,13 +241,13 @@ int ContainerRunner::luaSetRegistry (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ContainerRunner::ContainerRunner (lua_State* L, CreParms* _parms, const char* unique_shared_directory, const char* outq_name):
+ContainerRunner::ContainerRunner (lua_State* L, CreParms* _parms, const char* host_shared_directory, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     outQ(NULL),
-    uniqueSharedDirectory(StringLib::duplicate(unique_shared_directory))
+    hostSharedDirectory(StringLib::duplicate(host_shared_directory))
 {
     assert(_parms);
-    assert(unique_shared_directory);
+    assert(host_shared_directory);
 
     parms = _parms;
     if(outq_name) outQ = new Publisher(outq_name);
@@ -263,7 +263,7 @@ ContainerRunner::~ContainerRunner (void)
     active = false;
     delete controlPid;
     delete outQ;
-    delete [] uniqueSharedDirectory;
+    delete [] hostSharedDirectory;
     parms->releaseLuaObject();
 }
 
@@ -305,7 +305,7 @@ void* ContainerRunner::controlThread (void* parm)
 
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
-    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->uniqueSharedDirectory, HOST_SHARED_DIRECTORY);
+    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->hostSharedDirectory, SHARED_DIRECTORY);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
     /* Create Container */

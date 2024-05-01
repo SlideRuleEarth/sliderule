@@ -77,14 +77,32 @@ NO_VALUE = -9999
 # READ INPUTS
 ##############
 
-if len(sys.argv) > 3:
-    ph_data_all = pd.read_csv(sys.argv[1])
-    with open(sys.argv[2], 'r') as json_file:
-        ph_info_all = json.load(json_file)
-    output_filename = sys.argv[3]
-else:
-    print("Not enough parameters: python oceaneyes.py <input csv beam file> <input json beam file> <output csv beam file>")
+if len(sys.argv) <= 4:
+    print("Not enough parameters: python oceaneyes.py <settings json> <input json beam file> <input csv beam file> <output csv beam file>")
     sys.exit()
+
+settings_json   = sys.argv[1]
+info_json       = sys.argv[2]
+input_csv       = sys.argv[3]
+output_csv      = sys.argv[4]
+
+# read settings json
+with open(settings_json, 'r') as json_file:
+    settings        = json.load(json_file)
+    res_along_track = settings.get('res_along_track', 10) 
+    res_z           = settings.get('res_z', 0.2)
+    window_size     = settings.get('window_size', 11) # 3x overlap is not enough to filter bad daytime noise
+    range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
+    verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
+    photon_bins     = settings.get('photon_bins', False)
+    parallel        = settings.get('parallel', True)
+
+# read info json
+with open(info_json, 'r') as json_file:
+    ph_info_all = json.load(json_file)
+
+# read input csv
+ph_data_all = pd.read_csv(input_csv)
 
 ##################
 # BUILD DATAFRAME
@@ -108,8 +126,8 @@ ph_data["weight_surface"] = NO_VALUE
 ph_data["weight_bathymetry"] = NO_VALUE
 
 # if ndwi is available, filter out land
-# if 'ndwi' in ph_data_all:
-#    ph_data = ph_data[ph_data_all.ndwi > 0]
+if 'ndwi' in ph_data_all:
+    ph_data = ph_data[ph_data_all.ndwi > 0]
 
 print(ph_data.columns)
 
@@ -155,16 +173,8 @@ p_sr = Profile(data=ph_data, info=ph_info)
 # EXECUTE MODEL
 ################
 
-mmp = ModelMakerP(res_along_track=10, 
-                  res_z=0.2,
-                  window_size=11, # 3x overlap is not enough to filter bad daytime noise
-                  range_z=[-50, 30], # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
-                  verbose=False, # not really fully integrated, it's still going to print some recent debugging statements
-                  photon_bins=False,
-                  parallel=True)
-
+mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
 m = mmp.process(p_sr, n_cpu_cores=10)
-
 print(m.profile.data)
 
 ################
@@ -176,4 +186,4 @@ ph_out = pd.DataFrame()
 ph_out["index_ph"] = m.profile.data.photon_index
 ph_out["class_ph"] = m.profile.data.classification
 
-ph_out.to_csv(output_filename, index=False, columns=["index_ph", "class_ph"])
+ph_out.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])

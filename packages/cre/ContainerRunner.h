@@ -60,7 +60,7 @@ class ContainerRunner: public LuaObject
         static const int RESULT_SIGNAL = 0;
         static const int WAIT_TIMEOUT = 10;
 
-        static const char* HOST_SHARED_DIRECTORY;
+        static const char* SHARED_DIRECTORY;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -87,7 +87,7 @@ class ContainerRunner: public LuaObject
         bool            active;
         Thread*         controlPid;
         Publisher*      outQ;
-        const char*     uniqueSharedDirectory;
+        const char*     hostSharedDirectory;
         Cond            resultLock;
         CreParms*       parms;
 
@@ -95,7 +95,7 @@ class ContainerRunner: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ContainerRunner         (lua_State* L, CreParms* _parms, const char* unique_shared_directory, const char* outq_name);
+                        ContainerRunner         (lua_State* L, CreParms* _parms, const char* host_shared_directory, const char* outq_name);
         virtual         ~ContainerRunner        (void);
         static void*    controlThread           (void* parm);
         void            processContainerLogs    (const char* buffer, int buffer_size, const char* id);
