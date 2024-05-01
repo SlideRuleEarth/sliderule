@@ -100,4 +100,4 @@ while true do
 end
 
 -- cleanup container runtime environment
-runner.cleanup(crenv)
+--runner.cleanup(crenv)

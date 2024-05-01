@@ -46,7 +46,7 @@ const char* BathyParms::MAX_DEM_DELTA = "max_dem_delta";
 const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
 const char* BathyParms::USE_BATHY_MASK = "use_bathy_mask";
-const char* BathyParms::RETURN_INPUTS = "return_iputs";
+const char* BathyParms::RETURN_INPUTS = "return_inputs";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
 
 const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;

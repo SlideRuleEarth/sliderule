@@ -96,6 +96,7 @@ with open(settings_json, 'r') as json_file:
     verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
     photon_bins     = settings.get('photon_bins', False)
     parallel        = settings.get('parallel', True)
+    use_ndwi        = settings.get('use_ndwi', False)
 
 # read info json
 with open(info_json, 'r') as json_file:
@@ -126,10 +127,10 @@ ph_data["weight_surface"] = NO_VALUE
 ph_data["weight_bathymetry"] = NO_VALUE
 
 # if ndwi is available, filter out land
-if 'ndwi' in ph_data_all:
+if use_ndwi and 'ndwi' in ph_data_all:
     ph_data = ph_data[ph_data_all.ndwi > 0]
 
-print(ph_data.columns)
+print(ph_data)
 
 ########################
 # BUILD INFO DICTIONARY

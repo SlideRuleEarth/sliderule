@@ -189,14 +189,14 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
         const char* host_shared_directory = getLuaString(L, 1);
         if(!std::filesystem::remove_all(host_shared_directory))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to delete unique shared directory: %s", strerror(errno));
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror(errno));
         }
         status = true;
     }
     catch(const std::filesystem::filesystem_error& e1)
     {
         const string& explanation = e1.what();
-        mlog(CRITICAL, "Filesystem failure: %s", explanation.c_str());
+        mlog(CRITICAL, "filesystem failure - %s", explanation.c_str());
     }
     catch(const RunTimeException& e2)
     {

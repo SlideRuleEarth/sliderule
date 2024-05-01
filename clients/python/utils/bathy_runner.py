@@ -17,7 +17,7 @@ parser.add_argument('--verbose',        '-v',   action='store_true',    default=
 parser.add_argument('--loglvl',         '-l',   type=str,               default="INFO")
 parser.add_argument('--preserve',       '-p',   action='store_true',    default=False)
 parser.add_argument('--serverfile',     '-s',   type=str,               default="/tmp/bathyfile.csv")
-parser.add_argument('--return2client',  '-c',   action='store_true',    default=False)
+parser.add_argument('--return_inputs',  '-c',   action='store_true',    default=False)
 parser.add_argument('--generate_ndwi',  '-w',   action='store_true',    default=False)
 parser.add_argument('--use_bathy_mask', '-b',   action='store_true',    default=False)
 args,_ = parser.parse_known_args()
@@ -42,6 +42,7 @@ parms = {
     "pass_invalid": True,
     "generate_ndwi": args.generate_ndwi,
     "use_bathy_mask": args.use_bathy_mask,
+    "return_inputs": args.return_inputs,
     "timeout": args.timeout,
     "openoceans": {
         "res_along_track": 10,
@@ -49,10 +50,11 @@ parms = {
         "window_size": 11,
         "range_z": [-50, 30],
         "verbose": False,
-        "photon_bins": False
+        "photon_bins": False,
+        "use_ndwi": args.generate_ndwi
     }
 }
-if args.return2client:
+if args.return_inputs:
     parms["output"] = { 
         "path": args.serverfile, 
         "format": "csv", 
@@ -74,5 +76,5 @@ if(args.output != None):
     gdf.to_csv(args.output, index=False, columns=columns)
 
 # Clean Up Temporary Files
-if args.return2client and not args.preserve:
+if args.return_inputs and not args.preserve:
     os.remove(args.serverfile)

@@ -7,7 +7,7 @@ local function setup ()
 
     local shared_directory = cre.settings()
     local host_shared_directory = string.format("%s/%s", shared_directory, rqstid)
-    if cre.createunique(host_shared_directory) then
+    if not cre.createunique(host_shared_directory) then
         sys.log(core.WARNING, "Overwriting existing unique shared directory "..host_shared_directory)
     end
     return {host_shared_directory=host_shared_directory, container_shared_directory=shared_directory}
