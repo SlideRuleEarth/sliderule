@@ -161,6 +161,42 @@ class H5FileBuffer
                             H5FileBuffer        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only=false);
         virtual             ~H5FileBuffer       (void);
 
+        typedef enum {
+            DATASPACE_MSG           = 0x1,
+            LINK_INFO_MSG           = 0x2,
+            DATATYPE_MSG            = 0x3,
+            FILL_VALUE_MSG          = 0x5,
+            LINK_MSG                = 0x6,
+            DATA_LAYOUT_MSG         = 0x8,
+            FILTER_MSG              = 0xB,
+            ATTRIBUTE_MSG           = 0xC,
+            HEADER_CONT_MSG         = 0x10,
+            SYMBOL_TABLE_MSG        = 0x11,
+            ATTRIBUTE_INFO_MSG      = 0x15
+        } msg_type_t;
+
+        typedef struct {
+            int                     table_width;
+            int                     curr_num_rows;
+            int                     starting_blk_size;
+            int                     max_dblk_size;
+            int                     blk_offset_size;  // size in bytes of block offset field
+            bool                    dblk_checksum;
+            msg_type_t              msg_type;
+            int                     num_objects;
+            int                     cur_objects; // mutable
+            uint64_t                root_blk_addr;
+            uint32_t                max_size_mg_obj;
+            uint16_t                max_heap_size;
+            uint8_t                 hdr_flags;
+            
+            uint8_t                 heap_off_size; // uint32_t Size of heap offsets (in bytes)
+            uint8_t                 heap_len_size; // size of heap ID lengths (in bytes)
+
+            int                     dlvl; // pass down to found message for dense
+
+        } heap_info_t;
+
     protected:
 
         /*--------------------------------------------------------------------
@@ -199,15 +235,18 @@ class H5FileBuffer
         static const long       STR_BUFF_SIZE           = 128;
         static const long       FILTER_SIZE_SCALE       = 1; // maximum factor for dataChunkFilterBuffer
 
-        static const uint64_t   H5_SIGNATURE_LE         = 0x0A1A0A0D46444889LL;
-        static const uint64_t   H5_OHDR_SIGNATURE_LE    = 0x5244484FLL; // object header
-        static const uint64_t   H5_FRHP_SIGNATURE_LE    = 0x50485246LL; // fractal heap
-        static const uint64_t   H5_FHDB_SIGNATURE_LE    = 0x42444846LL; // direct block
-        static const uint64_t   H5_FHIB_SIGNATURE_LE    = 0x42494846LL; // indirect block
-        static const uint64_t   H5_OCHK_SIGNATURE_LE    = 0x4B48434FLL; // object header continuation block
-        static const uint64_t   H5_TREE_SIGNATURE_LE    = 0x45455254LL; // binary tree version 1
-        static const uint64_t   H5_HEAP_SIGNATURE_LE    = 0x50414548LL; // local heap
-        static const uint64_t   H5_SNOD_SIGNATURE_LE    = 0x444F4E53LL; // symbol table
+        static const uint64_t   H5_SIGNATURE_LE                 = 0x0A1A0A0D46444889LL;
+        static const uint64_t   H5_OHDR_SIGNATURE_LE            = 0x5244484FLL; // object header
+        static const uint64_t   H5_FRHP_SIGNATURE_LE            = 0x50485246LL; // fractal heap
+        static const uint64_t   H5_FHDB_SIGNATURE_LE            = 0x42444846LL; // direct block
+        static const uint64_t   H5_FHIB_SIGNATURE_LE            = 0x42494846LL; // indirect block
+        static const uint64_t   H5_OCHK_SIGNATURE_LE            = 0x4B48434FLL; // object header continuation block
+        static const uint64_t   H5_TREE_SIGNATURE_LE            = 0x45455254LL; // binary tree version 1
+        static const uint64_t   H5_HEAP_SIGNATURE_LE            = 0x50414548LL; // local heap
+        static const uint64_t   H5_SNOD_SIGNATURE_LE            = 0x444F4E53LL; // symbol table
+        static const uint64_t   H5_V2TREE_SIGNATURE_LE          = 0x44485442LL; // v2 btree header
+        static const uint64_t   H5_V2TREE_INTERNAL_SIGNATURE_LE = 0x4E495442LL; // v2 internal node
+        static const uint64_t   H5_V2TREE_LEAF_SIGNATURE_LE     = 0x464C5442LL; // v2 leaf node
 
         /* Object Header Flags */
         static const uint8_t    SIZE_OF_CHUNK_0_MASK    = 0x03;
@@ -221,20 +260,6 @@ class H5FileBuffer
         /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            DATASPACE_MSG           = 0x1,
-            LINK_INFO_MSG           = 0x2,
-            DATATYPE_MSG            = 0x3,
-            FILL_VALUE_MSG          = 0x5,
-            LINK_MSG                = 0x6,
-            DATA_LAYOUT_MSG         = 0x8,
-            FILTER_MSG              = 0xB,
-            ATTRIBUTE_MSG           = 0xC,
-            HEADER_CONT_MSG         = 0x10,
-            SYMBOL_TABLE_MSG        = 0x11,
-            ATTRIBUTE_INFO_MSG      = 0x15
-        } msg_type_t;
 
         typedef enum {
             FIXED_POINT_TYPE        = 0,
@@ -275,18 +300,6 @@ class H5FileBuffer
             uint64_t                slice[MAX_NDIMS];
             uint64_t                row_key;
         } btree_node_t;
-
-        typedef struct {
-            int                     table_width;
-            int                     curr_num_rows;
-            int                     starting_blk_size;
-            int                     max_dblk_size;
-            int                     blk_offset_size;  // size in bytes of block offset field
-            bool                    dblk_checksum;
-            msg_type_t              msg_type;
-            int                     num_objects;
-            int                     cur_objects; // mutable
-        } heap_info_t;
 
         typedef union {
             double                  fill_lf;
@@ -335,7 +348,7 @@ class H5FileBuffer
         void                readDataset           (info_t* info);
 
         uint64_t            readSuperblock        (void);
-        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr);
         int                 readDirectBlock       (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);
@@ -405,7 +418,11 @@ class H5FileBuffer
 
         /* Meta Info */
         meta_entry_t        metaData;
+
+    friend class H5BTreeV2;
 };
+
+// removed Btree
 
 /******************************************************************************
  * HDF5 CLOUD-OPTIMIZED READ-ONLY LIBRARY

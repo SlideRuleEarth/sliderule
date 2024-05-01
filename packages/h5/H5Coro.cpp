@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "H5Coro.h"
+#include "H5Dense.h"
 #include "core.h"
 
 #include <zlib.h>
@@ -987,7 +988,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
 /*----------------------------------------------------------------------------
  * readFractalHeap
  *----------------------------------------------------------------------------*/
-int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl)
+int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr)
 {
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS = 0x02;
 
@@ -1103,37 +1104,46 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint64_t check_sum = readField(4, &pos);
     (void)check_sum; // unused
 
+    
+    /* for heap len size - follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199 */
+    uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2Gen((uint64_t) max_size_mg_obj) / 8) + 1));
+
     /* Build Heap Info Structure */
-    heap_info_t heap_info = {
-        .table_width        = table_width,
-        .curr_num_rows      = curr_num_rows,
-        .starting_blk_size  = (int)starting_blk_size,
-        .max_dblk_size      = (int)max_dblk_size,
-        .blk_offset_size    = ((max_heap_size + 7) / 8),
-        .dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0),
-        .msg_type           = msg_type,
-        .num_objects        = (int)mg_objs,
-        .cur_objects        = 0 // updated as objects are read
-    };
+    heap_info_ptr->table_width        = table_width;
+    heap_info_ptr->curr_num_rows      = curr_num_rows;
+    heap_info_ptr->starting_blk_size  = (int)starting_blk_size;
+    heap_info_ptr->max_dblk_size      = (int)max_dblk_size;
+    heap_info_ptr->blk_offset_size    = ((max_heap_size + 7) / 8);
+    heap_info_ptr->dblk_checksum      = ((flags & FRHP_CHECKSUM_DIRECT_BLOCKS) != 0);
+    heap_info_ptr->msg_type           = msg_type;
+    heap_info_ptr->num_objects        = (int)mg_objs;
+    heap_info_ptr->cur_objects        = 0; // updated as objects are read
+    heap_info_ptr->root_blk_addr      = root_blk_addr;
+    heap_info_ptr->max_size_mg_obj    = max_size_mg_obj;
+    heap_info_ptr->max_heap_size      = max_heap_size;
+    heap_info_ptr->hdr_flags          = hdr_flags;
+    heap_info_ptr->heap_off_size      = (uint8_t) H5BTreeV2::sizeOffsetBits(max_heap_size);
+    heap_info_ptr->heap_len_size      = min_calc;
+    heap_info_ptr->dlvl               = dlvl;
 
     /* Process Blocks */
-    if(heap_info.curr_num_rows == 0)
+    if(heap_info_ptr->curr_num_rows == 0)
     {
         /* Direct Blocks */
-        int bytes_read = readDirectBlock(&heap_info, heap_info.starting_blk_size, root_blk_addr, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read > heap_info.starting_blk_size))
+        int bytes_read = readDirectBlock(heap_info_ptr, heap_info_ptr->starting_blk_size, root_blk_addr, hdr_flags, dlvl);
+        if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
-        pos += heap_info.starting_blk_size;
+        pos += heap_info_ptr->starting_blk_size;
     }
     else
     {
         /* Indirect Blocks */
-        int bytes_read = readIndirectBlock(&heap_info, 0, root_blk_addr, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read > heap_info.starting_blk_size))
+        int bytes_read = readIndirectBlock(heap_info_ptr, 0, root_blk_addr, hdr_flags, dlvl);
+        if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info.starting_blk_size);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
         pos += bytes_read;
     }
@@ -2195,10 +2205,13 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
+    // TODO: redundant, could be expelled in future 
+    heap_info_t heap_info_dense;
+
     /* Follow Heap Address if Provided */
     if((int)heap_address != -1)
     {
-        readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl);
+        readFractalHeap(LINK_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
     }
 
     /* Return Bytes Read */
@@ -2840,7 +2853,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     {
         uint64_t reserved0 = readField(1, &pos);
 
-        if(version != 1)
+        if(version != 1 && version != 3)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid attribute version: %d", (int)version);
         }
@@ -2865,8 +2878,23 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
     }
     uint8_t attr_name[STR_BUFF_SIZE];
-    readByteArray(attr_name, name_size, &pos);
-    pos += (8 - (name_size % 8)) % 8; // align to next 8-byte boundary
+
+    /* Set attr_name: version 3 bumps by 4 bytes*/
+    if (version == 1) {
+        readByteArray(attr_name, name_size, &pos);
+    }
+    if (version == 3) {
+        /* NOTE: did not extract encoding, assume ASCII; H5T_cset_t name_encoding; */
+        pos += 1;
+        readByteArray(attr_name, name_size, &pos);
+    }
+
+    mlog(CRITICAL, "received attr_name: %s", (const char *) attr_name);
+
+    if (version == 1) {
+        // name padding, align to next 8-byte boundary
+        pos += (8 - (name_size % 8)) % 8; 
+    }
 
     if(H5_ERROR_CHECKING)
     {
@@ -2911,7 +2939,10 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     pos += datatype_bytes_read;
-    pos += (8 - (datatype_bytes_read % 8)) % 8; // align to next 8-byte boundary
+    if (version == 1) {
+        // datatype padding align to next 8-byte boundary
+        pos += (8 - (datatype_bytes_read % 8)) % 8;
+    }
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
@@ -2921,7 +2952,10 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     pos += dataspace_bytes_read;
-    pos += (8 - (dataspace_bytes_read % 8)) % 8; // align to next 8-byte boundary
+    if (version == 1) {
+        // dataspace padding, align to next 8-byte boundary
+        pos += (8 - (dataspace_bytes_read % 8)) % 8;
+    }
 
     /* Calculate Meta Data */
     metaData.layout = CONTIGUOUS_LAYOUT;
@@ -2979,17 +3013,14 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         }
     }
 
-    /* Read Heap and Name Offsets */
+    /* Read Heap and BTree Values */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
+    uint64_t name_bt2_address = readField(metaData.offsetsize, &pos);
+    
     if(H5_VERBOSE)
     {
-        uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
-        print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
-    }
-    else
-    {
-        pos += metaData.offsetsize;
+        print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)name_bt2_address);
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
@@ -3006,9 +3037,33 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     }
 
     /* Follow Heap Address if Provided */
-    if((int)heap_address != -1)
-    {
-        readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl);
+    uint64_t address_snapshot = metaData.address;
+    uint64_t heap_addr_snapshot = heap_address;
+    heap_info_t heap_info_dense;
+
+    /* Wrap with general exceptions to avoid memory leaks */
+    try {
+        if((int)heap_address != -1)
+        {
+            readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
+        }
+
+        /* Check if Attribute Located Non-Dense, Else Init Dense Search */
+        
+        if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
+        {
+            print2term("Entering dense attribute search; No main attribute message match. \n");
+            H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
+            if (curr_btreev2.found_attr) {
+                readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
+            }
+            else {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+            }
+
+        }
+    } catch (const RunTimeException& e) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "DENSE ATTR READ FAILURE, FREE ALLOCS");
     }
 
     /* Return Bytes Read */
@@ -3490,6 +3545,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
     /* Open Resource and Read Dataset */
     H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
+    
     if(info.data)
     {
         bool data_valid = true;
@@ -3518,7 +3574,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             info.elements = info.elements / info.numcols;
         }
 
-        /* Perform Integer Type Transaltion */
+        /* Perform Integer Type Translation */
         if(valtype == RecordObject::INTEGER)
         {
             /* Allocate Buffer of Integers */
@@ -3551,6 +3607,25 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                     tbuf[i] = (int)dptr[i];
                 }
             }
+            /* String to Int - assumes ASCII encoding */
+            else if(info.datatype == RecordObject::STRING)
+            {
+                uint8_t* dptr = (uint8_t*)info.data;
+
+                // NOTE this len calc is redundant, but metaData not visible to scope
+                uint8_t* len_cnt = dptr;
+                uint32_t length = 0;
+                while (*len_cnt != '\0') {
+                    length++;
+                    len_cnt++;
+                }
+                for(uint32_t i = 0; i < length; i++)
+                {
+                    tbuf[i] = (int)dptr[i];
+                }
+                info.elements = length;
+            }
+
             /* Short to Int */
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
