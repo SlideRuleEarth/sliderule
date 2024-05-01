@@ -22,10 +22,10 @@
         "/data/AppServer.2/openoceans_bathy_beam_4.csv", 
         "/data/AppServer.2/openoceans_bathy_beam_5.csv", 
         "/data/AppServer.2/openoceans_bathy_beam_6.csv"],
-    "output_file_name": "atl24.csv",
+    "output_file_name": "/data/atl24.h5",
     "output":
     {
-        "format": "csv", 
+        "format": "hdf5", 
         "as_geo": false 
     }
 }

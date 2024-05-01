@@ -29,6 +29,7 @@
 
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 import h5py
 import sys
 import json
@@ -63,10 +64,12 @@ with open(control_json, 'r') as json_file:
 beam_dfs = [pd.read_csv(beam_csv_file) for beam_csv_file in control["beam_csv_files"]]
 beam_dicts = [json.load(open(beam_json_file, 'r')) for beam_json_file in control["beam_json_files"]]
 openoceans_dfs = [pd.read_csv(openocean_csv_file) for openocean_csv_file in control["openoceans_csv_files"]]
+print("Read all inputs into data frames")
 
 # merge dataframes
 for i in range(len(beam_dfs)):
     beam_dfs[i] = pd.merge(beam_dfs[i], openoceans_dfs[i], on='index_ph', how='left')
+print("Created merged beam data frames")
 
 # get granule level info
 granule_info = {
@@ -83,13 +86,16 @@ if "output" not in control or control["output"]["format"] != "hdf5":
     for i in range(len(beam_dfs)):
         for key in beam_dicts[i]:
             beam_dfs[i][key] = beam_dicts[i][key]
+    print("Added meta data columns")
 
     # concatenate (vertically) all dataframes
     df = pd.concat(beam_dfs)
+    print("Concatenated data frames into a single data frame")
 
     # write output
     if "output" not in control or control["output"]["format"] == "csv":
         df.to_csv(control["output_file_name"])
+        print("CSV file written: " + control["output_file_name"])
     elif control["output"]["format"] == "parquet":
         if control["output"]["as_geo"]:
             df['time'] = df['time'].astype('datetime64[ns]')
@@ -99,8 +105,10 @@ if "output" not in control or control["output"]["format"] != "hdf5":
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
             gdf.to_parquet(control["output_file_name"], index=None)
+            print("GeoParquet file written: " + control["output_file_name"])
         else:
             df.to_parquet(control["output_file_name"], index=None)
+            print("Parquet file written: " + control["output_file_name"])
 
 # HDF5 Output
 else:
@@ -123,10 +131,12 @@ else:
             beam_group.create_dataset("y_atc_corr", data=beam_df["y_atc"])
             beam_group.create_dataset("lat_corr", data=beam_df["latitude"])
             beam_group.create_dataset("lon_corr", data=beam_df["longitude"])
-            beam_group.create_dataset("class_ph", data=beam_df["class_ph"])
+            beam_group.create_dataset("class_ph", data=beam_df["class_ph"].astype(np.int16))
 
         # orbit info        
         orbit_group = hf.create_group("orbit_info")
         orbit_group.create_dataset("rgt", data=granule_info["rgt"])
         orbit_group.create_dataset("sc_orient", data={"forward": 1, "backward": 0}[granule_info["sc_orient"]])
         orbit_group.create_dataset("cycle_number", data=granule_info["cycle"])
+
+    print("HDF5 file written: " + control["output_file_name"])

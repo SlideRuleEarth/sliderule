@@ -11,6 +11,7 @@ local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
 local resource      = rqst["resource"]
 local parms         = rqst["parms"]
+local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 
 -- intialize processing environment
 local args = {
@@ -79,19 +80,16 @@ local function genfilenames(dir, i, prefix)
 end
 
 -- function: run openoceans
-local function runopenoceans(start_beam, stop_beam, timeout)
+local function runopenoceans(start_beam, stop_beam, container_timeout)
     for i = start_beam,stop_beam do
-        -- build parameters
         local container_parms = {
             image =  "openoceans",
             command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, i, "openoceans"),
-            timeout = timeout,
+            timeout = container_timeout,
             parms = { ["openoceans.json"] = parms["openoceans"] }
         }
-        -- execute container
         local container = runner.execute(crenv, container_parms, rspq)
-        -- wait for container to complete
-        runner.wait(container, timeout)
+        runner.wait(container, container_timeout)
     end
 end
 
@@ -100,11 +98,40 @@ while true do
     if not status then break end
 
     -- execute openoceans
-    runopenoceans(1, 6, parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT)
+    runopenoceans(1, 6, timeout)
 
     -- exit loop
     break
 end
+
+-- build final output
+local beam_csv_files = {}
+local beam_json_files = {}
+local openoceans_csv_files = {}
+for i = 1,6 do
+    table.insert(beam_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+    table.insert(beam_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+    table.insert(openoceans_csv_files, string.format("%s/openoceans_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+end
+local writer_parms = {
+    image =  "bathywriter",
+    command = "/env/bin/python /usr/local/etc/writer.py /data/settings.json",
+    timeout = timeout,
+    parms = { 
+        ["settings.json"] = {
+            beam_csv_files = beam_csv_files,
+            beam_json_files = beam_json_files,
+            openoceans_csv_files = openoceans_csv_files,
+            output = {
+                format = "hdf5",
+                as_geo = false
+            },
+            output_file_name = crenv.container_shared_directory.."/atl24.h5"
+        }
+    }
+}
+local container = runner.execute(crenv, writer_parms, rspq)
+runner.wait(container, timeout)
 
 -- cleanup container runtime environment
 --runner.cleanup(crenv)
