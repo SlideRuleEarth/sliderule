@@ -4,8 +4,6 @@ COPY conda-linux-aarch64.lock .
 RUN mamba create --copy -p /env --file conda-linux-aarch64.lock && \
     conda clean -afy
 
-RUN /env/bin/pip install fast_histogram
-
 RUN echo "source activate /env" > ~/.bashrc
 
 COPY *.py /usr/local/etc/

@@ -1,0 +1,31 @@
+{
+    "beam_csv_files": [
+        "/data/AppServer.2/bathy_beam_1.csv", 
+        "/data/AppServer.2/bathy_beam_2.csv", 
+        "/data/AppServer.2/bathy_beam_3.csv", 
+        "/data/AppServer.2/bathy_beam_4.csv", 
+        "/data/AppServer.2/bathy_beam_5.csv", 
+        "/data/AppServer.2/bathy_beam_6.csv"
+    ],
+    "beam_json_files": [
+        "/data/AppServer.2/bathy_beam_1.json", 
+        "/data/AppServer.2/bathy_beam_2.json", 
+        "/data/AppServer.2/bathy_beam_3.json", 
+        "/data/AppServer.2/bathy_beam_4.json", 
+        "/data/AppServer.2/bathy_beam_5.json", 
+        "/data/AppServer.2/bathy_beam_6.json"
+    ],
+    "openoceans_csv_files": [
+        "/data/AppServer.2/openoceans_bathy_beam_1.csv", 
+        "/data/AppServer.2/openoceans_bathy_beam_2.csv", 
+        "/data/AppServer.2/openoceans_bathy_beam_3.csv", 
+        "/data/AppServer.2/openoceans_bathy_beam_4.csv", 
+        "/data/AppServer.2/openoceans_bathy_beam_5.csv", 
+        "/data/AppServer.2/openoceans_bathy_beam_6.csv"],
+    "output_file_name": "atl24.csv",
+    "output":
+    {
+        "format": "csv", 
+        "as_geo": false 
+    }
+}

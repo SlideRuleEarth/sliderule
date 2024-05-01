@@ -45,7 +45,6 @@ if len(sys.argv) <= 1:
     sys.exit()
 
 # read control json
-#
 #   {
 #       "beam_csv_files": [<beam 1 file>, <beam 2 file>, ...],
 #       "beam_json_files": [<beam 1 file>, <beam 2 file>, ...],
@@ -61,9 +60,9 @@ with open(control_json, 'r') as json_file:
     control = json.load(json_file)
 
 # read in data
-beam_dfs = [pd.from_csv(beam_csv_file) for beam_csv_file in control["beam_csv_files"]]
+beam_dfs = [pd.read_csv(beam_csv_file) for beam_csv_file in control["beam_csv_files"]]
 beam_dicts = [json.load(open(beam_json_file, 'r')) for beam_json_file in control["beam_json_files"]]
-openoceans_dfs = [pd.from_csv(openocean_csv_file) for openocean_csv_file in control["openoceans_csv_files"]]
+openoceans_dfs = [pd.read_csv(openocean_csv_file) for openocean_csv_file in control["openoceans_csv_files"]]
 
 # merge dataframes
 for i in range(len(beam_dfs)):

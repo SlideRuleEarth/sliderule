@@ -63,11 +63,14 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-OPENOCEANS_CONTAINER_STAGE_DIR = $(STAGE)/openoceans
-OPENOCEANS_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/openoceans
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
+OPENOCEANS_CONTAINER_STAGE_DIR = $(STAGE)/openoceans
+OPENOCEANS_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/openoceans
 OPENOCEANS_CONTAINER_NAME ?= openoceans
+BATHYWRITER_CONTAINER_STAGE_DIR = $(STAGE)/bathywriter
+BATHYWRITER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/bathywriter
+BATHYWRITER_CONTAINER_NAME ?= bathywriter
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -211,6 +214,24 @@ openoceans-container-docker: ## create the container runtime environment base py
 	
 openoceans-container-run: ## run the build environment docker container
 	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/AppServer.2/bathy_beam_1.csv /data/AppServer.2/bathy_beam_1.json /data/AppServer.2/openoceans_1.csv
+
+bathywriter-container-lock: ## create the lock file for the container runtime environment base python image
+	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
+	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock render -p linux-aarch64
+
+bathywriter-container-docker: ## create the container runtime environment base python image
+	-rm -Rf $(BATHYWRITER_CONTAINER_STAGE_DIR)
+	mkdir -p $(BATHYWRITER_CONTAINER_STAGE_DIR)
+	cp $(BATHYWRITER_CONTAINER_DIR)/Dockerfile $(BATHYWRITER_CONTAINER_STAGE_DIR)
+	cp $(BATHYWRITER_CONTAINER_DIR)/conda-* $(BATHYWRITER_CONTAINER_STAGE_DIR)
+	cp $(BATHYWRITER_CONTAINER_DIR)/*.py $(BATHYWRITER_CONTAINER_STAGE_DIR)
+	cd $(BATHYWRITER_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+bathywriter-container-run: ## run the build environment docker container
+	cp $(BATHYWRITER_CONTAINER_DIR)/*.json /data
+	docker run -it --rm -v /data:/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py data/test.json
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
