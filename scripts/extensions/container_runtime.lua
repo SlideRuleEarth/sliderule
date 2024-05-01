@@ -44,9 +44,8 @@ end
 --
 -- Wait for Container
 --
-local function wait (parms, cre_runner)
+local function wait (cre_runner, timeout)
 
-    local timeout = parms["timeout"] or netsvc.NODE_TIMEOUT
     return cre_runner:waiton(timeout * 1000)
 
 end

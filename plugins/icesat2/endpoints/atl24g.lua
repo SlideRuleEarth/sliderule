@@ -78,22 +78,29 @@ local function genfilenames(dir, i, prefix)
     return string.format("%s/%s.json %s/%s_%d.json %s/%s_%d.csv %s/%s_%s_%d.csv", dir, prefix, dir, icesat2.BATHY_PREFIX, i, dir, icesat2.BATHY_PREFIX, i, dir, prefix, icesat2.BATHY_PREFIX, i)
 end
 
+-- function: run openoceans
+local function runopenoceans(start_beam, stop_beam, timeout)
+    for i = start_beam,stop_beam do
+        -- build parameters
+        local container_parms = {
+            image =  "openoceans",
+            command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, i, "openoceans"),
+            timeout = timeout,
+            parms = { ["openoceans.json"] = parms["openoceans"] }
+        }
+        -- execute container
+        local container = runner.execute(crenv, container_parms, rspq)
+        -- wait for container to complete
+        runner.wait(container, timeout)
+    end
+end
+
 while true do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
 
-    -- TODO - put this in a loop for all 6 beams
-
     -- execute openoceans
-    local openoceans_parms = {
-        image =  "openoceans",
-        command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, 1, "openoceans"),
-        timeout = parms["timeout"] or netsvc.RQST_TIMEOUT,
-        parms = { ["openoceans.json"] = parms["openoceans"] }
-    }
-
-    local openoceans_runner = runner.execute(crenv, openoceans_parms, rspq)
-    local openoceans_status = runner.wait(openoceans_parms, openoceans_runner)
+    runopenoceans(1, 6, parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT)
 
     -- exit loop
     break
