@@ -1,0 +1,12 @@
+name: openoceans
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - scipy
+  - tqdm
+  - numba
+  - scikit-learn
+  - pathos
+  - pip

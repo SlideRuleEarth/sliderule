@@ -5,7 +5,7 @@ SlideRule
 **Process Earth science datasets in the cloud through REST API calls to SlideRule web services.**
 
 :Latest Version: |LatestRelease|
-:GitHub: https://github.com/ICESat2-SlideRule/sliderule
+:GitHub: https://github.com/SlideRuleEarth/sliderule
 :Web: https://slideruleearth.io/web/
 :PyPi: https://pypi.org/project/sliderule/
 :Conda: https://anaconda.org/conda-forge/sliderule
@@ -66,7 +66,7 @@ Where To Begin
 Contacting Us
 -------------
 
-SlideRule is openly developed on GitHub at https://github.com/ICESat2-SlideRule.  We welcome all feedback and contributions!  For more details on the different ways to reach out to us, see our `Contact Us </web/contact/>`_ page.
+SlideRule is openly developed on GitHub at https://github.com/SlideRuleEarth.  We welcome all feedback and contributions!  For more details on the different ways to reach out to us, see our `Contact Us </web/contact/>`_ page.
 
 
 Project Information

@@ -8,29 +8,29 @@ Version description of the v4.1.0 release of ICESat-2 SlideRule.
 
 ## New Functionality
 
-* [#356](https://github.com/ICESat2-SlideRule/sliderule/pull/356) - Updated functionality in `ipysliderule` module to support AGU CryoCloud Workshop.
+* [#356](https://github.com/SlideRuleEarth/sliderule/pull/356) - Updated functionality in `ipysliderule` module to support AGU CryoCloud Workshop.
 
 * ATL06 Subsetting API - `atl06s` and `atl06sp` provide direct subsetting of ATL06 standard data product
 
 * ATL08 / PhoREAL Ancillary Fields - the `atl08` and `atl08p` APIs support ancillary fields via the `atl08_fields` parameter
 
-* [b9fec20](https://github.com/ICESat2-SlideRule/sliderule/commit/b9fec20b464a0d89ac5ad1cee2d31f96788cb01a) [81ffae6](https://github.com/ICESat2-SlideRule/sliderule/commit/81ffae68cf1d9c6783502b51b585723c0c8630bf) - Added functionality to support large polygons when subsetting; this is useful when the list of granules to process is produced through some other means than a geospatial query, but the returned granules need to be subsetted to a large region like everything below/above a certain latitude.
+* [b9fec20](https://github.com/SlideRuleEarth/sliderule/commit/b9fec20b464a0d89ac5ad1cee2d31f96788cb01a) [81ffae6](https://github.com/SlideRuleEarth/sliderule/commit/81ffae68cf1d9c6783502b51b585723c0c8630bf) - Added functionality to support large polygons when subsetting; this is useful when the list of granules to process is produced through some other means than a geospatial query, but the returned granules need to be subsetted to a large region like everything below/above a certain latitude.
 
 ## Issues Resolved
 
-* [98c7922](https://github.com/ICESat2-SlideRule/sliderule/commit/98c792264eba79949c8c79d66b7c7642250c51b2) - fixed plugin version check
+* [98c7922](https://github.com/SlideRuleEarth/sliderule/commit/98c792264eba79949c8c79d66b7c7642250c51b2) - fixed plugin version check
 
-* [#357]https://github.com/ICESat2-SlideRule/sliderule/issues/357) - fixed pflags in ATL06-SR
+* [#357]https://github.com/SlideRuleEarth/sliderule/issues/357) - fixed pflags in ATL06-SR
 
 ## Development Updates
 
 * Pixel level access and subsetting added to raster functionality
 
-* [#156](https://github.com/ICESat2-SlideRule/sliderule/issues/156) - implemented full granule locking
+* [#156](https://github.com/SlideRuleEarth/sliderule/issues/156) - implemented full granule locking
 
-* [#287](https://github.com/ICESat2-SlideRule/sliderule/issues/287) - capture build dependency versions in a lock file
+* [#287](https://github.com/SlideRuleEarth/sliderule/issues/287) - capture build dependency versions in a lock file
 
-* [e5dce17](https://github.com/ICESat2-SlideRule/sliderule/commit/e5dce17c9d797cb4696e9a41dbf26915e6704e74) - standardized on C++17 for all plugins
+* [e5dce17](https://github.com/SlideRuleEarth/sliderule/commit/e5dce17c9d797cb4696e9a41dbf26915e6704e74) - standardized on C++17 for all plugins
 
 * Unit tests are only run in the self test when compiled as a Debug build 
 
@@ -38,7 +38,7 @@ Version description of the v4.1.0 release of ICESat-2 SlideRule.
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.1.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.1.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.1.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.1.0)
 
 ## Benchmarks
 

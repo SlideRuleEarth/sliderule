@@ -1,0 +1,31 @@
+{
+    "spot_csv_files": [
+        "/data/AppServer.2/bathy_spot_1.csv", 
+        "/data/AppServer.2/bathy_spot_2.csv", 
+        "/data/AppServer.2/bathy_spot_3.csv", 
+        "/data/AppServer.2/bathy_spot_4.csv", 
+        "/data/AppServer.2/bathy_spot_5.csv", 
+        "/data/AppServer.2/bathy_spot_6.csv"
+    ],
+    "spot_json_files": [
+        "/data/AppServer.2/bathy_spot_1.json", 
+        "/data/AppServer.2/bathy_spot_2.json", 
+        "/data/AppServer.2/bathy_spot_3.json", 
+        "/data/AppServer.2/bathy_spot_4.json", 
+        "/data/AppServer.2/bathy_spot_5.json", 
+        "/data/AppServer.2/bathy_spot_6.json"
+    ],
+    "openoceans_csv_files": [
+        "/data/AppServer.2/openoceans_bathy_spot_1.csv", 
+        "/data/AppServer.2/openoceans_bathy_spot_2.csv", 
+        "/data/AppServer.2/openoceans_bathy_spot_3.csv", 
+        "/data/AppServer.2/openoceans_bathy_spot_4.csv", 
+        "/data/AppServer.2/openoceans_bathy_spot_5.csv", 
+        "/data/AppServer.2/openoceans_bathy_spot_6.csv"],
+    "output_file_name": "/data/atl24.h5",
+    "output":
+    {
+        "format": "hdf5", 
+        "as_geo": false 
+    }
+}

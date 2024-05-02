@@ -22,9 +22,9 @@ Version description of the v1.4.2 release of ICESat-2 SlideRule.
 
 ## Major Issues Resolved
 
-- Fixed spot calculation to match what is specified in the ATL03 ATBD. [b8ea34b](https://github.com/ICESat2-SlideRule/sliderule-python/commit/b8ea34bb24ea243b968de5df8f12939857393f46).
+- Fixed spot calculation to match what is specified in the ATL03 ATBD. [b8ea34b](https://github.com/SlideRuleEarth/sliderule-python/commit/b8ea34bb24ea243b968de5df8f12939857393f46).
 
-- Fixed Voila demo points showing up 360 degrees away [#97](https://github.com/ICESat2-SlideRule/sliderule-python/pull/97)
+- Fixed Voila demo points showing up 360 degrees away [#97](https://github.com/SlideRuleEarth/sliderule-python/pull/97)
 
 - Added significant tests to pytest framework for client: algorithm, atl08, atl06gs, h5 failure cases
 
@@ -38,13 +38,13 @@ Version description of the v1.4.2 release of ICESat-2 SlideRule.
 
 - More robust error checking in `netsvc` package _post_ and _get_ functions (the http response code is checked explicitly).
 
-- Fixed CPU usage metrics in Grafana [3a5fd92](https://github.com/ICESat2-SlideRule/sliderule-project/commit/3a5fd92178c3028c1fcd5d6b3c08ff0e2fff1758)
+- Fixed CPU usage metrics in Grafana [3a5fd92](https://github.com/SlideRuleEarth/sliderule-project/commit/3a5fd92178c3028c1fcd5d6b3c08ff0e2fff1758)
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.4.2](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.4.2)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.4.2](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.4.2)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.4.2](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.4.2)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.4.2](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.4.2)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.4.2](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.4.2)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.4.2](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.4.2)
 

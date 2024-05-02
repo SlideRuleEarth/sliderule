@@ -66,7 +66,7 @@ int cre_open (lua_State* L)
     luaL_newlib(L, cre_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS", CreParms::SELF);
+    LuaEngine::setAttrStr(L, "PARMS", CreParms::PARMS);
 
     return 1;
 }

@@ -11,7 +11,7 @@ Version description of the v3.1.0 release of ICESat-2 SlideRule.
   * Raster Sampling for L3, L4B datasets
   * User Guide: https://slideruleearth.io/web/rtd/user_guide/GEDI.html
   * API Reference: https://slideruleearth.io/web/rtd/api_reference/gedi.html
-  * Example Notebooks: https://github.com/ICESat2-SlideRule/sliderule-python/tree/main/examples
+  * Example Notebooks: https://github.com/SlideRuleEarth/sliderule-python/tree/main/examples
 
 - PhoREAL functionality officially supported
   * User Guilde: https://slideruleearth.io/web/rtd/user_guide/ICESat-2.html#photon-extent-parameters
@@ -28,17 +28,17 @@ Version description of the v3.1.0 release of ICESat-2 SlideRule.
 
 ## Issues Resolved
 
-- Progress messages in demo appear in order [#190](https://github.com/ICESat2-SlideRule/sliderule/issues/190)
+- Progress messages in demo appear in order [#190](https://github.com/SlideRuleEarth/sliderule/issues/190)
 
-- GEDI timestamps fixed [#218](https://github.com/ICESat2-SlideRule/sliderule/issues/218)
+- GEDI timestamps fixed [#218](https://github.com/SlideRuleEarth/sliderule/issues/218)
 
-- Fixed netCDF and HDF5 output from Python I/O module for delta_time update [a2e281a](https://github.com/ICESat2-SlideRule/sliderule/commit/a2e281a744bfb943c0ab04e4e1b3b603b1c58afc)
+- Fixed netCDF and HDF5 output from Python I/O module for delta_time update [a2e281a](https://github.com/SlideRuleEarth/sliderule/commit/a2e281a744bfb943c0ab04e4e1b3b603b1c58afc)
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v3.1.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v3.1.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v3.1.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v3.1.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v3.1.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v3.1.0)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v3.1.0](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v3.1.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v3.1.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v3.1.0)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v3.1.0](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v3.1.0)
 

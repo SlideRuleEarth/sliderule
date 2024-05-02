@@ -33,7 +33,7 @@ $ python3 setup.py install
 
 ## New Features
 
-- Support for large regions and complex polygon requests (via providing a rasterized polygon as part of the request) [sliderule-python#41](https://github.com/ICESat2-SlideRule/sliderule-python/issues/41) and [sliderule-python#24](https://github.com/ICESat2-SlideRule/sliderule-python/issues/24)
+- Support for large regions and complex polygon requests (via providing a rasterized polygon as part of the request) [sliderule-python#41](https://github.com/SlideRuleEarth/sliderule-python/issues/41) and [sliderule-python#24](https://github.com/SlideRuleEarth/sliderule-python/issues/24)
 
 - Added quality flags to request parameters and response fields
 
@@ -46,31 +46,31 @@ $ python3 setup.py install
 
 ## Major Issues Resolved
 
-- Moved all traffic to port 80; compatible with mybinder [sliderule-python#48](https://github.com/ICESat2-SlideRule/sliderule-python/issues/48)
+- Moved all traffic to port 80; compatible with mybinder [sliderule-python#48](https://github.com/SlideRuleEarth/sliderule-python/issues/48)
 
-- Fixed issue when saving NetCDF files [sliderule-python#75](https://github.com/ICESat2-SlideRule/sliderule-python/issues/75)
+- Fixed issue when saving NetCDF files [sliderule-python#75](https://github.com/SlideRuleEarth/sliderule-python/issues/75)
 
-- Updated Python dependencies [sliderule-python#53](https://github.com/ICESat2-SlideRule/sliderule-python/issues/53)
+- Updated Python dependencies [sliderule-python#53](https://github.com/SlideRuleEarth/sliderule-python/issues/53)
 
 
 ## Minor Issues Resolved
 
 - Documented the `t0`, and `t1` request parameters
 
-- Added `rgt`, `cycle`, and `region` request parameters [sliderule-python#27](https://github.com/ICESat2-SlideRule/sliderule-python/issues/27)
+- Added `rgt`, `cycle`, and `region` request parameters [sliderule-python#27](https://github.com/SlideRuleEarth/sliderule-python/issues/27)
 
 - Moved `track` request parameter from being a keyword argument to a member of the `parm` dictionary
 
 - The `cnf` parameter default changed to 2; the `maxi` parameter default changed to 5
 
-- Fixed inconsistencies in installation instructions [sliderule-python#9](https://github.com/ICESat2-SlideRule/sliderule-python/issues/9)
+- Fixed inconsistencies in installation instructions [sliderule-python#9](https://github.com/SlideRuleEarth/sliderule-python/issues/9)
 
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.4.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.4.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.4.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.4.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.4.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.4.0)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.4.0](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.4.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.4.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.4.0)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.4.0](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.4.0)
 

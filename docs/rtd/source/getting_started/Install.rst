@@ -57,7 +57,7 @@ Alternatively, you can use the PyPI package manager to install the SlideRule Pyt
 Developer Install
 -----------------
 
-For developers and contributors, to get the latest unreleased version of the Python client, the contents of the `sliderule` repository can be cloned or download as a `zipped file <https://github.com/ICESat2-SlideRule/sliderule/archive/main.zip>`_.
+For developers and contributors, to get the latest unreleased version of the Python client, the contents of the `sliderule` repository can be cloned or download as a `zipped file <https://github.com/SlideRuleEarth/sliderule/archive/main.zip>`_.
 If cloning, please consider forking into your own account before cloning onto your system.
 
 .. warning::
@@ -67,7 +67,7 @@ To clone the repository:
 
 .. code-block:: bash
 
-    git clone https://github.com/ICESat2-SlideRule/sliderule.git
+    git clone https://github.com/SlideRuleEarth/sliderule.git
 
 You can then install the `sliderule python` client using `setuptools`:
 

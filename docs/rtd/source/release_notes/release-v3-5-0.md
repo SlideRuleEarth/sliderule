@@ -14,7 +14,7 @@ Version description of the v3.5.0 release of ICESat-2 SlideRule.  This document 
 
 ## Development Updates
 
-* Added new pytests for performance monitoring, strip sampling, and file_directory. Also reorganized the pytests to better reflect their functionality; [233](https://github.com/ICESat2-SlideRule/sliderule/issues/233), [235](https://github.com/ICESat2-SlideRule/sliderule/issues/235), [246](https://github.com/ICESat2-SlideRule/sliderule/issues/246).
+* Added new pytests for performance monitoring, strip sampling, and file_directory. Also reorganized the pytests to better reflect their functionality; [233](https://github.com/SlideRuleEarth/sliderule/issues/233), [235](https://github.com/SlideRuleEarth/sliderule/issues/235), [246](https://github.com/SlideRuleEarth/sliderule/issues/246).
 
 * Broadened support for netCDF in H5Coro by adding code to handle different superblock versions, filter message versions, and fill data message versions.  Work was performed in support of SWOT plugin.
 
@@ -32,9 +32,9 @@ Version description of the v3.5.0 release of ICESat-2 SlideRule.  This document 
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v3.5.0](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v3.5.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v3.5.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v3.5.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v3.5.0](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v3.5.0)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v3.5.0](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v3.5.0)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v3.5.0](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v3.5.0)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v3.5.0](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v3.5.0)
 

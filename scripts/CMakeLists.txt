@@ -2,7 +2,6 @@
 # Endpoints #
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/cre.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
         ${CMAKE_CURRENT_LIST_DIR}/selftests/example_engine_endpoint.lua
@@ -30,6 +29,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/asset.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/base64.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/container_runtime.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/georesource.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua

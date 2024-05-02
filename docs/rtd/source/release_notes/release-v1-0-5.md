@@ -13,8 +13,8 @@ Version description of the v1.0.5 release of ICESat-2 SlideRule
 
 ## Getting this release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.0.5](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.0.5)
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.0.5](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.0.5)
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.0.5](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.0.5)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.0.5](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.0.5)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.0.5](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.0.5)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.0.5](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.0.5)
 
 

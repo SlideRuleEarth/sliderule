@@ -145,7 +145,7 @@ bool send2User (const char* fileName, const char* outputPath,
              (_path[5] == '/') &&
              (_path[6] == '/'))
     {
-        /* Rename the file - very fast if both files are on the same partition */
+        /* Rename File - very fast if both files are on the same partition */
         renameFile(fileName, &_path[7]);
         status = true;
     }
@@ -154,6 +154,9 @@ bool send2User (const char* fileName, const char* outputPath,
         /* Stream File Back to Client */
         status = send2Client(fileName, outputPath, outQ);
     }
+
+    /* Delete File Locally */
+    removeFile(fileName);
 
     stop_trace(INFO, send_trace_id);
     return status;
@@ -411,6 +414,51 @@ void renameFile (const char* oldName, const char* newName)
 bool fileExists(const char* fileName)
 {
     return std::filesystem::exists(fileName);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSend2User -
+ *----------------------------------------------------------------------------*/
+int luaSend2User (lua_State* L)
+{
+    bool status = false;
+    ArrowParms* _parms = NULL;
+    Publisher* outq = NULL;
+    const char* outputpath = NULL;
+    
+    try
+    {
+        /* Get Parameters */
+        const char* filename = LuaObject::getLuaString(L, 1);
+        _parms = dynamic_cast<ArrowParms*>(LuaObject::getLuaObject(L, 2, ArrowParms::OBJECT_TYPE));
+        const char* outq_name = LuaObject::getLuaString(L, 3);
+
+        /* Get Output Path */
+        outputpath = getOutputPath(_parms);
+
+        /* Get Trace from Lua Engine */
+        lua_getglobal(L, LuaEngine::LUA_TRACEID);
+        uint32_t trace_id = lua_tonumber(L, -1);
+
+        /* Create Publisher */
+        outq = new Publisher(outq_name);
+
+        /* Call Utility to Send File */
+        status = send2User(filename, outputpath, trace_id, _parms, outq);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error sending file to user: %s", e.what());
+    }
+
+    /* Release Allocated Resources */
+    if(_parms) _parms->releaseLuaObject();
+    delete outq;
+    delete [] outputpath;
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 1;
 }
 
 } /* namespace ArrowCommon */

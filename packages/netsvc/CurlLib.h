@@ -50,6 +50,13 @@ class CurlLib
     public:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int CONNECTION_TIMEOUT = 10L; // seconds
+        static const int DATA_TIMEOUT = 60L; // seconds
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -57,7 +64,7 @@ class CurlLib
         static void         deinit          (void);
 
         static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
-                                             bool verify_peer=false, bool verify_hostname=false, 
+                                             bool verify_peer=false, bool verify_hostname=false, int timeout=DATA_TIMEOUT,
                                              List<string*>* headers=NULL, 
                                              const char* unix_socket=NULL,
                                              List<string*>* rsps_headers=NULL);
@@ -75,8 +82,6 @@ class CurlLib
          *--------------------------------------------------------------------*/
 
         static const int EXPECTED_RESPONSE_SEGMENTS = 16;
-        static const int CONNECTION_TIMEOUT = 10L; // seconds
-        static const int DATA_TIMEOUT = 60L; // seconds
         static const int EXPECTED_MAX_HEADERS = 8;
 
         static const int RECOBJ_HDR_SIZE = 8; // bytes

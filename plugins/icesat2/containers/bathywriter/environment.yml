@@ -1,0 +1,10 @@
+name: bathywriter
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - geopandas
+  - pyarrow
+  - h5py
+  - pip

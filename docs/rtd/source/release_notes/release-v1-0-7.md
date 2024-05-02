@@ -4,15 +4,15 @@
 
 Version description of the v1.0.7 release of ICESat-2 SlideRule
 
-* Resolved background density calculation issue: [sliderule#2](https://github.com/ICESat2-SlideRule/sliderule/issues/2)
+* Resolved background density calculation issue: [sliderule#2](https://github.com/SlideRuleEarth/sliderule/issues/2)
 
-* Resolved background rate interpolation issue: [sliderule#3](https://github.com/ICESat2-SlideRule/sliderule/issues/3)
+* Resolved background rate interpolation issue: [sliderule#3](https://github.com/SlideRuleEarth/sliderule/issues/3)
 
-* Resolved spacecraft velocity calculation issue: [sliderule#5](https://github.com/ICESat2-SlideRule/sliderule/issues/5)
+* Resolved spacecraft velocity calculation issue: [sliderule#5](https://github.com/SlideRuleEarth/sliderule/issues/5)
 
-* Resolved along-track distance calculation issue: [sliderule#73](https://github.com/ICESat2-SlideRule/sliderule/issues/73)
+* Resolved along-track distance calculation issue: [sliderule#73](https://github.com/SlideRuleEarth/sliderule/issues/73)
 
-* ATL06-SR segment IDs are calculated by finding the center of the segment and using the segment ID of the closest ATL06 segment: [sliderule#72](https://github.com/ICESat2-SlideRule/sliderule/issues/72)
+* ATL06-SR segment IDs are calculated by finding the center of the segment and using the segment ID of the closest ATL06 segment: [sliderule#72](https://github.com/SlideRuleEarth/sliderule/issues/72)
 
 * Resolved consul exit functionality regression: devops#42
 
@@ -23,9 +23,9 @@ Version description of the v1.0.7 release of ICESat-2 SlideRule
 
 ## Getting this release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.0.7](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.0.7)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.0.7](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.0.7)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.0.7](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.0.7)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.0.7](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.0.7)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.0.7](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.0.7)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.0.7](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.0.7)
 

@@ -38,9 +38,12 @@
 #include "EventLib.h"
 #include "CurlLib.h" // netsvc package dependency
 #include "EndpointObject.h"
+#include "TimeLib.h"
 #include <rapidjson/document.h>
 #include <cstdlib>
 #include <filesystem>
+#include <sstream>
+#include <iostream>
 
 /******************************************************************************
  * STATIC DATA
@@ -52,10 +55,7 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* ContainerRunner::INPUT_CONTROL_FILENAME = "in.json";
-const char* ContainerRunner::OUTPUT_CONTROL_FILENAME = "out.json";
-const char* ContainerRunner::HOST_SHARED_DIRECTORY = "/usr/local/share/applications";
-const char* ContainerRunner::CONTAINER_SCRIPT_RUNTIME_DIRECTORY = "/usr/local/etc";
+const char* ContainerRunner::SHARED_DIRECTORY = "/data";
 
 const char* ContainerRunner::REGISTRY = NULL;
 
@@ -64,7 +64,7 @@ const char* ContainerRunner::REGISTRY = NULL;
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :container(<parms>, unique_shared_directory, [<outq_name>])
+ * luaCreate - :container(<parms>, host_shared_directory, [<outq_name>])
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaCreate (lua_State* L)
 {
@@ -74,7 +74,7 @@ int ContainerRunner::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         _parms = dynamic_cast<CreParms*>(getLuaObject(L, 1, CreParms::OBJECT_TYPE));
-        const char* unique_shared_directory = getLuaString(L, 2);
+        const char* host_shared_directory = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3, true, NULL);
 
         /* Check Environment */
@@ -84,7 +84,7 @@ int ContainerRunner::luaCreate (lua_State* L)
         }
 
         /* Create Container Runner */
-        return createLuaObject(L, new ContainerRunner(L, _parms, unique_shared_directory, outq_name));
+        return createLuaObject(L, new ContainerRunner(L, _parms, host_shared_directory, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -127,7 +127,7 @@ int ContainerRunner::luaList (lua_State* L)
     /* Make Request for List of Containers */
     const char* response = NULL;
     int size = 0;
-    long http_code = CurlLib::request(EndpointObject::GET, url, NULL, &response, &size, false, false, NULL, unix_socket);
+    long http_code = CurlLib::request(EndpointObject::GET, url, NULL, &response, &size, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
 
     /* Push Result */
     lua_pushinteger(L, http_code);
@@ -142,14 +142,12 @@ int ContainerRunner::luaList (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaSettings - settings() -> shared directory, input control filename, output control filename
+ * luaSettings - settings() -> shared directory
  *----------------------------------------------------------------------------*/
 int ContainerRunner::luaSettings (lua_State* L)
 {
-    lua_pushstring(L, HOST_SHARED_DIRECTORY);
-    lua_pushstring(L, INPUT_CONTROL_FILENAME);
-    lua_pushstring(L, OUTPUT_CONTROL_FILENAME);
-    return returnLuaStatus(L, true, 4);
+    lua_pushstring(L, SHARED_DIRECTORY);
+    return returnLuaStatus(L, true, 2);
 }
 
 /*----------------------------------------------------------------------------
@@ -160,17 +158,17 @@ int ContainerRunner::luaCreateUnique (lua_State* L)
     bool status = false;
     try
     {
-        const char* unique_shared_directory = getLuaString(L, 1);
-        if(!std::filesystem::create_directory(unique_shared_directory))
+        const char* host_shared_directory = getLuaString(L, 1);
+        if(!std::filesystem::create_directory(host_shared_directory))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create unique shared directory: %s", strerror(errno));
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror(errno));
         }
         status = true;
     }
     catch(const std::filesystem::filesystem_error& e1)
     {
         const string& explanation = e1.what();
-        mlog(CRITICAL, "Filesystem failure: %s", explanation.c_str());
+        mlog(CRITICAL, "filesystem failure: %s", explanation.c_str());
     }
     catch(const RunTimeException& e2)
     {
@@ -188,17 +186,17 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
     bool status = false;
     try
     {
-        const char* unique_shared_directory = getLuaString(L, 1);
-        if(!std::filesystem::remove_all(unique_shared_directory))
+        const char* host_shared_directory = getLuaString(L, 1);
+        if(!std::filesystem::remove_all(host_shared_directory))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to delete unique shared directory: %s", strerror(errno));
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror(errno));
         }
         status = true;
     }
     catch(const std::filesystem::filesystem_error& e1)
     {
         const string& explanation = e1.what();
-        mlog(CRITICAL, "Filesystem failure: %s", explanation.c_str());
+        mlog(CRITICAL, "filesystem failure - %s", explanation.c_str());
     }
     catch(const RunTimeException& e2)
     {
@@ -243,13 +241,13 @@ int ContainerRunner::luaSetRegistry (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ContainerRunner::ContainerRunner (lua_State* L, CreParms* _parms, const char* unique_shared_directory, const char* outq_name):
+ContainerRunner::ContainerRunner (lua_State* L, CreParms* _parms, const char* host_shared_directory, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     outQ(NULL),
-    uniqueSharedDirectory(StringLib::duplicate(unique_shared_directory))
+    hostSharedDirectory(StringLib::duplicate(host_shared_directory))
 {
     assert(_parms);
-    assert(unique_shared_directory);
+    assert(host_shared_directory);
 
     parms = _parms;
     if(outq_name) outQ = new Publisher(outq_name);
@@ -265,7 +263,7 @@ ContainerRunner::~ContainerRunner (void)
     active = false;
     delete controlPid;
     delete outQ;
-    delete [] uniqueSharedDirectory;
+    delete [] hostSharedDirectory;
     parms->releaseLuaObject();
 }
 
@@ -285,20 +283,39 @@ void* ContainerRunner::controlThread (void* parm)
     string* content_type = new string("Content-Type: application/json");
     headers.add(content_type);
 
+    /* Build Container Command Parameter */
+    string token;
+    vector<string> tokens;
+    std::istringstream cmd_str_iss(cr->parms->command);
+    while(std::getline(cmd_str_iss, token, ' '))
+    {
+        if(token.length() > 0)
+        {
+            tokens.push_back(token);
+        }
+    }
+    string cmd_str = "";
+    for(unsigned i = 0; i < tokens.size(); i++)
+    {
+        FString elem_str("\"%s\"", tokens[i].c_str());
+        cmd_str += elem_str.c_str();
+        if(i < (tokens.size() - 1)) cmd_str += ", ";
+    }    
+    FString cmd("\"Cmd\": [%s]}", cmd_str.c_str());
+
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
-    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->uniqueSharedDirectory, HOST_SHARED_DIRECTORY);
-    FString cmd("\"Cmd\": [\"python\", \"%s/%s\"]}", CONTAINER_SCRIPT_RUNTIME_DIRECTORY, cr->parms->script);
+    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->hostSharedDirectory, SHARED_DIRECTORY);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
     /* Create Container */
     FString create_url("http://localhost/%s/containers/create", api_version);
     const char* create_response = NULL;
-    long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, &headers, unix_socket);
+    long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, cr->parms->timeout, &headers, unix_socket);
     if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->image, create_http_code, create_response);
-    else mlog(INFO, "Created container <%s>", cr->parms->image);
+    else mlog(INFO, "Created container <%s> with parameters: %s", cr->parms->image, data.c_str());
 
-    /* Wait for Completion and Get Result */
+    /* Run Container */
     if(create_http_code == EndpointObject::Created)
     {
         /* Get Container ID */
@@ -306,46 +323,118 @@ void* ContainerRunner::controlThread (void* parm)
         json.Parse(create_response);
         const char* container_id = json["Id"].GetString();
 
+        /* Build Container Name String */
+        char subid[8];
+        StringLib::copy(subid, container_id, 8);
+        FString container_name_str("%s:%s", cr->parms->image, subid);
+
+        /* Latch Start Time */
+        int64_t logs_since = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000;
+
         /* Start Container */
         FString start_url("http://localhost/%s/containers/%s/start", api_version, container_id);
         const char* start_response = NULL;
-        long start_http_code = CurlLib::request(EndpointObject::POST, start_url.c_str(), NULL, &start_response, NULL, false, false, NULL, unix_socket);
-        if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", cr->parms->image, start_http_code, start_response);
-        else mlog(INFO, "Started container <%s> with Id %s", cr->parms->image, container_id);
+        long start_http_code = CurlLib::request(EndpointObject::POST, start_url.c_str(), NULL, &start_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
+        if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", container_name_str.c_str(), start_http_code, start_response);
+        else mlog(INFO, "Started container <%s>", container_name_str.c_str());
         delete [] start_response;
 
-        /* Poll Completion of Container */
-        FString wait_url("http://localhost/%s/containers/%s/wait", api_version, container_id);
-        const char* wait_response = NULL;
-        long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, NULL, unix_socket);
-        if(wait_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", cr->parms->image, wait_http_code, wait_response);
-        else mlog(INFO, "Waited for container <%s> with Id %s", cr->parms->image, container_id);
-        delete [] wait_response;
+        /* Wait Until Container Has Completed */
+        bool done = false;
+        bool in_error = false;
+        int time_left = cr->parms->timeout;
+        while(!done && !in_error)
+        {
+            /* Check Time Left */
+            time_left -= WAIT_TIMEOUT;
+            if(time_left <= 0)
+            {
+                mlog(ERROR, "Timeout reached for container <%s> after %d seconds", container_name_str.c_str(), cr->parms->timeout);
+                done = true;
+                in_error = true;
+            }
+
+            /* Poll Completion of Container */
+            FString wait_url("http://localhost/%s/containers/%s/wait", api_version, container_id);
+            const char* wait_response = NULL;
+            long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
+            if(wait_http_code == EndpointObject::OK)
+            {
+                mlog(INFO, "Container <%s> completed", cr->parms->image);
+                done = true;
+            }
+            else if(wait_http_code != EndpointObject::Service_Unavailable) // curl timed out which is normal if container is still running
+            {
+                alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", container_name_str.c_str(), wait_http_code, wait_response);
+                done = true;
+                in_error = true;
+            }
+            delete [] wait_response;
+
+            /* Get Logs for Container */
+            int64_t logs_now = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000;
+            FString log_url("http://localhost/%s/containers/%s/logs?stdout=1&stderr=1&since=%ld", api_version, container_id, logs_since);
+            logs_since = logs_now;
+            const char* log_response = NULL;
+            int log_response_size = 0;
+            long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, WAIT_TIMEOUT, NULL, unix_socket);
+            if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", container_name_str.c_str(), log_http_code, log_response);
+            else cr->processContainerLogs(log_response, log_response_size, container_id);
+            delete [] log_response;
+
+            /* Get Status of Container */
+            if(!done)
+            {
+                FString status_url("http://localhost/%s/containers/%s/json", api_version, container_id);
+                const char* status_response = NULL;
+                long status_http_code = CurlLib::request(EndpointObject::GET, status_url.c_str(), NULL, &status_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
+                if(status_http_code != EndpointObject::OK)
+                {
+                    alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get status of container <%s>: %ld - %s", container_name_str.c_str(), status_http_code, status_response);
+                    done = true;
+                    in_error = true;
+                }
+                else
+                {
+                    rapidjson::Document status_json;
+                    status_json.Parse(status_response);
+                    const char* container_status = status_json["State"]["Status"].GetString();
+                    if(StringLib::match(container_status, "running"))
+                    {
+                        bool rspq_status = alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> still running... %d seconds left", container_name_str.c_str(), time_left);
+                        if(!rspq_status) in_error = true;
+                    }
+                    else if(StringLib::match(container_status, "stopped"))
+                    {
+                        alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> has stopped", container_name_str.c_str());
+                        done = true;
+                    }
+                    else
+                    {
+                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> has is in an unexpected state: %s", container_name_str.c_str(), container_status);
+                        done = true;
+                        in_error = true;
+                    }
+                }
+                delete [] status_response;
+            }
+        }
 
         /* (If Necessary) Force Stop Container */
-        if(wait_http_code != EndpointObject::OK)
+        if(in_error)
         {
             FString stop_url("http://localhost/%s/containers/%s/stop", api_version, container_id);
             const char* stop_response = NULL;
-            long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, NULL, unix_socket);
-            if(stop_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
+            long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
+            if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
             else mlog(INFO, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
             delete [] stop_response;
         }
 
-        /* Get Logs for Container */
-        FString log_url("http://localhost/%s/containers/%s/logs?stdout=1&stderr=1", api_version, container_id);
-        const char* log_response = NULL;
-        int log_response_size = 0;
-        long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, NULL, unix_socket);
-        if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", cr->parms->image, log_http_code, log_response);
-        else cr->processContainerLogs(log_response, log_response_size, container_id);
-        delete [] log_response;
-
         /* Remove Container */
         FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
         const char* remove_response = NULL;
-        long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, NULL, unix_socket);
+        long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
         if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
         else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
         delete [] remove_response;
@@ -409,6 +498,9 @@ void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size,
         if      (pipe == 1) lvl = INFO;
         else if (pipe == 2) lvl = ERROR;
         else                lvl = CRITICAL;
+
+        /* Remove Trialing White Space */
+        if(message[log_message_length-1] == '\n') message[log_message_length-1] = '\0';
 
         /* Log Message */
         mlog(lvl, "%s - %s", id_str, message);
