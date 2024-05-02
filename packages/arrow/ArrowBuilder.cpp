@@ -526,13 +526,11 @@ void* ArrowBuilder::builderThread(void* parm)
 
     /* Send File to User */
     ArrowCommon::send2User(builder->dataFile, builder->outputPath, trace_id, builder->parms, builder->outQ);
-    ArrowCommon::removeFile(builder->dataFile);
 
     /* Send Metadata File to User */
     if(ArrowCommon::fileExists(builder->metadataFile))
     {
         ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, builder->parms, builder->outQ);
-        ArrowCommon::removeFile(builder->metadataFile);
     }
 
     /* Signal Completion */

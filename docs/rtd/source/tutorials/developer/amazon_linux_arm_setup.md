@@ -97,8 +97,8 @@ Create the local file `~/.gitconfig` in the user's home directory with the follo
 ```bash
 mkdir meta
 cd meta
-git clone git@github.com:ICESat2-SlideRule/sliderule.git
-git clone git@github.com:ICESat2-SlideRule/sliderule-python.git
+git clone git@github.com:SlideRuleEarth/sliderule.git
+git clone git@github.com:SlideRuleEarth/sliderule-python.git
 ```
 
 ### 8. Installing and Configuring Docker

@@ -62,19 +62,19 @@ Or, add them to the `[default]` section of your `.aws/credentials` file
 ## How To List S3 Files
 
 ```bash
-$ aws s3 ls s3://icesat2-sliderule/<path_to_subdirectory>/
+$ aws s3 ls s3://SlideRuleEarth/<path_to_subdirectory>/
 ```
 
 ## How To Upload Files to S3
 
 ```bash
-$ aws s3 cp <path_to_local_file> s3://icesat2-sliderule/<path_to_subdirectory>/
+$ aws s3 cp <path_to_local_file> s3://SlideRuleEarth/<path_to_subdirectory>/
 ```
 
 ## How To List Multipart Uploads
 
 ```bash
-$ aws s3api list-multipart-uploads --bucket icesat2-sliderule
+$ aws s3api list-multipart-uploads --bucket SlideRuleEarth
 ```
 
 

@@ -26,7 +26,7 @@ jobs:
   self_test:
     name: Sliderule regression test
     runs-on: ubuntu-latest
-    container: ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
+    container: ghcr.io/slideruleearth/sliderule-buildenv:latest
 
     steps:
     - name: Checkout sliderule repository

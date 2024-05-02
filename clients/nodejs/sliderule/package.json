@@ -8,7 +8,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ICESat2-SlideRule/sliderule.git"
+    "url": "git+https://github.com/SlideRuleEarth/sliderule.git"
   },
   "license": "BSD-3-Clause",
   "devDependencies": {
@@ -34,9 +34,9 @@
     "netrc": "^0.1.4"
   },
   "bugs": {
-    "url": "https://github.com/ICESat2-SlideRule/sliderule/issues"
+    "url": "https://github.com/SlideRuleEarth/sliderule/issues"
   },
-  "homepage": "https://github.com/ICESat2-SlideRule/sliderule#readme",
+  "homepage": "https://github.com/SlideRuleEarth/sliderule#readme",
   "author": "",
   "directories": {
     "test": "tests"

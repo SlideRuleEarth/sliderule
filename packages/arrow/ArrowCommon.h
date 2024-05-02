@@ -76,6 +76,8 @@ namespace ArrowCommon
     void        removeFile (const char* fileName);
     void        renameFile (const char* oldName, const char* newName);
     bool        fileExists (const char* fileName);
+
+    int         luaSend2User (lua_State* L);
 }
 
 #endif  /* __arrow_common__ */

@@ -42,7 +42,7 @@ rsps = icesat2.atl06p(parms, "icesat2")
 print(f"{rsps}")
 ```
 
-More extensive examples in the form of Jupyter Notebooks can be found in the [examples](https://github.com/ICESat2-SlideRule/sliderule-python/tree/main/examples) folder of the [sliderule-python](https://github.com/ICESat2-SlideRule/sliderule-python) repository.
+More extensive examples in the form of Jupyter Notebooks can be found in the [examples](https://github.com/SlideRuleEarth/sliderule-python/tree/main/examples) folder of the [sliderule-python](https://github.com/SlideRuleEarth/sliderule-python) repository.
 
 ## III. Reference and User's Guide
 

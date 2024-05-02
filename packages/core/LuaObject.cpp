@@ -195,6 +195,37 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
 }
 
 /*----------------------------------------------------------------------------
+ * getLuaObject
+ *----------------------------------------------------------------------------*/
+LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
+{
+    LuaObject* lua_obj = NULL;
+    luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
+    if(user_data)
+    {
+        if(StringLib::match(object_type, user_data->luaObj->ObjectType))
+        {
+            lua_obj = user_data->luaObj;
+            user_data->luaObj->referenceCount++;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
+        }
+    }
+    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
+    {
+        return dfltval;
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
+    }
+
+    return lua_obj;
+}
+
+/*----------------------------------------------------------------------------
  * returnLuaStatus
  *----------------------------------------------------------------------------*/
 int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return)
@@ -615,37 +646,6 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
     luaL_getmetatable(L, lua_obj->LuaMetaName);
     lua_setmetatable(L, -2);
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * getLuaObject
- *----------------------------------------------------------------------------*/
-LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
-{
-    LuaObject* lua_obj = NULL;
-    luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
-    if(user_data)
-    {
-        if(StringLib::match(object_type, user_data->luaObj->ObjectType))
-        {
-            lua_obj = user_data->luaObj;
-            user_data->luaObj->referenceCount++;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "%s object returned incorrect type <%s.%s>", object_type, user_data->luaObj->ObjectType, user_data->luaObj->LuaMetaName);
-        }
-    }
-    else if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
-    {
-        return dfltval;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
-    }
-
-    return lua_obj;
 }
 
 /*----------------------------------------------------------------------------

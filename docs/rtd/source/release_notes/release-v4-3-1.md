@@ -6,7 +6,7 @@ Version description of the v4.3.1 release of ICESat-2 SlideRule.
 
 ## New Features
 
-* [eb1085d](https://github.com/ICESat2-SlideRule/sliderule/commit/eb1085da18a3cd63939f340f811ccadae1c22715) - GEDI APIs for L1B and L2A datasets now point to LP DAAC S3 bucket.
+* [eb1085d](https://github.com/SlideRuleEarth/sliderule/commit/eb1085da18a3cd63939f340f811ccadae1c22715) - GEDI APIs for L1B and L2A datasets now point to LP DAAC S3 bucket.
 
 * GeoParquet output now supports ancillary fields
 
@@ -18,45 +18,45 @@ Version description of the v4.3.1 release of ICESat-2 SlideRule.
 
 * Added `region` to output of `atl06p` and `atl03sp` APIs; makes it easier to determine direction of travel for each measurement in addition to easily reconstructing which granule a measurement comes from
 
-* [878a48b](https://github.com/ICESat2-SlideRule/sliderule/commit/878a48b4474e6a6a7b598e4abdddcceb8b438697) - Python client can now be configured to rethrow exceptions for applications that want to manage exceptions themselves
+* [878a48b](https://github.com/SlideRuleEarth/sliderule/commit/878a48b4474e6a6a7b598e4abdddcceb8b438697) - Python client can now be configured to rethrow exceptions for applications that want to manage exceptions themselves
 
 * SlideRule web APIs now support CORS as well as JavaScript clients that can only provide data payloads on POST requests
 
 ## Issues Resolved
 
-* [24a6c79](https://github.com/ICESat2-SlideRule/sliderule/commit/24a6c798059a13bc81cd9feae09e96ab5a78461a) - fixed hanging issue when terminator is dropped due to queue being full
+* [24a6c79](https://github.com/SlideRuleEarth/sliderule/commit/24a6c798059a13bc81cd9feae09e96ab5a78461a) - fixed hanging issue when terminator is dropped due to queue being full
 
-* [25640d1](https://github.com/ICESat2-SlideRule/sliderule/commit/25640d123e4b9f015edad683f141f3ecba45ec69) - fixed corner-case bug in ATL08 processing when no ancillary data is available.
+* [25640d1](https://github.com/SlideRuleEarth/sliderule/commit/25640d123e4b9f015edad683f141f3ecba45ec69) - fixed corner-case bug in ATL08 processing when no ancillary data is available.
 
-* [599f4d7](https://github.com/ICESat2-SlideRule/sliderule/commit/599f4d778d726a12887b2a63af5fc59aec288026) - fixed memory leak with atl08 ancillary fields
+* [599f4d7](https://github.com/SlideRuleEarth/sliderule/commit/599f4d778d726a12887b2a63af5fc59aec288026) - fixed memory leak with atl08 ancillary fields
 
-* [407da7d](https://github.com/ICESat2-SlideRule/sliderule/commit/407da7d6bedf27d898bc0f5939321af6686b3005) - fixed bug in ABoVE classifier code that was causing out of bounds memory access
+* [407da7d](https://github.com/SlideRuleEarth/sliderule/commit/407da7d6bedf27d898bc0f5939321af6686b3005) - fixed bug in ABoVE classifier code that was causing out of bounds memory access
 
-* [e94161a](https://github.com/ICESat2-SlideRule/sliderule/commit/e94161ae0506df39e66001341fe293e8dde1270a) - fixed bug in GeoParquet geometry code where only the first latitude,longitude of each batch was being used for the batch; it caused the data to stack up on top of each other and look decimated
+* [e94161a](https://github.com/SlideRuleEarth/sliderule/commit/e94161ae0506df39e66001341fe293e8dde1270a) - fixed bug in GeoParquet geometry code where only the first latitude,longitude of each batch was being used for the batch; it caused the data to stack up on top of each other and look decimated
 
-* [368](https://github.com/ICESat2-SlideRule/sliderule/issues/368) - fixed bug in PhoREAL implementation ancillary field interpolation
+* [368](https://github.com/SlideRuleEarth/sliderule/issues/368) - fixed bug in PhoREAL implementation ancillary field interpolation
 
 ## Development Updates
 
-* [e9ec583](https://github.com/ICESat2-SlideRule/sliderule/commit/e9ec583e0b136f66d429281bf6492dd12f1880dc) - reordered build and deploy action so that temporary token is still valid when uploading terraform
+* [e9ec583](https://github.com/SlideRuleEarth/sliderule/commit/e9ec583e0b136f66d429281bf6492dd12f1880dc) - reordered build and deploy action so that temporary token is still valid when uploading terraform
 
-* [381](https://github.com/ICESat2-SlideRule/sliderule/pull/381) - static website move from ECS to CloudFront
+* [381](https://github.com/SlideRuleEarth/sliderule/pull/381) - static website move from ECS to CloudFront
 
 * GeoParquet output no longer includes latitude and longitude columns that duplicate what is provided in the geometry column
 
-* [e055bc6](https://github.com/ICESat2-SlideRule/sliderule/commit/e055bc6e419f13c0f95ab0ba60ada8897bfa2aa9) - meta data for each record (e.g. coordinates, index, etc) is now indicated in the definition of the record and no longer provided in each endpoint lua file
+* [e055bc6](https://github.com/SlideRuleEarth/sliderule/commit/e055bc6e419f13c0f95ab0ba60ada8897bfa2aa9) - meta data for each record (e.g. coordinates, index, etc) is now indicated in the definition of the record and no longer provided in each endpoint lua file
 
-* [00ecdb3](https://github.com/ICESat2-SlideRule/sliderule/commit/00ecdb34d3cefca4ca35b232c149e32abac05567) - server.lua script waits to authenticate to DAACs until the IAM role credentials have been established; this prevents errors at startup when trying to fetch the netrc file
+* [00ecdb3](https://github.com/SlideRuleEarth/sliderule/commit/00ecdb34d3cefca4ca35b232c149e32abac05567) - server.lua script waits to authenticate to DAACs until the IAM role credentials have been established; this prevents errors at startup when trying to fetch the netrc file
 
-* [08b56f7](https://github.com/ICESat2-SlideRule/sliderule/commit/08b56f70880d9b86ace32f318805357a5d603193) - fixed disk usage metric display in Grafana
+* [08b56f7](https://github.com/SlideRuleEarth/sliderule/commit/08b56f70880d9b86ace32f318805357a5d603193) - fixed disk usage metric display in Grafana
 
-* [0b00277](https://github.com/ICESat2-SlideRule/sliderule/commit/0b00277df7c040cc4fe06abf7eadd4a665d0d76f) - fixed prometheus endpoint to return valid table
+* [0b00277](https://github.com/SlideRuleEarth/sliderule/commit/0b00277df7c040cc4fe06abf7eadd4a665d0d76f) - fixed prometheus endpoint to return valid table
 
-* [373](https://github.com/ICESat2-SlideRule/sliderule/issues/373) - removed `maxi` from all examples
+* [373](https://github.com/SlideRuleEarth/sliderule/issues/373) - removed `maxi` from all examples
 
 ## Getting This Release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.3.1](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v4.3.1)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.3.1](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.3.1)
 
 ## Benchmarks
 

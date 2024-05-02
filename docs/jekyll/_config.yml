@@ -96,7 +96,7 @@ analytics:
 author:
   name             : "SlideRule"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : # "github.com/ICESat2-SlideRule"
+  bio              : # "github.com/SlideRuleEarth"
   location         : # "Somewhere"
   email            :
   links:
@@ -108,7 +108,7 @@ author:
       url: "https://slideruleearth.io/web/rtd/"
     - label: "Source Code"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/ICESat2-SlideRule/sliderule"
+      url: "https://github.com/SlideRuleEarth/sliderule"
     - label: "PyPi"
       icon: "fab fa-fw fa-python"
       url: "https://pypi.org/project/sliderule/"
@@ -124,7 +124,7 @@ footer:
   links:
     - label: "Source Code"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/ICESat2-SlideRule/sliderule"
+      url: "https://github.com/SlideRuleEarth/sliderule"
     - label: "PyPi"
       icon: "fab fa-fw fa-python"
       url: "https://pypi.org/project/sliderule/"

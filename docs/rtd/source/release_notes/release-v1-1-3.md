@@ -16,14 +16,14 @@ None
 
 ## Minor Issues Resolved
 
-* An out-of-bounds vulnerability was fixed in the processing of ATL08 photon classifications. [658409c](https://github.com/ICESat2-SlideRule/sliderule-icesat2/commit/658409cb1fac8608b0489e40cfd772cae2b66a01)
+* An out-of-bounds vulnerability was fixed in the processing of ATL08 photon classifications. [658409c](https://github.com/SlideRuleEarth/sliderule-icesat2/commit/658409cb1fac8608b0489e40cfd772cae2b66a01)
 
 
 ## Getting this release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.1.3](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.1.3)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.1.3](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.1.3)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.1.3](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.1.3)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.1.3](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.1.3)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.1.3](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.1.3)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.1.3](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.1.3)
 

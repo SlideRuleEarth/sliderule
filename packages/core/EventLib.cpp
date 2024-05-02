@@ -302,12 +302,12 @@ uint32_t EventLib::grabId (void)
 /*----------------------------------------------------------------------------
  * logMsg
  *----------------------------------------------------------------------------*/
-void EventLib::logMsg(const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...)
+bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...)
 {
     event_t event;
 
     /* Return Here If Nothing to Do */
-    if(lvl < log_level) return;
+    if(lvl < log_level) return true;
 
     /* Initialize Log Message */
     event.systime   = TimeLib::gpstime();
@@ -335,19 +335,21 @@ void EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
     va_end(args);
 
     /* Post Log Message */
-    sendEvent(&event, attr_size);
+    return sendEvent(&event, attr_size);
 }
 
 /*----------------------------------------------------------------------------
  * alertMsg
  *----------------------------------------------------------------------------*/
-void EventLib::alertMsg (event_level_t level, int code, void* rspsq, bool* active, const char* errmsg, ...)
+bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, bool* active, const char* errmsg, ...)
 {
+    bool status = true;
+
     /* Allocate and Initialize Alert Record */
     RecordObject record(alertRecType);
     alert_t* alert = reinterpret_cast<alert_t*>(record.getRecordData());
     alert->code = code;
-    alert->level = (int32_t)level;
+    alert->level = (int32_t)lvl;
 
     /* Build Message */
     va_list args;
@@ -358,14 +360,16 @@ void EventLib::alertMsg (event_level_t level, int code, void* rspsq, bool* activ
     va_end(args);
 
     /* Generate Corresponding Log Message */
-    mlog(level, "%s", alert->text);
+    EventLib::logMsg(file_name, line_number, lvl, "%s", alert->text);
 
     /* Post Alert Record */
     if(rspsq)
     {
         Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
-        record.post(rspsq_ptr, 0, active);
+        status = record.post(rspsq_ptr, 0, active);
     }
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -402,7 +406,7 @@ void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subty
 /*----------------------------------------------------------------------------
  * sendEvent
  *----------------------------------------------------------------------------*/
-int EventLib::sendEvent (event_t* event, int attr_size)
+bool EventLib::sendEvent (event_t* event, int attr_size)
 {
     int event_record_size = offsetof(event_t, attr) + attr_size;
     RecordObject record(eventRecType, event_record_size, false);

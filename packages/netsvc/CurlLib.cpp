@@ -63,7 +63,7 @@ void CurlLib::deinit (void)
  * request
  *----------------------------------------------------------------------------*/
 long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
-                       bool verify_peer, bool verify_hostname, 
+                       bool verify_peer, bool verify_hostname, int timeout,
                        List<string*>* headers, 
                        const char* unix_socket, 
                        List<string*>* rsps_headers)
@@ -96,7 +96,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, CURL_MAX_READ_SIZE); // TODO: test out performance
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECTION_TIMEOUT); // seconds
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, DATA_TIMEOUT); // seconds
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout); // seconds
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::writeData);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rsps_set);
         curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
@@ -429,7 +429,7 @@ int CurlLib::luaGet (lua_State* L)
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, &header_list, NULL, rsps_headers);
+        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list, NULL, rsps_headers);
         if(response)
         {
             /* get status and push response */
@@ -501,7 +501,7 @@ int CurlLib::luaPut (lua_State* L)
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size, verify_peer, verify_hostname, &header_list);
+        long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);
@@ -542,7 +542,7 @@ int CurlLib::luaPost (lua_State* L)
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size, false, false, &header_list);
+        long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size, false, false, DATA_TIMEOUT, &header_list);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);

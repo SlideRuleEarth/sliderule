@@ -36,9 +36,9 @@ Component Organization
 Links to Project Resources
 ------------------------------------
 
-    Example Jupyter Notebooks: `sliderule-python/examples <https://github.com/ICESat2-SlideRule/sliderule-python/tree/main/examples>`_
+    Example Jupyter Notebooks: `sliderule-python/examples <https://github.com/SlideRuleEarth/sliderule-python/tree/main/examples>`_
 
-    Juypter Notebook Widgets: `ipysliderule.py <https://github.com/ICESat2-SlideRule/sliderule/blob/main/sliderule/clients/python/sliderule/ipysliderule.py>`_
+    Juypter Notebook Widgets: `ipysliderule.py <https://github.com/SlideRuleEarth/sliderule/blob/main/sliderule/clients/python/sliderule/ipysliderule.py>`_
 
     Python Client Installation Instructions: `Getting Started Guide <../getting_started/Install.html>`_
 
@@ -48,7 +48,7 @@ Links to Project Resources
 
     Additional Information on CMR: `CMR Website <https://cmr.earthdata.nasa.gov>`_
 
-    SlideRule Server Source Code: `SlideRule GitHub <https://github.com/ICESat2-SlideRule/sliderule>`_
+    SlideRule Server Source Code: `SlideRule GitHub <https://github.com/SlideRuleEarth/sliderule>`_
 
     SlideRule Core Python API Reference: `SlideRule Reference Documentation <../api_reference/sliderule.html>`_
 
@@ -60,19 +60,19 @@ All of the software for SlideRule is open source under the BSD 3-clause license 
 
 The SlideRule project consists of one main repository with a few supporting repositories.
 
-  * The `sliderule <https://github.com/ICESat2-SlideRule/sliderule>`_ repository includes all source code for the deployment of sliderule
+  * The `sliderule <https://github.com/SlideRuleEarth/sliderule>`_ repository includes all source code for the deployment of sliderule
 
-    - `server <https://github.com/ICESat2-SlideRule/sliderule/tree/main/packages>`_: mission agnostic C++/Lua framework for processing science data
+    - `server <https://github.com/SlideRuleEarth/sliderule/tree/main/packages>`_: mission agnostic C++/Lua framework for processing science data
 
-    - `plugins <https://github.com/ICESat2-SlideRule/sliderule/tree/main/plugins>`_: mission specific plugins providing data subsetting and processing algorithms
+    - `plugins <https://github.com/SlideRuleEarth/sliderule/tree/main/plugins>`_: mission specific plugins providing data subsetting and processing algorithms
 
-    - `python client <https://github.com/ICESat2-SlideRule/sliderule/tree/main/clients/python>`_: the Python client code that allows users to easily interact with SlideRule from the Python language
+    - `python client <https://github.com/SlideRuleEarth/sliderule/tree/main/clients/python>`_: the Python client code that allows users to easily interact with SlideRule from the Python language
 
-    - `documentation <https://github.com/ICESat2-SlideRule/sliderule/tree/main/docs>`_: source for our static website and user documentation
+    - `documentation <https://github.com/SlideRuleEarth/sliderule/tree/main/docs>`_: source for our static website and user documentation
 
-    - `infrastructure <https://github.com/ICESat2-SlideRule/sliderule/tree/main/targets/slideruleearth-aws>`_: infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud
+    - `infrastructure <https://github.com/SlideRuleEarth/sliderule/tree/main/targets/slideruleearth-aws>`_: infrastructure code which contains the scripts and definition files for deploying the SlideRule system to the AWS cloud
     
-  * The `sliderule-python <https://github.com/ICESat2-SlideRule/sliderule-python>`_ repository includes example Jupyter notebooks for using SlideRule to perform common science data analysis workflows
+  * The `sliderule-python <https://github.com/SlideRuleEarth/sliderule-python>`_ repository includes example Jupyter notebooks for using SlideRule to perform common science data analysis workflows
   
-  * The `sliderule-prov-sys <https://github.com/ICESat2-SlideRule/sliderule-prov-sysb>`_ repository containing the source code for the SlideRule Provisioning System; written in Python/Django
+  * The `sliderule-prov-sys <https://github.com/SlideRuleEarth/sliderule-prov-sysb>`_ repository containing the source code for the SlideRule Provisioning System; written in Python/Django
   

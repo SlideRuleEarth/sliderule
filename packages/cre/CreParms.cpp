@@ -40,9 +40,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CreParms::SELF                = "output";
+const char* CreParms::PARMS               = "cre";
 const char* CreParms::IMAGE               = "image";
-const char* CreParms::SCRIPT              = "script";
+const char* CreParms::COMMAND             = "command";
 const char* CreParms::TIMEOUT             = "timeout";
 
 const char* CreParms::OBJECT_TYPE = "CreParms";
@@ -85,7 +85,7 @@ int CreParms::luaCreate (lua_State* L)
 CreParms::CreParms (lua_State* L, int index):
     LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     image               (NULL),
-    script              (NULL),
+    command             (NULL),
     timeout             (DEFAULT_TIMEOUT)
 {
     /* Populate Object from Lua */
@@ -116,10 +116,10 @@ CreParms::CreParms (lua_State* L, int index):
             }
             lua_pop(L, 1);
 
-            /* Script */
-            lua_getfield(L, index, SCRIPT);
-            script = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, script, &field_provided));
-            if(field_provided) mlog(DEBUG, "Setting %s to %s", SCRIPT, script);
+            /* Command */
+            lua_getfield(L, index, COMMAND);
+            command = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, command, &field_provided));
+            if(field_provided) mlog(DEBUG, "Setting %s to %s", COMMAND, COMMAND);
             lua_pop(L, 1);
 
             /* Timeout */
@@ -155,10 +155,10 @@ void CreParms::cleanup (void)
         image = NULL;
     }
 
-    if(script)
+    if(command)
     {
-        delete [] script;
-        script = NULL;
+        delete [] command;
+        command = NULL;
     }
 }
 

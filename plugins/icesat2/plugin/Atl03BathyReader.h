@@ -64,6 +64,8 @@ class Atl03BathyReader: public LuaObject
 
         static const int32_t INVALID_INDICE = -1;
 
+        static const char* OUTPUT_FILE_PREFIX;
+
         static const char* GLOBAL_BATHYMETRY_MASK_FILE_PATH;
         static const double GLOBAL_BATHYMETRY_MASK_MAX_LAT;
         static const double GLOBAL_BATHYMETRY_MASK_MIN_LAT;
@@ -98,6 +100,7 @@ class Atl03BathyReader: public LuaObject
             double          y_atc;                  // dist_ph_across
             double          background_rate;        // PE per second
             float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
+            float           dem_h;                  // best available dem height
             float           sigma_along;            // along track aerial uncertainty
             float           sigma_across;           // across track aerial uncertainty
             float           solar_elevation;
@@ -119,7 +122,8 @@ class Atl03BathyReader: public LuaObject
             uint8_t         cycle;
             uint8_t         utm_zone;
             uint64_t        extent_id;
-            uint32_t        photon_count;
+            uint8_t         spot;                   // 1, 2, 3, 4, 5, 6
+            uint32_t        photon_count;            
             photon_t        photons[];              // zero length field
         } extent_t;
 
@@ -142,7 +146,6 @@ class Atl03BathyReader: public LuaObject
             char                prefix[7];
             int                 track;
             int                 pair;
-            int                 beam;
         } info_t;
 
         /* Region Subclass */
@@ -188,6 +191,7 @@ class Atl03BathyReader: public LuaObject
                 H5Array<float>      sigma_across;
                 H5Array<float>      ref_elev;
                 H5Array<float>      geoid;
+                H5Array<float>      dem_h;
                 H5Array<float>      dist_ph_along;
                 H5Array<float>      dist_ph_across;
                 H5Array<float>      h_ph;
@@ -237,6 +241,7 @@ class Atl03BathyReader: public LuaObject
         BathyParms*         parms;
         GeoParms*           geoparms;
         int                 signalConfColIndex;
+        const char*         sharedDirectory;
 
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file
@@ -251,13 +256,14 @@ class Atl03BathyReader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03BathyReader           (lua_State* L,
-                                                        Asset* _asset, const char* _resource,
-                                                        const char* outq_name,
-                                                        BathyParms* _parms,
-                                                        GeoParms* _geoparms,
-                                                        bool _send_terminator=true);
-                            ~Atl03BathyReader          (void);
+                            Atl03BathyReader            (lua_State* L,
+                                                         Asset* _asset, const char* _resource,
+                                                         const char* outq_name,
+                                                         BathyParms* _parms,
+                                                         GeoParms* _geoparms,
+                                                         const char* shared_directory,
+                                                         bool _send_terminator=true);
+                            ~Atl03BathyReader           (void);
 
         static void*        subsettingThread            (void* parm);
 

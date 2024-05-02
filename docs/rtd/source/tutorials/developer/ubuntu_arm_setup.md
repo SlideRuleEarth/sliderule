@@ -112,8 +112,8 @@ Create the local file `~/.gitconfig` in the user's home directory with the follo
 ```bash
 mkdir meta
 cd meta
-git clone git@github.com:ICESat2-SlideRule/sliderule.git
-git clone git@github.com:ICESat2-SlideRule/sliderule-python.git
+git clone git@github.com:SlideRuleEarth/sliderule.git
+git clone git@github.com:SlideRuleEarth/sliderule-python.git
 ```
 
 ### 8. Installing and Configuring Docker
@@ -131,7 +131,7 @@ newgrp docker
 
 ### 9. Install Dependencies got Local Build
 
-The most reliable way to install all of the dependencies needed to build sliderule is to follow the steps outlined in the [Dockerfile](https://github.com/ICESat2-SlideRule/sliderule/blob/main/targets/slideruleearth-aws/docker/sliderule/Dockerfile.buildenv) for building the development environment.  Some translation of the steps from the Dockerfile format is needed, but all of the dependencies and the configuration options needed for those dependencies are explicitly called out in that file.
+The most reliable way to install all of the dependencies needed to build sliderule is to follow the steps outlined in the [Dockerfile](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth-aws/docker/sliderule/Dockerfile.buildenv) for building the development environment.  Some translation of the steps from the Dockerfile format is needed, but all of the dependencies and the configuration options needed for those dependencies are explicitly called out in that file.
 
 Alternatively, the `sliderule-buildenv` Docker image can be built and used as your development environment.  To do so, run the following commands from the root of the sliderule repository.
 ```bash

@@ -86,37 +86,39 @@ Stream
 #########
 
 When accessing SlideRule as a service, there are times when you need to specify which source datasets it should use when processing the data.
-A source dataset is called an **asset** and is specified by its name as a string.
+A source dataset is called an **asset** and is specified by its name as a string.  SlideRule's asset directory is a list of datasets that SlideRule 
+has access to.  Each entry in the asset directory describes a dataset and provides the necessary information to find, authenticate, and read that dataset.
 
-The asset name tells SlideRule where to get the data, and what format the data should be in. The following assets are supported by the current deployment of SlideRule:
+The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on); 
+the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
 
 .. csv-table::
-    :header: asset, identity, driver, path, index, region, endpoint
+    :header: asset, raster, description, location
 
-    icesat2,                    nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    gedil4a,                    ornl-cloud,     s3,         ornl-cumulus-prod-protected/gedi/GEDI_L4A_AGB_Density_V2_1/data,        nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    gedil4b,                    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L4B_Gridded_Biomass/data,         GEDI04_B_MW019MW138_02_002_05_R01000M_V2.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
-    gedil3-elevation,           ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_elev_lowestmode_mean_2019108_2022019_002_03.tif,    us-west-2, https://s3.us-west-2.amazonaws.com
-    gedil3-canopy,              ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_rh100_mean_2019108_2022019_002_03.tif,              us-west-2, https://s3.us-west-2.amazonaws.com
-    gedil3-elevation-stddev,    ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_elev_lowestmode_stddev_2019108_2022019_002_03.tif,  us-west-2, https://s3.us-west-2.amazonaws.com
-    gedil3-canopy-stddev,       ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_rh100_stddev_2019108_2022019_002_03.tif,            us-west-2, https://s3.us-west-2.amazonaws.com
-    gedil3-counts,              ornl-cloud,     s3,         /vsis3/ornl-cumulus-prod-protected/gedi/GEDI_L3_LandSurface_Metrics_V2/data,   GEDI03_counts_2019108_2022019_002_03.tif,                  us-west-2, https://s3.us-west-2.amazonaws.com
-    gedil2a,                    iam-role,       s3,         sliderule/data/GEDI,                                                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    gedil1b,                    iam-role,       s3,         sliderule/data/GEDI,                                                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    merit-dem,                  iam-role,       s3,         sliderule/data/MERIT,                                                   nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    swot-sim-ecco-llc4320,      podaac-cloud,   s3,         podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1, nil,       us-west-2,  https://s3.us-west-2.amazonaws.com
-    swot-sim-glorys,            podaac-cloud,   s3,         podaac-ops-cumulus-protected/SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1, nil,             us-west-2,  https://s3.us-west-2.amazonaws.com
-    usgs3dep-1meter-dem,        nil,            nil,        /vsis3/prd-tnm,                                                         nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    esa-worldcover-10meter,     nil,            nil,        /vsis3/esa-worldcover/v200/2021/map,                                    /vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt,  eu-central-1,  https://s3.eu-central-1.amazonaws.com
-    landsat-hls,                lpdaac-cloud,   nil,        /vsis3/lp-prod-protected,                                               nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    arcticdem-mosaic,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v3.0/2m,                     2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
-    arcticdem-strips,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                    nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    rema-mosaic,                nil,            nil,        /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m,                          2m_dem_tiles.vrt,   us-west-2,  https://s3.us-west-2.amazonaws.com
-    rema-strips,                nil,            nil,        /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m,                         nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    atlas-local,                local,          file,       /data/ATLAS,                                                            nil,                local,      local
-    gedi-local,                 local,          file,       /data/GEDI,                                                             nil,                local,      local
-    atlas-s3,                   iam-role,       s3,         sliderule/data/ATLAS,                                                   nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
-    nsidc-s3,                   nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,  https://s3.us-west-2.amazonaws.com
+    icesat2, , The ICESat-2 Standard Data Products ATL03/ATL06/ATL08, nsidc-cumulus-prod-protected
+    gedil4a, , GEDI L4A Footprint Level Aboveground Biomass Density, ornl-cumulus-prod-protected
+    gedil4b, x, GEDI L4B Gridden Aboveground Biomass Density, ornl-cumulus-prod-protected
+    gedil3-elevation, x, GEDI L3 gridded ground elevation, ornl-cumulus-prod-protected
+    gedil3-canopy, x, GEDI L3 gridded canopy height, ornl-cumulus-prod-protected
+    gedil3-elevation-stddev, x, GEDI L3 gridded ground elevation-standard deviation, ornl-cumulus-prod-protected
+    gedil3-canopy-stddev, x, GEDI L3 gridded canopy heigh-standard deviation, ornl-cumulus-prod-protected
+    gedil3-counts, x, GEDI L3 gridded counts of valid laser footprints, ornl-cumulus-prod-protected
+    gedil2a, , GEDI L2A Elevation and Height Metrics Data Global Footprint, sliderule
+    gedil1b, , GEDI L1B Geolocated Waveforms, sliderule
+    merit-dem, x, MERIT Digital Elevation Model, sliderule
+    swot-sim-ecco-llc4320, x, Simulated SWOT Data, podaac-ops-cumulus-protected
+    swot-sim-glorys, x, Simulated SWOT Data, podaac-ops-cumulus-protected
+    usgs3dep-1meter-dem, x, USGS 3DEP 1m Digital Elevation Model, prd-tnm
+    esa-worldcover-10meter, x, Worldwide land cover mapping, esa-worldcover
+    meta-globalcanopy-1meter, x, Meta and World Resources Institute 1m global canopy height map, dataforgood-fb-data
+    gebco-bathy, x, General Bathymetric Chart of the Oceans, sliderule
+    landsat-hls, x, Harmonized LandSat Sentinal-2, lp-prod-protected
+    arcticdem-mosaic, x, PGC Arctic Digital Elevation Model Mosaic, pgc-opendata-dems
+    arcticdem-strips, x, PGC Arctic Digital Elevation Model Strips, pgc-opendata-dems
+    rema-mosaic, x, PGC Reference Elevation Model of Antarctica Mosaic, pgc-opendata-dems
+    rema-strips, x, PGC Reference Elevation Model of Antarctica Strips, pgc-opendata-dems
+    atlas-s3, , Internal s3-bucket staged ICESat-2 Standard Data Products: ATL03/ATL06/ATL08, sliderule
+    nsidc-s3, , Alias for icesat2 asset, nsidc-cumulus-prod-protected
 
 5. Parameters
 #############

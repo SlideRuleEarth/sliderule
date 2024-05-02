@@ -20,22 +20,22 @@ Version description of the v1.1.1 release of ICESat-2 SlideRule.
 
 ## Minor Issues Resolved
 
-* ATL08 classification can be supplied as a table or a string. [04bc5fb](https://github.com/ICESat2-SlideRule/sliderule-icesat2/commit/04bc5fbd8453517043156c04ba0d8fdaee011f48)
+* ATL08 classification can be supplied as a table or a string. [04bc5fb](https://github.com/SlideRuleEarth/sliderule-icesat2/commit/04bc5fbd8453517043156c04ba0d8fdaee011f48)
 
-* Fixed out of bounds access caught by valgrind. [5af94a5](https://github.com/ICESat2-SlideRule/sliderule-icesat2/commit/5af94a5e6c8266bd05d9bffe2dedf265c278ca62)
+* Fixed out of bounds access caught by valgrind. [5af94a5](https://github.com/SlideRuleEarth/sliderule-icesat2/commit/5af94a5e6c8266bd05d9bffe2dedf265c278ca62)
 
 
-* Changed name of Python bindings to `srpybin` to avoid naming conflicts with the SlideRule Python client. [0525c0b](https://github.com/ICESat2-SlideRule/sliderule/commit/0525c0b8ff32d761c6d8075c6fc16a66639cf80a)
+* Changed name of Python bindings to `srpybin` to avoid naming conflicts with the SlideRule Python client. [0525c0b](https://github.com/SlideRuleEarth/sliderule/commit/0525c0b8ff32d761c6d8075c6fc16a66639cf80a)
 
-* Signed integer support added to Python bindings [sliderule#84](https://github.com/ICESat2-SlideRule/sliderule/issues/84)
+* Signed integer support added to Python bindings [sliderule#84](https://github.com/SlideRuleEarth/sliderule/issues/84)
 
-* Fixed bugs in s3cache I/O driver for H5Coro, and added support in Python bindings. [0170be8](https://github.com/ICESat2-SlideRule/sliderule/commit/0170be8e579bbde15a54a2e9b5b754b57657d90f)
+* Fixed bugs in s3cache I/O driver for H5Coro, and added support in Python bindings. [0170be8](https://github.com/SlideRuleEarth/sliderule/commit/0170be8e579bbde15a54a2e9b5b754b57657d90f)
 
 ## Getting this release
 
-[https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.1.1](https://github.com/ICESat2-SlideRule/sliderule/releases/tag/v1.1.1)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.1.1](https://github.com/SlideRuleEarth/sliderule/releases/tag/v1.1.1)
 
-[https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.1.1](https://github.com/ICESat2-SlideRule/sliderule-icesat2/releases/tag/v1.1.1)
+[https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.1.1](https://github.com/SlideRuleEarth/sliderule-icesat2/releases/tag/v1.1.1)
 
-[https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.1.1](https://github.com/ICESat2-SlideRule/sliderule-python/releases/tag/v1.1.1)
+[https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.1.1](https://github.com/SlideRuleEarth/sliderule-python/releases/tag/v1.1.1)
 

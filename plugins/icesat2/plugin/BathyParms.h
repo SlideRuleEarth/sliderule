@@ -52,18 +52,21 @@ class BathyParms: public Icesat2Parms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* PH_IN_EXTENT;
         static const char* MAX_ALONG_TRACK_SPREAD;
-        static const char* BEAM_FILE_PREFIX;
+        static const char* MAX_DEM_DELTA;
+        static const char* PH_IN_EXTENT;
         static const char* GENERATE_NDWI;
         static const char* USE_BATHY_MASK;
+        static const char* RETURN_INPUTS;
+        static const char* SPOTS;
         static const char* ATL09_RESOURCES;
 
         static const int ATL09_RESOURCE_NAME_LEN = 39;
         static const int ATL09_RESOURCE_KEY_LEN = 6;
 
-        static const int DEFAULT_PH_IN_EXTENT = 8192;
         static const double DEFAULT_MAX_ALONG_TRACK_SPREAD;
+        static const double DEFAULT_MAX_DEM_DELTA;
+        static const int DEFAULT_PH_IN_EXTENT = 8192;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -71,16 +74,19 @@ class BathyParms: public Icesat2Parms
 
         static int  luaCreate       (lua_State* L);
         static void getATL09Key     (char* key, const char* name);
+        static int  luaSpotEnabled  (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        int         ph_in_extent;
         double      max_along_track_spread;
-        const char* beam_file_prefix;
+        double      max_dem_delta;
+        int         ph_in_extent;
         bool        generate_ndwi;
         bool        use_bathy_mask;
+        bool        return_inputs; // return the atl03 bathy records back to client
+        bool        spots[NUM_SPOTS];
         Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------
@@ -92,6 +98,7 @@ class BathyParms: public Icesat2Parms
 
         void        cleanup         (void) const;
         void        get_atl09_list  (lua_State* L, int index, bool* provided);
+        void        get_spot_list   (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __bathy_parms__ */
