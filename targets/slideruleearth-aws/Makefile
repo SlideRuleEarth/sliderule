@@ -35,7 +35,7 @@
 #     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
 #        $ make sliderule-buildenv-docker
 #     3. Push to GitHub container registry
-#        $ docker push ghcr.io/SlideRuleEarth/sliderule-buildenv:latest
+#        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
 #
 
 ROOT = $(shell pwd)/../..
@@ -77,7 +77,7 @@ VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
 MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
-GHCR := ghcr.io/SlideRuleEarth
+GHCR := ghcr.io/slideruleearth
 DOCKEROPTS ?=
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # linux/arm64
