@@ -12,39 +12,9 @@ SlideRule supports sampling raster data at points of interest and including thos
 
 In order to sample a raster dataset, SlideRule must first ascertain which individual raster files in the dataset intersect the point of interest, then obtain credentials to access the identified files, and then lastly, open up those files and read the necessary pixels to calculate the returned sample value.  Unfortunately, most raster datasets are organized slightly differently and require a small amount of specialized code to perform the first step of determining which raster files need to be sampled.  The second step of obtaining credentials also requires some specialized code, but since most of our datasets are in AWS and authenticated through NASA DAACs, most of the authentication code is generic.  But even still, because of this, each raster dataset supported by SlideRule needs to be registered with SlideRule ahead of time and provided in what we call an Asset Directory.
 
-## Asset Directory
-
-SlideRule's asset directory is a list of datasets that SlideRule has access to.  Each entry in the asset directory describes a dataset and provides the necessary information to find, authenticate, and read that dataset.
-
-The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on); the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
-
-|asset|raster|description|
-|:---:|:---:|:----|
-|icesat2| | The ICESat-2 Standard Data Products: ATL03, ATL06, and ATL08|
-|gedil4a| | GEDI L4A Footprint Level Aboveground Biomass Density|
-|gedil3-elevation| *| GEDI L3 gridded ground elevation|
-|gedil3-canopy| *| GEDI L3 gridded canopy height|
-|gedil3-elevation-stddev| *| GEDI L3 gridded ground elevation-standard deviation|
-|gedil3-canopy-stddev| *| GEDI L3 gridded canopy heigh-standard deviation|
-|gedil3-counts| *| GEDI L3 gridded counts of valid laser footprints|
-|gedil2a| | GEDI L2A Elevation and Height Metrics Data Global Footprint|
-|gedil1b| | GEDI L1B Geolocated Waveforms|
-|merit-dem| *| MERIT Digital Elevation Model|
-|swot-sim-ecco-llc4320| *| Simulated SWOT Data|
-|swot-sim-glorys| *| Simulated SWOT Data|
-|usgs3dep-1meter-dem| *| USGS 3DEP 1m Digital Elevation Model|
-|esa-worldcover-10meter| *| Worldwide land cover mapping|
-|landsat-hls| *| Harmonized LandSat Sentinal-2|
-|arcticdem-mosaic| *| PGC Arctic Digital Elevation Model Mosaic|
-|arcticdem-strips| *| PGC Arctic Digital Elevation Model Strips|
-|rema-mosaic| *| PGC Reference Elevation Model of Antarctica Mosaic|
-|rema-strips| *| PGC Reference Elevation Model of Antarctica Strips|
-|atlas-local| | Local file-system staged ICESat-2 Standard Data Products: ATL03, ATL06, and ATL08|
-|gedi-local| | Local file-system staged GEDI Stadard Data Products: L1B, L2A, L3, L4A, L4B|
-|atlas-s3| | Internal s3-bucket staged ICESat-2 Standard Data Products: ATL03, ATL06, and ATL08|
-|nsidc-s3| | Alias for "icesat2" asset|
-
 ## Sampling
+
+See the [asset directory](./SlideRule.html#4-assets) for details on which rasters can be sampled.
 
 Sampling rasters is controlled by the `samples` field of a request's parameter dictionary.  The `samples` field is itself a dictionary of dictionaries, each describing a raster dataset that needs to be sampled for the given processing request.  The example below specifies two raster datasets that need to be sampled:
 ```python
