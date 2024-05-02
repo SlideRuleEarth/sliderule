@@ -174,7 +174,7 @@ def check_histogram_badness(
             quality_flag = -3
 
     # check the height of the largest peak
-    # recall theres some gaussian filter smoothing so this isnt exactly a photon count thing
+    # recall there's some gaussian filter smoothing so this isn't exactly a photon count thing
     # weak beam may struggle to accumulate lots of photons for calm water
     if peaks.shape[0] > 0:
         if (peaks.iloc[0].prominences < 1):
@@ -327,7 +327,7 @@ def get_peak_info(hist, z_inv, verbose=False):
             warnings.warn(warn_msg)
         dist_req_between_peaks = z_inv_bin_size
 
-    # note: scipy doesnt identify peaks at the start or end of the array
+    # note: scipy doesn't identify peaks at the start or end of the array
     # so zeros are inserted on either end of the histogram and output indexes adjusted after
 
     # distance = distance required between peaks - use approx 0.5 m, accepts floats >=1
@@ -366,7 +366,7 @@ def get_peak_info(hist, z_inv, verbose=False):
     # min values within that window identifies the bases
     # preference for closest of repeated minimum values
     # ie. can give weird values to the left/right of the main peak, and to the right of a bathy peak
-    # when theres noise in a scene with one 0 bin somewhere far
+    # when there's noise in a scene with one 0 bin somewhere far
     pk_dict["left_z"] = z_inv_padded[pk_dict["left_bases"]]
     pk_dict["right_z"] = z_inv_padded[pk_dict["right_bases"]]
     pk_dict["left_bases"] -= 1
@@ -501,12 +501,12 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         "background": np.nan,
         # prominence of potential bathy peak (count)
         "bathy_mag": np.nan,
-        # location of potentail bathy peak (m)
+        # location of potential bathy peak (m)
         "bathy_loc": np.nan,
         "bathy_std": np.nan,
     }  # deviation of potential bathy peak (m)
 
-    # corresponding to data thats been successfully evaluated, just has no good data (eg all clouds)
+    # corresponding to data that's been successfully evaluated, just has no good data (eg all clouds)
     # values allow computation to proceed and assigns photons to background class
     params_empty = {
         "surf_scaling": zero_val,
@@ -614,7 +614,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         height_above_surf_noise_est / z_bin_size
     )
 
-    # if theres not 15m above surface, use what there is above the surface
+    # if there's not 15m above surface, use what there is above the surface
     if above_surface_noise_left_edge_i <= 0:
         above_surface_noise_left_edge_i = 0
 
@@ -776,7 +776,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         if verbose:
             print("Using single gaussian for surface - either missing photon data or mixture model turned off manually.")
 
-    # check that the surface peaks arent too far apart (3 meters max, but totally arbitrary)
+    # check that the surface peaks aren't too far apart (3 meters max, but totally arbitrary)
     # more common for actual land, but helps avoid bad looking data on the model
 
     # get whichever peak is wider
@@ -854,9 +854,9 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
 
     # symmetry of the peak matters, if the left side is siginicantly wider than the right, it's likely that 
     # this peak is in the very shallow water column - and shallow returns are generally well defined / symmetric
-    # this is one of those hard to describe checks thats seems generally true based on looking at lots of data
+    # this is one of those hard to describe checks that seems generally true based on looking at lots of data
     # meant to address cases where shallow turbity is still the most prominent peak but is 
-    # convolved with lots of shallow water particulate, meanwhile theres still a clear peak some X m deeper
+    # convolved with lots of shallow water particulate, meanwhile there's still a clear peak some X m deeper
     # note we only apply this check on the left side of the peak (higher elevation)
     # bathymetry attenuates with depth and so the right side may be wider under normal conditions
     bathy_peaks = bathy_peaks[bathy_peaks.sigma_est_left < 3 * bathy_peaks.sigma_est_right]
@@ -875,7 +875,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         z_inv2 = bathy_peaks.iloc[1].z_inv
 
         # if area 2 is witthin 20% of area 1 and more than 10m deeper, switch rows 1 and 2
-        # i.e. theres a similar peak at a deeper depth we should prioritize
+        # i.e. there's a similar peak at a deeper depth we should prioritize
         # hopefully helps improve retention of deep bathymetry
         if (area2 / area1) > 0.8 and (z_inv2 - z_inv1) > 10:
             bathy_peaks.iloc[[0, 1]] = bathy_peaks.iloc[[0, 1]]  
@@ -931,7 +931,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
 
         if bathy_peak_right_edge_i >= len(hist):
             pass
-            # dont currently need to do this because array index slicing returns empty arrray
+            # don't currently need to do this because array index slicing returns empty array
             # doing this when the bathy peak is at the edge includes the peak value
             # bathy_peak_right_edge_i = len(hist) - 1
 
@@ -973,7 +973,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         # get indexer for turbidity data below the surface
         shallow_subsurface = np.full((len(hist),), False)
 
-        # add in all subsurface wihtin 10m
+        # add in all subsurface within 10m
         shallow_subsurface[transition_i:max_turb_depth_i] = True
 
         # remove bathy peak from subsurface histogram
@@ -992,7 +992,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
     # require hist values to be at least 2x the above surface background noise rate for inclusion
     # not technically required, but should help with fitting in daytime cases
     # ideally want to just remove the 'base' of noise from the histogram
-    # but want a turbidity model that doesnt require subsurface noise to be too accurate,
+    # but want a turbidity model that doesn't require subsurface noise to be too accurate,
     # and also dont want a bunch of subsurface bins that just represent noise
 
     # Commented out for debugging a separate issue
@@ -1039,7 +1039,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         wc_hist_ = hist_t[wc_i]
         wc_depth_ = z_inv_t[wc_i] - surf_pk.z_inv  # true depth below surface
 
-        # ignoring zero bins so log doesnt explode
+        # ignoring zero bins so log doesn't explode
         wc_hist = wc_hist_[wc_hist_ > 0]
         wc_depth = wc_depth_[wc_hist_ > 0]
 
@@ -1055,7 +1055,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
 
         weights[weights < 0] = 0
 
-        # feb '23: enough evidence to show weights are helping *alot*, don't discard without good reason
+        # feb '23: enough evidence to show weights are helping *a lot*, don't discard without good reason
 
         m, b = np.polyfit(wc_depth, np.log(wc_hist), deg=1, w=weights)
 
@@ -1064,7 +1064,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
 
         # # where does our turbidity model intersect with our surface model? defines the top of column - useful stat
         # # set up equation with exponential and gaussian mixture, solve for roots
-        # # wont work if the input data has been smoothed, hence commented out
+        # # won't work if the input data has been smoothed, hence commented out
         # A = 4 * _surf_sigma_1 **2 * _surf_sigma_2**2 * -decay_param
         # C1 = _surf_loc_1 + surf_pk.z_inv
         # C2 = _surf_loc_2 + surf_pk.z_inv
@@ -1091,7 +1091,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         else:
             # numerical intersection of turbidity and surface models
 
-            # recomput the column z values at higher resoluion
+            # recompute the column z values at higher resoluion
             z_column_interp = np.arange(
                 surf_pk.z_inv, z_inv[(np.argwhere(
                     hist > 0).flatten()[-1])], 1e-3
@@ -1152,7 +1152,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
     # now that we have a more solid estimate of the base of the bathy peak (turbidity/decay)
     # lets improve our estimate of the bathy model, if there is one
 
-    # if theres a bathy peak
+    # if there's a bathy peak
     if bathy_peaks.shape[0] > 0:
         # remove any contamination from the surface peak using the refined intersection
         z_inv_to_fit = z_inv[bathy_range_i[bathy_range_i > column_top_z_inv_i]]
@@ -1201,7 +1201,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
     # bathy_conf = ratio of bathy peak prominence to next most prominent peak
     # still undefined if only 1 bathy peak - do something else for these
 
-    # if theres a bathy peak
+    # if there's a bathy peak
     if bathy_peaks.shape[0] > 1:
         # trying a more naive approach
         # consider any peaks further than 1m in either direction
@@ -1228,7 +1228,7 @@ def estimate_model_params(hist, z_inv, peak_info=None, verbose=False, profile=No
         bathy_quality_ratio = -1  # do something here
 
     else:
-        # recall if the surface peak is badly defined we wouldnt get to this point
+        # recall if the surface peak is badly defined we wouldn't get to this point
         quality_flag = 1  # good surface, no bathy
         bathy_quality_ratio = -1
 
@@ -1275,7 +1275,7 @@ def bathy_quality_check(model_interp, params, peaks):
         # reequire at least a 10% prominence above its highest edge
 
         # note that instead of using the actual model output, we only use the subsurface (column + backgr)
-        # this is because in really shallow cases the bathy prominence gets reduced by its promixity to the strong surface return
+        # this is because in really shallow cases the bathy prominence gets reduced by its proximity to the strong surface return
 
         model_subsurf_top_of_bathy = model_interp.loc[
             idx_top, ["column", "background"]
@@ -1308,11 +1308,11 @@ def bathy_quality_check(model_interp, params, peaks):
             rmse_wout_bathy - rmse_with_bathy) / rmse_with_bathy
 
         # e.g. bathy_error_difference of 0.1 indicates that the bathymetry model is
-        # a) improving the overal model error
+        # a) improving the overall model error
         # b) improving it by at least 10%
 
         # compare the bathy peak prom to the rest of the unselected peaks
-        # targeting nighttime cases were the background ~ 0 and theres several small equal sized noise peaks
+        # targeting nighttime cases were the background ~ 0 and there's several small equal sized noise peaks
 
         bathy_prom = params.bathy_mag - np.max(
             [model_subsurf_top_of_bathy, model_subsurf_bot_of_bathy]
@@ -1327,7 +1327,7 @@ def bathy_quality_check(model_interp, params, peaks):
 
         # note: neighbor peaks are helpful for small vertical resolutions (<1m)
         # but larger resolutions will have further spaced peaks
-        # eg. 5m vertical bin size doesnt have any neighbor peaks, and this check is not useful
+        # eg. 5m vertical bin size doesn't have any neighbor peaks, and this check is not useful
 
         # if neighbor_peaks_idx is empty, use all subsurface peaks
         if np.sum(neighbor_peaks_idx) == 0:
@@ -1357,7 +1357,7 @@ def bathy_quality_check(model_interp, params, peaks):
         )
 
         # evaluate nearby peaks to compare how many photons might get classified
-        # to avoid random noise clusters, bathy should be noticably more photons than other peaks
+        # to avoid random noise clusters, bathy should be noticeably more photons than other peaks
         # high noise cases will also feature many many 1 photon peaks which can drag down the mean to less than meaningful
         # get up to 5 of the largest n_photons values
         largest_neighbor_peaks = neighbor_peaks.sort_values( 
@@ -1371,7 +1371,7 @@ def bathy_quality_check(model_interp, params, peaks):
         # # deep bathy hotfix
         # # commenting out feb 1 2024 as Im not sure it's working as intended
         # # if the bathy peak is more than 10m below the next largest area peak, loosen the height check
-        # # if theres more than 20 peaks we're proabably looking at a daytime case with lots of noise
+        # # if there's more than 20 peaks we're proabably looking at a daytime case with lots of noise
         
         # if (subsurface_peaks.shape[0] > 2) and (subsurface_peaks.shape[0] < 20):
         #     bathy_pk = subsurface_peaks.iloc[0]
@@ -1414,7 +1414,7 @@ def bathy_quality_check(model_interp, params, peaks):
     else:
         test_relheight_str = "FAILED"
 
-    # ok if the remainder of the bathymetry component makes up at least 10% of the area of tha total bathymetry model
+    # ok if the remainder of the bathymetry component makes up at least 10% of the area of the total bathymetry model
     min_bathy_area_ratio = 0.1
     ok_area = bathy_area_ratio > min_bathy_area_ratio
 
@@ -1446,7 +1446,7 @@ def bathy_quality_check(model_interp, params, peaks):
         test_mag_str = "FAILED"
 
     # daytime cases can have a lot of noise, with random clusters of photons appearing as peaks
-    # these are challenging to filter outright, as they are real, noticable peaks in the histogram, above the background rate
+    # these are challenging to filter outright, as they are real, noticeable peaks in the histogram, above the background rate
     # one solution may be to ensure bathymetry peaks classify more photons than noise peaks
     # this also implicitly accounts for changes in the background rate due to solar elevation / surface brightness
     ok_n_photons = bathy_peak_n_photons > minimum_n_photons
@@ -1658,7 +1658,7 @@ class Waveform:
         n_bathy = np.sum(self.profile.data.classification == self.profile.label_help("bathymetry"))
         n_background = np.sum(self.profile.data.classification == self.profile.label_help("background"))
 
-        depth = self.params.bathy_loc - (-self.params.column_top) # column top isnt inverted? why did I do this...
+        depth = self.params.bathy_loc - (-self.params.column_top) # column top isn't inverted? why did I do this...
 
         if n_surface <= 3:
             self.quality_flag = -11
@@ -1699,7 +1699,7 @@ class Waveform:
         elif n_bathy <= 5: # dont need this check in cases where a bad surface removes all other classes
             self.quality_flag = 4
             # keep the surface and water column data, but ignore any bathymetry
-            # recall if theres any water column returns identified they stop at the top of the bathy gaussian
+            # recall if there's any water column returns identified they stop at the top of the bathy gaussian
             if n_column > 0:
                 # if there are any column classified photons, convert bathy to column
                 self.profile.data.classification[self.profile.data.classification == self.profile.label_help("bathymetry")] = self.profile.label_help("column")
@@ -1737,7 +1737,7 @@ class Waveform:
             if n_bathy < n_bathy_shallow_req: 
                 self.quality_flag = 5
                 # keep the surface and water column data, but ignore any bathymetry
-                # recall if theres any water column returns identified they stop at the top of the bathy gaussian
+                # recall if there's any water column returns identified they stop at the top of the bathy gaussian
 
                 self.profile.data.classification[self.profile.data.classification == self.profile.label_help("bathymetry")] = self.profile.label_help("surface")
 
@@ -1926,7 +1926,7 @@ Overall Quality Flag : {self.quality_flag}
             model_out.surface = gaussian_filter1d(
                 model_out.surface, g_sigma_interp)
 
-            # if theres a surface mixture model of the surface, compute components and smooth
+            # if there's a surface mixture model of the surface, compute components and smooth
             if self.surface_gm is not None:
                 responsibilities = self.surface_gm.predict_proba(
                     z_inv.reshape(-1, 1))

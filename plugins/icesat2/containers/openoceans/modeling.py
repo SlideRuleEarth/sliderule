@@ -105,7 +105,7 @@ def iterate_models(
 
 def average_labels(profile, waveform_list):
     """
-    Generates final labels for a given profile based on (potentially duplicated) photon labels. Scores are computed as the number of times a photon recieved a given label for how many times it was labeled.
+    Generates final labels for a given profile based on (potentially duplicated) photon labels. Scores are computed as the number of times a photon received a given label for how many times it was labeled.
 
     Parameters:
     - profile (Profile): The profile object that needs labeling.
@@ -180,8 +180,8 @@ def average_labels(profile, waveform_list):
     # classed_photons = data_with_dupes.index.unique().values
     classed_photons = data_with_dupes.photon_index.unique()
 
-    # handles if photons werent included in a waveform
-    # not sure why thats happening but seems to only be the first photon
+    # handles if photons weren't included in a waveform
+    # not sure why that's happening but seems to only be the first photon
 
     # also, using .values for these will break the indexing (e.g. background score)
     # if you are looking for why the sea surface etc seems to be all over the place labeled at random, this is why
@@ -343,7 +343,7 @@ class ModelMaker:
         bin_edges_at = np.linspace(at_min, at_max, num=at_bin_count + 1)
         bin_edges_z = np.linspace(z_min, z_max, num=z_bin_count + 1)
 
-        # disctionary of waveform objects - (AT_bin_i, w)
+        # dictionary of waveform objects - (AT_bin_i, w)
         w_d = {}
 
         # list of organized/simple data series'
@@ -356,7 +356,7 @@ class ModelMaker:
         # win centers needs to actually handle the center values unlike here
         # currently bugs out if win is 1
 
-        # this step ensures that histograms at edges dont have lower 'intensity' just becasue the window exceeds the data range
+        # this step ensures that histograms at edges don't have lower 'intensity' just because the window exceeds the data range
         start_step = (self.window_size - 1) / 2
         end_step = len(bin_edges_at) - (self.window_size - 1) / 2 - 1
 
@@ -664,7 +664,7 @@ class Model:
     def _interp_model_hist(self, hist):
         """
         Interpolates any missing data in the histogram, particularly filling edges.
-        Honestly I'm not 100% why this is needed, but my guess is it was to avoid any NaNs propogating in later processing steps. (10/23)
+        Honestly I'm not 100% why this is needed, but my guess is it was to avoid any NaNs propagating in later processing steps. (10/23)
 
         Args:
             hist (array): The model histogram to be interpolated.
@@ -756,8 +756,8 @@ class Model:
             ],
         )
 
-        # handles if photons werent included in a waveform
-        # not sure why thats happening but seems to only be the first photon
+        # handles if photons weren't included in a waveform
+        # not sure why that's happening but seems to only be the first photon
         classed_photons = data_with_dupes.index.unique().values
 
         photon_class_data.loc[
@@ -783,7 +783,7 @@ class Model:
             # update class in full profile data
             self.profile.data["classification"] = photon_class_data.classification
 
-            # insert indivual scores
+            # insert individual scores
             self.profile.data["conf_background"] = photon_class_data.background
             self.profile.data["conf_surface"] = photon_class_data.surface
             self.profile.data["conf_column"] = photon_class_data.column

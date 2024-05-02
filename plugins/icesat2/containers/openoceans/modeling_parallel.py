@@ -51,7 +51,7 @@ from waveform import Waveform
 def iterate_models(params, input_profile, range_z=(-45, 15), z_res_jitter_bounds=(0.1, 0.3), verbose=False):
     """Iteritive / Ensemble / super resolution models.
     Can be run in two different modes:
-        1) Random jitter Z Resolution (differnt values within z_res_jitter_bounds for each model):
+        1) Random jitter Z Resolution (different values within z_res_jitter_bounds for each model):
             - Provide params as a list of 2-elements lists
             -- [[AT resol1, window size1],[AT resol2, window size2],...]
             - Provide z_res_jitter_bounds\n
@@ -111,7 +111,7 @@ def iterate_models(params, input_profile, range_z=(-45, 15), z_res_jitter_bounds
 
 def average_labels(profile, waveform_list):
     """
-    Generates final labels for a given profile based on (potentially duplicated) photon labels. Scores are computed as the number of times a photon recieved a given label for how many times it was labeled.
+    Generates final labels for a given profile based on (potentially duplicated) photon labels. Scores are computed as the number of times a photon received a given label for how many times it was labeled.
 
     Parameters:
     - profile (Profile): The profile object that needs labeling.
@@ -186,8 +186,8 @@ def average_labels(profile, waveform_list):
     # classed_photons = data_with_dupes.index.unique().values
     classed_photons = data_with_dupes.photon_index.unique()
 
-    # handles if photons werent included in a waveform
-    # not sure why thats happening but seems to only be the first photon
+    # handles if photons weren't included in a waveform
+    # not sure why that's happening but seems to only be the first photon
 
     # also, using .values for these will break the indexing (e.g. background score)
     # if you are looking for why the sea surface etc seems to be all over the place labeled at random, this is why
@@ -392,17 +392,17 @@ class ModelMakerP:
             at_min_idx = data.x_ph.min()
             at_idx_grp = np.arange(data.x_ph.min(), at_max_idx + self.res_along_track, self.res_along_track)
             
-            # sort the data by distnace along track, reset the index
+            # sort the data by distance along track, reset the index
             # add 'at_grp' column for the bin group id
             data.sort_values(by='x_ph', inplace=True)
             #data.reset_index(inplace=True)
             data['idx'] = data.index
             data['at_grp'] = 0
 
-            # for each bin group, assign an interger id for index values between each of the 
+            # for each bin group, assign an integer id for index values between each of the 
             #   group bin values. is pho_count = 20 then at_idx_grp = [0,20,49,60...]
-            #   - data indicies between 0-20: at_grp = 1
-            #   - data indicies between 20-40: at_grp = 2...
+            #   - data indices between 0-20: at_grp = 1
+            #   - data indices between 20-40: at_grp = 2...
             print('Computing at_grp...')
             for i, grp in tqdm(enumerate(at_idx_grp)):
                 if grp < at_idx_grp.max():
@@ -446,17 +446,17 @@ class ModelMakerP:
             at_min_idx = data.index.min()
             at_idx_grp = np.arange(data.index.min(), at_max_idx + pho_count, pho_count)
             
-            # sort the data by distnace along track, reset the index
+            # sort the data by distance along track, reset the index
             # add 'at_grp' column for the bin group id
             data.sort_values(by='x_ph', inplace=True)
             #data.reset_index(inplace=True)
             data['idx'] = data.index
             data['at_grp'] = 0
 
-            # for each bin group, assign an interger id for index values between each of the 
+            # for each bin group, assign an integer id for index values between each of the 
             #   group bin values. is pho_count = 20 then at_idx_grp = [0,20,49,60...]
-            #   - data indicies between 0-20: at_grp = 1
-            #   - data indicies between 20-40: at_grp = 2...
+            #   - data indices between 0-20: at_grp = 1
+            #   - data indices between 20-40: at_grp = 2...
             for i, grp in enumerate(at_idx_grp):
                 if grp < at_idx_grp.max():
                     data['at_grp'][data['idx'].between(at_idx_grp[i], at_idx_grp[i+1])] = (at_idx_grp[i] - at_idx_grp.min()) / pho_count
@@ -508,7 +508,7 @@ class ModelMakerP:
 
         else:
 
-            # disctionary of waveform objects - (AT_bin_i, w)
+            # dictionary of waveform objects - (AT_bin_i, w)
             w_d = {}
     
             # list of organized/simple data series'
@@ -654,7 +654,7 @@ class ModelMakerP:
         bin_edges_at = np.linspace(at_min, at_max, num=at_bin_count+1)
         bin_edges_z = np.linspace(z_min, z_max, num=z_bin_count+1)
 
-        # disctionary of waveform objects - (AT_bin_i, w)
+        # dictionary of waveform objects - (AT_bin_i, w)
         w_d = {}
 
         # list of organized/simple data series'
@@ -674,7 +674,7 @@ class ModelMakerP:
         # win centers needs to actually handle the center values unlike here
         # currently bugs out if win is 1
 
-        # this step ensures that histograms at edges dont have lower 'intensity' just becasue the window exceeds the data range
+        # this step ensures that histograms at edges don't have lower 'intensity' just because the window exceeds the data range
         start_step = (self.window_size-1) / 2
         end_step = len(bin_edges_at) - (self.window_size-1) / 2 - 1
 
@@ -786,7 +786,7 @@ class ModelMakerP:
 
 
 class ModelP:
-    # more processing after the histgram model has been estimated
+    # more processing after the histogram model has been estimated
 
     def __init__(self, params, model_hist, bin_edges_z, bin_edges_at,
                  window_size, waves, profile, ModelMaker):
@@ -945,8 +945,8 @@ class ModelP:
                                            index=self.profile.data.index.values,
                                            columns=['classification', 'none', 'background', 'surface', 'column', 'bathymetry'])
 
-        # handles if photons werent included in a waveform
-        # not sure why thats happening but seems to only be the first photon
+        # handles if photons weren't included in a waveform
+        # not sure why that's happening but seems to only be the first photon
         classed_photons = data_with_dupes.index.unique().values
 
         photon_class_data.loc[classed_photons,
@@ -980,7 +980,7 @@ class ModelP:
             # update class in full profile data
             self.profile.data['classification'] = photon_class_data.classification
 
-            # insert indivual scores
+            # insert individual scores
             self.profile.data['conf_background'] = photon_class_data.background
             self.profile.data['conf_surface'] = photon_class_data.surface
             self.profile.data['conf_column'] = photon_class_data.column
