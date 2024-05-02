@@ -49,7 +49,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl03BathyReader::OUTPUT_FILE_PREFIX = "bathy_beam";
+const char* Atl03BathyReader::OUTPUT_FILE_PREFIX = "bathy_spot";
 const char* Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;

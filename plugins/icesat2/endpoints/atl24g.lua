@@ -106,14 +106,22 @@ while true do
     break
 end
 
+-- get output parms
+local atl24_granule_filename = string.gsub(resource, "ATL03", "ATL24")
+local output_parms = parms[arrow.PARMS] or {
+    path = "/tmp/"..atl24_granule_filename,
+    format = "hdf5",
+    as_geo = false
+}
+
 -- build final output
-local beam_csv_files = {}
-local beam_json_files = {}
+local spot_csv_files = {}
+local spot_json_files = {}
 local openoceans_csv_files = {}
 for i = 1,icesat2.NUM_SPOTS do
     if bathy_parms:spoton(i) then
-        table.insert(beam_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-        table.insert(beam_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+        table.insert(spot_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+        table.insert(spot_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
         table.insert(openoceans_csv_files, string.format("%s/openoceans_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
     end
 end
@@ -123,19 +131,19 @@ local writer_parms = {
     timeout = timeout,
     parms = { 
         ["settings.json"] = {
-            beam_csv_files = beam_csv_files,
-            beam_json_files = beam_json_files,
+            spot_csv_files = spot_csv_files,
+            spot_json_files = spot_json_files,
             openoceans_csv_files = openoceans_csv_files,
-            output = {
-                format = "hdf5",
-                as_geo = false
-            },
-            output_file_name = crenv.container_shared_directory.."/atl24.h5"
+            output = output_parms,
+            output_filename = crenv.container_shared_directory.."/"..atl24_granule_filename
         }
     }
 }
 local container = runner.execute(crenv, writer_parms, rspq)
 runner.wait(container, timeout)
+
+-- send final output to user
+arrow.send2user(crenv.host_shared_directory.."/"..atl24_granule_filename, arrow.parms(output_parms), rspq)
 
 -- cleanup container runtime environment
 --runner.cleanup(crenv)

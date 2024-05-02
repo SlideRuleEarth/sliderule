@@ -53,10 +53,11 @@
 int arrow_open (lua_State* L)
 {
     static const struct luaL_Reg arrow_functions[] = {
-        {"builder",       ArrowBuilder::luaCreate},
-        {"sampler",       ArrowSampler::luaCreate},
-        {"parms",         ArrowParms::luaCreate},
-        {NULL,            NULL}
+        {"builder",     ArrowBuilder::luaCreate},
+        {"sampler",     ArrowSampler::luaCreate},
+        {"parms",       ArrowParms::luaCreate},
+        {"send2user",   ArrowCommon::luaSend2User},
+        {NULL,          NULL}
     };
 
     /* Set Library */

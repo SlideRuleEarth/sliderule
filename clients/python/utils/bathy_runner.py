@@ -4,7 +4,6 @@ import os
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--output',         '-f',   type=str,               default=None)
 parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20190604044922_10220307_006_02.h5")
 parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/tarawa.geojson")
 parser.add_argument('--track',          '-t',   type=int,               default=1)
@@ -17,8 +16,9 @@ parser.add_argument('--timeout',        '-x',   type=int,               default=
 parser.add_argument('--verbose',        '-v',   action='store_true',    default=False)
 parser.add_argument('--loglvl',         '-l',   type=str,               default="INFO")
 parser.add_argument('--preserve',       '-p',   action='store_true',    default=False)
-parser.add_argument('--serverfile',     '-s',   type=str,               default="/tmp/bathyfile.csv")
-parser.add_argument('--return_inputs',  '-c',   action='store_true',    default=False)
+parser.add_argument('--serverfile',     '-s',   type=str,               default="/tmp/ATL24_20190604044922_10220307_006_02.h5")
+parser.add_argument('--return_inputs',  '-i',   action='store_true',    default=False)
+parser.add_argument('--send_to_client', '-c',   action='store_true',    default=False)
 parser.add_argument('--generate_ndwi',  '-w',   action='store_true',    default=False)
 parser.add_argument('--use_bathy_mask', '-b',   action='store_true',    default=False)
 args,_ = parser.parse_known_args()
@@ -56,27 +56,17 @@ parms = {
         "use_ndwi": args.generate_ndwi
     }
 }
-if args.return_inputs:
+if args.send_to_client:
     parms["output"] = { 
         "path": args.serverfile, 
-        "format": "csv", 
-        "open_on_complete": True, 
+        "format": "hdf5", 
+        "open_on_complete": False, 
         "as_geo": False 
     }
 
 # Make ATL24G Processing Request
 gdf = icesat2.atl24gp(parms, resources=[args.granule], keep_id=True)
 
-# Write to CSV Local File
-if(args.output != None):
-    columns = [
-        "index_ph", "time", "geoid_corr_h", "latitude", "longitude", "x_ph", "y_ph", "x_atc", "y_atc", 
-        "sigma_along", "sigma_across", "ndwi", "yapc_score", "max_signal_conf", "quality_ph",
-        "region", "track", "pair", "sc_orient", "rgt", "cycle", "utm_zone", 
-        "background_rate", "solar_elevation", "wind_v", "pointing_angle", "extent_id" 
-    ]
-    gdf.to_csv(args.output, index=False, columns=columns)
-
 # Clean Up Temporary Files
-if args.return_inputs and not args.preserve:
+if args.send_to_client and not args.preserve:
     os.remove(args.serverfile)

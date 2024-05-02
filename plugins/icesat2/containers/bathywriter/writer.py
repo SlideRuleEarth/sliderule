@@ -47,10 +47,10 @@ if len(sys.argv) <= 1:
 
 # read control json
 #   {
-#       "beam_csv_files": [<beam 1 file>, <beam 2 file>, ...],
-#       "beam_json_files": [<beam 1 file>, <beam 2 file>, ...],
-#       "openoceans_csv_files": [<beam 1 file>, <beam 2 file>, ...],
-#       "output_file_name": <local output file>,
+#       "spot_csv_files": [<spot 1 file>, <spot 2 file>, ...],
+#       "spot_json_files": [<spot 1 file>, <spot 2 file>, ...],
+#       "openoceans_csv_files": [<spot 1 file>, <spot 2 file>, ...],
+#       "output_filename": <local output file>,
 #       "output":
 #       {
 #           ... arrow parms
@@ -61,41 +61,41 @@ with open(control_json, 'r') as json_file:
     control = json.load(json_file)
 
 # read in data
-beam_dfs = [pd.read_csv(beam_csv_file) for beam_csv_file in control["beam_csv_files"]]
-beam_dicts = [json.load(open(beam_json_file, 'r')) for beam_json_file in control["beam_json_files"]]
+spot_dfs = [pd.read_csv(spot_csv_file) for spot_csv_file in control["spot_csv_files"]]
+spot_dicts = [json.load(open(spot_json_file, 'r')) for spot_json_file in control["spot_json_files"]]
 openoceans_dfs = [pd.read_csv(openocean_csv_file) for openocean_csv_file in control["openoceans_csv_files"]]
 print("Read all inputs into data frames")
 
 # merge dataframes
-for i in range(len(beam_dfs)):
-    beam_dfs[i] = pd.merge(beam_dfs[i], openoceans_dfs[i], on='index_ph', how='left')
-print("Created merged beam data frames")
+for i in range(len(spot_dfs)):
+    spot_dfs[i] = pd.merge(spot_dfs[i], openoceans_dfs[i], on='index_ph', how='left')
+print("Created merged spot data frames")
 
 # get granule level info
 granule_info = {
-    "rgt": beam_dicts[0]["rgt"],
-    "sc_orient": beam_dicts[0]["sc_orient"],
-    "region": beam_dicts[0]["region"],
-    "cycle": beam_dicts[0]["cycle"]
+    "rgt": spot_dicts[0]["rgt"],
+    "sc_orient": spot_dicts[0]["sc_orient"],
+    "region": spot_dicts[0]["region"],
+    "cycle": spot_dicts[0]["cycle"]
 }
 
 # Non-HDF5 Outputs
 if "output" not in control or control["output"]["format"] != "hdf5":
 
     # add metadata columns to dataframe
-    for i in range(len(beam_dfs)):
-        for key in beam_dicts[i]:
-            beam_dfs[i][key] = beam_dicts[i][key]
+    for i in range(len(spot_dfs)):
+        for key in spot_dicts[i]:
+            spot_dfs[i][key] = spot_dicts[i][key]
     print("Added meta data columns")
 
     # concatenate (vertically) all dataframes
-    df = pd.concat(beam_dfs)
+    df = pd.concat(spot_dfs)
     print("Concatenated data frames into a single data frame")
 
     # write output
     if "output" not in control or control["output"]["format"] == "csv":
-        df.to_csv(control["output_file_name"])
-        print("CSV file written: " + control["output_file_name"])
+        df.to_csv(control["output_filename"])
+        print("CSV file written: " + control["output_filename"])
     elif control["output"]["format"] == "parquet":
         if control["output"]["as_geo"]:
             df['time'] = df['time'].astype('datetime64[ns]')
@@ -104,34 +104,34 @@ if "output" not in control or control["output"]["format"] != "hdf5":
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
-            gdf.to_parquet(control["output_file_name"], index=None)
-            print("GeoParquet file written: " + control["output_file_name"])
+            gdf.to_parquet(control["output_filename"], index=None)
+            print("GeoParquet file written: " + control["output_filename"])
         else:
-            df.to_parquet(control["output_file_name"], index=None)
-            print("Parquet file written: " + control["output_file_name"])
+            df.to_parquet(control["output_filename"], index=None)
+            print("Parquet file written: " + control["output_filename"])
 
 # HDF5 Output
 else:
 
-    with h5py.File(control["output_file_name"], 'w') as hf:
+    with h5py.File(control["output_filename"], 'w') as hf:
 
         # ancillary data
         ancillary_group = hf.create_group("ancillary_data")
         ancillary_group.create_dataset("atlas_sdp_gps_epoch", data=ATLAS_GPS_EPOCH)
 
-        # beams
-        for i in range(len(beam_dfs)):
-            beam_info = beam_dicts[i]
-            beam_df = beam_dfs[i]
-            beam_group = hf.create_group(beam_info["beam"]) # e.g. gt1r, gt2l, etc.
-            beam_group.create_dataset("index_ph", data=beam_df["index_ph"])            
-            beam_df["delta_time"] = (beam_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
-            beam_group.create_dataset("delta_time", data=beam_df["delta_time"])
-            beam_group.create_dataset("x_atc_corr", data=beam_df["x_atc"])
-            beam_group.create_dataset("y_atc_corr", data=beam_df["y_atc"])
-            beam_group.create_dataset("lat_corr", data=beam_df["latitude"])
-            beam_group.create_dataset("lon_corr", data=beam_df["longitude"])
-            beam_group.create_dataset("class_ph", data=beam_df["class_ph"].astype(np.int16))
+        # spots
+        for i in range(len(spot_dfs)):
+            spot_info = spot_dicts[i]
+            spot_df = spot_dfs[i]
+            beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
+            beam_group.create_dataset("index_ph", data=spot_df["index_ph"])            
+            spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
+            beam_group.create_dataset("delta_time", data=spot_df["delta_time"])
+            beam_group.create_dataset("x_atc_corr", data=spot_df["x_atc"])
+            beam_group.create_dataset("y_atc_corr", data=spot_df["y_atc"])
+            beam_group.create_dataset("lat_corr", data=spot_df["latitude"])
+            beam_group.create_dataset("lon_corr", data=spot_df["longitude"])
+            beam_group.create_dataset("class_ph", data=spot_df["class_ph"].astype(np.int16))
 
         # orbit info        
         orbit_group = hf.create_group("orbit_info")
@@ -139,4 +139,4 @@ else:
         orbit_group.create_dataset("sc_orient", data={"forward": 1, "backward": 0}[granule_info["sc_orient"]])
         orbit_group.create_dataset("cycle_number", data=granule_info["cycle"])
 
-    print("HDF5 file written: " + control["output_file_name"])
+    print("HDF5 file written: " + control["output_filename"])
