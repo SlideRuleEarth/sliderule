@@ -58,6 +58,7 @@ class BathyParms: public Icesat2Parms
         static const char* GENERATE_NDWI;
         static const char* USE_BATHY_MASK;
         static const char* RETURN_INPUTS;
+        static const char* SPOTS;
         static const char* ATL09_RESOURCES;
 
         static const int ATL09_RESOURCE_NAME_LEN = 39;
@@ -73,6 +74,7 @@ class BathyParms: public Icesat2Parms
 
         static int  luaCreate       (lua_State* L);
         static void getATL09Key     (char* key, const char* name);
+        static int  luaSpotEnabled  (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -84,6 +86,7 @@ class BathyParms: public Icesat2Parms
         bool        generate_ndwi;
         bool        use_bathy_mask;
         bool        return_inputs; // return the atl03 bathy records back to client
+        bool        spots[NUM_SPOTS];
         Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------
@@ -95,6 +98,7 @@ class BathyParms: public Icesat2Parms
 
         void        cleanup         (void) const;
         void        get_atl09_list  (lua_State* L, int index, bool* provided);
+        void        get_spot_list   (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __bathy_parms__ */

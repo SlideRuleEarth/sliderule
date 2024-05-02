@@ -8,11 +8,12 @@ parser.add_argument('--output',         '-f',   type=str,               default=
 parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20190604044922_10220307_006_02.h5")
 parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/tarawa.geojson")
 parser.add_argument('--track',          '-t',   type=int,               default=1)
+parser.add_argument('--spots',          '-e',   type=int, nargs='+',    choices=range(1,7), default=[1,2,3,4,5,6])
 parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   '-o',   type=str,               default="bathy")
 parser.add_argument('--desired_nodes',  '-n',   type=int,               default=None)
 parser.add_argument('--time_to_live',   '-m',   type=int,               default=120)
-parser.add_argument('--timeout',        '-x',   type=int,               default=600)
+parser.add_argument('--timeout',        '-x',   type=int,               default=800)
 parser.add_argument('--verbose',        '-v',   action='store_true',    default=False)
 parser.add_argument('--loglvl',         '-l',   type=str,               default="INFO")
 parser.add_argument('--preserve',       '-p',   action='store_true',    default=False)
@@ -44,6 +45,7 @@ parms = {
     "use_bathy_mask": args.use_bathy_mask,
     "return_inputs": args.return_inputs,
     "timeout": args.timeout,
+    "spots": args.spots,
     "openoceans": {
         "res_along_track": 10,
         "res_z": 0.2,

@@ -47,6 +47,7 @@ const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
 const char* BathyParms::USE_BATHY_MASK = "use_bathy_mask";
 const char* BathyParms::RETURN_INPUTS = "return_inputs";
+const char* BathyParms::SPOTS = "spots";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
 
 const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
@@ -95,6 +96,31 @@ void BathyParms::getATL09Key (char* key, const char* name)
     key[ATL09_RESOURCE_KEY_LEN] = '\0';
 }
 
+/*----------------------------------------------------------------------------
+ * luaSpotEnabled - :spoton(<spot>) --> true|false
+ *----------------------------------------------------------------------------*/
+int BathyParms::luaSpotEnabled (lua_State* L)
+{
+    bool status = false;
+    BathyParms* lua_obj = NULL;
+
+    try
+    {
+        lua_obj = dynamic_cast<BathyParms*>(getLuaSelf(L, 1));
+        int spot = getLuaInteger(L, 2);
+        if(spot >= 1 && spot <= NUM_SPOTS)
+        {
+            status = lua_obj->spots[spot-1];
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error retrieving spot status: %s", e.what());
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
@@ -106,9 +132,15 @@ BathyParms::BathyParms(lua_State* L, int index):
     ph_in_extent (DEFAULT_PH_IN_EXTENT),
     generate_ndwi(true),
     use_bathy_mask(true),
-    return_inputs(false)
+    return_inputs(false),
+    spots{true, true, true, true, true, true}
 {
     bool provided = false;
+
+    /* Set Meta Table Functions */
+    luaL_getmetatable(L, LUA_META_NAME);
+    LuaEngine::setAttrFunc(L, "spoton", luaSpotEnabled);
+    lua_pop(L, 1);
 
     try
     {
@@ -152,6 +184,12 @@ BathyParms::BathyParms(lua_State* L, int index):
         lua_getfield(L, index, BathyParms::ATL09_RESOURCES);
         get_atl09_list(L, -1, &provided);
         if(provided) mlog(DEBUG, "ATL09 resources set");
+        lua_pop(L, 1);
+
+        /* spot selection */
+        lua_getfield(L, index, BathyParms::SPOTS);
+        get_spot_list(L, -1, &provided);
+        if(provided) mlog(DEBUG, "Spots selected");
         lua_pop(L, 1);
     }
     catch(const RunTimeException& e)
@@ -223,5 +261,69 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "ATL09 lists must be provided as a table");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_spot_list
+ *----------------------------------------------------------------------------*/
+void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    if(provided) *provided = false;
+
+    /* Must be table of spots or a single spot */
+    if(lua_istable(L, index))
+    {
+        /* Clear spot table (sets all to false) */
+        memset(spots, 0, sizeof(spots));
+        if(provided) *provided = true;
+
+        /* Iterate through each spot in table */
+        int num_spots = lua_rawlen(L, index);
+        for(int i = 0; i < num_spots; i++)
+        {
+            /* Get spot */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set spot */
+            if(lua_isinteger(L, -1))
+            {
+                int spot = LuaObject::getLuaInteger(L, -1);
+                if(spot >= 1 && spot <= NUM_SPOTS)
+                {
+                    spots[spot-1] = true;
+                    mlog(DEBUG, "Selecting spot %d", spot);
+                }
+                else
+                {
+                    mlog(ERROR, "Invalid spot: %d", spot); 
+                }
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(lua_isinteger(L, index))
+    {
+        /* Clear spot table (sets all to false) */
+        memset(spots, 0, sizeof(spots));
+
+        /* Set spot */
+        int spot = LuaObject::getLuaInteger(L, -1);
+        if(spot >= 1 && spot <= NUM_SPOTS)
+        {
+            spots[spot-1] = true;
+            mlog(DEBUG, "Selecting spot %d", spot);
+        }
+        else
+        {
+            mlog(ERROR, "Invalid spot: %d", spot); 
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "Spot selection must be provided as a table or integer");
     }
 }

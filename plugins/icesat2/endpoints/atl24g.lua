@@ -80,16 +80,18 @@ local function genfilenames(dir, i, prefix)
 end
 
 -- function: run openoceans
-local function runopenoceans(start_beam, stop_beam, container_timeout)
-    for i = start_beam,stop_beam do
-        local container_parms = {
-            image =  "openoceans",
-            command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, i, "openoceans"),
-            timeout = container_timeout,
-            parms = { ["openoceans.json"] = parms["openoceans"] }
-        }
-        local container = runner.execute(crenv, container_parms, rspq)
-        runner.wait(container, container_timeout)
+local function runopenoceans(_bathy_parms, container_timeout)
+    for i = 1,icesat2.NUM_SPOTS do
+        if _bathy_parms:spoton(i) then
+            local container_parms = {
+                image =  "openoceans",
+                command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, i, "openoceans"),
+                timeout = container_timeout,
+                parms = { ["openoceans.json"] = parms["openoceans"] }
+            }
+            local container = runner.execute(crenv, container_parms, rspq)
+            runner.wait(container, container_timeout)
+        end
     end
 end
 
@@ -98,7 +100,7 @@ while true do
     if not status then break end
 
     -- execute openoceans
-    runopenoceans(1, 6, timeout)
+    runopenoceans(bathy_parms, timeout)
 
     -- exit loop
     break
@@ -108,10 +110,12 @@ end
 local beam_csv_files = {}
 local beam_json_files = {}
 local openoceans_csv_files = {}
-for i = 1,6 do
-    table.insert(beam_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-    table.insert(beam_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-    table.insert(openoceans_csv_files, string.format("%s/openoceans_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+for i = 1,icesat2.NUM_SPOTS do
+    if bathy_parms:spoton(i) then
+        table.insert(beam_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+        table.insert(beam_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+        table.insert(openoceans_csv_files, string.format("%s/openoceans_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+    end
 end
 local writer_parms = {
     image =  "bathywriter",

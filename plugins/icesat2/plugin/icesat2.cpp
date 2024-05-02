@@ -103,6 +103,7 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "RPT_2",                       Icesat2Parms::RPT_2);
     LuaEngine::setAttrInt(L, "RPT_3",                       Icesat2Parms::RPT_3);
     LuaEngine::setAttrInt(L, "NUM_TRACKS",                  Icesat2Parms::NUM_TRACKS);
+    LuaEngine::setAttrInt(L, "NUM_SPOTS",                   Icesat2Parms::NUM_SPOTS);
     LuaEngine::setAttrInt(L, "ATL08_NOISE",                 Icesat2Parms::ATL08_NOISE);
     LuaEngine::setAttrInt(L, "ATL08_GROUND",                Icesat2Parms::ATL08_GROUND);
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Parms::ATL08_CANOPY);
