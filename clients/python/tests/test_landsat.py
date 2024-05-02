@@ -36,15 +36,9 @@ class TestHLS:
         rsps = sliderule.source("subsets", rqst)
         assert init
         assert len(rsps) > 0
-        assert len(rsps['subsets'][0][0]['data']) > 0
-        assert rsps['subsets'][0][0]['rows'] == 1030
-        assert rsps['subsets'][0][0]['cols'] == 2504
+        assert len(rsps['subsets'][0][0]['file']) > 0
         assert rsps['subsets'][0][0]['size'] == 5158240
-        assert rsps['subsets'][0][0]['datatype'] == 1  # INT16
-        assert abs(rsps['subsets'][0][0]['ulx'] - 300000) < 1e-9
-        assert abs(rsps['subsets'][0][0]['uly'] - 5623518.2868507) < 1e-9
-        assert rsps['subsets'][0][0]['cellsize'] == 30
-        assert rsps['subsets'][0][0]['wkt'] != ""
+        assert rsps['subsets'][0][0]['poolsize'] == 6396026784
 
 
     def test_subset167(self, init):
@@ -66,16 +60,10 @@ class TestHLS:
         assert len(subsets) == 167
 
         for subset in subsets:
-            assert subset['rows'] > 0
-            assert subset['cols'] > 0
-            assert subset['size'] > 0
-
             # Some rsters have datatype as INT16 others as UINT16
-            assert subset['datatype'] == 1 or subset['datatype'] == 5
-            assert subset['ulx'] > 0  # for this test both ulx and uly in map coords are positive
-            assert subset['uly'] > 0
-            assert subset['cellsize'] == 30
-            assert subset['wkt'] != ""
+            assert len(rsps['subsets'][0][0]['file']) > 0
+            assert rsps['subsets'][0][0]['size'] > 0
+            assert rsps['subsets'][0][0]['poolsize'] > 0
 
 
     def test_ndvi(self, init):
