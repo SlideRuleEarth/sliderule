@@ -69,7 +69,7 @@ local function proxy(resources, parms, endpoint, rec)
                 if rc == earthdata.SUCCESS then
                     parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
                 else
-                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("proxy request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
+                    userlog:alert(core.WARNING, core.RTE_INFO, string.format("proxy request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
                 end
             end
         end
