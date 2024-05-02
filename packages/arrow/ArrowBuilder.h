@@ -135,6 +135,8 @@ class ArrowBuilder: public LuaObject
         ArrowParms*             getParms        (void);
         bool                    hasAncFields    (void);
         bool                    hasAncElements  (void);
+        const char*             getParmsAsString(void);
+        const char*             getEndpoint     (void);
 
     private:
 
@@ -168,6 +170,8 @@ class ArrowBuilder: public LuaObject
         const char*         metadataFile;       // used locally to build json metadata file
         const char*         outputPath;         // final destination of the data file
         const char*         outputMetadataPath; // final destination of the metadata file
+        const char*         parmsAsString;
+        const char*         endpoint;
 
         ArrowBuilderImpl*   impl; // private arrow data
 
@@ -177,7 +181,8 @@ class ArrowBuilder: public LuaObject
 
                         ArrowBuilder            (lua_State* L, ArrowParms* parms,
                                                  const char* outq_name, const char* inq_name,
-                                                 const char* rec_type, const char* id);
+                                                 const char* rec_type, const char* id,
+                                                 const char* parms_str, const char* _endpoint);
                         ~ArrowBuilder           (void);
         static void*    builderThread           (void* parm);
 };

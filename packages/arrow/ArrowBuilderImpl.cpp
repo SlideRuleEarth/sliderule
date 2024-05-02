@@ -466,10 +466,14 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     packagestr += "]";
     delete [] pkg_list;
 
+    /* Build rqst String */
+    FString rqststr("{\"endpoint\": \"%s\", \"parms\": %s}", arrowBuilder->getEndpoint(), arrowBuilder->getParmsAsString());
+
     /* Initialize Meta Data String */
     string metastr(FString(R"json({
         "server":
         {
+            "rqst": %s,
             "environment":"%s",
             "version":"%s",
             "duration":%s,
@@ -485,6 +489,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
             "y": "%s"
         }
     })json",
+        rqststr.c_str(),
         OsApi::getEnvVersion(),
         LIBID,
         durationstr.c_str(),

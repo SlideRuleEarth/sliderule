@@ -82,6 +82,7 @@ class GeoParms: public LuaObject
         static const char* URL_SUBSTRING;
         static const char* CLOSEST_TIME;
         static const char* USE_POI_TIME;
+        static const char* DOY_RANGE;
         static const char* PROJ_PIPELINE;
         static const char* AOI_BBOX;
         static const char* CATALOG;
@@ -131,6 +132,10 @@ class GeoParms: public LuaObject
         bool                    filter_closest_time;
         TimeLib::gmt_time_t     closest_time;
         bool                    use_poi_time;
+        bool                    filter_doy_range;
+        bool                    doy_keep_inrange;
+        int                     doy_start;
+        int                     doy_end;
         const char*             proj_pipeline;
         bbox_t                  aoi_bbox;
         const char*             catalog;

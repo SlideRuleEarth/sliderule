@@ -29,25 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __opendata_plugin__
-#define __opendata_plugin__
+#ifndef __meta_global_canopy_raster__
+#define __meta_global_canopy_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "EsaWorldCover10meterRaster.h"
-#include "MetaGlobalCanopy1meterRaster.h"
+#include "GeoRaster.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * META's GLOBAL CANOPY HEIGHT 1 METER RASTER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initopendata(void);
-void deinitopendata(void);
-}
+class MetaGlobalCanopy1meterRaster: public GeoRaster
+{
+    public:
 
-#endif  /* __opendata_plugin__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static RasterObject* create(lua_State* L, GeoParms* _parms)
+                          { return new MetaGlobalCanopy1meterRaster(L, _parms); }
 
 
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        MetaGlobalCanopy1meterRaster (lua_State* L, GeoParms* _parms):
+         GeoRaster(L, _parms,
+                  _parms->asset->getIndex(),
+                  TimeLib::datetime2gps(2024, 4, 7, 0, 0, 0),
+                  false /* Data is elevation */ ) {}
+
+    private:
+
+};
+
+#endif  /* __meta_global_canopy_raster__ */

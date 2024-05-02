@@ -133,6 +133,8 @@ class TimeLib
         static int          daysinmonth     (int year, int month);
         static const char*  getmonthname    (int month); // [1..12] --> ["January".."December"]
         static bool         gmtinrange      (const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end); // returns true if in range
+        static bool         str2doyrange    (const char* doy_range_str, int& doy_start, int& doy_end);
+        static bool         doyinrange      (const gmt_time_t& gmt_time, int doy_start, int doy_end); // returns true if in range
 
         private:
 
