@@ -36,7 +36,10 @@ class TestHLS:
         rsps = sliderule.source("subsets", rqst)
         assert init
         assert len(rsps) > 0
+        assert len(rsps['subsets'][0][0]['file']) > 0
         assert rsps['subsets'][0][0]['size'] == 5158240
+        assert rsps['subsets'][0][0]['poolsize'] == 6396026784
+
 
     def test_subset167(self, init):
         time_start = "2021-01-01T00:00:00Z"
@@ -56,7 +59,9 @@ class TestHLS:
         assert init
         assert len(subsets) == 167
         for subset in subsets:
-            assert subset['size'] > 0
+            assert len(rsps['subsets'][0][0]['file']) > 0
+            assert rsps['subsets'][0][0]['size'] > 0
+            assert rsps['subsets'][0][0]['poolsize'] > 0
 
 
     def test_ndvi(self, init):

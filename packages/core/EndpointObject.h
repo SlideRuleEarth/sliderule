@@ -111,6 +111,7 @@ class EndpointObject: public LuaObject
                 const char*         path;
                 const char*         resource;
                 verb_t              verb;
+                const char*         version;
                 HeaderDictionary    headers;
                 uint8_t*            body;
                 long                length; // of body
