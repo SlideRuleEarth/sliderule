@@ -52,6 +52,7 @@
 
 #include "H5Dense.h"
 #include "core.h"
+#include <limits>
 
 /******************************************************************************
  * H5 BTREE V2 CLASS
@@ -894,7 +895,7 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
 
     /* Version check */
     uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
-    if (signature != 0) {
+    if (version != 0) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
     }
 

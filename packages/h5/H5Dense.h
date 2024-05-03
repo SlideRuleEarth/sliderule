@@ -36,14 +36,14 @@ class H5BTreeV2
         };
 
         /* A "node pointer" to another B-tree node */
-        typedef struct {
+        typedef struct btree2_node_ptr_t{
             uint64_t                addr = 0; // address of pointed node
             uint64_t                all_nrec = 0; // num records in pointed AND in children
             uint16_t                node_nrec = 0; // num records in pointed node
         } btree2_node_ptr_t;
 
         /* Information about a node at a given depth */
-        typedef struct {
+        typedef struct btree2_node_info_t {
             uint64_t                cum_max_nrec = 0; // cumulative max. # of records below node's depth
             uint32_t                max_nrec = 0; // max num records in node
             uint32_t                split_nrec = 0; // num records to split node at 
@@ -78,7 +78,7 @@ class H5BTreeV2
         } btree2_nodepos_t;
 
         /* Doubling table for opening Direct/Indirect in Fractal heap */
-        typedef struct {
+        typedef struct dtable_t {
             /* Derived information (stored, varies during lifetime of table) */
             uint64_t                table_addr = 0; // addr of first block for table u ndefined if no space allocated for table */
             uint64_t                num_id_first_row = 0; // num of IDs in first row of table
@@ -99,14 +99,14 @@ class H5BTreeV2
         } dtable_t;
 
         /* B-tree leaf node information */
-        typedef struct {
+        typedef struct btree2_leaf_t {
             vector<uint8_t>         leaf_native;    // ptr to native records
             void                    *parent = NULL; // dependency for leaf
             uint16_t                nrec = 0;       // num records in this node   
         } btree2_leaf_t;
 
         /* B-tree internal node information */
-        typedef struct {
+        typedef struct btree2_internal_t {
             void                      *parent = NULL;
             vector<uint8_t>           int_native; // ptr native records               
             vector<btree2_node_ptr_t> node_ptrs;  // ptr to node ptrs
@@ -121,7 +121,7 @@ class H5BTreeV2
         } fheap_id_t;
 
         /* Type 8 Record Representation */
-        typedef struct {
+        typedef struct btree2_type8_densename_rec_t {
             fheap_id_t              id; // heap ID for attribute
             uint32_t                corder = 0; // 'creation order' field value
             uint32_t                hash = 0; // hash of 'name' field value
@@ -129,7 +129,7 @@ class H5BTreeV2
         } btree2_type8_densename_rec_t;
 
         /* Type 5 Record Representation -  native 'name' field index records in the v2 B-tree */
-        typedef struct {
+        typedef struct btree2_type5_densename_rec_t {
             uint32_t                hash = 0; // hash of 'name' field value 
             uint8_t                 id[7] = {0}; // heap ID for link, 7 stolen from H5G_DENSE_FHEAP_ID_LEN
         } btree2_type5_densename_rec_t;

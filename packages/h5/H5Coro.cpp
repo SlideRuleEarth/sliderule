@@ -3043,10 +3043,8 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 
     /* Wrap with general exceptions to avoid memory leaks */
     try {
-        if((int)heap_address != -1)
-        {
-            readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
-        }
+        /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
+        readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
 
         /* Check if Attribute Located Non-Dense, Else Init Dense Search */
         
