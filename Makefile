@@ -13,6 +13,7 @@ CFG += -DUSE_H5_PACKAGE=ON
 CFG += -DUSE_LEGACY_PACKAGE=ON
 CFG += -DUSE_NETSVC_PACKAGE=ON
 CFG += -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+CFG += -DENABLE_H5CORO_ATTRIBUTE_SUPPORT=ON
 
 all: ## build code
 	make -j4 -C $(BUILD)
@@ -20,6 +21,9 @@ all: ## build code
 config: prep ## configure make for release version of sliderule
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release $(CFG) $(ROOT)
 
+config-debug: prep 
+	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Debug -DH5CORO_MAXIMUM_NAME_SIZE=208 $(CFG) $(ROOT)
+	
 config-library: prep ## configure make for shared library libsliderule.so
 	cd $(BUILD); cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(CFG) $(ROOT)
 

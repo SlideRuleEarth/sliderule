@@ -1,6 +1,9 @@
 .vscode/
 .DS_Store
 
+# excces nc file
+*.nc
+
 # Prerequisites
 *.d
 
