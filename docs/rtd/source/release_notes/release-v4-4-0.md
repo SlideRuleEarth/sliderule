@@ -37,134 +37,133 @@ Version description of the v4.4.0 release of SlideRule Earth.
 [https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.4.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.4.0)
 
 ## Benchmarks
-
 ```
 atl06_aoi
-        output:              625445 x 16 elements
-        total:               26.511650 secs
-        gdf2poly:            0.000324 secs
-        toregion:            0.094860 secs
-        __parse_native:      21.172510 secs
-        todataframe:         0.391770 secs
-        merge:               0.000002 secs
-        flatten:             2.783902 secs
-        atl06p:              26.266139 secs
+	output:              657468 x 16 elements
+	total:               30.217794 secs
+	gdf2poly:            0.000361 secs
+	toregion:            0.101621 secs
+	__parse_native:      22.553648 secs
+	todataframe:         0.406877 secs
+	merge:               0.000003 secs
+	flatten:             2.973291 secs
+	atl06p:              29.944871 secs
 atl06_ancillary
-        output:              1180 x 17 elements
-        total:               3.049564 secs
-        gdf2poly:            0.000324 secs
-        toregion:            0.094860 secs
-        __parse_native:      0.690858 secs
-        todataframe:         0.005812 secs
-        merge:               0.013563 secs
-        flatten:             0.030884 secs
-        atl06p:              2.857920 secs
+	output:              1180 x 17 elements
+	total:               3.515006 secs
+	gdf2poly:            0.000361 secs
+	toregion:            0.101621 secs
+	__parse_native:      0.706065 secs
+	todataframe:         0.005833 secs
+	merge:               0.014554 secs
+	flatten:             0.032062 secs
+	atl06p:              3.311915 secs
 atl03_ancillary
-        output:              1180 x 17 elements
-        total:               3.047120 secs
-        gdf2poly:            0.000324 secs
-        toregion:            0.094860 secs
-        __parse_native:      0.158048 secs
-        todataframe:         0.005754 secs
-        merge:               0.013669 secs
-        flatten:             0.031304 secs
-        atl06p:              3.045915 secs
+	output:              1180 x 17 elements
+	total:               2.783418 secs
+	gdf2poly:            0.000361 secs
+	toregion:            0.101621 secs
+	__parse_native:      0.164518 secs
+	todataframe:         0.005624 secs
+	merge:               0.013533 secs
+	flatten:             0.030675 secs
+	atl06p:              2.782245 secs
 atl06_parquet
-        output:              1577 x 17 elements
-        total:               2.755643 secs
-        gdf2poly:            0.000324 secs
-        toregion:            0.094860 secs
-        __parse_native:      0.209622 secs
-        todataframe:         0.005754 secs
-        merge:               0.013669 secs
-        flatten:             0.044833 secs
-        atl06p:              2.755176 secs
+	output:              1577 x 17 elements
+	total:               2.658988 secs
+	gdf2poly:            0.000361 secs
+	toregion:            0.101621 secs
+	__parse_native:      0.209843 secs
+	todataframe:         0.005624 secs
+	merge:               0.013533 secs
+	flatten:             0.043108 secs
+	atl06p:              2.658509 secs
 atl03_parquet
-        output:              22833 x 22 elements
-        total:               1.633988 secs
-        gdf2poly:            0.000324 secs
-        toregion:            0.094860 secs
-        __parse_native:      0.011271 secs
-        todataframe:         0.005754 secs
-        merge:               0.013669 secs
-        flatten:             0.044833 secs
-        atl06p:              2.755176 secs
-        atl03sp:             1.607882 secs
+	output:              22833 x 22 elements
+	total:               1.645541 secs
+	gdf2poly:            0.000361 secs
+	toregion:            0.101621 secs
+	__parse_native:      0.010994 secs
+	todataframe:         0.005624 secs
+	merge:               0.013533 secs
+	flatten:             0.043108 secs
+	atl06p:              2.658509 secs
+	atl03sp:             1.618785 secs
 atl06_sample_landsat
-        output:              914 x 20 elements
-        total:               7.073046 secs
-        gdf2poly:            0.000324 secs
-        toregion:            0.094860 secs
-        __parse_native:      0.370676 secs
-        todataframe:         0.006028 secs
-        merge:               0.012087 secs
-        flatten:             0.031790 secs
-        atl06p:              4.672313 secs
-        atl03sp:             1.607882 secs
+	output:              914 x 20 elements
+	total:               6.421875 secs
+	gdf2poly:            0.000361 secs
+	toregion:            0.101621 secs
+	__parse_native:      0.371876 secs
+	todataframe:         0.005620 secs
+	merge:               0.011310 secs
+	flatten:             0.030409 secs
+	atl06p:              4.646134 secs
+	atl03sp:             1.618785 secs
 atl06_sample_zonal_arcticdem
-        output:              1651 x 27 elements
-        total:               6.384218 secs
-        gdf2poly:            0.000320 secs
-        toregion:            0.006032 secs
-        __parse_native:      0.319357 secs
-        todataframe:         0.005968 secs
-        merge:               0.020238 secs
-        flatten:             0.045042 secs
-        atl06p:              6.375683 secs
-        atl03sp:             1.607882 secs
+	output:              1651 x 27 elements
+	total:               7.677317 secs
+	gdf2poly:            0.000307 secs
+	toregion:            0.005774 secs
+	__parse_native:      0.325183 secs
+	todataframe:         0.006104 secs
+	merge:               0.020617 secs
+	flatten:             0.046536 secs
+	atl06p:              7.669182 secs
+	atl03sp:             1.618785 secs
 atl06_sample_nn_arcticdem
-        output:              1651 x 20 elements
-        total:               4.758471 secs
-        gdf2poly:            0.000278 secs
-        toregion:            0.005407 secs
-        __parse_native:      0.091373 secs
-        todataframe:         0.005742 secs
-        merge:               0.018872 secs
-        flatten:             0.038760 secs
-        atl06p:              4.751282 secs
-        atl03sp:             1.607882 secs
+	output:              1651 x 20 elements
+	total:               5.417307 secs
+	gdf2poly:            0.000285 secs
+	toregion:            0.005677 secs
+	__parse_native:      0.094793 secs
+	todataframe:         0.006071 secs
+	merge:               0.019175 secs
+	flatten:             0.039384 secs
+	atl06p:              5.409957 secs
+	atl03sp:             1.618785 secs
 atl06_msample_nn_arcticdem
-        output:              1596050 x 20 elements
-        total:               143.910649 secs
-        gdf2poly:            0.000268 secs
-        toregion:            0.005141 secs
-        __parse_native:      89.897940 secs
-        todataframe:         0.975277 secs
-        merge:               15.259323 secs
-        flatten:             29.145164 secs
-        atl06p:              142.751770 secs
-        atl03sp:             1.607882 secs
+	output:              1666932 x 20 elements
+	total:               134.748328 secs
+	gdf2poly:            0.000317 secs
+	toregion:            0.005744 secs
+	__parse_native:      96.033735 secs
+	todataframe:         1.105081 secs
+	merge:               15.617355 secs
+	flatten:             30.201550 secs
+	atl06p:              133.563389 secs
+	atl03sp:             1.618785 secs
 atl06_no_sample_arcticdem
-        output:              1596050 x 16 elements
-        total:               69.063557 secs
-        gdf2poly:            0.000306 secs
-        toregion:            0.006468 secs
-        __parse_native:      53.275093 secs
-        todataframe:         0.964930 secs
-        merge:               0.000003 secs
-        flatten:             7.419176 secs
-        atl06p:              67.920378 secs
-        atl03sp:             1.607882 secs
+	output:              1666932 x 16 elements
+	total:               71.098669 secs
+	gdf2poly:            0.000309 secs
+	toregion:            0.006578 secs
+	__parse_native:      57.098009 secs
+	todataframe:         0.983960 secs
+	merge:               0.000003 secs
+	flatten:             7.547646 secs
+	atl06p:              69.954445 secs
+	atl03sp:             1.618785 secs
 atl03_rasterized_subset
-        output:              51968 x 22 elements
-        total:               4.176219 secs
-        gdf2poly:            0.000306 secs
-        toregion:            0.006468 secs
-        __parse_native:      1.858839 secs
-        todataframe:         0.042089 secs
-        merge:               0.000003 secs
-        flatten:             0.371834 secs
-        atl06p:              67.920378 secs
-        atl03sp:             3.623235 secs
+	output:              51968 x 22 elements
+	total:               3.760473 secs
+	gdf2poly:            0.000309 secs
+	toregion:            0.006578 secs
+	__parse_native:      1.690030 secs
+	todataframe:         0.035699 secs
+	merge:               0.000003 secs
+	flatten:             0.324365 secs
+	atl06p:              69.954445 secs
+	atl03sp:             3.284419 secs
 atl03_polygon_subset
-        output:              50799 x 22 elements
-        total:               3.140495 secs
-        gdf2poly:            0.000306 secs
-        toregion:            0.006468 secs
-        __parse_native:      1.370758 secs
-        todataframe:         0.041492 secs
-        merge:               0.000003 secs
-        flatten:             0.359666 secs
-        atl06p:              67.920378 secs
-        atl03sp:             3.114903 secs
+	output:              50799 x 22 elements
+	total:               2.734295 secs
+	gdf2poly:            0.000309 secs
+	toregion:            0.006578 secs
+	__parse_native:      1.232244 secs
+	todataframe:         0.035859 secs
+	merge:               0.000003 secs
+	flatten:             0.320961 secs
+	atl06p:              69.954445 secs
+	atl03sp:             2.711521 secs
 ```
