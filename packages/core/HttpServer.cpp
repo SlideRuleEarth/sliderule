@@ -246,55 +246,42 @@ void HttpServer::extractPath (const char* url, const char** path, const char** r
  *----------------------------------------------------------------------------*/
 bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
 {
+    bool status = true;
+
     List<string*>* header_list = NULL;
     List<string*>* request_line = NULL;
     try
     {
-        string http_header(buf);
         /* Parse Request */
+        string http_header(buf);
         header_list = StringLib::split(http_header.c_str(), http_header.length(), '\r');
-        /* Parse Request Line */
         request_line = StringLib::split((*header_list)[0]->c_str(), (*header_list)[0]->length(), ' ');
-    }
-    catch(const RunTimeException& e)
-    {
-        delete header_list;
-        delete request_line;
-        mlog(e.level(), "Invalid request line: %s", e.what());
-        return false;
-    }
 
-    bool status = true;
-    const char* verb_str = (*request_line)[0]->c_str();
-    const char* url_str = (*request_line)[1]->c_str();
-    const char* version = (*request_line)[2]->c_str();
+        const char* verb_str = (*request_line)[0]->c_str();
+        const char* url_str = (*request_line)[1]->c_str();
+        const char* version = (*request_line)[2]->c_str();
 
-    /* Get Verb */
-    request->verb = EndpointObject::str2verb(verb_str);
-    if(request->verb == EndpointObject::UNRECOGNIZED)
-    {
-        mlog(CRITICAL, "Unrecognized HTTP verb: %s", verb_str);
-        status = false;
-    }
+        /* Get Verb */
+        request->verb = EndpointObject::str2verb(verb_str);
+        if(request->verb == EndpointObject::UNRECOGNIZED)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unrecognized HTTP verb: %s", verb_str);
+        }
 
-    /* Get Version */
-    request->version = StringLib::duplicate(version);
-    if(request->version == NULL)
-    {
-        mlog(CRITICAL, "No HTTP version specified");
-        status = false;
-    }
+        /* Get Version */
+        request->version = StringLib::duplicate(version);
+        if(request->version == NULL)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR,  "no HTTP version specified");
+        }
 
-    /* Get Endpoint and URL */
-    extractPath(url_str, &request->path, &request->resource);
-    if(!request->path || !request->resource)
-    {
-        mlog(CRITICAL, "Unable to extract endpoint and url: %s", url_str);
-        status = false;
-    }
+        /* Get Endpoint and URL */
+        extractPath(url_str, &request->path, &request->resource);
+        if(!request->path || !request->resource)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to extract endpoint and url: %s", url_str);
+        }
 
-    if(status)
-    {
         /* Parse Headers */
         for(int h = 1; h < header_list->length(); h++)
         {
@@ -313,6 +300,11 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
             }
             delete keyvalue_list;
         }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Invalid request: %s", e.what());
+        status = false;
     }
 
     /* Clean Up Allocated Memory */
@@ -505,7 +497,7 @@ int HttpServer::onRead(int fd)
                     }
                     catch(const RunTimeException& e)
                     {
-                        mlog(DEBUG, "Keep alive: %s, %s", connection->keep_alive ? "true" : "false", connection->request->version);
+                        (void)e;
                     }
                 }
                 else
@@ -682,7 +674,6 @@ int HttpServer::onWrite(int fd)
             bool rc = connections.add(fd, new_connection, false); // deletes old connection
             if(rc)
             {
-                mlog(DEBUG, "Will keepalive: %s, fd: %d", new_connection->id, fd);
                 status = 0; // will keep socket open
             }
             else
