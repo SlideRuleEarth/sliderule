@@ -31,7 +31,6 @@
 import sliderule
 from sliderule import earthdata, h5, icesat2, gedi
 import argparse
-import logging
 import time
 import os
 
