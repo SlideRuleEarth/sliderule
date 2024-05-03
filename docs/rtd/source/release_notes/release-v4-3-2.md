@@ -41,7 +41,6 @@ Version description of the v4.3.2 release of SlideRule Earth.
 [https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.3.2](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.3.2)
 
 ## Benchmarks
-
 ```
 atl06_aoi
         output:              625445 x 16 elements
@@ -171,4 +170,126 @@ atl03_polygon_subset
         flatten:             0.359666 secs
         atl06p:              67.920378 secs
         atl03sp:             3.114903 secs
+```
+
+## Metrics
+```
+gedi04a_count 1507918
+atl06_count 87138
+atl08_count 10885
+atl06s_count 3480
+atl03s_count 2105
+
+num_requests 383476
+num_complete 1611955
+num_failures 66
+num_timeouts 113
+num_active_locks 0
+sliderule_members 7
+atl03sp_count 1511
+gedi01bp_count 2
+atl06p_count 1331
+health_count 560355
+gedi02ap_count 5
+gedi01b_count 2
+time_count 10
+h5p_count 174
+atl08p_count 156
+subsets_count 3
+geo_count 4
+gedi02a_count 279
+prometheus_count 563886
+definition_count 2602
+gedi04ap_count 110152
+version_count 1157
+atl06sp_count 38
+samples_count 9
+gedi02a_sum 537.320136
+version 0.001322
+atl06 11.109224
+atl06_sum 269222.302717
+atl03s_sum 45790.410039
+health 0.000952
+samples_sum 52.696181
+gedi02a 0.105243
+atl03sp 0.001261
+atl06p 12.204205
+prometheus_sum 351.784345
+atl08p_sum 7718.444294
+gedi04ap 3.112503
+gedi04a_sum 679848.393561
+atl06p_sum 25904.344663
+definition 0.001652
+atl06s 2.181776
+subsets 11.677106
+atl08 27.497538
+atl08p 28.554842
+atl08_sum 77180.547501
+gedi04a 2.039029
+time_sum 0.009534
+atl06sp 4.233367
+atl06s_sum 5772.677444
+atl03s 1.296792
+h5p_sum 531.007692
+atl06sp_sum 1227.984701
+h5p 1.226820
+geo_sum 0.004317
+atl03sp_sum 14648.312617
+geo 0.000992
+definition_sum 6.065591
+gedi02ap_sum 47.440978
+health_sum 519.067018
+gedi01bp_sum 9.028753
+version_sum 1.458390
+gedi01bp 4.113071
+gedi01b_sum 6.861664
+gedi01b 3.025415
+prometheus 0.000528
+gedi04ap_sum 338562.337289
+subsets_sum 27.980504
+gedi02ap 1.210191
+samples 2.317266
+time 0.000976
+```
+
+## Version String
+```json
+{
+        "usgs3dep": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        },
+        "swot": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        },
+        "landsat": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        },
+        "pgc": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        },
+        "server": {
+                "version":"v4.3.2",
+                "commit":"v4.3.2-0-g63f4421c",
+                "packages":["core","arrow","aws","cre","geo","h5","netsvc","gedi","icesat2","landsat","opendata","pgc","swot","usgs3dep"],
+                "launch":"2024-04-14T06:15:44Z",
+                "environment":"v4.3.2-0-g63f4421c",
+                "duration":1665622349
+        },
+        "icesat2": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        },
+        "gedi": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        },
+        "opendata": {
+                "commit":"v4.3.2-0-g63f4421c",
+                "version":"v4.3.2"
+        }
+}
 ```

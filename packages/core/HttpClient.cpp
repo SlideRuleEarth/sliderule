@@ -172,7 +172,7 @@ HttpClient::~HttpClient(void)
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
     uint32_t trace_id = start_trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
-    
+
     if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace_id))
     {
         rsps_t rsps = parseResponse(outq, timeout, trace_id);
@@ -227,7 +227,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
     try
     {
         int rqst_len = 0;
-    
+
         /* Calculate Content Length */
         int content_length = 0;
         if(data)
@@ -750,7 +750,7 @@ void* HttpClient::requestThread(void* parm)
     }
 
     delete request_sub;
-    
+
     return NULL;
 }
 

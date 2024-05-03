@@ -59,6 +59,7 @@ EndpointObject::Request::Request (const char* _id):
     path        = NULL;
     resource    = NULL;
     verb        = UNRECOGNIZED;
+    version     = NULL;
     body        = NULL;
     length      = 0;
 }
@@ -70,6 +71,7 @@ EndpointObject::Request::~Request (void)
 {
     delete [] body;
     delete [] resource;
+    delete [] version;
     delete [] path;
     delete [] id;
 }

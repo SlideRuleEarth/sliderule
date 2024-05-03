@@ -145,7 +145,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
     {
         return sock;
     }
-    
+
     // server
     int listen_socket = sock;
     int server_socket = INVALID_RC;
@@ -177,9 +177,8 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
         }
     } while(server_socket == INVALID_RC && block && *block && !signal_exit);
 
-    /* Shutdown Listen Socket */
-    shutdown(listen_socket, SHUT_RDWR);
-    close(listen_socket);
+    /* Close Listen Socket */
+    sockclose(listen_socket);
 
     /* Check Acceptance */
     if(server_socket < 0)
@@ -268,7 +267,7 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
     if(timeout != IO_CHECK)
     {
         int activity = 1;
-        
+
         /* Build Poll Structure */
         struct pollfd polllist[1];
         polllist[0].fd = fd;
@@ -493,7 +492,12 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                         int error = 0;
                         socklen_t errlen = sizeof(error);
                         getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen);
+#ifdef __DEBUG__
+                        /* With server keeping sockets alive for HTTP/1.1 requests, the client will close the connection.
+                         * It may do it gracefully or abruptly.  If it does it abruptly (curlib3 socket pool timeout)
+                         * the server will see a POLLERR and ECONNRESET error, this is normal and should not be logged as an error. */
                         dlog("Poll error (%d) detected [0x%X] on server socket <%d>: %s", error, polllist[i].revents, polllist[i].fd, strerror(error));
+#endif
                         cb_stat = -1; // treat like a callback error or disconnect
                     }
                     else if(polllist[i].revents & POLLNVAL)
@@ -695,7 +699,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
                     dlog("Unable to create client socket on %s:%d", ip_addr ? ip_addr : "0.0.0.0", port);
                     return -1;
                 }
-                
+
                 /* Timeout */
                 OsApi::performIOTimeout();
             }

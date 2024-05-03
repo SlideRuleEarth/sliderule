@@ -58,7 +58,6 @@ class TestHLS:
         subsets = rsps['subsets'][0]
         assert init
         assert len(subsets) == 167
-
         for subset in subsets:
             # Some rsters have datatype as INT16 others as UINT16
             assert len(rsps['subsets'][0][0]['file']) > 0
