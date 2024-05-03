@@ -3040,30 +3040,23 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     uint64_t address_snapshot = metaData.address;
     uint64_t heap_addr_snapshot = heap_address;
     heap_info_t heap_info_dense;
+    
+    /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
+    readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
 
-    /* Wrap with general exceptions to avoid memory leaks */
-    try {
-        /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
-        readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
-
-        /* Check if Attribute Located Non-Dense, Else Init Dense Search */
-        
-        if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
-        {
-            print2term("Entering dense attribute search; No main attribute message match. \n");
-            H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
-            if (curr_btreev2.found_attr) {
-                readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
-            }
-            else {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
-            }
-
+    /* Check if Attribute Located Non-Dense, Else Init Dense Search */
+    if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
+    {
+        H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
+        if (curr_btreev2.found_attr) {
+            readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
         }
-    } catch (const RunTimeException& e) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "DENSE ATTR READ FAILURE, FREE ALLOCS");
-    }
+        else {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+        }
 
+    }
+    
     /* Return Bytes Read */
     uint64_t ending_position = pos;
     return ending_position - starting_position;
