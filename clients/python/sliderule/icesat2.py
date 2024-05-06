@@ -87,46 +87,23 @@ P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40'
 #
 # Calculate Laser Spot
 #
-def __calcspot(sc_orient, track, pair):
+def __calcspot(df):
 
-    # spacecraft in forward orientation
-    if sc_orient == SC_BACKWARD:
-        if track == 1:
-            if pair == LEFT_PAIR:
-                return 1
-            elif pair == RIGHT_PAIR:
-                return 2
-        elif track == 2:
-            if pair == LEFT_PAIR:
-                return 3
-            elif pair == RIGHT_PAIR:
-                return 4
-        elif track == 3:
-            if pair == LEFT_PAIR:
-                return 5
-            elif pair == RIGHT_PAIR:
-                return 6
-
-    # spacecraft in backward orientation
-    elif sc_orient == SC_FORWARD:
-        if track == 1:
-            if pair == LEFT_PAIR:
-                return 6
-            elif pair == RIGHT_PAIR:
-                return 5
-        elif track == 2:
-            if pair == LEFT_PAIR:
-                return 4
-            elif pair == RIGHT_PAIR:
-                return 3
-        elif track == 3:
-            if pair == LEFT_PAIR:
-                return 2
-            elif pair == RIGHT_PAIR:
-                return 1
-
-    # unknown spot
-    return 0
+    # Create dictionary mapping (sc_orient, track, pair) to spot
+    map_spot = {(SC_BACKWARD,   1,  LEFT_PAIR):     1,
+                (SC_BACKWARD,   1,  RIGHT_PAIR):    2,
+                (SC_BACKWARD,   2,  LEFT_PAIR):     3,
+                (SC_BACKWARD,   2,  RIGHT_PAIR):    4,
+                (SC_BACKWARD,   3,  LEFT_PAIR):     5,
+                (SC_BACKWARD,   3,  RIGHT_PAIR):    6,
+                (SC_FORWARD,    1,  LEFT_PAIR):     6,
+                (SC_FORWARD,    1,  RIGHT_PAIR):    5,
+                (SC_FORWARD,    2,  LEFT_PAIR):     4,
+                (SC_FORWARD,    2,  RIGHT_PAIR):    3,
+                (SC_FORWARD,    3,  LEFT_PAIR):     2,
+                (SC_FORWARD,    3,  RIGHT_PAIR):    1}
+    # return spot column
+    return geopandas.pd.Series(zip(df['sc_orient'], df['track'], df['pair'])).map(map_spot).values
 
 #
 # Get Ancillary Field Name
@@ -637,7 +614,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
                     gdf = sliderule.todataframe(columns, height_key=height_key)
 
                     # Calculate Spot Column
-                    gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+                    gdf['spot'] = __calcspot(gdf)
 
                     # Return Response
                     profiles[atl03sp.__name__] = time.perf_counter() - tstart
@@ -850,7 +827,7 @@ def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
                     gdf = sliderule.todataframe(columns, height_key=height_key)
 
                     # Calculate Spot Column
-                    gdf['spot'] = gdf.apply(lambda row: __calcspot(row["sc_orient"], row["track"], row["pair"]), axis=1)
+                    gdf['spot'] = __calcspot(gdf)
 
                     # Return Response
                     profiles[atl24gp.__name__] = time.perf_counter() - tstart
