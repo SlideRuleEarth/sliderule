@@ -1,4 +1,4 @@
-"""Tests for sliderule rema raster support."""
+"""Tests for sliderule opendata worldcover raster support."""
 
 import pytest
 from pathlib import Path
