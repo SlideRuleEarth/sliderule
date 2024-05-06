@@ -54,6 +54,7 @@ class SwotParms: public NetsvcParms
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* _SELF;
         static const char* VARIABLES;
         static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
         static const int EXPECTED_NUM_FIELDS = 16;
@@ -70,6 +71,7 @@ class SwotParms: public NetsvcParms
 
         static int          luaCreate           (lua_State* L);
         static int64_t      deltatime2timestamp (double delta_time);
+        const char*         defaultparms2json   (void) const override;
 
         /*--------------------------------------------------------------------
          * Data

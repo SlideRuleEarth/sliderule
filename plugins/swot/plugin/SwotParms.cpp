@@ -37,10 +37,15 @@
 #include "geo.h"
 #include "SwotParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
+const char* SwotParms::_SELF     = "swot";
 const char* SwotParms::VARIABLES = "variables";
 
 /******************************************************************************
@@ -76,6 +81,33 @@ int SwotParms::luaCreate (lua_State* L)
 int64_t SwotParms::deltatime2timestamp (double delta_time)
 {
     return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
+}
+
+/*----------------------------------------------------------------------------
+ * defaultparms2json - returns default parameters as a JSON string
+ *----------------------------------------------------------------------------*/
+const char* SwotParms::defaultparms2json(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    /* Base class params first */
+    const char* netsvcjson = NetsvcParms::defaultparms2json();
+    if(netsvcjson)
+    {
+        doc.Parse(netsvcjson);
+        delete [] netsvcjson;;
+    }
+
+    /* List is empty for default values */
+    doc.AddMember("variables", rapidjson::Value("[]"), allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /******************************************************************************

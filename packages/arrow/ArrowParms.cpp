@@ -36,6 +36,10 @@
 #include "core.h"
 #include "ArrowParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -194,6 +198,44 @@ ArrowParms::ArrowParms (lua_State* L, int index):
 ArrowParms::~ArrowParms (void)
 {
     cleanup();
+}
+
+/*----------------------------------------------------------------------------
+ * defaultparmrs2json - returns default parameters as a JSON string
+ *----------------------------------------------------------------------------*/
+const char* ArrowParms::defaultparms2json(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    doc.AddMember("path", rapidjson::Value(path ? path : "", allocator), allocator);
+
+    const char* format_str = format == NATIVE ? "NATIVE" :
+                             format == FEATHER ? "FEATHER" :
+                             format == PARQUET ? "PARQUET" :
+                             format == CSV ? "CSV" : "UNSUPPORTED";
+
+    doc.AddMember("format", rapidjson::Value(format_str, allocator), allocator);
+
+    doc.AddMember("open_on_complete", open_on_complete, allocator);
+    doc.AddMember("as_geo", as_geo, allocator);
+    doc.AddMember("asset_name", rapidjson::Value(asset_name ? asset_name : "", allocator), allocator);
+    doc.AddMember("region", rapidjson::Value(region ? region : "", allocator), allocator);
+
+    /* vector is empty for default values */
+    doc.AddMember("ancillary_fields", rapidjson::Value("[]"), allocator);
+
+    #ifdef __aws__
+    doc.AddMember("aws_region", rapidjson::Value(region ? region : "", allocator), allocator);
+    doc.AddMember("credentials", rapidjson::Value(credentials.provided ? "provided" : "not provided", allocator), allocator);
+    #endif
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /*----------------------------------------------------------------------------

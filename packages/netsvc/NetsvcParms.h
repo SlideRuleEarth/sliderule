@@ -54,6 +54,7 @@ class NetsvcParms: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* SELF;
         static const char* POLYGON;
         static const char* RASTER;
         static const char* LATITUDE;
@@ -81,6 +82,7 @@ class NetsvcParms: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
+        const char*         defaultparms2json   (void) const override;
 
         /*--------------------------------------------------------------------
          * Data

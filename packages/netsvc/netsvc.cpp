@@ -76,6 +76,7 @@ int netsvc_open (lua_State* L)
     luaL_newlib(L, netsvc_functions);
 
     /* Set Globals */
+    LuaEngine::setAttrStr(L, "PARMS",         NetsvcParms::SELF);
     LuaEngine::setAttrInt(L, "RQST_TIMEOUT",  NetsvcParms::DEFAULT_RQST_TIMEOUT);
     LuaEngine::setAttrInt(L, "NODE_TIMEOUT",  NetsvcParms::DEFAULT_NODE_TIMEOUT);
     LuaEngine::setAttrInt(L, "READ_TIMEOUT",  NetsvcParms::DEFAULT_READ_TIMEOUT);

@@ -38,6 +38,10 @@
 #include "core.h"
 #include "GeoParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -70,7 +74,7 @@ const char* GeoParms::MODE_ALGO             = "Mode";
 const char* GeoParms::GAUSS_ALGO            = "Gauss";
 
 const char* GeoParms::OBJECT_TYPE           = "GeoParms";
-const char* GeoParms::LUA_META_NAME           = "GeoParms";
+const char* GeoParms::LUA_META_NAME         = "GeoParms";
 const struct luaL_Reg GeoParms::LUA_META_TABLE[] = {
     {"name",        luaAssetName},
     {"region",      luaAssetRegion},
@@ -325,6 +329,43 @@ GeoParms::~GeoParms (void)
 }
 
 /*----------------------------------------------------------------------------
+ * defaultparms2json - returns default parameters as a JSON string
+ *----------------------------------------------------------------------------*/
+const char* GeoParms::defaultparms2json(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    doc.AddMember("sampling_algo", rapidjson::Value(algo2str(sampling_algo), allocator), allocator);
+    doc.AddMember("sampling_radius", sampling_radius, allocator);
+    doc.AddMember("zonal_stats", zonal_stats, allocator);
+    doc.AddMember("flags_file", flags_file, allocator);
+    doc.AddMember("filter_time", filter_time, allocator);
+    doc.AddMember("url_substring", url_substring ? rapidjson::Value(url_substring, allocator) : rapidjson::Value("null"), allocator);
+    doc.AddMember("filter_closest_time", filter_closest_time, allocator);
+    doc.AddMember("use_poi_time", use_poi_time, allocator);
+    doc.AddMember("filter_doy_range", filter_doy_range, allocator);
+    doc.AddMember("doy_keep_inrange", doy_keep_inrange, allocator);
+    doc.AddMember("doy_start", doy_start, allocator);
+    doc.AddMember("doy_end", doy_end, allocator);
+    doc.AddMember("proj_pipeline", proj_pipeline ? rapidjson::Value(proj_pipeline, allocator) : rapidjson::Value("null"), allocator);
+    doc.AddMember("aoi_bbox", rapidjson::Value().SetArray().PushBack(aoi_bbox.lon_min, allocator).PushBack(aoi_bbox.lat_min, allocator).PushBack(aoi_bbox.lon_max, allocator).PushBack(aoi_bbox.lat_max, allocator), allocator);
+    doc.AddMember("catalog", catalog ? rapidjson::Value(catalog, allocator) : rapidjson::Value("null"), allocator);
+    doc.AddMember("bands_list", rapidjson::Value("[]"), allocator);  //Empty list
+    doc.AddMember("bands", rapidjson::Value("null"), allocator); //No direct conversion of bands_list::Iterator* to json
+    doc.AddMember("asset_name", asset_name ? rapidjson::Value(asset_name, allocator) : rapidjson::Value("null"), allocator);
+    doc.AddMember("asset", rapidjson::Value("null"), allocator);
+    doc.AddMember("key_space", 0, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
+}
+
+/*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
 void GeoParms::cleanup (void)
@@ -381,6 +422,25 @@ int GeoParms::str2algo (const char* str)
     if(StringLib::match(str, MODE_ALGO))             return static_cast<int>(GRIORA_Mode);
     if(StringLib::match(str, GAUSS_ALGO))            return static_cast<int>(GRIORA_Gauss);
     throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
+}
+
+/*----------------------------------------------------------------------------
+ * algo2str
+ *----------------------------------------------------------------------------*/
+const char* GeoParms::algo2str(int algo)
+{
+    switch(algo)
+    {
+        case GRIORA_NearestNeighbour: return NEARESTNEIGHBOUR_ALGO;
+        case GRIORA_Bilinear:         return BILINEAR_ALGO;
+        case GRIORA_Cubic:            return CUBIC_ALGO;
+        case GRIORA_CubicSpline:      return CUBICSPLINE_ALGO;
+        case GRIORA_Lanczos:          return LANCZOS_ALGO;
+        case GRIORA_Average:          return AVERAGE_ALGO;
+        case GRIORA_Mode:             return MODE_ALGO;
+        case GRIORA_Gauss:            return GAUSS_ALGO;
+        default:                      return "Unknown";
+    }
 }
 
 /*----------------------------------------------------------------------------

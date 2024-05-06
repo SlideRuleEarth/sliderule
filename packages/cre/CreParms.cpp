@@ -36,6 +36,10 @@
 #include "core.h"
 #include "CreParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -160,6 +164,25 @@ void CreParms::cleanup (void)
         delete [] command;
         command = NULL;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * defaultparms2json - returns default parameters as a JSON string
+ *----------------------------------------------------------------------------*/
+const char* CreParms::defaultparms2json(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    doc.AddMember("image", image ? rapidjson::Value(image, allocator) : rapidjson::Value("null", allocator), allocator);
+    doc.AddMember("command", image ? rapidjson::Value(command, allocator) : rapidjson::Value("null", allocator), allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /*----------------------------------------------------------------------------

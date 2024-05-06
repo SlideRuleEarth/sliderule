@@ -40,7 +40,7 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_SWOT_LIBNAME                            "swot"
+#define LUA_SWOT_LIBNAME  "swot"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -70,6 +70,8 @@ int swot_open (lua_State *L)
 
     /* Set Library */
     luaL_newlib(L, swot_functions);
+
+    LuaEngine::setAttrStr(L, "PARMS", SwotParms::_SELF);
 
     return 1;
 }

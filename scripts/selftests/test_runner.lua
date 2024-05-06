@@ -3,6 +3,9 @@ local td = runner.rootdir(arg[0]) -- root directory
 local incloud = arg[1] == "cloud"
 
 -- Run Core Self Tests --
+
+runner.script(td .. "default_parms_tojson.lua")
+
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")

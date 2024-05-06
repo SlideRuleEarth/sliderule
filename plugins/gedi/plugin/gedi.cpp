@@ -80,6 +80,7 @@ int gedi_open (lua_State *L)
     luaL_newlib(L, gedi_functions);
 
     /* Set Globals */
+    LuaEngine::setAttrStr(L, "PARMS",           GediParms::_SELF);
     LuaEngine::setAttrInt(L, "NUM_BEAMS",       GediParms::NUM_BEAMS);
     LuaEngine::setAttrInt(L, "ALL_BEAMS",       GediParms::ALL_BEAMS);
 
