@@ -4,8 +4,6 @@ local incloud = arg[1] == "cloud"
 
 -- Run Core Self Tests --
 
-runner.script(td .. "default_parms_tojson.lua")
-
 if __core__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")
@@ -117,6 +115,9 @@ if __gebco__ and incloud then
     local gebco_td = td .. "../../plugins/gebco/selftests/"
     runner.script(gebco_td .. "gebco_reader.lua")
 end
+
+-- Run Default Parameters Self Tests for all modules
+runner.script(td .. "default_parms_tojson.lua")
 
 -- Report Results --
 local errors = runner.report()
