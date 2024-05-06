@@ -39,7 +39,7 @@
 #include "core.h"
 #include "h5.h"
 
-#include "Atl06Reader.h"
+#include "Atl13Reader.h"
 #include "Icesat2Parms.h"
 #include "AncillaryFields.h"
 
@@ -49,58 +49,47 @@ using std::numeric_limits;
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl06Reader::elRecType = "atl06srec.elevation";
-const RecordObject::fieldDef_t Atl06Reader::elRecDef[] = {
-    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                     1,  NULL, NATIVE_FLAGS},
-    {"cycle",                   RecordObject::UINT16,   offsetof(elevation_t, cycle),                   1,  NULL, NATIVE_FLAGS},
-    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                    1,  NULL, NATIVE_FLAGS},
-    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                      1,  NULL, NATIVE_FLAGS},
-// land_ice_segments
-    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
-    {"h_li",                    RecordObject::FLOAT,    offsetof(elevation_t, h_li),                    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"h_li_sigma",              RecordObject::FLOAT,    offsetof(elevation_t, h_li_sigma),              1,  NULL, NATIVE_FLAGS},
-    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"atl06_quality_summary",   RecordObject::INT8,     offsetof(elevation_t, atl06_quality_summary),   1,  NULL, NATIVE_FLAGS},
-    {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),              1,  NULL, NATIVE_FLAGS},
-    {"sigma_geo_h",             RecordObject::FLOAT,    offsetof(elevation_t, sigma_geo_h),             1,  NULL, NATIVE_FLAGS},
-// ground track
-    {"x_atc",                   RecordObject::DOUBLE,   offsetof(elevation_t, x_atc),                   1,  NULL, NATIVE_FLAGS},
-    {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),                   1,  NULL, NATIVE_FLAGS},
-    {"seg_azimuth",             RecordObject::FLOAT,    offsetof(elevation_t, seg_azimuth),             1,  NULL, NATIVE_FLAGS},
-// fit_statistics
-    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),               1,  NULL, NATIVE_FLAGS},
-    {"h_robust_sprd",           RecordObject::FLOAT,    offsetof(elevation_t, h_robust_sprd),           1,  NULL, NATIVE_FLAGS},
-    {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, n_fit_photons),           1,  NULL, NATIVE_FLAGS},
-    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, w_surface_window_final),  1,  NULL, NATIVE_FLAGS},
-// geophysical
-    {"bsnow_conf",              RecordObject::INT8,     offsetof(elevation_t, bsnow_conf),              1,  NULL, NATIVE_FLAGS},
-    {"bsnow_h",                 RecordObject::FLOAT,    offsetof(elevation_t, bsnow_h),                 1,  NULL, NATIVE_FLAGS},
-    {"r_eff",                   RecordObject::FLOAT,    offsetof(elevation_t, r_eff),                   1,  NULL, NATIVE_FLAGS},
-    {"tide_ocean",              RecordObject::FLOAT,    offsetof(elevation_t, tide_ocean),              1,  NULL, NATIVE_FLAGS},
+const char* Atl13Reader::wtRecType = "atl13srec.elevation";
+const RecordObject::fieldDef_t Atl13Reader::wtRecDef[] = {
+    {"extent_id",               RecordObject::UINT64,   offsetof(water_t, extent_id),               1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"rgt",                     RecordObject::UINT16,   offsetof(water_t, rgt),                     1,  NULL, NATIVE_FLAGS},
+    {"cycle",                   RecordObject::UINT16,   offsetof(water_t, cycle),                   1,  NULL, NATIVE_FLAGS},
+    {"spot",                    RecordObject::UINT8,    offsetof(water_t, spot),                    1,  NULL, NATIVE_FLAGS},
+    {"gt",                      RecordObject::UINT8,    offsetof(water_t, gt),                      1,  NULL, NATIVE_FLAGS},
+// beam
+    {"time",                    RecordObject::TIME8,    offsetof(water_t, time_ns),                 1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"snow_ice",                RecordObject::INT8,     offsetof(water_t, snow_ice_atl09),          1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"cloud",                   RecordObject::INT8,     offsetof(water_t, cloud_flag_asr_atl09),    1,  NULL, NATIVE_FLAGS},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(water_t, latitude),                1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(water_t, longitude),               1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"ht_ortho",                RecordObject::FLOAT,    offsetof(water_t, ht_ortho),                1,  NULL, NATIVE_FLAGS},
+    {"ht_water_surf",           RecordObject::FLOAT,    offsetof(water_t, ht_water_surf),           1,  NULL, NATIVE_FLAGS},
+    {"segment_azimuth",         RecordObject::FLOAT,    offsetof(water_t, segment_azimuth),         1,  NULL, NATIVE_FLAGS},
+    {"segment_quality",         RecordObject::INT32,    offsetof(water_t, segment_quality),         1,  NULL, NATIVE_FLAGS},
+    {"segment_slope_trk_bdy",   RecordObject::FLOAT,    offsetof(water_t, segment_slope_trk_bdy),   1,  NULL, NATIVE_FLAGS},
+    {"water_depth",             RecordObject::FLOAT,    offsetof(water_t, water_depth),             1,  NULL, NATIVE_FLAGS},
 };
 
-const char* Atl06Reader::atRecType = "atl06srec";
-const RecordObject::fieldDef_t Atl06Reader::atRecDef[] = {
-    {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
+const char* Atl13Reader::atRecType = "atl13srec";
+const RecordObject::fieldDef_t Atl13Reader::atRecDef[] = {
+    {"water",                   RecordObject::USER,     offsetof(atl13_t, water),                   0,  wtRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
-const char* Atl06Reader::OBJECT_TYPE = "Atl06Reader";
-const char* Atl06Reader::LUA_META_NAME = "Atl06Reader";
-const struct luaL_Reg Atl06Reader::LUA_META_TABLE[] = {
+const char* Atl13Reader::OBJECT_TYPE = "Atl13Reader";
+const char* Atl13Reader::LUA_META_NAME = "Atl13Reader";
+const struct luaL_Reg Atl13Reader::LUA_META_TABLE[] = {
     {"stats",       luaStats},
     {NULL,          NULL}
 };
 
 /******************************************************************************
- * ATL06 READER CLASS
+ * ATL13 READER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
-int Atl06Reader::luaCreate (lua_State* L)
+int Atl13Reader::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
     Icesat2Parms* parms = NULL;
@@ -115,13 +104,13 @@ int Atl06Reader::luaCreate (lua_State* L)
         bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl06Reader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl13Reader(L, asset, resource, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
         if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", Atl06Reader::LUA_META_NAME, e.what());
+        mlog(e.level(), "Error creating %s: %s", Atl13Reader::LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -129,16 +118,16 @@ int Atl06Reader::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Atl06Reader::init (void)
+void Atl13Reader::init (void)
 {
-    RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),    NULL /* "extent_id" */);
-    RECDEF(atRecType,       atRecDef,       sizeof(atl06_t),        NULL);
+    RECDEF(wtRecType,       wtRecDef,       sizeof(water_t),        NULL /* "extent_id" */);
+    RECDEF(atRecType,       atRecDef,       sizeof(atl13_t),        NULL);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
+Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000)
 {
@@ -219,7 +208,7 @@ Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, co
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::~Atl06Reader (void)
+Atl13Reader::~Atl13Reader (void)
 {
     active = false;
 
@@ -240,9 +229,9 @@ Atl06Reader::~Atl06Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Region::Region (info_t* info):
-    latitude        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/latitude").c_str(),  &info->reader->context),
-    longitude       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/longitude").c_str(), &info->reader->context),
+Atl13Reader::Region::Region (info_t* info):
+    latitude        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_lat").c_str(), &info->reader->context),
+    longitude       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_lon").c_str(), &info->reader->context),
     inclusion_mask  {NULL},
     inclusion_ptr   {NULL}
 {
@@ -291,7 +280,7 @@ Atl06Reader::Region::Region (info_t* info):
 /*----------------------------------------------------------------------------
  * Region::Destructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Region::~Region (void)
+Atl13Reader::Region::~Region (void)
 {
     cleanup();
 }
@@ -299,7 +288,7 @@ Atl06Reader::Region::~Region (void)
 /*----------------------------------------------------------------------------
  * Region::cleanup
  *----------------------------------------------------------------------------*/
-void Atl06Reader::Region::cleanup (void)
+void Atl13Reader::Region::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
@@ -308,7 +297,7 @@ void Atl06Reader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl06Reader::Region::polyregion (info_t* info)
+void Atl13Reader::Region::polyregion (info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -354,7 +343,7 @@ void Atl06Reader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl06Reader::Region::rasterregion (info_t* info)
+void Atl13Reader::Region::rasterregion (info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -407,29 +396,22 @@ void Atl06Reader::Region::rasterregion (info_t* info)
 }
 
 /*----------------------------------------------------------------------------
- * Atl06Data::Constructor
+ * Atl13Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
-    sc_orient               (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                                           &info->reader->context),
-    delta_time              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/delta_time").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
-    h_li                    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/h_li").c_str(),                                 &info->reader->context, 0, region.first_segment, region.num_segments),
-    h_li_sigma              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/h_li_sigma").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
-    atl06_quality_summary   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/atl06_quality_summary").c_str(),                &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/segment_id").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
-    sigma_geo_h             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/sigma_geo_h").c_str(),                          &info->reader->context, 0, region.first_segment, region.num_segments),
-    x_atc                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/x_atc").c_str(),                   &info->reader->context, 0, region.first_segment, region.num_segments),
-    y_atc                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/y_atc").c_str(),                   &info->reader->context, 0, region.first_segment, region.num_segments),
-    seg_azimuth             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/seg_azimuth").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
-    dh_fit_dx               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/dh_fit_dx").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
-    h_robust_sprd           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/h_robust_sprd").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    n_fit_photons           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/n_fit_photons").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    w_surface_window_final  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/w_surface_window_final").c_str(),&info->reader->context, 0, region.first_segment, region.num_segments),
-    bsnow_conf              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/bsnow_conf").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments),
-    bsnow_h                 (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/bsnow_h").c_str(),                  &info->reader->context, 0, region.first_segment, region.num_segments),
-    r_eff                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/r_eff").c_str(),                    &info->reader->context, 0, region.first_segment, region.num_segments),
-    tide_ocean              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/tide_ocean").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments)
+Atl13Reader::Atl13Data::Atl13Data (info_t* info, const Region& region):
+    sc_orient               (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",           &info->reader->context),
+    delta_time              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "delta_time").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_id_beg          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_id_beg").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
+    snow_ice_atl09          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "snow_ice_atl09").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
+    cloud_flag_asr_atl09    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "cloud_flag_asr_atl09").c_str(),   &info->reader->context, 0, region.first_segment, region.num_segments),
+    ht_ortho                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "ht_ortho").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments),
+    ht_water_surf           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "ht_water_surf").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_azimuth         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_azimuth").c_str(),        &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_quality         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_quality").c_str(),        &info->reader->context, H5Coro::ALL_ROWS, region.first_segment, region.num_segments),
+    segment_slope_trk_bdy   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_slope_trk_bdy").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
+    water_depth             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "water_depth").c_str(),            &info->reader->context, 0, region.first_segment, region.num_segments)
 {
-    AncillaryFields::list_t* anc_fields = info->reader->parms->atl06_fields;
+    AncillaryFields::list_t* anc_fields = info->reader->parms->atl13_fields;
 
     /* Read Ancillary Fields */
     if(anc_fields)
@@ -448,22 +430,15 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
     /* Join Hardcoded Reads */
     sc_orient.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
-    h_li.join(info->reader->read_timeout_ms, true);
-    h_li_sigma.join(info->reader->read_timeout_ms, true);
-    atl06_quality_summary.join(info->reader->read_timeout_ms, true);
-    segment_id.join(info->reader->read_timeout_ms, true);
-    sigma_geo_h.join(info->reader->read_timeout_ms, true);
-    x_atc.join(info->reader->read_timeout_ms, true);
-    y_atc.join(info->reader->read_timeout_ms, true);
-    seg_azimuth.join(info->reader->read_timeout_ms, true);
-    dh_fit_dx.join(info->reader->read_timeout_ms, true);
-    h_robust_sprd.join(info->reader->read_timeout_ms, true);
-    n_fit_photons.join(info->reader->read_timeout_ms, true);
-    w_surface_window_final.join(info->reader->read_timeout_ms, true);
-    bsnow_conf.join(info->reader->read_timeout_ms, true);
-    bsnow_h.join(info->reader->read_timeout_ms, true);
-    r_eff.join(info->reader->read_timeout_ms, true);
-    tide_ocean.join(info->reader->read_timeout_ms, true);
+    segment_id_beg.join(info->reader->read_timeout_ms, true);
+    snow_ice_atl09.join(info->reader->read_timeout_ms, true);
+    cloud_flag_asr_atl09.join(info->reader->read_timeout_ms, true);
+    ht_ortho.join(info->reader->read_timeout_ms, true);
+    ht_water_surf.join(info->reader->read_timeout_ms, true);
+    segment_azimuth.join(info->reader->read_timeout_ms, true);
+    segment_quality.join(info->reader->read_timeout_ms, true);
+    segment_slope_trk_bdy.join(info->reader->read_timeout_ms, true);
+    water_depth.join(info->reader->read_timeout_ms, true);
 
     /* Join Ancillary  Reads */
     if(anc_fields)
@@ -481,24 +456,24 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
 /*----------------------------------------------------------------------------
  * Atl03Data::Destructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Atl06Data::~Atl06Data (void)
+Atl13Reader::Atl13Data::~Atl13Data (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
-void* Atl06Reader::subsettingThread (void* parm)
+void* Atl13Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = (info_t*)parm;
-    Atl06Reader* reader = info->reader;
+    Atl13Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl06_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -507,14 +482,14 @@ void* Atl06Reader::subsettingThread (void* parm)
         Region region(info);
 
         /* Read ATL06 Datasets */
-        Atl06Data atl06(info, region);
+        Atl13Data atl13(info, region);
 
         /* Increment Read Statistics */
         local_stats.segments_read = region.num_segments;
 
         /* Initialize Loop Variables */
         RecordObject* batch_record = NULL;
-        atl06_t* atl06_data = NULL;
+        atl13_t* atl13_data = NULL;
         uint32_t extent_counter = 0;
         int batch_index = 0;
 
@@ -525,51 +500,44 @@ void* Atl06Reader::subsettingThread (void* parm)
             if(!batch_record)
             {
                 batch_record = new RecordObject(atRecType);
-                atl06_data = reinterpret_cast<atl06_t*>(batch_record->getRecordData());
+                atl13_data = reinterpret_cast<atl13_t*>(batch_record->getRecordData());
                 rec_vec.push_back(batch_record);
             }
 
             /* Populate Elevation */
-            elevation_t* entry = &atl06_data->elevation[batch_index++];
+            water_t* entry = &atl13_data->water[batch_index++];
             entry->extent_id                = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
-            entry->time_ns                  = Icesat2Parms::deltatime2timestamp(atl06.delta_time[segment]);
-            entry->segment_id               = atl06.segment_id[segment];
+            entry->time_ns                  = Icesat2Parms::deltatime2timestamp(atl13.delta_time[segment]);
+            entry->segment_id               = atl13.segment_id_beg[segment];
             entry->rgt                      = reader->start_rgt;
             entry->cycle                    = reader->start_cycle;
-            entry->spot                     = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl06.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
-            entry->gt                       = Icesat2Parms::getGroundTrack((Icesat2Parms::sc_orient_t)atl06.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
-            entry->atl06_quality_summary    = atl06.atl06_quality_summary[segment];
-            entry->bsnow_conf               = atl06.bsnow_conf[segment];
-            entry->n_fit_photons            = atl06.n_fit_photons[segment]          != numeric_limits<int32_t>::max() ? atl06.n_fit_photons[segment]            : 0;
+            entry->spot                     = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl13.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
+            entry->gt                       = Icesat2Parms::getGroundTrack((Icesat2Parms::sc_orient_t)atl13.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
             entry->latitude                 = region.latitude[segment];
             entry->longitude                = region.longitude[segment];
-            entry->x_atc                    = atl06.x_atc[segment]                  != numeric_limits<double>::max()  ? atl06.x_atc[segment]                    : numeric_limits<double>::quiet_NaN();
-            entry->y_atc                    = atl06.y_atc[segment]                  != numeric_limits<float>::max()   ? atl06.y_atc[segment]                    : numeric_limits<float>::quiet_NaN();
-            entry->h_li                     = atl06.h_li[segment]                   != numeric_limits<float>::max()   ? atl06.h_li[segment]                     : numeric_limits<float>::quiet_NaN();
-            entry->h_li_sigma               = atl06.h_li_sigma[segment]             != numeric_limits<float>::max()   ? atl06.h_li_sigma[segment]               : numeric_limits<float>::quiet_NaN();
-            entry->sigma_geo_h              = atl06.sigma_geo_h[segment]            != numeric_limits<float>::max()   ? atl06.sigma_geo_h[segment]              : numeric_limits<float>::quiet_NaN();
-            entry->seg_azimuth              = atl06.seg_azimuth[segment]            != numeric_limits<float>::max()   ? atl06.seg_azimuth[segment]              : numeric_limits<float>::quiet_NaN();
-            entry->dh_fit_dx                = atl06.dh_fit_dx[segment]              != numeric_limits<float>::max()   ? atl06.dh_fit_dx[segment]                : numeric_limits<float>::quiet_NaN();
-            entry->h_robust_sprd            = atl06.h_robust_sprd[segment]          != numeric_limits<float>::max()   ? atl06.h_robust_sprd[segment]            : numeric_limits<float>::quiet_NaN();
-            entry->w_surface_window_final   = atl06.w_surface_window_final[segment] != numeric_limits<float>::max()   ? atl06.w_surface_window_final[segment]   : numeric_limits<float>::quiet_NaN();
-            entry->bsnow_h                  = atl06.bsnow_h[segment]                != numeric_limits<float>::max()   ? atl06.bsnow_h[segment]                  : numeric_limits<float>::quiet_NaN();
-            entry->r_eff                    = atl06.r_eff[segment]                  != numeric_limits<float>::max()   ? atl06.r_eff[segment]                    : numeric_limits<float>::quiet_NaN();
-            entry->tide_ocean               = atl06.tide_ocean[segment]             != numeric_limits<float>::max()   ? atl06.tide_ocean[segment]               : numeric_limits<float>::quiet_NaN(); 
+            entry->snow_ice_atl09           = atl13.snow_ice_atl09[segment];
+            entry->cloud_flag_asr_atl09     = atl13.cloud_flag_asr_atl09[segment];
+            entry->ht_ortho                 = atl13.ht_ortho[segment]               != numeric_limits<int32_t>::max() ? atl13.ht_ortho[segment]                 : 0;
+            entry->ht_water_surf            = atl13.ht_water_surf[segment]          != numeric_limits<float>::max()   ? atl13.ht_water_surf[segment]            : numeric_limits<float>::quiet_NaN();
+            entry->segment_azimuth          = atl13.segment_azimuth[segment]        != numeric_limits<float>::max()   ? atl13.segment_azimuth[segment]          : numeric_limits<float>::quiet_NaN();
+            entry->segment_quality          = 0; // atl13.segment_quality[segment]        != numeric_limits<int32_t>::max() ? atl13.segment_quality[segment]          : 0;
+            entry->segment_slope_trk_bdy    = atl13.segment_slope_trk_bdy[segment]  != numeric_limits<float>::max()   ? atl13.segment_slope_trk_bdy[segment]    : numeric_limits<float>::quiet_NaN();
+            entry->water_depth              = atl13.water_depth[segment]            != numeric_limits<float>::max()   ? atl13.water_depth[segment]              : numeric_limits<float>::quiet_NaN();
 
             /* Populate Ancillary Data */
-            if(parms->atl06_fields)
+            if(parms->atl13_fields)
             {
                 /* Populate Each Field in Array */
                 vector<AncillaryFields::field_t> field_vec;
-                for(int i = 0; i < parms->atl06_fields->length(); i++)
+                for(int i = 0; i < parms->atl13_fields->length(); i++)
                 {
-                    const char* field_name = parms->atl06_fields->get(i).field.c_str();
+                    const char* field_name = parms->atl13_fields->get(i).field.c_str();
 
                     AncillaryFields::field_t field;
                     field.anc_type = Icesat2Parms::ATL06_ANC_TYPE;
                     field.field_index = i;
-                    field.data_type = atl06.anc_data[field_name]->elementType();
-                    atl06.anc_data[field_name]->serialize(&field.value[0], segment, 1);
+                    field.data_type = atl13.anc_data[field_name]->elementType();
+                    atl13.anc_data[field_name]->serialize(&field.value[0], segment, 1);
 
                     field_vec.push_back(field);
                 }
@@ -587,7 +555,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                 int bufsize = 0;
 
                 /* Calculate Batch Record Size */
-                int recsize = batch_index * sizeof(elevation_t);
+                int recsize = batch_index * sizeof(water_t);
                 batch_record->setUsedData(recsize);
 
                 if(rec_vec.size() > 1) // elevation and ancillary field records
@@ -705,7 +673,7 @@ void* Atl06Reader::subsettingThread (void* parm)
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl06Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& cycle, int32_t& region)
+void Atl13Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& cycle, int32_t& region)
 {
     if(StringLib::size(_resource) < 29)
     {
@@ -761,16 +729,16 @@ void Atl06Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& c
 /*----------------------------------------------------------------------------
  * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/
-int Atl06Reader::luaStats (lua_State* L)
+int Atl13Reader::luaStats (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Atl06Reader* lua_obj = NULL;
+    Atl13Reader* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = dynamic_cast<Atl06Reader*>(getLuaSelf(L, 1));
+        lua_obj = dynamic_cast<Atl13Reader*>(getLuaSelf(L, 1));
     }
     catch(const RunTimeException& e)
     {

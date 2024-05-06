@@ -68,6 +68,7 @@ const char* Icesat2Parms::ATL03_GEO_FIELDS             = "atl03_geo_fields";
 const char* Icesat2Parms::ATL03_PH_FIELDS              = "atl03_ph_fields";
 const char* Icesat2Parms::ATL06_FIELDS                 = "atl06_fields";
 const char* Icesat2Parms::ATL08_FIELDS                 = "atl08_fields";
+const char* Icesat2Parms::ATL13_FIELDS                 = "atl13_fields";
 const char* Icesat2Parms::PHOREAL                      = "phoreal";
 const char* Icesat2Parms::PHOREAL_BINSIZE              = "binsize";
 const char* Icesat2Parms::PHOREAL_GEOLOC               = "geoloc";
@@ -292,6 +293,7 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
     atl03_ph_fields             (NULL),
     atl06_fields                (NULL),
     atl08_fields                (NULL),
+    atl13_fields                (NULL),
     phoreal                     { .binsize          = 1.0,
                                   .geoloc           = PHOREAL_MEDIAN,
                                   .use_abs_h        = false,
@@ -433,6 +435,12 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
         }
         lua_pop(L, 1);
 
+        /* ATL13 Fields */
+        lua_getfield(L, index, Icesat2Parms::ATL13_FIELDS);
+        get_lua_field_list (L, -1, &atl13_fields, &provided);
+        if(provided) mlog(DEBUG, "ATL13 field array supplied");
+        lua_pop(L, 1);
+
         /* PhoREAL */
         lua_getfield(L, index, Icesat2Parms::PHOREAL);
         get_lua_phoreal(L, -1, &provided);
@@ -477,6 +485,7 @@ void Icesat2Parms::cleanup (void) const
     delete atl03_ph_fields;
     delete atl06_fields;
     delete atl08_fields;
+    delete atl13_fields;
 }
 
 /*----------------------------------------------------------------------------

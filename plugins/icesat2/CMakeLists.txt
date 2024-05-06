@@ -47,6 +47,7 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl08Dispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl13Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTDArray.cpp
@@ -75,6 +76,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06sp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13s.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13sp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24g.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24gp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
@@ -102,6 +105,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl08Dispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl13Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyParms.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/CumulusIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/GTArray.h

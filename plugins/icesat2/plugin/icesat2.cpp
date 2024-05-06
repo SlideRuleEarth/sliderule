@@ -70,6 +70,7 @@ int icesat2_open (lua_State *L)
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
+        {"atl13s",              Atl13Reader::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
         {"ut_atl03",            UT_Atl03Reader::luaCreate},
@@ -128,6 +129,7 @@ void initicesat2 (void)
     Atl06Dispatch::init();
     Atl06Reader::init();
     Atl08Dispatch::init();
+    Atl13Reader::init();
 
     /* Register Cumulus IO Driver */
     Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);

@@ -42,6 +42,7 @@
 #include "Atl06Dispatch.h"
 #include "Atl06Reader.h"
 #include "Atl08Dispatch.h"
+#include "Atl13Reader.h"
 #include "BathyParms.h"
 #include "CumulusIODriver.h"
 #include "GTArray.h"

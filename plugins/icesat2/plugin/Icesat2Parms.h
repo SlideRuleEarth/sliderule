@@ -84,6 +84,7 @@ class Icesat2Parms: public NetsvcParms
         static const char* ATL03_PH_FIELDS;
         static const char* ATL06_FIELDS;
         static const char* ATL08_FIELDS;
+        static const char* ATL13_FIELDS;
         static const char* PHOREAL;
         static const char* PHOREAL_BINSIZE;
         static const char* PHOREAL_GEOLOC;
@@ -298,6 +299,7 @@ class Icesat2Parms: public NetsvcParms
         AncillaryFields::list_t*    atl03_ph_fields;                // list of per-photon fields to associate with an extent
         AncillaryFields::list_t*    atl06_fields;                   // list of ATL06 fields to associate with an ATL06 subsetting request
         AncillaryFields::list_t*    atl08_fields;                   // list of ATL08 fields to associate with an extent
+        AncillaryFields::list_t*    atl13_fields;                   // list of ATL13 fields to associate with an extent
         phoreal_t                   phoreal;                        // phoreal algorithm settings
 
     protected:
