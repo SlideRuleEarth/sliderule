@@ -29,42 +29,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __atl13_io_driver__
+#define __atl13_io_driver__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl03Reader.h"
-#include "Atl03Indexer.h"
-#include "Atl03BathyReader.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "Atl13IODriver.h"
-#include "Atl13Reader.h"
-#include "BathyParms.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "Icesat2Parms.h"
-#include "MeritRaster.h"
-
-#ifdef __unittesting__
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
+#include "Asset.h"
+#include "S3CurlIODriver.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * S3 IO DRIVER CLASS
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
-}
+class Atl13IODriver: S3CurlIODriver
+{
+    public:
 
-#endif  /* __icesat2_plugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const char* FORMAT;
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static Asset::IODriver* create  (const Asset* _asset, const char* resource);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        Atl13IODriver (const Asset* _asset, const char* resource);
+        ~Atl13IODriver (void);
+};
+
+#endif  /* __atl13_io_driver__ */

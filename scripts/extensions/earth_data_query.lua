@@ -20,6 +20,7 @@ DATASETS = {
     ATL06 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
     ATL08 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
     ATL09 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    ATL13 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI01_B =                                            {provider = "LPDAAC_ECS",  version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI02_A =                                            {provider = "LPDAAC_ECS",  version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI02_B =                                            {provider = "LPDAAC_ECS",  version = "002",  api = "cmr",   formats = {".tiff"},  collections = {}},
@@ -51,6 +52,7 @@ ASSETS_TO_DATASETS = {
     ["icesat2-atl06"] = "ATL06",
     ["icesat2-atl08"] = "ATL08",
     ["icesat2-atl09"] = "ATL09",
+    ["icesat2-atl13"] = "ATL13",
     ["atlas-local"] = "ATL03",
     ["nsidc-s3"] = "ATL03"
 }

@@ -131,8 +131,9 @@ void initicesat2 (void)
     Atl08Dispatch::init();
     Atl13Reader::init();
 
-    /* Register Cumulus IO Driver */
+    /* Register IO Drivers */
     Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);
+    Asset::registerDriver(Atl13IODriver::FORMAT, Atl13IODriver::create);
 
     /* Register Rasters */
     RasterObject::registerRaster(MeritRaster::ASSET_NAME, MeritRaster::create);

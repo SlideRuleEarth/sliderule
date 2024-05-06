@@ -471,6 +471,81 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     return sliderule.emptyframe()
 
 #
+#  Subsetted ATL13
+#
+def atl13s (parm, resource):
+    '''
+    Subsets ATL13 data given the polygon and time range provided and returns measurements
+
+    Parameters
+    ----------
+        parms:      dict
+                    parameters used to configure ATL13 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        resource:   str
+                    ATL13 HDF5 filename
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL13 water measurements
+    '''
+    return atl13sp(parm, resources=[resource])
+
+#
+#  Parallel Subsetted ATL13
+#
+def atl13sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+    '''
+    Performs ATL13 subsetting in parallel on ATL13 data and returns measurement data.  Unlike the `atl13s <#atl13s>`_ function,
+    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
+    is used to fetch all available resources from the CMR system automatically.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL13 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL13_20181019065445_03150111_005_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
+        as_numpy_array: bool
+                        whether to provide all sampled values as numpy arrays even if there is only a single value
+        height_key:     str
+                        identifies the name of the column provided for the 3D CRS transformation
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL13 water measurements
+    '''
+    try:
+        tstart = time.perf_counter()
+
+        # Build Request
+        rqst = __build_request(parm, resources, default_asset="icesat2-atl13")
+
+        # Make API Processing Request
+        rsps = sliderule.source("atl13sp", rqst, stream=True, callbacks=callbacks)
+
+        # Flatten Responses
+        gdf = __flattenbatches(rsps, 'atl13srec', 'water', parm, keep_id, as_numpy_array, height_key)
+
+        # Return Response
+        profiles[atl13sp.__name__] = time.perf_counter() - tstart
+        return gdf
+
+    # Handle Runtime Errorss
+    except RuntimeError as e:
+        logger.critical(e)
+        if rethrow_exceptions:
+            raise
+    
+    # Error Case
+    return sliderule.emptyframe()
+
+#
 #  Subsetted ATL03
 #
 def atl03s (parm, resource):

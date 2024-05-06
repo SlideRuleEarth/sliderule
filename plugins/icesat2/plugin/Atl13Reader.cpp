@@ -419,7 +419,7 @@ Atl13Reader::Atl13Data::Atl13Data (info_t* info, const Region& region):
         for(int i = 0; i < anc_fields->length(); i++)
         {
             const char* field_name = (*anc_fields)[i].field.c_str();
-            FString dataset_name("%s/land_ice_segments/%s", info->prefix, field_name);
+            FString dataset_name("%s/%s", info->prefix, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
             bool status = anc_data.add(field_name, array);
             if(!status) delete array;
