@@ -59,11 +59,13 @@ SLIDERULE_EPSG = "EPSG:7912"
 PUBLIC_URL = "slideruleearth.io"
 PUBLIC_ORG = "sliderule"
 
+DEFAULT_TRUST_ENV = False
+
 service_url = PUBLIC_URL
 service_org = PUBLIC_ORG
 
 session = requests.Session()
-session.trust_env = False
+session.trust_env = DEFAULT_TRUST_ENV
 
 ps_refresh_token = None
 ps_access_token = None
@@ -700,7 +702,17 @@ def simplifypolygon(parm):
 #
 #  Initialize
 #
-def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, desired_nodes=None, time_to_live=60, bypass_dns=False, plugins=[]):
+def init (
+    url=PUBLIC_URL, 
+    verbose=False, 
+    loglevel=logging.INFO, 
+    organization=0, 
+    desired_nodes=None, 
+    time_to_live=60, 
+    bypass_dns=False, 
+    plugins=[],
+    trust_env=DEFAULT_TRUST_ENV
+):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -734,9 +746,12 @@ def init (url=PUBLIC_URL, verbose=False, loglevel=logging.INFO, organization=0, 
         >>> import sliderule
         >>> sliderule.init()
     '''
-    #  massage function parameters
+    # massage function parameters
     if organization == 0:
         organization = PUBLIC_ORG
+    # reconfigure session (if necessary)
+    if session.trust_env != trust_env:
+        session.trust_env = trust_env
     # configure client
     set_verbose(verbose, loglevel)
     set_url(url) # configure domain
