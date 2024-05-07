@@ -504,6 +504,9 @@ void* Atl13Reader::subsettingThread (void* parm)
                 rec_vec.push_back(batch_record);
             }
 
+            /* Grab Nominal Segment Quality */
+            int32_t nomial_segment_quality = atl13.segment_quality[4 * segment];
+
             /* Populate Elevation */
             water_t* entry = &atl13_data->water[batch_index++];
             entry->extent_id                = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
@@ -517,10 +520,10 @@ void* Atl13Reader::subsettingThread (void* parm)
             entry->longitude                = region.longitude[segment];
             entry->snow_ice_atl09           = atl13.snow_ice_atl09[segment];
             entry->cloud_flag_asr_atl09     = atl13.cloud_flag_asr_atl09[segment];
-            entry->ht_ortho                 = atl13.ht_ortho[segment]               != numeric_limits<int32_t>::max() ? atl13.ht_ortho[segment]                 : 0;
+            entry->ht_ortho                 = atl13.ht_ortho[segment]               != numeric_limits<float>::max() ? atl13.ht_ortho[segment]                   : numeric_limits<float>::quiet_NaN();
             entry->ht_water_surf            = atl13.ht_water_surf[segment]          != numeric_limits<float>::max()   ? atl13.ht_water_surf[segment]            : numeric_limits<float>::quiet_NaN();
             entry->segment_azimuth          = atl13.segment_azimuth[segment]        != numeric_limits<float>::max()   ? atl13.segment_azimuth[segment]          : numeric_limits<float>::quiet_NaN();
-            entry->segment_quality          = 0; // atl13.segment_quality[segment]        != numeric_limits<int32_t>::max() ? atl13.segment_quality[segment]          : 0;
+            entry->segment_quality          = nomial_segment_quality                != numeric_limits<int32_t>::max() ? atl13.segment_quality[segment]          : 0;
             entry->segment_slope_trk_bdy    = atl13.segment_slope_trk_bdy[segment]  != numeric_limits<float>::max()   ? atl13.segment_slope_trk_bdy[segment]    : numeric_limits<float>::quiet_NaN();
             entry->water_depth              = atl13.water_depth[segment]            != numeric_limits<float>::max()   ? atl13.water_depth[segment]              : numeric_limits<float>::quiet_NaN();
 
