@@ -84,24 +84,31 @@ int64_t SwotParms::deltatime2timestamp (double delta_time)
 }
 
 /*----------------------------------------------------------------------------
- * defaultparms2json - returns default parameters as a JSON string
+ * tojson
  *----------------------------------------------------------------------------*/
-const char* SwotParms::defaultparms2json(void) const
+const char* SwotParms::tojson (void) const
 {
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     /* Base class params first */
-    const char* netsvcjson = NetsvcParms::defaultparms2json();
+    const char* netsvcjson = NetsvcParms::tojson();
     if(netsvcjson)
     {
         doc.Parse(netsvcjson);
         delete [] netsvcjson;;
     }
 
-    /* List is empty for default values */
-    doc.AddMember("variables", rapidjson::Value("[]"), allocator);
+    /* Serialize variables */
+    rapidjson::Value var_array(rapidjson::kArrayType);
+    List<string>::Iterator iter(variables);
+    for(int i = 0; i < variables.length(); i++)
+    {
+        rapidjson::Value var_str(iter[i].c_str(), allocator);
+        var_array.PushBack(var_str, allocator);
+    }
+    doc.AddMember(rapidjson::Value(VARIABLES, allocator), var_array, allocator);
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

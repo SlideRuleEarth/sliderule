@@ -71,7 +71,7 @@ class SwotParms: public NetsvcParms
 
         static int          luaCreate           (lua_State* L);
         static int64_t      deltatime2timestamp (double delta_time);
-        const char*         defaultparms2json   (void) const override;
+        const char*         tojson              (void) const override;
 
         /*--------------------------------------------------------------------
          * Data

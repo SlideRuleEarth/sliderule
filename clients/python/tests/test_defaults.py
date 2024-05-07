@@ -15,10 +15,10 @@ class TestDefaultParms:
         d = sliderule.source("defaults")
         assert d is not None
         assert len(d["output"]) > 0
-        assert d["cre"] == '{"image":"null","command":"null"}'
+        assert len(d["cre"]) > 0
         assert len(d["samples"]) > 0
         assert len(d["netsvc"]) > 0
         assert len(d["swot"]) > 0
         assert len(d["gedi"]) > 0
         assert len(d["icesat2"]) > 0
-
+        assert len(d["samples"]) > 0

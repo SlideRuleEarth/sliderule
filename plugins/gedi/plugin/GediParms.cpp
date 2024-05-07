@@ -163,16 +163,16 @@ int64_t GediParms::deltatime2timestamp (double delta_time)
 }
 
 /*----------------------------------------------------------------------------
- * defautparms2json - returns default parameters as a JSON string
+ * tojson
  *----------------------------------------------------------------------------*/
-const char* GediParms::defaultparms2json (void) const
+const char* GediParms::tojson (void) const
 {
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     /* Base class params first */
-    const char* netsvcjson = NetsvcParms::defaultparms2json();
+    const char* netsvcjson = NetsvcParms::tojson();
     if(netsvcjson)
     {
         doc.Parse(netsvcjson);
@@ -181,7 +181,8 @@ const char* GediParms::defaultparms2json (void) const
 
     /* Serialize beams array */
     rapidjson::Value beamsArray(rapidjson::kArrayType);
-    for (int i = 0; i < NUM_BEAMS; ++i) {
+    for (int i = 0; i < NUM_BEAMS; ++i)
+    {
         beamsArray.PushBack(beams[i], allocator);
     }
     doc.AddMember("beams", beamsArray, allocator);

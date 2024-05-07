@@ -82,7 +82,7 @@ class NetsvcParms: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
-        const char*         defaultparms2json   (void) const override;
+        const char*         tojson              (void) const override;
 
         /*--------------------------------------------------------------------
          * Data

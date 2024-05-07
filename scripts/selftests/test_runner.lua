@@ -117,7 +117,7 @@ if __gebco__ and incloud then
 end
 
 -- Run Default Parameters Self Tests for all modules
-runner.script(td .. "default_parms_tojson.lua")
+runner.script(td .. "parms_tojson.lua")
 
 -- Report Results --
 local errors = runner.report()

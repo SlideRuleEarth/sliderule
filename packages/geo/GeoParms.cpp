@@ -329,34 +329,64 @@ GeoParms::~GeoParms (void)
 }
 
 /*----------------------------------------------------------------------------
- * defaultparms2json - returns default parameters as a JSON string
+ * tojson
  *----------------------------------------------------------------------------*/
-const char* GeoParms::defaultparms2json(void) const
+const char* GeoParms::tojson(void) const
 {
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+    rapidjson::Value nullval(rapidjson::kNullType);
 
     doc.AddMember("sampling_algo", rapidjson::Value(algo2str(sampling_algo), allocator), allocator);
     doc.AddMember("sampling_radius", sampling_radius, allocator);
     doc.AddMember("zonal_stats", zonal_stats, allocator);
     doc.AddMember("flags_file", flags_file, allocator);
     doc.AddMember("filter_time", filter_time, allocator);
-    doc.AddMember("url_substring", url_substring ? rapidjson::Value(url_substring, allocator) : rapidjson::Value("null"), allocator);
+
+    if(url_substring) doc.AddMember("url_substring", rapidjson::Value(url_substring, allocator), allocator);
+    else              doc.AddMember("url_substring", nullval, allocator);
+
     doc.AddMember("filter_closest_time", filter_closest_time, allocator);
     doc.AddMember("use_poi_time", use_poi_time, allocator);
     doc.AddMember("filter_doy_range", filter_doy_range, allocator);
     doc.AddMember("doy_keep_inrange", doy_keep_inrange, allocator);
     doc.AddMember("doy_start", doy_start, allocator);
     doc.AddMember("doy_end", doy_end, allocator);
-    doc.AddMember("proj_pipeline", proj_pipeline ? rapidjson::Value(proj_pipeline, allocator) : rapidjson::Value("null"), allocator);
+
+    if(proj_pipeline) doc.AddMember("proj_pipeline", rapidjson::Value(proj_pipeline, allocator), allocator);
+    else              doc.AddMember("proj_pipeline", nullval, allocator);
+
     doc.AddMember("aoi_bbox", rapidjson::Value().SetArray().PushBack(aoi_bbox.lon_min, allocator).PushBack(aoi_bbox.lat_min, allocator).PushBack(aoi_bbox.lon_max, allocator).PushBack(aoi_bbox.lat_max, allocator), allocator);
-    doc.AddMember("catalog", catalog ? rapidjson::Value(catalog, allocator) : rapidjson::Value("null"), allocator);
-    doc.AddMember("bands_list", rapidjson::Value("[]"), allocator);  //Empty list
-    doc.AddMember("bands", rapidjson::Value("null"), allocator); //No direct conversion of bands_list::Iterator* to json
-    doc.AddMember("asset_name", asset_name ? rapidjson::Value(asset_name, allocator) : rapidjson::Value("null"), allocator);
-    doc.AddMember("asset", rapidjson::Value("null"), allocator);
-    doc.AddMember("key_space", 0, allocator);
+
+    if(catalog) doc.AddMember("catalog", rapidjson::Value(catalog, allocator), allocator);
+    else        doc.AddMember("catalog", nullval, allocator);
+
+    if(bands)
+    {
+        rapidjson::Value _bands_list(rapidjson::kArrayType);
+        for(int i = 0; i < bands->length; i++)
+        {
+            const char* name = (*bands)[i].c_str();
+            if(name) _bands_list.PushBack(rapidjson::Value(name, allocator), allocator);
+        }
+        doc.AddMember("bands_list", _bands_list, allocator);
+    }
+    else doc.AddMember("bands_list", rapidjson::Value("[]"), allocator);
+
+    if(asset_name) doc.AddMember("asset_name", rapidjson::Value(asset_name, allocator), allocator);
+    else           doc.AddMember("asset_name", nullval, allocator);
+
+    if(asset)
+    {
+        const char* asset_json = asset->tojson();
+        rapidjson::Document asset_doc;
+        asset_doc.Parse(asset_json);
+        doc.AddMember("asset", asset_doc, allocator);
+    }
+    else doc.AddMember("asset", nullval, allocator);
+
+    doc.AddMember("key_space", key_space, allocator);
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

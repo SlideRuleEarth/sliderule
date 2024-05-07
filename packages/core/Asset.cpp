@@ -41,6 +41,10 @@
 #include "OsApi.h"
 #include "StringLib.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -146,15 +150,15 @@ int Asset::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * public assetFactory
  *----------------------------------------------------------------------------*/
-const Asset* Asset::assetFactory(lua_State* L, std::vector<const char*> attrs) {  
+const Asset* Asset::assetFactory(lua_State* L, std::vector<const char*> attrs) {
 
     // force rebuild
     attributes_t _attributes;
 
-    _attributes.name       = attrs[0]; 
-    _attributes.identity   = attrs[1]; 
-    _attributes.driver     = attrs[2]; 
-    _attributes.path       = attrs[3]; 
+    _attributes.name       = attrs[0];
+    _attributes.identity   = attrs[1];
+    _attributes.driver     = attrs[2];
+    _attributes.path       = attrs[3];
     _attributes.index      = attrs[4];
     _attributes.region     = attrs[5];
     _attributes.endpoint   = attrs[6];
@@ -172,8 +176,8 @@ const Asset* Asset::assetFactory(lua_State* L, std::vector<const char*> attrs) {
         _driver.factory = Asset::IODriver::create; // set it to the default
     }
 
-    return new Asset(L, _attributes, _driver); 
-} 
+    return new Asset(L, _attributes, _driver);
+}
 
 /*----------------------------------------------------------------------------
  * registerDriver
@@ -406,4 +410,30 @@ int Asset::luaLoad (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* Asset::tojson(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    /* Asset attribute strings don't need to be checked for NULL */
+    doc.AddMember("name",     rapidjson::Value(attributes.name, allocator), allocator);
+    doc.AddMember("identity", rapidjson::Value(attributes.identity, allocator), allocator);
+    doc.AddMember("driver",   rapidjson::Value(attributes.driver, allocator), allocator);
+    doc.AddMember("path",     rapidjson::Value(attributes.path, allocator), allocator);
+    doc.AddMember("index",    rapidjson::Value(attributes.index, allocator), allocator);
+    doc.AddMember("region",   rapidjson::Value(attributes.region, allocator), allocator);
+    doc.AddMember("endpoint", rapidjson::Value(attributes.endpoint, allocator), allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
+
 }

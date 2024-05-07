@@ -201,33 +201,38 @@ ArrowParms::~ArrowParms (void)
 }
 
 /*----------------------------------------------------------------------------
- * defaultparmrs2json - returns default parameters as a JSON string
+ * tojson
  *----------------------------------------------------------------------------*/
-const char* ArrowParms::defaultparms2json(void) const
+const char* ArrowParms::tojson (void) const
 {
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+    rapidjson::Value nullval(rapidjson::kNullType);
 
-    doc.AddMember("path", rapidjson::Value(path ? path : "", allocator), allocator);
+    if(path) doc.AddMember("path", rapidjson::Value(path, allocator), allocator);
+    else     doc.AddMember("path", nullval, allocator);
 
-    const char* format_str = format == NATIVE ? "NATIVE" :
-                             format == FEATHER ? "FEATHER" :
-                             format == PARQUET ? "PARQUET" :
-                             format == CSV ? "CSV" : "UNSUPPORTED";
-
-    doc.AddMember("format", rapidjson::Value(format_str, allocator), allocator);
+    doc.AddMember("format", rapidjson::Value(format2str(format), allocator), allocator);
 
     doc.AddMember("open_on_complete", open_on_complete, allocator);
     doc.AddMember("as_geo", as_geo, allocator);
-    doc.AddMember("asset_name", rapidjson::Value(asset_name ? asset_name : "", allocator), allocator);
-    doc.AddMember("region", rapidjson::Value(region ? region : "", allocator), allocator);
 
-    /* vector is empty for default values */
-    doc.AddMember("ancillary_fields", rapidjson::Value("[]"), allocator);
+    if(asset_name) doc.AddMember("asset_name", rapidjson::Value(asset_name, allocator), allocator);
+    else           doc.AddMember("asset_name", nullval, allocator);
+
+    if(region) doc.AddMember("region", rapidjson::Value(region, allocator), allocator);
+    else       doc.AddMember("region", nullval, allocator);
+
+    /* Serialize ancillary fields */
+    rapidjson::Value ancillary(rapidjson::kArrayType);
+    for(int i = 0; i < (int)ancillary_fields.size(); i++)
+    {
+        ancillary.PushBack(rapidjson::Value(ancillary_fields[i].c_str(), allocator), allocator);
+    }
+    doc.AddMember("ancillary_fields", ancillary, allocator);
 
     #ifdef __aws__
-    doc.AddMember("aws_region", rapidjson::Value(region ? region : "", allocator), allocator);
     doc.AddMember("credentials", rapidjson::Value(credentials.provided ? "provided" : "not provided", allocator), allocator);
     #endif
 
@@ -411,5 +416,20 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "ancillary fields must be provided as a table of strings");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * format2str
+ *----------------------------------------------------------------------------*/
+const char* ArrowParms::format2str (format_t fmt) const
+{
+    switch(fmt)
+    {
+        case NATIVE:    return "NATIVE";
+        case FEATHER:   return "FEATHER";
+        case PARQUET:   return "PARQUET";
+        case CSV:       return "CSV";
+        default:        return "UNSUPPORTED";
     }
 }

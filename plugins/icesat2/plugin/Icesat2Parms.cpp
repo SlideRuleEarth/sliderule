@@ -263,16 +263,16 @@ Icesat2Parms::gt_t Icesat2Parms::str2gt (const char* gt_str)
 }
 
 /*----------------------------------------------------------------------------
- * defaultparms2json - convert default parameters to json
+ * tojson
  *----------------------------------------------------------------------------*/
-const char* Icesat2Parms::defaultparms2json (void) const
+const char* Icesat2Parms::tojson (void) const
 {
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     /* Base class params first */
-    const char* netsvcjson = NetsvcParms::defaultparms2json();
+    const char* netsvcjson = NetsvcParms::tojson();
     if(netsvcjson)
     {
         doc.Parse(netsvcjson);
@@ -343,11 +343,72 @@ const char* Icesat2Parms::defaultparms2json (void) const
     doc.AddMember("extent_length", extent_length, allocator);
     doc.AddMember("extent_step", extent_step, allocator);
 
-    /* Data null by default */
-    doc.AddMember("atl03_geo_fields", rapidjson::Value("null", allocator), allocator);
-    doc.AddMember("atl03_ph_fields", rapidjson::Value("null", allocator), allocator);
-    doc.AddMember("atl06_fields", rapidjson::Value("null", allocator), allocator);
-    doc.AddMember("atl08_fields", rapidjson::Value("null", allocator), allocator);
+    rapidjson::Value nullval(rapidjson::kNullType);
+
+    if(atl03_geo_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl03_geo_fields);
+        for(int i = 0; i < atl03_geo_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl03_geo_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl03_geo_fields", nullval, allocator);
+
+    if(atl03_ph_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl03_ph_fields);
+        for(int i = 0; i < atl03_ph_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl03_ph_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl03_ph_fields", nullval, allocator);
+
+
+    if(atl06_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl06_fields);
+        for(int i = 0; i < atl06_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl06_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl06_fields", nullval, allocator);
+
+    if(atl08_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl08_fields);
+        for(int i = 0; i < atl08_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl08_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl08_fields", nullval, allocator);
 
     /* Serialized phoreal settings */
     rapidjson::Value phorealObject(rapidjson::kObjectType);

@@ -588,9 +588,9 @@ int LuaObject::luaWaitOn(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaParms2Json - :tojson()
+ * lua2json - :tojson()
  *----------------------------------------------------------------------------*/
-int LuaObject::luaParms2Json (lua_State* L)
+int LuaObject::lua2json(lua_State* L)
 {
     const char* json_str = NULL;
     try
@@ -599,7 +599,7 @@ int LuaObject::luaParms2Json (lua_State* L)
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Convert object's default parameters to JSON */
-        json_str = lua_obj->defaultparms2json();
+        json_str = lua_obj->tojson();
     }
     catch(const RunTimeException& e)
     {
@@ -645,7 +645,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
-        LuaEngine::setAttrFunc(L, "tojson", luaParms2Json);
+        LuaEngine::setAttrFunc(L, "tojson", lua2json);
     }
 }
 
@@ -710,9 +710,9 @@ void LuaObject::referenceLuaObject (LuaObject* lua_obj)
 }
 
 /*----------------------------------------------------------------------------
- * defaultparms2json - returns default parameters as a JSON string
+ * tojson
  *----------------------------------------------------------------------------*/
-const char* LuaObject::defaultparms2json(void) const
+const char* LuaObject::tojson(void) const
 {
     return StringLib::duplicate("{}");
 }

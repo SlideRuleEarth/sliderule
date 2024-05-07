@@ -78,7 +78,7 @@ class CreParms: public LuaObject
         static int  luaCreate           (lua_State* L);
                     CreParms            (lua_State* L, int index);
                     ~CreParms           (void);
-        const char* defaultparms2json   (void) const override;
+        const char* tojson              (void) const override;
 
     private:
 

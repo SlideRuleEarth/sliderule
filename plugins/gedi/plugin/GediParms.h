@@ -130,7 +130,7 @@ class GediParms: public NetsvcParms
         static int          beam2index          (int beam);
         static const char*  index2group         (int index);
         static int64_t      deltatime2timestamp (double delta_time);
-        const char*         defaultparms2json   (void) const override;
+        const char*         tojson              (void) const override;
 
         /*--------------------------------------------------------------------
          * Data

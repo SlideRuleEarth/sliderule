@@ -250,7 +250,7 @@ class Icesat2Parms: public NetsvcParms
         static phoreal_geoloc_t         str2geoloc              (const char* fmt_str);
         static gt_t                     str2gt                  (const char* gt_str);
         static int                      gt2index                (int gt) { return (gt / 10) - 1; }
-        const char*                     defaultparms2json       (void) const override;
+        const char*                     tojson                  (void) const override;
 
         /*--------------------------------------------------------------------
          * Inline Methods
