@@ -37,11 +37,15 @@
 #include "geo.h"
 #include "NetsvcParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
+const char* NetsvcParms::SELF               = "netsvc";
 const char* NetsvcParms::POLYGON            = "poly";
 const char* NetsvcParms::RASTER             = "raster";
 const char* NetsvcParms::LATITUDE           = "lat";
@@ -84,6 +88,57 @@ int NetsvcParms::luaCreate (lua_State* L)
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* NetsvcParms::tojson(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+    rapidjson::Value nullval(rapidjson::kNullType);
+
+    if(raster) doc.AddMember("raster", rapidjson::Value(raster->getJsonString(), allocator), allocator);
+    else       doc.AddMember("raster", nullval, allocator);
+
+    doc.AddMember("rqst_timeout", rapidjson::Value(rqst_timeout), allocator);
+    doc.AddMember("node_timeout", rapidjson::Value(node_timeout), allocator);
+    doc.AddMember("read_timeout", rapidjson::Value(read_timeout), allocator);
+    doc.AddMember("cluster_size_hint", rapidjson::Value(cluster_size_hint), allocator);
+
+    const char* proj_name = projection == MathLib::AUTOMATIC   ? "AUTOMATIC" :
+                            projection == MathLib::NORTH_POLAR ? "NORTH_POLAR" :
+                            projection == MathLib::SOUTH_POLAR ? "SOUTH_POLAR" :
+                            "PLATE_CARREE";
+
+    doc.AddMember("projection", rapidjson::Value(proj_name, allocator), allocator);
+
+    /* Polygon is a list of coordinates */
+    doc.AddMember("points_in_poly", rapidjson::Value(points_in_poly), allocator);
+    if(points_in_poly > 0)
+    {
+        rapidjson::Value _poly(rapidjson::kArrayType);
+        List<MathLib::coord_t>::Iterator poly_iterator(polygon);
+        for(int i = 0; i < points_in_poly; i++)
+        {
+            rapidjson::Value _coord(rapidjson::kObjectType);
+            _coord.AddMember("lon", poly_iterator[i].lon, allocator);
+            _coord.AddMember("lat", poly_iterator[i].lat, allocator);
+            _poly.PushBack(_coord, allocator);
+        }
+        doc.AddMember("polygon", _poly, allocator);
+    }
+    else doc.AddMember("polygon", rapidjson::Value("[]"), allocator);
+
+    /* User should not care about 'projected_poly, it is private data */
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /******************************************************************************
@@ -259,7 +314,12 @@ void NetsvcParms::get_lua_raster (lua_State* L, int index, bool* provided)
     /* Reset Provided */
     *provided = false;
 
-    /* Must be table of coordinates */
+    /* Must be table of
+     * {
+     *      data = <geojson file>,
+     *      cellsize = <cellsize>
+     * }
+     */
     if(lua_istable(L, index))
     {
         try

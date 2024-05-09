@@ -36,6 +36,10 @@
 #include "core.h"
 #include "CreParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -160,6 +164,31 @@ void CreParms::cleanup (void)
         delete [] command;
         command = NULL;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* CreParms::tojson (void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+    rapidjson::Value nullval(rapidjson::kNullType);
+
+    if(image) doc.AddMember("image", rapidjson::Value(image, allocator), allocator);
+    else      doc.AddMember("image", nullval, allocator);
+
+    if(command) doc.AddMember("command", rapidjson::Value(command, allocator), allocator);
+    else        doc.AddMember("command", nullval, allocator);
+
+    doc.AddMember("timeout", timeout, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /*----------------------------------------------------------------------------

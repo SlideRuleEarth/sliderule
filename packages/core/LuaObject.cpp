@@ -53,6 +53,30 @@ std::atomic<long> LuaObject::numObjects(0);
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+LuaObject::~LuaObject (void)
+{
+    stop_trace(DEBUG, traceId);
+    mlog(DEBUG, "Deleting %s/%s", getType(), getName());
+
+    /* Remove Name from Global Objects */
+    globalMut.lock();
+    {
+        /* Remove Previous Name (if it exists) */
+        if(ObjectName)
+        {
+            globalObjects.remove(ObjectName);
+            delete [] ObjectName;
+        }
+    }
+    globalMut.unlock();
+
+    /* Count Object */
+    numObjects--;
+}
+
+/*----------------------------------------------------------------------------
  * getType
  *----------------------------------------------------------------------------*/
 const char* LuaObject::getType (void) const
@@ -122,12 +146,12 @@ long LuaObject::getLuaInteger (lua_State* L, int parm, bool optional, long dfltv
         if(provided) *provided = true;
         return lua_tointeger(L, parm);
     }
-    
+
     if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    
+
     throw RunTimeException(CRITICAL, RTE_ERROR, "must supply an integer for parameter #%d", parm);
 }
 
@@ -143,12 +167,12 @@ double LuaObject::getLuaFloat (lua_State* L, int parm, bool optional, double dfl
         if(provided) *provided = true;
         return lua_tonumber(L, parm);
     }
-    
+
     if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    
+
     throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a floating point number for parameter #%d", parm);
 }
 
@@ -164,12 +188,12 @@ bool LuaObject::getLuaBoolean (lua_State* L, int parm, bool optional, bool dfltv
         if(provided) *provided = true;
         return lua_toboolean(L, parm);
     }
-    
+
     if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
     }
-    
+
     throw RunTimeException(CRITICAL, RTE_ERROR, "must supply a boolean for parameter #%d", parm);
 }
 
@@ -185,7 +209,7 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
         if(provided) *provided = true;
         return lua_tostring(L, parm);
     }
-    
+
     if(optional && ((lua_gettop(L) < parm) || lua_isnil(L, parm)))
     {
         return dfltval;
@@ -371,30 +395,6 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 
     /* Start Trace */
     traceId = start_trace(DEBUG, engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-LuaObject::~LuaObject (void)
-{
-    stop_trace(DEBUG, traceId);
-    mlog(DEBUG, "Deleting %s/%s", getType(), getName());
-
-    /* Remove Name from Global Objects */
-    globalMut.lock();
-    {
-        /* Remove Previous Name (if it exists) */
-        if(ObjectName)
-        {
-            globalObjects.remove(ObjectName);
-            delete [] ObjectName;
-        }
-    }
-    globalMut.unlock();
-
-    /* Count Object */
-    numObjects--;
 }
 
 /*----------------------------------------------------------------------------
@@ -588,6 +588,30 @@ int LuaObject::luaWaitOn(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * lua2json - :tojson()
+ *----------------------------------------------------------------------------*/
+int LuaObject::lua2json(lua_State* L)
+{
+    const char* json_str = NULL;
+    try
+    {
+        /* Get Self */
+        LuaObject* lua_obj = getLuaSelf(L, 1);
+
+        /* Convert object's default parameters to JSON */
+        json_str = lua_obj->tojson();
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error converting object's default parameters to json: %s", e.what());
+    }
+
+    lua_pushstring(L, json_str);
+    delete [] json_str;
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * signalComplete
  *----------------------------------------------------------------------------*/
 void LuaObject::signalComplete (void)
@@ -621,6 +645,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
+        LuaEngine::setAttrFunc(L, "tojson", lua2json);
     }
 }
 
@@ -683,3 +708,12 @@ void LuaObject::referenceLuaObject (LuaObject* lua_obj)
     }
     globalMut.unlock();
 }
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* LuaObject::tojson(void) const
+{
+    return StringLib::duplicate("{}");
+}
+

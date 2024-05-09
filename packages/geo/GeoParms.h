@@ -152,6 +152,7 @@ class GeoParms: public LuaObject
         static int  luaCreate   (lua_State* L);
                     GeoParms    (lua_State* L, int index, bool asset_required=true);
                     ~GeoParms   (void);
+        const char* tojson      (void) const override;
 
     private:
 
@@ -161,6 +162,7 @@ class GeoParms: public LuaObject
 
         void       cleanup         (void);
         static int str2algo        (const char* str);
+        static const char* algo2str(int algo);
         void       getLuaBands     (lua_State* L, int index, bool* provided);
         void       getAoiBbox      (lua_State* L, int index, bool* provided);
 

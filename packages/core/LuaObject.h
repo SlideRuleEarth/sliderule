@@ -132,6 +132,7 @@ class LuaObject
         static int          createLuaObject     (lua_State* L, LuaObject* lua_obj);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
         static void         referenceLuaObject  (LuaObject* lua_obj);
+        virtual const char* tojson              (void) const;
 
         /*--------------------------------------------------------------------
          * Data
@@ -150,7 +151,8 @@ class LuaObject
         static int          luaDestroy          (lua_State* L);
         static int          luaName             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
-        
+        static int          lua2json            (lua_State* L);
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/

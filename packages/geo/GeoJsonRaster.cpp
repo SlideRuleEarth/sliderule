@@ -130,6 +130,7 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::~GeoJsonRaster(void)
 {
+    delete [] geojstr;
     delete [] data;
     VSIUnlink(rasterFileName.c_str());
 }
@@ -142,7 +143,7 @@ GeoJsonRaster::~GeoJsonRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double _cellsize):
+GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojstr, double _cellsize):
  GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/),
  data(NULL),
  cellsize(_cellsize),
@@ -155,6 +156,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr
     GDALDataset* jsonDset   = NULL;
     const std::string jsonFile = "/vsimem/" + GdalRaster::getUUID() + ".geojson";
     rasterFileName = getFileName();
+    geojstr = StringLib::duplicate(_geojstr);
 
     if (geojstr == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");

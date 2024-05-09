@@ -45,12 +45,12 @@
 
 /*
  * Ancillary Field Records
- * 
+ *
  *  This record is used to capture a set of different fields in the source granule,
  *  all associated with a single extent id.  For example, if there was an ancillary
  *  field request for fields X, Y, and Z, then this record would hold the values
  *  for X, Y, and Z all in a single record and associate it with the extent.
- */ 
+ */
 const char* AncillaryFields::ancFieldRecType = "ancfrec.field";
 const RecordObject::fieldDef_t AncillaryFields::ancFieldRecDef[] = {
     {"anc_type",        RecordObject::UINT8,    offsetof(field_t, anc_type),                1,  NULL, NATIVE_FLAGS},
@@ -66,14 +66,14 @@ const RecordObject::fieldDef_t AncillaryFields::ancFieldArrayRecDef[] = {
     {"fields",          RecordObject::USER,     offsetof(field_array_t, fields),            0,  ancFieldRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
-/* 
+/*
  * Ancillary Element Records
  *
  *  This record is used to capture an array of field values all associated with a single field.
  *  It is primarily used for the ATL03 photon data and things like that where there is a variable
  *  number of values associated with a given field for a given extent.  So wherease the Ancillary
  *  Field Record is multiple fields each with one value; this is multiple values for just one field.
- */ 
+ */
 const char* AncillaryFields::ancElementRecType = "ancerec";
 const RecordObject::fieldDef_t AncillaryFields::ancElementRecDef[] = {
     {"extent_id",       RecordObject::UINT64,   offsetof(element_array_t, extent_id),       1,  NULL, NATIVE_FLAGS},
@@ -116,61 +116,61 @@ double* AncillaryFields::extractAsDoubles (element_array_t* elements)
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::INT32:     
+        case RecordObject::INT32:
         {
             int32_t* src = (int32_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::INT64:     
+        case RecordObject::INT64:
         {
             int64_t* src = (int64_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::UINT8:     
+        case RecordObject::UINT8:
         {
             uint8_t* src = (uint8_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::UINT16:    
+        case RecordObject::UINT16:
         {
             uint16_t* src = (uint16_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::UINT32:    
+        case RecordObject::UINT32:
         {
             uint32_t* src = (uint32_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::UINT64:    
+        case RecordObject::UINT64:
         {
             uint64_t* src = (uint64_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::FLOAT:    
+        case RecordObject::FLOAT:
         {
             float* src = getValueAsFloat(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::DOUBLE:    
+        case RecordObject::DOUBLE:
         {
             double* src = getValueAsDouble(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        case RecordObject::TIME8:     
+        case RecordObject::TIME8:
         {
             int64_t* src = (int64_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
             break;
         }
-        default:        
+        default:
         {
             break; // unable to extract
         }
@@ -201,61 +201,61 @@ int64_t* AncillaryFields::extractAsIntegers (element_array_t* elements)
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::INT32:     
+        case RecordObject::INT32:
         {
             int32_t* src = (int32_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::INT64:     
+        case RecordObject::INT64:
         {
             int64_t* src = (int64_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::UINT8:     
+        case RecordObject::UINT8:
         {
             uint8_t* src = (uint8_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::UINT16:    
+        case RecordObject::UINT16:
         {
             uint16_t* src = (uint16_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::UINT32:    
+        case RecordObject::UINT32:
         {
             uint32_t* src = (uint32_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::UINT64:    
+        case RecordObject::UINT64:
         {
             uint64_t* src = (uint64_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::FLOAT:    
+        case RecordObject::FLOAT:
         {
             float* src = getValueAsFloat(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::DOUBLE:    
+        case RecordObject::DOUBLE:
         {
             double* src = getValueAsDouble(&elements->data[0]);
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        case RecordObject::TIME8:     
+        case RecordObject::TIME8:
         {
             int64_t* src = (int64_t*)&elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
             break;
         }
-        default:        
+        default:
         {
             break; // unable to extract
         }
@@ -341,4 +341,17 @@ RecordObject* AncillaryFields::createFieldArrayRecord (uint64_t extent_id, vecto
     }
 
     return rec;
+}
+
+/*----------------------------------------------------------------------------
+ * estimation2str
+ *----------------------------------------------------------------------------*/
+const char* AncillaryFields::estimation2str (estimation_t estimation)
+{
+    switch(estimation)
+    {
+        case NEAREST_NEIGHBOR: return "NEAREST_NEIGHBOR";
+        case INTERPOLATION:    return "INTERPOLATION";
+        default:               return "UNKNOWN";
+    }
 }

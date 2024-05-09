@@ -74,6 +74,7 @@ class GeoJsonRaster: public GeoRaster
 
         bool                  includes       (double lon, double lat, double height=0);
         virtual              ~GeoJsonRaster  (void);
+        const char*           getJsonString  (void) { return geojstr; }
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -90,7 +91,7 @@ class GeoJsonRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* geojstr, double cellsize);
+        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojstr, double cellsize);
 
     private:
 
@@ -99,6 +100,7 @@ class GeoJsonRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
          std::string rasterFileName;
+         const char* geojstr;
          uint8_t*    data;
          double      cellsize;
          uint32_t    cols;

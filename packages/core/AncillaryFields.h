@@ -100,11 +100,11 @@ struct AncillaryFields
     /* Field */
     static const char* ancFieldRecType;
     static const RecordObject::fieldDef_t ancFieldRecDef[];
-    
+
     /* Field Array */
     static const char* ancFieldArrayRecType;
     static const RecordObject::fieldDef_t ancFieldArrayRecDef[];
-    
+
     /* Element Array */
     static const char* ancElementRecType;
     static const RecordObject::fieldDef_t ancElementRecDef[];
@@ -122,6 +122,7 @@ struct AncillaryFields
     static float*           getValueAsFloat         (uint8_t* buffer);
     static int64_t*         getValueAsInteger       (uint8_t* buffer);
     static RecordObject*    createFieldArrayRecord  (uint64_t extent_id, vector<field_t>& field_vec);
+    static const char*      estimation2str          (estimation_t estimation);
 };
 
 #endif  /* __ancillary_fields__ */

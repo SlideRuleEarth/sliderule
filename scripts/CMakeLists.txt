@@ -19,6 +19,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/tail.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/defaults.lua
     DESTINATION
         ${CONFDIR}/api
 )

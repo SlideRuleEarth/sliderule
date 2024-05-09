@@ -37,10 +37,15 @@
 #include "geo.h"
 #include "SwotParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
+const char* SwotParms::_SELF     = "swot";
 const char* SwotParms::VARIABLES = "variables";
 
 /******************************************************************************
@@ -76,6 +81,40 @@ int SwotParms::luaCreate (lua_State* L)
 int64_t SwotParms::deltatime2timestamp (double delta_time)
 {
     return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
+}
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* SwotParms::tojson (void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    /* Base class params first */
+    const char* netsvcjson = NetsvcParms::tojson();
+    if(netsvcjson)
+    {
+        doc.Parse(netsvcjson);
+        delete [] netsvcjson;;
+    }
+
+    /* Serialize variables */
+    rapidjson::Value var_array(rapidjson::kArrayType);
+    List<string>::Iterator iter(variables);
+    for(int i = 0; i < variables.length(); i++)
+    {
+        rapidjson::Value var_str(iter[i].c_str(), allocator);
+        var_array.PushBack(var_str, allocator);
+    }
+    doc.AddMember(rapidjson::Value(VARIABLES, allocator), var_array, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /******************************************************************************

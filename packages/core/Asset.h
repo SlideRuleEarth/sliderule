@@ -118,6 +118,7 @@ class Asset: public LuaObject
         const char*     getIndex        (void) const;
         const char*     getRegion       (void) const;
         const char*     getEndpoint     (void) const;
+        const char*     tojson          (void) const override;
 
     private:
 

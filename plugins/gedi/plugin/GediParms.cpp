@@ -37,10 +37,15 @@
 #include "geo.h"
 #include "GediParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
+const char* GediParms::_SELF            = "gedi";
 const char* GediParms::BEAM             = "beam";
 const char* GediParms::DEGRADE_FLAG     = "degrade_flag";
 const char* GediParms::L2_QUALITY_FLAG  = "l2_quality_flag";
@@ -150,11 +155,104 @@ const char* GediParms::index2group (int index)
 }
 
 /*----------------------------------------------------------------------------
+ * degrade2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::degrade2str(degrade_t filter)
+{
+    switch(filter)
+    {
+        case DEGRADE_UNFILTERED: return "UNFILTERED";
+        case DEGRADE_UNSET:      return "UNSET";
+        case DEGRADE_SET:        return "SET";
+        default:                 return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * l2quality2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::l2quality2str(l2_quality_t filter)
+{
+    switch(filter)
+    {
+        case L2QLTY_UNFILTERED: return "UNFILTERED";
+        case L2QLTY_UNSET:      return "UNSET";
+        case L2QLTY_SET:        return "SET";
+        default:                return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * l4quality2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::l4quality2str(l4_quality_t filter)
+{
+    switch(filter)
+    {
+        case L4QLTY_UNFILTERED: return "UNFILTERED";
+        case L4QLTY_UNSET:      return "UNSET";
+        case L4QLTY_SET:        return "SET";
+        default:                return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * surface2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::surface2str(surface_t filter)
+{
+    switch(filter)
+    {
+        case SURFACE_UNFILTERED: return "UNFILTERED";
+        case SURFACE_UNSET:      return "UNSET";
+        case SURFACE_SET:        return "SET";
+        default:                 return "UNKNOWN";
+    }
+}
+/*----------------------------------------------------------------------------
  * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
  *----------------------------------------------------------------------------*/
 int64_t GediParms::deltatime2timestamp (double delta_time)
 {
     return TimeLib::gps2systimeex(delta_time + (double)GEDI_SDP_EPOCH_GPS);
+}
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* GediParms::tojson (void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    /* Base class params first */
+    const char* netsvcjson = NetsvcParms::tojson();
+    if(netsvcjson)
+    {
+        doc.Parse(netsvcjson);
+        delete [] netsvcjson;;
+    }
+
+    /* Serialize beams array */
+    rapidjson::Value beamsArray(rapidjson::kArrayType);
+    for (int i = 0; i < NUM_BEAMS; ++i)
+    {
+        beamsArray.PushBack(beams[i], allocator);
+    }
+    doc.AddMember("beams", beamsArray, allocator);
+
+    /* Serialize filters using enum to string conversion */
+    doc.AddMember("degrade_filter", rapidjson::Value(degrade2str(degrade_filter), allocator), allocator);
+    doc.AddMember("l2_quality_filter", rapidjson::Value(l2quality2str(l2_quality_filter), allocator), allocator);
+    doc.AddMember("l4_quality_filter", rapidjson::Value(l4quality2str(l4_quality_filter), allocator), allocator);
+    doc.AddMember("surface_filter", rapidjson::Value(surface2str(surface_filter), allocator), allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
 }
 
 /******************************************************************************

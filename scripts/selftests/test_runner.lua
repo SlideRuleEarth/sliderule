@@ -115,6 +115,9 @@ if __gebco__ and incloud then
     runner.script(gebco_td .. "gebco_reader.lua")
 end
 
+-- Run Default Parameters Self Tests for all modules
+runner.script(td .. "parms_tojson.lua")
+
 -- Report Results --
 local errors = runner.report()
 

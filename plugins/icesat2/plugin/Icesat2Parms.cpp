@@ -37,10 +37,15 @@
 #include "geo.h"
 #include "Icesat2Parms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
+const char* Icesat2Parms::_SELF                        = "icesat2";
 const char* Icesat2Parms::SURFACE_TYPE                 = "srt";
 const char* Icesat2Parms::ATL03_CNF                    = "cnf";
 const char* Icesat2Parms::YAPC                         = "yapc";
@@ -258,6 +263,188 @@ Icesat2Parms::gt_t Icesat2Parms::str2gt (const char* gt_str)
     return INVALID_GT;
 }
 
+/*----------------------------------------------------------------------------
+ * atl03srt2str
+ *----------------------------------------------------------------------------*/
+const char* Icesat2Parms::atl03srt2str (surface_type_t type)
+{
+    switch (type)
+    {
+        case SRT_DYNAMIC:       return "SRT_DYNAMIC";
+        case SRT_LAND:          return "SRT_LAND";
+        case SRT_OCEAN:         return "SRT_OCEAN";
+        case SRT_SEA_ICE:       return "SRT_SEA_ICE";
+        case SRT_LAND_ICE:      return "SRT_LAND_ICE";
+        case SRT_INLAND_WATER:  return "SRT_INLAND_WATER";
+        case NUM_SURFACE_TYPES: return "NUM_SURFACE_TYPES";
+        default:                return "UNKNOWN_SURFACE_TYPE";
+    }
+}
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* Icesat2Parms::tojson (void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    /* Base class params first */
+    const char* netsvcjson = NetsvcParms::tojson();
+    if(netsvcjson)
+    {
+        doc.Parse(netsvcjson);
+        delete [] netsvcjson;;
+    }
+
+    /* Serialize surface type */
+    doc.AddMember("surface_type", rapidjson::Value(atl03srt2str(surface_type), allocator), allocator);
+    doc.AddMember("pass_invalid", pass_invalid, allocator);
+    doc.AddMember("dist_in_seg", dist_in_seg, allocator);
+
+    /* Serialize atl03 confidence */
+    rapidjson::Value cnfArray(rapidjson::kArrayType);
+    for (int i = 0; i < NUM_SIGNAL_CONF; ++i)
+    {
+        cnfArray.PushBack(atl03_cnf[i], allocator);
+    }
+    doc.AddMember("atl03_cnf", cnfArray, allocator);
+
+    /* Serialize quality flags */
+    rapidjson::Value qualityArray(rapidjson::kArrayType);
+    for (int i = 0; i < NUM_PHOTON_QUALITY; ++i)
+    {
+        qualityArray.PushBack(quality_ph[i], allocator);
+    }
+    doc.AddMember("quality_ph", qualityArray, allocator);
+
+    /* Serialize atl08 classification */
+    rapidjson::Value classArray(rapidjson::kArrayType);
+    for (int i = 0; i < NUM_ATL08_CLASSES; ++i)
+    {
+        classArray.PushBack(atl08_class[i], allocator);
+    }
+    doc.AddMember("atl08_class", classArray, allocator);
+
+    /* Serialize beams configuration */
+    rapidjson::Value beamsArray(rapidjson::kArrayType);
+    for (int i = 0; i < NUM_SPOTS; ++i)
+    {
+        beamsArray.PushBack(beams[i], allocator);
+    }
+    doc.AddMember("beams", beamsArray, allocator);
+
+    /* Serialize the stages array */
+    rapidjson::Value stagesArray(rapidjson::kArrayType);
+    for (int i = 0; i < NUM_STAGES; ++i)
+    {
+        stagesArray.PushBack(stages[i], allocator);
+    }
+    doc.AddMember("stages", stagesArray, allocator);
+
+    /* Serialize yapc settings as an object */
+    rapidjson::Value yapcObject(rapidjson::kObjectType);
+    yapcObject.AddMember("score", yapc.score, allocator);
+    yapcObject.AddMember("version", yapc.version, allocator);
+    yapcObject.AddMember("knn", yapc.knn, allocator);
+    yapcObject.AddMember("min_knn", yapc.min_knn, allocator);
+    yapcObject.AddMember("win_h", yapc.win_h, allocator);
+    yapcObject.AddMember("win_x", yapc.win_x, allocator);
+    doc.AddMember("yapc", yapcObject, allocator);
+
+    doc.AddMember("track", track, allocator);
+    doc.AddMember("max_iterations", max_iterations, allocator);
+    doc.AddMember("minimum_photon_count", minimum_photon_count, allocator);
+    doc.AddMember("along_track_spread", along_track_spread, allocator);
+    doc.AddMember("minimum_window", minimum_window, allocator);
+    doc.AddMember("maximum_robust_dispersion", maximum_robust_dispersion, allocator);
+    doc.AddMember("extent_length", extent_length, allocator);
+    doc.AddMember("extent_step", extent_step, allocator);
+
+    rapidjson::Value nullval(rapidjson::kNullType);
+
+    if(atl03_geo_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl03_geo_fields);
+        for(int i = 0; i < atl03_geo_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl03_geo_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl03_geo_fields", nullval, allocator);
+
+    if(atl03_ph_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl03_ph_fields);
+        for(int i = 0; i < atl03_ph_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl03_ph_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl03_ph_fields", nullval, allocator);
+
+
+    if(atl06_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl06_fields);
+        for(int i = 0; i < atl06_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl06_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl06_fields", nullval, allocator);
+
+    if(atl08_fields)
+    {
+        rapidjson::Value var_array(rapidjson::kArrayType);
+        List<AncillaryFields::entry_t>::Iterator iter(*atl08_fields);
+        for(int i = 0; i < atl08_fields->length(); i++)
+        {
+            rapidjson::Value _entry(rapidjson::kObjectType);
+            const AncillaryFields::entry_t& entry = iter[i];
+            _entry.AddMember("field", rapidjson::Value(entry.field.c_str(), allocator), allocator);
+            _entry.AddMember("estimation", rapidjson::Value(AncillaryFields::estimation2str(entry.estimation), allocator), allocator);
+            var_array.PushBack(_entry, allocator);
+        }
+        doc.AddMember("atl08_fields", var_array, allocator);
+    }
+    else doc.AddMember("atl08_fields", nullval, allocator);
+
+    /* Serialized phoreal settings */
+    rapidjson::Value phorealObject(rapidjson::kObjectType);
+    phorealObject.AddMember("binsize", phoreal.binsize, allocator);
+    phorealObject.AddMember("geoloc", phoreal.geoloc, allocator);
+    phorealObject.AddMember("use_abs_h", phoreal.use_abs_h, allocator);
+    phorealObject.AddMember("send_waveform", phoreal.send_waveform, allocator);
+    phorealObject.AddMember("above_classifier", phoreal.above_classifier, allocator);
+    doc.AddMember("phoreal", phorealObject, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
+}
+
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -423,7 +610,7 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
             mlog(DEBUG, "ATL08 field array supplied");
             if(!stages[STAGE_ATL08])
             {
-                /* If atl08 processing not enabled, then enable it 
+                /* If atl08 processing not enabled, then enable it
                    and default all classified photons to on */
                 stages[STAGE_ATL08] = true;
                 atl08_class[ATL08_NOISE] = true;
@@ -449,7 +636,7 @@ Icesat2Parms::Icesat2Parms(lua_State* L, int index):
             stages[STAGE_PHOREAL] = true;
             if(!stages[STAGE_ATL08])
             {
-                /* If atl08 processing not enabled, then enable it 
+                /* If atl08 processing not enabled, then enable it
                    and default photon classes to a reasonable request */
                 stages[STAGE_ATL08] = true;
                 atl08_class[ATL08_NOISE] = false;
@@ -850,7 +1037,7 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
                 }
                 else
                 {
-                    mlog(ERROR, "Invalid beam: %s", beam_str); 
+                    mlog(ERROR, "Invalid beam: %s", beam_str);
                 }
             }
 
@@ -892,7 +1079,7 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
         }
         else
         {
-            mlog(ERROR, "Invalid beam: %s", beam_str); 
+            mlog(ERROR, "Invalid beam: %s", beam_str);
         }
     }
     else if(!lua_isnil(L, index))

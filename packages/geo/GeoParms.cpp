@@ -38,6 +38,10 @@
 #include "core.h"
 #include "GeoParms.h"
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -70,7 +74,7 @@ const char* GeoParms::MODE_ALGO             = "Mode";
 const char* GeoParms::GAUSS_ALGO            = "Gauss";
 
 const char* GeoParms::OBJECT_TYPE           = "GeoParms";
-const char* GeoParms::LUA_META_NAME           = "GeoParms";
+const char* GeoParms::LUA_META_NAME         = "GeoParms";
 const struct luaL_Reg GeoParms::LUA_META_TABLE[] = {
     {"name",        luaAssetName},
     {"region",      luaAssetRegion},
@@ -325,6 +329,76 @@ GeoParms::~GeoParms (void)
 }
 
 /*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* GeoParms::tojson(void) const
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+    rapidjson::Value nullval(rapidjson::kNullType);
+
+    doc.AddMember("sampling_algo", rapidjson::Value(algo2str(sampling_algo), allocator), allocator);
+    doc.AddMember("sampling_radius", sampling_radius, allocator);
+    doc.AddMember("zonal_stats", zonal_stats, allocator);
+    doc.AddMember("flags_file", flags_file, allocator);
+    doc.AddMember("filter_time", filter_time, allocator);
+
+    if(url_substring) doc.AddMember("url_substring", rapidjson::Value(url_substring, allocator), allocator);
+    else              doc.AddMember("url_substring", nullval, allocator);
+
+    doc.AddMember("filter_closest_time", filter_closest_time, allocator);
+    doc.AddMember("use_poi_time", use_poi_time, allocator);
+    doc.AddMember("filter_doy_range", filter_doy_range, allocator);
+    doc.AddMember("doy_keep_inrange", doy_keep_inrange, allocator);
+    doc.AddMember("doy_start", doy_start, allocator);
+    doc.AddMember("doy_end", doy_end, allocator);
+
+    if(proj_pipeline) doc.AddMember("proj_pipeline", rapidjson::Value(proj_pipeline, allocator), allocator);
+    else              doc.AddMember("proj_pipeline", nullval, allocator);
+
+    doc.AddMember("aoi_bbox", rapidjson::Value().SetArray().PushBack(aoi_bbox.lon_min, allocator).PushBack(aoi_bbox.lat_min, allocator).PushBack(aoi_bbox.lon_max, allocator).PushBack(aoi_bbox.lat_max, allocator), allocator);
+
+    if(catalog) doc.AddMember("catalog", rapidjson::Value(catalog, allocator), allocator);
+    else        doc.AddMember("catalog", nullval, allocator);
+
+    if(bands)
+    {
+        rapidjson::Value _bands_list(rapidjson::kArrayType);
+        for(int i = 0; i < bands->length; i++)
+        {
+            const char* name = (*bands)[i].c_str();
+            if(name) _bands_list.PushBack(rapidjson::Value(name, allocator), allocator);
+        }
+        doc.AddMember("bands_list", _bands_list, allocator);
+    }
+    else doc.AddMember("bands_list", rapidjson::Value("[]"), allocator);
+
+    if(asset_name) doc.AddMember("asset_name", rapidjson::Value(asset_name, allocator), allocator);
+    else           doc.AddMember("asset_name", nullval, allocator);
+
+    if(asset)
+    {
+        const char* asset_json = asset->tojson();
+        rapidjson::Document asset_doc;
+        asset_doc.Parse(asset_json);
+        rapidjson::Value asset_val(rapidjson::kObjectType);
+        asset_val.CopyFrom(asset_doc, allocator);    // Deep copy the parsed document into a value
+        doc.AddMember("asset", asset_val, allocator);
+        delete [] asset_json;
+    }
+    else doc.AddMember("asset", nullval, allocator);
+
+    doc.AddMember("key_space", key_space, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return StringLib::duplicate(buffer.GetString());
+}
+
+/*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
 void GeoParms::cleanup (void)
@@ -381,6 +455,25 @@ int GeoParms::str2algo (const char* str)
     if(StringLib::match(str, MODE_ALGO))             return static_cast<int>(GRIORA_Mode);
     if(StringLib::match(str, GAUSS_ALGO))            return static_cast<int>(GRIORA_Gauss);
     throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid sampling algorithm: %s:", str);
+}
+
+/*----------------------------------------------------------------------------
+ * algo2str
+ *----------------------------------------------------------------------------*/
+const char* GeoParms::algo2str(int algo)
+{
+    switch(algo)
+    {
+        case GRIORA_NearestNeighbour: return NEARESTNEIGHBOUR_ALGO;
+        case GRIORA_Bilinear:         return BILINEAR_ALGO;
+        case GRIORA_Cubic:            return CUBIC_ALGO;
+        case GRIORA_CubicSpline:      return CUBICSPLINE_ALGO;
+        case GRIORA_Lanczos:          return LANCZOS_ALGO;
+        case GRIORA_Average:          return AVERAGE_ALGO;
+        case GRIORA_Mode:             return MODE_ALGO;
+        case GRIORA_Gauss:            return GAUSS_ALGO;
+        default:                      return "Unknown";
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -475,7 +568,7 @@ int GeoParms::luaAssetName (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
+        const GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset_name) lua_pushstring(L, lua_obj->asset_name);
         else lua_pushnil(L);
         return 1;
@@ -493,7 +586,7 @@ int GeoParms::luaAssetRegion (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
+        const GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getRegion());
         else lua_pushnil(L);
         return 1;

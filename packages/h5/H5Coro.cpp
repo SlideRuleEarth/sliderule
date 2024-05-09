@@ -1104,7 +1104,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint64_t check_sum = readField(4, &pos);
     (void)check_sum; // unused
 
-    
+
     /* for heap len size - follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199 */
     uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2Gen((uint64_t) max_size_mg_obj) / 8) + 1));
 
@@ -2205,7 +2205,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    // TODO: redundant, could be expelled in future 
+    // TODO: redundant, could be expelled in future
     heap_info_t heap_info_dense;
 
     /* Follow Heap Address if Provided */
@@ -2542,7 +2542,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         if(H5_VERBOSE)
         {
             uint8_t char_set = readField(1, &pos);
-            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);            
+            print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
         }
         else
         {
@@ -2893,7 +2893,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     if (version == 1) {
         // name padding, align to next 8-byte boundary
-        pos += (8 - (name_size % 8)) % 8; 
+        pos += (8 - (name_size % 8)) % 8;
     }
 
     if(H5_ERROR_CHECKING)
@@ -3016,7 +3016,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Read Heap and BTree Values */
     uint64_t heap_address = readField(metaData.offsetsize, &pos);
     uint64_t name_bt2_address = readField(metaData.offsetsize, &pos);
-    
+
     if(H5_VERBOSE)
     {
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
@@ -3040,7 +3040,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     uint64_t address_snapshot = metaData.address;
     uint64_t heap_addr_snapshot = heap_address;
     heap_info_t heap_info_dense;
-    
+
     /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
     readFractalHeap(ATTRIBUTE_MSG, heap_address, hdr_flags, dlvl, &heap_info_dense);
 
@@ -3056,7 +3056,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         }
 
     }
-    
+
     /* Return Bytes Read */
     uint64_t ending_position = pos;
     return ending_position - starting_position;
@@ -3536,7 +3536,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
     /* Open Resource and Read Dataset */
     H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
-    
+
     if(info.data)
     {
         bool data_valid = true;
