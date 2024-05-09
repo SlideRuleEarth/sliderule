@@ -70,7 +70,7 @@ static RecordObject::fieldDef_t eventRecDef[] =
     {"attr",    RecordObject::STRING,   offsetof(EventLib::event_t, attr),    0,                        NULL, NATIVE_FLAGS}
 };
 
-static RecordObject::fieldDef_t alertRecDef[] = 
+static RecordObject::fieldDef_t alertRecDef[] =
 {
     {"code",    RecordObject::INT32,    offsetof(EventLib::alert_t, code),    1,                        NULL, NATIVE_FLAGS},
     {"level",   RecordObject::INT32,    offsetof(EventLib::alert_t, level),   1,                        NULL, NATIVE_FLAGS},
@@ -341,7 +341,7 @@ bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 /*----------------------------------------------------------------------------
  * alertMsg
  *----------------------------------------------------------------------------*/
-bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, bool* active, const char* errmsg, ...)
+bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
 {
     bool status = true;
 
@@ -406,7 +406,7 @@ void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subty
 /*----------------------------------------------------------------------------
  * sendEvent
  *----------------------------------------------------------------------------*/
-bool EventLib::sendEvent (event_t* event, int attr_size)
+bool EventLib::sendEvent (const event_t* event, int attr_size)
 {
     int event_record_size = offsetof(event_t, attr) + attr_size;
     RecordObject record(eventRecType, event_record_size, false);

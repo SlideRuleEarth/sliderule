@@ -625,9 +625,9 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         registered_records = false;
         registered_streams = false;
 
-        for(int i = 0; i < argc; i++)
+        for(int i = 0; i < argc; i++) // NOLINT
         {
-            if(StringLib::match(argv[i], "ALL"))
+            if(StringLib::match(argv[i], "ALL")) // NOLINT
             {
                 built_in_commands = true;
                 registered_handlers = true;
@@ -635,11 +635,11 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
                 registered_records = true;
                 registered_streams = true;
             }
-            else if(StringLib::match(argv[i], "BI")) built_in_commands = true;
-            else if(StringLib::match(argv[i], "RH")) registered_handlers = true;
-            else if(StringLib::match(argv[i], "RO")) registered_objects = true;
-            else if(StringLib::match(argv[i], "RR")) registered_records = true;
-            else if(StringLib::match(argv[i], "RS")) registered_streams = true;
+            else if(StringLib::match(argv[i], "BI")) built_in_commands = true; // NOLINT
+            else if(StringLib::match(argv[i], "RH")) registered_handlers = true; // NOLINT
+            else if(StringLib::match(argv[i], "RO")) registered_objects = true; // NOLINT
+            else if(StringLib::match(argv[i], "RR")) registered_records = true; // NOLINT
+            else if(StringLib::match(argv[i], "RS")) registered_streams = true; // NOLINT
             else if(StringLib::match(argv[i], "O"))
             {
                 if(i < argc - 1)
@@ -694,7 +694,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     print2term("\tR <record type>: record information\n");
     print2term("\tS <stream name>: stream information\n");
 
-    if(built_in_commands)
+    if(built_in_commands) // NOLINT
     {
         print2term("\n-------------- Built-In Commands ---------------\n");
         try
@@ -713,7 +713,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
     }
 
-    if(registered_handlers)
+    if(registered_handlers) // NOLINT
     {
         print2term("\n-------------- Registered Handlers ---------------\n");
         try
@@ -732,14 +732,14 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
     }
 
-    if(registered_objects)
+    if(registered_objects) // NOLINT
     {
         print2term("\n-------------- Registered Objects ---------------\n");
         char** objnames = NULL;
-        int numobjs = objects.getKeys(&objnames);
+        int numobjs = objects.getKeys(&objnames); // NOLINT
         for(int i = 0; i < numobjs; i++)
         {
-            obj_entry_t entry = objects[objnames[i]];
+            obj_entry_t entry = objects[objnames[i]]; // NOLINT
             print2term("%s %s (%s)\n", objnames[i], entry.permanent ? "*" : "", entry.obj->getType());
             delete [] objnames[i];
         }

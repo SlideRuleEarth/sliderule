@@ -326,7 +326,7 @@ std::string MathLib::b64decode(const void* data, const size_t &len)
 {
     if (len == 0) return "";
 
-    unsigned char *p = (unsigned char*) data;
+    const unsigned char *p = (unsigned char*) data;
     size_t j = 0;
     size_t pad1 = len % 4 || p[len - 1] == '=';
     size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');

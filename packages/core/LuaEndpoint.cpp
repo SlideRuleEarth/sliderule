@@ -165,7 +165,7 @@ void* LuaEndpoint::requestThread (void* parm)
 
         /* Extract Bearer Token */
         string* auth_hdr;
-        if(request->headers.find("Authorization", &auth_hdr) || 
+        if(request->headers.find("Authorization", &auth_hdr) ||
            request->headers.find("authorization", &auth_hdr) )
         {
             bearer_token = StringLib::find(auth_hdr->c_str(), ' ');
@@ -211,7 +211,7 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);
-    
+
     /* Return */
     return NULL;
 }
@@ -223,6 +223,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
 {
     EndpointObject::info_t* info = new EndpointObject::info_t;
     info->endpoint = this;
+
     info->request = request;
     info->streaming = true;
 
@@ -243,12 +244,14 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
         }
     }
 
+    /* Determine Response Type before starting thread which may delete info */
+    rsptype_t response_type = info->streaming ? STREAMING : NORMAL;
+
     /* Start Thread */
     Thread pid(requestThread, info, false);
 
     /* Return Response Type */
-    if(info->streaming) return STREAMING;
-    return NORMAL;
+    return response_type;
 }
 
 /*----------------------------------------------------------------------------

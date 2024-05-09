@@ -96,7 +96,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
  *  Notes:  The buffer here (UNLIKE the base class RecordObject) only contains the
  *          binary packet and does not include the type string.
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
+CcsdsRecord::CcsdsRecord(const unsigned char* buffer, int size): RecordObject()
 {
     pktDef_t* pkt_def = getPacketDefinition(buffer, size);
     if(pkt_def)
@@ -126,7 +126,7 @@ CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
 bool CcsdsRecord::deserialize (unsigned char* buffer, int size)
 {
     /* Get Record Definition */
-    pktDef_t* pkt_def = getPacketDefinition(buffer, size);
+    const pktDef_t* pkt_def = getPacketDefinition(buffer, size);
 
     /* Definition Checks  */
     if(pkt_def == NULL)                                 return false;   // could not find definition
@@ -207,7 +207,7 @@ void CcsdsRecord::initCcsdsRecord(void)
 /*----------------------------------------------------------------------------
  * defineCommand
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, const char* id_field, uint16_t _apid, uint8_t _fc, int _size, fieldDef_t* fields, int num_fields, int max_fields)
+RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, const char* id_field, uint16_t _apid, uint8_t _fc, int _size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     definition_t* rec_def;
     recordDefErr_t status;
@@ -254,7 +254,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
 /*----------------------------------------------------------------------------
  * defineTelemetry
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, const char* id_field, uint16_t _apid, int _size, fieldDef_t* fields, int num_fields, int max_fields)
+RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, const char* id_field, uint16_t _apid, int _size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     definition_t* rec_def;
     recordDefErr_t status;

@@ -413,7 +413,7 @@ void Publisher::defaultFree(void* obj, void* parm)
 /*----------------------------------------------------------------------------
  * post
  *----------------------------------------------------------------------------*/
-int Publisher::post(void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout)
+int Publisher::post(void* data, unsigned int mask, const void* secondary_data, unsigned int secondary_size, int timeout)
 {
     int     post_state  = STATE_OKAY;
     bool    copy        = (mask & MSGQ_COPYQ_MASK) != 0;
@@ -729,7 +729,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
     msgQ->locknblock->lock();
     {
         bool space_reclaimed = false;
-        
+
         /* check state of queue */
         if(timeout != IO_CHECK)
         {
@@ -920,7 +920,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
         /* Add Subscription */
         for(int i = 0; i < msgQ->max_subscribers; i++)
         {
-            if(msgQ->subscriber_type[i] == UNSUBSCRIBED)
+            if(msgQ->subscriber_type[i] == UNSUBSCRIBED)  // NOLINT
             {
                 id = i;
                 msgQ->subscriber_type[id] = type;

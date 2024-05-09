@@ -188,7 +188,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
 
     /* Check Extent */
-    if(extent->photon_count == 0)
+    if(extent->photon_count == 0) // NOLINT
     {
         return true;
     }
@@ -199,9 +199,9 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     geolocateResult(extent, result);
 
     /* Execute Algorithm Stages */
-    if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+    if(parms->stages[Icesat2Parms::STAGE_PHOREAL]) // NOLINT
     {
-        phorealAlgorithm(extent, result);
+        phorealAlgorithm(extent, result); // NOLINT
     }
 
     /* Build Ancillary Inputs */
@@ -252,7 +252,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
 
         /* Find Ancillary Field in Parameters */
         AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
-        
+
         /* Initialize Field */
         AncillaryFields::field_t field;
         field.anc_type      = atl03_anc_rec->anc_type;
@@ -276,7 +276,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                 }
                 double nearest = 0.0;
                 int nearest_count = 0;
-                for (auto itr: counts) 
+                for (auto itr: counts)
                 {
                     if(itr.second > nearest_count)
                     {
@@ -316,11 +316,11 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
                     if(counts.count(values[j])) counts[values[j]] += 1;
-                    else counts[values[j]] = 1;                        
+                    else counts[values[j]] = 1;
                 }
                 int64_t nearest = 0.0;
                 int nearest_count = 0;
-                for (auto itr = counts.begin(); itr != counts.end(); ++itr) 
+                for (auto itr = counts.begin(); itr != counts.end(); ++itr)
                 {
                     if(itr->second > nearest_count)
                     {
@@ -499,9 +499,9 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     /* Determine Number of Ground and Vegetation Photons */
     long gnd_cnt = 0;
     long veg_cnt = 0;
-    for(uint32_t i = 0; i < num_ph; i++)
+    for(uint32_t i = 0; i < num_ph; i++) // NOLINT
     {
-        if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
+        if(isGround(&ph[i]) || parms->phoreal.use_abs_h) // NOLINT
         {
             gnd_cnt++;
         }
@@ -514,13 +514,13 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     result.vegetation_photon_count = veg_cnt;
 
     /* Create Ground and Vegetation Photon Index Arrays */
-    long* gnd_index = new long [gnd_cnt];
+    long* gnd_index = new long [gnd_cnt]; // NOLINT
     long* veg_index = new long [veg_cnt];
     long g = 0;
     long v = 0;
-    for(long i = 0; i < num_ph; i++)
+    for(long i = 0; i < num_ph; i++) // NOLINT
     {
-        if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
+        if(isGround(&ph[i]) || parms->phoreal.use_abs_h) // NOLINT
         {
             gnd_index[g++] = i;
         }
@@ -531,7 +531,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     }
 
     /* Sort Ground and Vegetation Photon Index Arrays */
-    quicksort(gnd_index, ph, &Atl03Reader::photon_t::height, 0, gnd_cnt - 1);
+    quicksort(gnd_index, ph, &Atl03Reader::photon_t::height, 0, gnd_cnt - 1); // NOLINT
     quicksort(veg_index, ph, &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
 
     /* Determine Min,Max,Avg Heights */
@@ -764,8 +764,8 @@ int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t*
     end++;
     while(true)
     {
-        while (ph_array[index_array[++start]].*field < pivot);
-        while (ph_array[index_array[--end]].*field > pivot);
+        while (ph_array[index_array[++start]].*field < pivot); // NOLINT
+        while (ph_array[index_array[--end]].*field > pivot); // NOLINT
         if (start >= end) return end;
 
         long tmp = index_array[start];

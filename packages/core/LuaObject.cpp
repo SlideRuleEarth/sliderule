@@ -596,7 +596,7 @@ int LuaObject::lua2json(lua_State* L)
     try
     {
         /* Get Self */
-        LuaObject* lua_obj = getLuaSelf(L, 1);
+        const LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Convert object's default parameters to JSON */
         json_str = lua_obj->tojson();

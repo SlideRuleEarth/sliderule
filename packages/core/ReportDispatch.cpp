@@ -255,7 +255,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         /* Write Row String */
         return File::writeBuffer(row.c_str(), row.length());
     }
-    
+
     if(format == JSON)
     {
         /* Build JSON String */
@@ -333,8 +333,6 @@ ReportDispatch::~ReportDispatch (void)
 bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)records;
-    
-    okey_t index = key;
 
     /* Sanity Check */
     if(!StringLib::match(record->getRecordType(), MetricRecord::rec_type))
@@ -364,6 +362,7 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
     bool status = true;
     reportMut.lock();
     {
+        okey_t index = key;
         entry_t* entry = new entry_t(index, name, value);
         if(entries) status = entries->add(index, entry);
         else        status = (ReportDispatch::postEntry(&entry, sizeof(entry_t*), this) > 0);

@@ -200,7 +200,7 @@ class Publisher: public MsgQ
 
     private:
 
-        int         post            (void* data, unsigned int mask, void* secondary_data, unsigned int secondary_size, int timeout);
+        int         post            (void* data, unsigned int mask, const void* secondary_data, unsigned int secondary_size, int timeout);
 
 };
 

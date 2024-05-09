@@ -354,7 +354,7 @@ int HttpServer::pollHandler(int fd, short* events, void* parm)
 
     /* Get Connection */
     Connection* connection = s->connections[fd];
-    rsps_state_t* state = &connection->rsps_state;
+    const rsps_state_t* state = &connection->rsps_state;
 
     /* Set Read Polling Flag (if request is ready) */
     if(connection->request) *events |= IO_READ_FLAG;
@@ -559,7 +559,7 @@ int HttpServer::onWrite(int fd)
     if(state->ref_status > 0)
     {
         bool ref_complete = false;
-        uint8_t* buffer;
+        const uint8_t* buffer;
         int bytes_left;
 
         if(state->header_sent && connection->response_type == EndpointObject::STREAMING) /* Setup Streaming */
@@ -793,7 +793,7 @@ int HttpServer::luaUntilUp (lua_State* L)
     try
     {
         /* Get Self */
-        HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
+        const HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         int timeout = getLuaInteger(L, 2, true, IO_PEND);

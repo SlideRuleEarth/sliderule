@@ -77,7 +77,7 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key, recVe
 {
     (void)key;
     (void)records;
-    
+
     try
     {
         CcsdsSpacePacket ccsds_pkt(record->getRecordData(), record->getRecordDataSize());

@@ -236,7 +236,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     else if(type == ASCII)
     {
         /* Write Converted Binary Values */
-        unsigned char* pkt_buffer = (unsigned char*)buf;
+        const unsigned char* pkt_buffer = (unsigned char*)buf;
         int  ret = 0;
         for(int i = 0; i < len; i++)
         {
@@ -298,7 +298,7 @@ int File::readBuffer (void* buf, int len, int timeout)
     {
         return ACC_ERR_RC;
     }
-    
+
     if(currFile >= numFiles)
     {
         return SHUTDOWN_RC;
@@ -354,7 +354,7 @@ int File::readBuffer (void* buf, int len, int timeout)
             {
                 break;
             }
-            
+
             if(ch == EOF)
             {
                 currFile++;
@@ -491,7 +491,7 @@ bool File::openNewFileForWriting(void)
         fp = stdout;
         return true;
     }
-    
+
     if(StringLib::match(filename, "STDERR") || StringLib::match(filename, "stderr"))
     {
         fp = stderr;

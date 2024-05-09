@@ -62,7 +62,7 @@ class StringLib
                 char*   carray;
                 long    bufsize;
         };
-        
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -80,9 +80,9 @@ class StringLib
         static bool             match           (const char* str1, const char* str2);
         static List<string*>*   split           (const char* str, int len, char separator, bool strip=true);
         static void             convertUpper    (char* str);
-        static char*            convertUpper    (char* dst, char* src);
+        static char*            convertUpper    (char* dst, const char* src);
         static void             convertLower    (char* str);
-        static char*            convertLower    (char* dst, char* src);
+        static char*            convertLower    (char* dst, const char* src);
         static int              tokenizeLine    (const char* str, int str_size, char separator, int numtokens, char tokens[][MAX_STR_SIZE]);
         static int              getLine         (char* str, int* ret_len, int max_str_size, FILE* fptr);
         static bool             str2bool        (const char* str, bool* val);

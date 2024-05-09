@@ -97,7 +97,7 @@ void OsApi::sleep(double secs)
     waittime.tv_sec  = (time_t)secs;
     waittime.tv_nsec = (long)((secs - (long)secs) * 1000000000L);
 
-    while( nanosleep(&waittime, &waittime) == -1 ) continue;
+    while( nanosleep(&waittime, &waittime) == -1 );
 }
 
 /*----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ void OsApi::dupstr (const char** dst, const char* src)
     assert(src);
     int len = 0;
     while(src[len] != '\0') len++;
-    char* buf = new char[len + 1]; 
+    char* buf = new char[len + 1];
     for(int k = 0; k < len; k++) buf[k] = src[k];
     buf[len] = '\0';
     *dst = buf;
@@ -152,7 +152,7 @@ int64_t OsApi::timeres(int clkid)
     {
         return 1000000; // microseconds
     }
-    
+
     if (clkid == CPU_CLK)
     {
         return 1000000; // microseconds
@@ -280,7 +280,7 @@ double OsApi::memusage (void)
             /* Calculate Memory Usage */
             return 1.0 - ((double)mem_available / (double)mem_total);
         }
-        
+
         return 0.0;
     }
 

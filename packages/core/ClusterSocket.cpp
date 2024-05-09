@@ -193,7 +193,7 @@ int ClusterSocket::writeBuffer(const void *buf, int len, int timeout)
     {
         return TIMEOUT_RC;
     }
-    
+
     if(len <= MAX_MSG_SIZE)
     {
         int status = pubsockq->postCopy(buf, len, timeout);
@@ -378,7 +378,7 @@ int ClusterSocket::onWrite(int fd)
                     uint32_t bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
                     uint32_t cpylen = connection->payload_left < bytes_left ? connection->payload_left : bytes_left;
                     int payload_index = connection->payload_ref.size - connection->payload_left;
-                    uint8_t* payload_buffer = (uint8_t*)connection->payload_ref.data;
+                    const uint8_t* payload_buffer = (uint8_t*)connection->payload_ref.data;
                     memcpy(&connection->buffer[connection->buffer_index], &payload_buffer[payload_index], cpylen);
                     connection->buffer_index += cpylen;
                     connection->payload_left -= cpylen;

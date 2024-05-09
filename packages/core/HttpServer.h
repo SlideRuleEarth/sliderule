@@ -123,7 +123,7 @@ class HttpServer: public LuaObject
         };
 
         struct RouteEntry {
-            RouteEntry(EndpointObject* _route=NULL) { route = _route; }
+            explicit RouteEntry(EndpointObject* _route=NULL) { route = _route; }
             ~RouteEntry(void) { route->releaseLuaObject(); }
             RouteEntry& operator= (const RouteEntry& other) {
                 if (this == &other) return *this;

@@ -244,11 +244,11 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<Raste
             cacheitem_t* item;
             if(cache.find(key, &item))
             {
-                RasterSample* sample = item->sample;
-                if(sample)
+                RasterSample* _sample = item->sample;
+                if(_sample)
                 {
-                    sample->flags = flags;
-                    slist.add(sample);
+                    _sample->flags = flags;
+                    slist.add(_sample);
                     item->sample = NULL;
                 }
 
@@ -300,10 +300,10 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
             const char* key = rinfo.fileName.c_str();
             if(cache.find(key, &item))
             {
-                RasterSample* sample = item->sample;
-                if(sample)
+                const RasterSample* _sample = item->sample;
+                if(_sample)
                 {
-                    flags = sample->value;
+                    flags = _sample->value;
                 }
             }
             break;

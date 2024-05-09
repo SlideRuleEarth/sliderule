@@ -665,7 +665,6 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
         /* Get Primary Header Fields */
         unsigned int apid = candidate_packet.getAPID();
         unsigned int seq = candidate_packet.getSEQ();
-        unsigned int len = candidate_packet.getLEN();
         seg_t        seg = candidate_packet.getSEQFLG();
 
         /* Command Packet Processing */
@@ -686,6 +685,7 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
             /* Length Validation */
             if(!ignore_length)
             {
+                unsigned int len = candidate_packet.getLEN();
                 if(len != _len)
                 {
                     status = false;

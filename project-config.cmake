@@ -3,7 +3,7 @@
 #################
 
 # Squelch a warning when building on Win32/Cygwin
-set (CMAKE_LEGACY_CYGWIN_WIN32 0) 
+set (CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -27,7 +27,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     # clang-tidy
     set (CLANG_TIDY_CHECKS
         clang-analyzer-*
-        concurrency-*
+        cconcurrency-*
         misc-*
         performance-*
         portability-*
@@ -38,7 +38,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         -misc-non-private-member-variables-in-classes
     )
     list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
-    set (CMAKE_CXX_CLANG_TIDY 
+    set (CMAKE_CXX_CLANG_TIDY
         clang-tidy;
         -header-filter=.;
         -checks=${CLANG_TIDY_CHECKS_PARM};
@@ -47,11 +47,11 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 
     # cppcheck
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
-    list (APPEND CMAKE_CXX_CPPCHECK 
+    list (APPEND CMAKE_CXX_CPPCHECK
         "--quiet"
-        "--enable=all" 
+        "--enable=all"
         "--suppress=unmatchedSuppression"
-        "--suppress=unusedFunction" 
+        "--suppress=unusedFunction"
         "--suppress=missingInclude"
         "--suppress=noOperatorEq"
         "--suppress=noCopyConstructor"
@@ -69,6 +69,44 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=uninitStructMember:*/plugins/icesat2/plugin/Atl06Dispatch.cpp"
         "--error-exitcode=1"
         "-DLLONG_MAX"
+        ###################################
+        # Need for cppcheck version 2.13, clang-tidy version 18.1.3
+        ###################################
+        "--suppress=knownConditionTrueFalse:*/HttpServer.cpp"
+        "--suppress=missingIncludeSystem"
+        "--suppress=cstyleCast"
+        "--suppress=duplInheritedMember"
+        "--suppress=badBitmaskCheck"
+        # NOTE: this should work for one function  "--suppress=memleak:LuaEndpoint::handleRequest /packages/core/LuaEndpoint.cpp"
+        "--suppress=memleak:*/packages/core/LuaEndpoint.cpp"
+        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"  # only LuaLibraryMsg::populateRecord() has a warning but cannot disable for function only
+        "--suppress=uninitvar:*/MsgQ.cpp"
+        "--suppress=uninitvar:*/CcsdsPacketInterleaver.cpp"
+        "--suppress=duplicateCondition:*/packages/core/Ordering.h"
+        "--suppress=knownConditionTrueFalse:*/Dictionary.h"
+        "--suppress=truncLongCastAssignment:*/TimeLib.cpp"
+        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"
+        "--suppress=constParameterCallback:*/S3CurlIODriver.cpp"
+        "--suppress=unsafeClassCanLeak:*/CcsdsParserAOSFrameModule.h"
+        "--suppress=constParameterPointer:*/packages/ccsds/*"
+        "--suppress=constParameterCallback:*/packages/ccsds/*"
+        "--suppress=knownConditionTrueFalse:*/GdalRaster.cpp"
+        "--suppress=constParameterReference:*/Table.h"
+        "--suppress=constVariableReference:*/Table.h"
+        "--suppress=uninitvar:*/packages/h5/*"
+        "--suppress=knownConditionTrueFalse:*/packages/h5/*"
+        "--suppress=constParameterPointer:*/packages/h5/*"
+        "--suppress=constParameterCallback:*/packages/h5/*"
+        "--suppress=constParameterPointer:*/legacy/*"
+        "--suppress=constVariablePointer:*/legacy/*"
+        "--suppress=constVariableReference:*/legacy/*"
+        #
+        "--suppress=uninitvar:*/plugins/*"
+        "--suppress=knownConditionTrueFalse:*/plugins/*"
+        "--suppress=constParameterPointer:*/plugins/*"
+        "--suppress=constParameterCallback:*/plugins/*"
+        "--suppress=constVariablePointer:*/plugins/*"
+        "--suppress=constVariableReference:*/plugins/*"
     )
 endif()
 

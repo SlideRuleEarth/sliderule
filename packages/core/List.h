@@ -87,7 +87,7 @@ class List
          * Methods
          *--------------------------------------------------------------------*/
 
-                List        (int list_block_size=DEFAULT_LIST_BLOCK_SIZE);
+      explicit  List        (int list_block_size=DEFAULT_LIST_BLOCK_SIZE);
                 List        (const List& l1);
                 ~List       (void);
 
@@ -171,7 +171,7 @@ const T& List<T>::Iterator::operator[](int index) const
     {
         int node_block = index / blockSize;
         int node_offset = index % blockSize;
-        const List<T>::list_node_t* block = blocks[node_block];
+        const List<T>::list_node_t* block = blocks[node_block];  // NOLINT
         return block->data[node_offset];
     }
 

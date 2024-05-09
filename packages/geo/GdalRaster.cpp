@@ -70,6 +70,8 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    cellSize   (0),
    bbox       (),
    radiusInPixels(0),
+   geoTransform(),
+   invGeoTransform(),
    ssError    (SS_NO_ERRORS)
 {
 }
@@ -154,10 +156,10 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
             open();
 
         double z = poi->getZ();
-        //mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        //mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -549,70 +551,70 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
         {
             case GDT_Byte:
             {
-                uint8_t* p   = static_cast<uint8_t*>(data);
+                const uint8_t* p   = static_cast<uint8_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int8:
             {
-                int8_t* p   = static_cast<int8_t*>(data);
+                const int8_t* p   = static_cast<int8_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_UInt16:
             {
-                uint16_t* p  = static_cast<uint16_t*>(data);
+                const uint16_t* p  = static_cast<uint16_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int16:
             {
-                int16_t* p   = static_cast<int16_t*>(data);
+                const int16_t* p   = static_cast<int16_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_UInt32:
             {
-                uint32_t* p  = static_cast<uint32_t*>(data);
+                const uint32_t* p  = static_cast<uint32_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int32:
             {
-                int32_t* p   = static_cast<int32_t*>(data);
+                const int32_t* p   = static_cast<int32_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int64:
             {
-                int64_t* p   = static_cast<int64_t*>(data);
+                const int64_t* p   = static_cast<int64_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_UInt64:
             {
-                uint64_t* p  = static_cast<uint64_t*>(data);
+                const uint64_t* p  = static_cast<uint64_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Float32:
             {
-                float* p     = static_cast<float*>(data);
+                const float* p     = static_cast<float*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Float64:
             {
-                double* p    = static_cast<double*>(data);
+                const double* p    = static_cast<double*>(data);
                 sample->value = p[offset];
             }
             break;
@@ -977,7 +979,11 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
         /* If parentPath is a vrt rename it to .tif */
         if (vsiName.substr(vsiName.length() - 4) == ".vrt")
-            vsiName = vsiName.substr(0, vsiName.length() - 4) + "_vrt.tif";
+        {
+            vsiName.erase(vsiName.length() - 4);
+            vsiName += "_vrt.tif";
+
+        }
 
         GDALDataType dtype = band->GetRasterDataType();
 

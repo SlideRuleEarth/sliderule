@@ -348,7 +348,7 @@ int RasterObject::luaSubsets(lua_State *L)
 
         /* Get gps closest time (overrides params provided closest time) */
         int64_t gps = 0;
-        if(closest_time_str != NULL)
+        if(closest_time_str != NULL) // NOLINT
         {
             gps = TimeLib::str2gpstime(closest_time_str);
         }

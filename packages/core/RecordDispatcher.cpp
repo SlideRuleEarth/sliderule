@@ -82,7 +82,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
         }
-        
+
         if(key_mode == FIELD_KEY_MODE)
         {
             key_field = getLuaString(L, 4);
@@ -296,7 +296,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     delete [] old_dispatch.list;
                 }
             }
-            catch(RunTimeException& e)
+            catch(const RunTimeException& e)
             {
                 (void)e;
             }
@@ -547,7 +547,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
         if(StringLib::match(rec_type, ContainerRecord::recType))
         {
             ContainerRecord::rec_t* container = (ContainerRecord::rec_t*)record->getRecordData();
-            
+
             /* Build List of Records */
             DispatchObject::recVec_t rec_list;
             rec_list.reserve(container->rec_cnt);
@@ -560,7 +560,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
             }
 
             /* Dispatch Each Record */
-            for(auto& rec: rec_list)
+            for(const auto& rec: rec_list)
             {
                 dispatchRecord(rec, &rec_list);
                 delete rec;
@@ -596,7 +596,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
             dis.list[i]->processRecord(record, key, records);
         }
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
     }

@@ -381,19 +381,19 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
     {
         return true; // no authentication used for default organization name
     }
-    
+
     if(token != NULL)
     {
         return ProvisioningSystemLib::validate(token);
     }
-    
+
     return false;
 }
 
 /*----------------------------------------------------------------------------
  * writeData
  *----------------------------------------------------------------------------*/
-size_t ProvisioningSystemLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t ProvisioningSystemLib::writeData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<data_t>* rsps_set = reinterpret_cast<List<data_t>*>(userp);
 

@@ -287,7 +287,7 @@ int ArrowParms::luaIsNative (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == NATIVE);
     }
     catch(const RunTimeException& e)
@@ -303,7 +303,7 @@ int ArrowParms::luaIsFeather (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == FEATHER);
     }
     catch(const RunTimeException& e)
@@ -319,7 +319,7 @@ int ArrowParms::luaIsParquet (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == PARQUET);
     }
     catch(const RunTimeException& e)
@@ -335,7 +335,7 @@ int ArrowParms::luaIsCSV (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == CSV);
     }
     catch(const RunTimeException& e)
@@ -351,7 +351,7 @@ int ArrowParms::luaIsArrow (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, (lua_obj->format == PARQUET) ||
                                   (lua_obj->format == CSV) ||
                                   (lua_obj->format == FEATHER));
@@ -369,7 +369,7 @@ int ArrowParms::luaPath (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         if(lua_obj->path) lua_pushstring(L, lua_obj->path);
         else lua_pushnil(L);
         return 1;

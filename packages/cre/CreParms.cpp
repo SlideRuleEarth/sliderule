@@ -198,7 +198,7 @@ int CreParms::luaImage (lua_State* L)
 {
     try
     {
-        CreParms* lua_obj = dynamic_cast<CreParms*>(getLuaSelf(L, 1));
+        const CreParms* lua_obj = dynamic_cast<CreParms*>(getLuaSelf(L, 1));
         if(lua_obj->image) lua_pushstring(L, lua_obj->image);
         else lua_pushnil(L);
         return 1;

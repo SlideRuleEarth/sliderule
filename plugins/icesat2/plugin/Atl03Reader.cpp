@@ -610,7 +610,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
         {
             /* Allocate Ancillary Data Dictionary */
             anc_seg_data = new H5DArrayDictionary(Icesat2Parms::EXPECTED_NUM_FIELDS);
-        
+
             /* Read Ancillary Fields */
             AncillaryFields::list_t* atl08_fields = info->reader->parms->atl08_fields;
             for(int i = 0; i < atl08_fields->length(); i++)
@@ -635,7 +635,7 @@ Atl03Reader::Atl08Class::Atl08Class (info_t* info):
         catch(const RunTimeException& e)
         {
             delete anc_seg_data;
-            throw;    
+            throw;
         }
     }
 }
@@ -813,13 +813,13 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, const Region& region, const Atl
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC])
+    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC]) // NOLINT
     {
         return;
     }
 
     /* Run YAPC */
-    if(info->reader->parms->yapc.version == 3)
+    if(info->reader->parms->yapc.version == 3) // NOLINT
     {
         yapcV3(info, region, atl03);
     }
@@ -1031,13 +1031,13 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const A
     int32_t num_segments = atl03.segment_id.size;
     int32_t num_photons = atl03.dist_ph_along.size;
     score = new uint8_t [num_photons]; // class member freed in deconstructor
-    double* ph_dist = new double[num_photons]; // local array freed below
+    double* ph_dist = new double[num_photons];  // NOLINT // local array freed below
 
     /* Populate Distance Array */
     int32_t ph_index = 0;
-    for(int segment_index = 0; segment_index < num_segments; segment_index++)
+    for(int segment_index = 0; segment_index < num_segments; segment_index++) // NOLINT
     {
-        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[segment_index]; ph_in_seg_index++)
+        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[segment_index]; ph_in_seg_index++) // NOLINT
         {
             ph_dist[ph_index] = atl03.segment_dist_x[segment_index] + atl03.dist_ph_along[ph_index];
             ph_index++;
@@ -1087,7 +1087,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const A
             while(neighbor_index < num_photons)
             {
                 /* Check Inside Horizontal Window */
-                double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index];
+                double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index]; // NOLINT
                 if(x_dist <= hWX)
                 {
                     /* Check Inside Vertical Window */
@@ -1195,7 +1195,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
-    {        
+    {
         /* Start Reading ATL08 Data */
         Atl08Class atl08(info);
 
@@ -1206,7 +1206,7 @@ void* Atl03Reader::subsettingThread (void* parm)
         Atl03Data atl03(info, region);
 
         /* Perform YAPC Scoring (if requested) */
-        YapcScore yapc(info, region, atl03);
+        YapcScore yapc(info, region, atl03); // NOLINT
 
         /* Perform ATL08 Classification (if requested) */
         atl08.classify(info, region, atl03);

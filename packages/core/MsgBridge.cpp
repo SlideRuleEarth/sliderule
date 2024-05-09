@@ -122,7 +122,7 @@ void* MsgBridge::bridgeThread(void* parm)
         int recv_status = bridge->inQ->receiveRef(ref, SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            unsigned char* msg = (unsigned char*)ref.data;
+            const unsigned char* msg = (unsigned char*)ref.data;
             int len = ref.size;
 
             /* Dispatch Record */

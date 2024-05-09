@@ -72,7 +72,7 @@ class Table
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Table       (K table_size=DEFAULT_TABLE_SIZE, hash_func_t _hash=identity);
+        explicit    Table       (K table_size=DEFAULT_TABLE_SIZE, hash_func_t _hash=identity);
         virtual     ~Table      (void);
 
 
@@ -304,7 +304,7 @@ T& Table<T,K>::get(K key, match_t match, bool resort)
             best_index = curr_index;
             break;
         }
-        
+
         if(match == MATCH_NEAREST_UNDER)
         {
             if(table[curr_index].key < key)

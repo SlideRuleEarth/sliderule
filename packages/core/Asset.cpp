@@ -150,7 +150,7 @@ int Asset::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * public assetFactory
  *----------------------------------------------------------------------------*/
-const Asset* Asset::assetFactory(lua_State* L, std::vector<const char*> attrs) {
+const Asset* Asset::assetFactory(lua_State* L, const std::vector<const char*>& attrs) {
 
     // force rebuild
     attributes_t _attributes;
@@ -302,7 +302,7 @@ const char* Asset::getEndpoint (void) const
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Asset::Asset (lua_State* L, attributes_t _attributes, const io_driver_t& _driver):
+Asset::Asset (lua_State* L, const attributes_t& _attributes, const io_driver_t& _driver):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     driver(_driver),
     resources(ASSET_STARTING_RESOURCES_PER_INDEX)
@@ -435,5 +435,4 @@ const char* Asset::tojson(void) const
     doc.Accept(writer);
 
     return StringLib::duplicate(buffer.GetString());
-
 }

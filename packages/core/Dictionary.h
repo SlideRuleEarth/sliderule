@@ -87,7 +87,7 @@ class Dictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Dictionary      (int hash_size=DEFAULT_HASH_TABLE_SIZE, double hash_load=DEFAULT_HASH_TABLE_LOAD);
+        explicit    Dictionary      (int hash_size=DEFAULT_HASH_TABLE_SIZE, double hash_load=DEFAULT_HASH_TABLE_LOAD);
                     ~Dictionary     (void);
 
         bool        add             (const char* key, const T& data, bool unique=false);
@@ -458,10 +458,10 @@ int Dictionary<T>::getMaxChain(void) const
 template <class T>
 int Dictionary<T>::getKeys (char*** keys) const
 {
-    if (numEntries == 0) return 0;
+    if (numEntries == 0) return 0; // NOLINT
 
-    *keys = new char* [numEntries];
-    for(unsigned int i = 0, j = 0; i < hashSize; i++)
+    *keys = new char* [numEntries];  // NOLINT
+    for(unsigned int i = 0, j = 0; i < hashSize; i++) // NOLINT
     {
         if(hashTable[i].chain != EMPTY_ENTRY)
         {
@@ -594,7 +594,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
 {
     /* Check Self Assignment */
     if(this == &other) return *this;
-    
+
     /* Clear Hash */
     clear();
 
@@ -690,7 +690,7 @@ unsigned int Dictionary<T>::getNode(const char* key) const
             while(hashTable[index].key[i] == key[i])
             {
                 /* If there is no difference AND key is at null, return match */
-                if(key[i] == '\0') 
+                if(key[i] == '\0')
                 {
                     return index;
                 }

@@ -78,7 +78,7 @@ int ContainerRecord::hdrSize (int cnt)
 int ContainerRecord::recSize (vector<RecordObject*> rec_vec)
 {
     int total_size = hdrSize(rec_vec.size());
-    for(RecordObject* rec: rec_vec)
+    for(const RecordObject* rec: rec_vec)
     {
         total_size += rec->getUsedMemory();
     }
@@ -117,7 +117,7 @@ ContainerRecord::ContainerRecord(vector<RecordObject*> rec_vec):
  *----------------------------------------------------------------------------*/
 ContainerRecord::~ContainerRecord()
 {
-}    
+}
 
 /*----------------------------------------------------------------------------
  * addRecord

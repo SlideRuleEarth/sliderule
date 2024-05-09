@@ -57,7 +57,7 @@ int MetricRecord::rec_elem = sizeof(MetricRecord::rec_def) / sizeof(RecordObject
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, const char* _name, void* _src, int _src_size):
+MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, const char* _name, const void* _src, int _src_size):
     RecordObject(rec_type, calcRecordSize(_text, _name, _src_size))
 {
     /* Populate Initial Metric */

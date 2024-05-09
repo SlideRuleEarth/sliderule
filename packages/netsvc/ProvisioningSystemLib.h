@@ -77,7 +77,7 @@ class ProvisioningSystemLib
         static int          luaLogin            (lua_State* L);
         static int          luaValidate         (lua_State* L);
 
-        static size_t       writeData           (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t       writeData           (const void *buffer, size_t size, size_t nmemb, void *userp);
 
         /*--------------------------------------------------------------------
          * Data

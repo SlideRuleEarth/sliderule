@@ -575,7 +575,7 @@ int LuaLibrarySys::lsys_lsobj (lua_State* L)
 int LuaLibrarySys::lsys_cwd (lua_State* L)
 {
     char cwd[MAX_STR_SIZE];
-    char* cwd_ptr = getcwd(cwd, MAX_STR_SIZE);
+    const char* cwd_ptr = getcwd(cwd, MAX_STR_SIZE);
 
     if(cwd_ptr != NULL)
     {

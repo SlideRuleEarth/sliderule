@@ -116,15 +116,15 @@ HttpClient::HttpClient(lua_State* L, const char* url):
     char* proto_term = StringLib::find(url_buf, "://");
     if(proto_term)
     {
-        char* proto = url_buf;
-        char* _ip_addr = proto_term + 3;
+        const char* proto = url_buf;
+        const char* _ip_addr = proto_term + 3;
         *proto_term = '\0';
         if((_ip_addr - proto) < MAX_URL_LEN)
         {
             char* ip_addr_term = StringLib::find(_ip_addr, ":");
             if(ip_addr_term)
             {
-                char* _port_str = ip_addr_term + 1;
+                const char* _port_str = ip_addr_term + 1;
                 *ip_addr_term = '\0';
                 if(_port_str)
                 {

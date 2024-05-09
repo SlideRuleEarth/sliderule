@@ -97,7 +97,7 @@ class Ordering
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Ordering    (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
+       explicit     Ordering    (typename Ordering<T,K>::postFunc_t post_func=NULL, void* post_parm=NULL, K max_list_size=INFINITE_LIST_SIZE);
                     ~Ordering   (void);
 
         bool        add         (K key, const T& data, bool unique=false);
@@ -194,7 +194,7 @@ typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) cons
 {
     if( (index < length) && (index >= 0) )
     {
-        Ordering<T,K>::kv_t pair(keys[index], *values[index]);
+        Ordering<T,K>::kv_t pair(keys[index], *values[index]); // NOLINT
         return pair;
     }
 
@@ -528,7 +528,7 @@ Ordering<T,K>& Ordering<T,K>::operator=(const Ordering& other)
     postParm = other.postParm;
 
     /* build new list */
-    sorted_node_t* tmp_node = other.firstNode;
+    const sorted_node_t* tmp_node = other.firstNode;
     while(tmp_node != NULL)
     {
         addNode(tmp_node->key, tmp_node->data, false);

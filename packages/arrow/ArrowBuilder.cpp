@@ -414,7 +414,7 @@ void* ArrowBuilder::builderThread(void* parm)
                         else if(StringLib::match(subrec->getRecordType(), AncillaryFields::ancElementRecType))
                         {
                             anc_vec.push_back(subrec);
-                            AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(subrec->getRecordData());
+                            const AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(subrec->getRecordData());
                             batch->anc_elements += element_array->num_elements;
                         }
                         else // ignore

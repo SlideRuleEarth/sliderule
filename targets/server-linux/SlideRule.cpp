@@ -177,7 +177,7 @@ static void* signal_thread (void* parm)
             signal(SIGINT, console_quick_exit);
             break;
         }
-        
+
         if(app_signal_abort)
         {
             break; // exit thread for clean up
@@ -202,7 +202,7 @@ static void ldplugins(void)
     DIR *dir;
     if((dir = opendir(CONFDIR)) != NULL)
     {
-        struct dirent *ent;
+        const struct dirent *ent;
         while((ent = readdir(dir)) != NULL)
         {
             /* Build Plugin Name */

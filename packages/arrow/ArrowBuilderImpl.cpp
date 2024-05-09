@@ -542,8 +542,8 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
 
         /* Initialize Column String */
         string columnstr(R"json({"name": "_NAME_", "field_name": "_NAME_", "pandas_type": "_PTYPE_", "numpy_type": "_NTYPE_", "metadata": null})json");
-        const char* pandas_type = "";
-        const char* numpy_type = "";
+        const char* pandas_type = "";  // NOLINT
+        const char* numpy_type = "";   // NOLINT
         bool is_last_entry = false;
 
         if      (field_type->Equals(arrow::float64()))      { pandas_type = "float64";    numpy_type = "float64";           }

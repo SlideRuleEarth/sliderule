@@ -135,7 +135,7 @@ void SockLib::signalexit(void)
 /*----------------------------------------------------------------------------
  * sockstream
  *----------------------------------------------------------------------------*/
-int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* block)
+int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const bool* block)
 {
     /* Create initial socket */
     int sock = sockcreate(SOCK_STREAM, ip_addr, port, is_server, block);
@@ -210,7 +210,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, bool* blo
 /*----------------------------------------------------------------------------
  * sockdatagram
  *----------------------------------------------------------------------------*/
-int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, bool* block, const char* multicast_group)
+int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, const bool* block, const char* multicast_group)
 {
     /* Create initial socket */
     int sock = sockcreate(SOCK_DGRAM, ip_addr, port, is_server, block);

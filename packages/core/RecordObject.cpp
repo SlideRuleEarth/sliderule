@@ -297,7 +297,7 @@ RecordObject::~RecordObject(void)
 bool RecordObject::deserialize(unsigned char* buffer, int size)
 {
     /* Get Record Definition */
-    definition_t* def = getDefinition(buffer, size);
+    const definition_t* def = getDefinition(buffer, size);
     if(def != recordDefinition)
     {
         return false; // record does not match definition
@@ -308,7 +308,7 @@ bool RecordObject::deserialize(unsigned char* buffer, int size)
     {
         return false; // buffer passed in too large
     }
-    
+
     if(size < def->type_size)
     {
         return false; // buffer not large enough to populate type string
@@ -329,7 +329,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     uint32_t datasize = 0;
 
     /* Determine Buffer Size */
-    rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
+    const rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
     if(size > 0)
     {
         int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
@@ -521,8 +521,8 @@ bool RecordObject::populate (const char* populate_string)
         char args[2][MAX_STR_SIZE];
         if(StringLib::tokenizeLine(toks[i], MAX_STR_SIZE, '=', 2, args) == 2)
         {
-            char* field_str = args[0];
-            char* value_str = args[1];
+            const char* field_str = args[0];
+            const char* value_str = args[1];
 
             field_t f = getField(field_str);
             if(f.type != RecordObject::INVALID_FIELD)
@@ -781,7 +781,7 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
         if(ptr_field.offset == 0) return NULL;
         return getValueText(ptr_field, valbuf);
     }
-    
+
     if(val_type == TEXT)
     {
         char* str = (char*)(recordData + TOBYTES(f.offset));
@@ -791,7 +791,7 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
             {
                 return StringLib::copy(valbuf, str, f.elements);
             }
-            
+
             // variable length
             int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
             if(memory_left > 1)
@@ -799,17 +799,17 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
                 return StringLib::copy(valbuf, str, memory_left);
             }
         }
-        
+
         // valbuf not supplied
         return str;
     }
-    
+
     if(val_type == INTEGER && valbuf)
     {
         long val = getValueInteger(f);
         return StringLib::format(valbuf, MAX_VAL_STR_SIZE, DEFAULT_LONG_FORMAT, val);
     }
-    
+
     if(val_type == REAL && valbuf)
     {
         double val = getValueReal(f);
@@ -833,7 +833,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
         field_t ptr_field = getPointedToField(f, false, element);
         return getValueReal(ptr_field, 0);
     }
-    
+
     if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
         switch(f.type)
@@ -853,7 +853,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
             default:        return 0.0;
         }
     }
-    
+
     // Swap
     switch(f.type)
     {
@@ -887,7 +887,7 @@ long RecordObject::getValueInteger(const field_t& f, int element)
         field_t ptr_field = getPointedToField(f, false, element);
         return getValueInteger(ptr_field, 0);
     }
-    
+
     // Native
     if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
     {
@@ -908,7 +908,7 @@ long RecordObject::getValueInteger(const field_t& f, int element)
             default:        return 0;
         }
     }
-    
+
     // Swap
     switch(f.type)
     {
@@ -1038,7 +1038,7 @@ int RecordObject::getRecords(char*** rec_types)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordIdField(const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->id_field;
 }
@@ -1048,7 +1048,7 @@ const char* RecordObject::getRecordIdField(const char* rec_type)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordIndexField (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->meta.index_field;
 }
@@ -1058,7 +1058,7 @@ const char* RecordObject::getRecordIndexField (const char* rec_type)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordTimeField (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->meta.time_field;
 }
@@ -1068,7 +1068,7 @@ const char* RecordObject::getRecordTimeField (const char* rec_type)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordXField (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->meta.x_field;
 }
@@ -1078,7 +1078,7 @@ const char* RecordObject::getRecordXField (const char* rec_type)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordYField (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->meta.y_field;
 }
@@ -1088,7 +1088,7 @@ const char* RecordObject::getRecordYField (const char* rec_type)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordZField (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->meta.z_field;
 }
@@ -1098,7 +1098,7 @@ const char* RecordObject::getRecordZField (const char* rec_type)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getRecordBatchField (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return NULL;
     return def->meta.batch_field;
 }
@@ -1118,7 +1118,7 @@ RecordObject::meta_t* RecordObject::getRecordMetaFields (const char* rec_type)
  *----------------------------------------------------------------------------*/
 int RecordObject::getRecordSize(const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return 0;
     return def->record_size;
 }
@@ -1128,7 +1128,7 @@ int RecordObject::getRecordSize(const char* rec_type)
  *----------------------------------------------------------------------------*/
 int RecordObject::getRecordDataSize (const char* rec_type)
 {
-    definition_t* def = getDefinition(rec_type);
+    const definition_t* def = getDefinition(rec_type);
     if(def == NULL) return 0;
     return def->data_size;
 }
@@ -1160,9 +1160,9 @@ int RecordObject::getRecordFields(const char* rec_type, char*** field_names, fie
             (*fields)[i] = new field_t;
             try
             {
-                *(*fields)[i] = def->fields[(*field_names)[i]];
+                *(*fields)[i] = def->fields[(*field_names)[i]]; // NOLINT
             }
-            catch(RunTimeException& e)
+            catch(const RunTimeException& e)
             {
                 (void)e;
                 (*fields)[i]->type = INVALID_FIELD;
@@ -1589,16 +1589,16 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
 {
     assert(field_name);
 
-    field_t field = { INVALID_FIELD, 0, 0, NULL, parent_flags };
+    field_t _field = { INVALID_FIELD, 0, 0, NULL, parent_flags };
     long element = -1;
 
     /* Sanity Check Def */
-    if(def == NULL) return field;
+    if(def == NULL) return _field;
 
     /* Attempt Direct Access */
     try
     {
-        field = def->fields[field_name];
+        _field = def->fields[field_name];
     }
     catch(const RunTimeException& e)
     {
@@ -1606,7 +1606,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     }
 
     /* Attempt Indirect Access (array and/or struct) */
-    if(field.type == INVALID_FIELD) try
+    if(_field.type == INVALID_FIELD) try
     {
         /* Make Mutable Copy of Field Name */
         char fstr[MAX_VAL_STR_SIZE]; // field string
@@ -1650,26 +1650,26 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
         }
 
         /* Look Up Field Name */
-        field = def->fields[fstr];
-        if(field.type != USER)
+        _field = def->fields[fstr];
+        if(_field.type != USER)
         {
             /* Check Element Boundary */
-            if(element >= 0 && (element < field.elements || field.elements <= 0))
+            if(element >= 0 && (element < _field.elements || _field.elements <= 0))
             {
                 /* Modify Elements and Offset if not Pointer */
-                if((field.flags & POINTER) == 0)
+                if((_field.flags & POINTER) == 0)
                 {
-                    if(field.elements > 0) field.elements -= element;
-                    field.offset += TOBITS(element * FIELD_TYPE_BYTES[field.type]);
+                    if(_field.elements > 0) _field.elements -= element;
+                    _field.offset += TOBITS(element * FIELD_TYPE_BYTES[_field.type]);
                 }
             }
         }
         else
         {
-            definition_t* subdef = definitions[field.exttype];
-            field_t subfield = getUserField(subdef, subfield_name, field.flags);
-            subfield.offset += field.offset;
-            field = subfield;
+            definition_t* subdef = definitions[_field.exttype];
+            field_t subfield = getUserField(subdef, subfield_name, _field.flags);
+            subfield.offset += _field.offset;
+            _field = subfield;
         }
     }
     catch(const RunTimeException& e)
@@ -1678,8 +1678,8 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
     }
 
     /* Return Field */
-    field.flags |= parent_flags;
-    return field;
+    _field.flags |= parent_flags;
+    return _field;
 }
 
 /*----------------------------------------------------------------------------
@@ -1785,9 +1785,9 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
 * scanDefinition
 *----------------------------------------------------------------------------*/
 void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, const char* rec_type)
-{    
+{
     /* Get Fields in Record */
-    Dictionary<field_t>* fields = getRecordFields(rec_type);
+    const Dictionary<field_t>* fields = getRecordFields(rec_type);
     if(fields == NULL)
     {
         mlog(CRITICAL, "Unable to scan record type: %s\n", rec_type);
@@ -1800,20 +1800,20 @@ void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, 
     {
         Dictionary<field_t>::kv_t kv = field_iter[i];
         FString field_name("%s%s%s", field_prefix, strlen(field_prefix) == 0 ? "" : ".", kv.key);
-        const field_t& field = kv.value;
+        const field_t& _field = kv.value;
 
         /* Check for Marked Field */
-        if((field.flags & INDEX)    && (def->meta.index_field == NULL))  def->meta.index_field    = field_name.c_str(true);
-        if((field.flags & TIME)     && (def->meta.time_field == NULL))   def->meta.time_field     = field_name.c_str(true);
-        if((field.flags & X_COORD)  && (def->meta.x_field == NULL))      def->meta.x_field        = field_name.c_str(true);
-        if((field.flags & Y_COORD)  && (def->meta.y_field == NULL))      def->meta.y_field        = field_name.c_str(true);
-        if((field.flags & Z_COORD)  && (def->meta.z_field == NULL))      def->meta.z_field        = field_name.c_str(true);
-        if((field.flags & BATCH)    && (def->meta.batch_field == NULL))  def->meta.batch_field    = field_name.c_str(true);
+        if((_field.flags & INDEX)    && (def->meta.index_field == NULL))  def->meta.index_field    = field_name.c_str(true);
+        if((_field.flags & TIME)     && (def->meta.time_field == NULL))   def->meta.time_field     = field_name.c_str(true);
+        if((_field.flags & X_COORD)  && (def->meta.x_field == NULL))      def->meta.x_field        = field_name.c_str(true);
+        if((_field.flags & Y_COORD)  && (def->meta.y_field == NULL))      def->meta.y_field        = field_name.c_str(true);
+        if((_field.flags & Z_COORD)  && (def->meta.z_field == NULL))      def->meta.z_field        = field_name.c_str(true);
+        if((_field.flags & BATCH)    && (def->meta.batch_field == NULL))  def->meta.batch_field    = field_name.c_str(true);
 
         /* Recurse for User Fields */
-        if(field.type == USER)
+        if(_field.type == USER)
         {
-            scanDefinition(def, field_name.c_str(), field.exttype);
+            scanDefinition(def, field_name.c_str(), _field.exttype);
         }
     }
 }
@@ -1825,7 +1825,7 @@ RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
 {
     definition_t* def = NULL;
     try { def = definitions[rec_type]; }
-    catch (RunTimeException& e) { (void)e; }
+    catch (const RunTimeException& e) { (void)e; }
     return def;
 }
 
@@ -1842,7 +1842,7 @@ RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, i
     if(size <= (int)sizeof(rec_hdr_t)) throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer too small to retrieve record definition");
 
     /* Get Record Definitions */
-    char* rec_type = (char*)&buffer[sizeof(rec_hdr_t)];
+    const char* rec_type = (char*)&buffer[sizeof(rec_hdr_t)];
     definition_t* def = getDefinition(rec_type);
 
     /* Check Record Definition */

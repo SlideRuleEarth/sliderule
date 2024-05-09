@@ -288,7 +288,7 @@ int H5File::luaTraverse (lua_State* L)
     try
     {
         /* Get Self */
-        H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
+        const H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         uint32_t max_depth = getLuaInteger(L, 2, true, 32);
@@ -316,7 +316,7 @@ int H5File::luaInspect (lua_State* L)
     try
     {
         /* Get Self */
-        H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
+        const H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* dataset_name = getLuaString(L, 2);

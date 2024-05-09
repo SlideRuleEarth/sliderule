@@ -372,7 +372,7 @@ char* createMetadataFileName(const char* fileName)
     size_t dotIndex = path.find_last_of(".");
     if(dotIndex != std::string::npos)
     {
-        path = path.substr(0, dotIndex);
+        path.resize(dotIndex);
     }
     path.append("_metadata.json");
     return StringLib::duplicate(path.c_str());
@@ -425,7 +425,7 @@ int luaSend2User (lua_State* L)
     ArrowParms* _parms = NULL;
     Publisher* outq = NULL;
     const char* outputpath = NULL;
-    
+
     try
     {
         /* Get Parameters */

@@ -53,8 +53,8 @@ class SockLib
         static void         init                (void); // initializes library
         static void         deinit              (void); // de-initializes library
         static void         signalexit          (void); // de-initializes library
-        static int          sockstream          (const char* ip_addr, int port, bool is_server, bool* block);
-        static int          sockdatagram        (const char* ip_addr, int port, bool is_server, bool* block, const char* multicast_group);
+        static int          sockstream          (const char* ip_addr, int port, bool is_server, const bool* block);
+        static int          sockdatagram        (const char* ip_addr, int port, bool is_server, const bool* block, const char* multicast_group);
         static int          socksend            (int fd, const void* buf, int size, int timeout);
         static int          sockrecv            (int fd, void* buf, int size, int timeout);
         static int          sockinfo            (int fd, char** local_ipaddr, int* local_port, char** remote_ipaddr, int* remote_port);

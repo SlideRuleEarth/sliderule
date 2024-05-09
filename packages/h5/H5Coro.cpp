@@ -637,7 +637,7 @@ void H5FileBuffer::readDataset (info_t* info)
     }
 
     /* Get Number of Rows */
-    uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 1;
+    uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 1; // NOLINT
     datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
     if((datasetStartRow + datasetNumRows) > first_dimension)
     {
@@ -647,7 +647,7 @@ void H5FileBuffer::readDataset (info_t* info)
     /* Allocate Data Buffer */
     uint8_t* buffer = NULL;
     int64_t buffer_size = row_size * datasetNumRows;
-    if(!metaOnly && buffer_size > 0)
+    if(!metaOnly && buffer_size > 0) // NOLINT
     {
         buffer = new uint8_t [buffer_size];
 
@@ -724,7 +724,7 @@ void H5FileBuffer::readDataset (info_t* info)
     }
 
     /* Read Dataset */
-    if(!metaOnly && buffer_size > 0)
+    if(!metaOnly && buffer_size > 0) // NOLINT
     {
         switch(metaData.layout)
         {
@@ -841,7 +841,7 @@ void H5FileBuffer::readDataset (info_t* info)
                         /* Copy Into New Buffer */
                         for(uint64_t k = 0; k < cdimsizes[1]; k++)
                         {
-                            fbuf[start + k] = buffer[bi++];
+                            fbuf[start + k] = buffer[bi++];   // NOLINT
                         }
 
                         /* Update Indices */
@@ -3038,7 +3038,6 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 
     /* Follow Heap Address if Provided */
     uint64_t address_snapshot = metaData.address;
-    uint64_t heap_addr_snapshot = heap_address;
     heap_info_t heap_info_dense;
 
     /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
@@ -3047,6 +3046,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Check if Attribute Located Non-Dense, Else Init Dense Search */
     if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
     {
+        uint64_t heap_addr_snapshot = heap_address;
         H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
         if (curr_btreev2.found_attr) {
             readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
@@ -3537,21 +3537,21 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     /* Open Resource and Read Dataset */
     H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
 
-    if(info.data)
+    if(info.data) // NOLINT
     {
         bool data_valid = true;
 
         /* Perform Column Translation */
-        if((info.numcols > 1) && (col != ALL_COLS))
+        if((info.numcols > 1) && (col != ALL_COLS)) // NOLINT
         {
             /* Allocate Column Buffer */
             int64_t tbuf_size = info.datasize / info.numcols;
-            uint8_t* tbuf = new uint8_t [tbuf_size];
+            uint8_t* tbuf = new uint8_t [tbuf_size]; // NOLINT
 
             /* Copy Column into Buffer */
             int64_t tbuf_row_size = info.datasize / info.numrows;
             int64_t tbuf_col_size = tbuf_row_size / info.numcols;
-            for(int row = 0; row < info.numrows; row++)
+            for(int row = 0; row < info.numrows; row++) // NOLINT
             {
                 int64_t tbuf_offset = (row * tbuf_col_size);
                 int64_t data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
@@ -3566,7 +3566,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
         }
 
         /* Perform Integer Type Translation */
-        if(valtype == RecordObject::INTEGER)
+        if(valtype == RecordObject::INTEGER) // NOLINT
         {
             /* Allocate Buffer of Integers */
             int* tbuf = new int [info.elements];
@@ -3577,7 +3577,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 float* dptr = (float*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = (int)dptr[i]; // NOLINT
                 }
             }
             /* Double to Int */
@@ -3586,7 +3586,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 double* dptr = (double*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = (int)dptr[i]; // NOLINT
                 }
             }
             /* Char to Int */
@@ -3595,7 +3595,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint8_t* dptr = (uint8_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = (int)dptr[i]; // NOLINT
                 }
             }
             /* String to Int - assumes ASCII encoding */
@@ -3606,7 +3606,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 // NOTE this len calc is redundant, but metaData not visible to scope
                 uint8_t* len_cnt = dptr;
                 uint32_t length = 0;
-                while (*len_cnt != '\0') {
+                while (*len_cnt != '\0') { // NOLINT
                     length++;
                     len_cnt++;
                 }
@@ -3623,7 +3623,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint16_t* dptr = (uint16_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = (int)dptr[i]; // NOLINT
                 }
             }
             /* Int to Int */
@@ -3632,7 +3632,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint32_t* dptr = (uint32_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = (int)dptr[i]; // NOLINT
                 }
             }
             /* Long to Int */
@@ -3641,7 +3641,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint64_t* dptr = (uint64_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = (int)dptr[i]; // NOLINT
                 }
             }
             else
@@ -3651,68 +3651,68 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
             /* Switch Buffers */
             delete [] info.data;
-            info.data = (uint8_t*)tbuf;
+            info.data = (uint8_t*)tbuf; // NOLINT
             info.datasize = sizeof(int) * info.elements;
         }
 
         /* Perform Integer Type Transaltion */
-        if(valtype == RecordObject::REAL)
+        if(valtype == RecordObject::REAL) // NOLINT
         {
             /* Allocate Buffer of Integers */
             double* tbuf = new double [info.elements];
 
             /* Float to Double */
-            if(info.datatype == RecordObject::FLOAT)
+            if(info.datatype == RecordObject::FLOAT) // NOLINT
             {
                 float* dptr = (float*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = (double)dptr[i]; // NOLINT
                 }
             }
             /* Double to Double */
-            else if(info.datatype == RecordObject::DOUBLE)
+            else if(info.datatype == RecordObject::DOUBLE) // NOLINT
             {
                 double* dptr = (double*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = (double)dptr[i]; // NOLINT
                 }
             }
             /* Char to Double */
-            else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
+            else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8) // NOLINT
             {
                 uint8_t* dptr = (uint8_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = (double)dptr[i]; // NOLINT
                 }
             }
             /* Short to Double */
-            else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
+            else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16) // NOLINT
             {
                 uint16_t* dptr = (uint16_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = (double)dptr[i]; // NOLINT
                 }
             }
             /* Int to Double */
-            else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
+            else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32) // NOLINT
             {
                 uint32_t* dptr = (uint32_t*)info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = (double)dptr[i]; // NOLINT
                 }
             }
             /* Long to Double */
-            else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
+            else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64) // NOLINT
             {
                 uint64_t* dptr = (uint64_t*)info.data;
-                for(uint32_t i = 0; i < info.elements; i++)
+                for(uint32_t i = 0; i < info.elements; i++) // NOLINT
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = (double)dptr[i]; // NOLINT
                 }
             }
             else

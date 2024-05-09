@@ -226,7 +226,7 @@ char* StringLib::copy(char* dst, const char* src, int _size)
 {
     if(dst && src && (_size > 0))
     {
-        char* nptr = (char*)memccpy(dst, src, 0, _size);
+        const char* nptr = (char*)memccpy(dst, src, 0, _size);
         if(!nptr) dst[_size - 1] = '\0';
     }
     else if(dst && (_size > 0))
@@ -359,7 +359,7 @@ void StringLib::convertUpper(char* str1)
  *
  *  converts from src to dst, returns dst for c syntax convenience
  *----------------------------------------------------------------------------*/
-char* StringLib::convertUpper(char* dst, char* src)
+char* StringLib::convertUpper(char* dst, const char* src)
 {
     int slen = (int)strlen(src) + 1;
     for(int i = 0; i < slen; i++)
@@ -398,7 +398,7 @@ void StringLib::convertLower(char* str1)
  *
  *  converts from src to dst, returns dst for c syntax convenience
  *----------------------------------------------------------------------------*/
-char* StringLib::convertLower(char* dst, char* src)
+char* StringLib::convertLower(char* dst, const char* src)
 {
     int slen = (int)strlen(src) + 1;
     for(int i = 0; i < slen; i++)
@@ -683,7 +683,7 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
     int len = *size;
     if (len == 0) return (unsigned char*)"";
 
-    unsigned char *p = (unsigned char*) data;
+    const unsigned char *p = (unsigned char*) data;
     size_t j = 0;
     size_t pad1 = len % 4 || p[len - 1] == '=';
     size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
@@ -737,7 +737,7 @@ char* StringLib::b16encode(const void* data, int size, bool lower_case, char* ds
     if(!str) str = new char [encoded_len + 1];
     str[encoded_len] = '\0';
 
-    uint8_t* data_ptr = (uint8_t*)data;
+    const uint8_t* data_ptr = (uint8_t*)data;
     for(int i = 0, j = 0; i < size; i++)
     {
         str[j++] = digits[data_ptr[i] >> 4];

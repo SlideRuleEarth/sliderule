@@ -174,8 +174,8 @@ int UT_Atl06Dispatch::luaSortTest (lua_State* L)
         bool tests_passed = true;
 
         /* Test 1 */
-        Atl06Dispatch::point_t a1[10] = { {0,0}, {0,5}, {0,1}, {0,4}, {0,2}, {0,3}, {0,9}, {0,6}, {0,7}, {0,8} };
-        Atl06Dispatch::point_t b1[10] = { {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, {0,9} };
+              Atl06Dispatch::point_t a1[10] = { {0,0}, {0,5}, {0,1}, {0,4}, {0,2}, {0,3}, {0,9}, {0,6}, {0,7}, {0,8} };
+        const Atl06Dispatch::point_t b1[10] = { {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, {0,9} };
         Atl06Dispatch::quicksort(a1, 0, 9);
         for(int i = 0; i < 10; i++)
         {
@@ -188,8 +188,8 @@ int UT_Atl06Dispatch::luaSortTest (lua_State* L)
         }
 
         /* Test 2 */
-        Atl06Dispatch::point_t a2[10] = { {0,1}, {0,1}, {0,1}, {0,3}, {0,2}, {0,3}, {0,3}, {0,6}, {0,9}, {0,9} };
-        Atl06Dispatch::point_t b2[10] = { {0,1}, {0,1}, {0,1}, {0,2}, {0,3}, {0,3}, {0,3}, {0,6}, {0,9}, {0,9} };
+              Atl06Dispatch::point_t a2[10] = { {0,1}, {0,1}, {0,1}, {0,3}, {0,2}, {0,3}, {0,3}, {0,6}, {0,9}, {0,9} };
+        const Atl06Dispatch::point_t b2[10] = { {0,1}, {0,1}, {0,1}, {0,2}, {0,3}, {0,3}, {0,3}, {0,6}, {0,9}, {0,9} };
         Atl06Dispatch::quicksort(a2, 0, 9);
         for(int i = 0; i < 10; i++)
         {
@@ -202,8 +202,8 @@ int UT_Atl06Dispatch::luaSortTest (lua_State* L)
         }
 
         /* Test 3 */
-        Atl06Dispatch::point_t a3[10] = { {0,9}, {0,8}, {0,1}, {0,7}, {0,6}, {0,3}, {0,5}, {0,4}, {0,2}, {0,0} };
-        Atl06Dispatch::point_t b3[10] = { {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, {0,9} };
+              Atl06Dispatch::point_t a3[10] = { {0,9}, {0,8}, {0,1}, {0,7}, {0,6}, {0,3}, {0,5}, {0,4}, {0,2}, {0,0} };
+        const Atl06Dispatch::point_t b3[10] = { {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, {0,9} };
         Atl06Dispatch::quicksort(a3, 0, 9);
         for(int i = 0; i < 10; i++)
         {

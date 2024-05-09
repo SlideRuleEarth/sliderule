@@ -335,7 +335,7 @@ void SpatialIndex::displayspan (const spatialspan_t& span)
 /*----------------------------------------------------------------------------
  * project
  *----------------------------------------------------------------------------*/
-SpatialIndex::projspan_t SpatialIndex::project (spatialspan_t span)
+SpatialIndex::projspan_t SpatialIndex::project (const spatialspan_t& span)
 {
     projspan_t proj;
 
@@ -358,7 +358,7 @@ SpatialIndex::projspan_t SpatialIndex::project (spatialspan_t span)
 /*----------------------------------------------------------------------------
  * restore
  *----------------------------------------------------------------------------*/
-spatialspan_t SpatialIndex::restore (projspan_t proj)
+spatialspan_t SpatialIndex::restore (const projspan_t& proj)
 {
     spatialspan_t span;
     span.c0 = MathLib::point2coord(proj.p0, projection);
@@ -374,7 +374,7 @@ int SpatialIndex::luaProject (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
+        const SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spherical Coordinates */
         MathLib::coord_t c;
@@ -406,7 +406,7 @@ int SpatialIndex::luaSphere (lua_State* L)
     try
     {
         /* Get Self */
-        SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
+        const SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Polar Coordinates */
         MathLib::point_t p;
@@ -496,8 +496,8 @@ int SpatialIndex::luaIntersect (lua_State* L)
         spatialspan_t span2 = lua_obj->luatable2span(L, 3);
 
         /* Get Intersection */
-        bool intersect = lua_obj->intersect(span1, span2);
-        lua_pushboolean(L, intersect);
+        bool _intersect = lua_obj->intersect(span1, span2);
+        lua_pushboolean(L, _intersect);
 
         /* Return Intersection */
         return 1;

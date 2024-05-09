@@ -399,7 +399,7 @@ void CcsdsParserAOSFrameModule::gotoInitState(bool reset)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int vcid, int strip_size, uint8_t* sync_marker, int sync_size, int sync_offset, int fixed_size, int header_size, int trailer_size):
+CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int vcid, int strip_size, const uint8_t* sync_marker, int sync_size, int sync_offset, int fixed_size, int header_size, int trailer_size):
     CcsdsParserModule(L, LUA_META_NAME, LUA_META_TABLE)
 {
     SpacecraftId        = scid;

@@ -76,7 +76,7 @@ int TcpSocket::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server, bool* block, bool _die_on_disconnect):
+TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server, const bool* block, bool _die_on_disconnect):
     DeviceObject(L, DUPLEX)
 {
     /* Initial Socket Parameters */

@@ -62,10 +62,10 @@ void CurlLib::deinit (void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                        bool verify_peer, bool verify_hostname, int timeout,
-                       List<string*>* headers, 
-                       const char* unix_socket, 
+                       List<string*>* headers,
+                       const char* unix_socket,
                        List<string*>* rsps_headers)
 {
     long http_code = 0;
@@ -384,8 +384,8 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
         if(num_strings == 0)
         {
             lua_pushnil(L);  // push nil to start the iteration
-            while(lua_next(L, index) != 0) 
-            { 
+            while(lua_next(L, index) != 0)
+            {
                 const char* key = LuaObject::getLuaString(L, -2);
                 const char* value = LuaObject::getLuaString(L, -1);
                 string* header = new string(FString("%s: %s", key, value).c_str());
@@ -446,7 +446,7 @@ int CurlLib::luaGet (lua_State* L)
                 /* push pair for each header */
                 for(int i = 0; i < rsps_headers->length(); i++)
                 {
-                    string* hdr_str = rsps_headers->get(i);
+                    const string* hdr_str = rsps_headers->get(i);
                     size_t pos = hdr_str->find(':');
                     string key = hdr_str->substr(0,pos);
                     string value = hdr_str->substr(pos+1);
@@ -597,11 +597,11 @@ void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, in
 /*----------------------------------------------------------------------------
  * CurlLib::postRecords
  *----------------------------------------------------------------------------*/
-size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     parser_t* parser = static_cast<parser_t*>(userp);
     int32_t bytes_to_process = static_cast<int32_t>(size * nmemb);
-    uint8_t* input_data = static_cast<uint8_t*>(buffer);
+    const uint8_t* input_data = static_cast<const uint8_t*>(buffer);
     uint32_t input_index = 0;
 
     while((!parser->active || *parser->active) && (bytes_to_process > 0))
@@ -617,7 +617,7 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
             if(parser->hdr_index == RECOBJ_HDR_SIZE)
             {
                 // parser header
-                RecordObject::rec_hdr_t* rec_hdr = reinterpret_cast<RecordObject::rec_hdr_t*>(parser->hdr_buf);
+                const RecordObject::rec_hdr_t* rec_hdr = reinterpret_cast<RecordObject::rec_hdr_t*>(parser->hdr_buf);
                 uint16_t version = OsApi::swaps(rec_hdr->version);
                 uint16_t type_size = OsApi::swaps(rec_hdr->type_size);
                 uint32_t data_size = OsApi::swapl(rec_hdr->data_size);
@@ -678,7 +678,7 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
 /*----------------------------------------------------------------------------
  * CurlLib::postData
  *----------------------------------------------------------------------------*/
-size_t CurlLib::postData(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t CurlLib::postData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     Publisher* outq = static_cast<Publisher*>(userp);
     return outq->postCopy(buffer, size * nmemb, DATA_TIMEOUT * 1000);
@@ -687,7 +687,7 @@ size_t CurlLib::postData(void *buffer, size_t size, size_t nmemb, void *userp)
 /*----------------------------------------------------------------------------
  * CurlLib::writeData
  *----------------------------------------------------------------------------*/
-size_t CurlLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t CurlLib::writeData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<data_t>* rsps_set = static_cast<List<data_t>*>(userp);
 
@@ -727,7 +727,7 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
 /*----------------------------------------------------------------------------
  * CurlLib::writerHeader
  *----------------------------------------------------------------------------*/
-size_t CurlLib::writerHeader(void* buffer, size_t size, size_t nmemb, void *userp) 
+size_t CurlLib::writerHeader(const void* buffer, size_t size, size_t nmemb, void *userp)
 {
     List<string*>* rsps_headers = reinterpret_cast<List<string*>*>(userp);
     string* header = new string((char*)buffer);
