@@ -253,7 +253,7 @@ coastnet-container-docker: ## create the coastnet container image
 	
 coastnet-surface-container-run: ## run the coastnet surface docker container
 #	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /surface.sh
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
+	docker run -it --rm -v /data:/data -v $(ROOT)/../ut-coastnet:/ut-coastnet --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
 
 coastnet-bathy-container-run: ## run the coastnet bathy docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /bathy.sh

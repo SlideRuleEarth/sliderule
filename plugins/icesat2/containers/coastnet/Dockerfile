@@ -7,6 +7,10 @@ FROM fedora:39 as buildenv
 RUN  dnf update -y \
   && dnf groupinstall -y "Development Tools" \
   && dnf install -y \
+         make \
+         automake \
+         gcc \
+         gcc-c++ \
          cmake \
          cppcheck \
          opencv-devel \
@@ -17,15 +21,22 @@ RUN  dnf update -y \
          mlpack-bin \
          gdal-devel \
          armadillo-devel \
-         'dnf-command(config-manager)' \
-  && dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora39/x86_64/cuda-fedora39.repo \
-  && dnf -y install cuda libcudnn8 libcudnn8-devel \
+#         'dnf-command(config-manager)' \
+#  && dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora39/x86_64/cuda-fedora39.repo \
+#  && dnf -y install cuda libcudnn8 libcudnn8-devel \
   && dnf clean all \
   && rm -rf /var/cache/yum
 
 # set working directory to root
 WORKDIR /
 
+# create python environment
+RUN python3.9 -m venv venv \
+    && source ./venv/bin/activate \
+    && python -m pip install --upgrade pip \
+    && pip install torch numpy
+
+    
 ##########
 # RUNTIME
 ##########
@@ -41,8 +52,9 @@ WORKDIR /
 #     mlpack-bin \
 #     gdal \
 #     armadillo \
-#  && dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo \
-#  && dnf -y install cuda libcudnn8 \
+#     'dnf-command(config-manager)' \
+#  && dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora39/x86_64/cuda-fedora39.repo \
+#  && dnf -y install cuda libcudnn8 libcudnn8-devel \
 #  && dnf clean all \
 #  && rm -rf /var/cache/yum
 
