@@ -155,6 +155,61 @@ const char* GediParms::index2group (int index)
 }
 
 /*----------------------------------------------------------------------------
+ * degrade2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::degrade2str(degrade_t filter)
+{
+    switch(filter)
+    {
+        case DEGRADE_UNFILTERED: return "UNFILTERED";
+        case DEGRADE_UNSET:      return "UNSET";
+        case DEGRADE_SET:        return "SET";
+        default:                 return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * l2quality2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::l2quality2str(l2_quality_t filter)
+{
+    switch(filter)
+    {
+        case L2QLTY_UNFILTERED: return "UNFILTERED";
+        case L2QLTY_UNSET:      return "UNSET";
+        case L2QLTY_SET:        return "SET";
+        default:                return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * l4quality2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::l4quality2str(l4_quality_t filter)
+{
+    switch(filter)
+    {
+        case L4QLTY_UNFILTERED: return "UNFILTERED";
+        case L4QLTY_UNSET:      return "UNSET";
+        case L4QLTY_SET:        return "SET";
+        default:                return "UNKNOWN";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * surface2str
+ *----------------------------------------------------------------------------*/
+const char* GediParms::surface2str(surface_t filter)
+{
+    switch(filter)
+    {
+        case SURFACE_UNFILTERED: return "UNFILTERED";
+        case SURFACE_UNSET:      return "UNSET";
+        case SURFACE_SET:        return "SET";
+        default:                 return "UNKNOWN";
+    }
+}
+/*----------------------------------------------------------------------------
  * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
  *----------------------------------------------------------------------------*/
 int64_t GediParms::deltatime2timestamp (double delta_time)
@@ -188,10 +243,10 @@ const char* GediParms::tojson (void) const
     doc.AddMember("beams", beamsArray, allocator);
 
     /* Serialize filters using enum to string conversion */
-    doc.AddMember("degrade_filter", rapidjson::Value(degrade2string(degrade_filter), allocator), allocator);
-    doc.AddMember("l2_quality_filter", rapidjson::Value(l2quality2tring(l2_quality_filter), allocator), allocator);
-    doc.AddMember("l4_quality_filter", rapidjson::Value(l4quality2string(l4_quality_filter), allocator), allocator);
-    doc.AddMember("surface_filter", rapidjson::Value(surface2string(surface_filter), allocator), allocator);
+    doc.AddMember("degrade_filter", rapidjson::Value(degrade2str(degrade_filter), allocator), allocator);
+    doc.AddMember("l2_quality_filter", rapidjson::Value(l2quality2str(l2_quality_filter), allocator), allocator);
+    doc.AddMember("l4_quality_filter", rapidjson::Value(l4quality2str(l4_quality_filter), allocator), allocator);
+    doc.AddMember("surface_filter", rapidjson::Value(surface2str(surface_filter), allocator), allocator);
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -361,61 +416,5 @@ void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "Beams must be provided as a table or single integer or string");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * degrade2string
- *----------------------------------------------------------------------------*/
-const char* GediParms::degrade2string(degrade_t filter) const
-{
-    switch(filter)
-    {
-        case DEGRADE_UNFILTERED: return "UNFILTERED";
-        case DEGRADE_UNSET:      return "UNSET";
-        case DEGRADE_SET:        return "SET";
-        default:                 return "UNKNOWN";
-    }
-}
-
-/*----------------------------------------------------------------------------
- * l2quality2string
- *----------------------------------------------------------------------------*/
-const char* GediParms::l2quality2tring(l2_quality_t filter) const
-{
-    switch(filter)
-    {
-        case L2QLTY_UNFILTERED: return "UNFILTERED";
-        case L2QLTY_UNSET:      return "UNSET";
-        case L2QLTY_SET:        return "SET";
-        default:                return "UNKNOWN";
-    }
-}
-
-/*----------------------------------------------------------------------------
- * l4quality2string
- *----------------------------------------------------------------------------*/
-const char* GediParms::l4quality2string(l4_quality_t filter) const
-{
-    switch(filter)
-    {
-        case L4QLTY_UNFILTERED: return "UNFILTERED";
-        case L4QLTY_UNSET:      return "UNSET";
-        case L4QLTY_SET:        return "SET";
-        default:                return "UNKNOWN";
-    }
-}
-
-/*----------------------------------------------------------------------------
- * surface2string
- *----------------------------------------------------------------------------*/
-const char* GediParms::surface2string(surface_t filter) const
-{
-    switch(filter)
-    {
-        case SURFACE_UNFILTERED: return "UNFILTERED";
-        case SURFACE_UNSET:      return "UNSET";
-        case SURFACE_SET:        return "SET";
-        default:                 return "UNKNOWN";
     }
 }

@@ -129,6 +129,11 @@ class GediParms: public NetsvcParms
         static int          group2beam          (const char* group);
         static int          beam2index          (int beam);
         static const char*  index2group         (int index);
+        static const char*  degrade2str         (degrade_t filter);
+        static const char*  l2quality2str       (l2_quality_t filter);
+        static const char*  l4quality2str       (l4_quality_t filter);
+        static const char*  surface2str         (surface_t filter);
+
         static int64_t      deltatime2timestamp (double delta_time);
         const char*         tojson              (void) const override;
 
@@ -153,10 +158,6 @@ class GediParms: public NetsvcParms
         void                    cleanup          (void);
         bool                    set_beam         (int beam);
         void                    get_lua_beams    (lua_State* L, int index, bool* provided);
-        const char*             degrade2string   (degrade_t filter) const;
-        const char*             l2quality2tring  (l2_quality_t filter) const;
-        const char*             l4quality2string (l4_quality_t filter) const;
-        const char*             surface2string   (surface_t filter) const;
 };
 
 #endif  /* __gedi_parms__ */

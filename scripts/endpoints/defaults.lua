@@ -2,40 +2,28 @@
 -- ENDPOINT:    /source/defaults
 --
 -- INPUT:       none
--- OUTPUT:      <default parameters>
+-- OUTPUT:      json string of default parameters
 --
-
-local json = require("json")
+local global = require("global")
 
 local default_parms = {}
 
-if __arrow__ then
-    default_parms[arrow.PARMS] = arrow.parms({}):tojson()
+local function insert_package_defaults(tbl, pkg)
+    if pkg ~= "legacy" then
+        local key = global.eval("PARMS", pkg)
+        if key then
+            local value = global.eval("parms({})", pkg):tojson()
+            local json_str = string.format("\"%s\":%s", key, value)
+            table.insert(tbl, json_str)
+        end
+    end
 end
 
-if __cre__ then
-    default_parms[cre.PARMS] = cre.parms({}):tojson()
+local version, commit, environment, launch, duration, packages = sys.version()
+for _,package in ipairs(packages) do
+    insert_package_defaults(default_parms, package)
 end
 
-if __geo__ then
-    default_parms[geo.PARMS] = geo.parms({}):tojson()
-end
-
-if __netsvc__ then
-    default_parms[netsvc.PARMS] = netsvc.parms({}):tojson()
-end
-
-if __swot__ then
-    default_parms[swot.PARMS] = swot.parms({}):tojson()
-end
-
-if __gedi__ then
-    default_parms[gedi.PARMS] = gedi.parms({}):tojson()
-end
-
-if __icesat2__ then
-    default_parms[icesat2.PARMS] = icesat2.parms({}):tojson()
-end
-
-return json.encode(default_parms)
+local json_str = "{"..table.concat(default_parms, ",").."}"
+return json_str
 

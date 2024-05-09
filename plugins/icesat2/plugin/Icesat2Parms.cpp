@@ -263,6 +263,23 @@ Icesat2Parms::gt_t Icesat2Parms::str2gt (const char* gt_str)
 }
 
 /*----------------------------------------------------------------------------
+ * atl03srt2str
+ *----------------------------------------------------------------------------*/
+const char* Icesat2Parms::atl03srt2str (surface_type_t type)
+{
+    switch (type)
+    {
+        case SRT_DYNAMIC:       return "SRT_DYNAMIC";
+        case SRT_LAND:          return "SRT_LAND";
+        case SRT_OCEAN:         return "SRT_OCEAN";
+        case SRT_SEA_ICE:       return "SRT_SEA_ICE";
+        case SRT_LAND_ICE:      return "SRT_LAND_ICE";
+        case SRT_INLAND_WATER:  return "SRT_INLAND_WATER";
+        case NUM_SURFACE_TYPES: return "NUM_SURFACE_TYPES";
+        default:                return "UNKNOWN_SURFACE_TYPE";
+    }
+}
+/*----------------------------------------------------------------------------
  * tojson
  *----------------------------------------------------------------------------*/
 const char* Icesat2Parms::tojson (void) const
@@ -280,7 +297,7 @@ const char* Icesat2Parms::tojson (void) const
     }
 
     /* Serialize surface type */
-    doc.AddMember("surface_type", rapidjson::Value(surface2string(surface_type), allocator), allocator);
+    doc.AddMember("surface_type", rapidjson::Value(atl03srt2str(surface_type), allocator), allocator);
     doc.AddMember("pass_invalid", pass_invalid, allocator);
     doc.AddMember("dist_in_seg", dist_in_seg, allocator);
 
@@ -1221,23 +1238,5 @@ void Icesat2Parms::get_lua_phoreal (lua_State* L, int index, bool* provided)
         phoreal.above_classifier = LuaObject::getLuaBoolean(L, -1, true, phoreal.above_classifier, &field_provided);
         if(field_provided) mlog(DEBUG, "Setting %s to %d", Icesat2Parms::PHOREAL_ABOVE, (int)phoreal.above_classifier);
         lua_pop(L, 1);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * surface2string
- *----------------------------------------------------------------------------*/
-const char* Icesat2Parms::surface2string (surface_type_t type) const
-{
-    switch (type)
-    {
-        case SRT_DYNAMIC:       return "DYNAMIC";
-        case SRT_LAND:          return "LAND";
-        case SRT_OCEAN:         return "OCEAN";
-        case SRT_SEA_ICE:       return "SEA_ICE";
-        case SRT_LAND_ICE:      return "LAND_ICE";
-        case SRT_INLAND_WATER:  return "INLAND_WATER";
-        case NUM_SURFACE_TYPES: return "NUM_SURFACE_TYPES";
-        default:                return "UNKNOWN_SURFACE_TYPE";
     }
 }
