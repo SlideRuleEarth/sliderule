@@ -382,7 +382,10 @@ const char* GeoParms::tojson(void) const
         const char* asset_json = asset->tojson();
         rapidjson::Document asset_doc;
         asset_doc.Parse(asset_json);
-        doc.AddMember("asset", asset_doc, allocator);
+        rapidjson::Value asset_val(rapidjson::kObjectType);
+        asset_val.CopyFrom(asset_doc, allocator);    // Deep copy the parsed document into a value
+        doc.AddMember("asset", asset_val, allocator);
+        delete [] asset_json;
     }
     else doc.AddMember("asset", nullval, allocator);
 
@@ -565,7 +568,7 @@ int GeoParms::luaAssetName (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
+        const GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset_name) lua_pushstring(L, lua_obj->asset_name);
         else lua_pushnil(L);
         return 1;
@@ -583,7 +586,7 @@ int GeoParms::luaAssetRegion (lua_State* L)
 {
     try
     {
-        GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
+        const GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
         if(lua_obj->asset) lua_pushstring(L, lua_obj->asset->getRegion());
         else lua_pushnil(L);
         return 1;
