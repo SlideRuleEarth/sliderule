@@ -36,7 +36,13 @@ RUN python3.9 -m venv venv \
     && python -m pip install --upgrade pip \
     && pip install torch numpy
 
-    
+COPY ut-coastnet /
+
+RUN source /venv/bin/activate \
+    && cd /ut-coastnet \
+    && make build
+
+
 ##########
 # RUNTIME
 ##########
@@ -58,7 +64,7 @@ RUN python3.9 -m venv venv \
 #  && dnf clean all \
 #  && rm -rf /var/cache/yum
 
-# copy sliderule installation from buildenv
+# copy installation from buildenv
 #COPY --from=buildenv /usr/local /usr/local
 
 # configure any new shared libraries
