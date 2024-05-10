@@ -432,7 +432,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
         subparms[s] = new parms_t;
         memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
-        s_pid[s] = new Thread(publisherThread, static_cast<void*>(pubparms[s]));
+        s_pid[s] = new Thread(opportunityThread, static_cast<void*>(subparms[s]));
     }
 
     /* Join Threads */
