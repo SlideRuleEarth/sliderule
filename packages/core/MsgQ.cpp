@@ -349,7 +349,7 @@ int Publisher::postRef(void* data, int size, int timeout)
  *----------------------------------------------------------------------------*/
 int Publisher::postCopy(const void* data, int size, int timeout)
 {
-    return post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, NULL, 0, timeout);
+    return post(const_cast<void*>(data), static_cast<unsigned int>(size) | MSGQ_COPYQ_MASK, NULL, 0, timeout);
 }
 
 /*----------------------------------------------------------------------------
@@ -369,7 +369,9 @@ int Publisher::postCopy(const void* data, int size, int timeout)
 int Publisher::postCopy(const void* data, int size, const void* secondary_data, int secondary_size, int timeout)
 {
     if(size < 0 || secondary_size < 0) return STATE_SIZE_ERROR;
-    return post((void*)data, ((unsigned int)size) | MSGQ_COPYQ_MASK, (void*)secondary_data, secondary_size, timeout);
+
+    return post(const_cast<void*>(data), static_cast<unsigned int>(size) | MSGQ_COPYQ_MASK,
+                const_cast<void*>(secondary_data), static_cast<unsigned int>(secondary_size), timeout);
 }
 
 /*----------------------------------------------------------------------------
@@ -407,7 +409,7 @@ int Publisher::postString(const char* format_string, ...)
 void Publisher::defaultFree(void* obj, void* parm)
 {
     (void)parm;
-    delete [] (char*)obj;
+    delete[] reinterpret_cast<char*>(obj);
 }
 
 /*----------------------------------------------------------------------------
@@ -467,12 +469,12 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             }
 
             /* create temp node */
-            queue_node_t* temp = (queue_node_t*) new char [memory_needed];
+            queue_node_t* temp = reinterpret_cast<queue_node_t*>(new char [memory_needed]);
 
             /* perform copy if queue is a copy queue */
             if(copy)
             {
-                temp->data = ((char*)temp) + sizeof(queue_node_t);
+                temp->data = reinterpret_cast<char*>(temp) + sizeof(queue_node_t);
                 memcpy(temp->data, data, data_size);
                 if(secondary_data)
                 {
@@ -481,7 +483,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             }
             else
             {
-                temp->data = (char*)data;
+                temp->data = reinterpret_cast<char*>(data);
             }
 
             /* construct node to be added */
@@ -581,7 +583,7 @@ Subscriber::~Subscriber()
             {
                 for(int i = msgQ->free_blocks - 1; i >= 0; i--)
                 {
-                    queue_node_t* temp = (queue_node_t*)msgQ->free_block_stack[i];
+                    queue_node_t* temp = reinterpret_cast<queue_node_t*>(msgQ->free_block_stack[i]);
                     if((temp->mask & MSGQ_COPYQ_MASK) == 0)
                     {
                         if(msgQ->free_func) (*msgQ->free_func)(temp->data, NULL);
@@ -615,7 +617,7 @@ bool Subscriber::dereference(msgRef_t& ref, bool with_delete)
 {
     assert(ref._handle); // casted to a pointer below and dereferenced
 
-    queue_node_t* node = (queue_node_t*)ref._handle;
+    queue_node_t* node = static_cast<queue_node_t*>(ref._handle);
 
     msgQ->locknblock->lock();
     {
@@ -675,9 +677,9 @@ bool Subscriber::isEmpty(void)
 void* Subscriber::getData(void* _handle, int* size)
 {
     assert(_handle);
-    queue_node_t* node = (queue_node_t*)_handle;
+    queue_node_t* node = static_cast<queue_node_t*>(_handle);
     if(size) *size = node->mask & ~MSGQ_COPYQ_MASK;
-    return (void*)node->data;
+    return static_cast<void*>(node->data);
 }
 
 /*----------------------------------------------------------------------------
@@ -762,7 +764,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
             {
                 ref.data = node->data;
                 ref.size = node_size;
-                ref._handle = (void*)node;
+                ref._handle = static_cast<void*>(node);
             }
             else
             {
@@ -845,12 +847,12 @@ bool Subscriber::reclaim_nodes(bool delete_data)
         else                            msgQ->front = msgQ->front->next;
 
         /* deallocate memory block and free data */
-        msgQ->free_block_stack[msgQ->free_blocks++] = (char*)node;
+        msgQ->free_block_stack[msgQ->free_blocks++] = reinterpret_cast<char*>(node);
         if(msgQ->free_blocks == MAX_FREE_STACK_SIZE)
         {
             for(int i = msgQ->free_blocks - 1; i >= 0; i--)
             {
-                queue_node_t* temp = (queue_node_t*)msgQ->free_block_stack[i];
+                queue_node_t* temp = reinterpret_cast<queue_node_t*>(msgQ->free_block_stack[i]);
                 if((temp->mask & MSGQ_COPYQ_MASK) == 0)
                 {
                     if(msgQ->free_func && delete_data)  (*msgQ->free_func)(temp->data, NULL);

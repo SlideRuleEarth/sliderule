@@ -96,7 +96,7 @@ void GdalRaster::open(void)
         return;
     }
 
-    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+    dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
     if(dset == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", fileName.c_str());
 
@@ -413,7 +413,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error subsetting: %s", e.what());
+        mlog(e.level(), "Error reading pixel: %s", e.what());
         delete [] data;
         data = NULL;
     }
@@ -960,7 +960,11 @@ void GdalRaster::readWithRetry(int x, int y, int _xsize, int _ysize, void *data,
         err = band->RasterIO(GF_Read, x, y, _xsize, _ysize, data, dataXsize, dataYsize, GDT_Float64, 0, 0, args);
     } while(err != CE_None && cnt-- && s3sleep());
 
-    if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+    if (err != CE_None)
+    {
+        ssError |= SS_READ_ERROR;
+        throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+    }
 }
 
 
@@ -1021,7 +1025,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
             GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
             CHECKPTR(driver);
-            subDset = (GDALDataset*)driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options);
+            subDset = static_cast<GDALDataset*>(driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options));
             CHECKPTR(subDset);
 
             /* Copy data to subraster */

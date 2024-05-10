@@ -383,7 +383,7 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
 {
     ReportDispatch* dispatch = static_cast<ReportDispatch*>(parm);
     int status = size;
-    entry_t* entry = *(entry_t**)data;
+    entry_t* entry = *(reinterpret_cast<entry_t**>(data));
     okey_t index = entry->index;
     const char* name = entry->name;
     string* value = new string(entry->value);

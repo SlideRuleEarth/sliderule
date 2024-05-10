@@ -386,7 +386,7 @@ uint32_t H5BTreeV2::checksumLookup3(const void *key, size_t length, uint32_t ini
     /* Source: https://github.com/HDFGroup/hdf5/blob/develop/src/H5checksum.c#L365 */
 
     /* Initialize set up */
-    const uint8_t *k = (const uint8_t *)key;
+    const uint8_t *k = reinterpret_cast<const uint8_t *>(key);
     uint32_t a, b, c = 0;
 
     /* Set up the internal state */
@@ -579,7 +579,7 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
 void H5BTreeV2::fheapLocate(const void * _id) {
 
     /* Dispatcher for heap ID types - currently only supporting manual type */
-    uint8_t* id = (uint8_t*)_id;
+    uint8_t* id = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(_id));
     uint8_t id_flags = 0; // heap ID flag bits
     id_flags = *id;
 
@@ -936,14 +936,14 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
         /* Decode node address -- see H5F_addr_decode */
         size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
 
-        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)); // internal pos value should change
-        varDecode((uint8_t *)internal_pos, node_nrec, max_nrec_size);
+        addrDecode(addr_size, reinterpret_cast<const uint8_t **>(&internal_pos), &(int_node_ptr->addr)); // internal pos value should change
+        varDecode(reinterpret_cast<uint8_t *>(internal_pos), node_nrec, max_nrec_size);
 
         safeAssigned(int_node_ptr->node_nrec, node_nrec);
         int_node_ptr->node_nrec = (uint16_t) node_nrec;
 
         if (internal->depth > 1) {
-            varDecode((uint8_t *)internal_pos, int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size);
+            varDecode(reinterpret_cast<uint8_t *>(internal_pos), int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size);
         }
         else {
             int_node_ptr->all_nrec = int_node_ptr->node_nrec;

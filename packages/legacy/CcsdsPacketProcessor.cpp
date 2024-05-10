@@ -143,9 +143,9 @@ CcsdsPacketProcessor::CcsdsPacketProcessor(CommandProcessor* cmd_proc, const cha
     }
 
     /* Register Current Values */
-    cmdProc->setCurrentValue(getName(), autoFlushKey,       (void*)&autoFlush,      sizeof(autoFlush));
-    cmdProc->setCurrentValue(getName(), autoFlushCntKey,    (void*)&autoFlushCnt,   sizeof(autoFlushCnt));
-    cmdProc->setCurrentValue(getName(), latencyKey,         (void*)&latency,        sizeof(latency));
+    cmdProc->setCurrentValue(getName(), autoFlushKey,       static_cast<void*>(&autoFlush),      sizeof(autoFlush));
+    cmdProc->setCurrentValue(getName(), autoFlushCntKey,    static_cast<void*>(&autoFlushCnt),   sizeof(autoFlushCnt));
+    cmdProc->setCurrentValue(getName(), latencyKey,         static_cast<void*>(&latency),        sizeof(latency));
 
     /* Register Commands */
     registerCommand("SET_AUTO_FLUSH", (cmdFunc_t)&CcsdsPacketProcessor::setAutoFlushCmd,    1, "<ENABLE|DISABLE>");
@@ -192,7 +192,7 @@ int CcsdsPacketProcessor::setAutoFlushCmd (int argc, char argv[][MAX_CMD_SIZE])
     if(!StringLib::str2bool(argv[0], &enable)) return -1;
 
     autoFlush = enable;
-    cmdProc->setCurrentValue(getName(), autoFlushKey, (void*)&enable, sizeof(enable));
+    cmdProc->setCurrentValue(getName(), autoFlushKey, static_cast<void*>(&enable), sizeof(enable));
 
     return 0;
 }
@@ -504,7 +504,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                     int64_t nowt = TimeLib::gpstime();
                     int64_t pktt = TimeLib::gmt2gpstime(TimeLib::cds2gmttime(CCSDS_GET_CDS_DAYS(msg), CCSDS_GET_CDS_MSECS(msg)));
                     latency = nowt - pktt;
-                    cmdProc->setCurrentValue(getName(), latencyKey, (void*)&latency, sizeof(latency));
+                    cmdProc->setCurrentValue(getName(), latencyKey, static_cast<void*>(&latency), sizeof(latency));
                 }
 
                 /* Grab Available Worker */
@@ -551,7 +551,7 @@ bool CcsdsPacketProcessor::handleTimeout (void)
     if((autoFlush && isFull()) || cmdFlush)
     {
         autoFlushCnt++;
-        cmdProc->setCurrentValue(getName(), autoFlushCntKey, (void*)&autoFlushCnt, sizeof(autoFlushCnt));
+        cmdProc->setCurrentValue(getName(), autoFlushCntKey, static_cast<void*>(&autoFlushCnt), sizeof(autoFlushCnt));
         resetProcessing(); // no check of return status because returning false is fatal to message processor parent class
     }
 

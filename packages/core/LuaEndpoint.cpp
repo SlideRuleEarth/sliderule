@@ -269,7 +269,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
         ((mem = OsApi::memusage()) < normalRequestMemoryThreshold) )
     {
         /* Launch Engine */
-        engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
+        engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
         engine->setString(LUA_REQUEST_ID, request->id);
         bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
@@ -327,7 +327,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
 
         /* Create Engine */
-        engine = new LuaEngine(scriptpath, (const char*)request->body, trace_id, NULL, true);
+        engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
         /* Supply Global Variables to Script */
         engine->setString(LUA_RESPONSE_QUEUE, rspq->getName());

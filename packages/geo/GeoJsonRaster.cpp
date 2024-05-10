@@ -168,11 +168,12 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
     {
         /* Create raster from geojson file */
         vsi_l_offset len = strlen(geojstr);
-        VSILFILE* fp = VSIFileFromMemBuffer(jsonFile.c_str(), (GByte*)geojstr, len, FALSE);
+        GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(geojstr));
+        VSILFILE* fp = VSIFileFromMemBuffer(jsonFile.c_str(), bytes, len, FALSE);
         CHECKPTR(fp);
         VSIFCloseL(fp);
 
-        jsonDset = (GDALDataset *)GDALOpenEx(jsonFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        jsonDset = static_cast<GDALDataset *>(GDALOpenEx(jsonFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
         CHECKPTR(jsonDset);
         OGRLayer *srcLayer = jsonDset->GetLayer(0);
         CHECKPTR(srcLayer);
@@ -189,7 +190,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
 
         GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
         CHECKPTR(driver);
-        rasterDset = (GDALDataset *)driver->Create(rasterFileName.c_str(), cols, rows, 1, GDT_Byte, options);
+        rasterDset = static_cast<GDALDataset *>(driver->Create(rasterFileName.c_str(), cols, rows, 1, GDT_Byte, options));
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};
@@ -224,7 +225,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
         double burnValues[BANDCNT];
         burnValues[0] = RASTER_PIXEL_ON;
 
-        CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, (OGRLayerH *)&layers[0], NULL, NULL, burnValues, NULL, NULL, NULL);
+        CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, reinterpret_cast<OGRLayerH*>(&layers[0]), NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFileName.c_str());
 
@@ -254,8 +255,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
 
    /* Cleanup */
    VSIUnlink(jsonFile.c_str());
-   if(jsonDset) GDALClose((GDALDatasetH)jsonDset);
-   if(rasterDset) GDALClose((GDALDatasetH)rasterDset);
+if(jsonDset) GDALClose(reinterpret_cast<GDALDatasetH>(jsonDset));
+if(rasterDset) GDALClose(reinterpret_cast<GDALDatasetH>(rasterDset));
 
    if(!rasterCreated)
        throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");

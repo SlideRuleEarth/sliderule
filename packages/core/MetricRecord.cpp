@@ -80,7 +80,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
     if(_text)
     {
         metric->text_offset = sizeof(metric_t);
-        text = (char*)(recordData + metric->text_offset);
+        text = reinterpret_cast<char*>(recordData + metric->text_offset);
         text_size = StringLib::size(_text) + 1;
         StringLib::copy(text, _text, text_size);
     }
@@ -90,7 +90,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
     if(_name)
     {
         metric->name_offset = metric->text_offset + text_size;
-        name = (char*)(recordData + metric->name_offset);
+        name = reinterpret_cast<char*>(recordData + metric->name_offset);
         name_size = StringLib::size(_name) + 1;
         StringLib::copy(name, _name, name_size);
     }

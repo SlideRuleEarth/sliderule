@@ -124,7 +124,7 @@ class CommandProcessor: public CommandableObject
                   size = _size; }
 
             ~cvt_entry_t(void)
-                { delete [] (unsigned char*)data; }
+                { delete [] static_cast<unsigned char*>(data); }
         };
 
         // Object Entry //

@@ -100,7 +100,7 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
             try
             {
                 /* Open new vector data set*/
-                dset = (GDALDataset*)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+                dset = static_cast<GDALDataset*>(GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
                 if(dset == NULL)
                 {
                     /* If index file for this ix, iy does not exist, continue */

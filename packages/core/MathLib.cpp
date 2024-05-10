@@ -291,7 +291,7 @@ bool MathLib::inpoly (point_t* poly, int len, point_t point)
 std::string MathLib::b64encode(const void* data, const size_t &len)
 {
     std::string result((len + 2) / 3 * 4, '=');
-    unsigned char *p = (unsigned  char*) data;
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
     char *str = &result[0];
     size_t j = 0;
     size_t pad = len % 3;
@@ -299,7 +299,7 @@ std::string MathLib::b64encode(const void* data, const size_t &len)
 
     for (size_t i = 0; i < last; i += 3)
     {
-        int n = int(p[i]) << 16 | int(p[i + 1]) << 8 | p[i + 2];
+        int n = static_cast<int>(p[i]) << 16 | static_cast<int>(p[i + 1]) << 8 | p[i + 2];
         str[j++] = B64CHARS[n >> 18];
         str[j++] = B64CHARS[n >> 12 & 0x3F];
         str[j++] = B64CHARS[n >> 6 & 0x3F];
@@ -307,7 +307,7 @@ std::string MathLib::b64encode(const void* data, const size_t &len)
     }
     if (pad)  /// Set padding
     {
-        int n = --pad ? int(p[last]) << 8 | p[last + 1] : p[last];
+        int n = (--pad ? static_cast<int>(p[last]) << 8 | p[last + 1] : p[last]);
         str[j++] = B64CHARS[pad ? n >> 10 & 0x3F : n >> 2];
         str[j++] = B64CHARS[pad ? n >> 4 & 0x03F : n << 4 & 0x3F];
         str[j++] = pad ? B64CHARS[n << 2 & 0x3F] : '=';
@@ -326,13 +326,13 @@ std::string MathLib::b64decode(const void* data, const size_t &len)
 {
     if (len == 0) return "";
 
-    const unsigned char *p = (unsigned char*) data;
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
     size_t j = 0;
     size_t pad1 = len % 4 || p[len - 1] == '=';
     size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
     std::string result(last / 4 * 3 + pad1 + pad2, '\0');
-    unsigned char *str = (unsigned char*) &result[0];
+    unsigned char *str = reinterpret_cast<unsigned char*>(&result[0]);
 
     for (size_t i = 0; i < last; i += 4)
     {
@@ -393,7 +393,7 @@ void MathLib::bitReverse(complex_t data[], unsigned long size)
     steps[0] = size / 2;
     for(s = 1; s < LOG2DATASIZE; s++)
     {
-        steps[s] = (unsigned long)(3 * size / pow(2, (s + 1)));
+        steps[s] = static_cast<unsigned long>(3 * size / pow(2, (s + 1)));
     }
 
     // Reorder Data //

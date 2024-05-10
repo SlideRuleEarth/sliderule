@@ -148,12 +148,12 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
         rasterFileName = getFileName();
 
         /* Make a copy of the raster data and pass the ownership to the VSIFile */
-        data = (GByte*)malloc(filelength);
+        data = reinterpret_cast<GByte*>(malloc(filelength));
         memcpy(data, file, filelength);
 
         /* Load user raster to vsimem */
         bool takeOwnership = false;
-        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, (vsi_l_offset)filelength, takeOwnership);
+        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), reinterpret_cast<GByte*>(data), static_cast<vsi_l_offset>(filelength), takeOwnership);
         CHECKPTR(fp);
         VSIFCloseL(fp);
     }

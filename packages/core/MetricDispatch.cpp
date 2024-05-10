@@ -136,7 +136,7 @@ MetricDispatch::~MetricDispatch(void)
 void MetricDispatch::freeSerialBuffer(void* obj, void* parm)
 {
     (void)parm;
-    delete [] (char*)obj;
+    delete [] static_cast<char*>(obj);
 }
 
 /*----------------------------------------------------------------------------
@@ -145,7 +145,7 @@ void MetricDispatch::freeSerialBuffer(void* obj, void* parm)
 bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)records;
-    
+
     /* Get Record ID and Key */
     long id = record->getRecordId();
     bool enabled = true;

@@ -155,7 +155,7 @@ int CcsdsRecord::serialize (unsigned char** buffer, serialMode_t mode, int size)
     }
     else
     {
-        *buffer = (unsigned char*)recordData;
+        *buffer = reinterpret_cast<unsigned char*>(recordData);
     }
 
     return recordDefinition->data_size;

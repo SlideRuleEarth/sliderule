@@ -379,7 +379,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         geoIndexPoly.empty();
 
         /* Open new vector data set*/
-        dset = (GDALDataset *)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+        dset = static_cast<GDALDataset *>(GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
         if (dset == NULL)
         {
             mlog(CRITICAL, "Failed to open vector index file: %s", newFile.c_str());
@@ -619,7 +619,7 @@ int GeoIndexedRaster::luaCellSize(lua_State *L)
  *----------------------------------------------------------------------------*/
 void* GeoIndexedRaster::readingThread(void *param)
 {
-    reader_t *reader = (reader_t*)param;
+    reader_t *reader = static_cast<reader_t*>(param);
 
     while(reader->run)
     {
@@ -636,11 +636,11 @@ void* GeoIndexedRaster::readingThread(void *param)
         {
             if(GdalRaster::ispoint(reader->geo))
             {
-                entry->sample = entry->raster->samplePOI((OGRPoint*)reader->geo);
+                entry->sample = entry->raster->samplePOI(static_cast<OGRPoint*>(reader->geo));
             }
             else if(GdalRaster::ispoly(reader->geo))
             {
-                entry->subset = entry->raster->subsetAOI((OGRPolygon*)reader->geo);
+                entry->subset = entry->raster->subsetAOI(static_cast<OGRPolygon*>(reader->geo));
                 if(entry->subset)
                 {
                     /*

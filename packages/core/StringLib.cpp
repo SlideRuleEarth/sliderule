@@ -226,7 +226,7 @@ char* StringLib::copy(char* dst, const char* src, int _size)
 {
     if(dst && src && (_size > 0))
     {
-        const char* nptr = (char*)memccpy(dst, src, 0, _size);
+        const char* nptr = static_cast<const char*>(memccpy(dst, src, 0, _size));
         if(!nptr) dst[_size - 1] = '\0';
     }
     else if(dst && (_size > 0))
@@ -643,7 +643,7 @@ char* StringLib::b64encode(const void* data, int* size)
     str[encoded_len - 1] = '=';
     str[encoded_len - 2] = '=';
 
-    unsigned char *p = (unsigned  char*) data;
+    unsigned char* p = reinterpret_cast<unsigned char*>(const_cast<void*>(data));
     size_t j = 0;
     size_t pad = len % 3;
     const size_t last = len - pad;
@@ -683,7 +683,7 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
     int len = *size;
     if (len == 0) return (unsigned char*)"";
 
-    const unsigned char *p = (unsigned char*) data;
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(data);
     size_t j = 0;
     size_t pad1 = len % 4 || p[len - 1] == '=';
     size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
@@ -737,7 +737,7 @@ char* StringLib::b16encode(const void* data, int size, bool lower_case, char* ds
     if(!str) str = new char [encoded_len + 1];
     str[encoded_len] = '\0';
 
-    const uint8_t* data_ptr = (uint8_t*)data;
+    const uint8_t* data_ptr = reinterpret_cast<const uint8_t*>(data);
     for(int i = 0, j = 0; i < size; i++)
     {
         str[j++] = digits[data_ptr[i] >> 4];

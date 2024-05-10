@@ -412,7 +412,7 @@ template <class T>
 void StatisticRecord<T>::freePost(void* obj, void* parm)
 {
     (void)parm;
-    unsigned char* mem = (unsigned char*)obj;
+    unsigned char* mem = reinterpret_cast<unsigned char*>(obj);
     delete [] mem;
 }
 

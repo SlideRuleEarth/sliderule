@@ -630,7 +630,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
 
     /* Register Interpreter Object */
     lua_pushstring(l, LUA_SELFKEY);
-    lua_pushlightuserdata(l, (void*)this);
+    lua_pushlightuserdata(l, static_cast<void*>(this));
     lua_settable(l, LUA_REGISTRYINDEX); /* registry[LUA_SELFKEY] = this */
 
     /* Register Application Libraries */
@@ -1096,8 +1096,8 @@ int LuaEngine::pmain (lua_State *L)
     }
 
     /* parse arguments */
-    int     argc    = (int)lua_tointeger(L, 1);
-    char**  argv    = (char**)lua_touserdata(L, 2);
+    int     argc    = static_cast<int>(lua_tointeger(L, 1));
+    char**  argv    = static_cast<char**>(lua_touserdata(L, 2));
     int     script  = 0;
     int     args    = li->collectargs(argv, &script);
 

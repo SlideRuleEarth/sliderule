@@ -175,7 +175,7 @@ void* CosmosInterface::listenerThread (void* parm)
 
     listener_t* l = static_cast<listener_t*>(parm);
 
-    int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, &l->ci->interfaceActive, (void*)l->ci);
+    int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, &l->ci->interfaceActive, static_cast<void*>(l->ci));
     if(status < 0)
     {
         mlog(CRITICAL, "Failed to establish server: %s", l->ci->getName());

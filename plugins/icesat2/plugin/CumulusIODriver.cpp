@@ -92,7 +92,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     /*
      * Determine ioBucket and ioKey
      */
-    ioBucket = (char*)resourcepath.c_str(true);
+    ioBucket = const_cast<char*>(resourcepath.c_str(true));
 
     /*
     * Differentiate Bucket and Key

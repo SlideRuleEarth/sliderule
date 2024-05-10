@@ -227,7 +227,7 @@ int H5DatasetDevice::readBuffer (void* buf, int len, int timeout)
             {
                 recData->offset = dataOffset;
                 recData->size = bytes_to_copy;
-                unsigned char* rec_buf = (unsigned char*)buf;
+                unsigned char* rec_buf = reinterpret_cast<unsigned char*>(buf);
                 int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, sizeof(h5dataset_t) + bytes_to_copy);
                 memcpy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
                 dataOffset += bytes_to_copy;

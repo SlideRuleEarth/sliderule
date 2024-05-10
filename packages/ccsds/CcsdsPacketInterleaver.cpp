@@ -190,7 +190,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
                     if(pkt_refs[i].size > 0)
                     {
                         /* Capture Packet Time */
-                        CcsdsSpacePacket pkt((unsigned char*)pkt_refs[i].data, pkt_refs[i].size);
+                        CcsdsSpacePacket pkt(reinterpret_cast<unsigned char*>(pkt_refs[i].data), pkt_refs[i].size);
                         pkt_times[i] = pkt.getCdsTime();
 
                         /* Check Time Filter */

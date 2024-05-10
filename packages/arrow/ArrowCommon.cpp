@@ -206,7 +206,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
 
             /* Send Remote Record */
             RecordObject remote_record(remoteRecType);
-            arrow_file_remote_t* remote = (arrow_file_remote_t*)remote_record.getRecordData();
+            arrow_file_remote_t* remote = reinterpret_cast<arrow_file_remote_t*>(remote_record.getRecordData());
             StringLib::copy(&remote->url[0], outputPath, URL_MAX_LEN);
             remote->size = bytes_uploaded;
             if(!remote_record.post(outQ))
@@ -258,7 +258,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
         {
             /* Send Meta Record */
             RecordObject meta_record(metaRecType);
-            arrow_file_meta_t* meta = (arrow_file_meta_t*)meta_record.getRecordData();
+            arrow_file_meta_t* meta = reinterpret_cast<arrow_file_meta_t*>(meta_record.getRecordData());
             StringLib::copy(&meta->filename[0], outPath, FILE_NAME_MAX_LEN);
             meta->size = file_size;
             if(!meta_record.post(outQ))
@@ -272,7 +272,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
             while(offset < file_size)
             {
                 RecordObject data_record(dataRecType, 0, false);
-                arrow_file_data_t* data = (arrow_file_data_t*)data_record.getRecordData();
+                arrow_file_data_t* data = reinterpret_cast<arrow_file_data_t*>(data_record.getRecordData());
                 StringLib::copy(&data->filename[0], outPath, FILE_NAME_MAX_LEN);
                 size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
                 if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))

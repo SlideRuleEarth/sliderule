@@ -196,7 +196,7 @@ void TcpSocket::closeConnection(void)
  *----------------------------------------------------------------------------*/
 int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
 {
-    unsigned char* cbuf = (unsigned char*)buf;
+    const unsigned char* cbuf = reinterpret_cast<const unsigned char*>(buf);
 
     /* Check Parameters */
     if(buf == NULL || len <= 0) return PARM_ERR_RC;

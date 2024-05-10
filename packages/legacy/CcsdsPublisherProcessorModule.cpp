@@ -66,7 +66,7 @@ CommandableObject* CcsdsPublisherProcessorModule::createObject(CommandProcessor*
 void CcsdsPublisherProcessorModule::freePkt(void* obj, void* parm)
 {
     (void)parm;
-    unsigned char* pkt = (unsigned char*)obj;
+    unsigned char* pkt = reinterpret_cast<unsigned char*>(obj);
     delete [] pkt;
 }
 

@@ -573,7 +573,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
     {
         case 8:
         {
-            value = *(uint64_t*)data_ptr;
+            value = *reinterpret_cast<uint64_t*>(data_ptr);
             #ifdef __be__
                 value = OsApi::swapll(value);
             #endif
@@ -582,7 +582,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         case 4:
         {
-            value = *(uint32_t*)data_ptr;
+            value = *reinterpret_cast<uint32_t*>(data_ptr);
             #ifdef __be__
                 value = OsApi::swapl(value);
             #endif
@@ -591,7 +591,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         case 2:
         {
-            value = *(uint16_t*)data_ptr;
+            value = *reinterpret_cast<uint16_t*>(data_ptr);
             #ifdef __be__
                 value = OsApi::swaps(value);
             #endif
@@ -600,7 +600,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         case 1:
         {
-            value = *(uint8_t*)data_ptr;
+            value = *reinterpret_cast<uint8_t*>(data_ptr);
             break;
         }
 
@@ -1725,7 +1725,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         /* Process Link */
         if(dlvl < static_cast<int>(datasetPath.size()))
         {
-            if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
+            if(StringLib::match(reinterpret_cast<const char*>(link_name), datasetPath[dlvl]))
             {
                 if(cache_type == 2)
                 {
@@ -2582,7 +2582,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         if(dlvl < static_cast<int>(datasetPath.size()))
         {
-            if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
+            if(StringLib::match(reinterpret_cast<const char*>(link_name), datasetPath[dlvl]))
             {
                 highestDataLevel = dlvl + 1;
                 readObjHdr(object_header_addr, highestDataLevel);
@@ -2875,7 +2875,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     /* Read Attribute Name */
     if(name_size > STR_BUFF_SIZE)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", static_cast<unsigned long>(name_size), static_cast<unsigned long>(pos));
     }
     uint8_t attr_name[STR_BUFF_SIZE];
 
@@ -2889,7 +2889,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         readByteArray(attr_name, name_size, &pos);
     }
 
-    mlog(CRITICAL, "received attr_name: %s", (const char *) attr_name);
+    mlog(CRITICAL, "received attr_name: %s", reinterpret_cast<const char*>(attr_name));
 
     if (version == 1) {
         // name padding, align to next 8-byte boundary
@@ -2913,18 +2913,18 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
-        print2term("Attribute Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("Attribute Message [%d]: 0x%lx\n", dlvl, static_cast<unsigned long>(starting_position));
         print2term("----------------\n");
-        print2term("Version:                                                         %d\n", (int)version);
-        print2term("Name:                                                            %s\n", (const char*)attr_name);
-        print2term("Message Size:                                                    %d\n", (int)size);
-        print2term("Datatype Message Bytes:                                          %d\n", (int)datatype_size);
-        print2term("Dataspace Message Bytes:                                         %d\n", (int)dataspace_size);
+        print2term("Version:                                                         %d\n", static_cast<int>(version));
+        print2term("Name:                                                            %s\n", reinterpret_cast<const char*>(attr_name));
+        print2term("Message Size:                                                    %d\n", static_cast<int>(size));
+        print2term("Datatype Message Bytes:                                          %d\n", static_cast<int>(datatype_size));
+        print2term("Dataspace Message Bytes:                                         %d\n", static_cast<int>(dataspace_size));
     }
 
     /* Shortcut Out if Not Desired Attribute */
-    if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
-        !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
+    if (((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
+        !StringLib::match(reinterpret_cast<const char*>(attr_name), datasetPath[dlvl]))
     {
         return size;
     }
@@ -2933,9 +2933,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Read Datatype Message */
     int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
-    if(H5_ERROR_CHECKING && datatype_bytes_read > (int)datatype_size)
+    if(H5_ERROR_CHECKING && datatype_bytes_read > static_cast<int>(datatype_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", static_cast<int>(datatype_bytes_read), static_cast<int>(datatype_size));
     }
 
     pos += datatype_bytes_read;
@@ -2946,9 +2946,9 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 
     /* Read Dataspace Message */
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
-    if(H5_ERROR_CHECKING && dataspace_bytes_read > (int)dataspace_size)
+    if(H5_ERROR_CHECKING && dataspace_bytes_read > static_cast<int>(dataspace_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", static_cast<int>(dataspace_bytes_read), static_cast<int>(dataspace_size));
     }
 
     pos += dataspace_bytes_read;
@@ -2988,14 +2988,14 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     {
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", static_cast<int>(version));
         }
     }
 
     if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
-        print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, static_cast<unsigned long>(starting_position));
         print2term("----------------\n");
     }
 
@@ -3005,7 +3005,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         if(H5_VERBOSE)
         {
             uint16_t max_create_index = readField(2, &pos);
-            print2term("Maximum Creation Index:                                          %u\n", (unsigned short)max_create_index);
+            print2term("Maximum Creation Index:                                          %u\n", static_cast<unsigned short>(max_create_index));
         }
         else
         {
@@ -3019,8 +3019,8 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
 
     if(H5_VERBOSE)
     {
-        print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
-        print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)name_bt2_address);
+        print2term("Heap Address:                                                    %lX\n", static_cast<unsigned long>(heap_address));
+        print2term("Attribute Name v2 B-tree Address:                                %lX\n", static_cast<unsigned long>(name_bt2_address));
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
@@ -3028,7 +3028,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
         if(H5_VERBOSE)
         {
             uint64_t create_order_index = readField(metaData.offsetsize, &pos);
-            print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+            print2term("Creation Order Index:                                            %lX\n", static_cast<unsigned long>(create_order_index));
         }
         else
         {
@@ -3078,8 +3078,8 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         print2term("\n----------------\n");
         print2term("Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
-        print2term("Offset:                                                          0x%lx\n", (unsigned long)hc_offset);
-        print2term("Length:                                                          %lu\n", (unsigned long)hc_length);
+        print2term("Offset:                                                          0x%lx\n", static_cast<unsigned long>(hc_offset));
+        print2term("Length:                                                          %lu\n", static_cast<unsigned long>(hc_length));
     }
 
     /* Read Continuation Block */
@@ -3097,7 +3097,7 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             uint64_t signature = readField(4, &pos);
             if(signature != H5_OCHK_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", (unsigned long long)signature);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
         }
         else
@@ -3139,8 +3139,8 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         print2term("\n----------------\n");
         print2term("Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
-        print2term("B-Tree Address:                                                  0x%lx\n", (unsigned long)btree_addr);
-        print2term("Heap Address:                                                    0x%lx\n", (unsigned long)heap_addr);
+        print2term("B-Tree Address:                                                  0x%lx\n", static_cast<unsigned long>(btree_addr));
+        print2term("Heap Address:                                                    0x%lx\n", static_cast<unsigned long>(heap_addr));
     }
 
     /* Read Heap Info */
@@ -3154,7 +3154,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_HEAP_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", static_cast<unsigned long long>(signature));
         }
 
         uint8_t version = (uint8_t)readField(1, &pos);
@@ -3181,7 +3181,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             uint32_t signature = (uint32_t)readField(4, &pos);
             if(signature != H5_TREE_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
 
             uint8_t node_type = (uint8_t)readField(1, &pos);
@@ -3211,10 +3211,10 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint64_t key0 = readField(metaData.lengthsize, &pos); (void)key0;
         if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
-            print2term("Entries Used:                                                    %d\n", (int)entries_used);
-            print2term("Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
-            print2term("Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
-            print2term("First Key:                                                       %lu\n", (unsigned long)key0);
+            print2term("Entries Used:                                                    %d\n", static_cast<int>(entries_used));
+            print2term("Left Sibling:                                                    0x%lx\n", static_cast<unsigned long>(left_sibling));
+            print2term("Right Sibling:                                                   0x%lx\n", static_cast<unsigned long>(right_sibling));
+            print2term("First Key:                                                       %lu\n", static_cast<unsigned long>(key0));
         }
 
         /* Loop Through Entries in Current Node */
@@ -3243,7 +3243,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             uint32_t signature = (uint32_t)readField(4, &pos);
             if(signature != H5_TREE_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
 
             uint8_t node_type = (uint8_t)readField(1, &pos);
@@ -3426,7 +3426,7 @@ int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8
 uint64_t H5FileBuffer::metaGetKey (const char* url)
 {
     uint64_t key_value = 0;
-    uint64_t* url_ptr = (uint64_t*)url;
+    uint64_t* url_ptr = const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(url));
     for(int i = 0; i < MAX_META_NAME_SIZE; i+=sizeof(uint64_t))
     {
         key_value += *url_ptr;
@@ -3574,34 +3574,34 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Float to Int */
             if(info.datatype == RecordObject::FLOAT)
             {
-                float* dptr = (float*)info.data;
+                float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT
                 }
             }
             /* Double to Int */
             else if(info.datatype == RecordObject::DOUBLE)
             {
-                double* dptr = (double*)info.data;
+                double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT
                 }
             }
             /* Char to Int */
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
-                uint8_t* dptr = (uint8_t*)info.data;
+                char* cptr = reinterpret_cast<char*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<int>(cptr[i]); // NOLINT
                 }
             }
             /* String to Int - assumes ASCII encoding */
             else if(info.datatype == RecordObject::STRING)
             {
-                uint8_t* dptr = (uint8_t*)info.data;
+                uint8_t* dptr = reinterpret_cast<uint8_t*>(info.data);
 
                 // NOTE this len calc is redundant, but metaData not visible to scope
                 uint8_t* len_cnt = dptr;
@@ -3612,7 +3612,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 }
                 for(uint32_t i = 0; i < length; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(dptr[i]);
                 }
                 info.elements = length;
             }
@@ -3620,28 +3620,28 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Short to Int */
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
-                uint16_t* dptr = (uint16_t*)info.data;
+                uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT
                 }
             }
             /* Int to Int */
             else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
-                uint32_t* dptr = (uint32_t*)info.data;
+                int* dptr = reinterpret_cast<int*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT
                 }
             }
             /* Long to Int */
             else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
-                uint64_t* dptr = (uint64_t*)info.data;
+                int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT
                 }
             }
             else
@@ -3651,7 +3651,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
             /* Switch Buffers */
             delete [] info.data;
-            info.data = (uint8_t*)tbuf; // NOLINT
+            info.data = reinterpret_cast<uint8_t*>(tbuf); // NOLINT
             info.datasize = sizeof(int) * info.elements;
         }
 
@@ -3664,55 +3664,55 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Float to Double */
             if(info.datatype == RecordObject::FLOAT) // NOLINT
             {
-                float* dptr = (float*)info.data;
+                float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT
                 }
             }
             /* Double to Double */
             else if(info.datatype == RecordObject::DOUBLE) // NOLINT
             {
-                double* dptr = (double*)info.data;
+                double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT
                 }
             }
             /* Char to Double */
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8) // NOLINT
             {
-                uint8_t* dptr = (uint8_t*)info.data;
+                uint8_t* dptr = reinterpret_cast<uint8_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT
                 }
             }
             /* Short to Double */
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16) // NOLINT
             {
-                uint16_t* dptr = (uint16_t*)info.data;
+                uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT
                 }
             }
             /* Int to Double */
             else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32) // NOLINT
             {
-                uint32_t* dptr = (uint32_t*)info.data;
+                uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT
                 }
             }
             /* Long to Double */
             else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64) // NOLINT
             {
-                uint64_t* dptr = (uint64_t*)info.data;
+                uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++) // NOLINT
                 {
-                    tbuf[i] = (double)dptr[i]; // NOLINT
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT
                 }
             }
             else
@@ -3722,7 +3722,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
             /* Switch Buffers */
             delete [] info.data;
-            info.data = (uint8_t*)tbuf;
+            info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(double) * info.elements;
         }
 

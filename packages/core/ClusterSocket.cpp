@@ -233,8 +233,8 @@ void* ClusterSocket::connectionThread(void* parm)
 
     int status = 0;
 
-    if(s->is_server) status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
-    else             status = SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
+    if(s->is_server) status = SockLib::startserver(s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, static_cast<void*>(s));
+    else             status = SockLib::startclient(s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, static_cast<void*>(s));
 
     if(status < 0)   mlog(CRITICAL, "Failed to establish cluster %s socket on %s:%d (%d)", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
 
@@ -378,7 +378,7 @@ int ClusterSocket::onWrite(int fd)
                     uint32_t bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
                     uint32_t cpylen = connection->payload_left < bytes_left ? connection->payload_left : bytes_left;
                     int payload_index = connection->payload_ref.size - connection->payload_left;
-                    const uint8_t* payload_buffer = (uint8_t*)connection->payload_ref.data;
+                    const uint8_t* payload_buffer = reinterpret_cast<const uint8_t*>(connection->payload_ref.data);
                     memcpy(&connection->buffer[connection->buffer_index], &payload_buffer[payload_index], cpylen);
                     connection->buffer_index += cpylen;
                     connection->payload_left -= cpylen;
@@ -451,7 +451,7 @@ int ClusterSocket::onWrite(int fd)
                 while(connection->payload_left > 0)
                 {
                     int payload_index = connection->payload_ref.size - connection->payload_left;
-                    uint8_t* byte_buffer = (uint8_t*)connection->payload_ref.data;
+                    uint8_t* byte_buffer = reinterpret_cast<uint8_t*>(connection->payload_ref.data);
                     int bytes = SockLib::socksend(fd, &byte_buffer[payload_index], connection->payload_left, IO_CHECK);
                     if(bytes > 0)
                     {

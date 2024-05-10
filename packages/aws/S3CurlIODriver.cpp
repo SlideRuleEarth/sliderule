@@ -95,7 +95,7 @@ static void sha256hash(const void* data, size_t len, char* dst)
  *----------------------------------------------------------------------------*/
 static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    fixed_data_t* data = (fixed_data_t*)userp;
+    fixed_data_t* data = static_cast<fixed_data_t*>(userp);
     size_t rsps_size = size * nmemb;
     size_t bytes_available = data->size - data->index;
     size_t bytes_to_copy = MIN(rsps_size, bytes_available);
@@ -123,7 +123,7 @@ static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *
  *----------------------------------------------------------------------------*/
 static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    file_data_t* data = (file_data_t*)userp;
+    file_data_t* data = reinterpret_cast<file_data_t*>(userp);
     size_t rsps_size = size * nmemb;
     size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
     if(bytes_written > 0) data->size += rsps_size;
@@ -135,7 +135,7 @@ static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp
  *----------------------------------------------------------------------------*/
 static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 {
-    file_data_t* data = (file_data_t*)userp;
+    file_data_t* data = reinterpret_cast<file_data_t*>(userp);
 
     size_t buffer_size = size * nmemb;
     size_t bytes_read = fread(buffer, 1, buffer_size, data->fd);
@@ -169,7 +169,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
         FString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.c_str(), stringToSign.size(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey), StringLib::size(credentials->secretAccessKey), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
         int encoded_hash_size = static_cast<int>(hash_size);
         const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
         FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
@@ -218,7 +218,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
         FString stringToSign("PUT\n\n%s\n%s\n%s\n/%s/%s", contentType.c_str(), date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.c_str(), stringToSign.length(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey), StringLib::size(credentials->secretAccessKey), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
         int encoded_hash_size = static_cast<int>(hash_size);
         const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
         FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
@@ -464,7 +464,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                         /* Request Failed */
                         if(info.index > 0)
                         {
-                            StringLib::printify((char*)info.buffer, info.index);
+                            StringLib::printify(reinterpret_cast<char*>(info.buffer), info.index);
                             mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
                         }
                         mlog(CRITICAL, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
@@ -575,8 +575,8 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 else
                 {
                     /* Request Failed */
-                    StringLib::printify((char*)rsps, rsps_size + 1);
-                    mlog(INFO, "%s", (const char*)rsps);
+                    StringLib::printify(reinterpret_cast<char*>(rsps), rsps_size + 1);
+                    mlog(INFO, "%s", reinterpret_cast<const char*>(rsps));
                     delete [] *data; // clean up memory
                     *data = NULL;
                     mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
@@ -841,7 +841,7 @@ int S3CurlIODriver::luaGet(lua_State* L)
         /* Push Contents */
         if(rsps_data)
         {
-            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            lua_pushlstring(L, reinterpret_cast<char*>(rsps_data), rsps_size);
             delete [] rsps_data;
             status = true;
             num_rets++;
@@ -929,7 +929,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
         /* Push Contents */
         if(rsps_size > 0)
         {
-            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            lua_pushlstring(L, reinterpret_cast<char*>(rsps_data), rsps_size);
             delete [] rsps_data;
             status = true;
             num_rets++;

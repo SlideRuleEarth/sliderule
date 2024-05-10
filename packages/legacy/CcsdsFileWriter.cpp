@@ -191,8 +191,8 @@ bool CcsdsFileWriter::openNewFile(void)
     /* Open New File */
     if(outfp != NULL) fclose(outfp);
     StringLib::format(filename, FILENAME_MAX_CHARS, "%s_%ld.out", prefix, fileCount);
-    if(isBinary())  outfp = fopen((const char*)filename, "wb");
-    else            outfp = fopen((const char*)filename, "w");
+    if(isBinary())  outfp = fopen(static_cast<const char*>(filename), "wb");
+    else            outfp = fopen(static_cast<const char*>(filename), "w");
     if(outfp == NULL)
     {
     	mlog(CRITICAL, "Error opening file: %s, err: %s", filename, strerror(errno));
@@ -221,7 +221,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* RAW ASCII */
     else if(fmt == RAW_ASCII)
     {
-        unsigned char* pkt_buffer = (unsigned char*)msg;
+        unsigned char* pkt_buffer = reinterpret_cast<unsigned char*>(msg);
         int bytes = 0, ret = 0;
         for(int i = 0; i < size; i++)
         {
@@ -237,7 +237,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* TEXT */
     else if(fmt == TEXT)
     {
-        int bytes = fprintf(outfp, "%s", (const char*)msg);
+        int bytes = fprintf(outfp, "%s", reinterpret_cast<const char*>(msg));
         fflush(outfp); // no need to worry about performance
         return bytes;
     }

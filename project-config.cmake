@@ -74,7 +74,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         ###################################
         "--suppress=knownConditionTrueFalse:*/HttpServer.cpp"
         "--suppress=missingIncludeSystem"
-        "--suppress=cstyleCast"
         "--suppress=duplInheritedMember"
         "--suppress=badBitmaskCheck"
         # NOTE: this should work for one function  "--suppress=memleak:LuaEndpoint::handleRequest /packages/core/LuaEndpoint.cpp"

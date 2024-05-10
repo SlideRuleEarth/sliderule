@@ -1,3 +1,30 @@
+# Development Note: Managing libtiff Dependencies for GDAL
+#
+# Dependencies:
+# - Both PROJ and libgeotiff depend on libtiff, which is typically installed by default.
+#
+# Build Process:
+# 1. Consistent libtiff Version:
+#    - Ensure that PROJ and libgeotiff are built using the system-installed version of libtiff.
+#    - Verify the libtiff version before proceeding with GDAL compilation to ensure all libraries are
+#      using the same version.
+#
+# 2. GDAL Build:
+#    - GDAL should automatically use the system version of libtiff if it is present. However, it sometimes
+#      defaults to using an older, internal version of libtiff.
+#    - This discrepancy can cause GDAL to pass all build tests but fail sliderule raster tests.
+#
+# Troubleshooting:
+# - Version Conflicts:
+#   - If GDAL is linked against multiple versions of libtiff (check with `ldd` on the GDAL binaries), this
+#     can lead to runtime errors and failed tests without explicit errors during the build.
+#
+# - System Cleanup:
+#   - Clean up the development environment to remove any residual or conflicting libtiff installations.
+#   - Rebuild PROJ, libgeotiff, and GDAL ensuring that only one version of libtiff is accessible and used
+#     during the build process.
+
+
 FROM amazonlinux:2023
 
 # install build dependencies
@@ -67,7 +94,7 @@ RUN git clone https://github.com/OSGeo/PROJ.git && \
     mkdir -p /build/proj && \
     cd /build/proj && \
     cmake /PROJ -DCMAKE_BUILD_TYPE=Release && \
-    make -j8 && \
+    make -j4 && \
     make install && \
     ldconfig
 
@@ -91,7 +118,7 @@ RUN git clone https://github.com/libgeos/geos.git && \
     mkdir -p /build/geos && \
     cd /build/geos && \
     cmake /geos -DCMAKE_BUILD_TYPE=Release && \
-    make -j8 && \
+    make -j4 && \
     make install && \
     ldconfig
 
@@ -103,7 +130,7 @@ RUN git clone https://github.com/OSGeo/gdal.git && \
     mkdir -p /build/gdal && \
     cd /build/gdal && \
     cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF && \
-    make -j8 && \
+    make -j4 && \
     make install && \
     ldconfig
 
@@ -120,3 +147,5 @@ RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
 # support interactive mode
 WORKDIR /
 CMD ["/bin/bash"]
+
+

@@ -185,7 +185,7 @@ void TTYLib::ttyclose(int fd)
  *----------------------------------------------------------------------------*/
 int TTYLib::ttywrite(int fd, const void* buf, int size, int timeout)
 {
-    unsigned char* cbuf = (unsigned char*)buf;
+    unsigned char* cbuf = const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(buf));
     int activity = 1;
     int revents = POLLOUT;
 

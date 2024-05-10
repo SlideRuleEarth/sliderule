@@ -94,7 +94,8 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
         throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
 
     /* Create in memory index file (geojson) */
-    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
+    GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(_parms->catalog));
+    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), bytes, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
 

@@ -75,7 +75,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
     data_t rqst;
     if(data)
     {
-        rqst.data = (char*)data;
+        rqst.data = const_cast<char*>(data);
         rqst.size = StringLib::size(data);
     }
     else
@@ -106,7 +106,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
 
         if(unix_socket)
         {
-            curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, (char*)unix_socket);
+            curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, const_cast<char*>(unix_socket));
         }
 
         if(rsps_headers)
@@ -216,7 +216,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 
     /* Initialize Request */
     data_t rqst;
-    rqst.data = (char*)data;
+    rqst.data = const_cast<char*>(data);
     rqst.size = StringLib::size(data);
 
     /* Initialize cURL */
@@ -277,7 +277,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 
     /* Initialize Request */
     data_t rqst;
-    rqst.data = (char*)data;
+    rqst.data = const_cast<char*>(data);
     rqst.size = StringLib::size(data);
 
     /* Initialize Response (only used if as_record is true) */
@@ -730,7 +730,7 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
 size_t CurlLib::writerHeader(const void* buffer, size_t size, size_t nmemb, void *userp)
 {
     List<string*>* rsps_headers = reinterpret_cast<List<string*>*>(userp);
-    string* header = new string((char*)buffer);
+    string* header = new string(static_cast<const char*>(buffer));
     rsps_headers->add(header);
     size_t total_size = size * nmemb;
     return total_size;

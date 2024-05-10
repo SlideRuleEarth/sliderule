@@ -318,7 +318,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
         if(status == MsgQ::STATE_OKAY)
         {
             bool done = false;
-            if(ref.size > 0) stream.write((const char*)ref.data, ref.size);
+            if(ref.size > 0) stream.write(reinterpret_cast<const char*>(ref.data), ref.size);
             else done = true;
             rspq.dereference(ref);
             if(done) break;

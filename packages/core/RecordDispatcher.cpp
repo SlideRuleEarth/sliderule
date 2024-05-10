@@ -435,7 +435,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         int recv_status = dispatcher->inQ->receiveRef(ref, SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            unsigned char* msg = (unsigned char*)ref.data;
+            unsigned char* msg = reinterpret_cast<unsigned char*>(ref.data);
             int len = ref.size;
 
             /* Dispatch Record */
@@ -546,14 +546,14 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
         const char* rec_type = record->getRecordType();
         if(StringLib::match(rec_type, ContainerRecord::recType))
         {
-            ContainerRecord::rec_t* container = (ContainerRecord::rec_t*)record->getRecordData();
+            ContainerRecord::rec_t* container = reinterpret_cast<ContainerRecord::rec_t*>(record->getRecordData());
 
             /* Build List of Records */
             DispatchObject::recVec_t rec_list;
             rec_list.reserve(container->rec_cnt);
             for(uint32_t i = 0; i < container->rec_cnt; i++)
             {
-                uint8_t* buffer = (uint8_t*)container + container->entries[i].rec_offset;
+                uint8_t* buffer = reinterpret_cast<uint8_t*>(container) + container->entries[i].rec_offset;
                 int size = container->entries[i].rec_size;
                 RecordObject* subrec = createRecord(buffer, size);
                 rec_list.push_back(subrec);

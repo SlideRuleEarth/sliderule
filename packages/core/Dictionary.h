@@ -467,7 +467,7 @@ int Dictionary<T>::getKeys (char*** keys) const
         {
             const char* new_key = NULL;
             OsApi::dupstr(&new_key, hashTable[i].key);
-            (*keys)[j++] = (char*)new_key;
+            (*keys)[j++] = const_cast<char*>(new_key);
         }
     }
 

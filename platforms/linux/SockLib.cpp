@@ -111,7 +111,7 @@ void SockLib::init()
     }
     else if(host != NULL)
     {
-        uint32_t addr = ((struct in_addr*)host->h_addr_list[0])->s_addr;
+        uint32_t addr = reinterpret_cast<struct in_addr*>(host->h_addr_list[0])->s_addr;
         snprintf(ipv4, IPV4_STR_LEN, "%u.%u.%u.%u", addr & 0xFF, (addr >> 8) & 0xFF, (addr >> 16) & 0xFF, (addr >> 24) & 0xFF);
     }
 }
@@ -366,8 +366,8 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     socklen_t addr_size = sizeof(struct sockaddr_in);
 
     /* Get Socket Info */
-    if(getsockname(fd, (struct sockaddr *)&local_addr, &addr_size) < 0) return -1;
-    if(getpeername(fd, (struct sockaddr *)&remote_addr, &addr_size) < 0) return -1;
+    if(getsockname(fd, reinterpret_cast<struct sockaddr *>(&local_addr), &addr_size) < 0) return -1;
+    if(getpeername(fd, reinterpret_cast<struct sockaddr *>(&remote_addr), &addr_size) < 0) return -1;
 
     /* Populate Local IP Address */
     if(local_ipaddr)
@@ -491,7 +491,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     {
                         int error = 0;
                         socklen_t errlen = sizeof(error);
-                        getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen);
+                        getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&error), &errlen);
 #ifdef __DEBUG__
                         /* With server keeping sockets alive for HTTP/1.1 requests, the client will close the connection.
                          * It may do it gracefully or abruptly.  If it does it abruptly (curlib3 socket pool timeout)
@@ -558,7 +558,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 {
                     int error = 0;
                     socklen_t errlen = sizeof(error);
-                    getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, (void *)&error, &errlen);
+                    getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, static_cast<void*>(&error), &errlen);
                     dlog("Poll error (%d) detected [0x%X] on listener socket: %s", error, polllist[0].revents, strerror(errno));
                 }
                 else if(polllist[0].revents & POLLIN)
@@ -974,7 +974,7 @@ int SockLib::sockmulticast(int socket_fd, const char* group)
 
     optval.imr_multiaddr.s_addr = inet_addr(group);
     optval.imr_interface.s_addr = htonl(INADDR_ANY);
-    if(setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&optval, optlen) < 0)
+    if(setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<char*>(&optval), optlen) < 0)
     {
         dlog("Failed to set IP_ADD_MEMBERSHIP option on socket, %s", strerror(errno));
         return SOCK_ERR_RC;

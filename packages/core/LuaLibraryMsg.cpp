@@ -581,7 +581,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
     const char* recclass = NULL;
     if(lua_isstring(L, 3))
     {
-        recclass = (const char*)lua_tostring(L, 3);
+        recclass = static_cast<const char*>(lua_tostring(L, 3));
     }
 
     bool terminator = false;
@@ -599,12 +599,12 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
                 if(recclass)
                 {
                     recClass_t rec_class = typeTable[recclass];
-                    record = rec_class.associate((unsigned char*)ref.data, ref.size);
-                }
-                else
-                {
-                    record = new RecordObject((unsigned char*)ref.data, ref.size);
-                }
+                    record = rec_class.associate(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+                    }
+                    else
+                    {
+                        record = new RecordObject(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+                    }
             }
             catch (const RunTimeException& e)
             {
@@ -704,7 +704,7 @@ int LuaLibraryMsg::lmsg_gettype (lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    
+
     if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
@@ -730,7 +730,7 @@ int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    
+
     if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
@@ -776,7 +776,7 @@ int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    
+
     if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
@@ -818,7 +818,7 @@ int LuaLibraryMsg::lmsg_serialize(lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    
+
     if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
@@ -826,7 +826,7 @@ int LuaLibraryMsg::lmsg_serialize(lua_State* L)
 
     unsigned char* buffer = NULL;
     int bytes = rec_data->rec->serialize(&buffer); // memory allocated
-    lua_pushlstring(L, (const char*)buffer, bytes);
+    lua_pushlstring(L, reinterpret_cast<const char*>(buffer), bytes);
     delete [] buffer; // memory freed
 
     return 1; // number of items returned (record string)
@@ -842,16 +842,15 @@ int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    
+
     if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");
     }
 
     size_t lbuf = 0;
-    unsigned char* buffer = (unsigned char*)lua_tolstring(L, 2, &lbuf);
-
-    bool status = rec_data->rec->deserialize(buffer, lbuf);
+    const unsigned char* buffer = reinterpret_cast<const unsigned char*>(lua_tolstring(L, 2, &lbuf));
+    bool status = rec_data->rec->deserialize(const_cast<unsigned char*>(buffer), lbuf);
     lua_pushboolean(L, status);
 
     return 1; // number of items returned (status of deserialization)
@@ -867,7 +866,7 @@ int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
     {
         return luaL_error(L, "invalid record");
     }
-    
+
     if(rec_data->rec == NULL)
     {
         return luaL_error(L, "record does not exist");

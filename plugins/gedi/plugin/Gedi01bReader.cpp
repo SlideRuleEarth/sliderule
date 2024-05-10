@@ -168,7 +168,7 @@ Gedi01bReader::Gedi01b::~Gedi01b (void)
 void* Gedi01bReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     Gedi01bReader* reader = static_cast<Gedi01bReader*>(info->reader);
     GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
@@ -223,7 +223,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
             reader->threadMut.lock();
             {
                 /* Populate Entry in Batch Structure */
-                g01b_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
+                g01b_footprint_t* fp        = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number             = gedi01b.shot_number[footprint];
                 fp->time_ns                 = GediParms::deltatime2timestamp(gedi01b.delta_time[footprint]);
                 fp->latitude                = region.lat[footprint];

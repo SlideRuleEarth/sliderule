@@ -325,7 +325,7 @@ void* HttpServer::listenerThread(void* parm)
     while(s->active)
     {
         /* Start Http Server */
-        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, (void*)s, &(s->listening));
+        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, static_cast<void*>(s), &(s->listening));
         if(status < 0)
         {
             mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
@@ -404,7 +404,7 @@ int HttpServer::onRead(int fd)
     int buf_available; // bytes available in buffer
     if(!state->header_complete)
     {
-        buf = (uint8_t*)&state->header_buf[state->header_size];
+        buf = reinterpret_cast<uint8_t*>(&state->header_buf[state->header_size]);
         buf_available = HEADER_BUF_LEN - state->header_size;
     }
     else if(connection->request->body)
@@ -580,8 +580,8 @@ int HttpServer::onWrite(int fd)
             {
                 /* Write Chunk Header - HTTP */
                 unsigned long chunk_size = state->ref.size > 0 ? state->ref.size : 0;
-                StringLib::format((char*)state->stream_buf, STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
-                state->stream_buf_size = StringLib::size((const char*)state->stream_buf);
+                StringLib::format(reinterpret_cast<char*>(state->stream_buf), STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
+                state->stream_buf_size = StringLib::size(reinterpret_cast<const char*>(state->stream_buf));
 
                 if(state->ref.size > 0)
                 {
@@ -591,7 +591,7 @@ int HttpServer::onWrite(int fd)
                 }
 
                 /* Write Chunk Trailer - HTTP */
-                StringLib::format((char*)&state->stream_buf[state->stream_buf_size], STREAM_OVERHEAD_SIZE, "\r\n");
+                StringLib::format(reinterpret_cast<char*>(&state->stream_buf[state->stream_buf_size]), STREAM_OVERHEAD_SIZE, "\r\n");
                 state->stream_buf_size += 2;
             }
 
@@ -602,7 +602,7 @@ int HttpServer::onWrite(int fd)
         else /* Setup Normal */
         {
             /* Setup Write State */
-            buffer = ((uint8_t*)state->ref.data) + state->ref_index;
+            buffer = reinterpret_cast<uint8_t*>(state->ref.data) + state->ref_index;
             bytes_left = state->ref.size - state->ref_index;
         }
 

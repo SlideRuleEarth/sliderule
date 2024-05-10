@@ -174,7 +174,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
             H5Coro::context_t context;
             H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.c_str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
             assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
-            int32_t* tile = (int32_t*)info.data;
+            int32_t* tile = reinterpret_cast<int32_t*>(info.data);
 
             /* Update Cache */
             cacheMut.lock();

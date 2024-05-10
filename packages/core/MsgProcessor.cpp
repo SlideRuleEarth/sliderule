@@ -176,7 +176,7 @@ void* MsgProcessor::processorThread(void* parm)
         {
             if(ref.size > 0)
             {
-                success = processor->processMsg((unsigned char*)ref.data, ref.size);
+                success = processor->processMsg(reinterpret_cast<unsigned char*>(ref.data), ref.size);
             }
             else // terminator
             {

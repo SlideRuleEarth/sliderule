@@ -191,9 +191,9 @@ uint64_t OsApi::swapll(uint64_t val)
 float OsApi::swapf(float val)
 {
     float rtrndata = 0.0;
-    uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint32_t* tempf = (uint32_t*)(char*)&val;
-    *(uint32_t*)(dataptr) = bswap_32(*tempf);
+    uint8_t* dataptr = reinterpret_cast<uint8_t*>(&rtrndata);
+    uint32_t* tempf = reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(&val));
+    *(reinterpret_cast<uint32_t*>(dataptr)) = bswap_32(*tempf);
     return rtrndata;
 }
 
@@ -203,9 +203,9 @@ float OsApi::swapf(float val)
 double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
-    uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint64_t* tempd = (uint64_t*)(char*)&val;
-    *(uint64_t*)(dataptr) = bswap_64(*tempd);
+    uint8_t* dataptr = reinterpret_cast<uint8_t*>(&rtrndata);
+    uint64_t* tempd = reinterpret_cast<uint64_t*>(reinterpret_cast<char*>(&val));
+    *(reinterpret_cast<uint64_t*>(dataptr)) = bswap_64(*tempd);
     return rtrndata;
 }
 

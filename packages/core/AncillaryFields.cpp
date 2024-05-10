@@ -106,68 +106,68 @@ double* AncillaryFields::extractAsDoubles (element_array_t* elements)
     {
         case RecordObject::INT8:
         {
-            int8_t* src = (int8_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const int8_t* src = reinterpret_cast<int8_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::INT16:
         {
-            int16_t* src = (int16_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const int16_t* src = reinterpret_cast<int16_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::INT32:
         {
-            int32_t* src = (int32_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const int32_t* src = reinterpret_cast<int32_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::INT64:
         {
-            int64_t* src = (int64_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const int64_t* src = reinterpret_cast<int64_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::UINT8:
         {
-            uint8_t* src = (uint8_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const uint8_t* src = reinterpret_cast<uint8_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::UINT16:
         {
-            uint16_t* src = (uint16_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const uint16_t* src = reinterpret_cast<uint16_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::UINT32:
         {
-            uint32_t* src = (uint32_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const uint32_t* src = reinterpret_cast<uint32_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::UINT64:
         {
-            uint64_t* src = (uint64_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const uint64_t* src = reinterpret_cast<uint64_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::FLOAT:
         {
-            float* src = getValueAsFloat(&elements->data[0]);
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const float* src = getValueAsFloat(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::DOUBLE:
         {
-            double* src = getValueAsDouble(&elements->data[0]);
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const double* src = getValueAsDouble(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         case RecordObject::TIME8:
         {
-            int64_t* src = (int64_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (double)src[i];
+            const int64_t* src = reinterpret_cast<int64_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }
         default:
@@ -191,68 +191,68 @@ int64_t* AncillaryFields::extractAsIntegers (element_array_t* elements)
     {
         case RecordObject::INT8:
         {
-            int8_t* src = (int8_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const int8_t* src = reinterpret_cast<const int8_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::INT16:
         {
-            int16_t* src = (int16_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const int16_t* src = reinterpret_cast<const int16_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::INT32:
         {
-            int32_t* src = (int32_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const int32_t* src = reinterpret_cast<const int32_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::INT64:
         {
-            int64_t* src = (int64_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const int64_t* src = reinterpret_cast<const int64_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::UINT8:
         {
-            uint8_t* src = (uint8_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const uint8_t* src = reinterpret_cast<const uint8_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::UINT16:
         {
-            uint16_t* src = (uint16_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const uint16_t* src = reinterpret_cast<const uint16_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::UINT32:
         {
-            uint32_t* src = (uint32_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const uint32_t* src = reinterpret_cast<const uint32_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::UINT64:
         {
-            uint64_t* src = (uint64_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const uint64_t* src = reinterpret_cast<const uint64_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::FLOAT:
         {
-            float* src = getValueAsFloat(&elements->data[0]);
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const float* src = getValueAsFloat(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::DOUBLE:
         {
-            double* src = getValueAsDouble(&elements->data[0]);
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const double* src = getValueAsDouble(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         case RecordObject::TIME8:
         {
-            int64_t* src = (int64_t*)&elements->data[0];
-            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = (int64_t)src[i];
+            const int64_t* src = reinterpret_cast<const int64_t*>(&elements->data[0]);
+            for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<int64_t>(src[i]);
             break;
         }
         default:
@@ -280,7 +280,7 @@ void AncillaryFields::setValueAsDouble (field_t* field, double value)
 void AncillaryFields::setValueAsInteger (field_t* field, int64_t value)
 {
     field->data_type = RecordObject::INT64;
-    int64_t* valptr = (int64_t*)&field->value[0];
+    int64_t* valptr = reinterpret_cast<int64_t*>(&field->value[0]);
     *valptr = value;
 }
 
@@ -332,7 +332,7 @@ RecordObject* AncillaryFields::createFieldArrayRecord (uint64_t extent_id, vecto
 
     int rec_size = offsetof(field_array_t, fields) + (sizeof(field_t) * field_vec.size());
     RecordObject* rec = new RecordObject(ancFieldArrayRecType, rec_size);
-    field_array_t* field_array = (field_array_t*)rec->getRecordData();
+    field_array_t* field_array = reinterpret_cast<field_array_t*>(rec->getRecordData());
     field_array->extent_id = extent_id;
     field_array->num_fields = field_vec.size();
     for(unsigned int i = 0; i < field_vec.size(); i++)

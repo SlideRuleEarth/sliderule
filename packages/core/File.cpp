@@ -236,7 +236,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     else if(type == ASCII)
     {
         /* Write Converted Binary Values */
-        const unsigned char* pkt_buffer = (unsigned char*)buf;
+        const unsigned char* pkt_buffer = reinterpret_cast<const unsigned char*>(buf);
         int  ret = 0;
         for(int i = 0; i < len; i++)
         {
@@ -266,7 +266,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     else if(type == TEXT)
     {
         /* Write String Data */
-        bytes_written = fprintf(fp, "%s", (const char*)buf);
+        bytes_written = fprintf(fp, "%s", static_cast<const char*>(buf));
     }
 
     /* IO Flushing/Caching Check */
@@ -344,7 +344,7 @@ int File::readBuffer (void* buf, int len, int timeout)
     else if(type == ASCII)
     {
         /* Read Next Packet */
-        unsigned char* pkt_buffer = (unsigned char*)buf;
+        unsigned char* pkt_buffer = static_cast<unsigned char*>(buf);
         char b[5] = {'0', 'x', '\0', '\0', '\0'};
         int n = 0;
         while(recv_bytes < len)
@@ -363,7 +363,7 @@ int File::readBuffer (void* buf, int len, int timeout)
                 break;
             }
 
-            b[2 + (n++ % 2)] = (char)ch;
+            b[2 + (n++ % 2)] = static_cast<char>(ch);
             if(n % 2 == 0)
             {
                 char *endptr;

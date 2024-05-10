@@ -1325,7 +1325,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
                 .x = batch->pri_record->getValueReal(x_field),
                 .y = batch->pri_record->getValueReal(y_field)
             };
-            (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(ArrowCommon::wkbpoint_t));
+            (void)builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowCommon::wkbpoint_t));
             if(x_field.flags & RecordObject::BATCH) x_field.offset += batch_row_size_bits;
             if(y_field.flags & RecordObject::BATCH) y_field.offset += batch_row_size_bits;
         }
@@ -1685,7 +1685,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int8_t* src = (int8_t*)&element_array->data[0];
+                    int8_t* src = reinterpret_cast<int8_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1702,7 +1702,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int16_t* src = (int16_t*)&element_array->data[0];
+                    int16_t* src = reinterpret_cast<int16_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1719,7 +1719,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int32_t* src = (int32_t*)&element_array->data[0];
+                    int32_t* src = reinterpret_cast<int32_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1736,7 +1736,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int64_t* src = (int64_t*)&element_array->data[0];
+                    int64_t* src = reinterpret_cast<int64_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1753,7 +1753,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint8_t* src = (uint8_t*)&element_array->data[0];
+                    uint8_t* src = reinterpret_cast<uint8_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1770,7 +1770,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint16_t* src = (uint16_t*)&element_array->data[0];
+                    uint16_t* src = reinterpret_cast<uint16_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1787,7 +1787,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint32_t* src = (uint32_t*)&element_array->data[0];
+                    uint32_t* src = reinterpret_cast<uint32_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1804,7 +1804,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint64_t* src = (uint64_t*)&element_array->data[0];
+                    uint64_t* src = reinterpret_cast<uint64_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1821,7 +1821,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int64_t* src = (int64_t*)&element_array->data[0];
+                    int64_t* src = reinterpret_cast<int64_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);

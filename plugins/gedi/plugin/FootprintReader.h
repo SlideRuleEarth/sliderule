@@ -210,7 +210,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
 
     /* Initialize Batch Record Processing */
     batchIndex = 0;
-    batchData = (batch_t*)batchRecord.getRecordData();
+    batchData = reinterpret_cast<batch_t*>(batchRecord.getRecordData());
 
     /* Initialize Readers */
     active = true;

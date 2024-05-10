@@ -288,7 +288,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
  *----------------------------------------------------------------------------*/
 void EventLib::stashId (uint32_t id)
 {
-    Thread::setGlobal(trace_key, (void*)(unsigned long long)id);
+    Thread::setGlobal(trace_key, reinterpret_cast<void*>(static_cast<unsigned long long>(id)));
 }
 
 /*----------------------------------------------------------------------------
@@ -296,7 +296,7 @@ void EventLib::stashId (uint32_t id)
  *----------------------------------------------------------------------------*/
 uint32_t EventLib::grabId (void)
 {
-    return (uint32_t)(unsigned long long)Thread::getGlobal(trace_key);
+    return static_cast<uint32_t>(reinterpret_cast<unsigned long long>(Thread::getGlobal(trace_key)));
 }
 
 /*----------------------------------------------------------------------------
@@ -410,7 +410,7 @@ bool EventLib::sendEvent (const event_t* event, int attr_size)
 {
     int event_record_size = offsetof(event_t, attr) + attr_size;
     RecordObject record(eventRecType, event_record_size, false);
-    event_t* data = (event_t*)record.getRecordData();
+    event_t* data = reinterpret_cast<event_t*>(record.getRecordData());
     memcpy(data, event, event_record_size);
     return record.post(outq, 0, NULL, false);
 }

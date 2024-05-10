@@ -165,7 +165,7 @@ static void console_quick_exit(int parm)
  */
 static void* signal_thread (void* parm)
 {
-    sigset_t* signal_set = (sigset_t*)parm;
+    sigset_t* signal_set = reinterpret_cast<sigset_t*>(parm);
 
     while(true)
     {
@@ -225,7 +225,7 @@ static void ldplugins(void)
 
             /* Initialize Plugin */
             StringLib::format(curr_plugin->init_func_name, MAX_STR_SIZE, "init%s", plugin_name);
-            plugin_f init = (plugin_f)dlsym(curr_plugin->plugin, curr_plugin->init_func_name);
+            plugin_f init = reinterpret_cast<plugin_f>(dlsym(curr_plugin->plugin, curr_plugin->init_func_name));
             if(!init) print2term("cannot find initialization function %s: %s\n", curr_plugin->init_func_name, dlerror());
             else init();
 
@@ -250,7 +250,7 @@ static void ulplugins(void)
     while(curr_plugin->next != NULL)
     {
         /* Deinitialize */
-        plugin_f deinit = (plugin_f)dlsym(curr_plugin->plugin, curr_plugin->deinit_func_name);
+        plugin_f deinit = reinterpret_cast<plugin_f>(dlsym(curr_plugin->plugin, curr_plugin->deinit_func_name));
         if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());
         else deinit();
 
@@ -291,7 +291,7 @@ int main (int argc, char* argv[])
     pthread_attr_t pthread_attr;
     pthread_attr_init(&pthread_attr);
     pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(&signal_pid, &pthread_attr, &signal_thread, (void *) &signal_set);
+    pthread_create(&signal_pid, &pthread_attr, &signal_thread, reinterpret_cast<void*>(&signal_set));
 
     /* Initialize Built-In Packages */
     initcore();

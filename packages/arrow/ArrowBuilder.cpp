@@ -384,7 +384,7 @@ void* ArrowBuilder::builderThread(void* parm)
             if(ref.size > 0)
             {
                 /* Create Batch Structure */
-                RecordInterface* record = new RecordInterface((unsigned char*)ref.data, ref.size);
+                RecordInterface* record = new RecordInterface(reinterpret_cast<unsigned char*>(ref.data), ref.size);
                 batch_t* batch = new batch_t(ref, builder->inQ);
 
                 /* Process Container Records */
@@ -397,7 +397,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     for(uint32_t i = 0; i < container->rec_cnt; i++)
                     {
                         /* Pull Out Subrecord */
-                        uint8_t* buffer = (uint8_t*)container + container->entries[i].rec_offset;
+                        uint8_t* buffer = reinterpret_cast<uint8_t*>(container) + container->entries[i].rec_offset;
                         int size = container->entries[i].rec_size;
                         RecordObject* subrec = new RecordInterface(buffer, size);
 

@@ -65,10 +65,10 @@ UT_MsgQ::UT_MsgQ(CommandProcessor* cmd_proc, const char* obj_name):
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
     /* Register Commands */
-    registerCommand("BLOCKING_RECEIVE_TEST", (cmdFunc_t)&UT_MsgQ::blockingReceiveUnitTestCmd, 0, "");
-    registerCommand("SUBSCRIBE_UNSUBSCRIBE_TEST", (cmdFunc_t)&UT_MsgQ::subscribeUnsubscribeUnitTestCmd, 0, "");
-    registerCommand("PERFORMANCE_TEST", (cmdFunc_t)&UT_MsgQ::performanceUnitTestCmd, 0, "[<depth> <size>]");
-    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", (cmdFunc_t)&UT_MsgQ::subscriberOfOpporunityUnitTestCmd, 0, "");
+    registerCommand("BLOCKING_RECEIVE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::blockingReceiveUnitTestCmd), 0, "");
+    registerCommand("SUBSCRIBE_UNSUBSCRIBE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::subscribeUnsubscribeUnitTestCmd), 0, "");
+    registerCommand("PERFORMANCE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::performanceUnitTestCmd), 0, "[<depth> <size>]");
+    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::subscriberOfOpporunityUnitTestCmd), 0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -112,7 +112,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     long data = 0;
     for(int i = 0; i < unit_test_parms.qdepth; i++)
     {
-        int status1 = pubq->postCopy((void*)&data, sizeof(long));
+        int status1 = pubq->postCopy(static_cast<void*>(&data), sizeof(long));
         if(status1 <= 0)
         {
             print2term("[%d] ERROR: post %ld error %d\n", __LINE__, data, status1);
@@ -123,7 +123,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* STEP 2: Verify that Post Times Out */
-    int status2 = pubq->postCopy((void*)&data, sizeof(long), SYS_TIMEOUT);
+    int status2 = pubq->postCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
     if(status2 != MsgQ::STATE_TIMEOUT)
     {
         print2term("[%d] ERROR: post %ld did not timeout: %d\n", __LINE__, data, status2);
@@ -135,7 +135,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     long value = 0;
     for(int i = 0; i < unit_test_parms.qdepth; i++)
     {
-        int status3 = subq->receiveCopy((void*)&value, sizeof(long), SYS_TIMEOUT);
+        int status3 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
         if(status3 != sizeof(long))
         {
             print2term("[%d] ERROR: receive failed with status %d\n", __LINE__, status3);
@@ -150,7 +150,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* STEP 4: Verify that Receive Times Out */
-    int status4 = subq->receiveCopy((void*)&value, sizeof(long), SYS_TIMEOUT);
+    int status4 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
     if(status4 != MsgQ::STATE_TIMEOUT)
     {
         print2term("[%d] ERROR: receive %ld did not timeout: %d\n", __LINE__, data, status4);
@@ -187,7 +187,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
     unit_test_parms.numsubs = 3;
 
     /* Initialize Random Seed */
-    srand((unsigned int)time(NULL));
+    srand(static_cast<unsigned int>(time(NULL)));
 
     /* Create Thread Data */
     Thread** p_pid = new Thread* [unit_test_parms.numpubs];
@@ -201,14 +201,14 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
         pubparms[p] = new parms_t;
         memcpy(pubparms[p], &unit_test_parms, sizeof(parms_t));
         pubparms[p]->threadid = p;
-        p_pid[p] = new Thread(publisherThread, (void*)pubparms[p]);
+        p_pid[p] = new Thread(publisherThread, static_cast<void*>(pubparms[p]));
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         subparms[s] = new parms_t;
         memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
-        s_pid[s] = new Thread(subscriberThread, (void*)subparms[s]);
+        s_pid[s] = new Thread(subscriberThread, static_cast<void*>(subparms[s]));
     }
 
     /* Join Threads */
@@ -338,7 +338,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         {
             for(int j = 0; j < size; j++)
             {
-                pkt[j] = (unsigned char)sequence++;
+                pkt[j] = static_cast<unsigned char>(sequence++);
             }
 
             int status = p->postCopy(pkt, size);
@@ -367,10 +367,10 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
         delete [] t;
         end = clock();
-        double sub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+        double sub_time = static_cast<double>(end - start) / CLOCKS_PER_SEC;
 
         clock_t total_end = clock();
-        double total_time = ((double) (total_end - total_start)) / CLOCKS_PER_SEC;
+        double total_time = static_cast<double>(total_end - total_start) / CLOCKS_PER_SEC;
 
         /* Print Results */
         print2term("%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
@@ -411,7 +411,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
     unit_test_parms.numsubs = 10;
 
     /* Initialize Random Seed */
-    srand((unsigned int)time(NULL));
+    srand(static_cast<unsigned int>(time(NULL)));
 
     /* Create Thread Data */
     Thread** p_pid = new Thread* [unit_test_parms.numpubs];
@@ -425,14 +425,14 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
         pubparms[p] = new parms_t;
         memcpy(pubparms[p], &unit_test_parms, sizeof(parms_t));
         pubparms[p]->threadid = p;
-        p_pid[p] = new Thread(publisherThread, (void*)pubparms[p]);
+        p_pid[p] = new Thread(publisherThread, static_cast<void*>(pubparms[p]));
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         subparms[s] = new parms_t;
         memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
-        s_pid[s] = new Thread(opportunityThread, (void*)subparms[s]);
+        s_pid[s] = new Thread(publisherThread, static_cast<void*>(pubparms[s]));
     }
 
     /* Join Threads */
@@ -512,7 +512,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
     while(loops--)
     {
         randomDelay(1);
-        int status = q->receiveCopy((void*)&data, sizeof(long), 1000 * unit_test_parms->numpubs);
+        int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), 1000 * unit_test_parms->numpubs);
         if(status > 0)
         {
             int threadid = data >> 16;
@@ -577,7 +577,7 @@ void* UT_MsgQ::publisherThread(void* parm)
     while(loops--)
     {
         randomDelay(1);
-        int status = q->postCopy((void*)&data, sizeof(long), 2000 * unit_test_parms->numpubs);
+        int status = q->postCopy(static_cast<void*>(&data), sizeof(long), 2000 * unit_test_parms->numpubs);
         if(status > 0)
         {
             *unit_test_parms->lastvalue = data++;
@@ -627,12 +627,12 @@ void* UT_MsgQ::performanceThread(void* parm)
             }
             else
             {
-                unsigned char* pkt = (unsigned char*)ref.data;
+                unsigned char* pkt = reinterpret_cast<unsigned char*>(ref.data);
                 for(int i = 0; i < RAW->size; i++)
                 {
-                    if(pkt[i] != (unsigned char)sequence++)
+                    if(pkt[i] != static_cast<unsigned char>(sequence++))
                     {
-                        print2term("[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], (unsigned char)(sequence - 1));
+                        print2term("[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], static_cast<unsigned char>(sequence - 1));
                         RAW->f = true;
                     }
                 }
@@ -689,7 +689,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
     while(loops--)
     {
         if(loops % 10 == 0) randomDelay(2);
-        int status = q->receiveCopy((void*)&data, sizeof(long), SYS_TIMEOUT);
+        int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
         if(status > 0)
         {
             int threadid = data >> 16;

@@ -157,7 +157,7 @@ bool CommandProcessor::postCommand(const char* cmdstr, ...)
     }
 
     /* Post Command */
-    if(cmdq_publisher->postCopy((void*)str, slen + 1) > 0)
+    if(cmdq_publisher->postCopy(static_cast<void*>(str), slen + 1) > 0)
     {
         return true;
     }
@@ -187,7 +187,7 @@ bool CommandProcessor::postPriority(const char* cmdstr, ...)
     }
 
     /* Post Command */
-    if(priq_publisher->postCopy((void*)str, slen + 1) > 0)
+    if(priq_publisher->postCopy(static_cast<void*>(str), slen + 1) > 0)
     {
         return true;
     }

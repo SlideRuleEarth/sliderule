@@ -127,7 +127,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     RecordObject* record = NULL;
     try
     {
-        record = createRecord((unsigned char*)msg, size);
+        record = static_cast<RecordObject*>(createRecord(reinterpret_cast<unsigned char*>(msg), size));
     }
     catch (const RunTimeException& e)
     {
@@ -138,10 +138,10 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* Get Fields */
     char** field_names = NULL;
     int num_fields = 0;
-    if(boundFields)
+    if (boundFields)
     {
         num_fields = numBoundFields;
-        field_names = (char**)boundFields;
+        field_names = const_cast<char**>(boundFields);
     }
     else
     {
@@ -156,7 +156,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
             for(int i = 0; i < num_fields ; i++)
             {
                 /* Output Prepended String */
-                const char* prepend = createPrependStr((unsigned char*)msg, size);
+                const char* prepend = createPrependStr(reinterpret_cast<unsigned char*>(msg), size);
                 if(prepend)
                 {
                     cnt += fprintf(outfp, "%s,", prepend);
@@ -194,7 +194,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
             }
 
             /* Write Fields */
-            const char* prepend = createPrependStr((unsigned char*)msg, size);
+            const char* prepend = createPrependStr(reinterpret_cast<unsigned char*>(msg), size);
             if(prepend)
             {
                 cnt += fprintf(outfp, "%s,", prepend);
