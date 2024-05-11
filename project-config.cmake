@@ -59,27 +59,26 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=unusedPrivateFunction"
         "--suppress=memsetClassFloat"
         "--suppress=useStlAlgorithm"
-        "--suppress=unreadVariable:*/TimeLib.cpp:471"                  # one line in the file
-        "--suppress=invalidPointerCast:*/H5Array.h:166"                # one line in the file
-        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp:120"             # one line in the file
+        "--suppress=unreadVariable:*/TimeLib.cpp:471"                          # terminating '\0' detected as 'unused' but it is used/needed
+        "--suppress=invalidPointerCast:*/H5Array.h:166"                        # documented in code
+        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp:120"                     # shallow copy which is fine in code
         "--error-exitcode=1"
         "-DLLONG_MAX"
         ###################################
         # Need for cppcheck version 2.13
         ###################################
-        "--suppress=duplInheritedMember"
-        "--suppress=memleak:*/LuaEndpoint.cpp:254"                     # one line in the file
-        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"    # one line in the file
-        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"
-        "--suppress=constParameterPointer:*/packages/ccsds/*"
-        "--suppress=constParameterCallback:*/packages/ccsds/*"
-        "--suppress=knownConditionTrueFalse:*/GdalRaster.cpp"
-        "--suppress=constParameterReference:*/Table.h"
-        "--suppress=constVariableReference:*/Table.h"
-    )
+        "--suppress=duplInheritedMember"                                       # JP please look at it - example: luaobj base class has getname() so do 'kids' but it is not a virtual function
+                                                                               # is the intent to return name of the base class or derived class object?
 
-    # Redirecting stdout to null since --quiet is not supressing
-    set(CMAKE_CXX_CPPCHECK "${CMAKE_CXX_CPPCHECK};>;/dev/null")
+        "--suppress=memleak:*/LuaEndpoint.cpp:254"                             # 'info' is freed by requestThread but ccpcheck does not 'see it'
+        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"            # one line in the file
+
+        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:635"        # List [] const issue
+        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:1010"
+        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:1306"
+
+        "--suppress=constParameterPointer:*/packages/ccsds/*"
+    )
 endif()
 
 ###################

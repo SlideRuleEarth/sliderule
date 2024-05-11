@@ -81,7 +81,7 @@ RecordObject* createCcsdsRec(const char* rec_type)
 /*----------------------------------------------------------------------------
  * associateCcsdsRec  -
  *----------------------------------------------------------------------------*/
-RecordObject* associateCcsdsRec(unsigned char* data, int size)
+RecordObject* associateCcsdsRec(const unsigned char* data, int size)
 {
     return new CcsdsRecord(data, size);
 }

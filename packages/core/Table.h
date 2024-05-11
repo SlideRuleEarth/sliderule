@@ -76,7 +76,7 @@ class Table
         virtual     ~Table      (void);
 
 
-        bool        add         (K key, T& data, bool unique);
+        bool        add         (K key, const T& data, bool unique);
         T&          get         (K key, match_t match=MATCH_EXACTLY, bool resort=false);
         bool        find        (K key, match_t match, T* data, bool resort=false);
         bool        remove      (K key);
@@ -177,7 +177,7 @@ Table<T,K>::~Table(void)
  *  Note - mid-function returns
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::add(K key, T& data, bool unique)
+bool Table<T,K>::add(K key, const T& data, bool unique)
 {
     K curr_index = hash(key) % size;
 
@@ -357,7 +357,7 @@ bool Table<T,K>::find(K key, match_t match, T* data, bool resort)
 {
     try
     {
-        T& entry = get(key, match, resort);
+        const T& entry = get(key, match, resort);
         if(data) *data = entry;
         return true;
     }

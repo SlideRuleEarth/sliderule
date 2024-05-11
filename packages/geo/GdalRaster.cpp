@@ -525,12 +525,19 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
 
         GDALRasterBlock* block = NULL;
         int cnt = 1;
-        do
+        while(true)
         {
             /* Retry read if error */
             block = band->GetLockedBlockRef(xblk, yblk, false);
-        } while(block == NULL && cnt-- && s3sleep());
-        CHECKPTR(block);
+            if(block == NULL && cnt--) s3sleep();
+            else break;
+        }
+
+        if(block == NULL)
+        {
+            ssError |= SS_READ_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get block: %d, %d", xblk, yblk);
+        }
 
         /* Get data block pointer, no memory copied but block is locked */
         void* data = block->GetDataRef();
@@ -955,10 +962,13 @@ void GdalRaster::readWithRetry(int x, int y, int _xsize, int _ysize, void *data,
      */
     int cnt = 1;
     CPLErr err = CE_None;
-    do
+    while(true)
     {
+        /* Retry read if error */
         err = band->RasterIO(GF_Read, x, y, _xsize, _ysize, data, dataXsize, dataYsize, GDT_Float64, 0, 0, args);
-    } while(err != CE_None && cnt-- && s3sleep());
+        if(err != CE_None && cnt--) s3sleep();
+        else break;
+    }
 
     if (err != CE_None)
     {
