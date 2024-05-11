@@ -25,25 +25,25 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
 
     # clang-tidy
-   set (CLANG_TIDY_CHECKS
-       clang-analyzer-*
-       cconcurrency-*
-       misc-*
-       performance-*
-       portability-*
-       readability-*
-       -readability-braces-around-statements
-       -readability-implicit-bool-conversion
-       -readability-magic-numbers
-       -misc-non-private-member-variables-in-classes
-   )
-   list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
-   set (CMAKE_CXX_CLANG_TIDY
-       clang-tidy;
-       -header-filter=.;
-       -checks=${CLANG_TIDY_CHECKS_PARM};
-       -warnings-as-errors=*;
-   )
+    set (CLANG_TIDY_CHECKS
+        clang-analyzer-*
+        cconcurrency-*
+        misc-*
+        performance-*
+        portability-*
+        readability-*
+        -readability-braces-around-statements
+        -readability-implicit-bool-conversion
+        -readability-magic-numbers
+        -misc-non-private-member-variables-in-classes
+    )
+    list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
+    set (CMAKE_CXX_CLANG_TIDY
+        clang-tidy;
+        -header-filter=.;
+        -checks=${CLANG_TIDY_CHECKS_PARM};
+        -warnings-as-errors=*;
+    )
 
     # cppcheck
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)

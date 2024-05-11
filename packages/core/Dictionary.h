@@ -458,10 +458,10 @@ int Dictionary<T>::getMaxChain(void) const
 template <class T>
 int Dictionary<T>::getKeys (char*** keys) const
 {
-    if (numEntries == 0) return 0; // NOLINT
+    if (numEntries == 0) return 0;
 
-    *keys = new char* [numEntries];  // NOLINT
-    for(unsigned int i = 0, j = 0; i < hashSize; i++) // NOLINT
+    *keys = new char* [numEntries];
+    for(unsigned int i = 0, j = 0; i < hashSize; i++)
     {
         if(hashTable[i].chain != EMPTY_ENTRY)
         {
