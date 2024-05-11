@@ -59,7 +59,6 @@ int LimitDispatch::luaCreate (lua_State* L)
     try
     {
         LimitRecord::limit_t rec;
-        memset(&rec, 0, sizeof(LimitRecord::limit_t));
 
         /* Initialize Limit Record with Parameters */
         StringLib::format(rec.field_name, LimitRecord::MAX_FIELD_NAME_SIZE, "%s", getLuaString(L, 1));
@@ -126,7 +125,7 @@ LimitDispatch::~LimitDispatch(void)
 bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)records;
-    
+
     bool status = true;
     bool enabled = true;
 

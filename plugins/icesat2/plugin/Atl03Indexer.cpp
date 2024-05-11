@@ -152,7 +152,7 @@ Atl03Indexer::Atl03Indexer (lua_State* L, Asset* _asset, List<string>* _resource
     resourceEntry = 0;
 
     /* Clear Record */
-    memset(&indexRec, 0, sizeof(indexRec));
+   indexRec.clear();
 
     /* Initialize Indexers */
     active = true;

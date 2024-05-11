@@ -50,20 +50,20 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     list (APPEND CMAKE_CXX_CPPCHECK
         "--quiet"
         "--enable=all"
-        "--suppress=unmatchedSuppression"
-        "--suppress=unusedFunction"
         "--suppress=missingInclude"
         "--suppress=missingIncludeSystem"
+        "--suppress=unmatchedSuppression"
+        "--suppress=unusedFunction"                                            # cppcheck is confused, used functions are reported 'unused'
+        "--suppress=unusedPrivateFunction:"                                    # same here
         "--suppress=noOperatorEq"
         "--suppress=noCopyConstructor"
-        "--suppress=unusedPrivateFunction"
-        "--suppress=memsetClassFloat"
-        "--suppress=useStlAlgorithm"
+        "--suppress=useStlAlgorithm"                                           # yeah, they may be a bit faster but are unreadable
+        "--suppress=memsetClassFloat:*/MathLib.cpp:80"                         # need memset here for performance
         "--suppress=unreadVariable:*/TimeLib.cpp:471"                          # terminating '\0' detected as 'unused' but it is used/needed
         "--suppress=invalidPointerCast:*/H5Array.h:166"                        # documented in code
         "--suppress=copyCtorPointerCopying:*/MsgQ.cpp:120"                     # shallow copy which is fine in code
         "--error-exitcode=1"
-        "-DLLONG_MAX"
+
         ###################################
         # Need for cppcheck version 2.13
         ###################################
@@ -71,13 +71,13 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
                                                                                # is the intent to return name of the base class or derived class object?
 
         "--suppress=memleak:*/LuaEndpoint.cpp:254"                             # 'info' is freed by requestThread but ccpcheck does not 'see it'
-        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"            # one line in the file
+        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"            # code is OK
 
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:635"        # List [] const issue
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:1010"
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:1306"
 
-        "--suppress=constParameterPointer:*/packages/ccsds/*"
+        "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"          # Not trivial to fix, would have to change DispachObject class as well.
     )
 endif()
 
