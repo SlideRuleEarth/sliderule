@@ -71,13 +71,15 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=memleak:*/LuaEndpoint.cpp:254"                     # one line in the file
         "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"    # one line in the file
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"
-        "--suppress=unsafeClassCanLeak:*/CcsdsParserAOSFrameModule.h"
         "--suppress=constParameterPointer:*/packages/ccsds/*"
         "--suppress=constParameterCallback:*/packages/ccsds/*"
         "--suppress=knownConditionTrueFalse:*/GdalRaster.cpp"
         "--suppress=constParameterReference:*/Table.h"
         "--suppress=constVariableReference:*/Table.h"
     )
+
+    # Redirecting stdout to null since --quiet is not supressing
+    set(CMAKE_CXX_CPPCHECK "${CMAKE_CXX_CPPCHECK};>;/dev/null")
 endif()
 
 ###################

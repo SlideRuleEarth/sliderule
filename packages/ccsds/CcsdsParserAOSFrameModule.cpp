@@ -437,6 +437,7 @@ CcsdsParserAOSFrameModule::CcsdsParserAOSFrameModule(lua_State* L, int scid, int
  *----------------------------------------------------------------------------*/
 CcsdsParserAOSFrameModule::~CcsdsParserAOSFrameModule(void)
 {
+    delete [] SyncMarker;
     delete [] aosPrimaryHdr;
     if(aosTrailer) delete [] aosTrailer;
 }

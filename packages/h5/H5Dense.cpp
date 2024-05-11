@@ -729,7 +729,6 @@ void H5BTreeV2::manualDblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *r
 
     /* populate entry pointer using derived info */
     *ret_entry = (row * (uint32_t) fheap_info->table_width) + col;
-
 }
 
 /*----------------------------------------------------------------------------
@@ -757,16 +756,17 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
     }
     else
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wvla-extension"
         /* Indirect Block Navigation */
-        uint64_t ents[(size_t)fheap_info->curr_num_rows * fheap_info->table_width]; // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
+        size_t num_elements = static_cast<size_t>(fheap_info->curr_num_rows) * fheap_info->table_width;
+        uint64_t* ents = new uint64_t[num_elements](); // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
         uint32_t entry; // entry of block
 
         /* Search for direct block using double table and offset */
         manualDblockLocate(obj_off, ents, &entry);
         dblock_addr = ents[entry];
-#pragma clang diagnostic pop
+
+        /* Free allocated memory */
+        delete[] ents;
     }
 
     /* read direct block to access message */
