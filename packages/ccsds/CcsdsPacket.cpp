@@ -51,7 +51,7 @@ CcsdsPacket::CcsdsPacket(type_t _type):
     is_malloced(false),
     max_pkt_len(0),
     pkt_type(_type)
-{    
+{
 }
 
 /*----------------------------------------------------------------------------
@@ -221,8 +221,7 @@ bool CcsdsSpacePacket::isTLM(void) const
  *----------------------------------------------------------------------------*/
 void CcsdsSpacePacket::setTLM(void)
 {
-    uint8_t flag = 0;
-    buffer[0] = (buffer[0] & 0xEF) | ((flag << 4) & 0x10);
+    buffer[0] &= 0xEF;
 }
 
 /*----------------------------------------------------------------------------
@@ -740,7 +739,7 @@ CcsdsSpacePacket& CcsdsSpacePacket::operator=(const CcsdsSpacePacket& rhp)
 {
     /* Check Self Assignment */
     if(this == &rhp) return *this;
-    
+
     /* Get Buffer and Buffer Length */
     if(max_pkt_len < rhp.max_pkt_len)
     {

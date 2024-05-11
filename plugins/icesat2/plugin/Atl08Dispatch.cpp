@@ -185,7 +185,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     (void)key;
     (void)records;
 
-    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
+    const Atl03Reader::extent_t* extent = reinterpret_cast<const Atl03Reader::extent_t*>(record->getRecordData());
 
     /* Check Extent */
     if(extent->photon_count == 0) // NOLINT
@@ -236,7 +236,7 @@ bool Atl08Dispatch::processTermination (void)
 /*----------------------------------------------------------------------------
  * geolocateResult
  *----------------------------------------------------------------------------*/
-RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent, recVec_t* records)
+RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* extent, recVec_t* records)
 {
     /* Check for Need */
     if(!records) return NULL;
@@ -251,7 +251,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
         AncillaryFields::element_array_t* atl03_anc_rec = (AncillaryFields::element_array_t*)records->at(i)->getRecordData();
 
         /* Find Ancillary Field in Parameters */
-        AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
+        const AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
 
         /* Initialize Field */
         AncillaryFields::field_t field;
@@ -357,7 +357,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
 /*----------------------------------------------------------------------------
  * geolocateResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t& result)
+void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
     Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
@@ -374,7 +374,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
     result.solar_elevation = extent->solar_elevation;
 
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = extent->photons;
+    const Atl03Reader::photon_t* ph = extent->photons;
     uint32_t num_ph = extent->photon_count;
 
     /* Calculate Geolocation Fields */
@@ -490,10 +490,10 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
 /*----------------------------------------------------------------------------
  * phorealAlgorithm
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_t& result)
+void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = extent->photons;
+    const Atl03Reader::photon_t* ph = extent->photons;
     uint32_t num_ph = extent->photon_count;
 
     /* Determine Number of Ground and Vegetation Photons */
@@ -531,8 +531,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     }
 
     /* Sort Ground and Vegetation Photon Index Arrays */
-    quicksort(gnd_index, ph, &Atl03Reader::photon_t::height, 0, gnd_cnt - 1); // NOLINT
-    quicksort(veg_index, ph, &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
+    quicksort(gnd_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::height, 0, gnd_cnt - 1); // NOLINT
+    quicksort(veg_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
 
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;

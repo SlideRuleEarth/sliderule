@@ -25,25 +25,25 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
 
     # clang-tidy
-    set (CLANG_TIDY_CHECKS
-        clang-analyzer-*
-        cconcurrency-*
-        misc-*
-        performance-*
-        portability-*
-        readability-*
-        -readability-braces-around-statements
-        -readability-implicit-bool-conversion
-        -readability-magic-numbers
-        -misc-non-private-member-variables-in-classes
-    )
-    list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
-    set (CMAKE_CXX_CLANG_TIDY
-        clang-tidy;
-        -header-filter=.;
-        -checks=${CLANG_TIDY_CHECKS_PARM};
-        -warnings-as-errors=*;
-    )
+   set (CLANG_TIDY_CHECKS
+       clang-analyzer-*
+       cconcurrency-*
+       misc-*
+       performance-*
+       portability-*
+       readability-*
+       -readability-braces-around-statements
+       -readability-implicit-bool-conversion
+       -readability-magic-numbers
+       -misc-non-private-member-variables-in-classes
+   )
+   list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
+   set (CMAKE_CXX_CLANG_TIDY
+       clang-tidy;
+       -header-filter=.;
+       -checks=${CLANG_TIDY_CHECKS_PARM};
+       -warnings-as-errors=*;
+   )
 
     # cppcheck
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
@@ -53,59 +53,30 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=unmatchedSuppression"
         "--suppress=unusedFunction"
         "--suppress=missingInclude"
+        "--suppress=missingIncludeSystem"
         "--suppress=noOperatorEq"
         "--suppress=noCopyConstructor"
         "--suppress=unusedPrivateFunction"
         "--suppress=memsetClassFloat"
         "--suppress=useStlAlgorithm"
-        "--suppress=constParameter:*/Table.h"
-        "--suppress=constParameter:*/Ordering.h"
-        "--suppress=constParameter:*/List.h"
-        "--suppress=constParameter:*/Dictionary.h"
-        "--suppress=unreadVariable:*/TimeLib.cpp"
-        "--suppress=invalidPointerCast:*/H5Array.h"
-        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"
-        "--suppress=knownConditionTrueFalse:*/packages/legacy/UT_*"
-        "--suppress=uninitStructMember:*/plugins/icesat2/plugin/Atl06Dispatch.cpp"
+        "--suppress=unreadVariable:*/TimeLib.cpp:471"                  # one line in the file
+        "--suppress=invalidPointerCast:*/H5Array.h:166"                # one line in the file
+        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp:120"             # one line in the file
         "--error-exitcode=1"
         "-DLLONG_MAX"
         ###################################
-        # Need for cppcheck version 2.13, clang-tidy version 18.1.3
+        # Need for cppcheck version 2.13
         ###################################
-        "--suppress=knownConditionTrueFalse:*/HttpServer.cpp"
-        "--suppress=missingIncludeSystem"
         "--suppress=duplInheritedMember"
-        "--suppress=badBitmaskCheck"
-        # NOTE: this should work for one function  "--suppress=memleak:LuaEndpoint::handleRequest /packages/core/LuaEndpoint.cpp"
-        "--suppress=memleak:*/packages/core/LuaEndpoint.cpp"
-        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"  # only LuaLibraryMsg::populateRecord() has a warning but cannot disable for function only
-        "--suppress=uninitvar:*/MsgQ.cpp"
-        "--suppress=uninitvar:*/CcsdsPacketInterleaver.cpp"
-        "--suppress=duplicateCondition:*/packages/core/Ordering.h"
-        "--suppress=knownConditionTrueFalse:*/Dictionary.h"
-        "--suppress=truncLongCastAssignment:*/TimeLib.cpp"
+        "--suppress=memleak:*/LuaEndpoint.cpp:254"                     # one line in the file
+        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"    # one line in the file
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"
-        "--suppress=constParameterCallback:*/S3CurlIODriver.cpp"
         "--suppress=unsafeClassCanLeak:*/CcsdsParserAOSFrameModule.h"
         "--suppress=constParameterPointer:*/packages/ccsds/*"
         "--suppress=constParameterCallback:*/packages/ccsds/*"
         "--suppress=knownConditionTrueFalse:*/GdalRaster.cpp"
         "--suppress=constParameterReference:*/Table.h"
         "--suppress=constVariableReference:*/Table.h"
-        "--suppress=uninitvar:*/packages/h5/*"
-        "--suppress=knownConditionTrueFalse:*/packages/h5/*"
-        "--suppress=constParameterPointer:*/packages/h5/*"
-        "--suppress=constParameterCallback:*/packages/h5/*"
-        "--suppress=constParameterPointer:*/legacy/*"
-        "--suppress=constVariablePointer:*/legacy/*"
-        "--suppress=constVariableReference:*/legacy/*"
-        #
-        "--suppress=uninitvar:*/plugins/*"
-        "--suppress=knownConditionTrueFalse:*/plugins/*"
-        "--suppress=constParameterPointer:*/plugins/*"
-        "--suppress=constParameterCallback:*/plugins/*"
-        "--suppress=constVariablePointer:*/plugins/*"
-        "--suppress=constVariableReference:*/plugins/*"
     )
 endif()
 

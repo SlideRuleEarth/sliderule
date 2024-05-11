@@ -147,7 +147,6 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
     (void)records;
 
     /* Get Record ID and Key */
-    long id = record->getRecordId();
     bool enabled = true;
 
     /* Check Id Filter */
@@ -158,6 +157,7 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
             enabled = false;
             for(int i = 0; i < idFilter->length(); i++)
             {
+                long id = record->getRecordId();
                 if(idFilter->get(i) == id)
                 {
                     enabled = true;

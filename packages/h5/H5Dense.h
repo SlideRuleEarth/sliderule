@@ -8,10 +8,10 @@ class H5BTreeV2
     public:
         /* key return values for outside */
 
-        uint64_t pos_out; 
+        uint64_t pos_out;
         uint64_t msg_size_out;
-        int32_t  hdr_dlvl_out; 
-        uint8_t  hdr_flags_out; 
+        int32_t  hdr_dlvl_out;
+        uint8_t  hdr_flags_out;
         bool     found_attr;
 
         H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
@@ -46,23 +46,23 @@ class H5BTreeV2
         typedef struct btree2_node_info_t {
             uint64_t                cum_max_nrec = 0; // cumulative max. # of records below node's depth
             uint32_t                max_nrec = 0; // max num records in node
-            uint32_t                split_nrec = 0; // num records to split node at 
+            uint32_t                split_nrec = 0; // num records to split node at
             uint32_t                merge_nrec = 0; // num records to merge node at
             uint8_t                 cum_max_nrec_size = 0; // size to store cumulative max. # of records for this node (in bytes)
         } btree2_node_info_t;
 
         /* B-tree subID mapping for type support - represents record types */
         typedef enum {
-            H5B2_TEST_ID = 0,        
+            H5B2_TEST_ID = 0,
             H5B2_FHEAP_HUGE_INDIR_ID = 1,
-            H5B2_FHEAP_HUGE_FILT_INDIR_ID = 2, 
-            H5B2_FHEAP_HUGE_DIR_ID = 3, 
+            H5B2_FHEAP_HUGE_FILT_INDIR_ID = 2,
+            H5B2_FHEAP_HUGE_DIR_ID = 3,
             H5B2_FHEAP_HUGE_FILT_DIR_ID = 4,
             H5B2_GRP_DENSE_NAME_ID = 5,
             H5B2_GRP_DENSE_CORDER_ID = 6,
             H5B2_SOHM_INDEX_ID = 7,
             H5B2_ATTR_DENSE_NAME_ID = 8,
-            H5B2_ATTR_DENSE_CORDER_ID = 9, 
+            H5B2_ATTR_DENSE_CORDER_ID = 9,
             H5B2_CDSET_ID = 10,
             H5B2_CDSET_FILT_ID = 11,
             H5B2_TEST2_ID,
@@ -95,20 +95,20 @@ class H5BTreeV2
             uint32_t                max_direct_bits = 0; // # of bits for max. direct block size (i.e. log2(max_direct_size))
             uint32_t                max_dir_blk_off_size = 0; // max size of offsets in direct blocks
             uint32_t                first_row_bits = 0; // # of bits in address of first row
-            
+
         } dtable_t;
 
         /* B-tree leaf node information */
         typedef struct btree2_leaf_t {
             vector<uint8_t>         leaf_native;    // ptr to native records
             void                    *parent = NULL; // dependency for leaf
-            uint16_t                nrec = 0;       // num records in this node   
+            uint16_t                nrec = 0;       // num records in this node
         } btree2_leaf_t;
 
         /* B-tree internal node information */
         typedef struct btree2_internal_t {
             void                      *parent = NULL;
-            vector<uint8_t>           int_native; // ptr native records               
+            vector<uint8_t>           int_native; // ptr native records
             vector<btree2_node_ptr_t> node_ptrs;  // ptr to node ptrs
             uint16_t                  nrec = 0; // num records in node
             uint16_t                  depth = 0; // depth of node
@@ -130,14 +130,14 @@ class H5BTreeV2
 
         /* Type 5 Record Representation -  native 'name' field index records in the v2 B-tree */
         typedef struct btree2_type5_densename_rec_t {
-            uint32_t                hash = 0; // hash of 'name' field value 
+            uint32_t                hash = 0; // hash of 'name' field value
             uint8_t                 id[7] = {0}; // heap ID for link, 7 stolen from H5G_DENSE_FHEAP_ID_LEN
         } btree2_type5_densename_rec_t;
 
         /* Helpers */
         bool                isTypeSharedAttrs (uint32_t type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
-        template<typename T, typename V> void safeAssigned(T& type_verify, V& value); 
+        template<typename T, typename V> void safeAssigned(T& type_verify, V& value);
         void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         void                varDecode(uint8_t* p, int32_t n, uint8_t l);
         uint32_t            log2Of2(uint32_t n);
@@ -154,14 +154,14 @@ class H5BTreeV2
         /* Fheap Navigation*/
         void                fheapLocate(const void * _id);
         void                fheapLocateManaged(uint8_t* id);
-        void                fheapNameCmp(const void *obj, size_t obj_len, void *op_data);
-        
+        void                fheapNameCmp(const void *obj, size_t obj_len, const void *op_data);
+
         /* Btreev2 setting and navigation */
-        void                locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp);
-        void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr);
+        void                locateRecordBTreeV2(uint32_t nrec, const size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp);
+        void                openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, const btree2_node_ptr_t* curr_node_ptr);
         void                findBTreeV2();
-        uint64_t            openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
-        
+        uint64_t            openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos);
+
         /* dtable search */
         void                dtableLookup(uint64_t off, uint32_t *row, uint32_t *col);
         uint64_t            buildEntriesIndirect(int32_t nrows, uint64_t pos, uint64_t* ents);
@@ -177,7 +177,7 @@ class H5BTreeV2
         /* Removed: hdr_size, node_refc, file_refc, sizeof_size, sizeof_addr */
 
         /* Tracking */
-        uint64_t                addr;          // addr of btree 
+        uint64_t                addr;          // addr of btree
         void                    *parent;       // potentially remove
         uint8_t                 max_nrec_size; // size to store max. # of records in any node (in bytes)
 
@@ -190,7 +190,7 @@ class H5BTreeV2
         uint16_t                depth;
         uint8_t                 split_percent; // percent full that a node needs to increase above before it is split
         uint8_t                 merge_percent; // percent full that a node needs to be decrease below before it is split
-        
+
         vector<btree2_node_info_t> node_info;  // table of node info structs for current depth of B-tree
         btree2_node_ptr_t       root;          // root struct
         vector<size_t>          nat_off;

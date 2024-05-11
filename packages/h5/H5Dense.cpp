@@ -106,11 +106,13 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
 
     /* NOT IMPLEMENTED: SHARED ATTR SUPPORT */
     print2term("WARNING: isTypeSharedAttrs is NOT implemented for dense attr reading \n");
+#if 0
     bool shared_attributes = isTypeSharedAttrs(H5FileBuffer::ATTRIBUTE_MSG);
-    if (shared_attributes)
+    if(shared_attributes)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
     }
+#endif
 
     /*** INIT BTREE HDR ***/
 
@@ -804,7 +806,7 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
 /*----------------------------------------------------------------------------
  * fheapNameCmp
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
+void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, const void *op_data){
 
     // temp satisfy print
     print2term("fheapNameCmp args: %lu, %lu, %lu", (uintptr_t) obj, (uintptr_t) obj_len, (uintptr_t) op_data);
@@ -849,7 +851,7 @@ void H5BTreeV2::compareType8Record(const void *_bt2_rec, int32_t *result)
  /*----------------------------------------------------------------------------
  * locateRecordBTreeV2
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp) {
+void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, const size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp) {
     /* Performs a binary search to locate a record in a sorted array of records
     sets *idx to location of record greater than or equal to record to locate */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2int.c#L89 */
@@ -882,7 +884,7 @@ void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_
  /*----------------------------------------------------------------------------
  * openInternalNode
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr) {
+void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, const btree2_node_ptr_t* curr_node_ptr) {
     /* Set up internal node structure from given addr start: internal_pos */
 
     uint8_t *native = NULL;
@@ -964,7 +966,7 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
 /*----------------------------------------------------------------------------
  * openLeafNode
  *----------------------------------------------------------------------------*/
-uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
+uint64_t H5BTreeV2::openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
     /* given pointer to lead node, set *leaf struct and deserialize the records contained at the node */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2cache.c#L988 */
 

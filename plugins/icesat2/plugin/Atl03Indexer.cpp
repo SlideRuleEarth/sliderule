@@ -331,7 +331,7 @@ int Atl03Indexer::luaStats (lua_State* L)
     try
     {
         /* Get Self */
-        Atl03Indexer* lua_obj = dynamic_cast<Atl03Indexer*>(getLuaSelf(L, 1));
+        const Atl03Indexer* lua_obj = dynamic_cast<Atl03Indexer*>(getLuaSelf(L, 1));
 
         /* Create Statistics Table */
         lua_newtable(L);

@@ -93,7 +93,7 @@ static void sha256hash(const void* data, size_t len, char* dst)
 /*----------------------------------------------------------------------------
  * curlWriteFixed
  *----------------------------------------------------------------------------*/
-static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteFixed(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     fixed_data_t* data = static_cast<fixed_data_t*>(userp);
     size_t rsps_size = size * nmemb;
@@ -107,7 +107,7 @@ static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *user
 /*----------------------------------------------------------------------------
  * curlWriteStreaming
  *----------------------------------------------------------------------------*/
-static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteStreaming(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<streaming_data_t>* rsps_set = reinterpret_cast<List<streaming_data_t>*>(userp);
     streaming_data_t rsps;
@@ -121,7 +121,7 @@ static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *
 /*----------------------------------------------------------------------------
  * curlWriteFile
  *----------------------------------------------------------------------------*/
-static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteFile(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     file_data_t* data = reinterpret_cast<file_data_t*>(userp);
     size_t rsps_size = size * nmemb;
@@ -442,7 +442,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         headers = curl_slist_append(headers, rangeHeader.c_str());
 
         /* Initialize cURL Request */
-        CURL* curl = initializeReadRequest(url, headers, curlWriteFixed, &info);
+        CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteFixed), &info);
         if(curl)
         {
             while(!rqst_complete && (attempts-- > 0))
@@ -536,7 +536,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
     /* Initialize cURL Request */
-    CURL* curl = initializeReadRequest(url, headers, curlWriteStreaming, &rsps_set);
+    CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteStreaming), &rsps_set);
     if(curl)
     {
         bool rqst_complete = false;
@@ -648,7 +648,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
         FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
         /* Initialize cURL Request */
-        CURL* curl = initializeReadRequest(url, headers, curlWriteFile, &data);
+        CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteFile), &data);
         if(curl)
         {
             bool rqst_complete = false;

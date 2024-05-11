@@ -228,7 +228,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
             RecordObject* rec = records->at(i);
             AncillaryFields::element_array_t* anc_rec = (AncillaryFields::element_array_t*)rec->getRecordData();
 
-            /* Build Array of Values 
+            /* Build Array of Values
                 * to be used by iterativeFitStage..lsf */
             double* values = AncillaryFields::extractAsDoubles(anc_rec); // `new` memory allocated here
             result.anc_values.push_back(values);
@@ -275,7 +275,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     postResult(&result);
 
     /* Delete Ancillary Value Arrays */
-    for(auto& values: result.anc_values)
+    for(const auto& values: result.anc_values)
     {
         delete [] values;
     }
@@ -711,7 +711,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
         /* Calculate G^-g and m */
         for(int p = 0; p < size; p++)
         {
-            Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+            const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
             double x = ph->x_atc;
             double y = ph->height;
 
@@ -743,7 +743,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             double longitude = 0.0;
             double time_ns = 0.0;
             double y_atc = 0.0;
-            
+
             /* Check Need to Shift Longitudes
                assumes that there isn't a set of photons with
                longitudes that extend for more than 30 degrees */
@@ -757,7 +757,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             /* Fixed Fields - Calculate G^-g and m */
             for(int p = 0; p < size; p++)
             {
-                Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+                const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
                 double ph_longitude = ph->longitude;
 
                 /* Shift Longitudes */
@@ -785,11 +785,11 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             /* Ancillary Fields - Calculate G^-g and m */
             for(size_t a = 0; a < result.anc_values.size(); a++)
             {
-                double* values = result.anc_values[a];
+                const double* values = result.anc_values[a];
                 double value = 0;
                 for(int p = 0; p < size; p++)
                 {
-                    Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+                    const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
                     double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
                     value += gig_1 * values[p];
                 }

@@ -627,7 +627,7 @@ void* UT_MsgQ::performanceThread(void* parm)
             }
             else
             {
-                unsigned char* pkt = reinterpret_cast<unsigned char*>(ref.data);
+                const unsigned char* pkt = reinterpret_cast<unsigned char*>(ref.data);
                 for(int i = 0; i < RAW->size; i++)
                 {
                     if(pkt[i] != static_cast<unsigned char>(sequence++))

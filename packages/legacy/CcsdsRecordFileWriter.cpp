@@ -264,7 +264,7 @@ const char* CcsdsRecordFileWriter::createPrependStr (unsigned char* buffer, int 
             return StringLib::duplicate(gmtstr);
 #endif
         }
-        catch(RunTimeException& e)
+        catch(const RunTimeException& e)
         {
             (void)e;
             return "::::";

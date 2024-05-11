@@ -210,9 +210,9 @@ class Atl03Reader: public LuaObject
                 static const uint8_t INVALID_FLAG = 0xFF;
 
                 /* Methods */
-                explicit Atl08Class (info_t* info);
+                explicit Atl08Class (const info_t* info);
                 ~Atl08Class         (void);
-                void classify       (info_t* info, const Region& region, const Atl03Data& atl03);
+                void classify       (const info_t* info, const Region& region, const Atl03Data& atl03);
                 uint8_t operator[]  (int index) const;
 
                 /* Class Data */
@@ -325,7 +325,7 @@ class Atl03Reader: public LuaObject
 
         static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
         uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
-        void                generateExtentRecord        (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
+        void                generateExtentRecord        (uint64_t extent_id, const info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
         static void         generateAncillaryRecords    (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, Icesat2Parms::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);

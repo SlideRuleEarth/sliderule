@@ -317,7 +317,7 @@ CommandableObject* CommandProcessor::getObject(const char* obj_name, const char*
             obj = entry.obj;
         }
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
     }
@@ -335,7 +335,7 @@ const char* CommandProcessor::getObjectType (const char* obj_name)
         obj_entry_t entry = objects[obj_name];
         return entry.obj->getType();
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
         return NULL;
@@ -425,7 +425,7 @@ int CommandProcessor::getCurrentValue(const char* obj_name, const char* key, voi
                 }
             }
         }
-        catch(RunTimeException& e)
+        catch(const RunTimeException& e)
         {
             /* Error on Dictionary Exception */
             mlog(WARNING, "Unable to find global data %s: %s", keyname, e.what());
@@ -565,7 +565,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
                 obj = objects[objtoks[0]].obj;
                 cmd = objtoks[1];
             }
-            catch(RunTimeException& e)
+            catch(const RunTimeException& e)
             {
                 (void)e;
             }
@@ -612,8 +612,8 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     bool registered_streams = false;
 
     char* obj_name = NULL;
-    char* rec_name = NULL;
-    char* str_name = NULL;
+    const char* rec_name = NULL;
+    const char* str_name = NULL;
 
     /* Parse Parameters */
 
@@ -795,7 +795,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             delete [] cmdnames;
             delete [] cmddescs;
         }
-        catch(RunTimeException& e)
+        catch(const RunTimeException& e)
         {
             (void)e;
             print2term("Object %s not found\n", obj_name);
@@ -943,7 +943,7 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
             return -1;
         }
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         mlog(e.level(), "Unable to find registered handler for %s: %s", class_name, e.what());
         return -1;
@@ -994,7 +994,7 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
         // Remove object from object list
         objects.remove(obj_name);
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
         mlog(CRITICAL, "Attempted to delete non-existent object: %s", obj_name);
@@ -1017,7 +1017,7 @@ int CommandProcessor::permCmd (int argc, char argv[][MAX_CMD_SIZE])
         obj_entry_t& entry = objects[obj_name];
         entry.permanent = true;
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
         mlog(CRITICAL, "Failed to make object %s permanent!", obj_name);
@@ -1040,7 +1040,7 @@ int CommandProcessor::typeCmd (int argc, char argv[][MAX_CMD_SIZE])
         CommandableObject* cmd_obj = objects[obj_name].obj;
         print2term("%s: %s\n", obj_name, cmd_obj->getType());
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
         mlog(ERROR, "Object %s not registered, unable to provide type!", obj_name);
@@ -1463,7 +1463,7 @@ int CommandProcessor::executeScriptCmd (int argc, char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 
-    char* script_name = argv[0];
+    const char* script_name = argv[0];
 
     if(executeScript(script_name) == false) return -1;
 

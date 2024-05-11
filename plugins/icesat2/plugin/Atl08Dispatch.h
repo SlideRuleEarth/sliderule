@@ -158,9 +158,9 @@ class Atl08Dispatch: public DispatchObject
         bool            processTimeout                  (void) override;
         bool            processTermination              (void) override;
 
-        RecordObject*   buildAncillaryRecord            (Atl03Reader::extent_t* extent, recVec_t* records);
-        void            geolocateResult                 (Atl03Reader::extent_t* extent, vegetation_t& result);
-        void            phorealAlgorithm                (Atl03Reader::extent_t* extent, vegetation_t& result);
+        RecordObject*   buildAncillaryRecord            (const Atl03Reader::extent_t* extent, recVec_t* records);
+        void            geolocateResult                 (const Atl03Reader::extent_t* extent, vegetation_t& result);
+        void            phorealAlgorithm                (const Atl03Reader::extent_t* extent, vegetation_t& result);
         void            postResult                      (const vegetation_t* result, RecordObject* ancrec);
         static void     quicksort                       (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
         static int      quicksortpartition              (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end);
@@ -169,12 +169,12 @@ class Atl08Dispatch: public DispatchObject
          * Inline Methods
          *--------------------------------------------------------------------*/
 
-        static bool isVegetation (Atl03Reader::photon_t* ph)
+        static bool isVegetation (const Atl03Reader::photon_t* ph)
         {
             return (ph->atl08_class == Icesat2Parms::ATL08_CANOPY || ph->atl08_class == Icesat2Parms::ATL08_TOP_OF_CANOPY);
         }
 
-        static bool isGround (Atl03Reader::photon_t* ph)
+        static bool isGround (const Atl03Reader::photon_t* ph)
         {
             return (ph->atl08_class == Icesat2Parms::ATL08_GROUND);
         }

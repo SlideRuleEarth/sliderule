@@ -163,7 +163,7 @@ class HttpServer: public LuaObject
         static int          activeHandler       (int fd, int flags, void* parm);
         int                 onRead              (int fd);
         int                 onWrite             (int fd);
-        int                 onAlive             (int fd);
+        void                onAlive             (int fd);
         int                 onConnect           (int fd);
         int                 onDisconnect        (int fd);
 

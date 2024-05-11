@@ -221,7 +221,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* RAW ASCII */
     else if(fmt == RAW_ASCII)
     {
-        unsigned char* pkt_buffer = reinterpret_cast<unsigned char*>(msg);
+        const unsigned char* pkt_buffer = reinterpret_cast<unsigned char*>(msg);
         int bytes = 0, ret = 0;
         for(int i = 0; i < size; i++)
         {

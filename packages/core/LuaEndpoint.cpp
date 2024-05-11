@@ -244,7 +244,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
         }
     }
 
-    /* Determine Response Type before starting thread which may delete info */
+    /* Determine Response Type before starting thread - thread frees info (race cond possible) */
     rsptype_t response_type = info->streaming ? STREAMING : NORMAL;
 
     /* Start Thread */

@@ -460,13 +460,9 @@ K Ordering<T,K>::first(T* data)
 template <class T, typename K>
 K Ordering<T,K>::next(T* data)
 {
-    if (curr != NULL)
+    if (curr != NULL && curr->next != NULL)
     {
         curr = curr->next;
-    }
-
-    if (curr != NULL)
-    {
         if (data != NULL) *data = curr->data;
         return curr->key;
     }
@@ -497,13 +493,9 @@ K Ordering<T,K>::last(T* data)
 template <class T, typename K>
 K Ordering<T,K>::prev(T* data)
 {
-    if (curr != NULL)
+    if (curr != NULL && curr->next != NULL)
     {
         curr = curr->next;
-    }
-
-    if (curr != NULL)
-    {
         if (data != NULL) *data = curr->data;
         return curr->key;
     }

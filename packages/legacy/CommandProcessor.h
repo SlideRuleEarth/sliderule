@@ -118,7 +118,7 @@ class CommandProcessor: public CommandableObject
             void*   data;
             int     size;
 
-            cvt_entry_t(void* _data, int _size)
+            cvt_entry_t(const void* _data, int _size)
                 { data = new unsigned char [_size];
                   memcpy(data, _data, _size);
                   size = _size; }

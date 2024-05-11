@@ -133,7 +133,7 @@ CommandableObject* CcsdsFrameStripper::createObject(CommandProcessor* cmd_proc, 
 /*----------------------------------------------------------------------------
  * Constructor  -
  *----------------------------------------------------------------------------*/
-CcsdsFrameStripper::CcsdsFrameStripper(CommandProcessor* cmd_proc, const char* obj_name, const char* inq_name, const char* outq_name, uint8_t* sync_marker, int sync_size, int strip_size, int frame_size):
+CcsdsFrameStripper::CcsdsFrameStripper(CommandProcessor* cmd_proc, const char* obj_name, const char* inq_name, const char* outq_name, const uint8_t* sync_marker, int sync_size, int strip_size, int frame_size):
     CcsdsMsgProcessor(cmd_proc, obj_name, TYPE, inq_name)
 {
     pubQ = new Publisher(outq_name);
@@ -180,9 +180,9 @@ CcsdsFrameStripper::~CcsdsFrameStripper(void)
 bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
 {
 
-    unsigned char*  parse_buffer = msg;
-    int             parse_bytes = bytes;
-    int             parse_index = 0;
+    const unsigned char*  parse_buffer = msg;
+    int                   parse_bytes = bytes;
+    int                   parse_index = 0;
 
     /* Parse Buffer */
     while(parse_index < parse_bytes)

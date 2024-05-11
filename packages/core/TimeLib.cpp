@@ -389,11 +389,11 @@ int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
     int years = gmt_time.year - 1980;
     if(years == 0)
     {
-        gps_seconds = (gmt_time.doy - 6) * TIME_SECS_IN_A_DAY;
+        gps_seconds = static_cast<int64_t>(gmt_time.doy - 6) * static_cast<int64_t>(TIME_SECS_IN_A_DAY);
     }
     else if(years > 0 && years < MAX_GPS_YEARS)
     {
-        gps_seconds = (GpsDaysToStartOfYear[years] + gmt_time.doy) * TIME_SECS_IN_A_DAY;
+        gps_seconds = static_cast<int64_t>(GpsDaysToStartOfYear[years] + gmt_time.doy) * static_cast<int64_t>(TIME_SECS_IN_A_DAY);
     }
 
     /* Adjust Seconds for Time within Day */

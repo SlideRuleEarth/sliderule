@@ -586,7 +586,7 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl08Class::Atl08Class (info_t* info):
+Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
     enabled             (info->reader->parms->stages[Icesat2Parms::STAGE_ATL08]),
     phoreal             (info->reader->parms->stages[Icesat2Parms::STAGE_PHOREAL]),
     ancillary           (info->reader->parms->atl08_fields != NULL),
@@ -656,7 +656,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Atl08Class::classify (info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!info->reader->parms->stages[Icesat2Parms::STAGE_ATL08])
@@ -1536,7 +1536,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
 
                 /* Clean Up Records */
-                for(auto& rec: rec_list)
+                for(const auto& rec: rec_list)
                 {
                     delete rec;
                 }
@@ -1672,7 +1672,7 @@ uint32_t Atl03Reader::calculateSegmentId (const TrackState& state, const Atl03Da
 /*----------------------------------------------------------------------------
  * generateExtentRecord
  *----------------------------------------------------------------------------*/
-void Atl03Reader::generateExtentRecord (uint64_t extent_id, info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
+void Atl03Reader::generateExtentRecord (uint64_t extent_id, const info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size)
 {
     /* Calculate Extent Record Size */
     int num_photons = state.extent_photons.length();
@@ -1724,7 +1724,7 @@ void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields:
         for(int i = 0; i < field_list->length(); i++)
         {
             /* Get Data Array */
-            H5DArray* array = (*field_dict)[(*field_list)[i].field.c_str()];
+            const H5DArray* array = (*field_dict)[(*field_list)[i].field.c_str()];
 
             /* Create Ancillary Record */
             int record_size =   offsetof(AncillaryFields::element_array_t, data) +
