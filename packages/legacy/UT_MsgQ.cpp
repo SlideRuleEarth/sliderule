@@ -737,6 +737,6 @@ void* UT_MsgQ::opportunityThread(void* parm)
  *----------------------------------------------------------------------------*/
 void UT_MsgQ::randomDelay(long max_milliseconds)
 {
-    long us = rand() % (max_milliseconds * 1000);
+    long us = rand() % (max_milliseconds * 1000); // NOLINT [concurrency-mt-unsafe]
     OsApi::sleep((double)us / 1000000.0);
 }

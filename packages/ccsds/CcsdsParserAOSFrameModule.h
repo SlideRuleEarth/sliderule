@@ -62,10 +62,10 @@ class CcsdsParserAOSFrameModule: public CcsdsParserModule
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsParserAOSFrameModule   (lua_State* L, int scid, int vcid, int strip_size, const uint8_t* sync_marker, int sync_size, int sync_offset, int fixed_size, int leading_size, int trailer_size);
+                    CcsdsParserAOSFrameModule   (lua_State* L, int scid, int vcid, int strip_size, const uint8_t* sync_marker, int sync_size, int sync_offset, int fixed_size, int header_size, int trailer_size);
         virtual     ~CcsdsParserAOSFrameModule  (void);
 
-        uint16_t    crc16                       (const uint8_t* data, uint32_t len, uint16_t crc);
+        static uint16_t crc16                   (const uint8_t* data, uint32_t len, uint16_t crc);
 
     private:
 

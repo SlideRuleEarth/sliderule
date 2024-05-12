@@ -165,12 +165,12 @@ class RecordObject
         struct meta_t
         {
             const char*             index_field;    // field name for index (e.g. extend_id; could be same as id)
-            const char*             time_field;     // field name for time 
+            const char*             time_field;     // field name for time
             const char*             x_field;        // field name for x coordinate (e.g. longitude)
             const char*             y_field;        // field name for y coordinate (e.g. latitude)
             const char*             z_field;
             const char*             batch_field;    // field name for batch
-            
+
             meta_t(void):
                 index_field(NULL),
                 time_field(NULL),
@@ -185,7 +185,7 @@ class RecordObject
                 delete [] x_field;
                 delete [] y_field;
                 delete [] z_field;
-                delete [] batch_field; 
+                delete [] batch_field;
             }
         };
 
@@ -241,7 +241,7 @@ class RecordObject
          *--------------------------------------------------------------------*/
 
         explicit                RecordObject        (const char* rec_type, int allocated_memory=0, bool clear=true); // must include the record type
-        explicit                RecordObject        (unsigned char* buffer, int size);
+        explicit                RecordObject        (const unsigned char* buffer, int size);
         virtual                 ~RecordObject       (void);
 
         /* Overloaded Methods */
@@ -282,7 +282,7 @@ class RecordObject
         static valType_t        getValueType        (const field_t& field);
         static recordDefErr_t   defineRecord        (const char* rec_type, const char* id_field, int data_size, const fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
         static recordDefErr_t   defineField         (const char* rec_type, const char* field_name, fieldType_t type, int offset, int size, const char* exttype, unsigned int flags=NATIVE_FLAGS);
-        
+
         /* Utility Static Methods */
         static bool             isRecord            (const char* rec_type);
         static bool             isType              (unsigned char* buffer, int size, const char* rec_type);
@@ -336,8 +336,8 @@ class RecordObject
             definition_t(const char* _type_name, const char* _id_field, int _data_size, int _max_fields):
                 fields(_max_fields)
                 { type_name = StringLib::duplicate(_type_name);
-                  type_size = (int)StringLib::size(_type_name) + 1;
-                  id_field = StringLib::duplicate(_id_field);
+                  type_size = StringLib::size(_type_name) + 1;
+                  id_field =  StringLib::duplicate(_id_field);
                   data_size = _data_size;
                   record_size = sizeof(rec_hdr_t) + type_size + _data_size; }
             ~definition_t(void)
@@ -375,7 +375,7 @@ class RecordObject
 
         /* Overloaded Methods */
         static definition_t*    getDefinition       (const char* rec_type);
-        static definition_t*    getDefinition       (unsigned char* buffer, int size);
+        static definition_t*    getDefinition       (const unsigned char* buffer, int size);
 };
 
 /*----------------------------------------------------------------------------
@@ -391,7 +391,7 @@ typedef RecordObject::Field RecordField;
 class RecordInterface: public RecordObject
 {
     public:
-                RecordInterface     (unsigned char* buffer, int size);
+                RecordInterface     (const unsigned char* buffer, int size);
         virtual ~RecordInterface    (void);
 };
 

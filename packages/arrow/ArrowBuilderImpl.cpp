@@ -45,7 +45,6 @@
 
 #include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
-#include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
 #include <arrow/table.h>
 #include <arrow/util/key_value_metadata.h>
@@ -183,7 +182,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
         /* Close Parquet Writer */
         if(file_finished)
         {
-            (void)csvWriter.get()->Close();
+            (void)csvWriter->Close();
         }
     }
 
@@ -431,7 +430,7 @@ void ArrowBuilderImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueM
     geostr = std::regex_replace(geostr, std::regex("\n"), " ");
 
     /* Append Meta String */
-    metadata->Append("geo", geostr.c_str());
+    metadata->Append("geo", geostr);
 }
 
 /*----------------------------------------------------------------------------
@@ -506,7 +505,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     metastr = std::regex_replace(metastr, std::regex("\n"), " ");
 
     /* Append Meta String */
-    metadata->Append("sliderule", metastr.c_str());
+    metadata->Append("sliderule", metastr);
 }
 
 /*----------------------------------------------------------------------------
@@ -590,7 +589,7 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
     pandasstr = std::regex_replace(pandasstr, std::regex("_COLUMNS_"), columns.c_str());
 
     /* Append Meta String */
-    metadata->Append("pandas", pandasstr.c_str());
+    metadata->Append("pandas", pandasstr);
 }
 
 /*----------------------------------------------------------------------------
@@ -648,14 +647,14 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                     int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
-                        builder.UnsafeAppend((double)batch->pri_record->getValueReal(field));
+                        builder.UnsafeAppend(batch->pri_record->getValueReal(field));
                         field.offset += batch_row_size_bits;
                     }
                     field.offset = starting_offset;
                 }
                 else // non-batch field
                 {
-                    double value = (double)batch->pri_record->getValueReal(field);
+                    double value = batch->pri_record->getValueReal(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -1029,7 +1028,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
                     (void)list_builder.Append();
                     for(int element = 0; element < field.elements; element++)
                     {
-                        (void)builder->Append((double)batch->pri_record->getValueReal(field, element));
+                        (void)builder->Append(batch->pri_record->getValueReal(field, element));
                     }
                     field.offset += batch_row_size_bits;
                 }
@@ -1325,7 +1324,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
                 .x = batch->pri_record->getValueReal(x_field),
                 .y = batch->pri_record->getValueReal(y_field)
             };
-            (void)builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowCommon::wkbpoint_t));
+            builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowCommon::wkbpoint_t));
             if(x_field.flags & RecordObject::BATCH) x_field.offset += batch_row_size_bits;
             if(y_field.flags & RecordObject::BATCH) y_field.offset += batch_row_size_bits;
         }
@@ -1416,7 +1415,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     double* val_ptr = AncillaryFields::getValueAsDouble(field->value);
-                    builder.UnsafeAppend((double)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1430,7 +1429,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     float* val_ptr = AncillaryFields::getValueAsFloat(field->value);
-                    builder.UnsafeAppend((float)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1486,7 +1485,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
-                    builder.UnsafeAppend((int64_t)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1556,7 +1555,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
-                    builder.UnsafeAppend((int64_t)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1753,7 +1752,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint8_t* src = reinterpret_cast<uint8_t*>(&element_array->data[0]);
+                    uint8_t* src = &element_array->data[0];
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);

@@ -184,7 +184,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Send Response */
-    response.send(Http::Code::Ok, request.body().c_str());
+    response.send(Http::Code::Ok, request.body());
 
     /* Stop Trace */
     stop_trace(CRITICAL, trace_id);

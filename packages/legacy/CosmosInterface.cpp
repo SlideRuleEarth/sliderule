@@ -159,8 +159,8 @@ CosmosInterface::~CosmosInterface(void)
     delete tlmListenerPid;
     delete cmdListenerPid;
 
-    if(tlmListener.ip_addr) delete [] tlmListener.ip_addr;
-    if(cmdListener.ip_addr) delete [] cmdListener.ip_addr;
+    delete [] tlmListener.ip_addr;
+    delete [] cmdListener.ip_addr;
 
     delete [] tlmQName;
     delete [] cmdQName;

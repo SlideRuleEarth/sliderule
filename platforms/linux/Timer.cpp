@@ -101,7 +101,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
         /* Block timer signal temporarily */
         sigemptyset(&mask);
         sigaddset(&mask, sigid);
-        sigprocmask(SIG_SETMASK, &mask, NULL);
+        sigprocmask(SIG_SETMASK, &mask, NULL);  // NOLINT(concurrency-mt-unsafe)
 
         /* Create the timer */
         sev.sigev_notify = SIGEV_SIGNAL;
@@ -115,7 +115,7 @@ Timer::Timer(timerHandler_t handler, int period_ms)
         its.it_interval.tv_sec = its.it_value.tv_sec;
         its.it_interval.tv_nsec = its.it_value.tv_nsec;
         timer_settime(timerid, 0, &its, NULL);
-        sigprocmask(SIG_UNBLOCK, &mask, NULL);
+        sigprocmask(SIG_UNBLOCK, &mask, NULL); // NOLINT(concurrency-mt-unsafe)
     }
     else
     {

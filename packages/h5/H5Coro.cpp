@@ -641,7 +641,7 @@ void H5FileBuffer::readDataset (info_t* info)
     datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
     if((datasetStartRow + datasetNumRows) > first_dimension)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, (int)datasetNumRows, (int)first_dimension);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, datasetNumRows, (int)first_dimension);
     }
 
     /* Allocate Data Buffer */
@@ -1025,24 +1025,24 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     uint16_t    io_filter_len       = (uint16_t)readField(2, &pos); // I/O Filters' Encoded Length
     uint8_t     flags               =  (uint8_t)readField(1, &pos); // Flags
     uint32_t    max_size_mg_obj     = (uint32_t)readField(4, &pos); // Maximum Size of Managed Objects
-    uint64_t    next_huge_obj_id    = (uint64_t)readField(metaData.lengthsize, &pos); // Next Huge Object ID
-    uint64_t    btree_addr_huge_obj = (uint64_t)readField(metaData.offsetsize, &pos); // v2 B-tree Address of Huge Objects
-    uint64_t    free_space_mg_blks  = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Free Space in Managed Blocks
-    uint64_t    addr_free_space_mg  = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Managed Block Free Space Manager
-    uint64_t    mg_space            = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Manged Space in Heap
-    uint64_t    alloc_mg_space      = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Allocated Managed Space in Heap
-    uint64_t    dblk_alloc_iter     = (uint64_t)readField(metaData.lengthsize, &pos); // Offset of Direct Block Allocation Iterator in Managed Space
-    uint64_t    mg_objs             = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Managed Objects in Heap
-    uint64_t    huge_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Huge Objects in Heap
-    uint64_t    huge_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Huge Objects in Heap
-    uint64_t    tiny_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Tiny Objects in Heap
-    uint64_t    tiny_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Tiny Objects in Heap
-    uint16_t    table_width         = (uint16_t)readField(2, &pos); // Table Width
-    uint64_t    starting_blk_size   = (uint64_t)readField(metaData.lengthsize, &pos); // Starting Block Size
-    uint64_t    max_dblk_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Maximum Direct Block Size
-    uint16_t    max_heap_size       = (uint16_t)readField(2, &pos); // Maximum Heap Size
-    uint16_t    start_num_rows      = (uint16_t)readField(2, &pos); // Starting # of Rows in Root Indirect Block
-    uint64_t    root_blk_addr       = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Root Block
+    uint64_t    next_huge_obj_id    = readField(metaData.lengthsize, &pos); // Next Huge Object ID
+    uint64_t    btree_addr_huge_obj = readField(metaData.offsetsize, &pos); // v2 B-tree Address of Huge Objects
+    uint64_t    free_space_mg_blks  = readField(metaData.lengthsize, &pos); // Amount of Free Space in Managed Blocks
+    uint64_t    addr_free_space_mg  = readField(metaData.offsetsize, &pos); // Address of Managed Block Free Space Manager
+    uint64_t    mg_space            = readField(metaData.lengthsize, &pos); // Amount of Manged Space in Heap
+    uint64_t    alloc_mg_space      = readField(metaData.lengthsize, &pos); // Amount of Allocated Managed Space in Heap
+    uint64_t    dblk_alloc_iter     = readField(metaData.lengthsize, &pos); // Offset of Direct Block Allocation Iterator in Managed Space
+    uint64_t    mg_objs             = readField(metaData.lengthsize, &pos); // Number of Managed Objects in Heap
+    uint64_t    huge_obj_size       = readField(metaData.lengthsize, &pos); // Size of Huge Objects in Heap
+    uint64_t    huge_objs           = readField(metaData.lengthsize, &pos); // Number of Huge Objects in Heap
+    uint64_t    tiny_obj_size       = readField(metaData.lengthsize, &pos); // Size of Tiny Objects in Heap
+    uint64_t    tiny_objs           = readField(metaData.lengthsize, &pos); // Number of Tiny Objects in Heap
+    uint16_t    table_width         = readField(2, &pos); // Table Width
+    uint64_t    starting_blk_size   = readField(metaData.lengthsize, &pos); // Starting Block Size
+    uint64_t    max_dblk_size       = readField(metaData.lengthsize, &pos); // Maximum Direct Block Size
+    uint16_t    max_heap_size       = readField(2, &pos); // Maximum Heap Size
+    uint16_t    start_num_rows      = readField(2, &pos); // Starting # of Rows in Root Indirect Block
+    uint64_t    root_blk_addr       = readField(metaData.offsetsize, &pos); // Address of Root Block
     uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
     if(H5_VERBOSE)
     {
@@ -1091,7 +1091,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     /* Read Filter Information */
     if(io_filter_len > 0)
     {
-        uint64_t filter_root_dblk   = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Filtered Root Direct Block
+        uint64_t filter_root_dblk   = readField(metaData.lengthsize, &pos); // Size of Filtered Root Direct Block
         uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
         print2term("Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
         print2term("I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
@@ -2554,7 +2554,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
     if(H5_ERROR_CHECKING && (link_name_len_of_len > 8))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", (int)link_name_len_of_len);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", link_name_len_of_len);
     }
 
     uint64_t link_name_len = readField(link_name_len_of_len, &pos);
@@ -2935,7 +2935,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
     if(H5_ERROR_CHECKING && datatype_bytes_read > static_cast<int>(datatype_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", static_cast<int>(datatype_bytes_read), static_cast<int>(datatype_size));
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", datatype_bytes_read, static_cast<int>(datatype_size));
     }
 
     pos += datatype_bytes_read;
@@ -2948,7 +2948,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
     if(H5_ERROR_CHECKING && dataspace_bytes_read > static_cast<int>(dataspace_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", static_cast<int>(dataspace_bytes_read), static_cast<int>(dataspace_size));
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", dataspace_bytes_read, static_cast<int>(dataspace_size));
     }
 
     pos += dataspace_bytes_read;
@@ -3601,7 +3601,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* String to Int - assumes ASCII encoding */
             else if(info.datatype == RecordObject::STRING)
             {
-                uint8_t* dptr = reinterpret_cast<uint8_t*>(info.data);
+                uint8_t* dptr = info.data;
 
                 // NOTE this len calc is redundant, but metaData not visible to scope
                 uint8_t* len_cnt = dptr;
@@ -3682,7 +3682,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Char to Double */
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8) // NOLINT
             {
-                uint8_t* dptr = reinterpret_cast<uint8_t*>(info.data);
+                uint8_t* dptr = info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]); // NOLINT

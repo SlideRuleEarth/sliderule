@@ -97,7 +97,7 @@ bool CcsdsMsgProcessor::handleTimeout(void)
 /*----------------------------------------------------------------------------
  * isActive  -
  *----------------------------------------------------------------------------*/
-bool CcsdsMsgProcessor::isActive(void)
+bool CcsdsMsgProcessor::isActive(void) const
 {
     return processorActive;
 }

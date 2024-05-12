@@ -291,7 +291,7 @@ bool AoiMetrics::init (void)
 AoiMetrics::regions_t AoiMetrics::getRegion (NetsvcParms* parms)
 {
     regions_t region_found = REGION_UNKNOWN;
-    if(parms->polygon.length() > 0)
+    if(!parms->polygon.empty())
     {
         MathLib::coord_t coord = parms->polygon[0];
         if(coord.lat > -60)

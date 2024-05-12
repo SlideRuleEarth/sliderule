@@ -22,7 +22,7 @@ class H5BTreeV2
     protected:
 
         enum {
-            H5O_MSG_FLAG_SHARED = 0x02u, // shared fractal heap flag
+            H5O_MSG_FLAG_SHARED = 0x02U, // shared fractal heap flag
             H5O_FHEAP_ID_LEN = 8, // len for heap ID of attr
             H5HF_ID_VERS_MASK = 0xC0,
             H5HF_ID_VERS_CURR = 0x00,
@@ -135,26 +135,26 @@ class H5BTreeV2
         } btree2_type5_densename_rec_t;
 
         /* Helpers */
-        bool                isTypeSharedAttrs (uint32_t type_id);
+        static bool         isTypeSharedAttrs (uint32_t type_id);
         uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
         template<typename T, typename V> void safeAssigned(T& type_verify, V& value);
-        void                addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
-        void                varDecode(uint8_t* p, int32_t n, uint8_t l);
-        uint32_t            log2Of2(uint32_t n);
+        static void         addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
+        static void         varDecode(uint8_t* p, int32_t n, uint8_t l);
+        static uint32_t     log2Of2(uint32_t n);
         uint16_t            sizeOffsetLen(int32_t l);
-        uint32_t            lookup3Rot(uint32_t x, uint32_t k);
+        static uint32_t     lookup3Rot(uint32_t x, uint32_t k);
         void                lookup3Mix(uint32_t& a, uint32_t& b, uint32_t& c);
         void                lookup3Final(uint32_t& a, uint32_t& b, uint32_t& c);
 
         /* Type Specific Decode/Comparators */
-        void                decodeType5Record(const uint8_t *raw, void *_nrecord);
+        static void         decodeType5Record(const uint8_t *raw, void *_nrecord);
         uint64_t            decodeType8Record(uint64_t internal_pos, void *_nrecord);
         void                compareType8Record(const void *_bt2_rec, int32_t *result);
 
         /* Fheap Navigation*/
         void                fheapLocate(const void * _id);
         void                fheapLocateManaged(uint8_t* id);
-        void                fheapNameCmp(const void *obj, size_t obj_len, const void *op_data);
+        static void         fheapNameCmp(const void *obj, size_t obj_len, const void *op_data);
 
         /* Btreev2 setting and navigation */
         void                locateRecordBTreeV2(uint32_t nrec, const size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp);

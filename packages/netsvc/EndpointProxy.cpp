@@ -97,7 +97,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 3); // get request parameters
         int         _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
-        int         _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request 
+        int         _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request
         const char* _outq_name          = getLuaString(L, 6); // get output queue
         bool        _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
         long        _cluster_size_hint  = getLuaInteger(L, 8, true, 0);
@@ -129,7 +129,7 @@ int EndpointProxy::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
-                              const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
+                              const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name,
                               bool _send_terminator, int _cluster_size_hint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
@@ -142,8 +142,8 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     locksPerNode = _locks_per_node;
     sendTerminator = _send_terminator;
 
-    /* 
-     * Set Number of Proxy Threads 
+    /*
+     * Set Number of Proxy Threads
      *  - if a hint for the size of the cluster is provided, then use it
      *  - otherwise query the orchestrator for the number of registered nodes
      *  - set the number of proxy threads to the maximum number of concurrent requests the cluster can handle
@@ -244,7 +244,7 @@ void* EndpointProxy::collatorThread (void* parm)
     int current_resource = 0;
 
     alert(INFO, RTE_INFO, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
-    
+
     while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
     {
         /* Get Available Nodes */
@@ -390,7 +390,7 @@ void* EndpointProxy::proxyThread (void* parm)
                         if(nodes)
                         {
                             /* Check Number of Nodes Returned */
-                            if(nodes->size() >= 1)
+                            if(!nodes->empty())
                             {
                                 node = nodes->at(0);
                                 need_to_free_node = true;

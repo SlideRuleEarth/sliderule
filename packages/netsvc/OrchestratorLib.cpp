@@ -421,7 +421,7 @@ int OrchestratorLib::luaUnlock(lua_State* L)
             for(int t = 0; t < num_transactions; t++)
             {
                 lua_rawgeti(L, 1, t+1);
-                transactions[t] = (long)LuaObject::getLuaInteger(L, -1);
+                transactions[t] = LuaObject::getLuaInteger(L, -1);
                 lua_pop(L, 1);
             }
 

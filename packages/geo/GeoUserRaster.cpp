@@ -153,7 +153,7 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
 
         /* Load user raster to vsimem */
         bool takeOwnership = false;
-        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), reinterpret_cast<GByte*>(data), static_cast<vsi_l_offset>(filelength), takeOwnership);
+        VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, static_cast<vsi_l_offset>(filelength), takeOwnership);
         CHECKPTR(fp);
         VSIFCloseL(fp);
     }

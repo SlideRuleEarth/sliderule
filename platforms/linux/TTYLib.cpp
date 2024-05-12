@@ -128,7 +128,8 @@ int TTYLib::ttyopen(const char* _device, int _baud, char _parity)
         fd = open(_device, O_RDWR | O_NOCTTY | O_NDELAY);
         if(fd < 0)
         {
-            dlog("Failed (%d) to open %s: %s", errno, _device, strerror(errno));
+            char err_buf[256];
+            dlog("Failed (%d) to open %s: %s", errno, _device, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             fd = INVALID_RC;
         }
         else
@@ -137,7 +138,8 @@ int TTYLib::ttyopen(const char* _device, int _baud, char _parity)
             memset(&tty, 0, sizeof(tty));
             if(tcgetattr (fd, &tty) != 0)
             {
-                dlog("Failed (%d) tcgetattr for %s: %s", errno, _device, strerror(errno));
+                char err_buf[256];
+                dlog("Failed (%d) tcgetattr for %s: %s", errno, _device, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 fd = INVALID_RC;
             }
             else
@@ -161,7 +163,8 @@ int TTYLib::ttyopen(const char* _device, int _baud, char _parity)
 
                 if(tcsetattr (fd, TCSANOW, &tty) != 0)
                 {
-                    dlog("Failed (%d) tcsetattr for %s: %s", errno, _device, strerror(errno));
+                    char err_buf[256];
+                    dlog("Failed (%d) tcsetattr for %s: %s", errno, _device, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                     fd = INVALID_RC;
                 }
             }

@@ -55,7 +55,7 @@ Mutex CcsdsRecord::pktMut;
  *         is because CcsdsRecords do not prepend the record type string but start
  *         immediately with the CCSDS packet data.
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
+CcsdsRecord::CcsdsRecord(const char* rec_type)
 {
     assert(rec_type);
 
@@ -96,7 +96,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
  *  Notes:  The buffer here (UNLIKE the base class RecordObject) only contains the
  *          binary packet and does not include the type string.
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(const unsigned char* buffer, int size): RecordObject()
+CcsdsRecord::CcsdsRecord(const unsigned char* buffer, int size)
 {
     pktDef_t* pkt_def = getPacketDefinition(buffer, size);
     if(pkt_def)
@@ -155,7 +155,7 @@ int CcsdsRecord::serialize (unsigned char** buffer, serialMode_t mode, int size)
     }
     else
     {
-        *buffer = reinterpret_cast<unsigned char*>(recordData);
+        *buffer = recordData;
     }
 
     return recordDefinition->data_size;
@@ -305,7 +305,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(void): RecordObject()
+CcsdsRecord::CcsdsRecord(void)
 {
     pktDef = NULL;
 }
@@ -356,7 +356,7 @@ CcsdsRecord::pktDef_t* CcsdsRecord::getPacketDefinition(const unsigned char* buf
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size): CcsdsRecord()
+CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size)
 {
     pktDef_t* pkt_def = getPacketDefinition(buffer, size);
     if(pkt_def)

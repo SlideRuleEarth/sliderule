@@ -108,8 +108,8 @@ class CommandProcessor: public CommandableObject
                   perm = _perm; }
 
             ~handle_entry_t(void)
-                { if(name) delete [] name;
-                  if(desc) delete [] desc; }
+                { delete [] name;
+                  delete [] desc; }
         };
 
         // Current Value Table Entry //

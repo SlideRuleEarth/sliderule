@@ -167,7 +167,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     else if(h5f->info.typesize == 1)
     {
         const uint8_t* src = reinterpret_cast<const uint8_t*>(h5f->info.data);
-        uint8_t* dst = reinterpret_cast<uint8_t*>(buffer);
+        uint8_t* dst = buffer;
         for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];

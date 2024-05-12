@@ -142,7 +142,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
 
         /* Add Headers */
         struct curl_slist* hdr_slist = NULL;
-        if(headers && headers->length() > 0)
+        if(headers && !headers->empty())
         {
             for(int i = 0; i < headers->length(); i++)
             {

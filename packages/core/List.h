@@ -171,7 +171,7 @@ const T& List<T>::Iterator::operator[](int index) const
     {
         int node_block = index / blockSize;
         int node_offset = index % blockSize;
-        const List<T>::list_node_t* block = blocks[node_block];  // NOLINT
+        const List<T>::list_node_t* block = blocks[node_block]; // NOLINT [clang-analyzer-core.uninitialized.Assign]
         return block->data[node_offset];
     }
 

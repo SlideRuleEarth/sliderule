@@ -326,7 +326,7 @@ template <class T>
 bool StatisticRecord<T>::stopTelemetry(void)
 {
     telemetryActive = false;
-    if(telemetryPid) delete telemetryPid;
+    delete telemetryPid;
     telemetryPid = NULL;
     return true;
 }

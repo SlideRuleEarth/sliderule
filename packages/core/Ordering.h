@@ -194,7 +194,7 @@ typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) cons
 {
     if( (index < length) && (index >= 0) )
     {
-        Ordering<T,K>::kv_t pair(keys[index], *values[index]); // NOLINT
+        Ordering<T,K>::kv_t pair(keys[index], *values[index]);  // NOLINT [clang-analyzer-core.CallAndMessage]
         return pair;
     }
 

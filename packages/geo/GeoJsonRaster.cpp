@@ -190,7 +190,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
 
         GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
         CHECKPTR(driver);
-        rasterDset = static_cast<GDALDataset *>(driver->Create(rasterFileName.c_str(), cols, rows, 1, GDT_Byte, options));
+        rasterDset = driver->Create(rasterFileName.c_str(), cols, rows, 1, GDT_Byte, options);
         CSLDestroy(options);
         CHECKPTR(rasterDset);
         double geot[6] = {e.MinX, cellsize, 0, e.MaxY, 0, -cellsize};

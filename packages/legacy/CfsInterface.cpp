@@ -194,14 +194,14 @@ CfsInterface::CfsInterface(CommandProcessor* cmd_proc, const char* obj_name, con
 CfsInterface::~CfsInterface(void)
 {
     interfaceActive = false;
-    if(telemetryPid) delete telemetryPid;
-    if(commandPid) delete commandPid;
+    delete telemetryPid;
+    delete commandPid;
 
-    if(tlmSock) delete tlmSock;
-    if(cmdSock) delete cmdSock;
+    delete tlmSock;
+    delete cmdSock;
 
-    if(tlmQ) delete tlmQ;
-    if(cmdQ) delete cmdQ;
+    delete tlmQ;
+    delete cmdQ;
 
     // PktStats (apidStats[]) do not need to be explicitly
     // deleted here; that is handled as a part of the

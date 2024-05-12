@@ -127,7 +127,7 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        int slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
+        static int slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

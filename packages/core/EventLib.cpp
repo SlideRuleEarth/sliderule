@@ -288,7 +288,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
  *----------------------------------------------------------------------------*/
 void EventLib::stashId (uint32_t id)
 {
-    Thread::setGlobal(trace_key, reinterpret_cast<void*>(static_cast<unsigned long long>(id)));
+    Thread::setGlobal(trace_key, reinterpret_cast<void*>(static_cast<unsigned long long>(id))); // NOLINT [performance-no-int-to-ptr]
 }
 
 /*----------------------------------------------------------------------------

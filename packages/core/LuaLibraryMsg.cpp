@@ -581,7 +581,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
     const char* recclass = NULL;
     if(lua_isstring(L, 3))
     {
-        recclass = static_cast<const char*>(lua_tostring(L, 3));
+        recclass = lua_tostring(L, 3);
     }
 
     bool terminator = false;
@@ -600,11 +600,11 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
                 {
                     recClass_t rec_class = typeTable[recclass];
                     record = rec_class.associate(reinterpret_cast<unsigned char*>(ref.data), ref.size);
-                    }
-                    else
-                    {
-                        record = new RecordObject(reinterpret_cast<unsigned char*>(ref.data), ref.size);
-                    }
+                }
+                else
+                {
+                    record = new RecordObject(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+                }
             }
             catch (const RunTimeException& e)
             {

@@ -78,7 +78,7 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
         uint8_t sync_marker[MAX_STR_SIZE];
         if(!StringLib::match(sync_str, "NOSYNC"))
         {
-            sync_size = (int)StringLib::size(sync_str);
+            sync_size = StringLib::size(sync_str);
             if(sync_size <= 0 || ((sync_size / 2) + offset) > strip || sync_size % 2 != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "sync marker is an invalid length: %d", sync_size);
@@ -439,7 +439,7 @@ CcsdsParserAOSFrameModule::~CcsdsParserAOSFrameModule(void)
 {
     delete [] SyncMarker;
     delete [] aosPrimaryHdr;
-    if(aosTrailer) delete [] aosTrailer;
+    delete [] aosTrailer;
 }
 
 /*----------------------------------------------------------------------------

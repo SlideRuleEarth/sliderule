@@ -289,13 +289,15 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
         if(rc != 0)
         {
             status = false;
-            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, fileName, strerror(errno));
+            char err_buf[256];
+            mlog(CRITICAL, "Failed (%d) to close file %s: %s", rc, fileName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         }
     }
     else // unable to open file
     {
         status = false;
-        mlog(CRITICAL, "Failed (%d) to read file %s: %s", errno, fileName, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Failed (%d) to read file %s: %s", errno, fileName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
     }
 
     /* Return Status */
@@ -369,7 +371,7 @@ const char* getUniqueFileName(const char* id)
 char* createMetadataFileName(const char* fileName)
 {
     std::string path(fileName);
-    size_t dotIndex = path.find_last_of(".");
+    size_t dotIndex = path.find_last_of('.');
     if(dotIndex != std::string::npos)
     {
         path.resize(dotIndex);
@@ -388,7 +390,8 @@ void removeFile(const char* fileName)
         int rc = std::remove(fileName);
         if(rc != 0)
         {
-            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, fileName, strerror(errno));
+            char err_buf[256];
+            mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, fileName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         }
     }
 }
@@ -403,7 +406,8 @@ void renameFile (const char* oldName, const char* newName)
         int rc = std::rename(oldName, newName);
         if(rc != 0)
         {
-            mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, oldName, newName, strerror(errno));
+            char err_buf[256];
+            mlog(CRITICAL, "Failed (%d) to rename file %s to %s: %s", rc, oldName, newName, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         }
     }
 }

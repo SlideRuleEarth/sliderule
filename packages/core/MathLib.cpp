@@ -292,7 +292,7 @@ std::string MathLib::b64encode(const void* data, const size_t &len)
 {
     std::string result((len + 2) / 3 * 4, '=');
     const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
-    char *str = &result[0];
+    char *str = result.data();
     size_t j = 0;
     size_t pad = len % 3;
     const size_t last = len - pad;
@@ -332,7 +332,7 @@ std::string MathLib::b64decode(const void* data, const size_t &len)
     size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
     std::string result(last / 4 * 3 + pad1 + pad2, '\0');
-    unsigned char *str = reinterpret_cast<unsigned char*>(&result[0]);
+    unsigned char *str = reinterpret_cast<unsigned char*>(result.data());
 
     for (size_t i = 0; i < last; i += 4)
     {

@@ -87,7 +87,7 @@ int File::luaCreate(lua_State* L)
         }
 
         /* Return File Device Object */
-        return createLuaObject(L, new File(L, file_str, (File::type_t)format, (File::role_t)role, (File::io_t)file_io, max_file));
+        return createLuaObject(L, new File(L, file_str, (File::type_t)format, (File::role_t)role, file_io, max_file));
     }
     catch(const RunTimeException& e)
     {
@@ -280,7 +280,8 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     }
     else
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
     }
 
     return bytes_written;
@@ -321,7 +322,8 @@ int File::readBuffer (void* buf, int len, int timeout)
         /* Check Error */
         if(fp == NULL)
         {
-            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], strerror(errno));
+            char err_buf[256];
+            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             return INVALID_RC;
         }
 
@@ -516,7 +518,8 @@ bool File::openNewFileForWriting(void)
     /* Check for Errors */
     if(fp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, strerror(errno));
+        char err_buf[256];
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return false;
     }
 
@@ -547,7 +550,7 @@ int File::createFileListForReading (char* input_string, char** file_list)
             // Treat it as a regular expression
             char* regex = new_buf;
             glob_t glob_buffer;
-            glob(regex, 0, NULL, &glob_buffer);
+            glob(regex, 0, NULL, &glob_buffer);  // NOLINT concurrency-mt-unsafe
             for (unsigned int m = 0; m < glob_buffer.gl_pathc; m++)
             {
                 const char* new_file = glob_buffer.gl_pathv[m];

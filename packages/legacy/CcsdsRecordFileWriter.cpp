@@ -127,7 +127,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     RecordObject* record = NULL;
     try
     {
-        record = static_cast<RecordObject*>(createRecord(reinterpret_cast<unsigned char*>(msg), size));
+        record = createRecord(reinterpret_cast<unsigned char*>(msg), size);
     }
     catch (const RunTimeException& e)
     {

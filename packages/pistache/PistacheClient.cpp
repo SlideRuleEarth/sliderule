@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "PistacheServer.h"
 #include "PistacheClient.h"
 #include "RouteHandler.h"
 #include "core.h"
@@ -107,7 +108,7 @@ PistacheClient::PistacheClient(lua_State* L,  const char* outq_name, size_t num_
  *----------------------------------------------------------------------------*/
 PistacheClient::~PistacheClient(void)
 {
-    if(outQ) delete outQ;
+    delete outQ;
 
     mlog(CRITICAL, "Shutting down HTTP client %s", getName());
     client.shutdown();
@@ -201,7 +202,7 @@ int PistacheClient::luaRequest(lua_State* L)
                                 /* Save Off and Signal Response */
                                 lua_obj->requestSignal.lock();
                                 {
-                                    lua_result += response_body.c_str();
+                                    lua_result += response_body;
                                     lua_obj->requestSignal.signal(REQUEST_SIGNAL);
                                 }
                                 lua_obj->requestSignal.unlock();

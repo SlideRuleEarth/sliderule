@@ -172,9 +172,8 @@ CcsdsPacketParser::~CcsdsPacketParser(void)
     stop(); // stop processor
 
     delete pkt;
-
-    if(outQ)    delete outQ;
-    if(statQ)   delete statQ;
+    delete outQ;
+    delete statQ;
 }
 
 /*----------------------------------------------------------------------------
@@ -548,7 +547,7 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
 
                             /* Post Buffer */
                             status = outQ->postCopy(bufptr, buflen, SYS_TIMEOUT);
-                            if((status != MsgQ::STATE_TIMEOUT) && (status < 0))
+                            if((status != MsgQ::STATE_TIMEOUT) && (status < 0))  // NOLINT [misc-redundant-expression]
                             {
                                 mlog(CRITICAL, "Packet %04X unable to be posted[%d] to output stream %s", pkt->getAPID(), status, outQ->getName());
                                 apidStats[apid].pkts_dropped++;

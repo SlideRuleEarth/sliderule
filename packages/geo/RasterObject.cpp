@@ -356,7 +356,7 @@ int RasterObject::luaSubsets(lua_State *L)
         /* Get subset */
         const MathLib::extent_t extent = {{lon_min, lat_min}, {lon_max, lat_max}};
         err = lua_obj->getSubsets(extent, gps, slist, NULL);
-        num_ret += lua_obj->slist2table(slist, err, L);
+        num_ret += slist2table(slist, err, L);
     }
     catch (const RunTimeException &e)
     {
@@ -412,7 +412,7 @@ int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors,
             LuaEngine::setAttrStr(L, "robj", "", 0);  /* For now, figure out how to return RasterObject* */
             LuaEngine::setAttrStr(L, "file",     subset->rasterName.c_str());
             LuaEngine::setAttrInt(L, "size",     subset->getSize());
-            LuaEngine::setAttrInt(L, "poolsize", subset->getPoolSize());
+            LuaEngine::setAttrInt(L, "poolsize", RasterSubset::getPoolSize());
             lua_rawseti(L, -2, i + 1);
         }
     }

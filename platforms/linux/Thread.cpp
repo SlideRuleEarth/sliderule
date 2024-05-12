@@ -69,7 +69,8 @@ Thread::Thread(thread_func_t function, void* parm, bool _join)
     int ret = pthread_create(&threadId, &pthread_attr, function, parm);
     if(ret != 0)
     {
-        dlog("Failed to create thread (%d): %s", ret, strerror(ret));
+        char error_buf[256];
+        dlog("Failed to create thread (%d): %s", ret, strerror_r(ret, error_buf, sizeof(error_buf)));  // Thread-safe error message
         throw RunTimeException(CRITICAL, RTE_ERROR, "pthread_create failed");
     }
 }
@@ -82,7 +83,11 @@ Thread::~Thread()
     if(join)
     {
         int ret = pthread_join(threadId, NULL);
-        if(ret != 0) dlog("Failed to join thread (%d): %s", ret, strerror(ret));
+        if(ret != 0)
+        {
+            char error_buf[256];
+            dlog("Failed to join thread (%d): %s", ret, strerror_r(ret, error_buf, sizeof(error_buf)));  // Thread-safe error message
+        }
     }
 }
 

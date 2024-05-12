@@ -585,7 +585,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 /* Request Completed */
                 rqst_complete = true;
             }
-            else if(rsps_set.length() > 0)
+            else if(!rsps_set.empty())
             {
                 mlog(CRITICAL, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
                 rsps_set.clear(); // try again
@@ -701,7 +701,8 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     }
     else
     {
-        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
     /* Clean Up Headers */
@@ -802,7 +803,8 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     }
     else
     {
-        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
     /* Throw Exception on Failure */

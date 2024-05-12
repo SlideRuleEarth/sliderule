@@ -123,7 +123,7 @@ int ContainerRunner::luaList (lua_State* L)
 {
     const char* unix_socket = "/var/run/docker.sock";
     const char* url= "http://localhost/v1.43/containers/json";
- 
+
     /* Make Request for List of Containers */
     const char* response = NULL;
     int size = 0;
@@ -161,7 +161,8 @@ int ContainerRunner::luaCreateUnique (lua_State* L)
         const char* host_shared_directory = getLuaString(L, 1);
         if(!std::filesystem::create_directory(host_shared_directory))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror(errno));
+            char err_buf[256];
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror_r(errno, err_buf, sizeof(err_buf)));
         }
         status = true;
     }
@@ -189,7 +190,8 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
         const char* host_shared_directory = getLuaString(L, 1);
         if(!std::filesystem::remove_all(host_shared_directory))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror(errno));
+            char err_buf[256];
+            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror_r(errno, err_buf, sizeof(err_buf)));
         }
         status = true;
     }
@@ -289,18 +291,18 @@ void* ContainerRunner::controlThread (void* parm)
     std::istringstream cmd_str_iss(cr->parms->command);
     while(std::getline(cmd_str_iss, token, ' '))
     {
-        if(token.length() > 0)
+        if(!token.empty())
         {
             tokens.push_back(token);
         }
     }
-    string cmd_str = "";
+    string cmd_str;
     for(unsigned i = 0; i < tokens.size(); i++)
     {
         FString elem_str("\"%s\"", tokens[i].c_str());
         cmd_str += elem_str.c_str();
         if(i < (tokens.size() - 1)) cmd_str += ", ";
-    }    
+    }
     FString cmd("\"Cmd\": [%s]}", cmd_str.c_str());
 
     /* Build Container Parameters */
@@ -379,7 +381,7 @@ void* ContainerRunner::controlThread (void* parm)
             int log_response_size = 0;
             long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, WAIT_TIMEOUT, NULL, unix_socket);
             if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", container_name_str.c_str(), log_http_code, log_response);
-            else cr->processContainerLogs(log_response, log_response_size, container_id);
+            else processContainerLogs(log_response, log_response_size, container_id);
             delete [] log_response;
 
             /* Get Status of Container */

@@ -98,11 +98,11 @@ void SockLib::init()
     struct hostent* host = NULL;
     if(gethostname(local_host_name, HOST_STR_LEN) != -1)
     {
-        host = gethostbyname(local_host_name);
+        host = gethostbyname(local_host_name); // NOLINT(concurrency-mt-unsafe)
     }
 
     /* Attempt to Get IP Address from Environment */
-    const char* ip_from_env = getenv(IPV4_ENV_VAR_NAME);
+    const char* ip_from_env = getenv(IPV4_ENV_VAR_NAME); // NOLINT(concurrency-mt-unsafe)
 
     /* Get IP Address */
     if(ip_from_env)
@@ -149,11 +149,12 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
     // server
     int listen_socket = sock;
     int server_socket = INVALID_RC;
+    char err_buf[256];
 
     /* Make Socket a Listen Socket */
     if(listen(listen_socket, 1) != 0)
     {
-        dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         close(listen_socket);
         return INVALID_RC;
     }
@@ -183,14 +184,14 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
     /* Check Acceptance */
     if(server_socket < 0)
     {
-        dlog("Failed to accept connection on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        dlog("Failed to accept connection on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return INVALID_RC;
     }
 
     /* Set Keep Alive on Socket */
     if(sockkeepalive(server_socket) < 0)
     {
-        dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         sockclose(server_socket);
         return INVALID_RC;
     }
@@ -198,7 +199,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
     /* Make Socket Non-Blocking */
     if(socknonblock(server_socket) < 0)
     {
-        dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+        dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         sockclose(server_socket);
         return INVALID_RC;
     }
@@ -297,7 +298,8 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
         }
         else if(timeout != IO_CHECK && c < 0)
         {
-            dlog("Failed (%d) to send data to ready socket [0x%0X]: %s", c, revents, strerror(errno));
+            char err_buf[256];
+            dlog("Failed (%d) to send data to ready socket [0x%0X]: %s", c, revents, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             c = SOCK_ERR_RC;
         }
     }
@@ -341,7 +343,8 @@ int SockLib::sockrecv(int fd, void* buf, int size, int timeout)
         }
         else if(timeout != IO_CHECK && c < 0)
         {
-            dlog("Failed (%d) to receive data from ready socket [0x%0X]: %s", c, revents, strerror(errno));
+            char err_buf[256];
+            dlog("Failed (%d) to receive data from ready socket [0x%0X]: %s", c, revents, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             c = SOCK_ERR_RC;
         }
     }
@@ -373,7 +376,7 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     if(local_ipaddr)
     {
         *local_ipaddr = new char[17];
-        strncpy(*local_ipaddr, inet_ntoa(local_addr.sin_addr), 16);
+        strncpy(*local_ipaddr, inet_ntoa(local_addr.sin_addr), 16); // NOLINT(concurrency-mt-unsafe)
         (*local_ipaddr)[15] = '\0';
     }
 
@@ -387,7 +390,7 @@ int SockLib::sockinfo(int fd, char** local_ipaddr, int* local_port, char** remot
     if(remote_ipaddr)
     {
         *remote_ipaddr = new char[17];
-        strncpy(*remote_ipaddr, inet_ntoa(remote_addr.sin_addr), 16);
+        strncpy(*remote_ipaddr, inet_ntoa(remote_addr.sin_addr), 16); // NOLINT(concurrency-mt-unsafe)
         (*remote_ipaddr)[15] = '\0';
     }
 
@@ -441,7 +444,8 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         }
         else
         {
-            dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+            char err_buf[256];
+            dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             listen_socket = INVALID_RC;
             status = -1;
         }
@@ -485,6 +489,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 {
                     bool valid_fd = true;
                     int cb_stat = 0;
+                    char err_buf[256];
 
                     /* Handle Errors */
                     if(polllist[i].revents & POLLERR)
@@ -496,13 +501,13 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                         /* With server keeping sockets alive for HTTP/1.1 requests, the client will close the connection.
                          * It may do it gracefully or abruptly.  If it does it abruptly (curlib3 socket pool timeout)
                          * the server will see a POLLERR and ECONNRESET error, this is normal and should not be logged as an error. */
-                        dlog("Poll error (%d) detected [0x%X] on server socket <%d>: %s", error, polllist[i].revents, polllist[i].fd, strerror(error));
+                        dlog("Poll error (%d) detected [0x%X] on server socket <%d>: %s", error, polllist[i].revents, polllist[i].fd, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
 #endif
                         cb_stat = -1; // treat like a callback error or disconnect
                     }
                     else if(polllist[i].revents & POLLNVAL)
                     {
-                        dlog("Socket <%d> not open, yet trying to poll: %s", polllist[i].fd, strerror(errno));
+                        dlog("Socket <%d> not open, yet trying to poll: %s", polllist[i].fd, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                         valid_fd = false;
                     }
                     else
@@ -559,7 +564,9 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     int error = 0;
                     socklen_t errlen = sizeof(error);
                     getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, static_cast<void*>(&error), &errlen);
-                    dlog("Poll error (%d) detected [0x%X] on listener socket: %s", error, polllist[0].revents, strerror(errno));
+
+                    char err_buf[256];
+                    dlog("Poll error (%d) detected [0x%X] on listener socket: %s", error, polllist[0].revents, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 }
                 else if(polllist[0].revents & POLLIN)
                 {
@@ -719,14 +726,15 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             /* Handle Errors */
             bool valid_fd = true;
             int cb_stat = 0;
+            char err_buf[256];
             if(polllist[0].revents & POLLERR)
             {
-                dlog("Poll error detected on client socket <%d>: %s", polllist[0].fd, strerror(errno));
+                dlog("Poll error detected on client socket <%d>: %s", polllist[0].fd, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 cb_stat = -1; // treat like a callback error or disconnect
             }
             else if(polllist[0].revents & POLLNVAL)
             {
-                dlog("Socket <%d> not open, yet trying to poll: %s", polllist[0].fd, strerror(errno));
+                dlog("Socket <%d> not open, yet trying to poll: %s", polllist[0].fd, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 valid_fd = false;
             }
             else
@@ -806,6 +814,8 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
         return TCP_ERR_RC;
     }
 
+    char err_buf[256];
+
     /* Try each address until we successfully connect. */
     for(rp = result; rp != NULL; rp = rp->ai_next)
     {
@@ -816,7 +826,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
         sock = socket(rp->ai_family, rp->ai_socktype, 0);
         if(sock < 0)
         {
-            dlog("Failed to open socket for %s:%s, %s", host, serv, strerror(errno));
+            dlog("Failed to open socket for %s:%s, %s", host, serv, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             continue;
         }
 
@@ -825,7 +835,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
             /* Set Reuse Option on Listen Socket */
             if(sockreuse(sock) < 0)
             {
-                dlog("Failed to set reuse on socket %s:%s, %s", host, serv, strerror(errno));
+                dlog("Failed to set reuse on socket %s:%s, %s", host, serv, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 close(sock);
                 continue;
             }
@@ -834,7 +844,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
             status = bind(sock, rp->ai_addr, rp->ai_addrlen);
             if(status < 0)
             {
-                dlog("Failed to bind socket to %s:%s, %s", host, serv, strerror(errno));
+                dlog("Failed to bind socket to %s:%s, %s", host, serv, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 close(sock);
             }
             else
@@ -849,7 +859,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
                 status = connect(sock, rp->ai_addr, rp->ai_addrlen);
                 if(status < 0)
                 {
-                    dlog("Failed to connect socket to %s:%s... %s", host, serv, strerror(errno));
+                    dlog("Failed to connect socket to %s:%s... %s", host, serv, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                     OsApi::performIOTimeout();
                 }
             } while(status < 0 && block && *block && !signal_exit);
@@ -874,7 +884,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
     {
         if(sockkeepalive(sock) < 0)
         {
-            dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+            dlog("Failed to set keep alive on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             sockclose(sock);
             return TCP_ERR_RC;
         }
@@ -882,7 +892,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
         /* Make Socket Non-Blocking*/
         if(socknonblock(sock) < 0)
         {
-            dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror(errno));
+            dlog("Failed to set non-blocking on %s:%d, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             sockclose(sock);
             return TCP_ERR_RC;
         }
@@ -899,32 +909,33 @@ int SockLib::sockkeepalive(int socket_fd, int idle, int cnt, int intvl)
 {
     int         optval;
     socklen_t   optlen = sizeof(optval);
+    char        err_buf[256];
 
     optval = 1; // set SO_KEEPALIVE on a socket to true (1)
     if (setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen) < 0)
     {
-        dlog("Failed to set SO_KEEPALIVE option on socket, %s", strerror(errno));
+        dlog("Failed to set SO_KEEPALIVE option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return TCP_ERR_RC;
     }
 
     optval = idle; // set TCP_KEEPIDLE on a socket to number of seconds the connection is idle before keepalive probes are sent
     if (setsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPIDLE, &optval, optlen) < 0)
     {
-        dlog("Failed to set TCP_KEEPIDLE option on socket, %s", strerror(errno));
+        dlog("Failed to set TCP_KEEPIDLE option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return TCP_ERR_RC;
     }
 
     optval = cnt; // set TCP_KEEPCNT on a socket to number of keepalive probes before dropping connection
     if (setsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPCNT, &optval, optlen) < 0)
     {
-        dlog("Failed to set TCP_KEEPCNT option on socket, %s", strerror(errno));
+        dlog("Failed to set TCP_KEEPCNT option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return TCP_ERR_RC;
     }
 
     optval = intvl; // set TCP_KEEPINTVL on a socket to number of seconds between keepalive probes
     if(setsockopt(socket_fd, IPPROTO_TCP, TCP_KEEPINTVL, &optval, optlen) < 0)
     {
-        dlog("Failed to set TCP_KEEPINTVL option on socket, %s", strerror(errno));
+        dlog("Failed to set TCP_KEEPINTVL option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return TCP_ERR_RC;
     }
 
@@ -942,7 +953,8 @@ int SockLib::sockreuse(int socket_fd)
     optval = 1; // set SO_REUSEADDR on a socket to true (1)
     if(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) < 0)
     {
-        dlog("Failed to set SO_REUSEADDR option on socket, %s", strerror(errno));
+        char err_buf[256];
+        dlog("Failed to set SO_REUSEADDR option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return SOCK_ERR_RC;
     }
 
@@ -957,7 +969,8 @@ int SockLib::socknonblock(int socket_fd)
     int flags = fcntl(socket_fd, F_GETFL, 0);
     if(flags < 0 || fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK) < 0)
     {
-        dlog("Failed to make socket non-blocking, %s", strerror(errno));
+        char err_buf[256];
+        dlog("Failed to make socket non-blocking, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return SOCK_ERR_RC;
     }
 
@@ -976,7 +989,8 @@ int SockLib::sockmulticast(int socket_fd, const char* group)
     optval.imr_interface.s_addr = htonl(INADDR_ANY);
     if(setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<char*>(&optval), optlen) < 0)
     {
-        dlog("Failed to set IP_ADD_MEMBERSHIP option on socket, %s", strerror(errno));
+        char err_buf[256];
+        dlog("Failed to set IP_ADD_MEMBERSHIP option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return SOCK_ERR_RC;
     }
 

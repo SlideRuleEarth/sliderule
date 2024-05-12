@@ -422,7 +422,7 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * format2str
  *----------------------------------------------------------------------------*/
-const char* ArrowParms::format2str (format_t fmt) const
+const char* ArrowParms::format2str (format_t fmt)
 {
     switch(fmt)
     {

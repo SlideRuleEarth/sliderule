@@ -41,7 +41,6 @@
 #include "RecordObject.h"
 #include "DispatchObject.h"
 #include "OsApi.h"
-#include "MsgQ.h"
 #include "RasterObject.h"
 
 /******************************************************************************

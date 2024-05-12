@@ -811,8 +811,6 @@ void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, const void *op_dat
     // temp satisfy print
     print2term("fheapNameCmp args: %lu, %lu, %lu", (uintptr_t) obj, (uintptr_t) obj_len, (uintptr_t) op_data);
     // TODO
-    return;
-
 }
 
  /*----------------------------------------------------------------------------
@@ -939,13 +937,13 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
         size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
 
         addrDecode(addr_size, reinterpret_cast<const uint8_t **>(&internal_pos), &(int_node_ptr->addr)); // internal pos value should change
-        varDecode(reinterpret_cast<uint8_t *>(internal_pos), node_nrec, max_nrec_size);
+        varDecode(reinterpret_cast<uint8_t *>(internal_pos), node_nrec, max_nrec_size); // NOLINT [performance-no-int-to-ptr]
 
         safeAssigned(int_node_ptr->node_nrec, node_nrec);
         int_node_ptr->node_nrec = (uint16_t) node_nrec;
 
         if (internal->depth > 1) {
-            varDecode(reinterpret_cast<uint8_t *>(internal_pos), int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size);
+            varDecode(reinterpret_cast<uint8_t *>(internal_pos), int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size); // NOLINT [performance-no-int-to-ptr]
         }
         else {
             int_node_ptr->all_nrec = int_node_ptr->node_nrec;
@@ -960,7 +958,6 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
     // TODO
 
     /* Return structure inside of internal */
-    return;
 }
 
 /*----------------------------------------------------------------------------
@@ -1066,7 +1063,7 @@ uint64_t H5BTreeV2::openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_
             node_info[u].split_nrec = (node_info[u].max_nrec * split_percent) / 100;
             node_info[u].merge_nrec = (node_info[u].max_nrec * merge_percent) / 100;
             node_info[u].cum_max_nrec = ((node_info[u].max_nrec + 1) * node_info[u - 1].cum_max_nrec) + node_info[u].max_nrec;
-            u_max_nrec_size = (log2Gen((uint64_t)node_info[u].cum_max_nrec) / 8) + 1;
+            u_max_nrec_size = (log2Gen(node_info[u].cum_max_nrec) / 8) + 1;
 
             safeAssigned(node_info[u].cum_max_nrec_size, u_max_nrec_size);
             node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;

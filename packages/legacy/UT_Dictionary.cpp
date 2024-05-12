@@ -211,7 +211,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                 delete [] key_list[i]; // NOLINT
             }
         }
-        if(key_list) delete [] key_list;
+        delete [] key_list;
         delete [] true_list;
     }
 

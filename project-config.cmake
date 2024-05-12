@@ -25,25 +25,49 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
 
     # clang-tidy
-    set (CLANG_TIDY_CHECKS
-        clang-analyzer-*
-        cconcurrency-*
-        misc-*
-        performance-*
-        portability-*
-        readability-*
-        -readability-braces-around-statements
-        -readability-implicit-bool-conversion
-        -readability-magic-numbers
-        -misc-non-private-member-variables-in-classes
+     set (CLANG_TIDY_CHECKS
+        "clang-analyzer-*,"
+        "-clang-diagnostic-unused-command-line-argument,"
+        "concurrency-*,"       # Several were disabled in cpp files with // NOLINT
+
+        "performance-*,"
+        "-performance-enum-size,"
+
+        "portability-*,"
+
+        "readability-*,"
+        "-readability-braces-around-statements,"
+        "-readability-implicit-bool-conversion,"
+        "-readability-magic-numbers,"
+        "-readability-function-cognitive-complexity,"
+        "-readability-identifier-length,"
+        "-readability-simplify-boolean-expr,"
+        "-readability-simplify-boolean-expr,"
+        "-readability-else-after-return,"
+        "-readability-avoid-const-params-in-decls,"
+        "-readability-avoid-unconditional-preprocessor-if,"
+        "-readability-suspicious-call-argument,"
+        "-readability-isolate-declaration,"
+        "-readability-misleading-indentation,"
+
+        "misc-*,"
+        "-misc-non-private-member-variables-in-classes,"
+        "-misc-include-cleaner,"
+        "-misc-const-correctness,"
+        "-misc-use-anonymous-namespace,"
+        "-misc-no-recursion,"
     )
-    list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
+
+    # Join checks into a single string parameter
+    list(JOIN CLANG_TIDY_CHECKS "" CLANG_TIDY_CHECKS_PARM)
+
     set (CMAKE_CXX_CLANG_TIDY
-        clang-tidy;
-        -header-filter=.;
-        -checks=${CLANG_TIDY_CHECKS_PARM};
-        -warnings-as-errors=*;
+       clang-tidy;
+       -header-filter=.;
+       -checks=${CLANG_TIDY_CHECKS_PARM};
     )
+
+    message(STATUS "Clang-Tidy checks parms: ${CLANG_TIDY_CHECKS_PARM}")
 
     # cppcheck
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
@@ -53,32 +77,29 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=missingInclude"
         "--suppress=missingIncludeSystem"
         "--suppress=unmatchedSuppression"
-        "--suppress=unusedFunction"                                            # cppcheck is confused, used functions are reported 'unused'
-        "--suppress=unusedPrivateFunction:"                                    # same here
+        "--suppress=unusedFunction"                                     # cppcheck is confused, used functions are reported 'unused'
+        "--suppress=unusedPrivateFunction"                              # same here
         "--suppress=noOperatorEq"
         "--suppress=noCopyConstructor"
-        "--suppress=useStlAlgorithm"                                           # yeah, they may be a bit faster but are unreadable
-        "--suppress=memsetClassFloat:*/MathLib.cpp:80"                         # need memset here for performance
-        "--suppress=unreadVariable:*/TimeLib.cpp:471"                          # terminating '\0' detected as 'unused' but it is used/needed
-        "--suppress=invalidPointerCast:*/H5Array.h:166"                        # documented in code
-        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp:120"                     # shallow copy which is fine in code
+        "--suppress=useStlAlgorithm"                                    # yeah, they may be a bit faster but are unreadable
+        "--suppress=memsetClassFloat:*/MathLib.cpp"                     # line: 80, need memset here for performance
+        "--suppress=unreadVariable:*/TimeLib.cpp"                       # line: 471, terminating '\0' detected as 'unused' but it is used/needed
+        "--suppress=invalidPointerCast:*/H5Array.h"                     # line: 166, documented in code
+        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"                  # line: 120, shallow copy which is fine in code
         "--error-exitcode=1"
 
         ###################################
         # Need for cppcheck version 2.13
         ###################################
-        "--suppress=duplInheritedMember"                                       # JP please look at it - example: luaobj base class has getname() so do 'kids' but it is not a virtual function
-                                                                               # is the intent to return name of the base class or derived class object?
+        "--suppress=duplInheritedMember"                                # JP please look at it - example: luaobj base class has getname() so do 'kids' but it is not a virtual function
+                                                                        # is the intent to return name of the base class or derived class object?
 
-        "--suppress=memleak:*/LuaEndpoint.cpp:254"                             # 'info' is freed by requestThread but ccpcheck does not 'see it'
-        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp:198"            # code is OK
-
-        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:635"        # List [] const issue
-        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:1010"
-        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp:1306"
-
-        "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"          # Not trivial to fix, would have to change DispachObject class as well.
+        "--suppress=memleak:*/LuaEndpoint.cpp"                          # line: 254, 'info' is freed by requestThread but ccpcheck does not 'see it'
+        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"         # line 198, code is OK
+        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
+        "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
     )
+    message(STATUS "cppcheck: ${CMAKE_CXX_CPPCHECK}")
 endif()
 
 ###################

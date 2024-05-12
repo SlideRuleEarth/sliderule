@@ -176,7 +176,7 @@ const char* ArrowBuilder::getYKey (void)
 /*----------------------------------------------------------------------------
  * getAsGeo
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::getAsGeo (void)
+bool ArrowBuilder::getAsGeo (void) const
 {
     return geoData.as_geo;
 }
@@ -208,7 +208,7 @@ ArrowParms* ArrowBuilder::getParms (void)
 /*----------------------------------------------------------------------------
  * hasAncFields
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::hasAncFields (void)
+bool ArrowBuilder::hasAncFields (void) const
 {
     return hasAncillaryFields;
 }
@@ -216,7 +216,7 @@ bool ArrowBuilder::hasAncFields (void)
 /*----------------------------------------------------------------------------
  * hasAncElements
  *----------------------------------------------------------------------------*/
-bool ArrowBuilder::hasAncElements (void)
+bool ArrowBuilder::hasAncElements (void) const
 {
     return hasAncillaryElements;
 }
@@ -397,7 +397,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     for(uint32_t i = 0; i < container->rec_cnt; i++)
                     {
                         /* Pull Out Subrecord */
-                        uint8_t* buffer = reinterpret_cast<uint8_t*>(container) + container->entries[i].rec_offset;
+                        const uint8_t* buffer = reinterpret_cast<uint8_t*>(container) + container->entries[i].rec_offset;
                         int size = container->entries[i].rec_size;
                         RecordObject* subrec = new RecordInterface(buffer, size);
 

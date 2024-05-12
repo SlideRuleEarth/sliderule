@@ -487,7 +487,7 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
     groupList.clear();
 
     /* For AOI always open new index file, for POI it depends... */
-    bool openNewFile = GdalRaster::ispoly(geo) ? true : geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
+    bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
     if(openNewFile)
     {
         if(!openGeoIndex(geo))
@@ -657,7 +657,7 @@ void* GeoIndexedRaster::readingThread(void *param)
                                                         entry->raster->getOverrideCRS());
 
                     /* GeoParms are shared with subsseted raster and other readers */
-                    reader->obj->referenceLuaObject(reader->obj->parms);
+                    GeoIndexedRaster::referenceLuaObject(reader->obj->parms);
                 }
             }
             entry->enabled = false; /* raster samples/subsetted */
@@ -875,5 +875,5 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         }
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }

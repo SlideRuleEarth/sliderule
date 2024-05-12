@@ -263,12 +263,12 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     if( gps_days < GpsDaysToStartOfYear[1] )
     {
         years = 1980;
-        year_days = (int)gps_days + 6;
+        year_days = gps_days + 6;
     }
     else if( gps_days < GpsDaysToStartOfYear[2] )
     {
         years  = 1981;
-        year_days = (int)gps_days - GpsDaysToStartOfYear[1];
+        year_days = gps_days - GpsDaysToStartOfYear[1];
     }
     else
     {

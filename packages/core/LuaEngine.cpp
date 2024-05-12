@@ -1099,7 +1099,7 @@ int LuaEngine::pmain (lua_State *L)
     int     argc    = static_cast<int>(lua_tointeger(L, 1));
     char**  argv    = static_cast<char**>(lua_touserdata(L, 2));
     int     script  = 0;
-    int     args    = li->collectargs(argv, &script);
+    int     args    = collectargs(argv, &script);
 
     /* check that interpreter has correct version */
     luaL_checkversion(L);

@@ -121,7 +121,8 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
         if(ret == -1 && errno != EEXIST)
         {
             cacheMut.unlock();
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create cache directory %s: %s", cache_root, strerror(errno));
+            char err_buf[256];
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create cache directory %s: %s", cache_root, strerror_r(errno, err_buf, sizeof(err_buf)));
         }
 
         /* Set Cache Root */
@@ -140,7 +141,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
         if((dir = opendir(cacheRoot)) != NULL)
         {
             struct dirent *ent;
-            while((ent = readdir(dir)) != NULL)
+            while((ent = readdir(dir)) != NULL) // NOLINT [concurrency-mt-unsafe]
             {
                 if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
                 {

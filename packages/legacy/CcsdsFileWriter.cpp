@@ -129,7 +129,7 @@ CcsdsFileWriter::CcsdsFileWriter(CommandProcessor* cmd_proc, const char* obj_nam
 
     fmt = _fmt;
 
-    int len = (int)StringLib::size(_prefix) + 1;
+    int len = StringLib::size(_prefix) + 1;
     prefix = new char[len];
     StringLib::copy(prefix, _prefix, len);
 
@@ -195,7 +195,9 @@ bool CcsdsFileWriter::openNewFile(void)
     else            outfp = fopen(static_cast<const char*>(filename), "w");
     if(outfp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s", filename, strerror(errno));
+        char err_buf[256];
+        (void)strerror_r(errno, err_buf, sizeof(err_buf));
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", filename, err_buf);
         return false;
     }
 
@@ -289,7 +291,9 @@ bool CcsdsFileWriter::processMsg (unsigned char* msg, int bytes)
     /* Error Checking */
     if(bytes_written < 0)
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s... killing writer!", filename, strerror(errno));
+        char err_buf[256];
+        (void)strerror_r(errno, err_buf, sizeof(err_buf));
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s... killing writer!", filename, err_buf);
         return false;
     }
     else

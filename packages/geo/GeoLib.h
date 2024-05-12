@@ -79,8 +79,8 @@ class GeoLib: public MathLib
                 TIFFImage (lua_State* L, const char* filename);
                 ~TIFFImage (void);
                 uint32_t getPixel (uint32_t x, uint32_t y);
-                uint32_t getWidth (void);
-                uint32_t getLength (void);
+                uint32_t getWidth (void) const;
+                uint32_t getLength (void) const;
             private:
                 static int luaDimensions (lua_State* L);
                 static int luaPixel (lua_State* L);
@@ -97,7 +97,7 @@ class GeoLib: public MathLib
 
         static void init (void);
         static int luaCalcUTM (lua_State* L);
-        static bool writeBMP (uint32_t* data, int width, int length, const char* filename);
+        static bool writeBMP (const uint32_t* data, int width, int height, const char* filename);
 
     private:
 

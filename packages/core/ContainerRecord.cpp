@@ -75,7 +75,7 @@ int ContainerRecord::hdrSize (int cnt)
 /*----------------------------------------------------------------------------
  * recSize
  *----------------------------------------------------------------------------*/
-int ContainerRecord::recSize (vector<RecordObject*> rec_vec)
+int ContainerRecord::recSize (const vector<RecordObject*>& rec_vec)
 {
     int total_size = hdrSize(rec_vec.size());
     for(const RecordObject* rec: rec_vec)
@@ -101,7 +101,7 @@ ContainerRecord::ContainerRecord(int rec_cnt, int size):
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ContainerRecord::ContainerRecord(vector<RecordObject*> rec_vec):
+ContainerRecord::ContainerRecord(const vector<RecordObject*>& rec_vec):
     RecordObject(recType, recSize(rec_vec))
 {
     recsContained = 0;

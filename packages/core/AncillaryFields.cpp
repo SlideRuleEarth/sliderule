@@ -130,7 +130,7 @@ double* AncillaryFields::extractAsDoubles (element_array_t* elements)
         }
         case RecordObject::UINT8:
         {
-            const uint8_t* src = reinterpret_cast<uint8_t*>(&elements->data[0]);
+            const uint8_t* src = &elements->data[0];
             for(uint32_t i = 0; i < elements->num_elements; i++) dst[i] = static_cast<double>(src[i]);
             break;
         }

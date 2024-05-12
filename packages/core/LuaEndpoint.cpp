@@ -237,7 +237,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
         string* hdr_str;
         if(request->headers.find("x-sliderule-streaming", &hdr_str))
         {
-            if(hdr_str->compare("0") == 0)
+            if(*hdr_str == "0")
             {
                 info->streaming = false;
             }

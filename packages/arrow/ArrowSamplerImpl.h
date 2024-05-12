@@ -103,21 +103,21 @@ class ArrowSamplerImpl
         void                          getXYPoints             (std::vector<ArrowSampler::point_info_t*>& points);
         void                          getGeoPoints            (std::vector<ArrowSampler::point_info_t*>& points);
         std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
-        std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table> table);
+        std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table>& table);
         bool                          makeColumnsWithLists    (ArrowSampler::sampler_t* sampler);
         bool                          makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler);
-        RasterSample*                 getFirstValidSample     (ArrowSampler::sample_list_t* slist);
-        void                          tableToParquet          (const std::shared_ptr<arrow::Table> table,
+        static RasterSample*          getFirstValidSample     (ArrowSampler::sample_list_t* slist);
+        static void                   tableToParquet          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
-        void                          tableToCsv              (const std::shared_ptr<arrow::Table> table,
+        static void                   tableToCsv              (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
-        void                          tableToFeather          (const std::shared_ptr<arrow::Table> table,
+        static void                   tableToFeather          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
-        std::shared_ptr<arrow::Table> removeGeometryColumn    (const std::shared_ptr<arrow::Table> table);
-        ArrowCommon::wkbpoint_t       convertWKBToPoint       (const std::string& wkb_data);
-        void                          printParquetMetadata    (const char* file_path);
+        static std::shared_ptr<arrow::Table> removeGeometryColumn(std::shared_ptr<arrow::Table>& table);
+        static ArrowCommon::wkbpoint_t convertWKBToPoint      (const std::string& wkb_data);
+        static void                   printParquetMetadata    (const char* file_path);
         std::string                   createFileMap           (void);
-        void                          metadataToJson          (const std::shared_ptr<arrow::Table> table,
+        static void                   metadataToJson          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
 };
 

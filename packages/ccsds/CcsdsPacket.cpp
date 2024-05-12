@@ -163,10 +163,10 @@ int CcsdsSpacePacket::getAPID(void) const
 /*----------------------------------------------------------------------------
  * setAPID
  *----------------------------------------------------------------------------*/
-void CcsdsSpacePacket::setAPID(int value)
+void CcsdsSpacePacket::setAPID(int apid)
 {
-    buffer[0] = (buffer[0] & 0xF8) | ((value >> 8) & 0x07);
-    buffer[1] = value & 0xff;
+    buffer[0] = (buffer[0] & 0xF8) | ((apid >> 8) & 0x07);
+    buffer[1] = apid & 0xff;
 }
 
 /*----------------------------------------------------------------------------
@@ -841,9 +841,9 @@ int CcsdsEncapPacket::getAPID(void) const
  *
  *   Write application ID to protocol and protocol extension fields
  *----------------------------------------------------------------------------*/
-void CcsdsEncapPacket::setAPID(int value)
+void CcsdsEncapPacket::setAPID(int apid)
 {
-    uint16_t hdr = (uint16_t)value;
+    uint16_t hdr = (uint16_t)apid;
     int lol = (hdr >> 10) & 0x03;
     buffer[0] = hdr >> 8;
     if(lol > 0) buffer[1] = hdr & 0xFF;

@@ -440,7 +440,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
         /* Load Hash */
         for(int i = 0; i < size; i++)
         {
-            key = rand() % key_range;
+            key = rand() % key_range; // NOLINT [concurrency-mt-unsafe]
             if(mytable.add(key, key, true))
             {
                 data_order[num_added++] = key;

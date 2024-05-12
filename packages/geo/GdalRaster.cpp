@@ -1035,7 +1035,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
             GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
             CHECKPTR(driver);
-            subDset = static_cast<GDALDataset*>(driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options));
+            subDset = driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options);
             CHECKPTR(subDset);
 
             /* Copy data to subraster */
@@ -1085,7 +1085,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
         {
             ssError |= SS_MEMPOOL_ERROR;
             mlog(ERROR, "RasterSubset requested memory: %lu MB, available: %lu MB, max: %lu MB", size / (1024*1024),
-                subset->getPoolSize()  / (1024*1024),
+                RasterSubset::getPoolSize() / (1024*1024),
                 RasterSubset::MAX_SIZE / (1024*1024));
         }
     }

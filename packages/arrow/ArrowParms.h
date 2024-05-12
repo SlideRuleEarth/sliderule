@@ -129,7 +129,7 @@ class ArrowParms: public LuaObject
         static int      luaIsArrow          (lua_State* L);
         static int      luaPath             (lua_State* L);
         void            luaGetAncillary     (lua_State* L, int index, bool* provided);
-        const char*     format2str          (format_t fmt) const;
+        static const char*format2str        (format_t fmt);
 };
 
 #endif  /* __arrow_parms__ */

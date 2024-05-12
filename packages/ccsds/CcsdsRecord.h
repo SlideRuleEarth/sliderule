@@ -118,9 +118,9 @@ class CcsdsRecord: public RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsRecord         (void);
-        void        populateHeader      (void);
-        pktDef_t*   getPacketDefinition (const unsigned char* buffer, int size); // overloaded RecordObject method
+                         CcsdsRecord         (void);
+        void             populateHeader      (void);
+        static pktDef_t* getPacketDefinition (const unsigned char* buffer, int size); // overloaded RecordObject method
 };
 
 /******************************************************************************

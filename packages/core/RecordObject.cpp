@@ -251,7 +251,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
  *  Assumes a serialized buffer <type string><binary data>
  *  (another way to perform deserialization)
  *----------------------------------------------------------------------------*/
-RecordObject::RecordObject(unsigned char* buffer, int size)
+RecordObject::RecordObject(const unsigned char* buffer, int size)
 {
     recordDefinition = getDefinition(buffer, size);
     if(recordDefinition != NULL)
@@ -266,7 +266,7 @@ RecordObject::RecordObject(unsigned char* buffer, int size)
             memcpy(recordMemory, buffer, memoryAllocated);
 
             /* Set Record Data */
-            recordData = reinterpret_cast<unsigned char*>(&recordMemory[sizeof(rec_hdr_t) + recordDefinition->type_size]);
+            recordData = &recordMemory[sizeof(rec_hdr_t) + recordDefinition->type_size];
         }
         else
         {
@@ -514,7 +514,7 @@ bool RecordObject::populate (const char* populate_string)
 
     char(*toks)[MAX_STR_SIZE] = new (char[MAX_INITIALIZERS][MAX_STR_SIZE]);
 
-    int numtoks = StringLib::tokenizeLine(populate_string, (int)StringLib::nsize(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
+    int numtoks = StringLib::tokenizeLine(populate_string, StringLib::nsize(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
 
     for(int i = 0; i < numtoks; i++)
     {
@@ -607,7 +607,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
     }
     else if(val_type == TEXT)
     {
-        int val_len = (int)StringLib::nsize(val, MAX_VAL_STR_SIZE) + 1;
+        int val_len = StringLib::nsize(val, MAX_VAL_STR_SIZE) + 1;
         if(val_len <= f.elements)
         {
             memcpy(recordData + TOBYTES(f.offset), reinterpret_cast<const unsigned char*>(val), val_len);
@@ -673,7 +673,7 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
             case UINT64:    cast->uint64_val = static_cast<uint64_t>(val);   break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, static_cast<long>(val));  break;
             case FLOAT:     cast->float_val  = static_cast<float>(val);      break;
-            case DOUBLE:    cast->double_val = static_cast<double>(val);     break;
+            case DOUBLE:    cast->double_val = val;                          break;
             case TIME8:     cast->int64_val  = static_cast<int64_t>(val);    break;
             case STRING:    StringLib::format(reinterpret_cast<char*>(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
@@ -694,7 +694,7 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
             case UINT64:    cast->uint64_val = OsApi::swapll(static_cast<uint64_t>(val));break;
             case BITFIELD:  packBitField(recordData, f.offset, f.elements, static_cast<long>(val)); break;
             case FLOAT:     cast->float_val  = OsApi::swapf(static_cast<float>(val));    break;
-            case DOUBLE:    cast->double_val = OsApi::swapf(static_cast<double>(val));   break;
+            case DOUBLE:    cast->double_val = OsApi::swapf(val);                        break;
             case TIME8 :    cast->int64_val  = OsApi::swapll(static_cast<uint64_t>(val));break;
             case STRING:    StringLib::format(reinterpret_cast<char*>(recordData + elem_offset), f.elements, DEFAULT_DOUBLE_FORMAT, val);
                             break;
@@ -729,7 +729,7 @@ void RecordObject::setValueInteger(const field_t& f, long val, int element)
             case UINT16:    cast->uint16_val = static_cast<uint16_t>(val);   break;
             case UINT32:    cast->uint32_val = static_cast<uint32_t>(val);   break;
             case UINT64:    cast->uint64_val = static_cast<uint64_t>(val);   break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, static_cast<long>(val)); break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, val); break;
             case FLOAT:     cast->float_val  = static_cast<float>(val);      break;
             case DOUBLE:    cast->double_val = val;                           break;
             case TIME8:     cast->int64_val  = static_cast<int64_t>(val);    break;
@@ -750,7 +750,7 @@ void RecordObject::setValueInteger(const field_t& f, long val, int element)
             case UINT16:    cast->uint16_val = OsApi::swaps(static_cast<uint16_t>(val));   break;
             case UINT32:    cast->uint32_val = OsApi::swapl(static_cast<uint32_t>(val));   break;
             case UINT64:    cast->uint64_val = OsApi::swapll(static_cast<uint64_t>(val));  break;
-            case BITFIELD:  packBitField(recordData, f.offset, f.elements, static_cast<long>(val)); break;
+            case BITFIELD:  packBitField(recordData, f.offset, f.elements, val); break;
             case FLOAT:     cast->float_val  = OsApi::swapf(static_cast<float>(val));      break;
             case DOUBLE:    cast->double_val = OsApi::swaplf(static_cast<double>(val));    break;
             case TIME8:     cast->int64_val  = OsApi::swapll(static_cast<int64_t>(val));   break;
@@ -848,7 +848,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
             case UINT64:    return static_cast<double>(cast->uint64_val);
             case BITFIELD:  return static_cast<double>(unpackBitField(recordData, f.offset, f.elements));
             case FLOAT:     return static_cast<double>(cast->float_val);
-            case DOUBLE:    return static_cast<double>(cast->double_val);
+            case DOUBLE:    return cast->double_val;
             case TIME8:     return static_cast<double>(cast->int64_val);
             default:        return 0.0;
         }
@@ -867,7 +867,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
         case UINT64:    return static_cast<double>(OsApi::swapll(cast->uint64_val));
         case BITFIELD:  return static_cast<double>(unpackBitField(recordData, f.offset, f.elements));
         case FLOAT:     return static_cast<double>(OsApi::swapf(cast->float_val));
-        case DOUBLE:    return static_cast<double>(OsApi::swaplf(cast->double_val));
+        case DOUBLE:    return OsApi::swaplf(cast->double_val);
         case TIME8:     return static_cast<double>(OsApi::swapll(cast->int64_val));
         default:        return 0.0;
     }
@@ -1160,7 +1160,7 @@ int RecordObject::getRecordFields(const char* rec_type, char*** field_names, fie
             (*fields)[i] = new field_t;
             try
             {
-                *(*fields)[i] = def->fields[(*field_names)[i]]; // NOLINT
+                *(*fields)[i] = def->fields[(*field_names)[i]];  // NOLINT [clang-analyzer-core.CallAndMessage]
             }
             catch(const RunTimeException& e)
             {
@@ -1199,7 +1199,7 @@ int RecordObject::parseSerial(const unsigned char* buffer, int size, const char*
             if(rec_type) *rec_type = reinterpret_cast<const char*>(buffer);
             if(i < size - 1)
             {
-                if(rec_data) *rec_data = reinterpret_cast<const unsigned char*>(&buffer[i+1]);
+                if(rec_data) *rec_data = &buffer[i+1];
             }
             return i + 1;
         }
@@ -1835,7 +1835,7 @@ RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
  *  Notes:
  *   1. operates on serialized data (not a population string)
  *----------------------------------------------------------------------------*/
-RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, int size)
+RecordObject::definition_t* RecordObject::getDefinition(const unsigned char* buffer, int size)
 {
     /* Check Parameters */
     if(buffer == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Null buffer used to retrieve record definition");
@@ -1857,7 +1857,7 @@ RecordObject::definition_t* RecordObject::getDefinition(unsigned char* buffer, i
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RecordInterface::RecordInterface(unsigned char* buffer, int size): RecordObject()
+RecordInterface::RecordInterface(const unsigned char* buffer, int size)
 {
     recordDefinition = getDefinition(buffer, size);
     if(recordDefinition != NULL)
