@@ -161,7 +161,7 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 
     factoryMut.lock();
     {
-        factory_t factory = { .create = create };
+        const factory_t factory = { .create = create };
         status = factories.add(_name, factory);
     }
     factoryMut.unlock();
@@ -241,9 +241,9 @@ int RasterObject::luaSamples(lua_State *L)
         lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
 
         /* Get Coordinates */
-        double lon    = getLuaFloat(L, 2);
-        double lat    = getLuaFloat(L, 3);
-        double height = getLuaFloat(L, 4, true, 0.0);
+        const double lon    = getLuaFloat(L, 2);
+        const double lat    = getLuaFloat(L, 3);
+        const double height = getLuaFloat(L, 4, true, 0.0);
         const char* closest_time_str = getLuaString(L, 5, true, NULL);
 
         /* Get gps closest time (overrides params provided closest time) */
@@ -255,7 +255,7 @@ int RasterObject::luaSamples(lua_State *L)
 
         /* Get samples */
         bool listvalid = true;
-        MathLib::point_3d_t point = {lon, lat, height};
+        const MathLib::point_3d_t point = {lon, lat, height};
         err = lua_obj->getSamples(point, gps, slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
@@ -348,7 +348,7 @@ int RasterObject::luaSubsets(lua_State *L)
 
         /* Get gps closest time (overrides params provided closest time) */
         int64_t gps = 0;
-        if(closest_time_str != NULL) // NOLINT
+        if(closest_time_str != NULL)
         {
             gps = TimeLib::str2gpstime(closest_time_str);
         }
@@ -402,7 +402,7 @@ int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors,
     /* Populate subsets */
     if(listvalid && !slist.empty())
     {
-        List<RasterSubset*>::Iterator lit(slist);
+        const List<RasterSubset*>::Iterator lit(slist);
         for(int i = 0; i < lit.length; i++)
         {
             const RasterSubset* subset = lit[i];

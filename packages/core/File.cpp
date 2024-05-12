@@ -74,11 +74,11 @@ int File::luaCreate(lua_State* L)
     try
     {
         /* Get Parameters */
-        int         role      = (int)getLuaInteger(L, 1);
-        int         format    = (int)getLuaInteger(L, 2);
-        const char* file_str  = getLuaString(L, 3);
-        File::io_t  file_io   = (File::io_t)getLuaInteger(L, 4, true, File::FLUSHED);
-        long        max_file  = getLuaInteger(L, 5, true, File::DEFAULT_FILE_MAX_SIZE);
+        const int         role      = (int)getLuaInteger(L, 1);
+        const int         format    = (int)getLuaInteger(L, 2);
+        const char*       file_str  = getLuaString(L, 3);
+        const File::io_t  file_io   = (File::io_t)getLuaInteger(L, 4, true, File::FLUSHED);
+        const long        max_file  = getLuaInteger(L, 5, true, File::DEFAULT_FILE_MAX_SIZE);
 
         /* Check Access Type */
         if(role != File::READER && role != File::WRITER)
@@ -125,7 +125,7 @@ File::File (lua_State* L, const char* _filename, type_t _type, role_t _role, io_
     currFile = 0;
     if(role == READER)
     {
-        int num_files = createFileListForReading(filename, NULL);
+        const int num_files = createFileListForReading(filename, NULL);
         if(num_files > 0)
         {
             fileList = new char* [num_files];
@@ -142,7 +142,7 @@ File::File (lua_State* L, const char* _filename, type_t _type, role_t _role, io_
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s (%s, %s, %s)", filename, type2str(type), role == READER ? "READER" : "WRITER", io2str(io)) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s (%s, %s, %s)", filename, type2str(type), role == READER ? "READER" : "WRITER", io2str(io)) + 1;
     config = new char[cfglen];
     sprintf(config, "%s (%s, %s, %s)", filename, type2str(type), role == READER ? "READER" : "WRITER", io2str(io));
 }
@@ -218,7 +218,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
         }
 
         /* Write File Header */
-        int hdr_bytes = writeFileHeader();
+        const int hdr_bytes = writeFileHeader();
         if(hdr_bytes < 0)
         {
             return hdr_bytes;
@@ -351,7 +351,7 @@ int File::readBuffer (void* buf, int len, int timeout)
         int n = 0;
         while(recv_bytes < len)
         {
-            int ch = getc(fp);
+            const int ch = getc(fp);
             if(ch == '\n')
             {
                 break;
@@ -370,7 +370,7 @@ int File::readBuffer (void* buf, int len, int timeout)
             {
                 char *endptr;
                 errno = 0;
-                unsigned long result = strtoul(b, &endptr, 0);
+                const unsigned long result = strtoul(b, &endptr, 0);
                 if( (endptr == b) ||
                     ((result == ULONG_MAX || result == 0) && errno == ERANGE) )
                 {

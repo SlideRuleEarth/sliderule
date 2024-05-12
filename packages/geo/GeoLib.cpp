@@ -188,7 +188,7 @@ GeoLib::TIFFImage::~TIFFImage(void)
  *----------------------------------------------------------------------------*/
 uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
 {
-    uint32_t offset = (y * width) + x;
+    const uint32_t offset = (y * width) + x;
     if(offset < size) return raster[offset];
     return INVALID_PIXEL;
 }
@@ -236,8 +236,8 @@ int GeoLib::TIFFImage::luaPixel (lua_State* L)
     try
     {
         GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
-        int x = getLuaInteger(L, 2);
-        int y = getLuaInteger(L, 3);
+        const int x = getLuaInteger(L, 2);
+        const int y = getLuaInteger(L, 3);
         if(x < 0 || x >= (int)lua_obj->width || y < 0 || y >= (int)lua_obj->length)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->length);
@@ -310,7 +310,7 @@ int GeoLib::luaCalcUTM (lua_State* L)
     }
 
     UTMTransform transform(latitude, longitude);
-    point_t coord = transform.calculateCoordinates(latitude, longitude);
+    const point_t coord = transform.calculateCoordinates(latitude, longitude);
     if(!transform.in_error)
     {
         lua_pushinteger(L, transform.zone);
@@ -340,10 +340,10 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
     }
 
     /* populate attributes */
-    uint32_t palette_size = 1024; // 2^(pixelsize) * 4
-	uint32_t image_size	= height * modup(width, 4);
-	uint32_t data_offset  = 0x36 + palette_size; // header plus palette
-	uint32_t file_size	= data_offset + image_size;
+    const uint32_t palette_size = 1024; // 2^(pixelsize) * 4
+	const uint32_t image_size	= height * modup(width, 4);
+	const uint32_t data_offset  = 0x36 + palette_size; // header plus palette
+	const uint32_t file_size	= data_offset + image_size;
 
     /* populate header */
     bmp_hdr_t bmp_hdr = {
@@ -388,8 +388,8 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
     {
         for(int x = 0; x < width; x++)
         {
-            int offset = (y * width) + x;
-            double normalized_pixel = (static_cast<double>(data[offset]) / static_cast<double>(0xFFFFFFFF)) * 256.0;
+            const int offset = (y * width) + x;
+            const double normalized_pixel = (static_cast<double>(data[offset]) / static_cast<double>(0xFFFFFFFF)) * 256.0;
             uint8_t scaled_pixel = static_cast<uint8_t>(normalized_pixel);
             fwrite(&scaled_pixel, 1, 1, bmp_file);
         }

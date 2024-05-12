@@ -156,7 +156,7 @@ CcsdsSpacePacket::~CcsdsSpacePacket(void)
  *----------------------------------------------------------------------------*/
 int CcsdsSpacePacket::getAPID(void) const
 {
-    uint16_t sid = (buffer[0] << 8) + buffer[1];
+    const uint16_t sid = (buffer[0] << 8) + buffer[1];
     return sid & 0x07FF;
 }
 
@@ -204,7 +204,7 @@ bool CcsdsSpacePacket::isCMD(void) const
  *----------------------------------------------------------------------------*/
 void CcsdsSpacePacket::setCMD(void)
 {
-    uint8_t flag = 1;
+    const uint8_t flag = 1;
     buffer[0] = (buffer[0] & 0xEF) | ((flag << 4) & 0x10);
 }
 
@@ -272,7 +272,7 @@ void CcsdsSpacePacket::setSEQ(int value)
  *----------------------------------------------------------------------------*/
 CcsdsSpacePacket::seg_flags_t CcsdsSpacePacket::getSEQFLG(void) const
 {
-    uint8_t flags = buffer[2] & 0xC0;
+    const uint8_t flags = buffer[2] & 0xC0;
 
     switch(flags)
     {
@@ -304,7 +304,7 @@ void CcsdsSpacePacket::setSEQFLG(seg_flags_t value)
  *----------------------------------------------------------------------------*/
 int CcsdsSpacePacket::getLEN(void) const
 {
-    int len = (buffer[4] << 8) + (buffer[5] + 7);
+    const int len = (buffer[4] << 8) + (buffer[5] + 7);
     if(max_pkt_len > 0)
     {
         if(len > max_pkt_len) mlog(WARNING, "out of bounds packet size detected: %d > %d", len, max_pkt_len);
@@ -491,8 +491,8 @@ bool CcsdsSpacePacket::setCdsMsecs(uint32_t msecs)
  *----------------------------------------------------------------------------*/
 double CcsdsSpacePacket::getCdsTime(void) const
 {
-    double days = getCdsDays();
-    double ms = getCdsMsecs();
+    const double days = getCdsDays();
+    const double ms = getCdsMsecs();
 
     return (days * (double)TIME_SECS_IN_A_DAY) + (ms / (double)1000);
 }
@@ -510,11 +510,11 @@ CcsdsSpacePacket::pkt_time_t CcsdsSpacePacket::getCdsTimeAsGmt(void) const
  *----------------------------------------------------------------------------*/
 bool CcsdsSpacePacket::setCdsTime(double gps)
 {
-    uint32_t seconds          = (uint32_t)gps;
-    uint32_t subseconds       = (uint32_t)((TIME_32BIT_FLOAT_MAX_VALUE) * (gps - (double)seconds));
-    uint16_t days             = (uint16_t)(seconds / TIME_SECS_IN_A_DAY);
-    uint32_t leftoverseconds  = seconds % TIME_SECS_IN_A_DAY;
-    uint32_t milliseconds     = (1000 * leftoverseconds) + (uint32_t) ( (double)(subseconds) / pow(2,32) * 1.0E+3 );;
+    const uint32_t seconds          = (uint32_t)gps;
+    const uint32_t subseconds       = (uint32_t)((TIME_32BIT_FLOAT_MAX_VALUE) * (gps - (double)seconds));
+    const uint16_t days             = (uint16_t)(seconds / TIME_SECS_IN_A_DAY);
+    const uint32_t leftoverseconds  = seconds % TIME_SECS_IN_A_DAY;
+    const uint32_t milliseconds     = (1000 * leftoverseconds) + (uint32_t) ( (double)(subseconds) / pow(2,32) * 1.0E+3 );;
 
     if(setCdsDays(days))
     {
@@ -563,7 +563,7 @@ bool CcsdsSpacePacket::loadChecksum(void)
 {
     if(setChecksum(0) == true)
     {
-        int cs = computeChecksum();
+        const int cs = computeChecksum();
         if(cs != CCSDS_ERROR)
         {
             setChecksum(cs);
@@ -579,10 +579,10 @@ bool CcsdsSpacePacket::loadChecksum(void)
  *----------------------------------------------------------------------------*/
 bool CcsdsSpacePacket::validChecksum(void) const
 {
-    int exp_cs = getChecksum();
+    const int exp_cs = getChecksum();
     if(exp_cs != CCSDS_ERROR)
     {
-        int act_cs = computeChecksum();
+        const int act_cs = computeChecksum();
         if(exp_cs == act_cs)
         {
             return true;
@@ -653,7 +653,7 @@ int CcsdsSpacePacket::appendStream(unsigned char* bytes, int len)
 
     if(index < CCSDS_SPACE_HEADER_SIZE)
     {
-        int hdr_left = CCSDS_SPACE_HEADER_SIZE - index;
+        const int hdr_left = CCSDS_SPACE_HEADER_SIZE - index;
         hdr_bytes_copied = len < hdr_left ? len : hdr_left;
         if(hdr_bytes_copied >= 0)
         {
@@ -668,8 +668,8 @@ int CcsdsSpacePacket::appendStream(unsigned char* bytes, int len)
 
     if(index >= CCSDS_SPACE_HEADER_SIZE)
     {
-        int payload_left = getLEN() - index;
-        int stream_left = len - hdr_bytes_copied;
+        const int payload_left = getLEN() - index;
+        const int stream_left = len - hdr_bytes_copied;
 
         pay_bytes_copied = payload_left < stream_left ? payload_left : stream_left;
         if( (max_pkt_len <= 0) ||
@@ -817,8 +817,8 @@ CcsdsEncapPacket::~CcsdsEncapPacket(void)
  *----------------------------------------------------------------------------*/
 int CcsdsEncapPacket::getAPID(void) const
 {
-    int proto1 = (buffer[0] & 0x1C) >> 2;
-    int lol = buffer[0] & 0x03;
+    const int proto1 = (buffer[0] & 0x1C) >> 2;
+    const int lol = buffer[0] & 0x03;
 
     if(proto1 == CCSDS_ENCAP_PROTO_PRIVATE)
     {
@@ -843,8 +843,8 @@ int CcsdsEncapPacket::getAPID(void) const
  *----------------------------------------------------------------------------*/
 void CcsdsEncapPacket::setAPID(int apid)
 {
-    uint16_t hdr = (uint16_t)apid;
-    int lol = (hdr >> 10) & 0x03;
+    const uint16_t hdr = (uint16_t)apid;
+    const int lol = (hdr >> 10) & 0x03;
     buffer[0] = hdr >> 8;
     if(lol > 0) buffer[1] = hdr & 0xFF;
 }
@@ -856,7 +856,7 @@ void CcsdsEncapPacket::setAPID(int apid)
  *----------------------------------------------------------------------------*/
 int CcsdsEncapPacket::getSEQ(void) const
 {
-    int lol = buffer[0] & 0x03;
+    const int lol = buffer[0] & 0x03;
     if(lol == 3)
     {
         uint16_t seq = buffer[2];
@@ -875,10 +875,10 @@ int CcsdsEncapPacket::getSEQ(void) const
  *----------------------------------------------------------------------------*/
 void CcsdsEncapPacket::setSEQ(int value)
 {
-    int lol = buffer[0] & 0x03;
+    const int lol = buffer[0] & 0x03;
     if(lol == 3)
     {
-        uint16_t seq = (uint16_t)value;
+        const uint16_t seq = (uint16_t)value;
         buffer[2] = (seq >> 8) & 0xFF;
         buffer[3] = seq & 0xFF;
     }
@@ -893,7 +893,7 @@ int CcsdsEncapPacket::getLEN(void) const
 {
     int pktlen = 0;
 
-    int lol = buffer[0] & 0x03;
+    const int lol = buffer[0] & 0x03;
     if(lol == 0)
     {
         pktlen = 1;
@@ -931,20 +931,20 @@ int CcsdsEncapPacket::getLEN(void) const
  *----------------------------------------------------------------------------*/
 void CcsdsEncapPacket::setLEN(int value)
 {
-    int lol = buffer[0] & 0x03;
+    const int lol = buffer[0] & 0x03;
     if(lol == 1)
     {
         buffer[1] = (unsigned char)value;
     }
     else if(lol == 2)
     {
-        uint16_t len = (uint16_t)value;
+        const uint16_t len = (uint16_t)value;
         buffer[2] = (len >> 8) & 0xFF;
         buffer[3] = len & 0xFF;
     }
     else if(lol == 3)
     {
-        uint32_t len = (uint32_t)value;
+        const uint32_t len = (uint32_t)value;
         buffer[4] = (len >> 24) & 0xFF;
         buffer[5] = (len >> 16) & 0xFF;
         buffer[6] = (len >> 8) & 0xFF;
@@ -1020,8 +1020,8 @@ int CcsdsEncapPacket::appendStream(unsigned char* bytes, int len)
         hdr_size = getHdrSize();
         if(index < hdr_size)
         {
-            int hdr_left = hdr_size - index;
-            int stream_left = len - len_bytes_copied;
+            const int hdr_left = hdr_size - index;
+            const int stream_left = len - len_bytes_copied;
 
             hdr_bytes_copied = stream_left < hdr_left ? stream_left : hdr_left;
             if(hdr_bytes_copied >= 0)
@@ -1037,8 +1037,8 @@ int CcsdsEncapPacket::appendStream(unsigned char* bytes, int len)
     }
     if(index >= hdr_size)
     {
-        int payload_left = getLEN() - index;
-        int stream_left = len - len_bytes_copied - hdr_bytes_copied;
+        const int payload_left = getLEN() - index;
+        const int stream_left = len - len_bytes_copied - hdr_bytes_copied;
 
         pay_bytes_copied = payload_left < stream_left ? payload_left : stream_left;
         if( (max_pkt_len <= 0) ||
@@ -1099,7 +1099,7 @@ unsigned char* CcsdsEncapPacket::getPayload(void)
  *----------------------------------------------------------------------------*/
 int CcsdsEncapPacket::getHdrSize(void) const
 {
-    int lol = buffer[0] & 0x03;
+    const int lol = buffer[0] & 0x03;
          if(lol == 0) return 1;
     else if(lol == 1) return 2;
     else if(lol == 2) return 4;

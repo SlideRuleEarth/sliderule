@@ -99,8 +99,8 @@ int LuaEndpoint::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        double normal_mem_thresh = getLuaFloat(L, 1, true, DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD);
-        double stream_mem_thresh = getLuaFloat(L, 2, true, DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD);
+        const double normal_mem_thresh = getLuaFloat(L, 1, true, DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD);
+        const double stream_mem_thresh = getLuaFloat(L, 2, true, DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD);
 
         /* Create Lua Endpoint */
         return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh));
@@ -142,16 +142,16 @@ void* LuaEndpoint::requestThread (void* parm)
     EndpointObject::info_t* info = (EndpointObject::info_t*)parm;
     EndpointObject::Request* request = info->request;
     LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
-    double start = TimeLib::latchtime();
+    const double start = TimeLib::latchtime();
 
     /* Get Request Script */
     const char* script_pathname = LuaEngine::sanitize(request->resource);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
+    const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
-    event_level_t log_level = info->streaming ? INFO : DEBUG;
+    const event_level_t log_level = info->streaming ? INFO : DEBUG;
     mlog(log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
 
     /* Create Publisher */
@@ -191,16 +191,16 @@ void* LuaEndpoint::requestThread (void* parm)
     {
         /* Respond with Unauthorized Error */
         char header[MAX_HDR_SIZE];
-        int header_length = buildheader(header, Unauthorized);
+        const int header_length = buildheader(header, Unauthorized);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
     /* End Response */
-    int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
+    const int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
     if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
 
     /* Generate Metric for Endpoint */
-    double duration = TimeLib::latchtime() - start;
+    const double duration = TimeLib::latchtime() - start;
     gauge_metric(INFO, request->resource, duration);
 
     /* Clean Up */
@@ -245,10 +245,10 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
     }
 
     /* Determine Response Type before starting thread - thread frees info (race cond possible) */
-    rsptype_t response_type = info->streaming ? STREAMING : NORMAL;
+    const rsptype_t response_type = info->streaming ? STREAMING : NORMAL;
 
     /* Start Thread */
-    Thread pid(requestThread, info, false);
+    const Thread pid(requestThread, info, false);
 
     /* Return Response Type */
     return response_type;
@@ -271,7 +271,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
         engine->setString(LUA_REQUEST_ID, request->id);
-        bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
+        const bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
         /* Send Response */
         if(status)
@@ -279,28 +279,28 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             const char* result = engine->getResult();
             if(result)
             {
-                int result_length = StringLib::size(result);
-                int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
+                const int result_length = StringLib::size(result);
+                const int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
                 rspq->postCopy(result, result_length, POST_TIMEOUT_MS);
             }
             else
             {
-                int header_length = buildheader(header, Not_Found);
+                const int header_length = buildheader(header, Not_Found);
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
             }
         }
         else
         {
             mlog(ERROR, "Failed to execute request: %s", scriptpath);
-            int header_length = buildheader(header, Internal_Server_Error);
+            const int header_length = buildheader(header, Internal_Server_Error);
             rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
         }
     }
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
-        int header_length = buildheader(header, Service_Unavailable);
+        const int header_length = buildheader(header, Service_Unavailable);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 
@@ -323,7 +323,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
         ((mem = OsApi::memusage()) < streamRequestMemoryThreshold) )
     {
         /* Send Header */
-        int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
+        const int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
 
         /* Create Engine */
@@ -341,7 +341,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
-        int header_length = buildheader(header, Service_Unavailable);
+        const int header_length = buildheader(header, Service_Unavailable);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
     }
 

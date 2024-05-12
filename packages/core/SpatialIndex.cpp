@@ -73,9 +73,9 @@ int SpatialIndex::luaCreate (lua_State* L)
     try
     {
         /* Get Asset Directory */
-        Asset*          _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        MathLib::proj_t _projection = (MathLib::proj_t)getLuaInteger(L, 2);
-        int             _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
+        Asset*                _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
+        const MathLib::proj_t _projection = (MathLib::proj_t)getLuaInteger(L, 2);
+        const int             _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
 
         /* Return AssetIndex Object */
         return createLuaObject(L, new SpatialIndex(L, _asset, _projection, _threshold));
@@ -111,7 +111,7 @@ SpatialIndex::~SpatialIndex(void)
 void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rspan)
 {
     /* Project to Polar polarinates */
-    projspan_t proj = project(node->span);
+    const projspan_t proj = project(node->span);
 
     /* Split Region */
     projspan_t lproj;
@@ -119,7 +119,7 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
     if(node->depth % 2 == 0) // even depth
     {
         /* Split Across Radius */
-        double split_val = (proj.p0.x + proj.p1.x) / 2.0;
+        const double split_val = (proj.p0.x + proj.p1.x) / 2.0;
 
         lproj.p0.x = proj.p0.x;
         lproj.p0.y = proj.p0.y;
@@ -134,7 +134,7 @@ void SpatialIndex::split (node_t* node, spatialspan_t& lspan, spatialspan_t& rsp
     else // odd depth
     {
         /* Split Across Angle */
-        double split_val = (proj.p0.y + proj.p1.y) / 2.0;
+        const double split_val = (proj.p0.y + proj.p1.y) / 2.0;
 
         lproj.p0.x = proj.p0.x;
         lproj.p0.y = split_val;
@@ -161,19 +161,19 @@ bool SpatialIndex::isleft (node_t* node, const spatialspan_t& span)
     assert(node->right);
 
     /* Project to Polar polarinates */
-    projspan_t lproj = project(node->left->span);
-    projspan_t rproj = project(node->right->span);
-    projspan_t sproj = project(span);
+    const projspan_t lproj = project(node->left->span);
+    const projspan_t rproj = project(node->right->span);
+    const projspan_t sproj = project(span);
 
     /* Compare Against Split Value */
     if(node->depth % 2 == 0) // even depth = Radius
     {
-        double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
+        const double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
         return (sproj.p0.x <= split_val);
     }
 
     // else odd depth = Angle
-    double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
+    const double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
     return (sproj.p0.y <= split_val);
 }
 
@@ -187,19 +187,19 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
     assert(node->right);
 
     /* Project to Polar polarinates */
-    projspan_t lproj = project(node->left->span);
-    projspan_t rproj = project(node->right->span);
-    projspan_t sproj = project(span);
+    const projspan_t lproj = project(node->left->span);
+    const projspan_t rproj = project(node->right->span);
+    const projspan_t sproj = project(span);
 
     /* Compare Against Split Value */
     if(node->depth % 2 == 0) // even depth = Radius
     {
-        double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
+        const double split_val = (lproj.p1.x + rproj.p0.x) / 2.0;
         return (sproj.p1.x >= split_val);
     }
 
     // else odd depth = Angle
-    double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
+    const double split_val = (lproj.p1.y + rproj.p0.y) / 2.0;
     return (sproj.p1.y >= split_val);
 }
 
@@ -209,20 +209,20 @@ bool SpatialIndex::isright (node_t* node, const spatialspan_t& span)
 bool SpatialIndex::intersect (const spatialspan_t& span1, const spatialspan_t& span2)
 {
     /* Project to Polar polarinates */
-    projspan_t polar1 = project(span1);
-    projspan_t polar2 = project(span2);
+    const projspan_t polar1 = project(span1);
+    const projspan_t polar2 = project(span2);
 
     /* Check Intersection in Radius */
-    bool xi = ((polar1.p0.x >= polar2.p0.x && polar1.p0.x <= polar2.p1.x) ||
-               (polar1.p1.x >= polar2.p0.x && polar1.p1.x <= polar2.p1.x) ||
-               (polar2.p0.x >= polar1.p0.x && polar2.p0.x <= polar1.p1.x) ||
-               (polar2.p1.x >= polar1.p0.x && polar2.p1.x <= polar1.p1.x));
+    const bool xi = ((polar1.p0.x >= polar2.p0.x && polar1.p0.x <= polar2.p1.x) ||
+                     (polar1.p1.x >= polar2.p0.x && polar1.p1.x <= polar2.p1.x) ||
+                     (polar2.p0.x >= polar1.p0.x && polar2.p0.x <= polar1.p1.x) ||
+                     (polar2.p1.x >= polar1.p0.x && polar2.p1.x <= polar1.p1.x));
 
     /* Check Intersection in Angle */
-    bool yi = ((polar1.p0.y >= polar2.p0.y && polar1.p0.y <= polar2.p1.y) ||
-               (polar1.p1.y >= polar2.p0.y && polar1.p1.y <= polar2.p1.y) ||
-               (polar2.p0.y >= polar1.p0.y && polar2.p0.y <= polar1.p1.y) ||
-               (polar2.p1.y >= polar1.p0.y && polar2.p1.y <= polar1.p1.y));
+    const bool yi = ((polar1.p0.y >= polar2.p0.y && polar1.p0.y <= polar2.p1.y) ||
+                     (polar1.p1.y >= polar2.p0.y && polar1.p1.y <= polar2.p1.y) ||
+                     (polar2.p0.y >= polar1.p0.y && polar2.p0.y <= polar1.p1.y) ||
+                     (polar2.p1.y >= polar1.p0.y && polar2.p1.y <= polar1.p1.y));
 
     /* Return Intersection */
     return (xi && yi);
@@ -236,8 +236,8 @@ spatialspan_t SpatialIndex::combine (const spatialspan_t& span1, const spatialsp
     projspan_t proj;
 
     /* Project to Polar Coordinates */
-    projspan_t polar1 = project(span1);
-    projspan_t polar2 = project(span2);
+    const projspan_t polar1 = project(span1);
+    const projspan_t polar2 = project(span2);
 
     /* Combine Spans */
     proj.p0.x = MIN(MIN(MIN(polar1.p0.x, polar2.p0.x), polar1.p1.x), polar2.p1.x);
@@ -324,7 +324,7 @@ spatialspan_t SpatialIndex::luatable2span (lua_State* L, int parm)
  *----------------------------------------------------------------------------*/
 void SpatialIndex::displayspan (const spatialspan_t& span)
 {
-    projspan_t proj = project(span);
+    const projspan_t proj = project(span);
     print2term("[%d,%d x %d,%d]", (int)(proj.p0.x*100), (int)(proj.p0.y*100), (int)(proj.p1.x*100), (int)(proj.p1.y*100));
 }
 
@@ -342,10 +342,10 @@ SpatialIndex::projspan_t SpatialIndex::project (const spatialspan_t& span)
     proj.p0 = MathLib::coord2point(span.c0, projection);
     proj.p1 = MathLib::coord2point(span.c1, projection);
 
-    double xmin = MIN(proj.p0.x, proj.p1.x);
-    double ymin = MIN(proj.p0.y, proj.p1.y);
-    double xmax = MAX(proj.p0.x, proj.p1.x);
-    double ymax = MAX(proj.p0.y, proj.p1.y);
+    const double xmin = MIN(proj.p0.x, proj.p1.x);
+    const double ymin = MIN(proj.p0.y, proj.p1.y);
+    const double xmax = MAX(proj.p0.x, proj.p1.x);
+    const double ymax = MAX(proj.p0.y, proj.p1.y);
 
     proj.p0.x = xmin;
     proj.p0.y = ymin;
@@ -382,7 +382,7 @@ int SpatialIndex::luaProject (lua_State* L)
         c.lat = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
-        MathLib::point_t p = MathLib::coord2point(c, lua_obj->projection);
+        const MathLib::point_t p = MathLib::coord2point(c, lua_obj->projection);
         lua_pushnumber(L, p.x);
         lua_pushnumber(L, p.y);
 
@@ -414,7 +414,7 @@ int SpatialIndex::luaSphere (lua_State* L)
         p.y = getLuaFloat(L, 3);
 
         /* Convert Coordinates */
-        MathLib::coord_t c = MathLib::point2coord(p, lua_obj->projection);
+        const MathLib::coord_t c = MathLib::point2coord(p, lua_obj->projection);
         lua_pushnumber(L, c.lon);
         lua_pushnumber(L, c.lat);
 
@@ -441,8 +441,8 @@ int SpatialIndex::luaSplit (lua_State* L)
         SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Span */
-        spatialspan_t span = lua_obj->luatable2span(L, 2);
-        int depth = getLuaInteger(L, 3, true, 0);
+        const spatialspan_t span = lua_obj->luatable2span(L, 2);
+        const int depth = getLuaInteger(L, 3, true, 0);
 
         /* Build Temporary Node (to split) */
         node_t node;
@@ -492,11 +492,11 @@ int SpatialIndex::luaIntersect (lua_State* L)
         SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Spans */
-        spatialspan_t span1 = lua_obj->luatable2span(L, 2);
-        spatialspan_t span2 = lua_obj->luatable2span(L, 3);
+        const spatialspan_t span1 = lua_obj->luatable2span(L, 2);
+        const spatialspan_t span2 = lua_obj->luatable2span(L, 3);
 
         /* Get Intersection */
-        bool _intersect = lua_obj->intersect(span1, span2);
+        const bool _intersect = lua_obj->intersect(span1, span2);
         lua_pushboolean(L, _intersect);
 
         /* Return Intersection */
@@ -522,11 +522,11 @@ int SpatialIndex::luaCombine (lua_State* L)
         SpatialIndex* lua_obj = dynamic_cast<SpatialIndex*>(getLuaSelf(L, 1));
 
         /* Get Spatial Spans */
-        spatialspan_t span1 = lua_obj->luatable2span(L, 2);
-        spatialspan_t span2 = lua_obj->luatable2span(L, 3);
+        const spatialspan_t span1 = lua_obj->luatable2span(L, 2);
+        const spatialspan_t span2 = lua_obj->luatable2span(L, 3);
 
         /* Combine Spans */
-        spatialspan_t span = lua_obj->combine(span1, span2);
+        const spatialspan_t span = lua_obj->combine(span1, span2);
 
         /* Return Span */
         lua_newtable(L);

@@ -62,14 +62,14 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
     try
     {
         /* Get Input Queues */
-        int inq_table_index = 1;
+        const int inq_table_index = 1;
         if(!lua_istable(L, inq_table_index))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply table of input queues");
         }
 
         /* Get number of names in table */
-        int num_names = lua_rawlen(L, inq_table_index);
+        const int num_names = lua_rawlen(L, inq_table_index);
         if(num_names <= 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply at least one input queue");
@@ -81,7 +81,7 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
         {
             /* Get name */
             lua_rawgeti(L, inq_table_index, i+1);
-            string name_str(getLuaString(L, -1));
+            const string name_str(getLuaString(L, -1));
 
             /* Add name to list */
             inq_names.add(name_str);
@@ -156,7 +156,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
     CcsdsPacketInterleaver* processor = static_cast<CcsdsPacketInterleaver*>(parm);
 
     /* Get Number of Inputs */
-    int num_inputs = processor->inQs.length();
+    const int num_inputs = processor->inQs.length();
     if(num_inputs <= 0)
     {
         mlog(CRITICAL, "Must have at least one input");
@@ -184,13 +184,13 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
         {
             if(inq_valid[i] && pkt_refs[i].size == 0)
             {
-                int status = processor->inQs[i]->receiveRef(pkt_refs[i], SYS_TIMEOUT);
+                const int status = processor->inQs[i]->receiveRef(pkt_refs[i], SYS_TIMEOUT);
                 if(status > 0)
                 {
                     if(pkt_refs[i].size > 0)
                     {
                         /* Capture Packet Time */
-                        CcsdsSpacePacket pkt(reinterpret_cast<unsigned char*>(pkt_refs[i].data), pkt_refs[i].size);
+                        const CcsdsSpacePacket pkt(reinterpret_cast<unsigned char*>(pkt_refs[i].data), pkt_refs[i].size);
                         pkt_times[i] = pkt.getCdsTime();
 
                         /* Check Time Filter */
@@ -230,7 +230,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
         {
             if(inq_valid[i] && pkt_refs[i].size > 0)
             {
-                if(pkt_times[i] < earliest_pkt_time)  // NOLINT
+                if(pkt_times[i] < earliest_pkt_time)  // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
                 {
                     earliest_pkt = i;
                     earliest_pkt_time = pkt_times[i];
@@ -287,7 +287,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
  *----------------------------------------------------------------------------*/
 int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
 {
-    bool status = false;
+    const bool status = false;
 
     try
     {
@@ -298,7 +298,7 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
         const char* gmt_str = getLuaString(L, 2);
 
         /* Get Time */
-        int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
+        const int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse time string %s", gmt_str);
@@ -321,7 +321,7 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
  *----------------------------------------------------------------------------*/
 int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
 {
-    bool status = false;
+    const bool status = false;
 
     try
     {
@@ -332,7 +332,7 @@ int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
         const char* gmt_str = getLuaString(L, 2);
 
         /* Get Time */
-        int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
+        const int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse time string %s", gmt_str);

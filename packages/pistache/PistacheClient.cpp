@@ -210,7 +210,7 @@ int PistacheClient::luaRequest(lua_State* L)
                         },
                         [&](std::exception_ptr exc)
                         {
-                            try { std::rethrow_exception(exc); }
+                            try { std::rethrow_exception(std::move(exc)); }
                             catch (const std::exception &e)
                             {
                                 mlog(CRITICAL, "Failed to get response on post to %s: %s", url, e.what());

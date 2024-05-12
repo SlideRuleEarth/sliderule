@@ -230,7 +230,7 @@ SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* _pa
     {
         rasterregion(_parms);
     }
-    else if(_parms->polygon.length() > 0)
+    else if(!_parms->polygon.empty())
     {
         polyregion(_parms);
     }

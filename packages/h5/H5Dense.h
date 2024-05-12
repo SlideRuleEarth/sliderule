@@ -136,15 +136,15 @@ class H5BTreeV2
 
         /* Helpers */
         static bool         isTypeSharedAttrs (uint32_t type_id);
-        uint32_t            checksumLookup3(const void *key, size_t length, uint32_t initval);
+        static uint32_t     checksumLookup3(const void *key, size_t length, uint32_t initval);
         template<typename T, typename V> void safeAssigned(T& type_verify, V& value);
         static void         addrDecode(size_t addr_len, const uint8_t **pp, uint64_t* addr_p);
         static void         varDecode(uint8_t* p, int32_t n, uint8_t l);
         static uint32_t     log2Of2(uint32_t n);
-        uint16_t            sizeOffsetLen(int32_t l);
+        static uint16_t     sizeOffsetLen(int32_t l);
         static uint32_t     lookup3Rot(uint32_t x, uint32_t k);
-        void                lookup3Mix(uint32_t& a, uint32_t& b, uint32_t& c);
-        void                lookup3Final(uint32_t& a, uint32_t& b, uint32_t& c);
+        static void         lookup3Mix(uint32_t& a, uint32_t& b, uint32_t& c);
+        static void                lookup3Final(uint32_t& a, uint32_t& b, uint32_t& c);
 
         /* Type Specific Decode/Comparators */
         static void         decodeType5Record(const uint8_t *raw, void *_nrecord);

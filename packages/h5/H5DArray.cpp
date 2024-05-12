@@ -76,7 +76,7 @@ bool H5DArray::join(int timeout, bool throw_exception) const
 
     if(h5f)
     {
-        H5Future::rc_t rc = h5f->wait(timeout);
+        const H5Future::rc_t rc = h5f->wait(timeout);
         if(rc == H5Future::COMPLETE)
         {
             status = true;
@@ -179,7 +179,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     }
 
     /* Return Number of Bytes Serialized */
-    int64_t elements_available = h5f->info.elements - start_element;
-    int64_t elements_copied = MAX(MIN(elements_available, num_elements), 0);
+    const int64_t elements_available = h5f->info.elements - start_element;
+    const int64_t elements_copied = MAX(MIN(elements_available, num_elements), 0);
     return elements_copied * h5f->info.typesize;
 }

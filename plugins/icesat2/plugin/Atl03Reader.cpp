@@ -813,13 +813,13 @@ Atl03Reader::YapcScore::YapcScore (info_t* info, const Region& region, const Atl
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC]) // NOLINT
+    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC])
     {
         return;
     }
 
     /* Run YAPC */
-    if(info->reader->parms->yapc.version == 3) // NOLINT
+    if(info->reader->parms->yapc.version == 3)
     {
         yapcV3(info, region, atl03);
     }
@@ -1031,13 +1031,13 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const A
     int32_t num_segments = atl03.segment_id.size;
     int32_t num_photons = atl03.dist_ph_along.size;
     score = new uint8_t [num_photons]; // class member freed in deconstructor
-    double* ph_dist = new double[num_photons];  // NOLINT // local array freed below
+    double* ph_dist = new double[num_photons];  // local array freed below
 
     /* Populate Distance Array */
     int32_t ph_index = 0;
-    for(int segment_index = 0; segment_index < num_segments; segment_index++) // NOLINT
+    for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
-        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[segment_index]; ph_in_seg_index++) // NOLINT
+        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[segment_index]; ph_in_seg_index++)
         {
             ph_dist[ph_index] = atl03.segment_dist_x[segment_index] + atl03.dist_ph_along[ph_index];
             ph_index++;
@@ -1087,7 +1087,7 @@ void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const A
             while(neighbor_index < num_photons)
             {
                 /* Check Inside Horizontal Window */
-                double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index]; // NOLINT
+                double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index]; // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
                 if(x_dist <= hWX)
                 {
                     /* Check Inside Vertical Window */
@@ -1206,7 +1206,7 @@ void* Atl03Reader::subsettingThread (void* parm)
         Atl03Data atl03(info, region);
 
         /* Perform YAPC Scoring (if requested) */
-        YapcScore yapc(info, region, atl03); // NOLINT
+        YapcScore yapc(info, region, atl03);
 
         /* Perform ATL08 Classification (if requested) */
         atl08.classify(info, region, atl03);
@@ -1414,8 +1414,8 @@ void* Atl03Reader::subsettingThread (void* parm)
                             .landcover = landcover_flag,
                             .snowcover = snowcover_flag,
                             .atl08_class = (uint8_t)atl08_class,
-                            .atl03_cnf = (int8_t)atl03_cnf,
-                            .quality_ph = (int8_t)quality_ph,
+                            .atl03_cnf = atl03_cnf,
+                            .quality_ph = quality_ph,
                             .yapc_score = yapc_score
                         };
                         state.extent_photons.add(ph);

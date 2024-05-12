@@ -776,7 +776,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         };
                         List<RasterSample*> slist(1);
                         uint32_t err = ndwiRaster->getSamples(point, gps, slist);
-                        if(slist.length() > 0) ndwi = static_cast<float>(slist[0]->value);
+                        if(!slist.empty()) ndwi = static_cast<float>(slist[0]->value);
                         else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, point.y, point.x, err);
                     }
                 }
@@ -803,7 +803,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .ndwi = ndwi,
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
-                    .quality_ph = (int8_t)quality_ph,
+                    .quality_ph = quality_ph,
                 };
                 extent_photons.add(ph);
             } while(false);
@@ -886,7 +886,8 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                             fileptr_t json_file = fopen(json_filename.c_str(), "w");
                             if(json_file == NULL)
                             {
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror(errno));
+                                char err_buf[256];
+                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
                             }
 
 /*
@@ -923,7 +924,8 @@ FString json_contents(R"json({
                             out_file = fopen(filename.c_str(), "w");
                             if(out_file == NULL)
                             {
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror(errno));
+                                char err_buf[256];
+                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
                             }
 
                             /* Write Header */

@@ -72,7 +72,7 @@ DeviceObject::DeviceObject (lua_State* L, role_t _role):
     /* Add Device to List */
     deviceListMut.lock();
     {
-        device_t device = { .device_obj = this };
+        const device_t device = { .device_obj = this };
         deviceList.add(currentListKey, device);
         deviceListKey = currentListKey++;
     }
@@ -104,7 +104,7 @@ char* DeviceObject::getDeviceList(void)
     deviceListMut.lock();
     {
         char devstr[DEV_STR_SIZE];
-        int liststrlen = DEV_STR_SIZE * deviceList.length() + 1;
+        const int liststrlen = DEV_STR_SIZE * deviceList.length() + 1;
         liststr = new char[liststrlen];
         liststr[0] = '\0';
 
@@ -149,7 +149,7 @@ int DeviceObject::luaSend (lua_State* L)
         /* Send Data */
         size_t str_len = 0;
         const char* str = lua_tolstring(L, 2, &str_len);
-        int bytes = dev->writeBuffer(str, (int)str_len);
+        const int bytes = dev->writeBuffer(str, (int)str_len);
 
         /* Set Status */
         status = (bytes == (int)str_len);
@@ -176,9 +176,9 @@ int DeviceObject::luaReceive (lua_State* L)
         DeviceObject* dev = dynamic_cast<DeviceObject*>(getLuaSelf(L, 1));
 
         /* Receive Data */
-        int io_maxsize = OsApi::getIOMaxsize();
+        const int io_maxsize = OsApi::getIOMaxsize();
         char* packet = new char [io_maxsize];
-        int bytes = dev->readBuffer(packet, io_maxsize);
+        const int bytes = dev->readBuffer(packet, io_maxsize);
         lua_pushlstring(L, packet, bytes);
         delete [] packet;
 

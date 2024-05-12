@@ -96,9 +96,9 @@ static void sha256hash(const void* data, size_t len, char* dst)
 static size_t curlWriteFixed(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     fixed_data_t* data = static_cast<fixed_data_t*>(userp);
-    size_t rsps_size = size * nmemb;
-    size_t bytes_available = data->size - data->index;
-    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
+    const size_t rsps_size = size * nmemb;
+    const size_t bytes_available = data->size - data->index;
+    const size_t bytes_to_copy = MIN(rsps_size, bytes_available);
     memcpy(&data->buffer[data->index], buffer, bytes_to_copy);
     data->index += bytes_to_copy;
     return bytes_to_copy;
@@ -124,8 +124,8 @@ static size_t curlWriteStreaming(const void *buffer, size_t size, size_t nmemb, 
 static size_t curlWriteFile(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     file_data_t* data = reinterpret_cast<file_data_t*>(userp);
-    size_t rsps_size = size * nmemb;
-    size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
+    const size_t rsps_size = size * nmemb;
+    const size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
     if(bytes_written > 0) data->size += rsps_size;
     return bytes_written;
 }
@@ -137,8 +137,8 @@ static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 {
     file_data_t* data = reinterpret_cast<file_data_t*>(userp);
 
-    size_t buffer_size = size * nmemb;
-    size_t bytes_read = fread(buffer, 1, buffer_size, data->fd);
+    const size_t buffer_size = size * nmemb;
+    const size_t bytes_read = fread(buffer, 1, buffer_size, data->fd);
     if(bytes_read) data->size += bytes_read;
 
     return bytes_read;
@@ -153,8 +153,8 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
     struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
-    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    const TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
+    const TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     FString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     FString dateHeader("Date: %s", date.c_str());
     headers = curl_slist_append(headers, dateHeader.c_str());
@@ -192,8 +192,8 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
     struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
-    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    const TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
+    const TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     FString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     FString dateHeader("Date: %s", date.c_str());
     headers = curl_slist_append(headers, dateHeader.c_str());
@@ -436,8 +436,8 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials);
 
         /* Build Range Header */
-        unsigned long start_byte = pos + info.index;
-        unsigned long end_byte = pos + size - info.index - 1;
+        const unsigned long start_byte = pos + info.index;
+        const unsigned long end_byte = pos + size - info.index - 1;
         FString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
         headers = curl_slist_append(headers, rangeHeader.c_str());
 
@@ -448,7 +448,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
+                const CURLcode res = curl_easy_perform(curl);
                 if(res == CURLE_OK)
                 {
                     /* Get HTTP Code */
@@ -544,7 +544,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
         while(!rqst_complete && (attempts-- > 0))
         {
             /* Perform Request */
-            CURLcode res = curl_easy_perform(curl);
+            const CURLcode res = curl_easy_perform(curl);
             if(res == CURLE_OK)
             {
                 /* Get Response Size */
@@ -656,7 +656,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
+                const CURLcode res = curl_easy_perform(curl);
                 if(res == CURLE_OK)
                 {
                     /* Get HTTP Code */
@@ -737,7 +737,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     {
         /* Get Size of File */
         fseek(data.fd, 0L, SEEK_END);
-        long content_length = ftell(data.fd);
+        const long content_length = ftell(data.fd);
         fseek(data.fd, 0L, SEEK_SET);
 
         /* Build Headers */
@@ -755,7 +755,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
+                const CURLcode res = curl_easy_perform(curl);
                 if(res == CURLE_OK)
                 {
                     /* Get HTTP Code */
@@ -838,7 +838,7 @@ int S3CurlIODriver::luaGet(lua_State* L)
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
-        int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(rsps_data)
@@ -883,7 +883,7 @@ int S3CurlIODriver::luaDownload(lua_State* L)
         CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        int64_t rsps_size = get(filename, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(filename, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(rsps_size > 0)   status = true;
@@ -912,8 +912,8 @@ int S3CurlIODriver::luaRead(lua_State* L)
         /* Get Parameters */
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
-        long size               = LuaObject::getLuaInteger(L, 3);
-        long pos                = LuaObject::getLuaInteger(L, 4);
+        const long size         = LuaObject::getLuaInteger(L, 3);
+        const long pos          = LuaObject::getLuaInteger(L, 4);
         const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
         const char* identity    = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
@@ -926,7 +926,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
 
         /* Make Request */
         uint8_t* rsps_data = new uint8_t [size];
-        int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(rsps_size > 0)
@@ -971,7 +971,7 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        int64_t upload_size = put(filename, bucket, key, region, &credentials);
+        const int64_t upload_size = put(filename, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(upload_size > 0)

@@ -36,7 +36,6 @@
 #include "PgcWkt.h"
 #include <fstream>
 #include <string>
-#include <fstream>
 #include <sstream>
 #include "OsApi.h"
 

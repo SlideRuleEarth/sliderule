@@ -105,7 +105,7 @@ int Atl03Indexer::luaCreate (lua_State* L)
     }
 
     /* Clean Up Resources Not Used Since Failed to Create Indexer */
-    if(_resources) delete _resources;
+    delete _resources;
 
     /* Release Asset Since Failed to Create Indexer */
     if(_asset) _asset->releaseLuaObject();

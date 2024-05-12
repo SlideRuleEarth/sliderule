@@ -332,7 +332,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     const rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
     if(size > 0)
     {
-        int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
+        const int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
         datasize = size;
         bufsize = hdrsize + datasize;
     }
@@ -341,7 +341,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     if (mode == ALLOCATE)
     {
         *buffer = new unsigned char[bufsize];
-        int bytes_to_copy = MIN(bufsize, memoryUsed);
+        const int bytes_to_copy = MIN(bufsize, memoryUsed);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
     else if (mode == REFERENCE)
@@ -356,7 +356,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     else // if (mode == COPY)
     {
         assert(*buffer);
-        int bytes_to_copy = MIN(bufsize, memoryUsed);
+        const int bytes_to_copy = MIN(bufsize, memoryUsed);
         memcpy(*buffer, recordMemory, bytes_to_copy);
     }
 
@@ -380,7 +380,7 @@ bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verb
 
     /* Serialize Record */
     uint8_t* rec_buf = NULL;
-    int rec_bytes = serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP, size);
+    const int rec_bytes = serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP, size);
 
     /* Post Record */
     int post_status = MsgQ::STATE_TIMEOUT;
@@ -421,7 +421,7 @@ long RecordObject::getRecordId(void)
 {
     if(recordDefinition->id_field)
     {
-        field_t f = getField(recordDefinition->id_field);
+        const field_t f = getField(recordDefinition->id_field);
 
         if(f.type != INVALID_FIELD)
         {
@@ -494,7 +494,7 @@ int RecordObject::getUsedDataSize (void) const
 RecordObject::Field* RecordObject::createRecordField(const char* field_name)
 {
     RecordField* rec_field = NULL;
-    field_t f = getField(field_name);
+    const field_t f = getField(field_name);
     if(f.type != INVALID_FIELD)
     {
         rec_field = new RecordField(*this, f.type, f.offset, f.elements, f.flags);
@@ -514,7 +514,7 @@ bool RecordObject::populate (const char* populate_string)
 
     char(*toks)[MAX_STR_SIZE] = new (char[MAX_INITIALIZERS][MAX_STR_SIZE]);
 
-    int numtoks = StringLib::tokenizeLine(populate_string, StringLib::nsize(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
+    const int numtoks = StringLib::tokenizeLine(populate_string, StringLib::nsize(populate_string, MAX_STR_SIZE - 1) + 1, ' ', MAX_INITIALIZERS, toks);
 
     for(int i = 0; i < numtoks; i++)
     {
@@ -524,7 +524,7 @@ bool RecordObject::populate (const char* populate_string)
             const char* field_str = args[0];
             const char* value_str = args[1];
 
-            field_t f = getField(field_str);
+            const field_t f = getField(field_str);
             if(f.type != RecordObject::INVALID_FIELD)
             {
                 setValueText(f, value_str);
@@ -597,17 +597,17 @@ RecordObject::Field RecordObject::field(const char* field_name)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueText(const field_t& f, const char* val, int element)
 {
-    valType_t val_type = getValueType(f);
+    const valType_t val_type = getValueType(f);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false, element);
+        const field_t ptr_field = getPointedToField(f, false, element);
         if(val == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Cannot null existing pointer!");
         setValueText(ptr_field, val);
     }
     else if(val_type == TEXT)
     {
-        int val_len = StringLib::nsize(val, MAX_VAL_STR_SIZE) + 1;
+        const int val_len = StringLib::nsize(val, MAX_VAL_STR_SIZE) + 1;
         if(val_len <= f.elements)
         {
             memcpy(recordData + TOBYTES(f.offset), reinterpret_cast<const unsigned char*>(val), val_len);
@@ -619,7 +619,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
         }
         else // variable length
         {
-            int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
+            const int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
             if(memory_left > 1)
             {
                 memcpy(recordData + TOBYTES(f.offset), reinterpret_cast<const unsigned char*>(val), memory_left - 1);
@@ -651,12 +651,12 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
 void RecordObject::setValueReal(const field_t& f, double val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
-    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false, element);
+        const field_t ptr_field = getPointedToField(f, false, element);
         setValueReal(ptr_field, val, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN)) // architectures match
@@ -709,12 +709,12 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
 void RecordObject::setValueInteger(const field_t& f, long val, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
-    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false, element);
+        const field_t ptr_field = getPointedToField(f, false, element);
         setValueInteger(ptr_field, val, 0);
     }
     else if(NATIVE_FLAGS == (f.flags & BIGENDIAN))
@@ -773,11 +773,11 @@ void RecordObject::setValueInteger(const field_t& f, long val, int element)
  *----------------------------------------------------------------------------*/
 const char* RecordObject::getValueText(const field_t& f, char* valbuf, int element)
 {
-    valType_t val_type = getValueType(f);
+    const valType_t val_type = getValueType(f);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, true, element);
+        const field_t ptr_field = getPointedToField(f, true, element);
         if(ptr_field.offset == 0) return NULL;
         return getValueText(ptr_field, valbuf);
     }
@@ -793,7 +793,7 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
             }
 
             // variable length
-            int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
+            const int memory_left = MIN(MAX_VAL_STR_SIZE, memoryAllocated - recordDefinition->type_size - TOBYTES(f.offset));
             if(memory_left > 1)
             {
                 return StringLib::copy(valbuf, str, memory_left);
@@ -806,13 +806,13 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
 
     if(val_type == INTEGER && valbuf)
     {
-        long val = getValueInteger(f);
+        const long val = getValueInteger(f);
         return StringLib::format(valbuf, MAX_VAL_STR_SIZE, DEFAULT_LONG_FORMAT, val);
     }
 
     if(val_type == REAL && valbuf)
     {
-        double val = getValueReal(f);
+        const double val = getValueReal(f);
         return StringLib::format(valbuf, MAX_VAL_STR_SIZE, DEFAULT_DOUBLE_FORMAT, val);
     }
 
@@ -825,12 +825,12 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
 double RecordObject::getValueReal(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
-    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false, element);
+        const field_t ptr_field = getPointedToField(f, false, element);
         return getValueReal(ptr_field, 0);
     }
 
@@ -879,12 +879,12 @@ double RecordObject::getValueReal(const field_t& f, int element)
 long RecordObject::getValueInteger(const field_t& f, int element)
 {
     if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
-    uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
+    const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
     if(f.flags & POINTER)
     {
-        field_t ptr_field = getPointedToField(f, false, element);
+        const field_t ptr_field = getPointedToField(f, false, element);
         return getValueInteger(ptr_field, 0);
     }
 
@@ -934,8 +934,8 @@ long RecordObject::getValueInteger(const field_t& f, int element)
 bool RecordObject::setUsedData (int size)
 {
     rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
-    int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
-    int bufsize = hdrsize + size;
+    const int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
+    const int bufsize = hdrsize + size;
     if(bufsize <= memoryAllocated)
     {
         memoryUsed = bufsize;
@@ -987,7 +987,7 @@ RecordObject::recordDefErr_t RecordObject::defineRecord(const char* rec_type, co
 {
     assert(rec_type);
     definition_t* rec_def = NULL;
-    recordDefErr_t status = addDefinition(&rec_def, rec_type, id_field, data_size, fields, num_fields, max_fields);
+    const recordDefErr_t status = addDefinition(&rec_def, rec_type, id_field, data_size, fields, num_fields, max_fields);
     if(status == SUCCESS_DEF) scanDefinition(rec_def, "", rec_type);
     return status;
 }
@@ -1151,7 +1151,7 @@ int RecordObject::getRecordFields(const char* rec_type, char*** field_names, fie
     definition_t* def = getDefinition(rec_type);
     if(def == NULL) return 0;
 
-    int num_fields = def->fields.getKeys(field_names);
+    const int num_fields = def->fields.getKeys(field_names);
     if(num_fields > 0)
     {
         *fields = new field_t* [num_fields];
@@ -1386,7 +1386,7 @@ unsigned long RecordObject::unpackBitField (const unsigned char* buf, int bit_of
 {
     /* Setup Parameters */
     int bits_left = bit_length;
-    int bits_to_lsb = bit_length + bit_offset;
+    const int bits_to_lsb = bit_length + bit_offset;
     int initial_shift = (sizeof(long) - bits_to_lsb) % 8;
     int byte_index = TOBYTES(bits_to_lsb - 1);
 
@@ -1395,8 +1395,8 @@ unsigned long RecordObject::unpackBitField (const unsigned char* buf, int bit_of
     unsigned long _value = 0;
     while(bits_left > 0)
     {
-        unsigned int contribution = buf[byte_index--] >> initial_shift;
-        unsigned int byte_mask = (1 << MIN(8, bits_left)) - 1;
+        const unsigned int contribution = buf[byte_index--] >> initial_shift;
+        const unsigned int byte_mask = (1 << MIN(8, bits_left)) - 1;
         _value += (contribution & byte_mask) * (1L << (i++ * 8));
         bits_left -= 8;
         initial_shift = 0;
@@ -1414,7 +1414,7 @@ void RecordObject::packBitField (unsigned char* buf, int bit_offset, int bit_len
 {
     int bits_remaining = bit_length;
     int bytes_remaining = TOBYTES(bit_length);
-    int base_size_in_bits = TOBYTES(bit_length + 7);
+    const int base_size_in_bits = TOBYTES(bit_length + 7);
     while(bits_remaining > 0)
     {
         int out_byte = (bit_offset + base_size_in_bits + bits_remaining) / 8;
@@ -1463,7 +1463,7 @@ RecordObject::field_t RecordObject::parseImmediateField(const char* str)
     /* Set Type */
     *div = '\0';
     char* type_str = &pstr[1];
-    fieldType_t type = str2ft(type_str);
+    const fieldType_t type = str2ft(type_str);
     if(type == INVALID_FIELD)
     {
         mlog(CRITICAL, "Invalid field type: %s", type_str);
@@ -1754,7 +1754,7 @@ RecordObject::recordDefErr_t RecordObject::addField(definition_t* def, const cha
     int end_of_field;
     if(flags & POINTER) end_of_field = offset + FIELD_TYPE_BYTES[INT32];
     else                end_of_field = type == BITFIELD ? TOBYTES(offset + elements) : offset + (elements * FIELD_TYPE_BYTES[type]);
-    int field_offset = type == BITFIELD ? offset : TOBITS(offset);
+    const int field_offset = type == BITFIELD ? offset : TOBITS(offset);
 
     /* Define Field */
     if(end_of_field <= def->data_size)
@@ -1798,7 +1798,7 @@ void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, 
     Dictionary<field_t>::Iterator field_iter(*fields);
     for(int i = 0; i < field_iter.length; i++)
     {
-        Dictionary<field_t>::kv_t kv = field_iter[i];
+        const Dictionary<field_t>::kv_t kv = field_iter[i];
         FString field_name("%s%s%s", field_prefix, strlen(field_prefix) == 0 ? "" : ".", kv.key);
         const field_t& _field = kv.value;
 

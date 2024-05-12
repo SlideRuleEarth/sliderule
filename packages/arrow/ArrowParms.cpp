@@ -392,7 +392,7 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Get number of fields in table */
-        int num_fields = lua_rawlen(L, index);
+        const int num_fields = lua_rawlen(L, index);
         if(num_fields > 0 && provided) *provided = true;
 
         /* Iterate through each field in table */
@@ -405,7 +405,7 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
             if(lua_isstring(L, -1))
             {
                 const char* field_str = LuaObject::getLuaString(L, -1);
-                string field_name(field_str);
+                const string field_name(field_str);
                 ancillary_fields.push_back(field_name);
             }
 

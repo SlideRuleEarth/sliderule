@@ -232,7 +232,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }
 
 

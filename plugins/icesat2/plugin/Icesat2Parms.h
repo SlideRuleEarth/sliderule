@@ -321,7 +321,7 @@ class Icesat2Parms: public NetsvcParms
         void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
         static void             get_lua_field_list      (lua_State* L, int index, AncillaryFields::list_t** string_list, bool* provided);
         void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
-        const char*             surface2string          (surface_type_t type) const;
+        static const char*      surface2string          (surface_type_t type);
 };
 
 #endif  /* __icesat2_parms__ */

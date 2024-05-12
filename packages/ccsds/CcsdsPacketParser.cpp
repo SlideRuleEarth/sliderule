@@ -74,7 +74,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
         const char*         statq_name  = getLuaString(L, 5, true, NULL);
 
         /* Get Packet Type */
-        CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
+        const CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
         if(pkt_type == CcsdsPacket::INVALID_PACKET)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid packet type: %s", type_str);
@@ -189,7 +189,7 @@ int CcsdsPacketParser::luaPassInvalid (lua_State* L)
         CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool pass_invalid = getLuaBoolean(L, 2);
+        const bool pass_invalid = getLuaBoolean(L, 2);
 
         /* Set Pass Invalid */
         lua_obj->passInvalid = pass_invalid;
@@ -219,7 +219,7 @@ int CcsdsPacketParser::luaResetInvalid (lua_State* L)
         CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool reset_invalid = getLuaBoolean(L, 2);
+        const bool reset_invalid = getLuaBoolean(L, 2);
 
         /* Set Reset Invalid */
         lua_obj->resetInvalid = reset_invalid;
@@ -250,8 +250,8 @@ int CcsdsPacketParser::luaLogPktStats (lua_State* L)
         CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        long            apid    = getLuaInteger(L, 2);
-        event_level_t   lvl     = (event_level_t)getLuaInteger(L, 3, true);
+        const long            apid    = getLuaInteger(L, 2);
+        const event_level_t   lvl     = (event_level_t)getLuaInteger(L, 3, true);
 
         /* Check APID */
         if(apid < 0 && apid > CCSDS_NUM_APIDS)
@@ -330,9 +330,9 @@ int CcsdsPacketParser::luaFilterPkt (lua_State* L)
         CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool enable = getLuaBoolean(L, 2);
-        int start_apid = getLuaInteger(L, 3);
-        int stop_apid = getLuaInteger(L, 4, true, start_apid);
+        const bool enable = getLuaBoolean(L, 2);
+        const int start_apid = getLuaInteger(L, 3);
+        const int stop_apid = getLuaInteger(L, 4, true, start_apid);
 
         /* Set Filter */
         if(start_apid == ALL_APIDS)
@@ -378,7 +378,7 @@ int CcsdsPacketParser::luaClearApidStats (lua_State* L)
         CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        int apid = getLuaInteger(L, 2);
+        const int apid = getLuaInteger(L, 2);
 
         /* Clear Stats */
         if(apid >= 0 && apid < CCSDS_NUM_APIDS)
@@ -422,7 +422,7 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
         CcsdsPacketParser* lua_obj = dynamic_cast<CcsdsPacketParser*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool strip_hdr = getLuaBoolean(L, 2);
+        const bool strip_hdr = getLuaBoolean(L, 2);
 
         /* Set Strip Header on Post */
         lua_obj->stripHdrOnPost = strip_hdr;
@@ -444,7 +444,7 @@ int CcsdsPacketParser::luaStripHdrOnPost (lua_State* L)
  *----------------------------------------------------------------------------*/
 bool CcsdsPacketParser::deinitProcessing (void)
 {
-    int status = outQ->postCopy("", 0, SYS_TIMEOUT);
+    const int status = outQ->postCopy("", 0, SYS_TIMEOUT);
     if(status < 0)
     {
         mlog(CRITICAL, "Failed (%d) to post terminator to %s", status, outQ->getName());
@@ -459,7 +459,7 @@ bool CcsdsPacketParser::deinitProcessing (void)
 bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
 {
     unsigned char*  recv_buffer = msg;
-    int             recv_bytes = bytes;
+    const int       recv_bytes = bytes;
 
     /* Count Total */
     parserBytes += bytes;
@@ -469,10 +469,10 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
     while(recv_index < recv_bytes)
     {
         /* Determine Number of Bytes left */
-        int bytes_left = recv_bytes - recv_index;
+        const int bytes_left = recv_bytes - recv_index;
 
         /* Parse Buffer */
-        int parse_bytes = parser->parseBuffer(&recv_buffer[recv_index], bytes_left, pkt);
+        const int parse_bytes = parser->parseBuffer(&recv_buffer[recv_index], bytes_left, pkt);
         if(parse_bytes >= 0)
         {
             if(!parserInSync) mlog(INFO, "Parser %s re-established sync at %ld", getName(), parserBytes);
@@ -495,8 +495,8 @@ bool CcsdsPacketParser::processMsg (unsigned char* msg, int bytes)
         /* Full Packet Received */
         if(pkt->isFull())
         {
-            uint16_t  apid    = pkt->getAPID();
-            uint16_t  len     = pkt->getLEN();
+            const uint16_t  apid    = pkt->getAPID();
+            const uint16_t  len     = pkt->getLEN();
             if(filter[apid])
             {
                 /* Validate Packet */
@@ -599,7 +599,7 @@ void* CcsdsPacketParser::telemetry_thread (void* parm)
         OsApi::sleep(parser->telemetryWaitSeconds);
 
         /* Calculate Elapsed Time */
-        double last = now;
+        const double last = now;
         now = TimeLib::latchtime();
         if(last == 0.0) continue; // skip first cycle
         elapsed = now - last;
@@ -634,7 +634,7 @@ void* CcsdsPacketParser::telemetry_thread (void* parm)
                 /* Post Stats */
                 if(parser->statQ != NULL)
                 {
-                    int status = parser->statQ->postCopy(&parser->apidStats[apid], sizeof(pktStats_t));
+                    const int status = parser->statQ->postCopy(&parser->apidStats[apid], sizeof(pktStats_t));
                     if(status <= 0)
                     {
                         mlog(CRITICAL, "(%d): failed to post apid stats to queue", status);
@@ -659,12 +659,12 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
     bool status = true;
     try
     {
-        CcsdsSpacePacket candidate_packet(_pkt, _len);
+        const CcsdsSpacePacket candidate_packet(_pkt, _len);
 
         /* Get Primary Header Fields */
-        unsigned int apid = candidate_packet.getAPID();
-        unsigned int seq = candidate_packet.getSEQ();
-        seg_t        seg = candidate_packet.getSEQFLG();
+        const unsigned int apid = candidate_packet.getAPID();
+        const unsigned int seq = candidate_packet.getSEQ();
+        const seg_t        seg = candidate_packet.getSEQFLG();
 
         /* Command Packet Processing */
         if(candidate_packet.isCMD() && candidate_packet.hasSHDR())
@@ -684,7 +684,7 @@ bool CcsdsPacketParser::isValid (unsigned char* _pkt, unsigned int _len, bool ig
             /* Length Validation */
             if(!ignore_length)
             {
-                unsigned int len = candidate_packet.getLEN();
+                const unsigned int len = candidate_packet.getLEN();
                 if(len != _len)
                 {
                     status = false;

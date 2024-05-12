@@ -103,11 +103,11 @@ int LuaLibrarySys::luaopen_syslib (lua_State *L)
 int LuaLibrarySys::lsys_version (lua_State* L)
 {
     /* Get Information */
-    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
-    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
+    const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+    const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-    int64_t duration = TimeLib::gpstime() - launch_time_gps;
+    const int64_t duration = TimeLib::gpstime() - launch_time_gps;
     const char** pkg_list = LuaEngine::getPkgList();
 
     /* Display Information on Terminal */
@@ -225,7 +225,7 @@ int LuaLibrarySys::lsys_log (lua_State* L)
 {
     if(lua_isinteger(L, 1))
     {
-        event_level_t lvl = (event_level_t)lua_tointeger(L, 1);
+        const event_level_t lvl = (event_level_t)lua_tointeger(L, 1);
         if(lua_isstring(L, 2))
         {
             mlog(lvl, "%s", lua_tostring(L, 2));
@@ -266,11 +266,11 @@ int LuaLibrarySys::lsys_lsmsgq (lua_State* L)
 {
     (void)L;
 
-    int num_msgqs = MsgQ::numQ();
+    const int num_msgqs = MsgQ::numQ();
     if(num_msgqs > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
-        int numq = MsgQ::listQ(msgQs, num_msgqs);
+        const int numq = MsgQ::listQ(msgQs, num_msgqs);
         print2term("\n");
         for(int i = 0; i < numq; i++)
         {
@@ -317,7 +317,7 @@ int LuaLibrarySys::lsys_setispublic (lua_State* L)
     if(lua_isstring(L, 1))
     {
         is_public_str = lua_tostring(L, 1);
-        bool is_public = StringLib::match(is_public_str, "True");
+        const bool is_public = StringLib::match(is_public_str, "True");
         OsApi::setIsPublic(is_public);
     }
     else
@@ -431,7 +431,7 @@ int LuaLibrarySys::lsys_setiosize (lua_State* L)
     else
     {
         /* Set I/O Size */
-        int size = lua_tointeger(L, 1);
+        const int size = lua_tointeger(L, 1);
         status = OsApi::setIOMaxsize(size);
     }
 
@@ -458,10 +458,10 @@ int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
 
     if(lua_isnumber(L, 1))
     {
-        int type_mask = lua_tointeger(L, 1);
+        const int type_mask = lua_tointeger(L, 1);
         if(lua_isnumber(L, 2))
         {
-            event_level_t lvl = (event_level_t)lua_tointeger(L, 2);
+            const event_level_t lvl = (event_level_t)lua_tointeger(L, 2);
             if(type_mask & EventLib::LOG) EventLib::setLvl(EventLib::LOG, lvl);
             if(type_mask & EventLib::TRACE) EventLib::setLvl(EventLib::TRACE, lvl);
             if(type_mask & EventLib::METRIC) EventLib::setLvl(EventLib::METRIC, lvl);
@@ -502,7 +502,7 @@ int LuaLibrarySys::lsys_healthy (lua_State* L)
     bool health = true;
 
     /* Check Memory Usage */
-    double current_memory_usage = OsApi::memusage();
+    const double current_memory_usage = OsApi::memusage();
     if(current_memory_usage >= memory_limit)
     {
         health = false;
@@ -532,13 +532,13 @@ int LuaLibrarySys::lsys_lsrec (lua_State* L)
 
     print2term("\n%50s %24s %s\n", "Type", "Id", "Size");
     char** rectypes = NULL;
-    int numrecs = RecordObject::getRecords(&rectypes);
+    const int numrecs = RecordObject::getRecords(&rectypes);
     for(int i = 0; i < numrecs; i++)
     {
         if(pattern == NULL || StringLib::find(rectypes[i], pattern))
         {
             const char* id_field = RecordObject::getRecordIdField(rectypes[i]);
-            int data_size = RecordObject::getRecordDataSize(rectypes[i]);
+            const int data_size = RecordObject::getRecordDataSize(rectypes[i]);
             print2term("%50s %24s %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size);
         }
         delete [] rectypes[i];
@@ -557,9 +557,9 @@ int LuaLibrarySys::lsys_lsobj (lua_State* L)
     vector<LuaObject::object_info_t> globals;
     LuaObject::getGlobalObjects(globals);
     print2term("\n%30s   %s\n", "Object Name", "Reference");
-    for(LuaObject::object_info_t& object: globals)
+    for(const LuaObject::object_info_t& object: globals)
     {
-        long reference_count = object.refCnt;
+        const long reference_count = object.refCnt;
         print2term("%30s   %ld        %s\n", object.objName.c_str(), reference_count, object.objType.c_str());
     }
 
@@ -608,7 +608,7 @@ int LuaLibrarySys::lsys_fileexists (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_memu (lua_State* L)
 {
-    double m = OsApi::memusage();
+    const double m = OsApi::memusage();
     lua_pushnumber(L, m);
     return 1;
 }

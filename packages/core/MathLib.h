@@ -101,6 +101,7 @@ class MathLib
 
         static std::string b64encode(const void* data, const size_t &len);
         static std::string b64decode(const void* data, const size_t &len);
+        static const char* proj2str (proj_t projection);
 
     private:
 

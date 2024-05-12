@@ -51,8 +51,8 @@ int UdpSocket::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* ip_addr   = getLuaString(L, 1);
-        int         port      = (int)getLuaInteger(L, 2);
-        bool        is_server = getLuaBoolean(L, 3);
+        const int   port      = (int)getLuaInteger(L, 2);
+        const bool  is_server = getLuaBoolean(L, 3);
         const char* multicast = getLuaString(L, 4, true, NULL);
 
         /* Get Server Parameter */
@@ -96,7 +96,7 @@ UdpSocket::UdpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
     config = new char[cfglen];
     sprintf(config, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port);
 

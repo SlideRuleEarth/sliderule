@@ -191,7 +191,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
         }
 
         /* Build Sample */
-        RasterSample* sample = new RasterSample(((double)gpsTime / (double)1000.0), 0);
+        RasterSample* sample = new RasterSample(((double)gpsTime / 1000.0), 0);
         sample->value = value;
 
         /* Return Sample */

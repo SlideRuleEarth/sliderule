@@ -124,8 +124,8 @@ bool send2User (const char* fileName, const char* outputPath,
 
     /* Send File to User */
     const char* _path = outputPath;
-    uint32_t send_trace_id = start_trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
-    int _path_len = StringLib::size(_path);
+    const uint32_t send_trace_id = start_trace(INFO, traceId, "send_file", "{\"path\": \"%s\"}", _path);
+    const int _path_len = StringLib::size(_path);
     if( (_path_len > 5) &&
         (_path[0] == 's') &&
         (_path[1] == '3') &&
@@ -199,7 +199,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
         try
         {
             /* Upload to S3 */
-            int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
+            const int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
 
             /* Send Successful Status */
             alert(INFO, RTE_INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
@@ -248,7 +248,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
     {
         /* Get Size of File */
         fseek(fp, 0L, SEEK_END);
-        long file_size = ftell(fp);
+        const long file_size = ftell(fp);
         fseek(fp, 0L, SEEK_SET);
 
         /* Log Status */
@@ -274,7 +274,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
                 RecordObject data_record(dataRecType, 0, false);
                 arrow_file_data_t* data = reinterpret_cast<arrow_file_data_t*>(data_record.getRecordData());
                 StringLib::copy(&data->filename[0], outPath, FILE_NAME_MAX_LEN);
-                size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
+                const size_t bytes_read = fread(data->data, 1, FILE_BUFFER_RSPS_SIZE, fp);
                 if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))
                 {
                     status = false;
@@ -285,7 +285,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
         } while(false);
 
         /* Close File */
-        int rc = fclose(fp);
+        const int rc = fclose(fp);
         if(rc != 0)
         {
             status = false;
@@ -326,7 +326,7 @@ const char* getOutputPath(ArrowParms* parms)
         if(parms->format == ArrowParms::PARQUET) path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
         if(parms->format == ArrowParms::CSV) path_suffix = "csv";
         FString path_name("%s.%016lX", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK));
-        bool use_provided_path = ((parms->path != NULL) && (parms->path[0] != '\0'));
+        const bool use_provided_path = ((parms->path != NULL) && (parms->path[0] != '\0'));
         FString path_str("%s%s/%s%s", path_prefix, asset->getPath(), use_provided_path ? parms->path : path_name.c_str(), path_suffix);
         asset->releaseLuaObject();
 
@@ -371,7 +371,7 @@ const char* getUniqueFileName(const char* id)
 char* createMetadataFileName(const char* fileName)
 {
     std::string path(fileName);
-    size_t dotIndex = path.find_last_of('.');
+    const size_t dotIndex = path.find_last_of('.');
     if(dotIndex != std::string::npos)
     {
         path.resize(dotIndex);
@@ -387,7 +387,7 @@ void removeFile(const char* fileName)
 {
     if(std::filesystem::exists(fileName))
     {
-        int rc = std::remove(fileName);
+        const int rc = std::remove(fileName);
         if(rc != 0)
         {
             char err_buf[256];
@@ -403,7 +403,7 @@ void renameFile (const char* oldName, const char* newName)
 {
     if(std::filesystem::exists(oldName))
     {
-        int rc = std::rename(oldName, newName);
+        const int rc = std::rename(oldName, newName);
         if(rc != 0)
         {
             char err_buf[256];
@@ -442,7 +442,7 @@ int luaSend2User (lua_State* L)
 
         /* Get Trace from Lua Engine */
         lua_getglobal(L, LuaEngine::LUA_TRACEID);
-        uint32_t trace_id = lua_tonumber(L, -1);
+        const uint32_t trace_id = lua_tonumber(L, -1);
 
         /* Create Publisher */
         outq = new Publisher(outq_name);

@@ -173,7 +173,8 @@ static void* signal_thread (void* parm)
         int status = sigwait(signal_set, &sig);
         if (status != 0)
         {
-            print2term("Fatal error (%d) ...failed to wait for signal: %s\n", status, strerror(errno));
+            char err_buf[256];
+            print2term("Fatal error (%d) ...failed to wait for signal: %s\n", status, strerror_r(status, err_buf, sizeof(err_buf)));
             signal(SIGINT, console_quick_exit);
             break;
         }
@@ -203,7 +204,7 @@ static void ldplugins(void)
     if((dir = opendir(CONFDIR)) != NULL)
     {
         const struct dirent *ent;
-        while((ent = readdir(dir)) != NULL)
+        while((ent = readdir(dir)) != NULL)  // NOLINT [concurrency-mt-unsafe]
         {
             /* Build Plugin Name */
             char plugin_name[MAX_STR_SIZE];
@@ -219,14 +220,14 @@ static void ldplugins(void)
             curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
             if(!curr_plugin->plugin)
             {
-                print2term("cannot load %s: %s\n", plugin_name, dlerror());
+                print2term("cannot load %s: %s\n", plugin_name, dlerror());  // NOLINT [concurrency-mt-unsafe]
                 continue;
             }
 
             /* Initialize Plugin */
             StringLib::format(curr_plugin->init_func_name, MAX_STR_SIZE, "init%s", plugin_name);
             plugin_f init = reinterpret_cast<plugin_f>(dlsym(curr_plugin->plugin, curr_plugin->init_func_name));
-            if(!init) print2term("cannot find initialization function %s: %s\n", curr_plugin->init_func_name, dlerror());
+            if(!init) print2term("cannot find initialization function %s: %s\n", curr_plugin->init_func_name, dlerror());  // NOLINT [concurrency-mt-unsafe]
             else init();
 
             /* Save Off Deinit Function Name */
@@ -251,7 +252,7 @@ static void ulplugins(void)
     {
         /* Deinitialize */
         plugin_f deinit = reinterpret_cast<plugin_f>(dlsym(curr_plugin->plugin, curr_plugin->deinit_func_name));
-        if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());
+        if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());  // NOLINT [concurrency-mt-unsafe]
         else deinit();
 
         #ifndef __no_unload__

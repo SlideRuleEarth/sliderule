@@ -111,7 +111,7 @@ CreParms::CreParms (lua_State* L, int index):
                 string s(image);
                 for (auto c_iter = s.begin(); c_iter < s.end(); ++c_iter)
                 {
-                    int c = *c_iter;
+                    const int c = *c_iter;
                     if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);

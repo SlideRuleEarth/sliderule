@@ -241,7 +241,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
                 pktDefs.add(rec_type, pkt_def);
 
                 /* Register New Packet Definition */
-                unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
+                const unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
                 pktCrossRefs[index] = pkt_def;
             }
         }
@@ -288,7 +288,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
                 pktDefs.add(rec_type, pkt_def);
 
                 /* Register New Packet Definition */
-                unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
+                const unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
                 pktCrossRefs[index] = pkt_def;
             }
         }
@@ -337,15 +337,15 @@ CcsdsRecord::pktDef_t* CcsdsRecord::getPacketDefinition(const unsigned char* buf
 {
     if(size < 6) return NULL;
 
-    int len = CCSDS_GET_LEN(buffer);
+    const int len = CCSDS_GET_LEN(buffer);
     if(len > size) return NULL;
 
-    unsigned int apid = CCSDS_GET_APID(buffer);
+    const unsigned int apid = CCSDS_GET_APID(buffer);
 
     unsigned int subtype = 0;
     if(CCSDS_IS_CMD(buffer)) subtype = CCSDS_GET_FC(buffer);
 
-    unsigned int index = (subtype << 11) | apid;
+    const unsigned int index = (subtype << 11) | apid;
     return pktCrossRefs[index];
 }
 

@@ -90,12 +90,12 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
 
     /* Get raster gps time */
     lua_getfield(L, index, GPSTIME_KEY);
-    double gps = getLuaFloat(L, -1);
+    const double gps = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
     /* Get raster elevation flag */
     lua_getfield(L, index, ELEVATION_KEY);
-    bool iselevation = getLuaBoolean(L, -1);
+    const bool iselevation = getLuaBoolean(L, -1);
     lua_pop(L, 1);
 
     lua_getfield(L, index, GeoParms::SELF);
@@ -104,7 +104,7 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
     lua_pop(L, 1);
 
     /* Convert raster from Base64 to Binary */
-    std::string tiff = MathLib::b64decode(raster, rasterlength);
+    const std::string tiff = MathLib::b64decode(raster, rasterlength);
     rasterlength = tiff.length();
 
     const uint32_t maxSize = 64*1024*1024;
@@ -152,7 +152,7 @@ GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, l
         memcpy(data, file, filelength);
 
         /* Load user raster to vsimem */
-        bool takeOwnership = false;
+        const bool takeOwnership = false;
         VSILFILE* fp = VSIFileFromMemBuffer(rasterFileName.c_str(), data, static_cast<vsi_l_offset>(filelength), takeOwnership);
         CHECKPTR(fp);
         VSIFCloseL(fp);

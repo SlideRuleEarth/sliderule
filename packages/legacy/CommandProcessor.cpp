@@ -144,8 +144,8 @@ bool CommandProcessor::postCommand(const char* cmdstr, ...)
     va_list args;
     va_start(args, cmdstr);
     char str[MAX_CMD_SIZE + 1];
-    int vlen = vsnprintf(str, MAX_CMD_SIZE, cmdstr, args);
-    int slen = MIN(vlen, MAX_CMD_SIZE);
+    const int vlen = vsnprintf(str, MAX_CMD_SIZE, cmdstr, args);
+    const int slen = MIN(vlen, MAX_CMD_SIZE);
     va_end(args);
     str[slen] = '\0';
 
@@ -174,8 +174,8 @@ bool CommandProcessor::postPriority(const char* cmdstr, ...)
     va_list args;
     va_start(args, cmdstr);
     char str[MAX_CMD_SIZE + 1];
-    int vlen = vsnprintf(str, MAX_CMD_SIZE, cmdstr, args);
-    int slen = MIN(vlen, MAX_CMD_SIZE);
+    const int vlen = vsnprintf(str, MAX_CMD_SIZE, cmdstr, args);
+    const int slen = MIN(vlen, MAX_CMD_SIZE);
     va_end(args);
     str[slen] = '\0';
 
@@ -222,10 +222,10 @@ bool CommandProcessor::executeScript (const char* script_name)
         if(StringLib::getLine(line, NULL, MAX_CMD_SIZE, script) == 0)
         {
             char toks[2][MAX_CMD_SIZE];
-            int num_toks = StringLib::tokenizeLine(line, MAX_CMD_SIZE, ' ', 2, toks);
+            const int num_toks = StringLib::tokenizeLine(line, MAX_CMD_SIZE, ' ', 2, toks);
             if(num_toks >= 2 && StringLib::match(toks[0], "EXECUTE_SCRIPT"))
             {
-                bool success = executeScript(toks[1]);
+                const bool success = executeScript(toks[1]);
                 if(!success) return false;
             }
             else if((line[0] != '\n') && line[0] != '\0')
@@ -449,7 +449,7 @@ void* CommandProcessor::cmdProcThread (void* parm)
     while(cp->procActive)
     {
         /* Get Next Command (or timeout) */
-        int cmdlen = cp->cmdq_subscriber->receiveCopy(cmdstr, MAX_CMD_SIZE, SYS_TIMEOUT);
+        const int cmdlen = cp->cmdq_subscriber->receiveCopy(cmdstr, MAX_CMD_SIZE, SYS_TIMEOUT);
         if(cmdlen < MAX_CMD_SIZE)   cmdstr[cmdlen] = '\0'; // guarantees null termination
         else                        cmdstr[MAX_CMD_SIZE-1] = '\0';
 
@@ -491,7 +491,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
     bool status = false;
 
     /* Check String */
-    int cmdlen = StringLib::size(cmdstr) + 1;
+    const int cmdlen = StringLib::size(cmdstr) + 1;
     if(cmdlen <= 0)
     {
         mlog(CRITICAL, "Invalid command string, unable to construct command!");
@@ -501,7 +501,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
     /* Parse Command into Tokens */
     char(*toks)[MAX_CMD_SIZE] = new (char[MAX_CMD_PARAMETERS + 1][MAX_CMD_SIZE]);
     mlog(DEBUG, "Received command: %s", cmdstr);
-    int totaltoks = StringLib::tokenizeLine(cmdstr, cmdlen, ' ', MAX_CMD_PARAMETERS + 1, toks);
+    const int totaltoks = StringLib::tokenizeLine(cmdstr, cmdlen, ' ', MAX_CMD_PARAMETERS + 1, toks);
     if(totaltoks > MAX_CMD_PARAMETERS) // unable to determine in more parameters supplied
     {
         mlog(CRITICAL, "Command has too many parameters %d, unable to execute!", totaltoks);
@@ -518,7 +518,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
             break;
         }
     }
-    int numtoks = tok_index;
+    const int numtoks = tok_index;
 
     /* Check for Store */
     const char* store_key = NULL;
@@ -539,7 +539,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
         /* Establish Parameters (argc, argv) */
         char* cp_cmd_str = toks[0];
         char (*argv)[MAX_CMD_SIZE] = &toks[1];
-        int argc = numtoks - 1; // command name does not count
+        const int argc = numtoks - 1; // command name does not count
 
         /* Reconstruct Command String (without comments) */
         char echoed_cmd[MAX_CMD_SIZE];
@@ -557,7 +557,7 @@ bool CommandProcessor::processCommand (const char* cmdstr)
         /* Get Object and Command */
         #define OBJ_CMD_TOKS 2
         char objtoks[OBJ_CMD_TOKS][MAX_CMD_SIZE];
-        int numobjtoks = StringLib::tokenizeLine(cp_cmd_str, StringLib::size(cp_cmd_str), OBJ_DELIMETER[0], OBJ_CMD_TOKS, objtoks);
+        const int numobjtoks = StringLib::tokenizeLine(cp_cmd_str, StringLib::size(cp_cmd_str), OBJ_DELIMETER[0], OBJ_CMD_TOKS, objtoks);
         if(numobjtoks > 1) // <object name>::<command name>
         {
             try
@@ -625,9 +625,9 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         registered_records = false;
         registered_streams = false;
 
-        for(int i = 0; i < argc; i++) // NOLINT
+        for(int i = 0; i < argc; i++)
         {
-            if(StringLib::match(argv[i], "ALL")) // NOLINT
+            if(StringLib::match(argv[i], "ALL"))
             {
                 built_in_commands = true;
                 registered_handlers = true;
@@ -635,11 +635,11 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
                 registered_records = true;
                 registered_streams = true;
             }
-            else if(StringLib::match(argv[i], "BI")) built_in_commands = true; // NOLINT
-            else if(StringLib::match(argv[i], "RH")) registered_handlers = true; // NOLINT
-            else if(StringLib::match(argv[i], "RO")) registered_objects = true; // NOLINT
-            else if(StringLib::match(argv[i], "RR")) registered_records = true; // NOLINT
-            else if(StringLib::match(argv[i], "RS")) registered_streams = true; // NOLINT
+            else if(StringLib::match(argv[i], "BI")) built_in_commands = true;
+            else if(StringLib::match(argv[i], "RH")) registered_handlers = true;
+            else if(StringLib::match(argv[i], "RO")) registered_objects = true;
+            else if(StringLib::match(argv[i], "RR")) registered_records = true;
+            else if(StringLib::match(argv[i], "RS")) registered_streams = true;
             else if(StringLib::match(argv[i], "O"))
             {
                 if(i < argc - 1)
@@ -694,7 +694,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     print2term("\tR <record type>: record information\n");
     print2term("\tS <stream name>: stream information\n");
 
-    if(built_in_commands) // NOLINT
+    if(built_in_commands)
     {
         print2term("\n-------------- Built-In Commands ---------------\n");
         try
@@ -713,7 +713,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
     }
 
-    if(registered_handlers) // NOLINT
+    if(registered_handlers)
     {
         print2term("\n-------------- Registered Handlers ---------------\n");
         try
@@ -732,14 +732,14 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
     }
 
-    if(registered_objects) // NOLINT
+    if(registered_objects)
     {
         print2term("\n-------------- Registered Objects ---------------\n");
         char** objnames = NULL;
-        int numobjs = objects.getKeys(&objnames); // NOLINT
+        int numobjs = objects.getKeys(&objnames);
         for(int i = 0; i < numobjs; i++)
         {
-            obj_entry_t entry = objects[objnames[i]]; // NOLINT
+            obj_entry_t entry = objects[objnames[i]];   // NOLINT [clang-analyzer-core.CallAndMessage]
             print2term("%s %s (%s)\n", objnames[i], entry.permanent ? "*" : "", entry.obj->getType());
             delete [] objnames[i];
         }
@@ -849,7 +849,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * versionCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argv;
     (void)argc;
@@ -862,7 +862,7 @@ int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * quitCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::quitCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::quitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argv;
     (void)argc;
@@ -875,7 +875,7 @@ int CommandProcessor::quitCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * abortCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::abortCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::abortCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argv;
     (void)argc;
@@ -1097,7 +1097,7 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * defineCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     const char* rec_type = StringLib::StringLib::checkNullStr(argv[0]);
     const char* id_field = StringLib::StringLib::checkNullStr(argv[1]);
@@ -1142,7 +1142,7 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Define Record */
-    RecordObject::recordDefErr_t status = RecordObject::defineRecord(rec_type, id_field, size, NULL, 0, max_fields);
+    const RecordObject::recordDefErr_t status = RecordObject::defineRecord(rec_type, id_field, size, NULL, 0, max_fields);
     if(status == RecordObject::DUPLICATE_DEF)
     {
         mlog(WARNING, "Attempting to define record that is already defined: %s", rec_type);
@@ -1162,7 +1162,7 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE])
  *
  *   Notes: size and offset are bytes except for bitfields, where it is bits
  *----------------------------------------------------------------------------*/
-int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 
@@ -1233,7 +1233,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * exportDefinitionCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 
@@ -1339,7 +1339,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * waitCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 
@@ -1364,7 +1364,7 @@ int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * waitOnEmptyCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     char*   qname       = argv[0];
     char*   wait_str    = argv[1];
@@ -1399,7 +1399,7 @@ int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE])
     int q_empty_count = 0;
     while(true)
     {
-        int q_count = q->getCount();
+        const int q_count = q->getCount();
         if(q_count <= thresh)   q_empty_count++;
         else                    q_empty_count = 0;
 
@@ -1433,7 +1433,7 @@ int CommandProcessor::startStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * displayStopWatchCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
     (void)argv;
@@ -1446,7 +1446,7 @@ int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * logCmdStatsCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::logCmdStatsCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::logCmdStatsCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
     (void)argv;
@@ -1473,7 +1473,7 @@ int CommandProcessor::executeScriptCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * listDevicesCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
     (void)argv;
@@ -1488,12 +1488,12 @@ int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * listMsgQCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argv;
     (void)argc;
 
-    int num_msgqs = MsgQ::numQ();
+    const int num_msgqs = MsgQ::numQ();
     if(num_msgqs > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
@@ -1515,7 +1515,7 @@ int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * qdepthMsgQCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 
@@ -1540,7 +1540,7 @@ int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * setIOTimeoutCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 
@@ -1574,7 +1574,7 @@ int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * setIOMaxsizeCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::setIOMaxsizeCmd (int argc, char argv[][MAX_CMD_SIZE])
+int CommandProcessor::setIOMaxsizeCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 

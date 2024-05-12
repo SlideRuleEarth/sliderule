@@ -64,9 +64,9 @@ int HttpServer::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        int         port            = (int)getLuaInteger(L, 1);
+        const int   port            = (int)getLuaInteger(L, 1);
         const char* ip_addr         = getLuaString(L, 2, true, NULL);
-        int         max_connections = (int)getLuaInteger(L, 3, true, DEFAULT_MAX_CONNECTIONS);
+        const int   max_connections = (int)getLuaInteger(L, 3, true, DEFAULT_MAX_CONNECTIONS);
 
         /* Get Server Parameter */
         if( ip_addr && (StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*")) )
@@ -188,7 +188,7 @@ void HttpServer::Connection::initialize (const char* _name)
     /* Create Unique ID for Request */
     name = StringLib::duplicate(_name);
     id = new char [REQUEST_ID_LEN];
-    long cnt = requestId++;
+    const long cnt = requestId++;
     StringLib::format(id, REQUEST_ID_LEN, "%s.%ld", name, cnt);
 
     /* Start Trace */
@@ -219,8 +219,8 @@ void HttpServer::extractPath (const char* url, const char** path, const char** r
         if(second_slash)
         {
             /* Get Endpoint */
-            int path_len = second_slash - first_slash + 1; // this includes null terminator and slash
-            char* dst = new char[path_len];
+            const int path_len = second_slash - first_slash + 1; // this includes null terminator and slash
+            char*       dst = new char[path_len];
             const char* src = first_slash ; // include the slash
             *path = dst;
             while(src < second_slash) *dst++ = *src++;
@@ -230,7 +230,7 @@ void HttpServer::extractPath (const char* url, const char** path, const char** r
             const char* terminator = StringLib::find(second_slash+1, '\0');
             if(terminator)
             {
-                int resource_len = terminator - second_slash; // this includes null terminator
+                const int resource_len = terminator - second_slash; // this includes null terminator
                 dst = new char[resource_len];
                 src = second_slash + 1; // do NOT include the slash
                 *resource = dst;
@@ -253,7 +253,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
     try
     {
         /* Parse Request */
-        string http_header(buf);
+        const string http_header(buf);
         header_list = StringLib::split(http_header.c_str(), http_header.length(), '\r');
         request_line = StringLib::split((*header_list)[0]->c_str(), (*header_list)[0]->length(), ' ');
 
@@ -325,7 +325,7 @@ void* HttpServer::listenerThread(void* parm)
     while(s->active)
     {
         /* Start Http Server */
-        int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, static_cast<void*>(s), &(s->listening));
+        const int status = SockLib::startserver(s->getIpAddr(), s->getPort(), DEFAULT_MAX_CONNECTIONS, pollHandler, activeHandler, &s->active, static_cast<void*>(s), &(s->listening));
         if(status < 0)
         {
             mlog(CRITICAL, "Http server on %s:%d returned error: %d", s->getIpAddr(), s->getPort(), status);
@@ -400,7 +400,7 @@ int HttpServer::onRead(int fd)
     int status = 0;
     Connection* connection = connections[fd];
     rqst_state_t* state = &connection->rqst_state;
-    uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
+    const uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_read", "%s", "{}");
 
     /* Determine Buffer to Read Into */
     uint8_t* buf; // pointer to buffer to read into
@@ -422,7 +422,7 @@ int HttpServer::onRead(int fd)
     }
 
     /* Socket Read */
-    int bytes = SockLib::sockrecv(fd, buf, buf_available - 1, IO_CHECK);
+    const int bytes = SockLib::sockrecv(fd, buf, buf_available - 1, IO_CHECK);
     if(bytes > 0)
     {
         status = bytes;
@@ -461,7 +461,7 @@ int HttpServer::onRead(int fd)
                             /* Allocate and Prepopulate Request Body */
                             connection->request->body = new uint8_t[connection->request->length + 1];
                             connection->request->body[connection->request->length] = '\0';
-                            int bytes_to_copy = state->header_size - state->header_index;
+                            const int bytes_to_copy = state->header_size - state->header_index;
                             memcpy(connection->request->body, &state->header_buf[state->header_index], bytes_to_copy);
                             state->body_size += bytes_to_copy;
                         }
@@ -556,7 +556,7 @@ int HttpServer::onWrite(int fd)
     int status = 0;
     Connection* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
-    uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
+    const uint32_t trace_id = start_trace(DEBUG, connection->trace_id, "on_write", "%s", "{}");
 
     /* If Something to Send */
     if(state->ref_status > 0)
@@ -582,7 +582,7 @@ int HttpServer::onWrite(int fd)
             if(state->stream_buf_size == 0)
             {
                 /* Write Chunk Header - HTTP */
-                unsigned long chunk_size = state->ref.size > 0 ? state->ref.size : 0;
+                const unsigned long chunk_size = state->ref.size > 0 ? state->ref.size : 0;
                 StringLib::format(reinterpret_cast<char*>(state->stream_buf), STREAM_OVERHEAD_SIZE, "%lX\r\n", chunk_size);
                 state->stream_buf_size = StringLib::size(reinterpret_cast<const char*>(state->stream_buf));
 
@@ -613,7 +613,7 @@ int HttpServer::onWrite(int fd)
         if(bytes_left > 0)
         {
             /* Write Data to Socket */
-            int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
+            const int bytes = SockLib::socksend(fd, buffer, bytes_left, IO_CHECK);
             if(bytes >= 0)
             {
                 /* Update Status */
@@ -674,7 +674,7 @@ int HttpServer::onWrite(int fd)
         if(state->response_complete && connection->keep_alive)
         {
             Connection* new_connection = new Connection(*connection);
-            bool rc = connections.add(fd, new_connection, false); // deletes old connection
+            const bool rc = connections.add(fd, new_connection, false); // deletes old connection
             if(rc)
             {
                 status = 0; // will keep socket open

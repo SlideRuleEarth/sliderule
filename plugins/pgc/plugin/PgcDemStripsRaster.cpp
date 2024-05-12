@@ -152,7 +152,7 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
     if(GdalRaster::ispoint(geo))
     {
         const OGRPoint* poi = geo->toPoint();
-        return _getIndexFile(poi->getX(), poi->getY(), file);
+        _getIndexFile(poi->getX(), poi->getY(), file);
     }
 }
 
@@ -221,7 +221,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                     flagsRinfo.tag = FLAGS_TAG;
                     flagsRinfo.fileName = fileName;
 
-                    if(flagsRinfo.fileName.length() > 0)
+                    if(!flagsRinfo.fileName.empty())
                     {
                         rgroup->infovect.push_back(flagsRinfo);
                     }
@@ -249,7 +249,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }
 
 

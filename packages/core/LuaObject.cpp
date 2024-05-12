@@ -259,7 +259,7 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
     {
         if( num_obj_to_return == 1 )
         {
-            int stack_cnt = lua_gettop(L);
+            const int stack_cnt = lua_gettop(L);
 
             /* Self object must be on stack */
             assert(stack_cnt != 0);
@@ -284,7 +284,7 @@ void LuaObject::getGlobalObjects (vector<object_info_t>& globals)
         const char* object_name = globalObjects.first(&global_object);
         while(object_name != NULL)
         {
-            object_info_t info = {
+            const object_info_t info = {
                 .objName = object_name,
                 .objType = global_object.lua_obj->getType(),
                 .refCnt = global_object.lua_obj->referenceCount
@@ -301,7 +301,7 @@ void LuaObject::getGlobalObjects (vector<object_info_t>& globals)
  *----------------------------------------------------------------------------*/
 long LuaObject::getNumObjects (void)
 {
-    long num_objects = numObjects;
+    const long num_objects = numObjects;
     return num_objects;
 }
 
@@ -410,7 +410,7 @@ int LuaObject::luaDelete (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                int count = lua_obj->referenceCount--;
+                const int count = lua_obj->referenceCount--;
                 mlog(DEBUG, "Garbage collecting object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
 
                 if(lua_obj->referenceCount == 0)
@@ -459,7 +459,7 @@ int LuaObject::luaDestroy (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                int count = lua_obj->referenceCount--;
+                const int count = lua_obj->referenceCount--;
                 mlog(DEBUG, "Destroying object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
 
                 if(lua_obj->referenceCount == 0)
@@ -513,7 +513,7 @@ int LuaObject::luaName(lua_State* L)
             if(!lua_obj->ObjectName)
             {
                 /* Register Name */
-                global_object_t global_object = { .lua_obj = lua_obj };
+                const global_object_t global_object = { .lua_obj = lua_obj };
                 if(globalObjects.add(name, global_object, true))
                 {
                     /* Associate Name */
@@ -565,7 +565,7 @@ int LuaObject::luaWaitOn(lua_State* L)
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Get Parameters */
-        int timeout = getLuaInteger(L, 2, true, IO_PEND);
+        const int timeout = getLuaInteger(L, 2, true, IO_PEND);
 
         /* Wait On Signal */
         lua_obj->objSignal.lock();

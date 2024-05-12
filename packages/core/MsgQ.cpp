@@ -103,7 +103,7 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             }
 
             // Register message queue with non-null name
-            global_queue_t global_queue = { .queue = msgQ };
+            const global_queue_t global_queue = { .queue = msgQ };
             if(msgQ->name) queues.add(msgQ->name, global_queue);
         }
     }
@@ -390,7 +390,7 @@ int Publisher::postString(const char* format_string, ...)
     va_list args;
     va_start(args, format_string);
     char str[MAX_POSTED_STR + 1];
-    int vlen = vsnprintf(str, MAX_POSTED_STR, format_string, args);
+    const int vlen = vsnprintf(str, MAX_POSTED_STR, format_string, args);
     int slen = MIN(vlen, MAX_POSTED_STR);
     va_end(args);
     if (slen < 2) return STATE_SIZE_ERROR; // do not send null strings
@@ -398,7 +398,7 @@ int Publisher::postString(const char* format_string, ...)
     slen++; // include null termination in message
 
     /* Post the String */
-    int status = post(str, ((unsigned int)slen) | MSGQ_COPYQ_MASK, NULL, 0, IO_CHECK);
+    const int status = post(str, ((unsigned int)slen) | MSGQ_COPYQ_MASK, NULL, 0, IO_CHECK);
     if(status == STATE_OKAY) return slen;
     return status;
 }
@@ -417,9 +417,9 @@ void Publisher::defaultFree(void* obj, void* parm)
  *----------------------------------------------------------------------------*/
 int Publisher::post(void* data, unsigned int mask, const void* secondary_data, unsigned int secondary_size, int timeout)
 {
-    int     post_state  = STATE_OKAY;
-    bool    copy        = (mask & MSGQ_COPYQ_MASK) != 0;
-    int     data_size   = mask & ~MSGQ_COPYQ_MASK;
+    int         post_state  = STATE_OKAY;
+    const bool  copy        = (mask & MSGQ_COPYQ_MASK) != 0;
+    const int   data_size   = mask & ~MSGQ_COPYQ_MASK;
 
     /* post data */
     msgQ->locknblock->lock();
@@ -574,7 +574,7 @@ Subscriber::~Subscriber()
             node->refs--;
             node = node->next;
         }
-        bool space_reclaimed = reclaim_nodes(true);
+        const bool space_reclaimed = reclaim_nodes(true);
 
         /* Clean up Remaining Free Blocks */
         if(msgQ->subscriptions == 1)
@@ -622,7 +622,7 @@ bool Subscriber::dereference(msgRef_t& ref, bool with_delete)
     msgQ->locknblock->lock();
     {
         node->refs--;
-        bool space_reclaimed = reclaim_nodes(with_delete);
+        const bool space_reclaimed = reclaim_nodes(with_delete);
 
         if(space_reclaimed)
         {
@@ -648,7 +648,7 @@ void Subscriber::drain(bool with_delete)
             node->refs--;
             node = node->next;
         }
-        bool space_reclaimed = reclaim_nodes(with_delete);
+        const bool space_reclaimed = reclaim_nodes(with_delete);
         msgQ->curr_nodes[id] = NULL;
 
         if(space_reclaimed)
@@ -708,7 +708,7 @@ int Subscriber::receiveCopy(void* data, int size, int timeout)
 
     msgRef_t ref;
     ref.data = data;
-    int status = receive(ref, size, timeout, true);
+    const int status = receive(ref, size, timeout, true);
     if(status == STATE_OKAY) return ref.size;
     return status;
 }
@@ -757,7 +757,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
             /* update queue status*/
             queue_node_t* node = msgQ->curr_nodes[id];
             msgQ->curr_nodes[id] = node->next;
-            int node_size = node->mask & ~MSGQ_COPYQ_MASK;
+            const int node_size = node->mask & ~MSGQ_COPYQ_MASK;
 
             /* perform dequeue */
             if(!copy)
@@ -827,7 +827,7 @@ bool Subscriber::reclaim_nodes(bool delete_data)
                  * to it, then it must make sure it never gets behind to
                  * the point where it is pointing to the last node in the
                  * queue */
-                int starting_ref_count = msgQ->curr_nodes[i]->refs;
+                const int starting_ref_count = msgQ->curr_nodes[i]->refs;
                 while(msgQ->curr_nodes[i] && (msgQ->curr_nodes[i]->refs == starting_ref_count))
                 {
                     msgQ->curr_nodes[i]->refs--;
@@ -879,7 +879,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
     msgQ->locknblock->lock();
     {
         /* Check Need to Resize */
-        int old_max_subscribers = msgQ->max_subscribers;
+        const int old_max_subscribers = msgQ->max_subscribers;
         if(msgQ->subscriptions >= msgQ->max_subscribers)
         {
             msgQ->max_subscribers *= 2;
@@ -922,7 +922,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
         /* Add Subscription */
         for(int i = 0; i < msgQ->max_subscribers; i++)
         {
-            if(msgQ->subscriber_type[i] == UNSUBSCRIBED)  // NOLINT
+            if(msgQ->subscriber_type[i] == UNSUBSCRIBED)  // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
             {
                 id = i;
                 msgQ->subscriber_type[id] = type;

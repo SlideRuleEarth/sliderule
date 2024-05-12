@@ -62,8 +62,8 @@ okey_t calcCdsTime(unsigned char* buffer, int size)
     okey_t key = 0;
     if(buffer && size >= 12)
     {
-        CcsdsSpacePacket pkt(buffer, size);
-        double timestamp_ms = pkt.getCdsTime() * 1000.0;
+        const CcsdsSpacePacket pkt(buffer, size);
+        const double timestamp_ms = pkt.getCdsTime() * 1000.0;
         key = (okey_t)timestamp_ms;
     }
 

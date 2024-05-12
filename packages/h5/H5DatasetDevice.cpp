@@ -62,16 +62,16 @@ int H5DatasetDevice::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        int             _role           = (int)getLuaInteger(L, 1);
-                        _asset          = dynamic_cast<Asset*>(getLuaObject(L, 2, Asset::OBJECT_TYPE));
-        const char*     _resource       = getLuaString(L, 3);
-        const char*     dataset_name    = getLuaString(L, 4);
-        long            id              = getLuaInteger(L, 5, true, 0);
-        bool            raw_mode        = getLuaBoolean(L, 6, true, true);
-        RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 7, true, RecordObject::DYNAMIC);
-        long            col             = getLuaInteger(L, 8, true, 0);
-        long            startrow        = getLuaInteger(L, 9, true, 0);
-        long            numrows         = getLuaInteger(L, 10, true, H5Coro::ALL_ROWS);
+        const int             _role           = (int)getLuaInteger(L, 1);
+                              _asset          = dynamic_cast<Asset*>(getLuaObject(L, 2, Asset::OBJECT_TYPE));
+        const char*           _resource       = getLuaString(L, 3);
+        const char*           dataset_name    = getLuaString(L, 4);
+        const long            id              = getLuaInteger(L, 5, true, 0);
+        const bool            raw_mode        = getLuaBoolean(L, 6, true, true);
+        const RecordObject::valType_t datatype = (RecordObject::valType_t)getLuaInteger(L, 7, true, RecordObject::DYNAMIC);
+        const long            col             = getLuaInteger(L, 8, true, 0);
+        const long            startrow        = getLuaInteger(L, 9, true, 0);
+        const long            numrows         = getLuaInteger(L, 10, true, H5Coro::ALL_ROWS);
 
         /* Check Access Type */
         if(_role != DeviceObject::READER && _role != DeviceObject::WRITER)
@@ -106,7 +106,7 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     DeviceObject(L, _role)
 {
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
+    const uint32_t trace_id = start_trace(INFO, traceId, "h5_device", "{\"file\":\"%s\", \"dataset\":%s}", _resource, dataset_name);
 
     /* Set Record */
     recObj = new RecordObject(recType);
@@ -127,14 +127,14 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     recData->id = id;
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s (%s)", _resource, role == READER ? "READER" : "WRITER") + 1;
+    const int cfglen = snprintf(NULL, 0, "%s (%s)", _resource, role == READER ? "READER" : "WRITER") + 1;
     config = new char[cfglen];
     sprintf(config, "%s (%s)", _resource, role == READER ? "READER" : "WRITER");
 
     /* Read File */
     try
     {
-        H5Coro::info_t info = H5Coro::read(asset, resource, dataName, datatype, col, startrow, numrows, NULL, false, trace_id);
+        const H5Coro::info_t info = H5Coro::read(asset, resource, dataName, datatype, col, startrow, numrows, NULL, false, trace_id);
         recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;
@@ -208,11 +208,11 @@ int H5DatasetDevice::readBuffer (void* buf, int len, int timeout)
 
     if(connected)
     {
-        int bytes_remaining = dataSize - dataOffset;
+        const int bytes_remaining = dataSize - dataOffset;
 
         if(rawMode)
         {
-            int bytes_to_copy = MIN(len, bytes_remaining);
+            const int bytes_to_copy = MIN(len, bytes_remaining);
             if(bytes_to_copy > 0)
             {
                 memcpy(buf, &dataBuffer[dataOffset], bytes_to_copy);
@@ -222,13 +222,13 @@ int H5DatasetDevice::readBuffer (void* buf, int len, int timeout)
         }
         else // record
         {
-            int bytes_to_copy = MIN(len - recObj->getAllocatedMemory(), bytes_remaining);
+            const int bytes_to_copy = MIN(len - recObj->getAllocatedMemory(), bytes_remaining);
             if(bytes_to_copy > 0)
             {
                 recData->offset = dataOffset;
                 recData->size = bytes_to_copy;
                 unsigned char* rec_buf = reinterpret_cast<unsigned char*>(buf);
-                int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, sizeof(h5dataset_t) + bytes_to_copy);
+                const int bytes_written = recObj->serialize(&rec_buf, RecordObject::COPY, sizeof(h5dataset_t) + bytes_to_copy);
                 memcpy(&rec_buf[bytes_written], &dataBuffer[dataOffset], bytes_to_copy);
                 dataOffset += bytes_to_copy;
                 bytes = bytes_written + bytes_to_copy;

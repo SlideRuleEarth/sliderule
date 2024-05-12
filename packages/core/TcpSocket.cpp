@@ -50,9 +50,9 @@ int TcpSocket::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* ip_addr   = getLuaString(L, 1);
-        int         port      = (int)getLuaInteger(L, 2);
-        bool        is_server = getLuaBoolean(L, 3);
-        bool        die       = getLuaBoolean(L, 4, true, false);
+        const int   port      = (int)getLuaInteger(L, 2);
+        const bool  is_server = getLuaBoolean(L, 3);
+        const bool  die       = getLuaBoolean(L, 4, true, false);
 
         /* Get Server Parameter */
         if(is_server)
@@ -91,7 +91,7 @@ TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
     config = new char[cfglen];
     sprintf(config, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port);
 
@@ -141,7 +141,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
     config = new char[cfglen];
     sprintf(config, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port);
 
@@ -212,7 +212,7 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
     int c = 0;
     while(c < len && alive)
     {
-        int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
+        const int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
         if(ret > 0)
         {
             c += ret;
@@ -246,7 +246,7 @@ int TcpSocket::readBuffer(void* buf, int len, int timeout)
     }
 
     /* Receive Data */
-    int ret = SockLib::sockrecv(sock, buf, len, timeout);
+    const int ret = SockLib::sockrecv(sock, buf, len, timeout);
     if(ret < 0)
     {
         closeConnection();

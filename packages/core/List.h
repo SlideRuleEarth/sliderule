@@ -140,7 +140,7 @@ List<T>::Iterator::Iterator(const List& l):
     length(l.len),
     blockSize(l.listBlockSize)
 {
-    int num_blocks = (length + (blockSize - 1)) / blockSize;
+    const int num_blocks = (length + (blockSize - 1)) / blockSize;
     blocks = new const List<T>::list_node_t* [num_blocks];
 
     const List<T>::list_node_t* curr_block = &l.head;
@@ -169,8 +169,8 @@ const T& List<T>::Iterator::operator[](int index) const
 {
     if( (index < length) && (index >= 0) )
     {
-        int node_block = index / blockSize;
-        int node_offset = index % blockSize;
+        const int node_block = index / blockSize;
+        const int node_offset = index % blockSize;
         const List<T>::list_node_t* block = blocks[node_block]; // NOLINT [clang-analyzer-core.uninitialized.Assign]
         return block->data[node_offset];
     }
@@ -236,7 +236,7 @@ int List<T>::add(const T& data)
     tail->offset++;
 
     /* Increment Length and Return Index */
-    int index = len++;
+    const int index = len++;
     return index;
 }
 
@@ -248,8 +248,8 @@ bool List<T>::remove(int index)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / listBlockSize;
-        int node_offset = index % listBlockSize;
+        const int node_block = index / listBlockSize;
+        const int node_offset = index % listBlockSize;
         list_node_t* curr = &head;
         list_node_t* prev = NULL;
         for(int i = 0; i < node_block; i++)
@@ -322,7 +322,7 @@ bool List<T>::remove(int index)
         len--;
 
         /* Recalculate the Tail */
-        int tail_block = len / listBlockSize;
+        const int tail_block = len / listBlockSize;
         tail = &head;
         for (int i = 0; i < tail_block; i++) { assert(tail); tail = tail->next; }
 
@@ -341,8 +341,8 @@ T& List<T>::get(int index)
 {
     if( (index < len) && (index >= 0) )
     {
-        int node_block = index / listBlockSize;
-        int node_offset = index % listBlockSize;
+        const int node_block = index / listBlockSize;
+        const int node_offset = index % listBlockSize;
 
         list_node_t* curr = &head;
         if(node_block == prevblock)
@@ -471,7 +471,7 @@ void List<T>::sort(void)
     int index = 0;
     while(items_remaining > 0)
     {
-        int items_to_copy = MIN(items_remaining, listBlockSize);
+        const int items_to_copy = MIN(items_remaining, listBlockSize);
         for(int i = 0; i < items_to_copy; i++)
         {
             array[index++] = curr->data[i];
@@ -489,7 +489,7 @@ void List<T>::sort(void)
     index = 0;
     while(items_remaining > 0)
     {
-        int items_to_copy = MIN(items_remaining, listBlockSize);
+        const int items_to_copy = MIN(items_remaining, listBlockSize);
         for(int i = 0; i < items_to_copy; i++)
         {
             curr->data[i] = array[index++];
@@ -591,7 +591,7 @@ void List<T>::quicksort(T* array, int start, int end)
 {
     if(start < end)
     {
-        int partition = quicksortpartition(array, start, end);
+        const int partition = quicksortpartition(array, start, end);
         quicksort(array, start, partition);
         quicksort(array, partition + 1, end);
     }
@@ -603,7 +603,7 @@ void List<T>::quicksort(T* array, int start, int end)
 template <class T>
 int List<T>::quicksortpartition(T* array, int start, int end)
 {
-    double pivot = array[(start + end) / 2];
+    const double pivot = array[(start + end) / 2];
 
     start--;
     end++;

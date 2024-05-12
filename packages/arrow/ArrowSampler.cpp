@@ -173,7 +173,7 @@ void ArrowSampler::sample(void)
     alreadySampled = true;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, traceId, "arrow_sampler", "{\"filename\":\"%s\"}", dataFile);
+    const uint32_t trace_id = start_trace(INFO, traceId, "arrow_sampler", "{\"filename\":\"%s\"}", dataFile);
     EventLib::stashId(trace_id);
 
     /* Start sampling threads */
@@ -357,12 +357,12 @@ void* ArrowSampler::samplerThread(void* parm)
 
     for(point_info_t* pinfo : sampler->obj->points)
     {
-        MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
-        double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
+        const MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
+        const double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
-        uint32_t err = robj->getSamples(point, gps, *slist, NULL);
+        const uint32_t err = robj->getSamples(point, gps, *slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {

@@ -318,14 +318,14 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     yKey = StringLib::duplicate(getSubField(rec_meta->y_field));
 
     /* Get Row Size */
-    RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
+    const RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
     if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
     else batchRowSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
     rowSizeBytes = RecordObject::getRecordDataSize(recType) + batchRowSizeBytes;
     maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
 
     /* Initialize Queues */
-    int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
+    const int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
     outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
     inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
 
@@ -369,7 +369,7 @@ void* ArrowBuilder::builderThread(void* parm)
     int row_cnt = 0;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
+    const uint32_t trace_id = start_trace(INFO, builder->traceId, "arrow_builder", "{\"filename\":\"%s\"}", builder->dataFile);
     EventLib::stashId(trace_id);
 
     /* Loop Forever */
@@ -377,7 +377,7 @@ void* ArrowBuilder::builderThread(void* parm)
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
-        int recv_status = builder->inQ->receiveRef(ref, SYS_TIMEOUT);
+        const int recv_status = builder->inQ->receiveRef(ref, SYS_TIMEOUT);
         if(recv_status > 0)
         {
             /* Process Record */
@@ -398,7 +398,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     {
                         /* Pull Out Subrecord */
                         const uint8_t* buffer = reinterpret_cast<uint8_t*>(container) + container->entries[i].rec_offset;
-                        int size = container->entries[i].rec_size;
+                        const int size = container->entries[i].rec_size;
                         RecordObject* subrec = new RecordInterface(buffer, size);
 
                         /* Handle Supported Record Types */
@@ -462,12 +462,12 @@ void* ArrowBuilder::builderThread(void* parm)
                 }
 
                 /* Determine Rows in Record */
-                int record_size_bytes = batch->pri_record->getAllocatedDataSize();
-                int batch_size_bytes = record_size_bytes - (builder->rowSizeBytes - builder->batchRowSizeBytes);
+                const int record_size_bytes = batch->pri_record->getAllocatedDataSize();
+                const int batch_size_bytes = record_size_bytes - (builder->rowSizeBytes - builder->batchRowSizeBytes);
                 batch->rows =  batch_size_bytes / builder->batchRowSizeBytes;
 
                 /* Sanity Check Rows */
-                int left_over = batch_size_bytes % builder->batchRowSizeBytes;
+                const int left_over = batch_size_bytes % builder->batchRowSizeBytes;
                 if(left_over > 0)
                 {
                     mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", batch->pri_record->getRecordType(), batch_size_bytes, builder->batchRowSizeBytes);
@@ -493,7 +493,7 @@ void* ArrowBuilder::builderThread(void* parm)
                 row_cnt += batch->rows;
                 if(row_cnt >= builder->maxRowsInGroup)
                 {
-                    bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
+                    const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
                     if(!status)
                     {
                         alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
@@ -520,7 +520,7 @@ void* ArrowBuilder::builderThread(void* parm)
     }
 
     /* Process Remaining Records */
-    bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
+    const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
     if(!status) alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
     builder->recordBatch.clear();
 

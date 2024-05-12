@@ -190,7 +190,7 @@ void* CosmosInterface::listenerThread (void* parm)
  *
  *   Notes: provides the flags back to the poll function
  *----------------------------------------------------------------------------*/
-int CosmosInterface::pollHandler(int fd, short* events, void* parm)
+int CosmosInterface::pollHandler(int fd, short* events, void* parm)   // NOLINT [readability-non-const-parameter]
 {
     (void)fd;
     (void)events;

@@ -69,7 +69,7 @@ const char* CCSDS::NAME = "CCSDS";
 /*----------------------------------------------------------------------------
  * CCSDS - defineTelemetryCmd
  *----------------------------------------------------------------------------*/
-int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZE])
+int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 
@@ -143,7 +143,7 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
 /*----------------------------------------------------------------------------
  * CCSDS - defineCommandCmd
  *----------------------------------------------------------------------------*/
-int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZE])
+int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
 

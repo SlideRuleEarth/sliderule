@@ -119,11 +119,11 @@ void* MsgBridge::bridgeThread(void* parm)
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
-        int recv_status = bridge->inQ->receiveRef(ref, SYS_TIMEOUT);
+        const int recv_status = bridge->inQ->receiveRef(ref, SYS_TIMEOUT);
         if(recv_status > 0)
         {
             const unsigned char* msg = reinterpret_cast<const unsigned char*>(ref.data);
-            int len = ref.size;
+            const int len = ref.size;
 
             /* Dispatch Record */
             if(len > 0)

@@ -307,7 +307,7 @@ void* StatisticRecord<T>::telemetryThread(void* parm)
             {
                 wait_counter = procstat->telemetryWaitSeconds;
                 procstat->prepost();
-                bool status = procstat->post();
+                const bool status = procstat->post();
                 if(status != true)
                 {
                     mlog(DEBUG, "Unable to post %s telemetry!", procstat->getName());
@@ -362,7 +362,7 @@ int StatisticRecord<T>::clearCmd(int argc, char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 
-    clear_t clear = StatisticRecord<T>::str2clear(argv[0]);
+    const clear_t clear = StatisticRecord<T>::str2clear(argv[0]);
     if(clear == CLEAR_UNKNOWN)
     {
         mlog(CRITICAL, "Invalid parameter passed to clear command: %s", argv[0]);

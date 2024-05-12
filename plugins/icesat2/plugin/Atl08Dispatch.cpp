@@ -188,7 +188,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     const Atl03Reader::extent_t* extent = reinterpret_cast<const Atl03Reader::extent_t*>(record->getRecordData());
 
     /* Check Extent */
-    if(extent->photon_count == 0) // NOLINT
+    if(extent->photon_count == 0)
     {
         return true;
     }
@@ -199,9 +199,9 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     geolocateResult(extent, result);
 
     /* Execute Algorithm Stages */
-    if(parms->stages[Icesat2Parms::STAGE_PHOREAL]) // NOLINT
+    if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
     {
-        phorealAlgorithm(extent, result); // NOLINT
+        phorealAlgorithm(extent, result);
     }
 
     /* Build Ancillary Inputs */
@@ -499,9 +499,9 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     /* Determine Number of Ground and Vegetation Photons */
     long gnd_cnt = 0;
     long veg_cnt = 0;
-    for(uint32_t i = 0; i < num_ph; i++) // NOLINT
+    for(uint32_t i = 0; i < num_ph; i++)
     {
-        if(isGround(&ph[i]) || parms->phoreal.use_abs_h) // NOLINT
+        if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
         {
             gnd_cnt++;
         }
@@ -514,13 +514,13 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     result.vegetation_photon_count = veg_cnt;
 
     /* Create Ground and Vegetation Photon Index Arrays */
-    long* gnd_index = new long [gnd_cnt]; // NOLINT
+    long* gnd_index = new long [gnd_cnt];
     long* veg_index = new long [veg_cnt];
     long g = 0;
     long v = 0;
-    for(long i = 0; i < num_ph; i++) // NOLINT
+    for(long i = 0; i < num_ph; i++)
     {
-        if(isGround(&ph[i]) || parms->phoreal.use_abs_h) // NOLINT
+        if(isGround(&ph[i]) || parms->phoreal.use_abs_h)
         {
             gnd_index[g++] = i;
         }
@@ -531,7 +531,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     }
 
     /* Sort Ground and Vegetation Photon Index Arrays */
-    quicksort(gnd_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::height, 0, gnd_cnt - 1); // NOLINT
+    quicksort(gnd_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::height, 0, gnd_cnt - 1);
     quicksort(veg_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
 
     /* Determine Min,Max,Avg Heights */
@@ -764,8 +764,8 @@ int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t*
     end++;
     while(true)
     {
-        while (ph_array[index_array[++start]].*field < pivot); // NOLINT
-        while (ph_array[index_array[--end]].*field > pivot); // NOLINT
+        while (ph_array[index_array[++start]].*field < pivot); // NOLINT [clang-analyzer-core.uninitialized.ArraySubscript]
+        while (ph_array[index_array[--end]].*field > pivot);   // NOLINT [clang-analyzer-core.uninitialized.ArraySubscript]
         if (start >= end) return end;
 
         long tmp = index_array[start];

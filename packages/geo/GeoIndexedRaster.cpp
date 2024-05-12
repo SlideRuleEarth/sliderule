@@ -119,7 +119,7 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
         if(sample(&ogr_point, gps))
         {
             /* Populate Return Vector of Samples (slist) */
-            GroupOrdering::Iterator iter(groupList);
+            const GroupOrdering::Iterator iter(groupList);
             for(int i = 0; i < iter.length; i++)
             {
                 const rasters_group_t* rgroup = iter[i].value;
@@ -178,7 +178,7 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
         if(sample(&poly, gps))
         {
             /* Populate Return Vector of Subsets (slist) */
-            GroupOrdering::Iterator iter(groupList);
+            const GroupOrdering::Iterator iter(groupList);
             for(int i = 0; i < iter.length; i++)
             {
                 const rasters_group_t* rgroup = iter[i].value;
@@ -320,7 +320,7 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
 {
     memset(&gmtDate, 0, sizeof(TimeLib::gmt_time_t));
 
-    int i = feature->GetFieldIndex(field);
+    const int i = feature->GetFieldIndex(field);
     if(i == -1)
     {
         mlog(ERROR, "Time field: %s not found, unable to get GMT date", field);
@@ -406,7 +406,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
 
         /* OGREnvelope is not treated as first classs geometry in OGR, must create a polygon geometry from it */
         OGREnvelope env;
-        OGRErr err = layer->GetExtent(&env);
+        const OGRErr err = layer->GetExtent(&env);
         if(err == OGRERR_NONE )
         {
             bbox.lon_min = env.MinX;
@@ -487,7 +487,7 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
     groupList.clear();
 
     /* For AOI always open new index file, for POI it depends... */
-    bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
+    const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
     if(openNewFile)
     {
         if(!openGeoIndex(geo))
@@ -596,7 +596,7 @@ int GeoIndexedRaster::luaCellSize(lua_State *L)
     try
     {
         /* Cannot return cell sizes of index vector file */
-        int cellSize = 0;
+        const int cellSize = 0;
 
         /* Set Return Values */
         lua_pushnumber(L, cellSize);
@@ -679,9 +679,9 @@ void* GeoIndexedRaster::readingThread(void *param)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::createThreads(void)
 {
-    int threadsNeeded = cache.length();
-    int threadsNow    = readers.length();
-    int newThreadsCnt = threadsNeeded - threadsNow;
+    const int threadsNeeded = cache.length();
+    const int threadsNow    = readers.length();
+    const int newThreadsCnt = threadsNeeded - threadsNow;
 
     if(threadsNeeded <= threadsNow)
         return;
@@ -700,7 +700,7 @@ void GeoIndexedRaster::createThreads(void)
 bool GeoIndexedRaster::updateCache(void)
 {
     /* Cache contains items/rasters from previous sample run */
-    GroupOrdering::Iterator group_iter(groupList);
+    const GroupOrdering::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
@@ -708,7 +708,7 @@ bool GeoIndexedRaster::updateCache(void)
         {
             const char* key = rinfo.fileName.c_str();
             cacheitem_t* item;
-            bool inCache = cache.find(key, &item);
+            const bool inCache = cache.find(key, &item);
             if(!inCache)
             {
                 /* Limit area of interest to the extent of vector index file */
@@ -722,7 +722,7 @@ bool GeoIndexedRaster::updateCache(void)
                                               rinfo.dataIsElevation, crscb);
                 item->sample = NULL;
                 item->subset = NULL;
-                bool status = cache.add(key, item);
+                const bool status = cache.add(key, item);
                 assert(status); (void)status; // cannot fail; prevents linter warnings
             }
 
@@ -774,7 +774,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
     /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
     if(parms->url_substring || parms->filter_time || parms->filter_doy_range)
     {
-        GroupOrdering::Iterator group_iter(groupList);
+        const GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
@@ -805,7 +805,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
                 /* Day Of Year filter */
                 if(parms->filter_doy_range)
                 {
-                    bool inrange = TimeLib::doyinrange(rgroup->gmtDate, parms->doy_start, parms->doy_end);
+                    const bool inrange = TimeLib::doyinrange(rgroup->gmtDate, parms->doy_start, parms->doy_end);
                     if(parms->doy_keep_inrange)
                     {
                         if(!inrange)
@@ -850,12 +850,12 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
         /* Find raster group with the closest time */
-        GroupOrdering::Iterator group_iter(groupList);
+        const GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
-            int64_t gpsTime = rgroup->gpsTime;
-            int64_t delta   = abs(closestGps - gpsTime);
+            const int64_t gpsTime = rgroup->gpsTime;
+            const int64_t delta   = abs(closestGps - gpsTime);
 
             if(delta < minDelta)
                 minDelta = delta;
@@ -865,8 +865,8 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
-            int64_t gpsTime = rgroup->gpsTime;
-            int64_t delta   = abs(closestGps - gpsTime);
+            const int64_t gpsTime = rgroup->gpsTime;
+            const int64_t delta   = abs(closestGps - gpsTime);
 
             if(delta > minDelta)
             {

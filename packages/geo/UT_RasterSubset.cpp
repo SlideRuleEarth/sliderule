@@ -118,7 +118,7 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
 
         /* Get subsets */
         List<RasterSubset*> subsetsList;
-        MathLib::extent_t extent = {{llx, lly}, {urx, ury}};
+        const MathLib::extent_t extent = {{llx, lly}, {urx, ury}};
         lua_obj->raster->getSubsets(extent, 0, subsetsList, NULL);
 
         std::vector<SampleInfo_t*>  rasterSamples;
@@ -132,7 +132,7 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
         const double height = 0.0;
         print2term("Point: %.2lf, %.2lf, %.2lf\n", lon, lat, height);
 
-        MathLib::point_3d_t point = {lon, lat, height};
+        const MathLib::point_3d_t point = {lon, lat, height};
         errors += lua_obj->raster->getSamples(point, 0, samplesList, NULL);
         for(int i = 0; i < samplesList.length(); i++)
         {
@@ -150,7 +150,7 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
             /* Get samples */
             samplesList.clear();
 
-            MathLib::point_3d_t _point = {lon, lat, height};
+            const MathLib::point_3d_t _point = {lon, lat, height};
             errors += srobj->getSamples(_point, 0, samplesList, NULL);
 
             for(int j = 0; j < samplesList.length(); j++)

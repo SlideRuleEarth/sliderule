@@ -128,13 +128,13 @@ UT_TimeLib::~UT_TimeLib(void)
  *
  *  Checks that a SYS time is converted to the correct GPS time
  *----------------------------------------------------------------------------*/
-int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE])
+int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
   (void)argc;
   (void)argv;
   for (int i = 0; i < 39; i++)
   {
-    int64_t gps_ms = TimeLib::sys2gpstime(Truth_Times[i][0]);
+    const int64_t gps_ms = TimeLib::sys2gpstime(Truth_Times[i][0]);
     if (gps_ms != Truth_Times[i][1])
     {
       print2term("Calculated: %lld\n", (long long)gps_ms);
@@ -156,7 +156,7 @@ int UT_TimeLib::CheckGps2GmtCmd(int argc, char argv[][MAX_CMD_SIZE])
   (void)argv;
   for (int i = 0; i < 39; ++i)
   {
-    TimeLib::gmt_time_t gmt_time = TimeLib::gps2gmttime(Truth_Times[i][1]);
+    const TimeLib::gmt_time_t gmt_time = TimeLib::gps2gmttime(Truth_Times[i][1]);
     bool success = true;
     if (gmt_time.millisecond != Truth_GMT[i].millisecond) success = false;
     if (gmt_time.second      != Truth_GMT[i].second)      success = false;
@@ -186,7 +186,7 @@ int UT_TimeLib::CheckGmt2GpsCmd(int argc, char argv[][MAX_CMD_SIZE])
   (void)argv;
   for (int i = 0; i < 39; ++i)
   {
-    int64_t gps_time = TimeLib::gmt2gpstime(Truth_GMT[i]);
+    const int64_t gps_time = TimeLib::gmt2gpstime(Truth_GMT[i]);
     if (gps_time != Truth_Times[i][1])
     {
       print2term("Calculated: %lld\n", (long long)gps_time);

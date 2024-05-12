@@ -153,10 +153,10 @@ class GediParms: public NetsvcParms
         void                    cleanup          (void);
         bool                    set_beam         (int beam);
         void                    get_lua_beams    (lua_State* L, int index, bool* provided);
-        const char*             degrade2string   (degrade_t filter) const;
-        const char*             l2quality2tring  (l2_quality_t filter) const;
-        const char*             l4quality2string (l4_quality_t filter) const;
-        const char*             surface2string   (surface_t filter) const;
+        static const char*      degrade2string   (degrade_t filter);
+        static const char*      l2quality2tring  (l2_quality_t filter);
+        static const char*      l4quality2string (l4_quality_t filter);
+        static const char*      surface2string   (surface_t filter);
 };
 
 #endif  /* __gedi_parms__ */

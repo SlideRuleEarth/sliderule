@@ -367,7 +367,7 @@ void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * degrade2string
  *----------------------------------------------------------------------------*/
-const char* GediParms::degrade2string(degrade_t filter) const
+const char* GediParms::degrade2string(degrade_t filter)
 {
     switch(filter)
     {
@@ -381,7 +381,7 @@ const char* GediParms::degrade2string(degrade_t filter) const
 /*----------------------------------------------------------------------------
  * l2quality2string
  *----------------------------------------------------------------------------*/
-const char* GediParms::l2quality2tring(l2_quality_t filter) const
+const char* GediParms::l2quality2tring(l2_quality_t filter)
 {
     switch(filter)
     {
@@ -395,7 +395,7 @@ const char* GediParms::l2quality2tring(l2_quality_t filter) const
 /*----------------------------------------------------------------------------
  * l4quality2string
  *----------------------------------------------------------------------------*/
-const char* GediParms::l4quality2string(l4_quality_t filter) const
+const char* GediParms::l4quality2string(l4_quality_t filter)
 {
     switch(filter)
     {
@@ -409,7 +409,7 @@ const char* GediParms::l4quality2string(l4_quality_t filter) const
 /*----------------------------------------------------------------------------
  * surface2string
  *----------------------------------------------------------------------------*/
-const char* GediParms::surface2string(surface_t filter) const
+const char* GediParms::surface2string(surface_t filter)
 {
     switch(filter)
     {

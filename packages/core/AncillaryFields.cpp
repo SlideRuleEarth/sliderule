@@ -330,7 +330,7 @@ RecordObject* AncillaryFields::createFieldArrayRecord (uint64_t extent_id, vecto
 {
     if(field_vec.empty()) return NULL;
 
-    int rec_size = offsetof(field_array_t, fields) + (sizeof(field_t) * field_vec.size());
+    const int rec_size = offsetof(field_array_t, fields) + (sizeof(field_t) * field_vec.size());
     RecordObject* rec = new RecordObject(ancFieldArrayRecType, rec_size);
     field_array_t* field_array = reinterpret_cast<field_array_t*>(rec->getRecordData());
     field_array->extent_id = extent_id;

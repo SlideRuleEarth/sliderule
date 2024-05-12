@@ -179,12 +179,12 @@ void ArrowSamplerImpl::getMetadata(void)
 {
     bool foundIt = false;
 
-    std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
+    const std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
 
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        std::string key = file_metadata->key_value_metadata()->key(i);
-        std::string value = file_metadata->key_value_metadata()->value(i);
+        const std::string key = file_metadata->key_value_metadata()->key(i);
+        const std::string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "sliderule")
         {
@@ -239,9 +239,9 @@ void ArrowSamplerImpl::getPoints(std::vector<ArrowSampler::point_info_t*>& point
         getXYPoints(points);
 
     /* Get point's gps from time column */
-    std::vector<const char*> columnNames = {timeKey};
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int time_column_index = table->schema()->GetFieldIndex(timeKey);
+    const std::vector<const char*> columnNames = {timeKey};
+    const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    const int time_column_index = table->schema()->GetFieldIndex(timeKey);
     if(time_column_index > -1)
     {
         auto time_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(time_column_index)->chunk(0));
@@ -259,13 +259,13 @@ void ArrowSamplerImpl::getPoints(std::vector<ArrowSampler::point_info_t*>& point
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
-    std::vector<const char*> columnNames = {xKey, yKey};
+    const std::vector<const char*> columnNames = {xKey, yKey};
 
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int x_column_index = table->schema()->GetFieldIndex(xKey);
+    const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    const int x_column_index = table->schema()->GetFieldIndex(xKey);
     if(x_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
 
-    int y_column_index = table->schema()->GetFieldIndex(yKey);
+    const int y_column_index = table->schema()->GetFieldIndex(yKey);
     if(y_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
 
     auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
@@ -274,8 +274,8 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
     /* x and y columns are the same longth */
     for(int64_t i = 0; i < x_column->length(); i++)
     {
-        double x = x_column->Value(i);
-        double y = y_column->Value(i);
+        const double x = x_column->Value(i);
+        const double y = y_column->Value(i);
 
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({x, y, 0.0});
         points.push_back(pinfo);
@@ -288,10 +288,10 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
 void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
     const char* geocol  = "geometry";
-    std::vector<const char*> columnNames = {geocol};
+    const std::vector<const char*> columnNames = {geocol};
 
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
+    const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    const int geometry_column_index = table->schema()->GetFieldIndex(geocol);
     if(geometry_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
 
     auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
@@ -303,8 +303,8 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& po
     /* Iterate over each item in the geometry column and extract points */
     for(int64_t i = 0; i < binary_array->length(); i++)
     {
-        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
+        const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
+        const ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({point.x, point.y, 0.0});
         points.push_back(pinfo);
     }
@@ -368,7 +368,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
     const std::string pandas_key = "pandas";
     if(metadata->Contains(pandas_key))
     {
-        int key_index = metadata->FindKey(pandas_key);
+        const int key_index = metadata->FindKey(pandas_key);
         if(key_index != -1)
         {
             PARQUET_THROW_NOT_OK(metadata->Delete(key_index));
@@ -749,7 +749,7 @@ void ArrowSamplerImpl::tableToParquet(const std::shared_ptr<arrow::Table>& table
     parquet::WriterProperties::Builder writer_props_builder;
     writer_props_builder.compression(parquet::Compression::SNAPPY);
     writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
-    shared_ptr<parquet::WriterProperties> writer_properties = writer_props_builder.build();
+    const shared_ptr<parquet::WriterProperties> writer_properties = writer_props_builder.build();
 
     /* Create an Arrow writer properties builder to specify that we want to store Arrow schema */
     auto arrow_properties = parquet::ArrowWriterProperties::Builder().store_schema()->build();
@@ -768,7 +768,7 @@ void ArrowSamplerImpl::tableToCsv(const std::shared_ptr<arrow::Table>& table, co
     PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
 
     /* Create a CSV writer */
-    arrow::csv::WriteOptions write_options = arrow::csv::WriteOptions::Defaults();
+    const arrow::csv::WriteOptions write_options = arrow::csv::WriteOptions::Defaults();
 
     /* Write the table to the CSV file */
     PARQUET_THROW_NOT_OK(arrow::csv::WriteCSV(*table, write_options, outfile.get()));
@@ -797,7 +797,7 @@ void ArrowSamplerImpl::tableToFeather(const std::shared_ptr<arrow::Table>& table
 *----------------------------------------------------------------------------*/
 std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(std::shared_ptr<arrow::Table>& table)
 {
-    int column_index = table->schema()->GetFieldIndex("geometry");
+    const int column_index = table->schema()->GetFieldIndex("geometry");
 
     if(column_index == -1)
         return table;
@@ -872,7 +872,7 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     std::unique_ptr<parquet::arrow::FileReader> _reader;
     PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &_reader));
 
-    std::shared_ptr<parquet::FileMetaData> file_metadata = _reader->parquet_reader()->metadata();
+    const std::shared_ptr<parquet::FileMetaData> file_metadata = _reader->parquet_reader()->metadata();
     print2term("***********************************************************\n");
     print2term("***********************************************************\n");
     print2term("***********************************************************\n");
@@ -886,8 +886,8 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     print2term("  Key Value Metadata:\n");
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        std::string key = file_metadata->key_value_metadata()->key(i);
-        std::string value = file_metadata->key_value_metadata()->value(i);
+        const std::string key = file_metadata->key_value_metadata()->key(i);
+        const std::string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "ARROW:schema") continue;
         print2term("    %s:  %s\n", key.c_str(), value.c_str());
@@ -896,7 +896,7 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     print2term("  Schema:\n");
     for(int i = 0; i < file_metadata->num_columns(); i++)
     {
-        std::shared_ptr<parquet::schema::ColumnPath> path = file_metadata->schema()->Column(i)->path();
+        const std::shared_ptr<parquet::schema::ColumnPath> path = file_metadata->schema()->Column(i)->path();
         print2term("    %s\n", path->ToDotString().c_str());
     }
 }

@@ -68,13 +68,13 @@ int MetricDispatch::luaCreate (lua_State* L)
 
         /* Populate Filter From Command */
         List<long>* id_filter = NULL;
-        int num_filters = getLuaNumParms(L) - 2;
+        const int num_filters = getLuaNumParms(L) - 2;
         if(num_filters > 0)
         {
             id_filter = new List<long>;
             for(int i = 0; i < num_filters; i++)
             {
-                long id = getLuaInteger(L, i + 3);
+                const long id = getLuaInteger(L, i + 3);
                 id_filter->add(id);
             }
         }
@@ -157,7 +157,7 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
             enabled = false;
             for(int i = 0; i < idFilter->length(); i++)
             {
-                long id = record->getRecordId();
+                const long id = record->getRecordId();
                 if(idFilter->get(i) == id)
                 {
                     enabled = true;
@@ -199,8 +199,8 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
                     const char* field_name = fieldFilter->first(&filter_value);
                     while(enabled && field_name)
                     {
-                        RecordObject::field_t field = record->getField(field_name);
-                        RecordObject::valType_t field_type = RecordObject::getValueType(field);
+                        const RecordObject::field_t field = record->getField(field_name);
+                        const RecordObject::valType_t field_type = RecordObject::getValueType(field);
                         if((field_type == RecordObject::INTEGER) && (filter_value->lvalue != record->getValueInteger(field)))
                         {
                             enabled = filter_value->enable;
@@ -227,7 +227,7 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
             if(enabled)
             {
                 /* Generate Data Point */
-                RecordObject::field_t data_field = record->getField(dataField);
+                const RecordObject::field_t data_field = record->getField(dataField);
                 if(data_field.type != RecordObject::INVALID_FIELD)
                 {
                     /* Playback Source */
@@ -248,7 +248,7 @@ bool MetricDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
                     else name = NULL;
 
                     /* Playback Value */
-                    double value = record->getValueReal(data_field);
+                    const double value = record->getValueReal(data_field);
 
                     /* Index Data Point*/
                     MetricRecord metric(key, value, text, name, src, size);
@@ -469,7 +469,7 @@ int MetricDispatch::luaAddFilter(lua_State* L)
 
         /* Get Parameters */
         const char* field_name  = getLuaString(L, 2);
-        bool        enable      = getLuaBoolean(L, 3);
+        const bool  enable      = getLuaBoolean(L, 3);
         const char* field_val_s = getLuaString(L, 4);
 
         /* Get Filter Field Values as Long and Double */

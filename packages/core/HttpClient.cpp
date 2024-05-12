@@ -65,7 +65,7 @@ int HttpClient::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* ip_addr = getLuaString(L, 1, true, NULL);
-        int         port    = (int)getLuaInteger(L, 2);
+        const int   port    = (int)getLuaInteger(L, 2);
 
         /* Get Server Parameter */
         if( ip_addr && (StringLib::match(ip_addr, "0.0.0.0") || StringLib::match(ip_addr, "*")) )
@@ -171,7 +171,7 @@ HttpClient::~HttpClient(void)
  *----------------------------------------------------------------------------*/
 HttpClient::rsps_t HttpClient::request (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout)
 {
-    uint32_t trace_id = start_trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
+    const uint32_t trace_id = start_trace(INFO, traceId, "http_client", "{\"verb\": \"%s\", \"resource\": \"%s\"}", EndpointObject::verb2str(verb), resource);
 
     if(sock->isConnected() && makeRequest(verb, resource, data, keep_alive, trace_id))
     {
@@ -211,7 +211,7 @@ int HttpClient::getPort (void) const
  *----------------------------------------------------------------------------*/
 TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
 {
-    bool block = false;
+    const bool block = false;
     return new TcpSocket(NULL, _ip_addr, _port, false, &block, false);
 }
 
@@ -221,7 +221,7 @@ TcpSocket* HttpClient::initializeSocket(const char* _ip_addr, int _port)
 bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, int32_t parent_trace_id)
 {
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "make_request", "%s", "{}");
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "make_request", "%s", "{}");
 
     bool status = true;
     try
@@ -256,7 +256,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
                                 content_length);
 
             /* Build Request */
-            int hdr_len = rqst_hdr.length();
+            const int hdr_len = rqst_hdr.length();
             rqst_len = content_length + hdr_len;
             if(rqst_len <= MAX_RQST_BUF_LEN)
             {
@@ -288,7 +288,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         }
 
         /* Issue Request */
-        int bytes_written = sock->writeBuffer(rqstBuf, rqst_len);
+        const int bytes_written = sock->writeBuffer(rqstBuf, rqst_len);
 
         /* Check Status */
         if(bytes_written != rqst_len)
@@ -314,7 +314,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
 HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int32_t parent_trace_id)
 {
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "parse_response", "%s", "{}");
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "parse_response", "%s", "{}");
 
     /* Initialize Response */
     rsps_t rsps = {
@@ -342,7 +342,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
         while(active && !response_complete)
         {
             int bytes_read = sock->readBuffer(&rspsBuf[rsps_buf_index], MAX_RSPS_BUF_LEN-rsps_buf_index, timeout);
-            uint32_t sock_trace_id = start_trace(DEBUG, trace_id, "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
+            const uint32_t sock_trace_id = start_trace(DEBUG, trace_id, "sock_read_buffer", "{\"bytes_read\": %d", bytes_read);
             if(bytes_read > 0)
             {
                 int line_start = 0;
@@ -363,7 +363,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                             /* Parse Status Line */
                             if(header_num == 0)
                             {
-                                status_line_t sl = parseStatusLine(line_start, line_term);
+                                const status_line_t sl = parseStatusLine(line_start, line_term);
                                 rsps.code = sl.code;
                                 if(rsps.code != EndpointObject::OK)
                                 {
@@ -373,7 +373,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                             /* Parse Header Line */
                             else
                             {
-                                hdr_kv_t hdr = parseHeaderLine(line_start, line_term);
+                                const hdr_kv_t hdr = parseHeaderLine(line_start, line_term);
                                 StringLib::convertLower(hdr.key);
 
                                 /* Process Content Length Header */
@@ -410,7 +410,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         }
                         else // header line not complete (line_term == 0)
                         {
-                            int bytes_remaining = bytes_read - line_start;
+                            const int bytes_remaining = bytes_read - line_start;
                             memmove(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
                             line_start += bytes_remaining;
@@ -443,7 +443,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         }
                         else // chunk header not complete
                         {
-                            int bytes_remaining = bytes_read - line_start;
+                            const int bytes_remaining = bytes_read - line_start;
                             memmove(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
                             line_start += bytes_remaining;
@@ -461,7 +461,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         }
 
                         /* Determine Bytes to Copy */
-                        int rsps_bytes = bytes_read - line_start;
+                        const int rsps_bytes = bytes_read - line_start;
                         if(rsps_bytes > content_remaining)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", rsps_bytes, content_remaining);
@@ -552,7 +552,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         }
                         else // chunk trailer not complete
                         {
-                            int bytes_remaining = bytes_read - line_start;
+                            const int bytes_remaining = bytes_read - line_start;
                             memmove(&rspsBuf[0], &rspsBuf[line_start], bytes_remaining);
                             rsps_buf_index += bytes_remaining;
                             line_start += bytes_remaining;
@@ -727,7 +727,7 @@ void* HttpClient::requestThread(void* parm)
     while(client->active)
     {
         rqst_t rqst;
-        int recv_status = request_sub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
+        const int recv_status = request_sub->receiveCopy(&rqst, sizeof(rqst_t), SYS_TIMEOUT);
         if(recv_status > 0)
         {
             try
@@ -774,7 +774,7 @@ int HttpClient::luaRequest (lua_State* L)
         const char* outq_name   = getLuaString(L, 5, true, NULL);
 
         /* Error Check Verb */
-        EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
+        const EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
         if(verb == EndpointObject::UNRECOGNIZED)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid verb: %s", verb_str);
@@ -783,7 +783,7 @@ int HttpClient::luaRequest (lua_State* L)
         /* Check if Blocking */
         if(outq_name == NULL)
         {
-            rsps_t rsps = lua_obj->request(verb, resource, data, true, NULL);
+            const rsps_t rsps = lua_obj->request(verb, resource, data, true, NULL);
             if(rsps.response)
             {
                 lua_pushlstring(L, rsps.response, rsps.size);

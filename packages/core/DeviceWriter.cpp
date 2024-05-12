@@ -116,7 +116,7 @@ void* DeviceWriter::writerThread (void* parm)
     {
         /* Read Bytes */
         Subscriber::msgRef_t ref;
-        int status = dw->inq->receiveRef(ref, dw->blockCfg);
+        const int status = dw->inq->receiveRef(ref, dw->blockCfg);
 
         /* Process Bytes */
         if(status > 0)

@@ -65,14 +65,14 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        long        scid        = getLuaInteger(L, 1);
-        long        vcid        = getLuaInteger(L, 2);
-        long        strip       = getLuaInteger(L, 3);
+        const long        scid        = getLuaInteger(L, 1);
+        const long        vcid        = getLuaInteger(L, 2);
+        const long        strip       = getLuaInteger(L, 3);
         const char* sync_str    = getLuaString(L, 4);
-        long        offset      = getLuaInteger(L, 5);
-        long        fixed       = getLuaInteger(L, 6);
-        long        header      = getLuaInteger(L, 7);
-        long        trailer     = getLuaInteger(L, 8);
+        const long        offset      = getLuaInteger(L, 5);
+        const long        fixed       = getLuaInteger(L, 6);
+        const long        header      = getLuaInteger(L, 7);
+        const long        trailer     = getLuaInteger(L, 8);
 
         int sync_size = 0;
         uint8_t sync_marker[MAX_STR_SIZE];
@@ -121,7 +121,7 @@ int CcsdsParserAOSFrameModule::luaCreate (lua_State* L)
 int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, CcsdsPacket* pkt)
 {
     unsigned char*  parse_buffer = buffer;
-    int             parse_bytes = bytes;
+    const int       parse_bytes = bytes;
     int             parse_index = 0;
 
     /* Parse Buffer */
@@ -200,7 +200,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
         else if(state == HEADER)
         {
             /* Copy into Primary Header Buffer */
-            int cpylen = MIN(headerBytes, bytes_left);
+            const int cpylen = MIN(headerBytes, bytes_left);
             memcpy(&aosPrimaryHdr[FrameHeaderSize - headerBytes], &parse_buffer[parse_index], cpylen);
             headerBytes     -= cpylen;
             frameIndex      += cpylen;
@@ -215,8 +215,8 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
                 frameCRC = crc16(aosPrimaryHdr, FrameHeaderSize, 0);
 
                 /* Get Frame Counter and Virtual Channel */
-                int curr_frame_counter = (((uint32_t)aosPrimaryHdr[2]) << 16) | (((uint32_t)aosPrimaryHdr[3]) << 8) | (((uint32_t)aosPrimaryHdr[4]));
-                int curr_channel_id = aosPrimaryHdr[1] & 0x3F;
+                const int curr_frame_counter = (((uint32_t)aosPrimaryHdr[2]) << 16) | (((uint32_t)aosPrimaryHdr[3]) << 8) | (((uint32_t)aosPrimaryHdr[4]));
+                const int curr_channel_id = aosPrimaryHdr[1] & 0x3F;
 
                 /* Check Frame Counter */
                 if(frameCounter != FRAME_COUNTER_UNSET)
@@ -290,7 +290,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
             }
 
             /* Call CCSDS Parser */
-            int bytes_parsed = CcsdsParserModule::parseBuffer(&parse_buffer[parse_index], bytes_left, pkt);
+            const int bytes_parsed = CcsdsParserModule::parseBuffer(&parse_buffer[parse_index], bytes_left, pkt);
 
             /* Check Status */
             if(bytes_parsed >= 0)
@@ -306,7 +306,7 @@ int CcsdsParserAOSFrameModule::parseBuffer (unsigned char* buffer, int bytes, Cc
         }
         else if(state == TRAILER)
         {
-            int cpylen = MIN(trailerBytes, bytes_left);
+            const int cpylen = MIN(trailerBytes, bytes_left);
             memcpy(&aosTrailer[FrameTrailerSize - trailerBytes], &parse_buffer[parse_index], cpylen);
 
             if(trailerBytes <= bytes_left)

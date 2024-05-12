@@ -108,12 +108,7 @@ const char* NetsvcParms::tojson(void) const
     doc.AddMember("read_timeout", rapidjson::Value(read_timeout), allocator);
     doc.AddMember("cluster_size_hint", rapidjson::Value(cluster_size_hint), allocator);
 
-    const char* proj_name = projection == MathLib::AUTOMATIC   ? "AUTOMATIC" :
-                            projection == MathLib::NORTH_POLAR ? "NORTH_POLAR" :
-                            projection == MathLib::SOUTH_POLAR ? "SOUTH_POLAR" :
-                            "PLATE_CARREE";
-
-    doc.AddMember("projection", rapidjson::Value(proj_name, allocator), allocator);
+    doc.AddMember("projection", rapidjson::Value(MathLib::proj2str(projection), allocator), allocator);
 
     /* Polygon is a list of coordinates */
     doc.AddMember("points_in_poly", rapidjson::Value(points_in_poly), allocator);

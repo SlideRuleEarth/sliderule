@@ -1227,7 +1227,7 @@ void Icesat2Parms::get_lua_phoreal (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * surface2string
  *----------------------------------------------------------------------------*/
-const char* Icesat2Parms::surface2string (surface_type_t type) const
+const char* Icesat2Parms::surface2string (surface_type_t type)
 {
     switch (type)
     {

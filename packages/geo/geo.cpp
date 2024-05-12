@@ -87,8 +87,8 @@ void test_projlib(void)
     PJ *G2P = proj_create_crs_to_crs_from_pj(C, G, P, A, options);
 
     /* Longitude and latitude of Copenhagen, in degrees. */
-    double lon = 12.0;
-    double lat = 55.0;
+    const double lon = 12.0;
+    const double lat = 55.0;
 
     /* Prepare the input */
     PJ_COORD c_in;
@@ -99,11 +99,11 @@ void test_projlib(void)
     // print2term("Input longitude: %g, latitude: %g (degrees)\n", c_in.lp.lam, c_in.lp.phi);
 
     /* Compute easting and northing */
-    PJ_COORD c_out = proj_trans(G2P, PJ_FWD, c_in);
+    const PJ_COORD c_out = proj_trans(G2P, PJ_FWD, c_in);
     // print2term("Output easting: %g, northing: %g (meters)\n", c_out.enu.e, c_out.enu.n);
 
     /* Apply the inverse transform */
-    PJ_COORD c_inv = proj_trans(G2P, PJ_INV, c_out);
+    const PJ_COORD c_inv = proj_trans(G2P, PJ_INV, c_out);
     // print2term("Inverse applied. Longitude: %g, latitude: %g (degrees)\n", c_inv.lp.lam, c_inv.lp.phi);
 
     if(c_in.lpzt.z != c_inv.lpzt.z &&

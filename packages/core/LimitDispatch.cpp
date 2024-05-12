@@ -126,7 +126,6 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
 {
     (void)records;
 
-    bool status = true;
     bool enabled = true;
 
     /* Filter on ID */
@@ -141,11 +140,11 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     /* Limit Check */
     if(enabled)
     {
-        RecordObject::field_t field = record->getField(limit.field_name);
+        const RecordObject::field_t field = record->getField(limit.field_name);
         if(field.type != RecordObject::INVALID_FIELD)
         {
             inError = false;
-            double val = record->getValueReal(field);
+            const double val = record->getValueReal(field);
             if( ((limit.limit_min) && (limit.d_min > val)) ||
                 ((limit.limit_max) && (limit.d_max < val)) )
             {
@@ -157,7 +156,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 /* Log Error Message */
                 if(gmtDisplay)
                 {
-                    TimeLib::gmt_time_t index_time = TimeLib::gps2gmttime(key);
+                    const TimeLib::gmt_time_t index_time = TimeLib::gps2gmttime(key);
                     mlog(logLevel, "Limit violation for %s - %s(%ld): %lf violates %s: [%lf, %lf] at %d:%d:%d:%d:%d:%d",
                             limit.field_name, violation.limit->record_name, record->getRecordId(),
                             violation.limit->d_val, ObjectType, limit.d_min, limit.d_max,
@@ -174,7 +173,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 if(limitQ)
                 {
                     unsigned char* buffer; // reference to serial buffer
-                    int size = violation.serialize(&buffer, RecordObject::REFERENCE);
+                    const int size = violation.serialize(&buffer, RecordObject::REFERENCE);
                     if(size > 0) limitQ->postCopy(buffer, size);
                 }
 
@@ -182,7 +181,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 if(deepQ)
                 {
                     unsigned char* buffer; // reference to serial buffer
-                    int size = record->serialize(&buffer, RecordObject::REFERENCE);
+                    const int size = record->serialize(&buffer, RecordObject::REFERENCE);
                     if(size > 0) deepQ->postCopy(buffer, size);
                 }
             }
@@ -194,7 +193,7 @@ bool LimitDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         }
     }
 
-    return status;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -210,7 +209,7 @@ int LimitDispatch::luaSetLogLevel(lua_State* L)
         LimitDispatch* lua_obj = dynamic_cast<LimitDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        event_level_t lvl = (event_level_t)getLuaInteger(L, 2);
+        const event_level_t lvl = (event_level_t)getLuaInteger(L, 2);
 
         /* Set Level */
         lua_obj->logLevel = lvl;

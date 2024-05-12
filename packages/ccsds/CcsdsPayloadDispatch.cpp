@@ -106,14 +106,14 @@ bool CcsdsPayloadDispatch::processRecord(RecordObject* record, okey_t key, recVe
         }
 
         /* Get APID */
-        int apid = ccsds_pkt.getAPID();
+        const int apid = ccsds_pkt.getAPID();
 
         /* Post Payload */
         qMut.lock();
         {
             if(outQ[apid])
             {
-                int status = outQ[apid]->postCopy(ccsds_pkt.getPayload(), ccsds_pkt.getLEN() - ccsds_pkt.getHdrSize());
+                const int status = outQ[apid]->postCopy(ccsds_pkt.getPayload(), ccsds_pkt.getLEN() - ccsds_pkt.getHdrSize());
                 if(status <= 0)
                 {
                     mlog(ERROR, "Dropped payload on post to %s with error %d", outQ[apid]->getName(), status);
@@ -178,7 +178,7 @@ void CcsdsPayloadDispatch::setPublisher (int apid, const char* qname)
             catch(RunTimeException& e)
             {
                 (void)e;
-                pub_t pub_lookup = { .pub = new Publisher(qname) };
+                const pub_t pub_lookup = { .pub = new Publisher(qname) };
                 qLookUp.add(qname, pub_lookup);
             }
         }
@@ -226,7 +226,7 @@ int CcsdsPayloadDispatch::luaForwardPacket(lua_State* L)
         CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        long        apid        = getLuaInteger(L, 1);
+        const long  apid        = getLuaInteger(L, 1);
         const char* outq_name   = getLuaString(L, 2);
 
         /* Check and Forward APID */
@@ -271,7 +271,7 @@ int CcsdsPayloadDispatch::luaCheckLength(lua_State* L)
         CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool enable = getLuaBoolean(L, 2);
+        const bool enable = getLuaBoolean(L, 2);
 
         /* Set Length Check */
         lua_obj->checkLength = enable;
@@ -301,7 +301,7 @@ int CcsdsPayloadDispatch::luaCheckChecksum(lua_State* L)
         CcsdsPayloadDispatch* lua_obj = dynamic_cast<CcsdsPayloadDispatch*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool enable = getLuaBoolean(L, 2);
+        const bool enable = getLuaBoolean(L, 2);
 
         /* Set Checksum Check */
         lua_obj->checkChecksum = enable;

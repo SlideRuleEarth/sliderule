@@ -172,7 +172,7 @@ void LuaEngine::deinit(void)
     /* Free memory stored in pkgInitTable list */
     pkgInitTableMutex.lock();
     {
-        int num_pkgs = pkgInitTable.length();
+        const int num_pkgs = pkgInitTable.length();
         for(int i = 0; i < num_pkgs; i++)
         {
             delete [] pkgInitTable[i].pkg_name;
@@ -184,7 +184,7 @@ void LuaEngine::deinit(void)
     /* Free memory stored libInitTable list */
     libInitTableMutex.lock();
     {
-        int num_libs = libInitTable.length();
+        const int num_libs = libInitTable.length();
         for(int i = 0; i < num_libs ; i++)
         {
             delete [] libInitTable[i].lib_name;
@@ -232,7 +232,7 @@ const char** LuaEngine::getPkgList(void)
 
     pkgInitTableMutex.lock();
     {
-        int num_pkgs = pkgInitTable.length();
+        const int num_pkgs = pkgInitTable.length();
         if(num_pkgs > 0)
         {
             pkg_list = new const char* [num_pkgs + 1];
@@ -336,14 +336,14 @@ void LuaEngine::setAttrFunc (lua_State* l, const char* name, lua_CFunction val)
 void LuaEngine::showStack (lua_State* l, const char* prefix)
 {
     if(l == NULL) return;
-    int top = lua_gettop(l);
+    const int top = lua_gettop(l);
 
     if( prefix ) print2term("%s, stack depth is: %d\n", prefix, top );
     else         print2term("stack depth is: %d\n", top );
 
     for (int i = top; i >= 1; i--)
     {
-        int t = lua_type(l, i);
+        const int t = lua_type(l, i);
 
         switch (t)
         {
@@ -559,8 +559,8 @@ void* LuaEngine::protectedThread (void* parm)
         lua_pushcfunction(p->engine->L, &pmain);            /* to call 'pmain' in protected mode */
         lua_pushinteger(p->engine->L, p->argc);             /* 1st argument */
         lua_pushlightuserdata(p->engine->L, p->argv);       /* 2nd argument */
-        int status = lua_pcall(p->engine->L, 2, 1, 0);      /* do the call */
-        int result = lua_toboolean(p->engine->L, -1);       /* get result */
+        const int status = lua_pcall(p->engine->L, 2, 1, 0);/* do the call */
+        const int result = lua_toboolean(p->engine->L, -1); /* get result */
         if (status != LUA_OK || result == 0)
         {
             mlog(CRITICAL, "%s exited with error", p->argc > 0 ? p->argv[0] : "lua script");
@@ -818,7 +818,7 @@ int LuaEngine::msghandler (lua_State* l)
 int LuaEngine::docall (int narg, int nres)
 {
     int status;
-    int base = lua_gettop(L) - narg;  /* function index */
+    const int base = lua_gettop(L) - narg;  /* function index */
     lua_pushcfunction(L, msghandler);  /* push message handler */
     lua_insert(L, base);  /* put it under function and args */
     status = lua_pcall(L, narg, nres, base);
@@ -895,7 +895,7 @@ int LuaEngine::addreturn (void)
 {
     const char *line = lua_tostring(L, -1);  /* original line */
     const char *retline = lua_pushfstring(L, "return %s;", line);
-    int status = luaL_loadbuffer(L, retline, StringLib::size(retline), "=stdin");
+    const int status = luaL_loadbuffer(L, retline, StringLib::size(retline), "=stdin");
     if (status == LUA_OK)
     {
         lua_remove(L, -2);  /* remove modified line */
@@ -920,7 +920,7 @@ int LuaEngine::multiline (void)
     {
         size_t len;
         const char *line = lua_tolstring(L, 1, &len);  /* get what it has */
-        int status = luaL_loadbuffer(L, line, len, "=stdin");  /* try it */
+        const int status = luaL_loadbuffer(L, line, len, "=stdin");  /* try it */
         if (!incomplete(status) || !pushline(0))
         {
             add_history(line);  /* keep history */
@@ -964,7 +964,7 @@ int LuaEngine::loadline (void)
  *----------------------------------------------------------------------------*/
 void LuaEngine::lprint (void)
 {
-    int n = lua_gettop(L);
+    const int n = lua_gettop(L);
 
     /* any result to be printed? */
     if (n > 0)
@@ -1096,10 +1096,10 @@ int LuaEngine::pmain (lua_State *L)
     }
 
     /* parse arguments */
-    int     argc    = static_cast<int>(lua_tointeger(L, 1));
-    char**  argv    = static_cast<char**>(lua_touserdata(L, 2));
-    int     script  = 0;
-    int     args    = collectargs(argv, &script);
+    const int argc    = static_cast<int>(lua_tointeger(L, 1));
+    char**    argv    = static_cast<char**>(lua_touserdata(L, 2));
+    int       script  = 0;
+    const int args    = collectargs(argv, &script);
 
     /* check that interpreter has correct version */
     luaL_checkversion(L);
@@ -1122,7 +1122,7 @@ int LuaEngine::pmain (lua_State *L)
     */
     int nscript = script;
     if (script == argc) nscript = 0;  /* no script name? */
-    int narg = argc - (nscript + 1);  /* number of positive indices */
+    const int narg = argc - (nscript + 1);  /* number of positive indices */
     lua_createtable(L, narg, nscript + 1);
     for (int i = 0; i < argc; i++)
     {
@@ -1134,7 +1134,7 @@ int LuaEngine::pmain (lua_State *L)
     /* execute main script (if there is one) */
     if (script < argc)
     {
-        int script_status = li->handlescript(argv[script]);
+        const int script_status = li->handlescript(argv[script]);
         if( script_status != LUA_OK)
         {
             lua_pushboolean(L, 0);  /* error */

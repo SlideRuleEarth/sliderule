@@ -59,10 +59,10 @@ int CcsdsPacketizer::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* inq         = getLuaString(L, 1);
         const char* outq        = getLuaString(L, 2);
-        int         apid        = getLuaInteger(L, 3);
-        int         pkttype     = getLuaInteger(L, 4);
-        int         fc          = getLuaInteger(L, 5, true, 0);
-        int         maxsize     = getLuaInteger(L, 6, true, CcsdsPacketizer::DEFAULT_MAX_PACKET_SIZE);
+        const int   apid        = getLuaInteger(L, 3);
+        const int   pkttype     = getLuaInteger(L, 4);
+        const int   fc          = getLuaInteger(L, 5, true, 0);
+        const int   maxsize     = getLuaInteger(L, 6, true, CcsdsPacketizer::DEFAULT_MAX_PACKET_SIZE);
 
         /* Create Packet Parser */
         return createLuaObject(L, new CcsdsPacketizer(L, inq, outq, pkttype, (uint16_t)apid, fc, (uint16_t)maxsize));
@@ -116,7 +116,7 @@ CcsdsPacketizer::~CcsdsPacketizer(void)
  *----------------------------------------------------------------------------*/
 bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
 {
-    int pkt_len = hdrLength + bytes;
+    const int pkt_len = hdrLength + bytes;
 
     if(pkt_len > maxLength)
     {
@@ -148,7 +148,7 @@ bool CcsdsPacketizer::processMsg (unsigned char* msg, int bytes)
     }
 
     /* Post Packet */
-    int status = outQ->postCopy(pkt.getBuffer(), pkt.getLEN());
+    const int status = outQ->postCopy(pkt.getBuffer(), pkt.getLEN());
     if(status <= 0)
     {
         mlog(ERROR, "failed to post packetized record %04X", apid);

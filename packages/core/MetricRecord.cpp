@@ -118,7 +118,7 @@ MetricRecord::~MetricRecord()
  *----------------------------------------------------------------------------*/
 int MetricRecord::calcRecordSize (const char* _text, const char* _name, int _src_size)
 {
-    int text_len = StringLib::size(_text) + 1;
-    int name_len = StringLib::size(_name) + 1;
+    const int text_len = StringLib::size(_text) + 1;
+    const int name_len = StringLib::size(_name) + 1;
     return (sizeof(metric_t) + text_len + name_len + _src_size);
 }

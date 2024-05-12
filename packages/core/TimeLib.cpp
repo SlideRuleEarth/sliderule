@@ -202,7 +202,7 @@ int64_t TimeLib::gps2systimeex (double gps_secs)
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::sysex2gpstime (int64_t sysex)
 {
-    int64_t sysnow = sysex / 1000;
+    const int64_t sysnow = sysex / 1000;
     return(sys2gpstime(sysnow));
 }
 
@@ -237,8 +237,8 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     int64_t gps_msecs  = msecs;
 
     /* Calculate Leap Seconds */
-    int64_t gps_ms  = (gps_days * (int64_t)TIME_MILLISECS_IN_A_DAY) + gps_msecs;
-    int64_t unix_us = GPS_TO_SYS(gps_ms);
+    const int64_t gps_ms  = (gps_days * (int64_t)TIME_MILLISECS_IN_A_DAY) + gps_msecs;
+    const int64_t unix_us = GPS_TO_SYS(gps_ms);
     gps_msecs      -= (getleapsecs(unix_us, GPS_EPOCH_START) * 1000);
 
     if(gps_msecs >= 0)
@@ -273,14 +273,14 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
     else
     {
         /* Now modulo math for year index is safe - will be at least 1 */
-        unsigned int year_index = (unsigned int)(gps_days/TIME_DAYS_IN_A_YEAR);
+        const unsigned int year_index = (unsigned int)(gps_days/TIME_DAYS_IN_A_YEAR);
 
         /* Since we use index+1 make sure the index is not too big */
         if( year_index < (MAX_GPS_YEARS - 1) )
         {
-            int gps_days_at_start_of_next_year = GpsDaysToStartOfYear[year_index+1];
-            int gps_days_at_start_of_this_year = GpsDaysToStartOfYear[year_index];
-            int gps_days_at_start_of_prev_year = GpsDaysToStartOfYear[year_index-1];
+            const int gps_days_at_start_of_next_year = GpsDaysToStartOfYear[year_index+1];
+            const int gps_days_at_start_of_this_year = GpsDaysToStartOfYear[year_index];
+            const int gps_days_at_start_of_prev_year = GpsDaysToStartOfYear[year_index-1];
 
             if( gps_days >=  gps_days_at_start_of_next_year )
             {
@@ -366,7 +366,7 @@ TimeLib::date_t TimeLib::gmt2date (const gmt_time_t& gmt_time)
  *----------------------------------------------------------------------------*/
 int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
 {
-    bool leap_year = (gmt_time.year % 4 == 0);
+    const bool leap_year = (gmt_time.year % 4 == 0);
 
     /* Check GMT Time Passed In */
     if( (gmt_time.year < 1980 || gmt_time.year > (1980 + MAX_GPS_YEARS)) ||
@@ -386,7 +386,7 @@ int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
 
     /* Find number of seconds */
     int64_t gps_seconds = 0;
-    int years = gmt_time.year - 1980;
+    const int years = gmt_time.year - 1980;
     if(years == 0)
     {
         gps_seconds = static_cast<int64_t>(gmt_time.doy - 6) * static_cast<int64_t>(TIME_SECS_IN_A_DAY);
@@ -405,7 +405,7 @@ int64_t TimeLib::gmt2gpstime (const gmt_time_t& gmt_time)
     int64_t gps_msecs = (gps_seconds * 1000) + gmt_time.millisecond;
 
     /* Calculate and add Leap Seconds */
-    int64_t unix_us = GPS_TO_SYS(gps_msecs);
+    const int64_t unix_us = GPS_TO_SYS(gps_msecs);
     gps_msecs += (getleapsecs(unix_us, GPS_EPOCH_START) * 1000);
 
     return gps_msecs;
@@ -661,7 +661,7 @@ int TimeLib::daysinmonth (int year, int month)
 {
     if(month < 1 || month > MONTHS_IN_YEAR) return 0;
 
-    int days_in_month = DaysInEachMonth[month - 1];
+    const int days_in_month = DaysInEachMonth[month - 1];
 
     int leap_day = 0;
     if(month == 2)
@@ -688,7 +688,7 @@ int TimeLib::daysinmonth (int year, int month)
  *----------------------------------------------------------------------------*/
 const char* TimeLib::getmonthname (int month)
 {
-    int month_index = month - 1;
+    const int month_index = month - 1;
     if(month_index >= 0 && month_index < MONTHS_IN_YEAR)
     {
         return MonthNames[month_index];
@@ -703,9 +703,9 @@ const char* TimeLib::getmonthname (int month)
  *----------------------------------------------------------------------------*/
 bool TimeLib::gmtinrange(const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end)
 {
-    int64_t gpsTime  = TimeLib::gmt2gpstime(gmt_time);
-    int64_t gpsStart = TimeLib::gmt2gpstime(gmt_start);
-    int64_t gpsEnd   = TimeLib::gmt2gpstime(gmt_end);
+    const int64_t gpsTime  = TimeLib::gmt2gpstime(gmt_time);
+    const int64_t gpsStart = TimeLib::gmt2gpstime(gmt_start);
+    const int64_t gpsEnd   = TimeLib::gmt2gpstime(gmt_end);
 
    return ((gpsTime >= gpsStart) && (gpsTime <= gpsEnd));
 }
@@ -760,7 +760,7 @@ bool TimeLib::str2doyrange(const char* doy_range_str, int& doy_start, int& doy_e
 bool TimeLib::doyinrange(const gmt_time_t& gmt_time, int doy_start, int doy_end)
 {
     const date_t date = gmt2date(gmt_time);
-    int doy = dayofyear(date.year, date.month, date.day);
+    const int doy = dayofyear(date.year, date.month, date.day);
     return ((doy >= doy_start) && (doy <= doy_end));
 }
 
@@ -777,7 +777,7 @@ int TimeLib::getleapsecs(int64_t sysnow, int64_t start_secs)
 {
     int start_index = leapCount;
     int current_index = 0;
-    int64_t sys_secs = sysnow / 1000000;
+    const int64_t sys_secs = sysnow / 1000000;
 
     /* Find the index of the last leap second before the current time */
     for (int i = leapCount - 1; i > 0; i--)
@@ -822,8 +822,8 @@ void TimeLib::heartbeat(void)
         counter = 0;
 
         /* Calculate Microseconds per Second */
-        int64_t now = OsApi::time(OsApi::SYS_CLK);
-        int64_t usec_per_sec = now - lastTime;
+        const int64_t now = OsApi::time(OsApi::SYS_CLK);
+        const int64_t usec_per_sec = now - lastTime;
         if(usec_per_sec > 500000 && usec_per_sec < 1500000)
         {
             /* Calculate New Step Time */
@@ -869,14 +869,14 @@ void TimeLib::parsenistfile(void)
             {
                 /* Trim everything after the first space */
                 char leap_second_str[1][MAX_STR_SIZE];
-                int num_vals = StringLib::tokenizeLine(line, MAX_STR_SIZE, ' ', 1, leap_second_str);
+                const int num_vals = StringLib::tokenizeLine(line, MAX_STR_SIZE, ' ', 1, leap_second_str);
                 if(num_vals > 0)
                 {
                     /* Convert to long and assign to array */
                     long long leap_second;
                     if(StringLib::str2llong(leap_second_str[0], &leap_second, 10))
                     {
-                        int64_t ls = (int64_t)leap_second;
+                        const int64_t ls = (int64_t)leap_second;
                         ntp_leap_seconds.add(ls);
                     }
                     else

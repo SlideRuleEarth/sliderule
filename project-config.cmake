@@ -29,12 +29,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "clang-analyzer-*,"
         "-clang-diagnostic-unused-command-line-argument,"
         "concurrency-*,"       # Several were disabled in cpp files with // NOLINT
-
         "performance-*,"
         "-performance-enum-size,"
-
         "portability-*,"
-
         "readability-*,"
         "-readability-braces-around-statements,"
         "-readability-implicit-bool-conversion,"
@@ -42,20 +39,18 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "-readability-function-cognitive-complexity,"
         "-readability-identifier-length,"
         "-readability-simplify-boolean-expr,"
-        "-readability-simplify-boolean-expr,"
         "-readability-else-after-return,"
         "-readability-avoid-const-params-in-decls,"
         "-readability-avoid-unconditional-preprocessor-if,"
         "-readability-suspicious-call-argument,"
         "-readability-isolate-declaration,"
         "-readability-misleading-indentation,"
-
         "misc-*,"
         "-misc-non-private-member-variables-in-classes,"
         "-misc-include-cleaner,"
-        "-misc-const-correctness,"
         "-misc-use-anonymous-namespace,"
-        "-misc-no-recursion,"
+        "-misc-const-correctness,"
+        "-misc-no-recursion"
     )
 
     # Join checks into a single string parameter
@@ -65,9 +60,10 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
        clang-tidy;
        -header-filter=.;
        -checks=${CLANG_TIDY_CHECKS_PARM};
+       -warnings-as-errors=*;
     )
 
-    message(STATUS "Clang-Tidy checks parms: ${CLANG_TIDY_CHECKS_PARM}")
+    #message(STATUS "Clang-Tidy checks parms: ${CLANG_TIDY_CHECKS_PARM}")
 
     # cppcheck
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
@@ -99,7 +95,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
     )
-    message(STATUS "cppcheck: ${CMAKE_CXX_CPPCHECK}")
+
+    #message(STATUS "cppcheck: ${CMAKE_CXX_CPPCHECK}")
 endif()
 
 ###################

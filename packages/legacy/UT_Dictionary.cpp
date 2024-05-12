@@ -101,7 +101,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     try
     {
         wordlist_ptr = wordsets[wordset_name];
-        if(wordlist_ptr->empty()) // NOLINT
+        if(wordlist_ptr->empty())
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
             return -1;
@@ -118,10 +118,10 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     int numwords = static_cast<int>(wordset.size());
 
     /* Set Entries */
-    for(int i = 0; i < numwords; i++) // NOLINT
+    for(int i = 0; i < numwords; i++)
     {
         seq = i;
-        if(!d1.add(wordset[i].c_str(), seq)) // NOLINT
+        if(!d1.add(wordset[i].c_str(), seq))
         {
             print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
             failure = true;
@@ -129,9 +129,9 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     }
 
     /* Find Entries */
-    for(int i = 0; i < numwords; i++) // NOLINT
+    for(int i = 0; i < numwords; i++)
     {
-        if(!d1.find(wordset[i].c_str())) // NOINT
+        if(!d1.find(wordset[i].c_str()))
         {
             print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i].c_str());
             failure = true;
@@ -139,12 +139,12 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     }
 
     /* Get Entries */
-    for(int i = 0; i < numwords; i++) // NOINT
+    for(int i = 0; i < numwords; i++)
     {
         try
         {
             long data = d1.get(wordset[i].c_str());
-            if(data != i) // NOLINT
+            if(data != i)
             {
                 print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i].c_str());
                 failure = true;
@@ -194,7 +194,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                 {
                     if(true_list[j] != NULL)
                     {
-                        if(StringLib::match(true_list[j], key_list[i])) // NOLINT
+                        if(StringLib::match(true_list[j], key_list[i])) // NOLINT [clang-analyzer-core.CallAndMessage]
                         {
                             found = true;
                             true_list[j] = NULL;
@@ -208,7 +208,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                     failure = true;
                 }
 
-                delete [] key_list[i]; // NOLINT
+                delete [] key_list[i]; // NOLINT [clang-analyzer-core.CallAndMessage]
             }
         }
         delete [] key_list;

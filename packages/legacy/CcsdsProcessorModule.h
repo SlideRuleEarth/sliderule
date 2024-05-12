@@ -70,7 +70,7 @@ class CcsdsProcessorModule: public CommandableObject
                         ~CcsdsProcessorModule       (void);
 
         static long     parseInt                    (const unsigned char* ptr, int size);
-        double          parseFlt                    (const unsigned char* ptr, int size);
+        static double   parseFlt                    (const unsigned char* ptr, int size);
         static double   integrateAverage            (uint32_t statcnt, double curr_avg, double new_val);
         static double   integrateWeightedAverage    (uint32_t curr_cnt, double curr_avg, double new_val, uint32_t new_cnt);
 };

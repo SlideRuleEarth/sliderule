@@ -81,7 +81,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
 
     /* Get cellsize */
     lua_getfield(L, index, CELLSIZE_KEY);
-    double cellsize = getLuaFloat(L, -1);
+    const double cellsize = getLuaFloat(L, -1);
     lua_pop(L, 1);
 
     /* Get Geo Parameters */
@@ -113,8 +113,8 @@ bool GeoJsonRaster::includes(double lon, double lat, double height)
     if((lon >= bbox.lon_min) && (lon <= bbox.lon_max) &&
        (lat >= bbox.lat_min) && (lat <= bbox.lat_max))
     {
-        uint32_t row = (bbox.lat_max - lat) / cellsize;
-        uint32_t col = (lon - bbox.lon_min) / cellsize;
+        const uint32_t row = (bbox.lat_max - lat) / cellsize;
+        const uint32_t col = (lon - bbox.lon_min) / cellsize;
 
         if((row < rows) && (col < cols))
         {
@@ -167,7 +167,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
     try
     {
         /* Create raster from geojson file */
-        vsi_l_offset len = strlen(geojstr);
+        const vsi_l_offset len = strlen(geojstr);
         GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(geojstr));
         VSILFILE* fp = VSIFileFromMemBuffer(jsonFile.c_str(), bytes, len, FALSE);
         CHECKPTR(fp);
@@ -205,7 +205,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
         rasterDset->SetProjection(wkt);
         CPLFree(wkt);
 
-        int bandInx = 1; /* Band index starts at 1, not 0 */
+        const int bandInx = 1; /* Band index starts at 1, not 0 */
         GDALRasterBand *rb = rasterDset->GetRasterBand(bandInx);
         CHECKPTR(rb);
         rb->SetNoDataValue(RASTER_NODATA_VALUE);
@@ -225,7 +225,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
         double burnValues[BANDCNT];
         burnValues[0] = RASTER_PIXEL_ON;
 
-        CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, reinterpret_cast<OGRLayerH*>(&layers[0]), NULL, NULL, burnValues, NULL, NULL, NULL);
+        const CPLErr cplerr = GDALRasterizeLayers(rasterDset, 1, bandlist, 1, reinterpret_cast<OGRLayerH*>(&layers[0]), NULL, NULL, burnValues, NULL, NULL, NULL);
         CHECK_GDALERR(cplerr);
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFileName.c_str());
 

@@ -81,7 +81,7 @@ UT_MsgQ::~UT_MsgQ(void)
 /*----------------------------------------------------------------------------
  * blockingReceiveUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
     (void)argv;
@@ -170,7 +170,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * subscriberThread  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
     (void)argv;
@@ -279,7 +279,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
 /*----------------------------------------------------------------------------
  * performanceUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     long depth = 500000;
     long size = 1000;
@@ -394,7 +394,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * subscriberOfOpporunityUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
 {
     (void)argc;
     (void)argv;
