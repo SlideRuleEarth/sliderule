@@ -175,7 +175,7 @@ void* CosmosInterface::listenerThread (void* parm)
 
     listener_t* l = static_cast<listener_t*>(parm);
 
-    int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, &l->ci->interfaceActive, static_cast<void*>(l->ci));
+    const int status = SockLib::startserver(l->ip_addr, l->port, l->ci->maxConnections, pollHandler, l->handler, &l->ci->interfaceActive, static_cast<void*>(l->ci));
     if(status < 0)
     {
         mlog(CRITICAL, "Failed to establish server: %s", l->ci->getName());
@@ -263,12 +263,12 @@ void* CosmosInterface::telemetryThread (void* parm)
     while(ci->interfaceActive)
     {
         /* ReceivePacket */
-        int bytes = rqst->sub->receiveCopy(&buffer[HEADER_SIZE], MAX_PACKET_SIZE, SYS_TIMEOUT);
+        const int bytes = rqst->sub->receiveCopy(&buffer[HEADER_SIZE], MAX_PACKET_SIZE, SYS_TIMEOUT);
         if(bytes > 0)
         {
             buffer[SYNC_SIZE] = (bytes + HEADER_SIZE) & 0xFF;
             buffer[SYNC_SIZE + 1] = ((bytes + HEADER_SIZE) >> 8) & 0xFF;
-            int bytes_sent = rqst->sock->writeBuffer(buffer, bytes + HEADER_SIZE);
+            const int bytes_sent = rqst->sock->writeBuffer(buffer, bytes + HEADER_SIZE);
             if(bytes_sent != bytes + HEADER_SIZE)
             {
                 mlog(CRITICAL, "Message of size %d unable to be sent (%d) to remote destination %s", bytes, bytes_sent, rqst->sock->getIpAddr());
@@ -309,7 +309,7 @@ void* CosmosInterface::commandThread (void* parm)
         /* Read Header */
         if(header_index != HEADER_SIZE)
         {
-            int bytes = rqst->sock->readBuffer(&header_buf[header_index], HEADER_SIZE - header_index);
+            const int bytes = rqst->sock->readBuffer(&header_buf[header_index], HEADER_SIZE - header_index);
             if(bytes > 0)
             {
                 header_index += bytes;
@@ -357,7 +357,7 @@ void* CosmosInterface::commandThread (void* parm)
         /* Read Packet */
         else if(packet_index < packet_size)
         {
-            int bytes = rqst->sock->readBuffer(&packet_buf[packet_index], packet_size - packet_index);
+            const int bytes = rqst->sock->readBuffer(&packet_buf[packet_index], packet_size - packet_index);
             if(bytes > 0)
             {
                 packet_index += bytes;

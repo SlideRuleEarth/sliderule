@@ -84,7 +84,7 @@ int Gedi04aReader::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<GediParms*>(getLuaObject(L, 4, GediParms::OBJECT_TYPE));
-        bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Gedi04aReader(L, asset, resource, outq_name, parms, send_terminator));
@@ -173,7 +173,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -182,7 +182,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         Region region(info);
 
         /* Read GEDI Datasets */
-        Gedi04a gedi04a(info, region);
+        const Gedi04a gedi04a(info, region);
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;

@@ -69,7 +69,7 @@ int PistacheClient::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name   = getLuaString(L, 1, true, NULL);
-        long        num_threads = getLuaInteger(L, 2, true, 1);
+        const long  num_threads = getLuaInteger(L, 2, true, 1);
 
         /* Create Lua Endpoint */
         return createLuaObject(L, new PistacheClient(L, outq_name, num_threads));
@@ -162,7 +162,7 @@ int PistacheClient::luaRequest(lua_State* L)
 
         /* Get Timeout */
         bool timeout_provided = false;
-        int timeout = getLuaInteger(L, 5, true, SYS_TIMEOUT, &timeout_provided);
+        const int timeout = getLuaInteger(L, 5, true, SYS_TIMEOUT, &timeout_provided);
         if(timeout_provided && lua_obj->outQ)
         {
             mlog(WARNING, "Timeout ignored for asynchronous clients");

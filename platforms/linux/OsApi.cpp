@@ -231,7 +231,7 @@ double OsApi::memusage (void)
     if(memfd)
     {
         lseek(memfd, 0, SEEK_SET);
-        int bytes_read = read(memfd, buffer, BUFSIZE - 1);
+        const int bytes_read = read(memfd, buffer, BUFSIZE - 1);
         if(bytes_read > 0)
         {
             buffer[bytes_read] = '\0';
@@ -255,7 +255,7 @@ double OsApi::memusage (void)
 
             /* Convert MemTotal */
             errno = 0;
-            long mem_total = strtol(mem_total_ptr, &endptr, 10);
+            const long mem_total = strtol(mem_total_ptr, &endptr, 10);
             if( (endptr == mem_total_ptr) ||
                 (errno == ERANGE && (mem_total == LONG_MAX || mem_total == LONG_MIN)) )
             {
@@ -264,7 +264,7 @@ double OsApi::memusage (void)
 
             /* Convert MemAvailable */
             errno = 0;
-            long mem_available = strtol(mem_available_ptr, &endptr, 10);
+            const long mem_available = strtol(mem_available_ptr, &endptr, 10);
             if( (endptr == mem_available_ptr) ||
                 (errno == ERANGE && (mem_available == LONG_MAX || mem_available == LONG_MIN)) )
             {

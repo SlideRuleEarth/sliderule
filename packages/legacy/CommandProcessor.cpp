@@ -736,7 +736,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         print2term("\n-------------- Registered Objects ---------------\n");
         char** objnames = NULL;
-        int numobjs = objects.getKeys(&objnames);
+        const int numobjs = objects.getKeys(&objnames);
         for(int i = 0; i < numobjs; i++)
         {
             obj_entry_t entry = objects[objnames[i]];   // NOLINT [clang-analyzer-core.CallAndMessage]
@@ -750,7 +750,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         print2term("\n-------------- Registered Records ---------------\n");
         char** rectypes = NULL;
-        int numrecs = RecordObject::getRecords(&rectypes);
+        const int numrecs = RecordObject::getRecords(&rectypes);
         for(int i = 0; i < numrecs; i++)
         {
             print2term("%s\n", rectypes[i]);
@@ -762,11 +762,11 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     if(registered_streams)
     {
         print2term("\n-------------- Registered Streams ---------------\n");
-        int num_msgqs = MsgQ::numQ();
+        const int num_msgqs = MsgQ::numQ();
         if(num_msgqs > 0)
         {
             MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
-            int numq = MsgQ::listQ(msgQs, num_msgqs);
+            const int numq = MsgQ::listQ(msgQs, num_msgqs);
             for(int i = 0; i < numq; i++)
             {
                 print2term("%-40s %8d %9s %d\n",
@@ -785,7 +785,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             print2term("\n-------------- %s %s (%s) ---------------\n", obj_name, entry.permanent ? "*" : "", entry.obj->getType());
             char** cmdnames = NULL;
             char** cmddescs = NULL;
-            int numcmds = entry.obj->getCommands(&cmdnames, &cmddescs);
+            const int numcmds = entry.obj->getCommands(&cmdnames, &cmddescs);
             for(int j = 0; j < numcmds; j++)
             {
                 print2term("%-32s %s\n", cmdnames[j], cmddescs[j]);
@@ -809,7 +809,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         {
             RecordObject* rec = new RecordObject(rec_name);
             char** fieldnames = NULL;
-            int numfields = rec->getFieldNames(&fieldnames);
+            const int numfields = rec->getFieldNames(&fieldnames);
             for(int i = 0; i < numfields; i++)
             {
                 RecordObject::field_t field = rec->getField(fieldnames[i]);
@@ -823,11 +823,11 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
     if(str_name != NULL)
     {
         print2term("\n-------------- %s ---------------\n", str_name);
-        int num_msgqs = MsgQ::numQ();
+        const int num_msgqs = MsgQ::numQ();
         if(num_msgqs > 0)
         {
             MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
-            int numq = MsgQ::listQ(msgQs, num_msgqs);
+            const int numq = MsgQ::listQ(msgQs, num_msgqs);
             for(int i = 0; i < numq; i++)
             {
                 if(StringLib::match(str_name, msgQs[i].name))
@@ -903,7 +903,7 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
 
     try
     {
-        int minargs = 2;
+        const int minargs = 2;
 
         /* Look Up Handler */
         handle_entry_t* handle = handlers[class_name];
@@ -924,8 +924,8 @@ int CommandProcessor::newCmd (int argc, char argv[][MAX_CMD_SIZE])
         CommandableObject* obj = handle->func(this, obj_name, argc - minargs, &argv[minargs]);
         if(obj)
         {
-            obj_entry_t entry(obj, handle->perm);
-            bool registered = objects.add(obj_name, entry, true);
+            const obj_entry_t entry(obj, handle->perm);
+            const bool registered = objects.add(obj_name, entry, true);
             if(registered)
             {
                 mlog(DEBUG, "Object %s created and registered", obj_name);
@@ -962,7 +962,7 @@ int CommandProcessor::deleteCmd (int argc, char argv[][MAX_CMD_SIZE])
     const char* obj_name = argv[0];
     try
     {
-        obj_entry_t entry = objects[obj_name];
+        const obj_entry_t entry = objects[obj_name];
 
         // Only delete non-permanent objects
         // otherwise leave alive, but still remove
@@ -1079,8 +1079,8 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Register */
-    obj_entry_t entry(obj, true);
-    bool registered = objects.add(obj_name, entry, true);
+    const obj_entry_t entry(obj, true);
+    const bool registered = objects.add(obj_name, entry, true);
     if(registered)
     {
         mlog(DEBUG, "Object %s now registered", obj_name);
@@ -1168,7 +1168,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
 
     const char*                 rec_type    = StringLib::StringLib::checkNullStr(argv[0]);
     const char*                 field_name  = StringLib::StringLib::checkNullStr(argv[1]);
-    RecordObject::fieldType_t   field_type  = RecordObject::str2ft(argv[2]);
+    const RecordObject::fieldType_t   field_type  = RecordObject::str2ft(argv[2]);
     const char*                 offset_str  = argv[3];
     const char*                 size_str    = argv[4];
     const char*                 flags_str   = argv[5];
@@ -1207,10 +1207,10 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
     }
 
     /* Get Flags */
-    unsigned int flags = RecordObject::str2flags(flags_str);
+    const unsigned int flags = RecordObject::str2flags(flags_str);
 
     /* Define Field */
-    RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, field_name, field_type, offset, size, NULL, flags);
+    const RecordObject::recordDefErr_t status = RecordObject::defineField(rec_type, field_name, field_type, offset, size, NULL, flags);
     if(status == RecordObject::DUPLICATE_DEF)
     {
         mlog(WARNING, "Attempting to define field %s that is already defined for record %s", field_name, rec_type);
@@ -1253,12 +1253,12 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) 
     if(StringLib::match("ALL", rec_type))
     {
         char** rectypes = NULL;
-        int numrecs = RecordObject::getRecords(&rectypes);
+        const int numrecs = RecordObject::getRecords(&rectypes);
         for(int i = 0; i < numrecs; i++)
         {
             const char* id_field = RecordObject::getRecordIdField(rectypes[i]);
-            int data_size = RecordObject::getRecordDataSize(rectypes[i]);
-            int max_fields = RecordObject::getRecordMaxFields(rectypes[i]);
+            const int data_size = RecordObject::getRecordDataSize(rectypes[i]);
+            const int max_fields = RecordObject::getRecordMaxFields(rectypes[i]);
             int post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rectypes[i], id_field != NULL ? id_field : "NA", data_size, max_fields);
             if(post_status <= 0)
             {
@@ -1269,7 +1269,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) 
             {
                 char** fieldnames = NULL;
                 RecordObject::field_t** fields = NULL;
-                int numfields = RecordObject::getRecordFields(rectypes[i], &fieldnames, &fields);
+                const int numfields = RecordObject::getRecordFields(rectypes[i], &fieldnames, &fields);
                 for(int k = 0; k < numfields; k++)
                 {
                     const char* flags_str = RecordObject::flags2str(fields[k]->flags);
@@ -1294,8 +1294,8 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) 
     else if(RecordObject::isRecord(rec_type))
     {
         const char* id_field = RecordObject::getRecordIdField(rec_type);
-        int data_size = RecordObject::getRecordDataSize(rec_type);
-        int max_fields = RecordObject::getRecordMaxFields(rec_type);
+        const int data_size = RecordObject::getRecordDataSize(rec_type);
+        const int max_fields = RecordObject::getRecordMaxFields(rec_type);
         int post_status = cmdq_out->postString("DEFINE %s %s %d %d\n", rec_type, id_field != NULL ? id_field : "NA", data_size, max_fields);
         if(post_status <= 0)
         {
@@ -1306,7 +1306,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) 
         {
             char** fieldnames = NULL;
             RecordObject::field_t** fields = NULL;
-            int numfields = RecordObject::getRecordFields(rec_type, &fieldnames, &fields);
+            const int numfields = RecordObject::getRecordFields(rec_type, &fieldnames, &fields);
             for(int k = 0; k < numfields; k++)
             {
                 const char* flags_str = RecordObject::flags2str(fields[k]->flags);
@@ -1497,7 +1497,7 @@ int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
     if(num_msgqs > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[num_msgqs];
-        int numq = MsgQ::listQ(msgQs, num_msgqs);
+        const int numq = MsgQ::listQ(msgQs, num_msgqs);
         print2term("\n");
         for(int i = 0; i < numq; i++)
         {

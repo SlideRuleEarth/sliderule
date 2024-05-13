@@ -239,7 +239,7 @@ int UT_Ordering::testSort(int argc, char argv[][MAX_CMD_SIZE])
     Ordering<int,int> mylist2;
     for(int i = 0; i < 20; i++)
     {
-        int d = 20 - i;
+        const int d = 20 - i;
         mylist2.add(20 - i, d);
     }
     for(int i = 1; i <= 20; i++) ut_assert(mylist2[i] == i, "failed to sort %d\n", i);
@@ -286,11 +286,11 @@ int UT_Ordering::testIterator(int argc, char argv[][MAX_CMD_SIZE])
 
     for(int i = 0; i < 20; i++)
     {
-        int d = 20 - i;
+        const int d = 20 - i;
         mylist.add(20 - i, d);
     }
 
-    Ordering<int,int>::Iterator iterator(mylist);
+    const Ordering<int,int>::Iterator iterator(mylist);
     for(int i = 0; i < 20; i++)
     {
         ut_assert(iterator[i].key == (i + 1), "failed to iterate key %d\n", i + 1);

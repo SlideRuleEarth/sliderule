@@ -111,7 +111,7 @@ void SockLib::init()
     }
     else if(host != NULL)
     {
-        uint32_t addr = reinterpret_cast<struct in_addr*>(host->h_addr_list[0])->s_addr;
+        const uint32_t addr = reinterpret_cast<struct in_addr*>(host->h_addr_list[0])->s_addr;
         snprintf(ipv4, IPV4_STR_LEN, "%u.%u.%u.%u", addr & 0xFF, (addr >> 8) & 0xFF, (addr >> 16) & 0xFF, (addr >> 24) & 0xFF);
     }
 }
@@ -138,7 +138,7 @@ void SockLib::signalexit(void)
 int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const bool* block)
 {
     /* Create initial socket */
-    int sock = sockcreate(SOCK_STREAM, ip_addr, port, is_server, block);
+    const int sock = sockcreate(SOCK_STREAM, ip_addr, port, is_server, block);
     if(sock == INVALID_RC) return INVALID_RC;
 
     if(!is_server) // client
@@ -147,7 +147,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
     }
 
     // server
-    int listen_socket = sock;
+    const int listen_socket = sock;
     int server_socket = INVALID_RC;
     char err_buf[256];
 
@@ -214,7 +214,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
 int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, const bool* block, const char* multicast_group)
 {
     /* Create initial socket */
-    int sock = sockcreate(SOCK_DGRAM, ip_addr, port, is_server, block);
+    const int sock = sockcreate(SOCK_DGRAM, ip_addr, port, is_server, block);
     if(sock == INVALID_RC) return INVALID_RC;
 
     /* Set Options for Multicast  - IPv4 only */
@@ -223,7 +223,7 @@ int SockLib::sockdatagram(const char* ip_addr, int port, bool is_server, const b
         struct in_addr ipv4_addr;
         if(inet_pton(AF_INET, multicast_group, &ipv4_addr) == 1)
         {
-            uint32_t naddr = htonl(ipv4_addr.s_addr);
+            const uint32_t naddr = htonl(ipv4_addr.s_addr);
             if(naddr >= IPV4_MULTICAST_START && naddr < IPV4_MULTICAST_STOP)
             {
                 if(sockmulticast(sock, multicast_group) < 0)
@@ -424,7 +424,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
 
     /* Initialize Connection Variables */
     int num_sockets = 0;
-    int max_num_sockets = max_num_connections + 1; // add in listener
+    const int max_num_sockets = max_num_connections + 1; // add in listener
     struct pollfd* polllist = new struct pollfd [max_num_sockets];
 
     /* Create Listen Socket */
@@ -532,7 +532,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     if(!valid_fd)
                     {
                         /* Remove from Polling */
-                        int connections_left = num_sockets - 1;
+                        const int connections_left = num_sockets - 1;
                         if(i < connections_left)
                         {
                             memmove(&polllist[i], &polllist[i+1], (connections_left - i) * sizeof(struct pollfd));
@@ -576,7 +576,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                         client_address_t    client_address;
                         socklen_t           address_length = sizeof(socket_address_t);
 
-                        int client_socket = accept(listen_socket, &client_address, &address_length);
+                        const int client_socket = accept(listen_socket, &client_address, &address_length);
                         if(client_socket != -1)
                         {
                             /* Set Non-Blocking */
@@ -660,7 +660,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
 {
     /* Initialize Connection Variables */
     bool _connected = false;
-    int max_num_sockets = max_num_connections + 1; // for listener socket
+    const int max_num_sockets = max_num_connections + 1; // for listener socket
     int num_sockets = 0;
     struct pollfd polllist[1];
 
@@ -681,7 +681,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             }
 
             /* Connect Client Socket */
-            int client_socket = sockstream(ip_addr, port, false, NULL);
+            const int client_socket = sockstream(ip_addr, port, false, NULL);
             if(client_socket >= 0)
             {
                 /* Call Connection Callback */
@@ -907,9 +907,9 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
  *----------------------------------------------------------------------------*/
 int SockLib::sockkeepalive(int socket_fd, int idle, int cnt, int intvl)
 {
-    int         optval;
-    socklen_t   optlen = sizeof(optval);
-    char        err_buf[256];
+    int               optval;
+    const socklen_t   optlen = sizeof(optval);
+    char              err_buf[256];
 
     optval = 1; // set SO_KEEPALIVE on a socket to true (1)
     if (setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen) < 0)
@@ -947,8 +947,8 @@ int SockLib::sockkeepalive(int socket_fd, int idle, int cnt, int intvl)
  *----------------------------------------------------------------------------*/
 int SockLib::sockreuse(int socket_fd)
 {
-    int         optval;
-    socklen_t   optlen = sizeof(optval);
+    int               optval;
+    const socklen_t   optlen = sizeof(optval);
 
     optval = 1; // set SO_REUSEADDR on a socket to true (1)
     if(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) < 0)
@@ -966,7 +966,7 @@ int SockLib::sockreuse(int socket_fd)
  *----------------------------------------------------------------------------*/
 int SockLib::socknonblock(int socket_fd)
 {
-    int flags = fcntl(socket_fd, F_GETFL, 0);
+    const int flags = fcntl(socket_fd, F_GETFL, 0);
     if(flags < 0 || fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK) < 0)
     {
         char err_buf[256];
@@ -983,7 +983,7 @@ int SockLib::socknonblock(int socket_fd)
 int SockLib::sockmulticast(int socket_fd, const char* group)
 {
     struct ip_mreq  optval;
-    socklen_t       optlen = sizeof(optval);
+    const socklen_t optlen = sizeof(optval);
 
     optval.imr_multiaddr.s_addr = inet_addr(group);
     optval.imr_interface.s_addr = htonl(INADDR_ANY);

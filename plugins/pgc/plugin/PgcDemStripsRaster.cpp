@@ -47,7 +47,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
     demName(dem_name),
     path2geocells(_parms->asset->getPath() + std::string(geo_suffix))
 {
-    std::size_t pos = path2geocells.find(demName);
+    const std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
 
@@ -79,10 +79,10 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
     OGREnvelope env;
     poly->getEnvelope(&env);
 
-    double minx = floor(env.MinX);
-    double miny = floor(env.MinY);
-    double maxx = ceil(env.MaxX);
-    double maxy = ceil(env.MaxY);
+    const double minx = floor(env.MinX);
+    const double miny = floor(env.MinY);
+    const double maxx = ceil(env.MaxX);
+    const double maxy = ceil(env.MaxY);
 
     /* Create poly geometry for all index files */
     geoIndexPoly = GdalRaster::makeRectangle(minx, miny, maxx, maxy);
@@ -173,7 +173,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
      * the two images can be up to 30 days apart.
      *
      */
-    std::vector<const char*> dates = {"start_datetime", "end_datetime"};
+    const std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
         for(unsigned i = 0; i < featuresList.size(); i++)
@@ -279,8 +279,8 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
      */
 
     /* Round to geocell location */
-    int _lon = static_cast<int>(floor(lon));
-    int _lat = static_cast<int>(floor(lat));
+    const int _lon = static_cast<int>(floor(lon));
+    const int _lat = static_cast<int>(floor(lat));
 
     char lonBuf[32];
     char latBuf[32];
@@ -288,8 +288,8 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
     sprintf(lonBuf, "%03d", abs(_lon));
     sprintf(latBuf, "%02d", abs(_lat));
 
-    std::string lonStr(lonBuf);
-    std::string latStr(latBuf);
+    const std::string lonStr(lonBuf);
+    const std::string latStr(latBuf);
 
     file = path2geocells +
            latStr +

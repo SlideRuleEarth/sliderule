@@ -199,7 +199,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                 const char* fname = feature->GetFieldAsString(bandName);
                 if(fname && strlen(fname) > 0)
                 {
-                    std::string fileName(fname);
+                    const std::string fileName(fname);
                     const size_t pos = strlen(URL_str);
 
                     raster_info_t rinfo;
@@ -255,7 +255,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
     if(!isL8 && !isS2)
         throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
 
-    double invalid = -999999.0;
+    const double invalid = -999999.0;
     double green;
     double red;
     double nir08;
@@ -304,8 +304,8 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
         }
     }
 
-    double groupTime = rgroup->gpsTime / 1000;
-    std::string groupName = rgroup->id + " {\"algo\": \"";
+    const double groupTime = rgroup->gpsTime / 1000;
+    const std::string groupName = rgroup->id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)

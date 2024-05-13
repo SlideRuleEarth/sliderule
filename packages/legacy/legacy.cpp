@@ -130,7 +130,7 @@ int CCSDS::defineTelemetryCmd (int argc, char argv[][CommandProcessor::MAX_CMD_S
     }
 
     /* Define Record */
-    RecordObject::recordDefErr_t status = CcsdsRecord::defineTelemetry(rec_type, id_field, (uint16_t)apid, size, NULL, 0, max_fields);
+    const RecordObject::recordDefErr_t status = CcsdsRecord::defineTelemetry(rec_type, id_field, (uint16_t)apid, size, NULL, 0, max_fields);
     if(status != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define telemetry packet %s: %d", rec_type, (int)status);
@@ -218,7 +218,7 @@ int CCSDS::defineCommandCmd (int argc, char argv[][CommandProcessor::MAX_CMD_SIZ
     }
 
     /* Define Record */
-    RecordObject::recordDefErr_t status = CcsdsRecord::defineCommand(rec_type, id_field, (uint16_t)apid, (uint8_t)fc, size, NULL, 0, max_fields);
+    const RecordObject::recordDefErr_t status = CcsdsRecord::defineCommand(rec_type, id_field, (uint16_t)apid, (uint8_t)fc, size, NULL, 0, max_fields);
     if(status != RecordObject::SUCCESS_DEF)
     {
         mlog(CRITICAL, "Failed to define command packet %s: %d", rec_type, (int)status);

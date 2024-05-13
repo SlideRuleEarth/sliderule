@@ -107,7 +107,7 @@ int BathyParms::luaSpotEnabled (lua_State* L)
     try
     {
         lua_obj = dynamic_cast<BathyParms*>(getLuaSelf(L, 1));
-        int spot = getLuaInteger(L, 2);
+        const int spot = getLuaInteger(L, 2);
         if(spot >= 1 && spot <= NUM_SPOTS)
         {
             status = lua_obj->spots[spot-1];
@@ -226,7 +226,7 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Get number of item in table */
-        int num_strings = lua_rawlen(L, index);
+        const int num_strings = lua_rawlen(L, index);
         if(num_strings > 0 && provided) *provided = true;
 
         /* Iterate through each item in table */
@@ -242,7 +242,7 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
                 const char* str = LuaObject::getLuaString(L, -1);
                 char key[ATL09_RESOURCE_KEY_LEN + 1];
                 getATL09Key(key, str); // throws on error
-                string name(str);
+                const string name(str);
                 if(!alt09_index.add(key, name, true))
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "Duplicate ATL09 key detected: %s", str);
@@ -280,7 +280,7 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
         if(provided) *provided = true;
 
         /* Iterate through each spot in table */
-        int num_spots = lua_rawlen(L, index);
+        const int num_spots = lua_rawlen(L, index);
         for(int i = 0; i < num_spots; i++)
         {
             /* Get spot */
@@ -289,7 +289,7 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
             /* Set spot */
             if(lua_isinteger(L, -1))
             {
-                int spot = LuaObject::getLuaInteger(L, -1);
+                const int spot = LuaObject::getLuaInteger(L, -1);
                 if(spot >= 1 && spot <= NUM_SPOTS)
                 {
                     spots[spot-1] = true;
@@ -297,7 +297,7 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
                 }
                 else
                 {
-                    mlog(ERROR, "Invalid spot: %d", spot); 
+                    mlog(ERROR, "Invalid spot: %d", spot);
                 }
             }
 
@@ -311,7 +311,7 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
         memset(spots, 0, sizeof(spots));
 
         /* Set spot */
-        int spot = LuaObject::getLuaInteger(L, -1);
+        const int spot = LuaObject::getLuaInteger(L, -1);
         if(spot >= 1 && spot <= NUM_SPOTS)
         {
             spots[spot-1] = true;
@@ -319,7 +319,7 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
         }
         else
         {
-            mlog(ERROR, "Invalid spot: %d", spot); 
+            mlog(ERROR, "Invalid spot: %d", spot);
         }
     }
     else if(!lua_isnil(L, index))

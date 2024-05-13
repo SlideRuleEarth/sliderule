@@ -97,7 +97,7 @@ CommandProcessor* CommandableObject::getProc(void)
  *----------------------------------------------------------------------------*/
 int CommandableObject::getCommands(char*** cmd_names, char*** cmd_descs)
 {
-    int numcmds = commands.getKeys(cmd_names);
+    const int numcmds = commands.getKeys(cmd_names);
     *cmd_descs = new char* [numcmds];
     for(int i = 0; i < numcmds; i++)
     {

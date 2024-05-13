@@ -107,8 +107,8 @@ bool CcsdsMsgProcessor::isActive(void) const
  *----------------------------------------------------------------------------*/
 bool CcsdsMsgProcessor::isFull(void)
 {
-    int pkts_in_q = inQ->getCount();
-    int space_in_q = inQ->getDepth();
+    const int pkts_in_q = inQ->getCount();
+    const int space_in_q = inQ->getDepth();
     if (pkts_in_q > 0 && pkts_in_q == space_in_q)
     {
         return true;
@@ -170,7 +170,7 @@ void* CcsdsMsgProcessor::processorThread(void* parm)
     {
         /* Read Bytes */
         Subscriber::msgRef_t ref;
-        int status = processor->inQ->receiveRef(ref, SYS_TIMEOUT);
+        const int status = processor->inQ->receiveRef(ref, SYS_TIMEOUT);
 
         /* Process Bytes */
         bool success = false;

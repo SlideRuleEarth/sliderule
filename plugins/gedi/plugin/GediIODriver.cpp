@@ -71,7 +71,7 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     char version_buffer[8];
     char resource_buffer[57];
 
-    int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
     if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid gedi s3 resource: %s", resource);
 
     const char* product = elements[0];

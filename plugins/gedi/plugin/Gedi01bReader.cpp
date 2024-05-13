@@ -86,7 +86,7 @@ int Gedi01bReader::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<GediParms*>(getLuaObject(L, 4, GediParms::OBJECT_TYPE));
-        bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Gedi01bReader(L, asset, resource, outq_name, parms, send_terminator));
@@ -174,7 +174,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi01b_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi01b_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -183,13 +183,13 @@ void* Gedi01bReader::subsettingThread (void* parm)
         Region region(info);
 
         /* Read GEDI Datasets */
-        Gedi01b gedi01b(info, region);
+        const Gedi01b gedi01b(info, region);
 
         /* Read Waveforms */
-        long tx0 = gedi01b.tx_start_index[0] - 1;
-        long txN = gedi01b.tx_start_index[region.num_footprints - 1] - 1 + gedi01b.tx_sample_count[region.num_footprints - 1] - tx0;
-        long rx0 = gedi01b.rx_start_index[0] - 1;
-        long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
+        const long tx0 = gedi01b.tx_start_index[0] - 1;
+        const long txN = gedi01b.tx_start_index[region.num_footprints - 1] - 1 + gedi01b.tx_sample_count[region.num_footprints - 1] - tx0;
+        const long rx0 = gedi01b.rx_start_index[0] - 1;
+        const long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
         H5Array<float> txwaveform(info->reader->asset, info->reader->resource, FString("%s/txwaveform", GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, tx0, txN);
         H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, FString("%s/rxwaveform", GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, rx0, rxN);
         txwaveform.join(info->reader->read_timeout_ms, true);
@@ -240,16 +240,16 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 if(gedi01b.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
 
                 /* Populate Tx Waveform */
-                long tx_start_index = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];
-                long tx_end_index = tx_start_index + MIN(fp->tx_size, G01B_MAX_TX_SAMPLES);
+                const long tx_start_index = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];
+                const long tx_end_index = tx_start_index + MIN(fp->tx_size, G01B_MAX_TX_SAMPLES);
                 for(long i = tx_start_index, j = 0; i < tx_end_index; i++, j++)
                 {
                     fp->tx_waveform[j] = txwaveform[i];
                 }
 
                 /* Populate Rx Waveform */
-                long rx_start_index = gedi01b.rx_start_index[footprint] - gedi01b.rx_start_index[0];
-                long rx_end_index = rx_start_index + MIN(fp->rx_size, G01B_MAX_RX_SAMPLES);
+                const long rx_start_index = gedi01b.rx_start_index[footprint] - gedi01b.rx_start_index[0];
+                const long rx_end_index = rx_start_index + MIN(fp->rx_size, G01B_MAX_RX_SAMPLES);
                 for(long i = rx_start_index, j = 0; i < rx_end_index; i++, j++)
                 {
                     fp->rx_waveform[j] = rxwaveform[i];

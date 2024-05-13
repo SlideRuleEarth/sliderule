@@ -74,19 +74,19 @@ int Atl03Indexer::luaCreate (lua_State* L)
     {
         /* Get URL */
                     _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        int         tblindex    = 2;
+        const int   tblindex    = 2;
         const char* outq_name   = getLuaString(L, 3);
-        int         num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
+        const int   num_threads = getLuaInteger(L, 4, true, DEFAULT_NUM_THREADS);
 
         /* Build Resource Table */
         if(lua_type(L, tblindex) == LUA_TTABLE)
         {
-            int size = lua_rawlen(L, tblindex);
+            const int size = lua_rawlen(L, tblindex);
             _resources = new List<string>(size);
             for(int e = 0; e < size; e++)
             {
                 lua_rawgeti(L, tblindex, e + 1);
-                string name(getLuaString(L, -1));
+                const string name(getLuaString(L, -1));
                 _resources->add(name);
                 lua_pop(L, 1);
             }
@@ -200,7 +200,7 @@ void* Atl03Indexer::indexerThread (void* parm)
     Atl03Indexer* indexer = reinterpret_cast<Atl03Indexer*>(parm);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
+    const uint32_t trace_id = start_trace(CRITICAL, indexer->traceId, "atl03_indexer", "{\"tag\":\"%s\"}", indexer->getName());
     EventLib::stashId (trace_id); // set thread specific trace id for H5Lib
 
     /* Build Prefix */
@@ -281,7 +281,7 @@ void* Atl03Indexer::indexerThread (void* parm)
 
                 /* Post Segment Record */
                 uint8_t* rec_buf = NULL;
-                int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+                const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
                 int post_status = MsgQ::STATE_ERROR;
                 while(indexer->active && (post_status = indexer->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) <= 0)
                 {

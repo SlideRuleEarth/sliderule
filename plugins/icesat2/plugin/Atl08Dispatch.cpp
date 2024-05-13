@@ -360,8 +360,8 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
 void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
-    Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
-    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
+    const Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
+    const Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
 
     /* Extent Attributes */
     result.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
@@ -375,7 +375,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
 
     /* Determine Starting Photon and Number of Photons */
     const Atl03Reader::photon_t* ph = extent->photons;
-    uint32_t num_ph = extent->photon_count;
+    const uint32_t num_ph = extent->photon_count;
 
     /* Calculate Geolocation Fields */
     if(num_ph == 0)
@@ -438,7 +438,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
-        uint32_t center_ph = num_ph / 2;
+        const uint32_t center_ph = num_ph / 2;
         if(num_ph % 2 == 1) // Odd Number of Photons
         {
             result.time_ns = ph[center_ph].time_ns;
@@ -475,7 +475,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            double diff = abs(ph[i].time_ns - result.time_ns);
+            const double diff = abs(ph[i].time_ns - result.time_ns);
             if(diff < diff_min)
             {
                 diff_min = diff;
@@ -494,7 +494,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
 {
     /* Determine Starting Photon and Number of Photons */
     const Atl03Reader::photon_t* ph = extent->photons;
-    uint32_t num_ph = extent->photon_count;
+    const uint32_t num_ph = extent->photon_count;
 
     /* Determine Number of Ground and Vegetation Photons */
     long gnd_cnt = 0;
@@ -566,7 +566,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     double std_h = 0.0;
     for(long i = 0; i < veg_cnt; i++)
     {
-        double delta = (ph[veg_index[i]].relief - result.h_mean_canopy);
+        const double delta = (ph[veg_index[i]].relief - result.h_mean_canopy);
         std_h += delta * delta;
     }
     result.canopy_openness = sqrt(std_h / (double)veg_cnt);
@@ -599,7 +599,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     /* Send Waveforms */
     if(parms->phoreal.send_waveform && num_bins > 0)
     {
-        int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
+        const int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = (waveform_t*)waverec.getRecordData();
         data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
@@ -626,13 +626,13 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     {
         if(gnd_cnt % 2 == 0) // even
         {
-            long i0 = (gnd_cnt - 1) / 2;
-            long i1 = ((gnd_cnt - 1) / 2) + 1;
+            const long i0 = (gnd_cnt - 1) / 2;
+            const long i1 = ((gnd_cnt - 1) / 2) + 1;
             h_te_median = (ph[gnd_index[i0]].height + ph[gnd_index[i1]].height) / 2.0;
         }
         else // odd
         {
-            long i0 = (gnd_cnt - 1) / 2;
+            const long i0 = (gnd_cnt - 1) / 2;
             h_te_median = ph[gnd_index[i0]].height;
         }
     }
@@ -646,7 +646,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
         {
             while(b < num_bins)
             {
-                double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
+                const double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
                 if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
                     result.canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
@@ -658,7 +658,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
         /* Find 98th Percentile */
         while(b < num_bins)
         {
-            double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
+            const double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
             if(percentage >= 98.0 && cbins[b] > 0)
             {
                 result.h_canopy = ph[veg_index[cbins[b] - 1]].relief;
@@ -706,7 +706,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)
         {
             /* Calculate ATL08 Record Size */
-            int size = batchIndex * sizeof(vegetation_t);
+            const int size = batchIndex * sizeof(vegetation_t);
             atl08Record->setUsedData(size);
 
             /* Post Record */
@@ -714,7 +714,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
             {
                 /* Post Serialized Record */
                 unsigned char* buffer = NULL;
-                int bufsize = atl08Record->serialize(&buffer, RecordObject::REFERENCE);
+                const int bufsize = atl08Record->serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
             }
             else if(recVec.size() > 1)
@@ -722,7 +722,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
                 /* Post Serialized Container Record */
                 ContainerRecord container(recVec);
                 unsigned char* buffer = NULL;
-                int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
+                const int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
             }
 
@@ -747,7 +747,7 @@ void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_arra
 {
     if(start < end)
     {
-        int partition = quicksortpartition(index_array, ph_array, field, start, end);
+        const int partition = quicksortpartition(index_array, ph_array, field, start, end);
         quicksort(index_array, ph_array, field, start, partition);
         quicksort(index_array, ph_array, field, partition + 1, end);
     }
@@ -758,7 +758,7 @@ void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_arra
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
 {
-    double pivot = ph_array[index_array[(start + end) / 2]].*field;
+    const double pivot = ph_array[index_array[(start + end) / 2]].*field;
 
     start--;
     end++;
@@ -768,7 +768,7 @@ int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t*
         while (ph_array[index_array[--end]].*field > pivot);   // NOLINT [clang-analyzer-core.uninitialized.ArraySubscript]
         if (start >= end) return end;
 
-        long tmp = index_array[start];
+        const long tmp = index_array[start];
         index_array[start] = index_array[end];
         index_array[end] = tmp;
     }

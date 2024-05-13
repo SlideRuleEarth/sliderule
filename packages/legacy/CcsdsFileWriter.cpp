@@ -129,7 +129,7 @@ CcsdsFileWriter::CcsdsFileWriter(CommandProcessor* cmd_proc, const char* obj_nam
 
     fmt = _fmt;
 
-    int len = StringLib::size(_prefix) + 1;
+    const int len = StringLib::size(_prefix) + 1;
     prefix = new char[len];
     StringLib::copy(prefix, _prefix, len);
 
@@ -239,7 +239,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* TEXT */
     else if(fmt == TEXT)
     {
-        int bytes = fprintf(outfp, "%s", reinterpret_cast<const char*>(msg));
+        const int bytes = fprintf(outfp, "%s", reinterpret_cast<const char*>(msg));
         fflush(outfp); // no need to worry about performance
         return bytes;
     }
@@ -286,7 +286,7 @@ bool CcsdsFileWriter::processMsg (unsigned char* msg, int bytes)
     }
 
     /* Write Record */
-    int bytes_written = writeMsg(msg, bytes, write_header);
+    const int bytes_written = writeMsg(msg, bytes, write_header);
 
     /* Error Checking */
     if(bytes_written < 0)

@@ -141,7 +141,7 @@ int UT_Table::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data;
-    int size = 8;
+    const int size = 8;
     Table<int,int> mytable(size);
 
     failures = 0;
@@ -181,7 +181,7 @@ int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data;
-    int size = 8;
+    const int size = 8;
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,8,9,10,11};
 
@@ -220,7 +220,7 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
 
     int key;
     int data;
-    int size = 16;
+    const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16]    = {0, 16, 32,  1, 17, 33,  2, 18, 34,  3,  4,  5,  6,  7,  8,  9};
     const int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
@@ -260,7 +260,7 @@ int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key;
-    int size = 16;
+    const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
 
@@ -320,7 +320,7 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key;
-    int size = 8;
+    const int size = 8;
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,4,5,6,7};
 
@@ -346,10 +346,10 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
 
         ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
 
-        int new1_key = key + size;
+        const int new1_key = key + size;
         ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
-        int new2_key = key + size + 1;
+        const int new2_key = key + size + 1;
         ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
@@ -361,10 +361,10 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
 
         ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
 
-        int new1_key = key + size;
+        const int new1_key = key + size;
         ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
-        int new2_key = key + size + 1;
+        const int new2_key = key + size + 1;
         ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
@@ -380,7 +380,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data;
-    int size = 16;
+    const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16]    =  {0,16,32, 1,17,33, 2,18,34,40,50,66,48,35, 8, 9};
     const int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
@@ -420,10 +420,10 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data = 0;
-    int size = 64;
+    const int size = 64;
     int data_order[64];
-    int test_cycles = 65536;
-    int key_range = 0xFFFFFFFF;
+    const int test_cycles = 65536;
+    const int key_range = 0xFFFFFFFF;
     Table<int,int> mytable(size);
 
     failures = 0;

@@ -170,7 +170,7 @@ static void* signal_thread (void* parm)
     while(true)
     {
         int sig = 0;
-        int status = sigwait(signal_set, &sig);
+        const int status = sigwait(signal_set, &sig);
         if (status != 0)
         {
             char err_buf[256];
@@ -337,7 +337,7 @@ int main (int argc, char* argv[])
     ldplugins();
 
     /* Get Interpreter Arguments */
-    int lua_argc = argc; // "-i" is plus one, executable is minus one
+    const int lua_argc = argc; // "-i" is plus one, executable is minus one
     char(*lua_argv)[LuaEngine::MAX_LUA_ARG] = new char[lua_argc][LuaEngine::MAX_LUA_ARG];
     StringLib::copy(lua_argv[0], "-i", LuaEngine::MAX_LUA_ARG);
     for(int i = 1; i < argc; i++) StringLib::copy(lua_argv[i], argv[i], LuaEngine::MAX_LUA_ARG);
@@ -402,7 +402,7 @@ int main (int argc, char* argv[])
         deinitarrow();
     #endif
 
-    int errors = geterrors();
+    const int errors = geterrors();
     deinitcore();
 
     /* Exit Thread Managing Signals */

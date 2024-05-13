@@ -181,7 +181,7 @@ bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
 {
 
     const unsigned char*  parse_buffer = msg;
-    int                   parse_bytes = bytes;
+    const int             parse_bytes = bytes;
     int                   parse_index = 0;
 
     /* Parse Buffer */
@@ -262,7 +262,7 @@ bool CcsdsFrameStripper::processMsg (unsigned char* msg, int bytes)
         if(frameIndex >= FrameFixedSize)
         {
             /* Post Frame Buffer */
-            int status = pubQ->postCopy(frameBuffer, FrameFixedSize, SYS_TIMEOUT);
+            const int status = pubQ->postCopy(frameBuffer, FrameFixedSize, SYS_TIMEOUT);
             if(status <= 0)
             {
                 mlog(CRITICAL, "Frame unable to be posted[%d] to output stream %s", status, pubQ->getName());

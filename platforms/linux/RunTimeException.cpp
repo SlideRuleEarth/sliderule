@@ -52,8 +52,8 @@ RunTimeException::RunTimeException(event_level_t _lvl, int _rc, const char* _err
 
     va_list args;
     va_start(args, _errmsg);
-    int vlen = vsnprintf(errmsg, ERROR_MSG_LEN - 1, _errmsg, args);
-    int msglen = MIN(vlen, ERROR_MSG_LEN - 1);
+    const int vlen = vsnprintf(errmsg, ERROR_MSG_LEN - 1, _errmsg, args);
+    const int msglen = MIN(vlen, ERROR_MSG_LEN - 1);
     va_end(args);
 
     if (msglen >= 0) errmsg[msglen] = '\0';

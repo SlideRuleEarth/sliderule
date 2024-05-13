@@ -66,7 +66,7 @@ Thread::Thread(thread_func_t function, void* parm, bool _join)
     pthread_attr_t pthread_attr;
     pthread_attr_init(&pthread_attr);
     if(!join) pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED);
-    int ret = pthread_create(&threadId, &pthread_attr, function, parm);
+    const int ret = pthread_create(&threadId, &pthread_attr, function, parm);
     if(ret != 0)
     {
         char error_buf[256];
@@ -82,7 +82,7 @@ Thread::~Thread()
 {
     if(join)
     {
-        int ret = pthread_join(threadId, NULL);
+        const int ret = pthread_join(threadId, NULL);
         if(ret != 0)
         {
             char error_buf[256];
@@ -96,7 +96,7 @@ Thread::~Thread()
  *----------------------------------------------------------------------------*/
 long Thread::getId(void)
 {
-    pid_t pid = gettid();
+    const pid_t pid = gettid();
     return (long)pid;
 }
 

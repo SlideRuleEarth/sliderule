@@ -413,7 +413,7 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
                 for(int s = 0; s < worker->segments->length(); s++)
                 {
                     CcsdsPacket* seg = worker->segments->get(s);
-                    int seglen = seg->getLEN();
+                    const int seglen = seg->getLEN();
                     const unsigned char* segbuf = seg->getBuffer();
                     print2term("[%d]: ", seglen);
                     for(int i = 0; i < seglen; i++) print2term("%02X", segbuf[i]);
@@ -427,7 +427,7 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
         worker->segments = NULL; // informs resetProcessing() that segments has been freed
 
         /* Make Available Again */
-        int status = worker->availq->postRef(worker, sizeof(workerThread_t));
+        const int status = worker->availq->postRef(worker, sizeof(workerThread_t));
         if(status <= 0)
         {
             mlog(CRITICAL, "Failed to post available worker ...exiting thread!");
@@ -468,9 +468,9 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
     }
 
     /* Pull Out CCSDS Header Parameters */
-    uint16_t apid = pkt->getAPID();
-    uint16_t len  = pkt->getLEN();
-    CcsdsSpacePacket::seg_flags_t seg = pkt->getSEQFLG();
+    const uint16_t apid = pkt->getAPID();
+    const uint16_t len  = pkt->getLEN();
+    const CcsdsSpacePacket::seg_flags_t seg = pkt->getSEQFLG();
 
     /* Check if Enabled */
     if(pktProcessor[apid].enable)
@@ -501,15 +501,15 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                 /* Pull Out Time */
                 if(measureLatency)
                 {
-                    int64_t nowt = TimeLib::gpstime();
-                    int64_t pktt = TimeLib::gmt2gpstime(TimeLib::cds2gmttime(CCSDS_GET_CDS_DAYS(msg), CCSDS_GET_CDS_MSECS(msg)));
+                    const int64_t nowt = TimeLib::gpstime();
+                    const int64_t pktt = TimeLib::gmt2gpstime(TimeLib::cds2gmttime(CCSDS_GET_CDS_DAYS(msg), CCSDS_GET_CDS_MSECS(msg)));
                     latency = nowt - pktt;
                     cmdProc->setCurrentValue(getName(), latencyKey, static_cast<void*>(&latency), sizeof(latency));
                 }
 
                 /* Grab Available Worker */
                 Subscriber::msgRef_t ref;
-                int status = subAvailQ->receiveRef(ref, 5000); // wait for five seconds
+                const int status = subAvailQ->receiveRef(ref, 5000); // wait for five seconds
                 if(status > 0)
                 {
                     subAvailQ->dereference(ref, false); // free up memory in message queue, but don't delete the worker

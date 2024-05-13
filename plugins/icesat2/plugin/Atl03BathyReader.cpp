@@ -122,7 +122,7 @@ int Atl03BathyReader::luaCreate (lua_State* L)
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 4, BathyParms::OBJECT_TYPE));
         geoparms = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
         const char* shared_directory = getLuaString(L, 6);
-        bool send_terminator = getLuaBoolean(L, 7, true, true);
+        const bool send_terminator = getLuaBoolean(L, 7, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, shared_directory, send_terminator));
@@ -223,7 +223,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
         {
             for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
             {
-                int gt_index = (2 * (track - 1)) + pair;
+                const int gt_index = (2 * (track - 1)) + pair;
                 if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
@@ -363,8 +363,8 @@ void Atl03BathyReader::Region::polyregion (info_t* info)
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
-        MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->builder->parms->projection);
+        const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
+        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->builder->parms->projection);
 
         /* Test Inclusion */
         if(MathLib::inpoly(info->builder->parms->projected_poly, info->builder->parms->points_in_poly, segment_point))
@@ -441,7 +441,7 @@ void Atl03BathyReader::Region::rasterregion (info_t* info)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            bool inclusion = info->builder->parms->raster->includes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = info->builder->parms->raster->includes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -597,17 +597,17 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     fileptr_t out_file = NULL;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, builder->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", builder->asset->getName(), builder->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, builder->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", builder->asset->getName(), builder->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Subset to Region of Interest */
-        Region region(info);
+        const Region region(info);
 
         /* Read ATL03/09 Datasets */
-        Atl03Data atl03(info, region);
-        Atl09Class atl09(info);
+        const Atl03Data atl03(info, region);
+        const Atl09Class atl09(info);
 
         /* Initialize Extent State */
         List<photon_t> extent_photons; // list of individual photons in extent
@@ -627,7 +627,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
 
         /* Get Dataset Level Parameters */
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
-        uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
+        const uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
 
         /* Traverse All Photons In Dataset */
         while(builder->active && (current_photon < atl03.dist_ph_along.size))
@@ -653,13 +653,13 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 /* Check Global Bathymetry Mask */
                 if(builder->bathyMask)
                 {
-                    double degrees_of_latitude = GLOBAL_BATHYMETRY_MASK_MAX_LAT - region.segment_lat[current_segment];
-                    double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
-                    uint32_t y = static_cast<uint32_t>(latitude_pixels);
+                    const double degrees_of_latitude = GLOBAL_BATHYMETRY_MASK_MAX_LAT - region.segment_lat[current_segment];
+                    const double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+                    const uint32_t y = static_cast<uint32_t>(latitude_pixels);
 
-                    double degrees_of_longitude = 180 + region.segment_lon[current_segment];
-                    double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
-                    uint32_t x = static_cast<uint32_t>(longitude_pixels);
+                    const double degrees_of_longitude = 180 + region.segment_lon[current_segment];
+                    const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+                    const uint32_t x = static_cast<uint32_t>(longitude_pixels);
 
                     if(builder->bathyMask->getPixel(x, y) == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
                     {
@@ -683,7 +683,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                      * code below chooses the signal confidence that is the highest
                      * value of the five */
-                    int32_t conf_index = current_photon * Icesat2Parms::NUM_SURFACE_TYPES;
+                    const int32_t conf_index = current_photon * Icesat2Parms::NUM_SURFACE_TYPES;
                     atl03_cnf = Icesat2Parms::ATL03_INVALID_CONFIDENCE;
                     for(int i = 0; i < Icesat2Parms::NUM_SURFACE_TYPES; i++)
                     {
@@ -709,7 +709,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Set and Check ATL03 Photon Quality Level */
-                int8_t quality_ph = atl03.quality_ph[current_photon];
+                const int8_t quality_ph = atl03.quality_ph[current_photon];
                 if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
@@ -720,30 +720,30 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Set and Check YAPC Score */
-                uint8_t yapc_score = atl03.weight_ph[current_photon];
+                const uint8_t yapc_score = atl03.weight_ph[current_photon];
                 if(yapc_score < parms->yapc.score)
                 {
                     break;
                 }
 
                 /* Check Maximum DEM Delta */
-                double dem_delta = abs(atl03.dem_h[current_segment] - atl03.h_ph[current_photon]);
+                const double dem_delta = abs(atl03.dem_h[current_segment] - atl03.h_ph[current_photon]);
                 if(dem_delta > parms->max_dem_delta)
                 {
                     break;
                 }
 
                 /* Calculate UTM Coordinates */
-                double latitude = atl03.lat_ph[current_photon];
-                double longitude = atl03.lon_ph[current_photon];
-                GeoLib::point_t coord = utm_transform.calculateCoordinates(latitude, longitude);
+                const double latitude = atl03.lat_ph[current_photon];
+                const double longitude = atl03.lon_ph[current_photon];
+                const GeoLib::point_t coord = utm_transform.calculateCoordinates(latitude, longitude);
                 if(utm_transform.in_error)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "unable to convert %lf,%lf to UTM zone %d", latitude, longitude, utm_transform.zone);
                 }
 
                 /* Save Off Latest Delta Time */
-                double current_delta_time = atl03.delta_time[current_photon];
+                const double current_delta_time = atl03.delta_time[current_photon];
 
                 /* Calculate Segment Level Fields */
                 if(previous_segment != current_segment)
@@ -768,21 +768,21 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     ndwi = std::numeric_limits<float>::quiet_NaN();
                     if(ndwiRaster && parms->generate_ndwi)
                     {
-                        double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
-                        MathLib::point_3d_t point = {
+                        const double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
+                        const MathLib::point_3d_t point = {
                             .x = region.segment_lon[current_segment],
                             .y = region.segment_lat[current_segment],
                             .z = 0.0 // since we are not sampling elevation data, this should be fine at zero
                         };
                         List<RasterSample*> slist(1);
-                        uint32_t err = ndwiRaster->getSamples(point, gps, slist);
+                        const uint32_t err = ndwiRaster->getSamples(point, gps, slist);
                         if(!slist.empty()) ndwi = static_cast<float>(slist[0]->value);
                         else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, point.y, point.x, err);
                     }
                 }
 
                 /* Add Photon to Extent */
-                photon_t ph = {
+                const photon_t ph = {
                     .time_ns = Icesat2Parms::deltatime2timestamp(current_delta_time),
                     .index_ph = static_cast<int32_t>(region.first_photon) + current_photon,
                     .index_seg = static_cast<int32_t>(region.first_segment) + current_segment,
@@ -826,8 +826,8 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 /* Check Along Track Spread */
                 if(extent_photons.length() > 1)
                 {
-                    int32_t last = extent_photons.length() - 1;
-                    double along_track_spread = extent_photons[last].x_atc - extent_photons[0].x_atc;
+                    const int32_t last = extent_photons.length() - 1;
+                    const double along_track_spread = extent_photons[last].x_atc - extent_photons[0].x_atc;
                     if(along_track_spread >= parms->max_along_track_spread)
                     {
                         extent_valid = false;
@@ -838,11 +838,11 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 if(extent_valid || parms->pass_invalid)
                 {
                     /* Generate Extent ID */
-                    uint64_t extent_id = Icesat2Parms::generateExtentId(builder->start_rgt, builder->start_cycle, builder->start_region, info->track, info->pair, extent_counter);
+                    const uint64_t extent_id = Icesat2Parms::generateExtentId(builder->start_rgt, builder->start_cycle, builder->start_region, info->track, info->pair, extent_counter);
 
                     /* Calculate Extent Record Size */
-                    int num_photons = extent_photons.length();
-                    int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
+                    const int num_photons = extent_photons.length();
+                    const int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
                     /* Allocate and Initialize Extent Record */
                     RecordObject record(exRecType, extent_bytes);
@@ -869,7 +869,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     {
                         /* Post Record */
                         uint8_t* rec_buf = NULL;
-                        int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+                        const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
                         int post_status = MsgQ::STATE_TIMEOUT;
                         while(builder->active && (post_status = builder->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
                         if(post_status <= 0)
@@ -1029,20 +1029,20 @@ double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& 
     double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(bckgrd_index < atl03.bckgrd_rate.size)
     {
-        double curr_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index];
-        double segment_time = atl03.segment_delta_time[current_segment];
+        const double curr_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index];
+        const double segment_time = atl03.segment_delta_time[current_segment];
         if(curr_bckgrd_time >= segment_time)
         {
             /* Interpolate Background Rate */
             if(bckgrd_index > 0)
             {
-                double prev_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index - 1];
-                double prev_bckgrd_rate = atl03.bckgrd_rate[bckgrd_index - 1];
-                double curr_bckgrd_rate = atl03.bckgrd_rate[bckgrd_index];
+                const double prev_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index - 1];
+                const double prev_bckgrd_rate = atl03.bckgrd_rate[bckgrd_index - 1];
+                const double curr_bckgrd_rate = atl03.bckgrd_rate[bckgrd_index];
 
-                double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
-                double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
-                double segment_to_bckgrd_delta = segment_time - prev_bckgrd_time;
+                const double bckgrd_run = curr_bckgrd_time - prev_bckgrd_time;
+                const double bckgrd_rise = curr_bckgrd_rate - prev_bckgrd_rate;
+                const double segment_to_bckgrd_delta = segment_time - prev_bckgrd_time;
 
                 background_rate = ((bckgrd_rise / bckgrd_run) * segment_to_bckgrd_delta) + prev_bckgrd_rate;
             }

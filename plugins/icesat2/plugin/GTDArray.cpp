@@ -77,6 +77,6 @@ bool GTDArray::join(int timeout, bool throw_exception)
  *----------------------------------------------------------------------------*/
 uint64_t GTDArray::serialize (uint8_t* buffer, const int32_t* start_element, const uint32_t* num_elements)
 {
-    uint64_t bytes_written = gt[Icesat2Parms::RPT_L].serialize(&buffer[0], start_element[Icesat2Parms::RPT_L], num_elements[Icesat2Parms::RPT_L]);
+    const uint64_t bytes_written = gt[Icesat2Parms::RPT_L].serialize(&buffer[0], start_element[Icesat2Parms::RPT_L], num_elements[Icesat2Parms::RPT_L]);
     return gt[Icesat2Parms::RPT_L].serialize(&buffer[bytes_written], start_element[Icesat2Parms::RPT_R], num_elements[Icesat2Parms::RPT_R]);
 }

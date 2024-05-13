@@ -101,7 +101,7 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
 
     /* Create Extent */
     const int num_photons = 4;
-    int extent_bytes = sizeof(Atl03Reader::extent_t) + (sizeof(Atl03Reader::photon_t) * num_photons);
+    const int extent_bytes = sizeof(Atl03Reader::extent_t) + (sizeof(Atl03Reader::photon_t) * num_photons);
     RecordObject* record = new RecordObject(Atl03Reader::exRecType, extent_bytes);
     Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
     extent->photons[0].x_atc = 1.0;
@@ -115,7 +115,7 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
     try
     {
         bool tests_passed = true;
-        double tolerance = 0.0000001;
+        const double tolerance = 0.0000001;
 
         /* Test 1 */
         extent->photons[0].height = 2.0;
@@ -125,7 +125,7 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
         Atl06Dispatch::point_t v1[num_photons] = { {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0} };
         result.photons = v1;
         result.elevation.photon_count = num_photons;
-        Atl06Dispatch::lsf_t fit1 = Atl06Dispatch::lsf(extent, result, false);
+        const Atl06Dispatch::lsf_t fit1 = Atl06Dispatch::lsf(extent, result, false);
         if(fit1.height != 0.0 || fabs(fit1.slope - 2.0) > tolerance)
         {
             mlog(CRITICAL, "Failed LSF test01: %lf, %lf", fit1.height, fit1.slope);
@@ -140,7 +140,7 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
         Atl06Dispatch::point_t v2[num_photons] = { {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0} };
         result.photons = v2;
         result.elevation.photon_count = num_photons;
-        Atl06Dispatch::lsf_t fit2 = Atl06Dispatch::lsf(extent, result, false);
+        const Atl06Dispatch::lsf_t fit2 = Atl06Dispatch::lsf(extent, result, false);
         if(fabs(fit2.height - 3.0) > tolerance || fabs(fit2.slope - 1.0) > tolerance)
         {
             mlog(CRITICAL, "Failed LSF test02: %lf, %lf", fit2.height, fit2.slope);

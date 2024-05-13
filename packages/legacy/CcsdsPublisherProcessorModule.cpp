@@ -123,10 +123,10 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
     while(segindex < segments.length())
     {
         CcsdsSpacePacket* pkt = segments[segindex++];
-        int apid = pkt->getAPID();
-        int len = pkt->getLEN();
-        int seq = pkt->getSEQ();
-        int seg = pkt->getSEQFLG();
+        const int apid = pkt->getAPID();
+        const int len = pkt->getLEN();
+        const int seq = pkt->getSEQ();
+        const int seg = pkt->getSEQFLG();
 
         /* Check Packet Length */
         if(checkLength)
@@ -145,7 +145,7 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
             {
                 if(!pkt->validChecksum())
                 {
-                    int fc = pkt->getFunctionCode();
+                    const int fc = pkt->getFunctionCode();
                     mlog(ERROR, "Command checksum mismatch detected in %s, dropping packet (APID = x%04X, FC = %d, LEN = %d)", getName(), apid, fc, len);
                     continue;
                 }
@@ -170,14 +170,14 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
                     int bufindex = 0;
                     while(copyindex < segindex)
                     {
-                        int copy_len = MAX(segments[copyindex]->getLEN() - stripHeaderBytes, 0);
+                        const int copy_len = MAX(segments[copyindex]->getLEN() - stripHeaderBytes, 0);
                         memcpy(&pktbuf[bufindex], segments[copyindex]->getBuffer(), copy_len);
                         bufindex += copy_len;
                         copyindex++;
                     }
 
                     /* Post Packet Buffer */
-                    int status = pubQ->postRef(pktbuf, bufsize, SYS_TIMEOUT);
+                    const int status = pubQ->postRef(pktbuf, bufsize, SYS_TIMEOUT);
                     if(status <= 0)
                     {
                         mlog(WARNING, "Failed to post packet in %s: %d", getName(), status);
@@ -204,7 +204,7 @@ bool CcsdsPublisherProcessorModule::processSegments(List<CcsdsSpacePacket*>& seg
             {
                 /* Post Packet Buffer */
                 unsigned char* pktbuf = pkt->getBuffer();
-                int status = pubQ->postCopy(&pktbuf[stripHeaderBytes], len - stripHeaderBytes, SYS_TIMEOUT);
+                const int status = pubQ->postCopy(&pktbuf[stripHeaderBytes], len - stripHeaderBytes, SYS_TIMEOUT);
                 if(status <= 0)
                 {
                     mlog(WARNING, "Failed to post packet in %s: %d", getName(), status);

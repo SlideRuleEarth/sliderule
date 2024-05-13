@@ -228,7 +228,7 @@ int TTYLib::ttywrite(int fd, const void* buf, int size, int timeout)
         }
         else if(revents & POLLOUT)
         {
-            int ret = write(fd, &cbuf[c], size - c);
+            const int ret = write(fd, &cbuf[c], size - c);
             if(ret > 0) c += ret;
             else c = TTY_ERR_RC;
         }

@@ -112,7 +112,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) //
     long data = 0;
     for(int i = 0; i < unit_test_parms.qdepth; i++)
     {
-        int status1 = pubq->postCopy(static_cast<void*>(&data), sizeof(long));
+        const int status1 = pubq->postCopy(static_cast<void*>(&data), sizeof(long));
         if(status1 <= 0)
         {
             print2term("[%d] ERROR: post %ld error %d\n", __LINE__, data, status1);
@@ -123,7 +123,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) //
     }
 
     /* STEP 2: Verify that Post Times Out */
-    int status2 = pubq->postCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
+    const int status2 = pubq->postCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
     if(status2 != MsgQ::STATE_TIMEOUT)
     {
         print2term("[%d] ERROR: post %ld did not timeout: %d\n", __LINE__, data, status2);
@@ -135,7 +135,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) //
     long value = 0;
     for(int i = 0; i < unit_test_parms.qdepth; i++)
     {
-        int status3 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
+        const int status3 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
         if(status3 != sizeof(long))
         {
             print2term("[%d] ERROR: receive failed with status %d\n", __LINE__, status3);
@@ -150,7 +150,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) //
     }
 
     /* STEP 4: Verify that Receive Times Out */
-    int status4 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
+    const int status4 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
     if(status4 != MsgQ::STATE_TIMEOUT)
     {
         print2term("[%d] ERROR: receive %ld did not timeout: %d\n", __LINE__, data, status4);
@@ -246,11 +246,11 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
     }
 
     /* Check Results */
-    int numq = MsgQ::numQ();
+    const int numq = MsgQ::numQ();
     if(numq > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[numq];
-        int cnumq = MsgQ::listQ(msgQs, numq);
+        const int cnumq = MsgQ::listQ(msgQs, numq);
         for(int i = 0; i < cnumq; i++)
         {
             if(StringLib::match(msgQs[i].name, unit_test_parms.qname))
@@ -317,7 +317,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
     {
         perf_thread_t* RAW = new perf_thread_t[numsubs];
 
-        clock_t total_start = clock();
+        const clock_t total_start = clock();
 
         /* Kick-off Subscribers */
         Thread** t = new Thread* [numsubs];
@@ -341,7 +341,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
                 pkt[j] = static_cast<unsigned char>(sequence++);
             }
 
-            int status = p->postCopy(pkt, size);
+            const int status = p->postCopy(pkt, size);
             if(status <= 0)
             {
                 print2term("[%d] ERROR: unable to post pkt %d with error %d\n", __LINE__, i, status);
@@ -350,7 +350,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
         }
         delete [] pkt;
         clock_t end = clock();
-        double pub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+        const double pub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
         /* Start Subscribers */
         start = clock();
@@ -367,10 +367,10 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
         }
         delete [] t;
         end = clock();
-        double sub_time = static_cast<double>(end - start) / CLOCKS_PER_SEC;
+        const double sub_time = static_cast<double>(end - start) / CLOCKS_PER_SEC;
 
-        clock_t total_end = clock();
-        double total_time = static_cast<double>(total_end - total_start) / CLOCKS_PER_SEC;
+        const clock_t total_end = clock();
+        const double total_time = static_cast<double>(total_end - total_start) / CLOCKS_PER_SEC;
 
         /* Print Results */
         print2term("%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
@@ -459,11 +459,11 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
     }
 
     /* Check Results */
-    int numq = MsgQ::numQ();
+    const int numq = MsgQ::numQ();
     if(numq > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[numq];
-        int cnumq = MsgQ::listQ(msgQs, numq);
+        const int cnumq = MsgQ::listQ(msgQs, numq);
         for(int i = 0; i < cnumq; i++)
         {
             if(StringLib::match(msgQs[i].name, unit_test_parms.qname))
@@ -512,10 +512,10 @@ void* UT_MsgQ::subscriberThread(void* parm)
     while(loops--)
     {
         randomDelay(1);
-        int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), 1000 * unit_test_parms->numpubs);
+        const int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), 1000 * unit_test_parms->numpubs);
         if(status > 0)
         {
-            int threadid = data >> 16;
+            const int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
                 print2term("[%d] ERROR: out of bounds threadid in %d: %d", __LINE__, unit_test_parms->threadid, threadid);
@@ -577,7 +577,7 @@ void* UT_MsgQ::publisherThread(void* parm)
     while(loops--)
     {
         randomDelay(1);
-        int status = q->postCopy(static_cast<void*>(&data), sizeof(long), 2000 * unit_test_parms->numpubs);
+        const int status = q->postCopy(static_cast<void*>(&data), sizeof(long), 2000 * unit_test_parms->numpubs);
         if(status > 0)
         {
             *unit_test_parms->lastvalue = data++;
@@ -617,7 +617,7 @@ void* UT_MsgQ::performanceThread(void* parm)
     for(int pktnum = 0; pktnum < RAW->depth; pktnum++)
     {
         Subscriber::msgRef_t ref;
-        int status = RAW->s->receiveRef(ref, SYS_TIMEOUT);
+        const int status = RAW->s->receiveRef(ref, SYS_TIMEOUT);
         if(status > 0)
         {
             if(ref.size != RAW->size)
@@ -654,7 +654,7 @@ void* UT_MsgQ::performanceThread(void* parm)
 
     /* Check Empty */
     Subscriber::msgRef_t ref;
-    int status = RAW->s->receiveRef(ref, IO_CHECK);
+    const int status = RAW->s->receiveRef(ref, IO_CHECK);
     if(status != MsgQ::STATE_EMPTY)
     {
         print2term("[%d] ERROR: queue unexpectedly not empty, return status %d\n", __LINE__, status);
@@ -689,10 +689,10 @@ void* UT_MsgQ::opportunityThread(void* parm)
     while(loops--)
     {
         if(loops % 10 == 0) randomDelay(2);
-        int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
+        const int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
         if(status > 0)
         {
-            int threadid = data >> 16;
+            const int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
                 print2term("[%d] ERROR: out of bounds threadid in %d: %d\n", __LINE__, unit_test_parms->threadid, threadid);

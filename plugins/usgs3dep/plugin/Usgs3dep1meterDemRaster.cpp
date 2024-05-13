@@ -114,7 +114,7 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
             {
-                std::string fileName(fname);
+                const std::string fileName(fname);
                 const size_t pos = strlen(URL_str);
 
                 raster_info_t rinfo;
@@ -145,7 +145,7 @@ OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 {
     OGRErr ogrerr   = OGRERR_FAILURE;
     int northFlag   = 0;
-    int utm         = target.GetUTMZone(&northFlag);
+    const int utm   = target.GetUTMZone(&northFlag);
 
     // target.dumpReadable();
     mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
@@ -175,9 +175,9 @@ OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     OGRSpatialReference horizontal;
     OGRSpatialReference vertical;
 
-    OGRErr er1 = horizontal.importFromEPSG(epsg);
-    OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
-    OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
+    const OGRErr er1 = horizontal.importFromEPSG(epsg);
+    const OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
+    const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
     if(((er1 == er2) == er3) == OGRERR_NONE)
     {

@@ -167,7 +167,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
                 cnt += fprintf(outfp, "%s,", field_names[i]);
 
                 /* Output Value */
-                RecordObject::field_t field = record->getField(field_names[i]);
+                const RecordObject::field_t field = record->getField(field_names[i]);
                 char valbuf[RecordObject::MAX_VAL_STR_SIZE];
                 cnt += fprintf(outfp, "%s\n", record->getValueText(field, valbuf));
             }
@@ -202,11 +202,11 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
             }
             for(int i = 0; i < num_fields - 1; i++)
             {
-                RecordObject::field_t field = record->getField(field_names[i]);
+                const RecordObject::field_t field = record->getField(field_names[i]);
                 char valbuf[RecordObject::MAX_VAL_STR_SIZE];
                 cnt += fprintf(outfp, "%s,", record->getValueText(field, valbuf));
             }
-            RecordObject::field_t field = record->getField(field_names[num_fields - 1]);
+            const RecordObject::field_t field = record->getField(field_names[num_fields - 1]);
             char valbuf[RecordObject::MAX_VAL_STR_SIZE];
             cnt += fprintf(outfp, "%s\n", record->getValueText(field, valbuf));
         }
@@ -257,8 +257,8 @@ const char* CcsdsRecordFileWriter::createPrependStr (unsigned char* buffer, int 
             StringLib::format(timestr, MAX_STR_SIZE, "%ld,%02d:%03d:%02d:%02d:%02d,%d", (long)(unix_time * 1000000.0), gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second, 0);
             return StringLib::duplicate(timestr);
 #else
-            CcsdsSpacePacket ccsdspkt(buffer, size);
-            CcsdsSpacePacket::pkt_time_t gmt_time = ccsdspkt.getCdsTimeAsGmt();
+            const CcsdsSpacePacket ccsdspkt(buffer, size);
+            const CcsdsSpacePacket::pkt_time_t gmt_time = ccsdspkt.getCdsTimeAsGmt();
             char gmtstr[MAX_STR_SIZE];
             StringLib::format(gmtstr, MAX_STR_SIZE, "%02d:%03d:%02d:%02d:%02d", gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second);
             return StringLib::duplicate(gmtstr);
