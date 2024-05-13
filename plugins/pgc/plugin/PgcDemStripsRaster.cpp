@@ -228,7 +228,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 }
 
                 double gps = 0;
-                for(auto& s: dates)
+                for(const auto& s: dates)
                 {
                     TimeLib::gmt_time_t gmt;
                     gps += getGmtDate(feature, s, gmt);

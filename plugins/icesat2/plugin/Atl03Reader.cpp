@@ -1336,7 +1336,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         }
 
                         /* Set and Check ATL03 Photon Quality Level */
-                        int8_t quality_ph = atl03.quality_ph[current_photon];
+                        const int8_t quality_ph = atl03.quality_ph[current_photon];
                         if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
                         {
                             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);

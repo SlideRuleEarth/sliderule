@@ -59,7 +59,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
        clang-tidy;
        -header-filter=.;
        -checks=${CLANG_TIDY_CHECKS_PARM};
-       #-warnings-as-errors=*;
+       -warnings-as-errors=*;
     )
 
     #message(STATUS "Clang-Tidy checks parms: ${CLANG_TIDY_CHECKS_PARM}")

@@ -54,7 +54,7 @@ const char* CcsdsFileWriter::TYPE = "CcsdsFileWriter";
  *----------------------------------------------------------------------------*/
 CommandableObject* CcsdsFileWriter::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
 {
-    fmt_t       format = str2fmt(argv[0]);
+    const fmt_t format = str2fmt(argv[0]);
     const char* prefix = StringLib::checkNullStr(argv[1]);
     const char* stream = StringLib::checkNullStr(argv[2]);
     const char* maxstr = NULL; // argv[3]

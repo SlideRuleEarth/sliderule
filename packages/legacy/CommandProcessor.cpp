@@ -812,7 +812,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
             const int numfields = rec->getFieldNames(&fieldnames);
             for(int i = 0; i < numfields; i++)
             {
-                RecordObject::field_t field = rec->getField(fieldnames[i]);
+                const RecordObject::field_t field = rec->getField(fieldnames[i]);
                 print2term("%-32s %-16s %-8d %-8d   %02X\n", fieldnames[i], RecordObject::vt2str(rec->getValueType(field)), (int)field.offset, (int)field.elements, field.flags);
                 delete [] fieldnames[i];
             }

@@ -178,7 +178,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         }
 
         /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
+        const CURLcode res = curl_easy_perform(curl);
 
         /* Check for Success */
         if(res == CURLE_OK)
@@ -237,7 +237,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, outq);
 
         /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
+        const CURLcode res = curl_easy_perform(curl);
 
         /* Check for Success */
         if(res == CURLE_OK)
