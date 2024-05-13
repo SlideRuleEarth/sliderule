@@ -123,9 +123,7 @@ Gedi01bReader::Gedi01bReader (lua_State* L, Asset* _asset, const char* _resource
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Gedi01bReader::~Gedi01bReader (void)
-{
-}
+Gedi01bReader::~Gedi01bReader (void) = default;
 
 /*----------------------------------------------------------------------------
  * Gedi01b::Constructor
@@ -158,9 +156,7 @@ Gedi01bReader::Gedi01b::Gedi01b (info_t* info, Region& region):
 /*----------------------------------------------------------------------------
  * Gedi01b::Destructor
  *----------------------------------------------------------------------------*/
-Gedi01bReader::Gedi01b::~Gedi01b (void)
-{
-}
+Gedi01bReader::Gedi01b::~Gedi01b (void) = default;
 
 /*----------------------------------------------------------------------------
  * subsetFootprints

@@ -69,7 +69,7 @@ class ContainerRecord: public RecordObject
 
         ContainerRecord(int rec_cnt, int size);
         explicit ContainerRecord(const vector<RecordObject*>& rec_vec);
-        ~ContainerRecord(void);
+        ~ContainerRecord(void) override;
 
         int addRecord(RecordObject& record, int size=0);
 

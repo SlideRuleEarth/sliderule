@@ -89,9 +89,7 @@ UT_Ordering::UT_Ordering(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Ordering::~UT_Ordering(void)
-{
-}
+UT_Ordering::~UT_Ordering(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro

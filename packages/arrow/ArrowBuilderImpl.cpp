@@ -84,9 +84,7 @@ ArrowBuilderImpl::ArrowBuilderImpl (ArrowBuilder* _builder):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ArrowBuilderImpl::~ArrowBuilderImpl (void)
-{
-}
+ArrowBuilderImpl::~ArrowBuilderImpl (void) = default;
 
 /*----------------------------------------------------------------------------
  * processRecordBatch
@@ -280,7 +278,7 @@ void ArrowBuilderImpl::createSchema (void)
 /*----------------------------------------------------------------------------
 * buildFieldList
 *----------------------------------------------------------------------------*/
-bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int flags)
+bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int flags)  // NOLINT(misc-no-recursion)
 {
     /* Loop Through Fields in Record */
     Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);

@@ -80,7 +80,7 @@ class File: public DeviceObject
         static int          luaCreate           (lua_State* L);
 
                             File                (lua_State* L, const char* _filename, type_t _type, role_t _role, io_t _io=CACHED, long _max_file_size=DEFAULT_FILE_MAX_SIZE);
-        virtual             ~File               ();
+                            ~File               (void) override;
 
         bool                isConnected         (int num_open=0) override;   // is the file open
         void                closeConnection     (void) override;             // close the file

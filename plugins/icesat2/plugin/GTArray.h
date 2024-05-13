@@ -102,9 +102,7 @@ GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const c
  * Destructor
  *----------------------------------------------------------------------------*/
 template <class T>
-GTArray<T>::~GTArray(void)
-{
-}
+GTArray<T>::~GTArray(void) = default;
 
 /*----------------------------------------------------------------------------
  * operator[]

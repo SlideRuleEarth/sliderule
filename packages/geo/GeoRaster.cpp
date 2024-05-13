@@ -72,9 +72,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileNam
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GeoRaster::~GeoRaster(void)
-{
-}
+GeoRaster::~GeoRaster(void) = default;
 
 
 /*----------------------------------------------------------------------------

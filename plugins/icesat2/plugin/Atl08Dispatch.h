@@ -151,7 +151,7 @@ class Atl08Dispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
                         Atl08Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
-                        ~Atl08Dispatch                  (void);
+                        ~Atl08Dispatch                  (void) override;
 
         bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout                  (void) override;

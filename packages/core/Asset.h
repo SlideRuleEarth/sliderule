@@ -105,7 +105,7 @@ class Asset: public LuaObject
 
         IODriver*       createDriver    (const char* resource) const;
 
-        virtual         ~Asset          (void);
+                        ~Asset          (void) override;
 
         int             load            (const resource_t& resource);
         resource_t&     operator[]      (int i);

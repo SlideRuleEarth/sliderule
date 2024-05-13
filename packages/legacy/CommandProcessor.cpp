@@ -200,7 +200,7 @@ bool CommandProcessor::postPriority(const char* cmdstr, ...)
  *
  *   Notes: shortcut here in code to check for need to recursively call executeScript
  *----------------------------------------------------------------------------*/
-bool CommandProcessor::executeScript (const char* script_name)
+bool CommandProcessor::executeScript (const char* script_name)  // NOLINT(misc-no-recursion)
 {
     /* Open Script */
     FILE* script = fopen(script_name, "r");
@@ -739,7 +739,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
         const int numobjs = objects.getKeys(&objnames);
         for(int i = 0; i < numobjs; i++)
         {
-            obj_entry_t entry = objects[objnames[i]];   // NOLINT [clang-analyzer-core.CallAndMessage]
+            obj_entry_t entry = objects[objnames[i]];   // NOLINT(clang-analyzer-core.CallAndMessage)
             print2term("%s %s (%s)\n", objnames[i], entry.permanent ? "*" : "", entry.obj->getType());
             delete [] objnames[i];
         }
@@ -849,7 +849,7 @@ int CommandProcessor::helpCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * versionCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argv;
     (void)argc;
@@ -862,7 +862,7 @@ int CommandProcessor::versionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT
 /*----------------------------------------------------------------------------
  * quitCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::quitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::quitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argv;
     (void)argc;
@@ -875,7 +875,7 @@ int CommandProcessor::quitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [r
 /*----------------------------------------------------------------------------
  * abortCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::abortCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::abortCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argv;
     (void)argc;
@@ -1097,7 +1097,7 @@ int CommandProcessor::registerCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * defineCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     const char* rec_type = StringLib::StringLib::checkNullStr(argv[0]);
     const char* id_field = StringLib::StringLib::checkNullStr(argv[1]);
@@ -1162,7 +1162,7 @@ int CommandProcessor::defineCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT 
  *
  *   Notes: size and offset are bytes except for bitfields, where it is bits
  *----------------------------------------------------------------------------*/
-int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
 
@@ -1233,7 +1233,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
 /*----------------------------------------------------------------------------
  * exportDefinitionCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
 
@@ -1339,7 +1339,7 @@ int CommandProcessor::exportDefinitionCmd (int argc, char argv[][MAX_CMD_SIZE]) 
 /*----------------------------------------------------------------------------
  * waitCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
 
@@ -1364,7 +1364,7 @@ int CommandProcessor::waitCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [r
 /*----------------------------------------------------------------------------
  * waitOnEmptyCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::waitOnEmptyCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     char*   qname       = argv[0];
     char*   wait_str    = argv[1];
@@ -1433,7 +1433,7 @@ int CommandProcessor::startStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * displayStopWatchCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static, readability-make-member-function-const)
 {
     (void)argc;
     (void)argv;
@@ -1446,7 +1446,7 @@ int CommandProcessor::displayStopWatchCmd (int argc, char argv[][MAX_CMD_SIZE]) 
 /*----------------------------------------------------------------------------
  * logCmdStatsCmd  -
  *----------------------------------------------------------------------------*/
-int CommandProcessor::logCmdStatsCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::logCmdStatsCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static, readability-make-member-function-const)
 {
     (void)argc;
     (void)argv;
@@ -1473,7 +1473,7 @@ int CommandProcessor::executeScriptCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * listDevicesCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
     (void)argv;
@@ -1488,7 +1488,7 @@ int CommandProcessor::listDevicesCmd (int argc, char argv[][MAX_CMD_SIZE]) // NO
 /*----------------------------------------------------------------------------
  * listMsgQCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argv;
     (void)argc;
@@ -1515,7 +1515,7 @@ int CommandProcessor::listMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
 /*----------------------------------------------------------------------------
  * qdepthMsgQCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
 
@@ -1540,7 +1540,7 @@ int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
 /*----------------------------------------------------------------------------
  * setIOTimeoutCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
 
@@ -1574,7 +1574,7 @@ int CommandProcessor::setIOTimeoutCmd (int argc, char argv[][MAX_CMD_SIZE]) // N
 /*----------------------------------------------------------------------------
  * setIOMaxsizeCmd
  *----------------------------------------------------------------------------*/
-int CommandProcessor::setIOMaxsizeCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int CommandProcessor::setIOMaxsizeCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
 

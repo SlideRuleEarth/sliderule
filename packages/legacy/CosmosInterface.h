@@ -146,7 +146,7 @@ class CosmosInterface: public CommandableObject
          *--------------------------------------------------------------------*/
 
                         CosmosInterface         (CommandProcessor* cmd_proc, const char* obj_name, const char* tlmq_name, const char* cmdq_name, const char* tlm_ip, int tlm_port, const char* cmd_ip, int cmd_port, int max_connections);
-                        ~CosmosInterface        (void);
+                        ~CosmosInterface        (void) override;
 
         static void*    listenerThread          (void* parm);
         static int      pollHandler             (int fd, short* events, void* parm);

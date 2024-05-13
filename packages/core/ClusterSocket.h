@@ -81,7 +81,7 @@ class ClusterSocket: public TcpSocket
         static int      luaCreate           (lua_State* L);
 
                         ClusterSocket       (lua_State* L, const char* _ip_addr, int _port, role_t _role, protocol_t _protocol, bool _is_server, bool _is_blind=false, const char* passthruq=NULL);
-                        ~ClusterSocket      (void);
+                        ~ClusterSocket      (void) override;
 
         bool            isConnected         (int num_connections = 1) override;
         void            closeConnection     (void) override;

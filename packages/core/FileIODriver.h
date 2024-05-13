@@ -67,7 +67,7 @@ class FileIODriver: Asset::IODriver
          *--------------------------------------------------------------------*/
 
         FileIODriver (const Asset* _asset, const char* resource);
-        ~FileIODriver (void);
+        ~FileIODriver (void) override;
 
         /*--------------------------------------------------------------------
          * Data

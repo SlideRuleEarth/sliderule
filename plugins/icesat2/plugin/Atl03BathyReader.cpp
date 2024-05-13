@@ -549,9 +549,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
 /*----------------------------------------------------------------------------
  * Atl03Data::Destructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl03Data::~Atl03Data (void)
-{
-}
+Atl03BathyReader::Atl03Data::~Atl03Data (void) = default;
 
 /*----------------------------------------------------------------------------
  * Atl09Class::Constructor
@@ -573,13 +571,6 @@ Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     {
         mlog(CRITICAL, "ATL09 data unavailable <%s>", info->builder->resource09.c_str());
     }
-}
-
-/*----------------------------------------------------------------------------
- * Atl09Class::Destructor
- *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl09Class::~Atl09Class (void)
-{
 }
 
 /*----------------------------------------------------------------------------

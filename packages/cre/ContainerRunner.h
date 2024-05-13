@@ -96,7 +96,7 @@ class ContainerRunner: public LuaObject
          *--------------------------------------------------------------------*/
 
                         ContainerRunner         (lua_State* L, CreParms* _parms, const char* host_shared_directory, const char* outq_name);
-        virtual         ~ContainerRunner        (void);
+                        ~ContainerRunner        (void) override;
         static void*    controlThread           (void* parm);
         static void     processContainerLogs    (const char* buffer, int buffer_size, const char* id);
 };

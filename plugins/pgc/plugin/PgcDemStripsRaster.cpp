@@ -57,9 +57,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::~PgcDemStripsRaster(void)
-{
-}
+PgcDemStripsRaster::~PgcDemStripsRaster(void) = default;
 
 /*----------------------------------------------------------------------------
  * openGeoIndex

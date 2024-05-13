@@ -110,6 +110,4 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CumulusIODriver::~CumulusIODriver (void)
-{
-}
+CumulusIODriver::~CumulusIODriver (void) = default;

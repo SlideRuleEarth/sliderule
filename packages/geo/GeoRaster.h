@@ -62,7 +62,7 @@ class GeoRaster: public RasterObject
         static void   deinit     (void);
 
                       GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
-        virtual      ~GeoRaster  (void);
+                     ~GeoRaster  (void) override;
         uint32_t      getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t      getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
         uint8_t*      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL) override;

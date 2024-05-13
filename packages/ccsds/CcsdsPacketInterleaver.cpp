@@ -230,7 +230,7 @@ void* CcsdsPacketInterleaver::processorThread(void* parm)
         {
             if(inq_valid[i] && pkt_refs[i].size > 0)
             {
-                if(pkt_times[i] < earliest_pkt_time)  // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
+                if(pkt_times[i] < earliest_pkt_time)  // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
                 {
                     earliest_pkt = i;
                     earliest_pkt_time = pkt_times[i];

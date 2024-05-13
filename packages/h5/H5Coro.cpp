@@ -65,6 +65,8 @@
  * H5 FUTURE CLASS
  ******************************************************************************/
 
+// NOLINTBEGIN(misc-no-recursion)
+
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
@@ -841,7 +843,7 @@ void H5FileBuffer::readDataset (info_t* info)
                         /* Copy Into New Buffer */
                         for(uint64_t k = 0; k < cdimsizes[1]; k++)
                         {
-                            fbuf[start + k] = buffer[bi++];   // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                            fbuf[start + k] = buffer[bi++];   // NOLINT(clang-analyzer-core.uninitialized.Assign)
                         }
 
                         /* Update Indices */
@@ -3577,7 +3579,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Double to Int */
@@ -3586,7 +3588,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Char to Int */
@@ -3595,7 +3597,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 char* cptr = reinterpret_cast<char*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<int>(cptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<int>(cptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* String to Int - assumes ASCII encoding */
@@ -3606,7 +3608,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 // NOTE this len calc is redundant, but metaData not visible to scope
                 uint8_t* len_cnt = dptr;
                 uint32_t length = 0;
-                while (*len_cnt != '\0') {  // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
+                while (*len_cnt != '\0') {  // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
                     length++;
                     len_cnt++;
                 }
@@ -3623,7 +3625,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Int to Int */
@@ -3632,7 +3634,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 int* dptr = reinterpret_cast<int*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Long to Int */
@@ -3641,7 +3643,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             else
@@ -3667,7 +3669,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Double to Double */
@@ -3676,7 +3678,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = dptr[i]; // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Char to Double */
@@ -3685,7 +3687,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint8_t* dptr = info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Short to Double */
@@ -3694,7 +3696,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Int to Double */
@@ -3703,7 +3705,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Long to Double */
@@ -3712,7 +3714,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
                 uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT [clang-analyzer-core.uninitialized.Assign]
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             else
@@ -3850,3 +3852,5 @@ void* H5Coro::reader_thread (void* parm)
 
     return NULL;
 }
+
+// NOLINTEND(misc-no-recursion)

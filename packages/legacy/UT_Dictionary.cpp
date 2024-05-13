@@ -72,9 +72,7 @@ UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Dictionary::~UT_Dictionary(void)
-{
-}
+UT_Dictionary::~UT_Dictionary(void) = default;
 
 /*----------------------------------------------------------------------------
  * functionalUnitTestCmd  -
@@ -194,7 +192,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                 {
                     if(true_list[j] != NULL)
                     {
-                        if(StringLib::match(true_list[j], key_list[i])) // NOLINT [clang-analyzer-core.CallAndMessage]
+                        if(StringLib::match(true_list[j], key_list[i])) // NOLINT(clang-analyzer-core.CallAndMessage)
                         {
                             found = true;
                             true_list[j] = NULL;
@@ -208,7 +206,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                     failure = true;
                 }
 
-                delete [] key_list[i]; // NOLINT [clang-analyzer-core.CallAndMessage]
+                delete [] key_list[i]; // NOLINT(clang-analyzer-core.CallAndMessage)
             }
         }
         delete [] key_list;

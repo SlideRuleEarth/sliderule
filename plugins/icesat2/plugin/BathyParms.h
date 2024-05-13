@@ -94,7 +94,7 @@ class BathyParms: public Icesat2Parms
          *--------------------------------------------------------------------*/
 
                     BathyParms      (lua_State* L, int index);
-                    ~BathyParms     (void);
+                    ~BathyParms     (void) override;
 
         void        cleanup         (void) const;
         void        get_atl09_list  (lua_State* L, int index, bool* provided);

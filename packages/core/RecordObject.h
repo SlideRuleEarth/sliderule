@@ -218,7 +218,7 @@ class RecordObject
                             Field           (RecordObject& _rec, fieldType_t _type, int _offset, int _elements, unsigned int _flags=0, int _element=0);
                             Field           (RecordObject& _rec, const field_t& _field, int _element=0);
                             Field           (const Field& f);
-                            ~Field          (void);
+                            ~Field          (void) = default;
 
                 Field&      operator=       (const char* rhs);
                 Field&      operator=       (double const& rhs);
@@ -392,7 +392,7 @@ class RecordInterface: public RecordObject
 {
     public:
                 RecordInterface     (const unsigned char* buffer, int size);
-        virtual ~RecordInterface    (void);
+                ~RecordInterface    (void) override;
 };
 
 #endif  /* __record_object__ */

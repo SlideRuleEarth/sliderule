@@ -70,7 +70,7 @@ class UT_Atl06Dispatch: public LuaObject
          *--------------------------------------------------------------------*/
 
                         explicit UT_Atl06Dispatch   (lua_State* L);
-                        ~UT_Atl06Dispatch           (void);
+                        ~UT_Atl06Dispatch           (void) override;
 
         static int      luaLsfTest                  (lua_State* L);
         static int      luaSortTest                 (lua_State* L);

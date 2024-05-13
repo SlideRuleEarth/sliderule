@@ -86,7 +86,7 @@ class LimitRecord: public RecordObject
 
         LimitRecord(void);
         explicit LimitRecord(const limit_t& _limit);
-        ~LimitRecord(void);
+        ~LimitRecord(void) override;
 };
 
 #endif  /* __limit_record__ */

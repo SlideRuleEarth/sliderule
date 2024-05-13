@@ -101,7 +101,7 @@ int CommandableObject::getCommands(char*** cmd_names, char*** cmd_descs)
     *cmd_descs = new char* [numcmds];
     for(int i = 0; i < numcmds; i++)
     {
-        const obj_cmd_entry_t* cmd = commands[(*cmd_names)[i]]; // NOLINT
+        const obj_cmd_entry_t* cmd = commands[(*cmd_names)[i]]; // NOLINT(clang-analyzer-core.CallAndMessage)
         (*cmd_descs)[i] = StringLib::duplicate(cmd->desc);
     }
     return numcmds;

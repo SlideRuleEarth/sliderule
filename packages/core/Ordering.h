@@ -76,7 +76,7 @@ class Ordering
 
         typedef struct kv {
             kv(K _key, const T& _value): key(_key), value(_value) {};
-            ~kv(void) {};
+            ~kv(void) = default;
             K           key;
             const T&    value;
         } kv_t;
@@ -194,7 +194,7 @@ typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) cons
 {
     if( (index < length) && (index >= 0) )
     {
-        Ordering<T,K>::kv_t pair(keys[index], *values[index]);  // NOLINT [clang-analyzer-core.CallAndMessage]
+        const Ordering<T,K>::kv_t pair(keys[index], *values[index]);  // NOLINT(clang-analyzer-core.CallAndMessage)
         return pair;
     }
 

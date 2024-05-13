@@ -77,7 +77,7 @@ class GeoLib: public MathLib
                 static const uint32_t INVALID_PIXEL = 0xFFFFFFFF;
                 static int luaCreate (lua_State* L);
                 TIFFImage (lua_State* L, const char* filename);
-                ~TIFFImage (void);
+                ~TIFFImage (void) override;
                 uint32_t getPixel (uint32_t x, uint32_t y);
                 uint32_t getWidth (void) const;
                 uint32_t getLength (void) const;

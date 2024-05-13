@@ -112,9 +112,7 @@ CcsdsRecordFileWriter::CcsdsRecordFileWriter(CommandProcessor* cmd_proc, const c
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-CcsdsRecordFileWriter::~CcsdsRecordFileWriter(void)
-{
-}
+CcsdsRecordFileWriter::~CcsdsRecordFileWriter(void) = default;
 
 /*----------------------------------------------------------------------------
  * writeMsg -

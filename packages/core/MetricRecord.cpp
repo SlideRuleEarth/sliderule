@@ -107,9 +107,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-MetricRecord::~MetricRecord()
-{
-}
+MetricRecord::~MetricRecord() = default;
 
 /*----------------------------------------------------------------------------
  * calcRecordSize

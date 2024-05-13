@@ -60,9 +60,7 @@ CcsdsProcessorModule::CcsdsProcessorModule(CommandProcessor* cmd_proc, const cha
 /*----------------------------------------------------------------------------
  * Desctructor  -
  *----------------------------------------------------------------------------*/
-CcsdsProcessorModule::~CcsdsProcessorModule()
-{
-}
+CcsdsProcessorModule::~CcsdsProcessorModule() = default;
 
 /*----------------------------------------------------------------------------
  * parseInt  -

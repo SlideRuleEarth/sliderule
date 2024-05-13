@@ -70,7 +70,7 @@ class UT_Atl03Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
                         explicit UT_Atl03Reader (lua_State* L);
-                        ~UT_Atl03Reader         (void);
+                        ~UT_Atl03Reader         (void) override;
 
         static int      luaTriangleTest         (lua_State* L);
 };

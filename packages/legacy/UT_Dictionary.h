@@ -71,7 +71,7 @@ class UT_Dictionary: public CommandableObject
          *--------------------------------------------------------------------*/
 
         UT_Dictionary (CommandProcessor* cmd_proc, const char* obj_name);
-        ~UT_Dictionary (void);
+        ~UT_Dictionary (void) override;
 
         int functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE]);
         int iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE]);

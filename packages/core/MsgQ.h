@@ -95,7 +95,7 @@ class MsgQ
          *--------------------------------------------------------------------*/
 
         explicit        MsgQ            (const char* name, free_func_t free_func=NULL, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
-        explicit        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
+                        MsgQ            (const MsgQ& existing_q, free_func_t free_func=NULL);
                         ~MsgQ           (void);
 
                 int     getCount        (void);

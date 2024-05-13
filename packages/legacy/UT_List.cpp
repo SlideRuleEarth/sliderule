@@ -81,9 +81,7 @@ UT_List::UT_List(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_List::~UT_List(void)
-{
-}
+UT_List::~UT_List(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro

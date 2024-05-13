@@ -98,8 +98,8 @@ class H5DatasetDevice: public DeviceObject
          *--------------------------------------------------------------------*/
 
                     H5DatasetDevice     (lua_State* L, role_t _role, Asset* asset, const char* resource, const char* dataset_name, long id, bool raw_mode,
-                                            RecordObject::valType_t datatype, long col, long startrow, long numrows);
-                    ~H5DatasetDevice    (void);
+                                         RecordObject::valType_t datatype, long col, long startrow, long numrows);
+                    ~H5DatasetDevice    (void) override;
 
         bool        isConnected         (int num_open=0) override;   // is the file open
         void        closeConnection     (void) override;    // close the file

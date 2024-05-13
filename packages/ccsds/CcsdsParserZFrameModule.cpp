@@ -276,7 +276,5 @@ CcsdsParserZFrameModule::CcsdsParserZFrameModule(lua_State* L, bool file):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsParserZFrameModule::~CcsdsParserZFrameModule(void)
-{
-}
+CcsdsParserZFrameModule::~CcsdsParserZFrameModule(void) = default;
 

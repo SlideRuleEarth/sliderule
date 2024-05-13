@@ -115,9 +115,7 @@ ContainerRecord::ContainerRecord(const vector<RecordObject*>& rec_vec):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ContainerRecord::~ContainerRecord()
-{
-}
+ContainerRecord::~ContainerRecord() = default;
 
 /*----------------------------------------------------------------------------
  * addRecord

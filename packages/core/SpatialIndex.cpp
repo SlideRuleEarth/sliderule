@@ -101,9 +101,7 @@ SpatialIndex::SpatialIndex(lua_State* L, Asset* _asset, MathLib::proj_t _project
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-SpatialIndex::~SpatialIndex(void)
-{
-}
+SpatialIndex::~SpatialIndex(void) = default;
 
 /*----------------------------------------------------------------------------
  * split

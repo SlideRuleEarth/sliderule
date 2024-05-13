@@ -102,9 +102,7 @@ CcsdsRecordDispatcher::CcsdsRecordDispatcher(lua_State* L, const char* inputq_na
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordDispatcher::~CcsdsRecordDispatcher(void)
-{
-}
+CcsdsRecordDispatcher::~CcsdsRecordDispatcher(void) = default;
 
 /*----------------------------------------------------------------------------
  * createRecord

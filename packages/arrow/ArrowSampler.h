@@ -146,7 +146,7 @@ class ArrowSampler: public LuaObject
 
                         ArrowSampler          (lua_State* L, ArrowParms* _parms, const char* input_file,
                                                const char* outq_name, const std::vector<raster_info_t>& rasters);
-                        ~ArrowSampler         (void);
+                        ~ArrowSampler         (void) override;
         void            Delete                (void);
         static void*    samplerThread         (void* parm);
 };

@@ -75,7 +75,7 @@ class HttpServer: public LuaObject
         static int          luaCreate       (lua_State* L);
 
                             HttpServer      (lua_State* L, const char* _ip_addr, int _port, int max_connections);
-                            ~HttpServer     (void);
+                            ~HttpServer     (void) override;
 
         const char*         getIpAddr       (void) const;
         int                 getPort         (void) const;
@@ -109,7 +109,7 @@ class HttpServer: public LuaObject
 
         struct Connection {
             explicit Connection(const char* _name);
-            explicit Connection(const Connection& other);
+            Connection(const Connection& other);
             ~Connection(void);
             void initialize (const char* _name);
             const char*                 name;

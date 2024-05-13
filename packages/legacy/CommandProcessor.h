@@ -72,7 +72,7 @@ class CommandProcessor: public CommandableObject
          *--------------------------------------------------------------------*/
 
         explicit            CommandProcessor        (const char* cmdq_name);
-                            ~CommandProcessor       (void);
+                            ~CommandProcessor       (void) override;
 
         bool                postCommand             (const char* cmdstr, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
         bool                postPriority            (const char* cmdstr, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
@@ -133,8 +133,7 @@ class CommandProcessor: public CommandableObject
             CommandableObject*  obj;
             bool                permanent;
 
-            obj_entry_t(void) { } // uninitialized entry
-
+            obj_entry_t(void): obj(NULL), permanent(false) { }
             obj_entry_t(CommandableObject* _obj, bool _permanent)
                 { obj = _obj;
                   permanent = _permanent; }

@@ -395,7 +395,7 @@ void* ArrowSampler::samplerThread(void* parm)
             */
             if(sampler->file_ids.find(id) != sampler->file_ids.end())
             {
-                sampler->filemap.push_back(std::make_pair(id, name));
+                sampler->filemap.emplace_back(id, name);
             }
         }
 

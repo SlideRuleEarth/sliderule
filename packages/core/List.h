@@ -171,7 +171,7 @@ const T& List<T>::Iterator::operator[](int index) const
     {
         const int node_block = index / blockSize;
         const int node_offset = index % blockSize;
-        const List<T>::list_node_t* block = blocks[node_block]; // NOLINT [clang-analyzer-core.uninitialized.Assign]
+        const List<T>::list_node_t* block = blocks[node_block]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
         return block->data[node_offset];
     }
 
@@ -587,7 +587,7 @@ void List<T>::freeNode(typename List<T>::list_node_t* node, int index)
  * quicksort
  *----------------------------------------------------------------------------*/
 template <class T>
-void List<T>::quicksort(T* array, int start, int end)
+void List<T>::quicksort(T* array, int start, int end) // NOLINT(misc-no-recursion)
 {
     if(start < end)
     {

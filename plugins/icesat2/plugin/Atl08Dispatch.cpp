@@ -743,7 +743,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
+void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end) // NOLINT(misc-no-recursion)
 {
     if(start < end)
     {
@@ -764,8 +764,8 @@ int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t*
     end++;
     while(true)
     {
-        while (ph_array[index_array[++start]].*field < pivot); // NOLINT [clang-analyzer-core.uninitialized.ArraySubscript]
-        while (ph_array[index_array[--end]].*field > pivot);   // NOLINT [clang-analyzer-core.uninitialized.ArraySubscript]
+        while (ph_array[index_array[++start]].*field < pivot); // NOLINT(clang-analyzer-core.uninitialized.ArraySubscript)
+        while (ph_array[index_array[--end]].*field > pivot);   // NOLINT(clang-analyzer-core.uninitialized.ArraySubscript)
         if (start >= end) return end;
 
         const long tmp = index_array[start];

@@ -120,9 +120,7 @@ Gedi02aReader::Gedi02aReader (lua_State* L, Asset* _asset, const char* _resource
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Gedi02aReader::~Gedi02aReader (void)
-{
-}
+Gedi02aReader::~Gedi02aReader (void) = default;
 
 /*----------------------------------------------------------------------------
  * Gedi02a::Constructor
@@ -154,9 +152,7 @@ Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
 /*----------------------------------------------------------------------------
  * Gedi02a::Destructor
  *----------------------------------------------------------------------------*/
-Gedi02aReader::Gedi02a::~Gedi02a (void)
-{
-}
+Gedi02aReader::Gedi02a::~Gedi02a (void) = default;
 
 /*----------------------------------------------------------------------------
  * subsettingThread

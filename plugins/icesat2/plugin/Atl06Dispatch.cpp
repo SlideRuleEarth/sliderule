@@ -805,7 +805,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-void Atl06Dispatch::quicksort(point_t* array, int start, int end)
+void Atl06Dispatch::quicksort(point_t* array, int start, int end) // NOLINT(misc-no-recursion)
 {
     if(start < end)
     {

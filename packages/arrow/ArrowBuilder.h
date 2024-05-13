@@ -183,7 +183,7 @@ class ArrowBuilder: public LuaObject
                                                  const char* outq_name, const char* inq_name,
                                                  const char* rec_type, const char* id,
                                                  const char* parms_str, const char* _endpoint);
-                        ~ArrowBuilder           (void);
+                        ~ArrowBuilder           (void) override;
         static void*    builderThread           (void* parm);
 };
 

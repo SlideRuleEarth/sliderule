@@ -76,7 +76,7 @@ class UT_TimeLib: public CommandableObject
          *--------------------------------------------------------------------*/
 
             UT_TimeLib          (CommandProcessor* cmd_proc, const char* obj_name);
-            ~UT_TimeLib         (void);
+            ~UT_TimeLib         (void) override;
 	int     CheckGmt2GpsCmd     (int argc, char argv[][MAX_CMD_SIZE]);
 	int     CheckGps2GmtCmd     (int argc, char argv[][MAX_CMD_SIZE]);
 	int     CheckGetCountCmd    (int argc, char argv[][MAX_CMD_SIZE]);

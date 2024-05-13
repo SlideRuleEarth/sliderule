@@ -319,7 +319,7 @@ class Atl03Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
                             Atl03Reader                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
-                            ~Atl03Reader                (void);
+                            ~Atl03Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);
 

@@ -107,6 +107,4 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GediIODriver::~GediIODriver (void)
-{
-}
+GediIODriver::~GediIODriver (void) = default;

@@ -141,7 +141,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
         if((dir = opendir(cacheRoot)) != NULL)
         {
             struct dirent *ent;
-            while((ent = readdir(dir)) != NULL) // NOLINT [concurrency-mt-unsafe]
+            while((ent = readdir(dir)) != NULL) // NOLINT(concurrency-mt-unsafe)
             {
                 if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
                 {

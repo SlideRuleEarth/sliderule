@@ -320,9 +320,7 @@ Publisher::Publisher (const MsgQ& existing_q, MsgQ::free_func_t free_func): MsgQ
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Publisher::~Publisher()
-{
-}
+Publisher::~Publisher() = default;
 
 /*----------------------------------------------------------------------------
  * postRef
@@ -922,7 +920,7 @@ void Subscriber::init_subscriber(subscriber_type_t type)
         /* Add Subscription */
         for(int i = 0; i < msgQ->max_subscribers; i++)
         {
-            if(msgQ->subscriber_type[i] == UNSUBSCRIBED)  // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
+            if(msgQ->subscriber_type[i] == UNSUBSCRIBED)  // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
             {
                 id = i;
                 msgQ->subscriber_type[id] = type;

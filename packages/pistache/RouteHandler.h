@@ -77,7 +77,7 @@ class RouteHandler: public LuaObject
          *--------------------------------------------------------------------*/
 
                     RouteHandler     (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-        virtual     ~RouteHandler    (void);
+                    ~RouteHandler    (void) override;
 };
 
 #endif  /* __route_handler__ */

@@ -101,9 +101,9 @@ class EndpointProxy: public LuaObject
          *--------------------------------------------------------------------*/
 
                             EndpointProxy           (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
-                                                     const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
+                                                     const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name,
                                                      bool _send_terminator, int _cluster_size_hint);
-                            ~EndpointProxy          (void);
+                            ~EndpointProxy          (void) override;
 
         static void*        collatorThread          (void* parm);
         static void*        proxyThread             (void* parm);

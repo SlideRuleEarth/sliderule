@@ -375,7 +375,4 @@ CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordInterface::~CcsdsRecordInterface(void)
-{
-
-}
+CcsdsRecordInterface::~CcsdsRecordInterface(void) = default;

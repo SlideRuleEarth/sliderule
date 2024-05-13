@@ -76,9 +76,7 @@ LuaEndpoint::Authenticator::Authenticator(lua_State* L):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::Authenticator::~Authenticator(void)
-{
-}
+LuaEndpoint::Authenticator::~Authenticator(void) = default;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -130,9 +128,7 @@ LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_m
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::~LuaEndpoint(void)
-{
-}
+LuaEndpoint::~LuaEndpoint(void) = default;
 
 /*----------------------------------------------------------------------------
  * requestThread

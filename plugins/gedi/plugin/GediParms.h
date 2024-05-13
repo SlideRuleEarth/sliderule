@@ -149,7 +149,7 @@ class GediParms: public NetsvcParms
          *--------------------------------------------------------------------*/
 
                                 GediParms        (lua_State* L, int index);
-                                ~GediParms       (void);
+                                ~GediParms       (void) override;
         void                    cleanup          (void);
         bool                    set_beam         (int beam);
         void                    get_lua_beams    (lua_State* L, int index, bool* provided);

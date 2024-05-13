@@ -80,6 +80,8 @@ const int RecordObject::FIELD_TYPE_BYTES[NUM_FIELD_TYPES] = {
  * RECORD OBJECT FIELD METHODS
  ******************************************************************************/
 
+// NOLINTBEGIN(misc-no-recursion)
+
 /*----------------------------------------------------------------------------
  * Constructor
  *
@@ -108,19 +110,7 @@ RecordObject::Field::Field(RecordObject& _rec, const field_t& _field, int _eleme
 /*----------------------------------------------------------------------------
  * Constructor (COPY)
  *----------------------------------------------------------------------------*/
-RecordObject::Field::Field(const Field& f):
-    record(f.record),
-    field(f.field),
-    element(f.element)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-RecordObject::Field::~Field(void)
-{
-}
+RecordObject::Field::Field(const Field& f) = default;
 
 /*----------------------------------------------------------------------------
  * operator= <string>
@@ -1160,7 +1150,7 @@ int RecordObject::getRecordFields(const char* rec_type, char*** field_names, fie
             (*fields)[i] = new field_t;
             try
             {
-                *(*fields)[i] = def->fields[(*field_names)[i]];  // NOLINT [clang-analyzer-core.CallAndMessage]
+                *(*fields)[i] = def->fields[(*field_names)[i]];  // NOLINT(clang-analyzer-core.CallAndMessage)
             }
             catch(const RunTimeException& e)
             {
@@ -1883,7 +1873,6 @@ RecordInterface::RecordInterface(const unsigned char* buffer, int size)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-RecordInterface::~RecordInterface(void)
-{
+RecordInterface::~RecordInterface(void) = default;
 
-}
+// NOLINTEND(misc-no-recursion)

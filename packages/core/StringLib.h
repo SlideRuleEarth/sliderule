@@ -50,7 +50,7 @@ class StringLib
         {
             public:
 
-                FormattedString (const char* _str, ...) VARG_CHECK(printf, 2, 3);
+                explicit FormattedString (const char* _str, ...) VARG_CHECK(printf, 2, 3);
                 ~FormattedString (void);
 
                 const char*     c_str       (bool duplicate = false);

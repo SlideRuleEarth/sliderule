@@ -60,7 +60,7 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          *--------------------------------------------------------------------*/
 
                         SpatialIndex    (lua_State* L, Asset* _asset, MathLib::proj_t _projection, int _threshold);
-                        ~SpatialIndex   (void);
+                        ~SpatialIndex   (void) override;
 
         static int      luaCreate       (lua_State* L);
 

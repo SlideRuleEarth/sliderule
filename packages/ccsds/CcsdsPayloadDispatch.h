@@ -63,7 +63,7 @@ class CcsdsPayloadDispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         static int  luaCreate       (lua_State* L);
-        bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records);
+        bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
 
     private:
 
@@ -90,7 +90,7 @@ class CcsdsPayloadDispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
         explicit    CcsdsPayloadDispatch    (lua_State* L);
-                    ~CcsdsPayloadDispatch   (void);
+                    ~CcsdsPayloadDispatch   (void) override;
 
         void        setPublisher            (int apid, const char* qname);
 

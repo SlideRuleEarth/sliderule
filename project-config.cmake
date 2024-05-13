@@ -24,14 +24,17 @@ endif()
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
 
+### https://clang.llvm.org/extra/clang-tidy/
+
     # clang-tidy
      set (CLANG_TIDY_CHECKS
         "clang-analyzer-*,"
-        "-clang-diagnostic-unused-command-line-argument,"
-        "concurrency-*,"       # Several were disabled in cpp files with // NOLINT
+        "portability-*,"
+        "concurrency-*,"   # Several warnings were disabled in cpp files with NOLINT
+
         "performance-*,"
         "-performance-enum-size,"
-        "portability-*,"
+
         "readability-*,"
         "-readability-braces-around-statements,"
         "-readability-implicit-bool-conversion,"
@@ -45,11 +48,27 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "-readability-suspicious-call-argument,"
         "-readability-isolate-declaration,"
         "-readability-misleading-indentation,"
+
         "misc-*,"
         "-misc-non-private-member-variables-in-classes,"
         "-misc-include-cleaner,"
         "-misc-use-anonymous-namespace,"
-        "-misc-no-recursion"
+
+        "hicpp-*,"
+        "-hicpp-special-member-functions,"
+        "-hicpp-use-nullptr,"
+        "-hicpp-use-noexcept,"
+        "-hicpp-avoid-c-arrays,"
+        "-hicpp-member-init,"
+        "-hicpp-vararg,"
+        "-hicpp-no-array-decay,"
+        "-hicpp-braces-around-statements,"
+        "-hicpp-use-auto,"
+        "-hicpp-deprecated-headers,"
+        "-hicpp-signed-bitwise,"
+        "-hicpp-no-malloc,"
+
+        "-clang-diagnostic-unused-command-line-argument,"
     )
 
     # Join checks into a single string parameter

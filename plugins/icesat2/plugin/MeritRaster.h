@@ -69,7 +69,7 @@ class MeritRaster: public RasterObject
 
         static void             init            (void);
         static RasterObject*    create          (lua_State* L, GeoParms* _parms);
-        virtual                 ~MeritRaster    (void);
+                                ~MeritRaster    (void) override;
 
     protected:
 

@@ -65,7 +65,7 @@ class Dictionary
 
         typedef struct kv {
             kv(const char* _key, const T& _value): key(_key), value(_value) {};
-            ~kv(void) {};
+            ~kv(void) = default;
             const char* key;
             const T&    value;
         } kv_t;
@@ -165,9 +165,7 @@ Dictionary<T>::Iterator::Iterator(const Dictionary& d):
  * Destructor
  *----------------------------------------------------------------------------*/
 template <class T>
-Dictionary<T>::Iterator::~Iterator(void)
-{
-}
+Dictionary<T>::Iterator::~Iterator(void) = default;
 
 /*----------------------------------------------------------------------------
  * []

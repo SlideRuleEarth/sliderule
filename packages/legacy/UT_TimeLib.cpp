@@ -119,16 +119,14 @@ UT_TimeLib::UT_TimeLib(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_TimeLib::~UT_TimeLib(void)
-{
-}
+UT_TimeLib::~UT_TimeLib(void) = default;
 
 /*----------------------------------------------------------------------------
  * CheckGetCountCmd
  *
  *  Checks that a SYS time is converted to the correct GPS time
  *----------------------------------------------------------------------------*/
-int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE]) // NOLINT [readability-convert-member-functions-to-static]
+int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
   (void)argc;
   (void)argv;

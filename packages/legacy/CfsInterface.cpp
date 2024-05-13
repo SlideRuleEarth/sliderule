@@ -73,9 +73,7 @@ CfsInterface::PktStats::PktStats(CommandProcessor* cmd_proc, const char* stat_na
     cmdProc->registerObject(stat_name, this);
 }
 
-CfsInterface::PktStats::~PktStats(void)
-{
-}
+CfsInterface::PktStats::~PktStats(void) = default;
 
 /******************************************************************************
  * PUBLIC METHODS

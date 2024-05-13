@@ -936,13 +936,13 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
         const size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
 
         addrDecode(addr_size, reinterpret_cast<const uint8_t **>(&internal_pos), &(int_node_ptr->addr)); // internal pos value should change
-        varDecode(reinterpret_cast<uint8_t *>(internal_pos), node_nrec, max_nrec_size); // NOLINT [performance-no-int-to-ptr]
+        varDecode(reinterpret_cast<uint8_t *>(internal_pos), node_nrec, max_nrec_size); // NOLINT(performance-no-int-to-ptr)
 
         safeAssigned(int_node_ptr->node_nrec, node_nrec);
         int_node_ptr->node_nrec = (uint16_t) node_nrec;
 
         if (internal->depth > 1) {
-            varDecode(reinterpret_cast<uint8_t *>(internal_pos), int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size); // NOLINT [performance-no-int-to-ptr]
+            varDecode(reinterpret_cast<uint8_t *>(internal_pos), int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size); // NOLINT(performance-no-int-to-ptr)
         }
         else {
             int_node_ptr->all_nrec = int_node_ptr->node_nrec;

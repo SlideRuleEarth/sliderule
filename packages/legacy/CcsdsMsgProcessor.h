@@ -53,7 +53,7 @@ class CcsdsMsgProcessor: public CommandableObject
          *--------------------------------------------------------------------*/
 
                         CcsdsMsgProcessor    (CommandProcessor* cmd_proc, const char* obj_name, const char* _type, const char* inq_name);
-        virtual         ~CcsdsMsgProcessor   (void);
+                        ~CcsdsMsgProcessor   (void) override;
 
         virtual bool    processMsg      (unsigned char* msg, int bytes) = 0;
         virtual bool    initProcessing  (void); // this method and corresponding deinit are used for blocking functions

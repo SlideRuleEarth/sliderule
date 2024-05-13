@@ -1172,9 +1172,7 @@ Atl03Reader::TrackState::TrackState (const Atl03Data& atl03)
 /*----------------------------------------------------------------------------
  * TrackState::Destructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::TrackState::~TrackState (void)
-{
-}
+Atl03Reader::TrackState::~TrackState (void) = default;
 
 /*----------------------------------------------------------------------------
  * subsettingThread

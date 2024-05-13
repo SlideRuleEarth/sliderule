@@ -115,7 +115,7 @@ class StatisticRecord: public CommandableObject, public RecordObject
          *--------------------------------------------------------------------*/
 
                         StatisticRecord  (CommandProcessor* cmd_proc, const char* cmd_name, const char* rec_name, bool automatic_post=true);
-                        ~StatisticRecord (void);
+                        ~StatisticRecord (void) override;
 
         static void*    telemetryThread     (void* parm);
         bool            stopTelemetry       (void);

@@ -91,7 +91,7 @@ class UT_MsgQ: public CommandableObject
          *--------------------------------------------------------------------*/
 
         UT_MsgQ (CommandProcessor* cmd_proc, const char* obj_name);
-        ~UT_MsgQ (void);
+        ~UT_MsgQ (void) override;
 
         int blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
         int subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);

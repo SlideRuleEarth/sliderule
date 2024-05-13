@@ -73,7 +73,7 @@ class GeoJsonRaster: public GeoRaster
         static GeoJsonRaster* create         (lua_State* L, int index);
 
         bool                  includes       (double lon, double lat, double height=0);
-        virtual              ~GeoJsonRaster  (void);
+                             ~GeoJsonRaster  (void) override;
         const char*           getJsonString  (void) { return geojstr; }
 
         /*--------------------------------------------------------------------

@@ -67,7 +67,7 @@ class CcsdsProcessorModule: public CommandableObject
          *--------------------------------------------------------------------*/
 
                         CcsdsProcessorModule        (CommandProcessor* cmd_proc, const char* obj_name);
-                        ~CcsdsProcessorModule       (void);
+                        ~CcsdsProcessorModule       (void) override;
 
         static long     parseInt                    (const unsigned char* ptr, int size);
         static double   parseFlt                    (const unsigned char* ptr, int size);

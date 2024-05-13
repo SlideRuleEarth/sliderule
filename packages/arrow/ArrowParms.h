@@ -111,7 +111,7 @@ class ArrowParms: public LuaObject
 
         static int  luaCreate           (lua_State* L);
                     ArrowParms          (lua_State* L, int index);
-                    ~ArrowParms         (void);
+                    ~ArrowParms         (void) override;
         const char* tojson              (void) const override;
 
     private:

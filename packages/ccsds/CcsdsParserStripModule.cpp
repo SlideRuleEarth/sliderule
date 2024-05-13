@@ -159,6 +159,4 @@ CcsdsParserStripModule::CcsdsParserStripModule(lua_State* L, int header_size):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsParserStripModule::~CcsdsParserStripModule(void)
-{
-}
+CcsdsParserStripModule::~CcsdsParserStripModule(void) = default;

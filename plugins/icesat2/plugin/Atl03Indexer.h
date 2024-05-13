@@ -127,7 +127,7 @@ class Atl03Indexer: public LuaObject
          *--------------------------------------------------------------------*/
 
                             Atl03Indexer        (lua_State* L, Asset* _asset, List<string>* _resources, const char* outq_name, int num_threads);
-                            ~Atl03Indexer       (void);
+                            ~Atl03Indexer       (void) override;
 
         static void*        indexerThread       (void* parm);
 

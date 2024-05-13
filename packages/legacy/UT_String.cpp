@@ -79,9 +79,7 @@ UT_String::UT_String(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_String::~UT_String(void)
-{
-}
+UT_String::~UT_String(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro

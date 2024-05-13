@@ -91,7 +91,7 @@ class AssetIndex: public LuaObject
          *--------------------------------------------------------------------*/
 
                                 AssetIndex      (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold=DEFAULT_THRESHOLD);
-        virtual                 ~AssetIndex     (void);
+                                ~AssetIndex     (void) override;
 
         virtual void            build           (void);
         virtual T               get             (int index);
@@ -355,7 +355,7 @@ int AssetIndex<T>::luaDisplay (lua_State* L)
  * buildtree
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
+void AssetIndex<T>::buildtree (node_t* root, int* maxdepth) // NOLINT(misc-no-recursion)
 {
     /* Check Root */
     if(!root || !root->ril) return;
@@ -431,7 +431,7 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
  * updatenode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
+void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth) // NOLINT(misc-no-recursion)
 {
     /* Get Span of Resource being Added */
     T& span = spans[i];
@@ -513,7 +513,7 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
  * balancenode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::balancenode (node_t** root)
+void AssetIndex<T>::balancenode (node_t** root) // NOLINT(misc-no-recursion)
 {
     node_t* curr = *root;
 
@@ -603,7 +603,7 @@ void AssetIndex<T>::balancenode (node_t** root)
  * querynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::querynode (const T& span, node_t* curr, Ordering<int>* list)
+void AssetIndex<T>::querynode (const T& span, node_t* curr, Ordering<int>* list) // NOLINT(misc-no-recursion)
 {
     /* Return on Null Path */
     if(curr == NULL) return;
@@ -653,7 +653,7 @@ typename AssetIndex<T>::node_t* AssetIndex<T>::newnode (const T& span)
  * displaynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::deletenode (node_t* node)
+void AssetIndex<T>::deletenode (node_t* node) // NOLINT(misc-no-recursion)
 {
     /* Stop */
     if(node == NULL) return;
@@ -743,7 +743,7 @@ bool AssetIndex<T>::prunenode (node_t* node)
  * displaynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::displaynode (node_t* curr)
+void AssetIndex<T>::displaynode (node_t* curr) // NOLINT(misc-no-recursion)
 {
     /* Stop */
     if(curr == NULL) return;

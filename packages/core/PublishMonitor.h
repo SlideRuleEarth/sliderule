@@ -71,7 +71,7 @@ class PublishMonitor: public Monitor
          *--------------------------------------------------------------------*/
 
         PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
-        ~PublishMonitor (void);
+        ~PublishMonitor (void) override;
 
         /*--------------------------------------------------------------------
          * Data

@@ -77,7 +77,7 @@ class S3CacheIODriver: public S3CurlIODriver
          *--------------------------------------------------------------------*/
 
                 S3CacheIODriver     (const Asset* _asset, const char* resource);
-                ~S3CacheIODriver    (void);
+                ~S3CacheIODriver    (void) override;
 
         bool    fileGet             (const char* bucket, const char* key, const char** file);
 
@@ -86,7 +86,7 @@ class S3CacheIODriver: public S3CurlIODriver
          *--------------------------------------------------------------------*/
 
         typedef Ordering<string*, okey_t> FileOrdering;
-        
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

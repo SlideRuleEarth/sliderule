@@ -65,9 +65,7 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GebcoBathyRaster::~GebcoBathyRaster(void)
-{
-}
+GebcoBathyRaster::~GebcoBathyRaster(void) = default;
 
 /*----------------------------------------------------------------------------
  * getIndexFile

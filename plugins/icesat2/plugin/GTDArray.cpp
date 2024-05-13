@@ -60,9 +60,7 @@ GTDArray::GTDArray(const Asset* asset, const char* resource, int track, const ch
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GTDArray::~GTDArray(void)
-{
-}
+GTDArray::~GTDArray(void) = default;
 
 /*----------------------------------------------------------------------------
  * join

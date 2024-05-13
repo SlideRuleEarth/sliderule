@@ -72,7 +72,7 @@ class PistacheClient: public LuaObject
          *--------------------------------------------------------------------*/
 
                     PistacheClient     (lua_State* L, const char* outq_name, size_t num_threads);
-        virtual     ~PistacheClient    (void);
+                    ~PistacheClient    (void) override;
 
     private:
 

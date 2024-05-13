@@ -67,7 +67,7 @@ class MetricRecord: public RecordObject
         static int rec_elem;
 
         MetricRecord(okey_t _index, double _value, const char* _text, const char* _name, const void* _src, int _src_size);
-        ~MetricRecord(void);
+        ~MetricRecord(void) override;
 
         static int calcRecordSize (const char* _text, const char* _name, int _src_size);
 };

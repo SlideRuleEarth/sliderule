@@ -368,9 +368,7 @@ ProvisioningSystemLib::Authenticator::Authenticator (lua_State* L):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ProvisioningSystemLib::Authenticator::~Authenticator (void)
-{
-}
+ProvisioningSystemLib::Authenticator::~Authenticator (void) = default;
 
 /*----------------------------------------------------------------------------
  * isValid

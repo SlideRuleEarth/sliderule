@@ -91,6 +91,4 @@ MetricMonitor::MetricMonitor(lua_State* L, event_level_t level):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-MetricMonitor::~MetricMonitor(void)
-{
-}
+MetricMonitor::~MetricMonitor(void) = default;

@@ -161,7 +161,7 @@ class CcsdsPacket
          * Methods
          *--------------------------------------------------------------------*/
 
-                                CcsdsPacket         (type_t _type);
+        explicit                CcsdsPacket         (type_t _type);
         virtual                 ~CcsdsPacket        (void);
         type_t                  getType             (void);
 
@@ -241,7 +241,7 @@ class CcsdsSpacePacket: public CcsdsPacket
        explicit             CcsdsSpacePacket    (int len=CCSDS_MAX_SPACE_PACKET_SIZE);
                             CcsdsSpacePacket    (uint16_t apid, int len, bool clear);
                             CcsdsSpacePacket    (unsigned char* buf, int size, bool copy=false);
-                            ~CcsdsSpacePacket   (void);
+                            ~CcsdsSpacePacket   (void) override;
 
         int                 getAPID             (void) const override;
         void                setAPID             (int apid) override;
@@ -305,7 +305,7 @@ class CcsdsEncapPacket: public CcsdsPacket
          *--------------------------------------------------------------------*/
 
         explicit        CcsdsEncapPacket    (int len=CCSDS_MAX_SPACE_PACKET_SIZE);
-                        ~CcsdsEncapPacket   (void);
+                        ~CcsdsEncapPacket   (void) override;
 
         int             getAPID             (void) const override;
         void            setAPID             (int apid) override;

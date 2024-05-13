@@ -311,7 +311,7 @@ class Icesat2Parms: public NetsvcParms
          *--------------------------------------------------------------------*/
 
                                 Icesat2Parms               (lua_State* L, int index);
-                                ~Icesat2Parms              (void);
+                                ~Icesat2Parms              (void) override;
 
         void                    cleanup                 (void) const;
         void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);

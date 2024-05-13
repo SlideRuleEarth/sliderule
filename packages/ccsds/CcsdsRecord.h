@@ -131,7 +131,7 @@ class CcsdsRecordInterface: public CcsdsRecord
 {
     public:
                 CcsdsRecordInterface     (unsigned char* buffer, int size);
-        virtual ~CcsdsRecordInterface    (void);
+                ~CcsdsRecordInterface    (void) override;
 };
 
 #endif  /* __ccsds_record__ */

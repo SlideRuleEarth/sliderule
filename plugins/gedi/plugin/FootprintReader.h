@@ -148,7 +148,7 @@ class FootprintReader: public LuaObject
                                                      const char* outq_name, GediParms* _parms, bool _send_terminator,
                                                      const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                      subset_func_t subsetter);
-                            ~FootprintReader        (void);
+                            ~FootprintReader        (void) override;
         void                postRecordBatch         (stats_t* local_stats);
         static int          luaStats                (lua_State* L);
 };

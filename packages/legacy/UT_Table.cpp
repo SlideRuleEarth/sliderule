@@ -85,9 +85,7 @@ UT_Table::UT_Table(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Table::~UT_Table(void)
-{
-}
+UT_Table::~UT_Table(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro
@@ -440,7 +438,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
         /* Load Hash */
         for(int i = 0; i < size; i++)
         {
-            key = rand() % key_range; // NOLINT [concurrency-mt-unsafe]
+            key = rand() % key_range; // NOLINT(concurrency-mt-unsafe)
             if(mytable.add(key, key, true))
             {
                 data_order[num_added++] = key;

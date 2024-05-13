@@ -87,11 +87,9 @@ DeviceIO::DeviceIO(lua_State* L, DeviceObject* _device):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-DeviceIO::~DeviceIO(void)
-{
-    // full destruction is handled in child classes to guarantee
-    // correct order in this destructor
-}
+DeviceIO::~DeviceIO(void) = default;
+// full destruction is handled in child classes to guarantee
+// correct order in this destructor
 
 /*----------------------------------------------------------------------------
  * luaLogPktStats - :stats([<event level>])

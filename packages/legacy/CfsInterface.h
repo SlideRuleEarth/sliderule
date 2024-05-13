@@ -95,7 +95,7 @@ class CfsInterface: public CommandableObject
                 static int rec_elem;
 
                 PktStats    (CommandProcessor* cmd_proc, const char* stat_name);
-                ~PktStats   (void);
+                ~PktStats   (void) override;
         };
 
         /*--------------------------------------------------------------------
@@ -131,7 +131,7 @@ class CfsInterface: public CommandableObject
          *--------------------------------------------------------------------*/
 
                         CfsInterface        (CommandProcessor* cmd_proc, const char* obj_name, const char* tlmq_name, const char* cmdq_name, const char* tlm_ip, int tlm_port, const char* cmd_ip, int cmd_port);
-                        ~CfsInterface       (void);
+                        ~CfsInterface       (void) override;
 
         static void*    telemetryThread     (void* parm);
         static void*    commandThread       (void* parm);

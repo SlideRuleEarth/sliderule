@@ -86,6 +86,4 @@ UT_Atl03Reader::UT_Atl03Reader (lua_State* L):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Atl03Reader::~UT_Atl03Reader(void)
-{
-}
+UT_Atl03Reader::~UT_Atl03Reader(void) = default;

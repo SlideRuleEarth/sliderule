@@ -538,7 +538,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
 /*----------------------------------------------------------------------------
  * dispatchRecord
  *----------------------------------------------------------------------------*/
-void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::recVec_t* records)
+void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::recVec_t* records) // NOLINT(misc-no-recursion)
 {
     /* Dispatch Dispatches */
     try

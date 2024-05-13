@@ -149,7 +149,7 @@ class RasterSampler: public DispatchObject
 
                         RasterSampler           (lua_State* L, RasterObject* _raster, const char* raster_key,
                                                  const char* outq_name, const char* rec_type, bool use_time);
-                        ~RasterSampler          (void);
+                        ~RasterSampler          (void) override;
 
         bool            processRecord           (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout          (void) override;
