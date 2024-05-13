@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Thread.h"
 
 #include <assert.h>
 #include <errno.h>

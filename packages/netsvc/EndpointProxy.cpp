@@ -39,6 +39,7 @@
 
 #include "core.h"
 #include "netsvc.h"
+#include "EndpointProxy.h"
 
 /******************************************************************************
  * STATIC DATA

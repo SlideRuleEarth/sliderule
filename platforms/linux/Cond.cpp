@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Cond.h"
 
 #include <assert.h>
 #include <poll.h>

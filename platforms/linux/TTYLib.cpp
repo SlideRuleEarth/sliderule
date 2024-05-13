@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "TTYLib.h"
 
 #include <stdlib.h>
 #include <stdio.h>

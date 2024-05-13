@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "SockLib.h"
 
 #include <stdlib.h>
 #include <stdio.h>

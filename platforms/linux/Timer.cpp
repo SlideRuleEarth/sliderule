@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Timer.h"
 
 #include <time.h>
 #include <limits.h>

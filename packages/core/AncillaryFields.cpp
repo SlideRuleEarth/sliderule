@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "AncillaryFields.h"
 #include <math.h>
 #include <float.h>
 #include <map>

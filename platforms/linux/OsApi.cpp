@@ -40,12 +40,12 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <limits.h>
 #include <assert.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
