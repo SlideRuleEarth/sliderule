@@ -165,7 +165,7 @@ static void console_quick_exit(int parm)
  */
 static void* signal_thread (void* parm)
 {
-    sigset_t* signal_set = reinterpret_cast<sigset_t*>(parm);
+    sigset_t* signal_set = static_cast<sigset_t*>(parm);
 
     while(true)
     {

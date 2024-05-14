@@ -451,7 +451,7 @@ void* SwotL2Reader::varThread (void* parm)
             var_rec_t* rec_data = reinterpret_cast<var_rec_t*>(rec_obj.getRecordData());
             StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
             StringLib::copy(rec_data->variable, info->variable_name, MAX_VARIABLE_NAME_STR);
-            rec_data->datatype = (uint32_t)results.datatype;
+            rec_data->datatype = static_cast<uint32_t>(results.datatype);
             rec_data->elements = results.elements;
             rec_data->width = results.elements / reader->region.num_lines;
             rec_data->size = results.datasize;

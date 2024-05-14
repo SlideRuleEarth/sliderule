@@ -265,12 +265,12 @@ class Icesat2Parms: public NetsvcParms
         // [RGT: 63-52][CYCLE: 51-36][REGION: 35-32][RPT: 31-30][ID: 29-2][PHOTONS|ELEVATION: 1][LEFT|RIGHT: 0]
         static uint64_t generateExtentId (int32_t rgt, int32_t cycle, int32_t region, int track, int pair, uint32_t counter)
         {
-            uint64_t extent_id = ((uint64_t)rgt << 52) |
-                                 ((uint64_t)cycle << 36) |
-                                 ((uint64_t)region << 32) |
-                                 ((uint64_t)track << 30) |
-                                 (((uint64_t)counter & 0xFFFFFFF) << 2) |
-                                 pair;
+            uint64_t extent_id = static_cast<uint64_t>(rgt) << 52 |
+                                 static_cast<uint64_t>(cycle) << 36 |
+                                 static_cast<uint64_t>(region) << 32 |
+                                 static_cast<uint64_t>(track) << 30 |
+                                 (static_cast<uint64_t>(counter) & 0xFFFFFFF) << 2 |
+                                 static_cast<uint64_t>(pair);
 
             if(EXTENT_ID_PHOTONS) extent_id |= EXTENT_ID_PHOTONS;
 
