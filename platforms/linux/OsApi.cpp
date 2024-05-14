@@ -94,10 +94,10 @@ void OsApi::sleep(double secs)
 {
     struct timespec waittime;
 
-    waittime.tv_sec = static_cast<time_t>(secs);
+    waittime.tv_sec  = static_cast<time_t>(secs);
     waittime.tv_nsec = static_cast<long>((secs - static_cast<long>(secs)) * 1000000000L);
 
-    while(nanosleep(&waittime, &waittime) == -1);
+    while(nanosleep(&waittime, &waittime) == -1 && errno == EINTR);
 }
 
 /*----------------------------------------------------------------------------
@@ -138,7 +138,7 @@ int64_t OsApi::time(int clkid)
         return 0;
     }
 
-    return ((int64_t)now.tv_sec * 1000000) + (now.tv_nsec / 1000);
+    return (static_cast<int64_t>(now.tv_sec) * 1000000) + (now.tv_nsec / 1000);
 }
 
 /*----------------------------------------------------------------------------

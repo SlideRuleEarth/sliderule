@@ -164,7 +164,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = static_cast<info_t*>(parm);
-    Gedi04aReader* reader = dynamic_cast<Gedi04aReader*>(info->reader);
+    Gedi04aReader* reader = reinterpret_cast<Gedi04aReader*>(info->reader);
     const GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 

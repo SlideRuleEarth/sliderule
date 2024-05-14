@@ -268,8 +268,12 @@ char* StringLib::find(const char* big, const char* little)
  *----------------------------------------------------------------------------*/
 char* StringLib::find(const char* str, char c, bool first)
 {
-    if(first) return const_cast<char*>(strchr(str, c));
-    return const_cast<char*>(strrchr(str, c));
+    const char* p = NULL;
+
+    if(first) p = strchr(str, c);
+    else p = strrchr(str, c);
+
+    return const_cast<char*>(p);
 }
 
 /*----------------------------------------------------------------------------

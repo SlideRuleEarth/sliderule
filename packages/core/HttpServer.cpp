@@ -605,7 +605,7 @@ int HttpServer::onWrite(int fd)
         else /* Setup Normal */
         {
             /* Setup Write State */
-            buffer = static_cast<uint8_t*>(state->ref.data) + state->ref_index;
+            buffer = reinterpret_cast<uint8_t*>(state->ref.data) + state->ref_index;
             bytes_left = state->ref.size - state->ref_index;
         }
 

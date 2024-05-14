@@ -82,7 +82,7 @@ bool Sem::take(int timeout_ms)
     if(timeout_ms > 0)
     {
         /* Build Time Structure */
-        struct timespec ts = {0, 0};
+        struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec  += (time_t) (timeout_ms / 1000) ;
         ts.tv_nsec +=  (timeout_ms % 1000) * 1000000L ;

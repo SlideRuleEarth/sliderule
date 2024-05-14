@@ -161,7 +161,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = static_cast<info_t*>(parm);
-    Gedi02aReader* reader = dynamic_cast<Gedi02aReader*>(info->reader);
+    Gedi02aReader* reader = reinterpret_cast<Gedi02aReader*>(info->reader); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     const GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
