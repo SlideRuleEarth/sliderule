@@ -636,11 +636,11 @@ void* GeoIndexedRaster::readingThread(void *param)
         {
             if(GdalRaster::ispoint(reader->geo))
             {
-                entry->sample = entry->raster->samplePOI(static_cast<OGRPoint*>(reader->geo));
+                entry->sample = entry->raster->samplePOI(dynamic_cast<OGRPoint*>(reader->geo));
             }
             else if(GdalRaster::ispoly(reader->geo))
             {
-                entry->subset = entry->raster->subsetAOI(static_cast<OGRPolygon*>(reader->geo));
+                entry->subset = entry->raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo));
                 if(entry->subset)
                 {
                     /*

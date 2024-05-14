@@ -120,7 +120,7 @@ H5File::~H5File (void)
  *----------------------------------------------------------------------------*/
 void* H5File::readThread (void* parm)
 {
-    dataset_info_t* info = (dataset_info_t*)parm;
+    dataset_info_t* info = static_cast<dataset_info_t*>(parm);
 
     /* Declare and Initialize Results */
     H5Coro::info_t results;
@@ -144,7 +144,7 @@ void* H5File::readThread (void* parm)
 
         /* Create Record Object */
         RecordObject rec_obj(recType);
-        h5file_t* rec_data = (h5file_t*)rec_obj.getRecordData();
+        h5file_t* rec_data = reinterpret_cast<h5file_t*>(rec_obj.getRecordData());
         StringLib::copy(rec_data->dataset, info->dataset, MAX_NAME_STR);
         rec_data->datatype = (uint32_t)results.datatype;
         rec_data->elements = results.elements;

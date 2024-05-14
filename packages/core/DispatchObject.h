@@ -64,7 +64,7 @@ class DispatchObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual         ~DispatchObject     (void) = 0;           // NOLINT(hicpp-use-override)
+        virtual         ~DispatchObject     (void) = 0;           // NOLINT(hicpp-use-override, cppcoreguidelines-explicit-virtual-functions)
 
         virtual bool    processRecord      (RecordObject* record, okey_t key, recVec_t* records) = 0;
         virtual bool    processTimeout     (void);

@@ -128,7 +128,7 @@ bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records
     unsigned char* event_buf_ptr = reinterpret_cast<unsigned char*>(&event_buffer[0]);
 
     /* Pull Out Log Message */
-    EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
+    EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record->getRecordData());
 
     /* Filter Events */
     if( ((event->type & eventTypeMask) == 0) ||
@@ -372,7 +372,7 @@ int Monitor::luaCat (lua_State* L)
         for(int i = 0; i < lua_obj->eventTailSize; i++)
         {
             const int index = (start + i) % lua_obj->eventTailSize;
-            const char* event_msg = reinterpret_cast<const char*>(&lua_obj->eventTailArray[index * MAX_EVENT_SIZE]);
+            const char* event_msg = static_cast<const char*>(&lua_obj->eventTailArray[index * MAX_EVENT_SIZE]);
             if(event_msg[0] != '\0')
             {
                 msg_index++;

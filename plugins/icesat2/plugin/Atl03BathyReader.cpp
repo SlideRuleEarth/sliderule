@@ -579,7 +579,7 @@ Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
 void* Atl03BathyReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     Atl03BathyReader* builder = info->builder;
     BathyParms* parms = builder->parms;
     RasterObject* ndwiRaster = RasterObject::cppCreate(builder->geoparms);
@@ -837,7 +837,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
 
                     /* Allocate and Initialize Extent Record */
                     RecordObject record(exRecType, extent_bytes);
-                    extent_t* extent                = (extent_t*)record.getRecordData();
+                    extent_t* extent                = reinterpret_cast<extent_t*>(record.getRecordData());
                     extent->region                  = builder->start_region;
                     extent->track                   = info->track;
                     extent->pair                    = info->pair;

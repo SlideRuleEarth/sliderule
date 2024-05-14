@@ -545,7 +545,7 @@ void H5BTreeV2::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     // https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5Gbtree2.c#L286
 
     /* TODO: fix reading fields, DO NOT USE DECODE MACRO */
-    btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
+    btree2_type5_densename_rec_t *nrecord = reinterpret_cast<btree2_type5_densename_rec_t *>(_nrecord);
     const size_t H5G_DENSE_FHEAP_ID_LEN = 7;
     // TODO FIX
     raw += 4;
@@ -560,7 +560,7 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
     /* See HDF5 official documentation: https://docs.hdfgroup.org/hdf5/v1_10/_f_m_t3.html#DatatypeMessage:~:text=Layout%3A%20Version%202%20B%2Dtree%2C%20Type%208%20Record%20Layout%20%2D%20Attribute%20Name%20for%20Indexed%20Attributes */
 
     uint32_t u = 0;
-    btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
+    btree2_type8_densename_rec_t *nrecord = reinterpret_cast<btree2_type8_densename_rec_t *>(_nrecord);
 
     for (u = 0; u < H5O_FHEAP_ID_LEN; u++ ) {
         nrecord->id.id[u] = (uint8_t) h5filePtr_->readField(1, &internal_pos);
@@ -808,7 +808,10 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
 void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, const void *op_data){
 
     // temp satisfy print
-    print2term("fheapNameCmp args: %lu, %lu, %lu", (uintptr_t) obj, (uintptr_t) obj_len, (uintptr_t) op_data);
+    print2term("fheapNameCmp args: %lu, %lu, %lu",
+                static_cast<unsigned long>(reinterpret_cast<uintptr_t>(obj)),
+                static_cast<unsigned long>(obj_len),
+                static_cast<unsigned long>(reinterpret_cast<uintptr_t>(op_data)));
     // TODO
 }
 
@@ -820,7 +823,7 @@ void H5BTreeV2::compareType8Record(const void *_bt2_rec, int32_t *result)
     /* Implementation of H5A__dense_btree2_name_compare with type 8 - H5B2_GRP_DENSE_NAME_ID*/
     /* See: https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L220 */
 
-    const btree2_type8_densename_rec_t *bt2_rec   = (const btree2_type8_densename_rec_t *)_bt2_rec;
+    const btree2_type8_densename_rec_t *bt2_rec = static_cast<const btree2_type8_densename_rec_t *>(_bt2_rec);
 
     /* Check hash value - influence btree search direction */
     if (name_hash < bt2_rec->hash)

@@ -184,7 +184,7 @@ void initcore (void)
     LuaEngine::init();
     ContainerRecord::init();
     AncillaryFields::init();
-    
+
     /* Register IO Drivers */
     Asset::registerDriver("nil", Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);

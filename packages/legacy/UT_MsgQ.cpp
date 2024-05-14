@@ -492,7 +492,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::subscriberThread(void* parm)
 {
-    parms_t* unit_test_parms = (parms_t*)parm;
+    parms_t* unit_test_parms = static_cast<parms_t*>(parm);
 
     /* Initialize Checking Variables */
     unit_test_parms->lastvalue = new long[unit_test_parms->numpubs];
@@ -558,7 +558,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::publisherThread(void* parm)
 {
-    parms_t* unit_test_parms = (parms_t*)parm;
+    parms_t* unit_test_parms = static_cast<parms_t*>(parm);
 
     /* Last Value Instantiation */
     unit_test_parms->lastvalue = new long;
@@ -605,7 +605,7 @@ void* UT_MsgQ::publisherThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::performanceThread(void* parm)
 {
-    perf_thread_t* RAW = (perf_thread_t*)parm;
+    perf_thread_t* RAW = static_cast<perf_thread_t*>(parm);
     unsigned long sequence = 0;
 
     /* Wait to Start */
@@ -668,7 +668,7 @@ void* UT_MsgQ::performanceThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::opportunityThread(void* parm)
 {
-    parms_t* unit_test_parms = (parms_t*)parm;
+    parms_t* unit_test_parms = static_cast<parms_t*>(parm);
 
     /* Initialize Checking Variables */
     unit_test_parms->lastvalue = new long[unit_test_parms->numpubs];

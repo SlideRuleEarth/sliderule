@@ -1180,7 +1180,7 @@ Atl03Reader::TrackState::~TrackState (void) = default;
 void* Atl03Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     Atl03Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
@@ -1678,7 +1678,7 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, const info_t* info, 
 
     /* Allocate and Initialize Extent Record */
     RecordObject* record            = new RecordObject(exRecType, extent_bytes);
-    extent_t* extent                = (extent_t*)record->getRecordData();
+    extent_t* extent                = reinterpret_cast<extent_t*>(record->getRecordData());
     extent->extent_id               = extent_id;
     extent->region                  = start_region;
     extent->track                   = info->track;
@@ -1728,7 +1728,7 @@ void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, AncillaryFields:
             const int record_size = offsetof(AncillaryFields::element_array_t, data) +
                                     (array->elementSize() * indices->length());
             RecordObject* record = new RecordObject(AncillaryFields::ancElementRecType, record_size);
-            AncillaryFields::element_array_t* data = (AncillaryFields::element_array_t*)record->getRecordData();
+            AncillaryFields::element_array_t* data = reinterpret_cast<AncillaryFields::element_array_t*>(record->getRecordData());
 
             /* Populate Ancillary Record */
             data->extent_id = extent_id;

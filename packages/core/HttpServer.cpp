@@ -289,7 +289,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
             List<string*>* keyvalue_list = StringLib::split((*header_list)[h]->c_str(), (*header_list)[h]->length(), ':');
             try
             {
-                char* key = (char*)(*keyvalue_list)[0]->c_str();
+                char* key = const_cast<char*>((*keyvalue_list)[0]->c_str());
                 string* value = new string(*(*keyvalue_list)[1]);
                 StringLib::convertLower(key);
                 if(!request->headers.add(key, value, true)) delete value;
@@ -605,7 +605,7 @@ int HttpServer::onWrite(int fd)
         else /* Setup Normal */
         {
             /* Setup Write State */
-            buffer = reinterpret_cast<uint8_t*>(state->ref.data) + state->ref_index;
+            buffer = static_cast<uint8_t*>(state->ref.data) + state->ref_index;
             bytes_left = state->ref.size - state->ref_index;
         }
 

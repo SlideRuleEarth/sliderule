@@ -135,7 +135,7 @@ LuaEndpoint::~LuaEndpoint(void) = default;
  *----------------------------------------------------------------------------*/
 void* LuaEndpoint::requestThread (void* parm)
 {
-    EndpointObject::info_t* info = (EndpointObject::info_t*)parm;
+    EndpointObject::info_t* info = static_cast<EndpointObject::info_t*>(parm);
     EndpointObject::Request* request = info->request;
     LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
     const double start = TimeLib::latchtime();

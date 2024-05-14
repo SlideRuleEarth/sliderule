@@ -391,7 +391,7 @@ void* SwotL2Reader::geoThread (void* parm)
 
     /* Create Record Object */
     RecordObject rec_obj(geoRecType, total_size);
-    geo_rec_t* rec_data = (geo_rec_t*)rec_obj.getRecordData();
+    geo_rec_t* rec_data = reinterpret_cast<geo_rec_t*>(rec_obj.getRecordData());
 
     /* Populate Record Object */
     StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
@@ -427,7 +427,7 @@ void* SwotL2Reader::geoThread (void* parm)
 void* SwotL2Reader::varThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     SwotL2Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
@@ -448,7 +448,7 @@ void* SwotL2Reader::varThread (void* parm)
         {
             /* Create Record Object */
             RecordObject rec_obj(varRecType);
-            var_rec_t* rec_data = (var_rec_t*)rec_obj.getRecordData();
+            var_rec_t* rec_data = reinterpret_cast<var_rec_t*>(rec_obj.getRecordData());
             StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
             StringLib::copy(rec_data->variable, info->variable_name, MAX_VARIABLE_NAME_STR);
             rec_data->datatype = (uint32_t)results.datatype;

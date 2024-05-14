@@ -393,7 +393,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     vector<RecordObject*> anc_vec;
 
                     /* Loop Through Records in Container */
-                    ContainerRecord::rec_t* container = (ContainerRecord::rec_t*)record->getRecordData();
+                    ContainerRecord::rec_t* container = reinterpret_cast<ContainerRecord::rec_t*>(record->getRecordData());
                     for(uint32_t i = 0; i < container->rec_cnt; i++)
                     {
                         /* Pull Out Subrecord */

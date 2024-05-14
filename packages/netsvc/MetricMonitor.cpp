@@ -52,7 +52,7 @@ int MetricMonitor::luaCreate (lua_State* L)
     try
     {
         /* Get Parmeters */
-        const event_level_t level = (event_level_t)getLuaInteger(L, 1);
+        const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
 
         /* Return Dispatch Object */
         return createLuaObject(L, new MetricMonitor(L, level));

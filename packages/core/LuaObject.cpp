@@ -224,7 +224,7 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
 LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
 {
     LuaObject* lua_obj = NULL;
-    luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
+    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
     if(user_data)
     {
         if(StringLib::match(object_type, user_data->luaObj->ObjectType))
@@ -404,7 +404,7 @@ int LuaObject::luaDelete (lua_State* L)
 {
     try
     {
-        luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
+        luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, 1));
         if(user_data)
         {
             LuaObject* lua_obj = user_data->luaObj;
@@ -453,7 +453,7 @@ int LuaObject::luaDestroy (lua_State* L)
 {
     try
     {
-        luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
+        luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, 1));
         if(user_data)
         {
             LuaObject* lua_obj = user_data->luaObj;
@@ -657,7 +657,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
 int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 {
     /* Create Lua User Data Object */
-    lua_obj->userData = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
+    lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
     if(!lua_obj->userData)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
@@ -678,7 +678,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
  *----------------------------------------------------------------------------*/
 LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
 {
-    luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
+    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
     if(user_data)
     {
         if(user_data->luaObj)

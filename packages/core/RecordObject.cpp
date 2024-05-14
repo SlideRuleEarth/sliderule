@@ -319,7 +319,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     uint32_t datasize = 0;
 
     /* Determine Buffer Size */
-    const rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
+    const rec_hdr_t* rechdr = reinterpret_cast<const rec_hdr_t*>(recordMemory);
     if(size > 0)
     {
         const int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
@@ -353,7 +353,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
     /* Set Size in Record Header */
     if(size > 0)
     {
-        rec_hdr_t* bufhdr = (rec_hdr_t*)(*buffer);
+        rec_hdr_t* bufhdr = reinterpret_cast<rec_hdr_t*>(*buffer);
         bufhdr->data_size = OsApi::swapl(datasize);
     }
 
@@ -923,7 +923,7 @@ long RecordObject::getValueInteger(const field_t& f, int element)
  *----------------------------------------------------------------------------*/
 bool RecordObject::setUsedData (int size)
 {
-    rec_hdr_t* rechdr = (rec_hdr_t*)(recordMemory);
+    rec_hdr_t* rechdr = reinterpret_cast<rec_hdr_t*>(recordMemory);
     const int hdrsize = sizeof(rec_hdr_t) + OsApi::swaps(rechdr->type_size);
     const int bufsize = hdrsize + size;
     if(bufsize <= memoryAllocated)

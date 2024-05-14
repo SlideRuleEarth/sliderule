@@ -94,10 +94,10 @@ void OsApi::sleep(double secs)
 {
     struct timespec waittime;
 
-    waittime.tv_sec  = (time_t)secs;
-    waittime.tv_nsec = (long)((secs - (long)secs) * 1000000000L);
+    waittime.tv_sec = static_cast<time_t>(secs);
+    waittime.tv_nsec = static_cast<long>((secs - static_cast<long>(secs)) * 1000000000L);
 
-    while( nanosleep(&waittime, &waittime) == -1 );
+    while(nanosleep(&waittime, &waittime) == -1);
 }
 
 /*----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ void OsApi::dupstr (const char** dst, const char* src)
 *-----------------------------------------------------------------------------*/
 int64_t OsApi::time(int clkid)
 {
-    struct timespec now;
+    struct timespec now = {0, 0};
 
     if (clkid == SYS_CLK)
     {
@@ -190,10 +190,18 @@ uint64_t OsApi::swapll(uint64_t val)
  *----------------------------------------------------------------------------*/
 float OsApi::swapf(float val)
 {
-    float rtrndata = 0.0;
-    uint8_t* dataptr = reinterpret_cast<uint8_t*>(&rtrndata);
-    uint32_t* tempf = reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(&val));
-    *(reinterpret_cast<uint32_t*>(dataptr)) = bswap_32(*tempf);
+    float rtrndata = 0.0F;
+    uint32_t tempf = 0;
+
+    // Copy the float into a uint32_t
+    memcpy(&tempf, &val, sizeof(float));
+
+    // Swap the bytes
+    tempf = bswap_32(tempf);
+
+    // Copy the swapped uint32_t back into a float
+    memcpy(&rtrndata, &tempf, sizeof(float));
+
     return rtrndata;
 }
 
@@ -203,9 +211,17 @@ float OsApi::swapf(float val)
 double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
-    uint8_t* dataptr = reinterpret_cast<uint8_t*>(&rtrndata);
-    uint64_t* tempd = reinterpret_cast<uint64_t*>(reinterpret_cast<char*>(&val));
-    *(reinterpret_cast<uint64_t*>(dataptr)) = bswap_64(*tempd);
+    uint64_t tempd = 0;
+
+    // Copy the double into a uint64_t
+    memcpy(&tempd, &val, sizeof(double));
+
+    // Swap the bytes
+    tempd = bswap_64(tempd);
+
+    // Copy the swapped uint64_t back into a double
+    memcpy(&rtrndata, &tempd, sizeof(double));
+
     return rtrndata;
 }
 

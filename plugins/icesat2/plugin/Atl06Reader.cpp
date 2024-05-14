@@ -483,7 +483,7 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
 void* Atl06Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     Atl06Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};

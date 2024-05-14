@@ -64,9 +64,9 @@ UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
     /* Register Commands */
-    registerCommand("FUNCTIONAL_TEST", (cmdFunc_t)&UT_Dictionary::functionalUnitTestCmd, 1, "<set name>");
-    registerCommand("ITERATOR_TEST", (cmdFunc_t)&UT_Dictionary::iteratorUnitTestCmd, 1, "<set name>");
-    registerCommand("ADD_WORD_SET", (cmdFunc_t)&UT_Dictionary::addWordSetCmd, 3, "<set name> <filename> <num words in set>");
+    registerCommand("FUNCTIONAL_TEST", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::functionalUnitTestCmd), 1, "<set name>");
+    registerCommand("ITERATOR_TEST", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::iteratorUnitTestCmd), 1, "<set name>");
+    registerCommand("ADD_WORD_SET", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::addWordSetCmd), 3, "<set name> <filename> <num words in set>");
 }
 
 /*----------------------------------------------------------------------------

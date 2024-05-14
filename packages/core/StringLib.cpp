@@ -253,7 +253,7 @@ char* StringLib::find(const char* big, const char* little)
         {
             if((big[i] == little[0]) && StringLib::match(&big[i], little))
             {
-                return (char*)&big[i];
+                return const_cast<char*>(&big[i]);
             }
         }
     }
@@ -268,8 +268,8 @@ char* StringLib::find(const char* big, const char* little)
  *----------------------------------------------------------------------------*/
 char* StringLib::find(const char* str, char c, bool first)
 {
-    if(first) return (char*)strchr(str, c);
-    return (char*)strrchr(str, c);
+    if(first) return const_cast<char*>(strchr(str, c));
+    return const_cast<char*>(strrchr(str, c));
 }
 
 /*----------------------------------------------------------------------------
@@ -622,7 +622,7 @@ char* StringLib::checkNullStr (const char* str)
         return NULL;
     }
 
-    return (char*)str;
+    return const_cast<char*>(str);
 }
 
 /*----------------------------------------------------------------------------
@@ -681,7 +681,7 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
     assert(size);
 
     const int len = *size;
-    if (len == 0) return (unsigned char*)"";
+    if (len == 0) return reinterpret_cast<unsigned char*>(const_cast<char*>(""));
 
     const unsigned char* p = reinterpret_cast<const unsigned char*>(data);
     size_t j = 0;

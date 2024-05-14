@@ -296,7 +296,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             /* Create and Post Sample Record */
             const int size_of_record = offsetof(zs_geo_t, samples) + (sizeof(RasterSample) * num_samples);
             RecordObject stats_rec(zsGeoRecType, size_of_record);
-            zs_geo_t* data = (zs_geo_t*)stats_rec.getRecordData();
+            zs_geo_t* data = reinterpret_cast<zs_geo_t*>(stats_rec.getRecordData());
             data->index = index;
             StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
             data->num_samples = num_samples;
@@ -318,7 +318,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             /* Create and Post Sample Record */
             const int size_of_record = offsetof(rs_geo_t, samples) + (sizeof(sample_t) * num_samples);
             RecordObject sample_rec(rsGeoRecType, size_of_record);
-            rs_geo_t* data = (rs_geo_t*)sample_rec.getRecordData();
+            rs_geo_t* data = reinterpret_cast<rs_geo_t*>(sample_rec.getRecordData());
             data->index = index;
             StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
             data->num_samples = num_samples;
@@ -362,7 +362,7 @@ bool RasterSampler::processTermination (void)
         const int file_name_len = StringLib::size(iterator[i].key) + 1;
         const int size = offsetof(file_directory_entry_t, file_name) + file_name_len;
         RecordObject record(fileIdRecType, size);
-        file_directory_entry_t* entry = (file_directory_entry_t*)record.getRecordData();
+        file_directory_entry_t* entry = reinterpret_cast<file_directory_entry_t*>(record.getRecordData());
         entry->file_id = iterator[i].value;
         StringLib::copy(entry->file_name, iterator[i].key, file_name_len);
         record.post(outQ);

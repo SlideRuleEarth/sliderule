@@ -248,7 +248,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
     for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
     {
         /* Get ATL03 Ancillary Record's Element Array */
-        AncillaryFields::element_array_t* atl03_anc_rec = (AncillaryFields::element_array_t*)records->at(i)->getRecordData();
+        AncillaryFields::element_array_t* atl03_anc_rec = reinterpret_cast<AncillaryFields::element_array_t*>(records->at(i)->getRecordData());
 
         /* Find Ancillary Field in Parameters */
         const AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
@@ -601,7 +601,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
     {
         const int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
-        waveform_t* data = (waveform_t*)waverec.getRecordData();
+        waveform_t* data = reinterpret_cast<waveform_t*>(waverec.getRecordData());
         data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;

@@ -551,7 +551,7 @@ const char* LuaEngine::getResult (void)
  *----------------------------------------------------------------------------*/
 void* LuaEngine::protectedThread (void* parm)
 {
-    protectedThread_t* p = (protectedThread_t*)parm;
+    protectedThread_t* p = static_cast<protectedThread_t*>(parm);
 
     p->engine->engineSignal.lock();
     {
@@ -584,7 +584,7 @@ void* LuaEngine::protectedThread (void* parm)
  *----------------------------------------------------------------------------*/
 void* LuaEngine::directThread (void* parm)
 {
-    directThread_t* d = (directThread_t*)parm;
+    directThread_t* d = static_cast<directThread_t*>(parm);
 
     d->engine->engineSignal.lock();
     {
@@ -837,7 +837,7 @@ char* LuaEngine::getprompt (int firstline)
     lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
     p = lua_tostring(L, -1);
     if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
-    return (char*)p;
+    return const_cast<char*>(p);
 }
 
 /*----------------------------------------------------------------------------

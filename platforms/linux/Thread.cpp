@@ -61,9 +61,9 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Thread::Thread(thread_func_t function, void* parm, bool _join)
+Thread::Thread(thread_func_t function, void* parm, bool _join):
+    join(_join)
 {
-    join = _join;
     pthread_attr_t pthread_attr;
     pthread_attr_init(&pthread_attr);
     if(!join) pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED);

@@ -398,38 +398,38 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
 
     /* Create list builders for the new columns */
     arrow::ListBuilder value_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* value_builder = static_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
+    auto* value_builder = dynamic_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
 
     arrow::ListBuilder time_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* time_builder = static_cast<arrow::DoubleBuilder*>(time_list_builder.value_builder());
+    auto* time_builder = dynamic_cast<arrow::DoubleBuilder*>(time_list_builder.value_builder());
 
     arrow::ListBuilder flags_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
-    auto* flags_builder = static_cast<arrow::UInt32Builder*>(flags_list_builder.value_builder());
+    auto* flags_builder = dynamic_cast<arrow::UInt32Builder*>(flags_list_builder.value_builder());
 
     arrow::ListBuilder fileid_list_builder(pool, std::make_shared<arrow::UInt64Builder>());
-    auto* fileid_builder = static_cast<arrow::UInt64Builder*>(fileid_list_builder.value_builder());
+    auto* fileid_builder = dynamic_cast<arrow::UInt64Builder*>(fileid_list_builder.value_builder());
 
     /* Create list builders for zonal stats */
     arrow::ListBuilder count_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
-    auto* count_builder = static_cast<arrow::UInt32Builder*>(count_list_builder.value_builder());
+    auto* count_builder = dynamic_cast<arrow::UInt32Builder*>(count_list_builder.value_builder());
 
     arrow::ListBuilder min_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* min_builder = static_cast<arrow::DoubleBuilder*>(min_list_builder.value_builder());
+    auto* min_builder = dynamic_cast<arrow::DoubleBuilder*>(min_list_builder.value_builder());
 
     arrow::ListBuilder max_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* max_builder = static_cast<arrow::DoubleBuilder*>(max_list_builder.value_builder());
+    auto* max_builder = dynamic_cast<arrow::DoubleBuilder*>(max_list_builder.value_builder());
 
     arrow::ListBuilder mean_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* mean_builder = static_cast<arrow::DoubleBuilder*>(mean_list_builder.value_builder());
+    auto* mean_builder = dynamic_cast<arrow::DoubleBuilder*>(mean_list_builder.value_builder());
 
     arrow::ListBuilder median_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* median_builder = static_cast<arrow::DoubleBuilder*>(median_list_builder.value_builder());
+    auto* median_builder = dynamic_cast<arrow::DoubleBuilder*>(median_list_builder.value_builder());
 
     arrow::ListBuilder stdev_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* stdev_builder = static_cast<arrow::DoubleBuilder*>(stdev_list_builder.value_builder());
+    auto* stdev_builder = dynamic_cast<arrow::DoubleBuilder*>(stdev_list_builder.value_builder());
 
     arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto* mad_builder = static_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
+    auto* mad_builder = dynamic_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
 
     std::shared_ptr<arrow::Array> value_list_array, time_list_array, fileid_list_array, flags_list_array;
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;

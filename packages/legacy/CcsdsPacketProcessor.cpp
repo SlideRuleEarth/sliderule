@@ -396,7 +396,7 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
  *----------------------------------------------------------------------------*/
 void* CcsdsPacketProcessor::workerThread (void* parm)
 {
-    workerThread_t* worker = (workerThread_t*)parm;
+    workerThread_t* worker = static_cast<workerThread_t*>(parm);
 
     while(worker->msgproc->workersActive)
     {
@@ -513,7 +513,7 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                 if(status > 0)
                 {
                     subAvailQ->dereference(ref, false); // free up memory in message queue, but don't delete the worker
-                    workerThread_t* worker = (workerThread_t*)ref.data;
+                    workerThread_t* worker = static_cast<workerThread_t*>(ref.data);
 
                     /* Configure Worker */
                     worker->processor   = pktProcessor[apid].processor;
@@ -600,7 +600,7 @@ bool CcsdsPacketProcessor::resetProcessing (void)
 void CcsdsPacketProcessor::freeWorker (void* obj, void* parm)
 {
     (void)parm;
-    workerThread_t* worker = (workerThread_t*)obj;
+    workerThread_t* worker = static_cast<workerThread_t*>(obj);
 
     // -- DO NOT DELETE ... this memory is deallocated in the delete [] of workerThreadPool
     (void) worker;

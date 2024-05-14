@@ -266,7 +266,7 @@ void* Atl03Indexer::indexerThread (void* parm)
 
                 /* Allocate Record */
                 RecordObject record(recType);
-                index_t* index = (index_t*)record.getRecordData();
+                index_t* index = reinterpret_cast<index_t*>(record.getRecordData());
 
                 /* Copy In Fields */
                 StringLib::copy(index->name, resource_name, Asset::RESOURCE_NAME_LENGTH);

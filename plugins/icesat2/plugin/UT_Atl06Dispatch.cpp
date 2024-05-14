@@ -101,7 +101,7 @@ int UT_Atl06Dispatch::luaLsfTest (lua_State* L)
     const int num_photons = 4;
     const int extent_bytes = sizeof(Atl03Reader::extent_t) + (sizeof(Atl03Reader::photon_t) * num_photons);
     RecordObject* record = new RecordObject(Atl03Reader::exRecType, extent_bytes);
-    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
+    Atl03Reader::extent_t* extent = reinterpret_cast<Atl03Reader::extent_t*>(record->getRecordData());
     extent->photons[0].x_atc = 1.0;
     extent->photons[1].x_atc = 2.0;
     extent->photons[2].x_atc = 3.0;

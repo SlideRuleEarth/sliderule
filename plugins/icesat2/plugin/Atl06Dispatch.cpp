@@ -218,7 +218,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     result.photons = NULL;
 
     /* Get Input */
-    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
+    Atl03Reader::extent_t* extent = reinterpret_cast<Atl03Reader::extent_t*>(record->getRecordData());
 
     /* Build Ancillary Inputs */
     if(records)
@@ -226,7 +226,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
         {
             RecordObject* rec = records->at(i);
-            AncillaryFields::element_array_t* anc_rec = (AncillaryFields::element_array_t*)rec->getRecordData();
+            AncillaryFields::element_array_t* anc_rec = reinterpret_cast<AncillaryFields::element_array_t*>(rec->getRecordData());
 
             /* Build Array of Values
                 * to be used by iterativeFitStage..lsf */

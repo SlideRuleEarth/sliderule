@@ -239,7 +239,7 @@ int LuaLibraryMsg::lmsg_publish (lua_State* L)
     const char* msgq_name = lua_tostring(L, 1);
 
     /* Get Message User Data */
-    msgPublisherData_t* msg_data = (msgPublisherData_t*)lua_newuserdata(L, sizeof(msgPublisherData_t));
+    msgPublisherData_t* msg_data = static_cast<msgPublisherData_t*>(lua_newuserdata(L, sizeof(msgPublisherData_t)));
     msg_data->msgq_name = StringLib::duplicate(msgq_name);
     msg_data->pub = new Publisher(msgq_name);
 
@@ -258,7 +258,7 @@ int LuaLibraryMsg::lmsg_subscribe (lua_State* L)
     const char* msgq_name = lua_tostring(L, 1);
 
     /* Get Message User Data */
-    msgSubscriberData_t* msg_data = (msgSubscriberData_t*)lua_newuserdata(L, sizeof(msgSubscriberData_t));
+    msgSubscriberData_t* msg_data = static_cast<msgSubscriberData_t*>(lua_newuserdata(L, sizeof(msgSubscriberData_t)));
     msg_data->msgq_name = StringLib::duplicate(msgq_name);
     msg_data->sub = new Subscriber(msgq_name);
 
@@ -282,7 +282,7 @@ int LuaLibraryMsg::lmsg_create (lua_State* L)
     }
 
     /* Create User Data */
-    recUserData_t* rec_data = (recUserData_t*)lua_newuserdata(L, sizeof(recUserData_t));
+    recUserData_t* rec_data = static_cast<recUserData_t*>(lua_newuserdata(L, sizeof(recUserData_t)));
     rec_data->record_str = StringLib::duplicate(population_string);
     rec_data->rec = record;
 
@@ -370,7 +370,7 @@ int LuaLibraryMsg::lmsg_sendstring (lua_State* L)
 {
     size_t len;
 
-    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    msgPublisherData_t* msg_data = static_cast<msgPublisherData_t*>(luaL_checkudata(L, 1, LUA_PUBMETANAME));
     if(msg_data == NULL)
     {
         return luaL_error(L, "invalid message queue");
@@ -394,7 +394,7 @@ int LuaLibraryMsg::lmsg_sendstring (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
 {
-    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    msgPublisherData_t* msg_data = static_cast<msgPublisherData_t*>(luaL_checkudata(L, 1, LUA_PUBMETANAME));
     if(msg_data == NULL)
     {
         return luaL_error(L, "invalid message queue");
@@ -405,7 +405,7 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
 
     if(lua_isuserdata(L, 2)) // user data record
     {
-        LuaLibraryMsg::recUserData_t* rec_data = (LuaLibraryMsg::recUserData_t*)luaL_checkudata(L, 2, LuaLibraryMsg::LUA_RECMETANAME);
+        LuaLibraryMsg::recUserData_t* rec_data = static_cast<LuaLibraryMsg::recUserData_t*>(luaL_checkudata(L, 2, LuaLibraryMsg::LUA_RECMETANAME));
         record = rec_data->rec;
         if(record == NULL)
         {
@@ -445,7 +445,7 @@ int LuaLibraryMsg::lmsg_sendrecord (lua_State* L)
 int LuaLibraryMsg::lmsg_alert (lua_State* L)
 {
     /* Get Publisher */
-    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    msgPublisherData_t* msg_data = static_cast<msgPublisherData_t*>(luaL_checkudata(L, 1, LUA_PUBMETANAME));
     if(msg_data == NULL)
     {
         return luaL_error(L, "invalid message queue");
@@ -498,7 +498,7 @@ int LuaLibraryMsg::lmsg_alert (lua_State* L)
 int LuaLibraryMsg::lmsg_numsubs (lua_State* L)
 {
     /* Get Publisher */
-    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    msgPublisherData_t* msg_data = static_cast<msgPublisherData_t*>(luaL_checkudata(L, 1, LUA_PUBMETANAME));
     if(msg_data)
     {
         /* Get Number of Subscriptions */
@@ -519,7 +519,7 @@ int LuaLibraryMsg::lmsg_numsubs (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_deletepub (lua_State* L)
 {
-    msgPublisherData_t* msg_data = (msgPublisherData_t*)luaL_checkudata(L, 1, LUA_PUBMETANAME);
+    msgPublisherData_t* msg_data = static_cast<msgPublisherData_t*>(luaL_checkudata(L, 1, LUA_PUBMETANAME));
 
     if(msg_data)
     {
@@ -544,7 +544,7 @@ int LuaLibraryMsg::lmsg_deletepub (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_recvstring (lua_State* L)
 {
-    msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
+    msgSubscriberData_t* msg_data = static_cast<msgSubscriberData_t*>(luaL_checkudata(L, 1, LUA_SUBMETANAME));
     if(msg_data)
     {
         const int timeoutms = (int)lua_tointeger(L, 2);
@@ -571,7 +571,7 @@ int LuaLibraryMsg::lmsg_recvstring (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
 {
-    msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
+    msgSubscriberData_t* msg_data = static_cast<msgSubscriberData_t*>(luaL_checkudata(L, 1, LUA_SUBMETANAME));
     if(msg_data == NULL)
     {
         return luaL_error(L, "invalid message queue");
@@ -599,11 +599,11 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
                 if(recclass)
                 {
                     const recClass_t rec_class = typeTable[recclass];
-                    record = rec_class.associate(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+                    record = rec_class.associate(static_cast<unsigned char*>(ref.data), ref.size);
                 }
                 else
                 {
-                    record = new RecordObject(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+                    record = new RecordObject(static_cast<unsigned char*>(ref.data), ref.size);
                 }
             }
             catch (const RunTimeException& e)
@@ -622,7 +622,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
         /* Assign Record to User Data */
         if(record)
         {
-            LuaLibraryMsg::recUserData_t* rec_data = (LuaLibraryMsg::recUserData_t*)lua_newuserdata(L, sizeof(LuaLibraryMsg::recUserData_t));
+            LuaLibraryMsg::recUserData_t* rec_data = static_cast<LuaLibraryMsg::recUserData_t*>(lua_newuserdata(L, sizeof(LuaLibraryMsg::recUserData_t)));
             rec_data->record_str = NULL;
             rec_data->rec = record;
             luaL_getmetatable(L, LUA_RECMETANAME);
@@ -650,7 +650,7 @@ int LuaLibraryMsg::lmsg_recvrecord (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_drain (lua_State* L)
 {
-    msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
+    msgSubscriberData_t* msg_data = static_cast<msgSubscriberData_t*>(luaL_checkudata(L, 1, LUA_SUBMETANAME));
 
     if(msg_data)
     {
@@ -670,7 +670,7 @@ int LuaLibraryMsg::lmsg_drain (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_deletesub (lua_State* L)
 {
-    msgSubscriberData_t* msg_data = (msgSubscriberData_t*)luaL_checkudata(L, 1, LUA_SUBMETANAME);
+    msgSubscriberData_t* msg_data = static_cast<msgSubscriberData_t*>(luaL_checkudata(L, 1, LUA_SUBMETANAME));
 
     if(msg_data)
     {
@@ -699,7 +699,7 @@ int LuaLibraryMsg::lmsg_deletesub (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_gettype (lua_State* L)
 {
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     if(rec_data == NULL)
     {
         return luaL_error(L, "invalid record");
@@ -723,7 +723,7 @@ int LuaLibraryMsg::lmsg_gettype (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
 {
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     const char* fldname = lua_tostring(L, 2); // get field name
 
     if(rec_data == NULL)
@@ -769,7 +769,7 @@ int LuaLibraryMsg::lmsg_getfieldvalue (lua_State* L)
 int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
 {
     bool status = true;
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     const char* fldname = lua_tostring(L, 2);  /* get field name */
 
     if(rec_data == NULL)
@@ -813,7 +813,7 @@ int LuaLibraryMsg::lmsg_setfieldvalue (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_serialize(lua_State* L)
 {
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     if(rec_data == NULL)
     {
         return luaL_error(L, "invalid record");
@@ -837,7 +837,7 @@ int LuaLibraryMsg::lmsg_serialize(lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
 {
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     if(rec_data == NULL)
     {
         return luaL_error(L, "invalid record");
@@ -861,7 +861,7 @@ int LuaLibraryMsg::lmsg_deserialize(lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_tabulate(lua_State* L)
 {
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     if(rec_data == NULL)
     {
         return luaL_error(L, "invalid record");
@@ -1077,7 +1077,7 @@ int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
     delete [] fieldnames;
 
     /* Assign Record to User Data */
-    LuaLibraryMsg::recUserData_t* rec_data = (LuaLibraryMsg::recUserData_t*)lua_newuserdata(L, sizeof(LuaLibraryMsg::recUserData_t));
+    LuaLibraryMsg::recUserData_t* rec_data = static_cast<LuaLibraryMsg::recUserData_t*>(lua_newuserdata(L, sizeof(LuaLibraryMsg::recUserData_t)));
     rec_data->record_str = NULL;
     rec_data->rec = record;
     luaL_getmetatable(L, LUA_RECMETANAME);
@@ -1092,7 +1092,7 @@ int LuaLibraryMsg::lmsg_detabulate(lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryMsg::lmsg_deleterec (lua_State* L)
 {
-    recUserData_t* rec_data = (recUserData_t*)luaL_checkudata(L, 1, LUA_RECMETANAME);
+    recUserData_t* rec_data = static_cast<recUserData_t*>(luaL_checkudata(L, 1, LUA_RECMETANAME));
     if(rec_data)
     {
         delete [] rec_data->record_str;
