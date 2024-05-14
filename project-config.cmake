@@ -92,10 +92,10 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=missingIncludeSystem"
         "--suppress=unmatchedSuppression"
         "--suppress=unusedFunction"                                     # cppcheck is confused, used functions are reported 'unused'
-        "--suppress=unusedPrivateFunction"                              # same here
+        "--suppress=unusedPrivateFunction"                              # cppcheck is confused
         "--suppress=noOperatorEq"
         "--suppress=noCopyConstructor"
-        "--suppress=useStlAlgorithm"                                    # yeah, they may be a bit faster but are unreadable
+        "--suppress=useStlAlgorithm"                                    # yeah, they may be a bit faster but code is unreadable
         "--suppress=memsetClassFloat:*/MathLib.cpp"                     # line: 80, need memset here for performance
         "--suppress=unreadVariable:*/TimeLib.cpp"                       # line: 471, terminating '\0' detected as 'unused' but it is used/needed
         "--suppress=invalidPointerCast:*/H5Array.h"                     # line: 166, documented in code
@@ -105,8 +105,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         ###################################
         # Need for cppcheck version 2.13
         ###################################
-        "--suppress=duplInheritedMember"                                # JP please look at it - example: luaobj base class has getname() so do 'kids' but it is not a virtual function
-                                                                        # is the intent to return name of the base class or derived class object?
+        "--suppress=duplInheritedMember"                                # Name hiding for functions with the same name
 
         "--suppress=memleak:*/LuaEndpoint.cpp"                          # line: 254, 'info' is freed by requestThread but ccpcheck does not 'see it'
         "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"         # line 198, code is OK
