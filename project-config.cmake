@@ -26,7 +26,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 
 ### https://clang.llvm.org/extra/clang-tidy/
 
-    # clang-tidy
+    # clang-tidy, tested with version 18.1.3
      set (CLANG_TIDY_CHECKS
         "clang-analyzer-*,"
         "portability-*,"
@@ -68,7 +68,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "-hicpp-signed-bitwise,"
         "-hicpp-no-malloc,"
 
-        # Most are turned off but several are veryuseful - correct type of casting, c style stuff misc and hicpp missed
+        # Most are turned off but several are very useful - checks for correct c++ casting, c style stuff misc and hicpp missed
         "cppcoreguidelines-*,"
         "-cppcoreguidelines-avoid-c-arrays,"
         "-cppcoreguidelines-avoid-magic-numbers,"
@@ -111,7 +111,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 
     #message(STATUS "Clang-Tidy checks parms: ${CLANG_TIDY_CHECKS_PARM}")
 
-    # cppcheck
+    # cppcheck, tested with version 2.13.0
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
     list (APPEND CMAKE_CXX_CPPCHECK
         "--quiet"
@@ -130,9 +130,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"                  # line: 120, shallow copy which is fine in code
         "--error-exitcode=1"
 
-        ###################################
-        # Need for cppcheck version 2.13
-        ###################################
         "--suppress=duplInheritedMember"                                # Name hiding for functions with the same name
 
         "--suppress=memleak:*/LuaEndpoint.cpp"                          # line: 254, 'info' is freed by requestThread but ccpcheck does not 'see it'
