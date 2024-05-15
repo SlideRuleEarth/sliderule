@@ -218,6 +218,7 @@ void initcore (void)
 void deinitcore (void)
 {
     print2term("Exiting... ");
+    LuaObject::freeGlobalObjects();
     LuaEngine::deinit();
     EventLib::deinit();
     TimeLib::deinit();

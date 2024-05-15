@@ -103,6 +103,7 @@ class LuaObject
         static LuaObject*   getLuaObject        (lua_State* L, int parm, const char* object_type, bool optional=false, LuaObject* dfltval=NULL);
         static int          returnLuaStatus     (lua_State* L, bool status, int num_obj_to_return=1);
 
+        static void         freeGlobalObjects   (void);
         static void         getGlobalObjects    (vector<object_info_t>& globals);
         static long         getNumObjects       (void);
 
