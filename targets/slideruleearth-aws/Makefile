@@ -249,13 +249,16 @@ coastnet-container-docker: ## create the coastnet container image
 	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(COASTNET_CONTAINER_STAGE_DIR)/ut-coastnet --exclude build --exclude .git
 	cp $(COASTNET_CONTAINER_DIR)/Dockerfile $(COASTNET_CONTAINER_STAGE_DIR)
 	cp $(COASTNET_CONTAINER_DIR)/*.sh $(COASTNET_CONTAINER_STAGE_DIR)
+	cp $(COASTNET_CONTAINER_DIR)/CMakeLists.txt $(COASTNET_CONTAINER_STAGE_DIR)
+	cp $(COASTNET_CONTAINER_DIR)/Makefile $(COASTNET_CONTAINER_STAGE_DIR)
 	cd $(COASTNET_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 coastnet-surface-container-run: ## run the coastnet surface docker container
-#	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /ut-coastnet/scripts/sliderule_classify_surface.sh /data/AppServer.2/bathy_spot_3.csv /ut-coastnet/models/coastnet-surface.pt /data/AppServer.2/coastnet.csv
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
+#	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) 
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh /data/AppServer.2/bathy_spot_3.csv /ut-coastnet/models/coastnet-surface.pt /data/AppServer.2/coastnet.csv
+#	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
 
 coastnet-bathy-container-run: ## run the coastnet bathy docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /bathy.sh

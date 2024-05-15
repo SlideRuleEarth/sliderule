@@ -1,5 +1,18 @@
-build/[debug|release]/classify_coastnet \
+#!/usr/bin/bash
+
+# Bash strict mode
+set -euo pipefail
+IFS=$'\n\t'
+
+# Use debug build unless overridden from cmdline
+: ${build:=debug}
+
+echo build = ${build}
+
+find $1 | \
+    parallel --verbose --lb --jobs=15 \
+        "/ut-coastnet/build/${build}/classify_coastnet \
         --class=40 \
         --aspect-ratio=4 \
-        --network-filename=./models/coastnet-bathy-manual.pt \
-        < input_filename.csv > output_filename.csv
+        --network-filename=$2 \
+        < {} > $3"

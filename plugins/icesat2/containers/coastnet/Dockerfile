@@ -28,9 +28,19 @@ RUN python3.9 -m venv venv \
     && pip install torch numpy
 
 COPY ut-coastnet /
+COPY CMakeLists.txt /ut-coastnet/
+COPY Makefile /ut-coastnet/
+COPY surface.sh /
+COPY bathy.sh /
 
 RUN source /venv/bin/activate \
     && cd /ut-coastnet \
-    && make build
+    && make
 
-ENTRYPOINT ["/bin/sh"]
+#ENTRYPOINT ["/bin/sh"]
+
+# Set the SHELL to Bash
+SHELL ["/bin/bash", "-c"]
+
+# Default command when the container starts
+CMD ["/bin/bash"]
