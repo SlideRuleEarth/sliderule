@@ -1,0 +1,37 @@
+FROM ubuntu:20.04 as buildenv
+
+# install build dependencies
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive \
+  apt-get install -y --no-install-recommends \
+  build-essential \
+  cmake \
+  git \
+  cppcheck \
+  libopencv-dev \
+  python3.9 \
+  python3.9-venv \
+  parallel \
+  libgmp-dev \
+  libmlpack-dev \
+  mlpack-bin \
+  libarmadillo-dev \
+  libgdal-dev
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+
+# create python environment
+RUN python3.9 -m venv venv \
+    && . ./venv/bin/activate \
+    && python -m pip install --upgrade pip \
+    && pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cpu \
+    && pip install numpy
+
+COPY ut-coastnet /
+
+RUN . /venv/bin/activate \
+    && cd /ut-coastnet \
+    && make build
+
+ENTRYPOINT ["/bin/sh"]

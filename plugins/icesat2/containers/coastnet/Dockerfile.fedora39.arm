@@ -1,5 +1,6 @@
 FROM fedora:39 as buildenv
 
+# install build dependencies
 RUN  dnf update -y \
   && dnf groupinstall -y "Development Tools" \
   && dnf install -y \
@@ -20,8 +21,10 @@ RUN  dnf update -y \
   && dnf clean all \
   && rm -rf /var/cache/yum
 
+# set working directory to root
 WORKDIR /
 
+# create python environment
 RUN python3.9 -m venv venv \
     && source ./venv/bin/activate \
     && python -m pip install --upgrade pip \
@@ -33,4 +36,5 @@ RUN source /venv/bin/activate \
     && cd /ut-coastnet \
     && make build
 
+# set entrypoint to bash shell (expect it to be overridden)
 ENTRYPOINT ["/bin/sh"]
