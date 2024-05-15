@@ -37,8 +37,6 @@ RUN source /venv/bin/activate \
     && cd /ut-coastnet \
     && make
 
-#ENTRYPOINT ["/bin/sh"]
-
 # Set the SHELL to Bash
 SHELL ["/bin/bash", "-c"]
 
