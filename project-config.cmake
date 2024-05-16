@@ -106,7 +106,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
        clang-tidy;
        -header-filter=.;
        -checks=${CLANG_TIDY_CHECKS_PARM};
-#       -warnings-as-errors=*;
+       -warnings-as-errors=*;
     )
 
     # cppcheck, tested with version 2.13.0
