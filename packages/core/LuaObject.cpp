@@ -410,27 +410,15 @@ int LuaObject::luaDelete (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                int count = lua_obj->referenceCount--;
-                mlog(DEBUG, "Garbage collecting object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
-
-                if(lua_obj->referenceCount == 0)
-                {
-                    /* Delete Object */
-                    delete lua_obj;
-                    user_data->luaObj = NULL;
-                }
-                else
-                {
-                    mlog(DEBUG, "Delaying delete on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
-                    lua_obj->userData = NULL; // user data is now out of scope
-                }
+                mlog(DEBUG, "Garbage collecting object %s/%s <%ld>", lua_obj->getType(), lua_obj->getName(), lua_obj->referenceCount.load());
+                lua_obj->releaseLuaObject();
             }
             else
             {
                 /* This will occurr, for instance, when a device is closed
                  * explicitly, and then also deleted when the lua variable
                  * goes out of scope and is garbage collected */
-                mlog(DEBUG, "Vacuous delete of lua object that has already been deleted");
+                mlog(DEBUG, "Garbage collector, vacuous delete of lua object that has already been deleted");
             }
         }
         else
@@ -440,7 +428,7 @@ int LuaObject::luaDelete (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error deleting object: %s", e.what());
+        mlog(e.level(), "Error garbage collecting object: %s", e.what());
     }
 
     return 0;
@@ -459,19 +447,8 @@ int LuaObject::luaDestroy (lua_State* L)
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                int count = lua_obj->referenceCount--;
-                mlog(DEBUG, "Destroying object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
-
-                if(lua_obj->referenceCount == 0)
-                {
-                    /* Delete Object */
-                    delete lua_obj;
-                    user_data->luaObj = NULL;
-                }
-                else
-                {
-                    mlog(DEBUG, "Delaying destroy on referenced object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
-                }
+                mlog(DEBUG, "Script destroying object %s/%s <%ld>", lua_obj->getType(), lua_obj->getName(), lua_obj->referenceCount.load());
+                lua_obj->releaseLuaObject();
             }
             else
             {
