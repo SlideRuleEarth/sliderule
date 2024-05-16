@@ -380,12 +380,9 @@ int HttpServer::activeHandler(int fd, int flags, void* parm)
 
     if((flags & IO_READ_FLAG)       && (s->onRead(fd)       < 0))   rc = INVALID_RC;
     if((flags & IO_WRITE_FLAG)      && (s->onWrite(fd)      < 0))   rc = INVALID_RC;
+    if((flags & IO_ALIVE_FLAG)      && (s->onAlive(fd)      < 0))   rc = INVALID_RC;
     if((flags & IO_CONNECT_FLAG)    && (s->onConnect(fd)    < 0))   rc = INVALID_RC;
     if((flags & IO_DISCONNECT_FLAG) && (s->onDisconnect(fd) < 0))   rc = INVALID_RC;
-    if((flags & IO_ALIVE_FLAG))
-    {
-        s->onAlive(fd);
-    }
 
     return rc;
 }
@@ -699,7 +696,7 @@ int HttpServer::onWrite(int fd)
  *
  *  Notes: Performed for every existing connection
  *----------------------------------------------------------------------------*/
-void HttpServer::onAlive(int fd)
+int HttpServer::onAlive(int fd)
 {
     Connection* connection = connections[fd];
     rsps_state_t* state = &connection->rsps_state;
@@ -708,6 +705,8 @@ void HttpServer::onAlive(int fd)
     {
         state->ref_status = state->rspq->receiveRef(state->ref, IO_CHECK);
     }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------

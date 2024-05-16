@@ -124,7 +124,7 @@ class List
         void            copy                (const List& l1);
         list_node_t*    newNode             (void);
         void            freeNode            (typename List<T>::list_node_t* node, int index);
-        void            quicksort           (T* array, int start, int end);
+        void            quicksort           (T* array, int start, int end); // NOLINT(misc-no-recursion)
         int             quicksortpartition  (T* array, int start, int end);
 };
 
@@ -592,8 +592,8 @@ void List<T>::quicksort(T* array, int start, int end) // NOLINT(misc-no-recursio
     if(start < end)
     {
         const int partition = quicksortpartition(array, start, end);
-        quicksort(array, start, partition);
-        quicksort(array, partition + 1, end);
+        quicksort(array, start, partition); // NOLINT(misc-no-recursion)
+        quicksort(array, partition + 1, end); // NOLINT(misc-no-recursion)
     }
 }
 

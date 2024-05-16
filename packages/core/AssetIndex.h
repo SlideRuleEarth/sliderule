@@ -49,6 +49,8 @@
  * ASSET INDEX CLASS
  ******************************************************************************/
 
+// NOLINTBEGIN(misc-no-recursion)
+
 template <class T>
 class AssetIndex: public LuaObject
 {
@@ -355,7 +357,7 @@ int AssetIndex<T>::luaDisplay (lua_State* L)
  * buildtree
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::buildtree (node_t* root, int* maxdepth) // NOLINT(misc-no-recursion)
+void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
 {
     /* Check Root */
     if(!root || !root->ril) return;
@@ -431,7 +433,7 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth) // NOLINT(misc-no-re
  * updatenode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth) // NOLINT(misc-no-recursion)
+void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
 {
     /* Get Span of Resource being Added */
     T& span = spans[i];
@@ -513,7 +515,7 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth) // NOLINT(m
  * balancenode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::balancenode (node_t** root) // NOLINT(misc-no-recursion)
+void AssetIndex<T>::balancenode (node_t** root)
 {
     node_t* curr = *root;
 
@@ -772,5 +774,7 @@ void AssetIndex<T>::displaynode (node_t* curr) // NOLINT(misc-no-recursion)
     displaynode(curr->left);
     displaynode(curr->right);
 }
+
+// NOLINTEND(misc-no-recursion)
 
 #endif  /* __asset_index__ */

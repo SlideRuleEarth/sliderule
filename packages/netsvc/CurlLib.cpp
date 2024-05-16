@@ -270,7 +270,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 /*----------------------------------------------------------------------------
  * postAsRecord
  *----------------------------------------------------------------------------*/
-long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active)
+long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active)
 {
     long http_code = 0;
     CURL* curl = NULL;

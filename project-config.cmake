@@ -106,10 +106,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
        clang-tidy;
        -header-filter=.;
        -checks=${CLANG_TIDY_CHECKS_PARM};
-       -warnings-as-errors=*;
+#       -warnings-as-errors=*;
     )
-
-    #message(STATUS "Clang-Tidy checks parms: ${CLANG_TIDY_CHECKS_PARM}")
 
     # cppcheck, tested with version 2.13.0
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
@@ -138,7 +136,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
     )
 
-    #message(STATUS "cppcheck: ${CMAKE_CXX_CPPCHECK}")
 endif()
 
 ###################

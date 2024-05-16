@@ -69,7 +69,7 @@ class CurlLib
                                              const char* unix_socket=NULL,
                                              List<string*>* rsps_headers=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
-        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active=NULL);
+        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active=NULL);
         static int          getHeaders      (lua_State* L, int index, List<string*>& header_list);
         static int          luaGet          (lua_State* L);
         static int          luaPut          (lua_State* L);
@@ -104,7 +104,7 @@ class CurlLib
             uint8_t*    rec_buf;
             Publisher*  outq;
             const char* url;
-            bool*       active;
+            const bool* active;
         } parser_t;
 
         /*--------------------------------------------------------------------
