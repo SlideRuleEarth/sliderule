@@ -161,6 +161,8 @@ ClusterSocket::~ClusterSocket(void)
         SockLib::sockclose(fd);
         fd = write_connections.next( &writeCon );
     }
+
+    /* Table desctructor will free connections memory */
 }
 
 /*----------------------------------------------------------------------------
@@ -193,7 +195,7 @@ int ClusterSocket::writeBuffer(const void *buf, int len, int timeout)
     {
         return TIMEOUT_RC;
     }
-    
+
     if(len <= MAX_MSG_SIZE)
     {
         int status = pubsockq->postCopy(buf, len, timeout);
