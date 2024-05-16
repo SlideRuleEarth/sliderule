@@ -118,10 +118,12 @@ int LuaObject::luaGetByName(lua_State* L)
             /* Get Self */
             lua_obj = globalObjects.get(name).lua_obj;
 
-            /* Return Lua Object */
+            /* Associate MetaTable with LuaObject */
             associateMetaTable(L, lua_obj->LuaMetaName, lua_obj->LuaMetaTable);
         }
         globalMut.unlock();
+
+        /* Return Lua Object */
         return createLuaObject(L, lua_obj);
     }
     catch(const RunTimeException& e)
@@ -271,6 +273,26 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
     }
 
     return num_obj_to_return;
+}
+
+/*----------------------------------------------------------------------------
+ * freeGlobalObjects
+ *----------------------------------------------------------------------------*/
+void LuaObject::freeGlobalObjects (void)
+{
+    globalMut.lock();
+    {
+        char** keys = NULL;
+        int num_keys = globalObjects.getKeys(&keys);
+        for(int i = 0; i < num_keys; i++)
+        {
+            LuaObject* lua_obj = globalObjects.get(keys[i]).lua_obj;
+            lua_obj->releaseLuaObject();
+            delete [] keys[i];
+        }
+        delete [] keys;
+    }
+    globalMut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -516,6 +538,12 @@ int LuaObject::luaName(lua_State* L)
                 global_object_t global_object = { .lua_obj = lua_obj };
                 if(globalObjects.add(name, global_object, true))
                 {
+                    /* Bump Reference Count
+                     *  this make the object global as there will now be an additional reference
+                     *  to this object without a corresponding lua variable that will get
+                     *  garbage collected */
+                    lua_obj->referenceCount++;
+
                     /* Associate Name */
                     lua_obj->ObjectName = StringLib::duplicate(name);
                     mlog(DEBUG, "Associating %s with object of type %s", lua_obj->getName(), lua_obj->getType());

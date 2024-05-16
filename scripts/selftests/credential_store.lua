@@ -15,11 +15,6 @@ runner.check(creds.secretAccessKey == "5678")
 runner.check(creds.sessionToken == "abcdefg")
 runner.check(creds.expiration == "2021-06-02 14:59:56+00:00")
 
--- Clean Up --
-
-server:destroy()
-client:destroy()
-
 -- Report Results --
 
 runner.report()
