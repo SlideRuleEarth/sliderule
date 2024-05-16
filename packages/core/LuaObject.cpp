@@ -286,7 +286,8 @@ void LuaObject::freeGlobalObjects (void)
         int num_keys = globalObjects.getKeys(&keys);
         for(int i = 0; i < num_keys; i++)
         {
-            delete globalObjects[keys[i]].lua_obj;
+            LuaObject* lua_obj = globalObjects.get(keys[i]).lua_obj;
+            lua_obj->releaseLuaObject();
             delete [] keys[i];
         }
         delete [] keys;
