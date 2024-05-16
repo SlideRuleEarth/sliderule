@@ -168,13 +168,7 @@ template <class T, typename K>
 Table<T,K>::~Table(void)
 {
     /* Free All Nodes */
-    for(K i = 0; i < size; i++)
-    {
-        if(table[i].occupied)
-        {
-            freeNode(i);
-        }
-    }
+    clear();
 
     /* Free Hash Structure */
     delete [] table;
