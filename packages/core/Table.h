@@ -167,6 +167,9 @@ Table<T,K>::Table(K table_size, hash_func_t _hash)
 template <class T, typename K>
 Table<T,K>::~Table(void)
 {
+    /* Free All Nodes */
+    clear();
+
     /* Free Hash Structure */
     delete [] table;
 }
@@ -304,7 +307,7 @@ T& Table<T,K>::get(K key, match_t match, bool resort)
             best_index = curr_index;
             break;
         }
-        
+
         if(match == MATCH_NEAREST_UNDER)
         {
             if(table[curr_index].key < key)
