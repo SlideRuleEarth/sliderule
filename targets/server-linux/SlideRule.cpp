@@ -177,7 +177,7 @@ static void* signal_thread (void* parm)
             signal(SIGINT, console_quick_exit);
             break;
         }
-        
+
         if(app_signal_abort)
         {
             break; // exit thread for clean up
@@ -356,6 +356,9 @@ int main (int argc, char* argv[])
         #endif
         OsApi::sleep(1);
     }
+
+    /* Free Global Objects */
+    LuaObject::freeGlobalObjects();
 
     /* Free Interpreter */
     delete interpreter;
