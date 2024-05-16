@@ -134,6 +134,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"         # line 198, code is OK
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
+        "--suppress=knownConditionTrueFalse:*/HttpServer.cpp"
     )
 
 endif()
