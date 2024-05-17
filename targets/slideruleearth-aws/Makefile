@@ -72,7 +72,7 @@ OPENOCEANS_CONTAINER_NAME ?= openoceans
 BATHYWRITER_CONTAINER_STAGE_DIR = $(STAGE)/bathywriter
 BATHYWRITER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/bathywriter
 BATHYWRITER_CONTAINER_NAME ?= bathywriter
-COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../ut-coastnet
+COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
 COASTNET_CONTAINER_STAGE_DIR = $(STAGE)/coastnet
 COASTNET_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/coastnet
 COASTNET_CONTAINER_NAME ?= coastnet
@@ -246,7 +246,7 @@ bathywriter-container-run: ## run the bathywriter docker container
 coastnet-container-docker: ## create the coastnet container image
 	-rm -Rf $(COASTNET_CONTAINER_STAGE_DIR)
 	mkdir -p $(COASTNET_CONTAINER_STAGE_DIR)
-	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(COASTNET_CONTAINER_STAGE_DIR)/ut-coastnet --exclude build --exclude .git
+	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(COASTNET_CONTAINER_STAGE_DIR)/coastnet --exclude build --exclude .git
 	cp $(COASTNET_CONTAINER_DIR)/Dockerfile $(COASTNET_CONTAINER_STAGE_DIR)
 	cp $(COASTNET_CONTAINER_DIR)/*.sh $(COASTNET_CONTAINER_STAGE_DIR)
 	cp $(COASTNET_CONTAINER_DIR)/CMakeLists.txt $(COASTNET_CONTAINER_STAGE_DIR)
@@ -256,7 +256,7 @@ coastnet-container-docker: ## create the coastnet container image
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 coastnet-surface-container-run: ## run the coastnet surface docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh /data/AppServer.2/bathy_spot_3.csv /ut-coastnet/models/coastnet-surface.pt /data/AppServer.2/coastnet.csv
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh /data/AppServer.2/bathy_spot_3.csv /coastnet/models/coastnet-surface.pt /data/AppServer.2/coastnet.csv
 
 coastnet-bathy-container-run: ## run the coastnet bathy docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /bathy.sh

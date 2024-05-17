@@ -25,10 +25,10 @@ RUN python3.9 -m venv venv \
     && python -m pip install --upgrade pip \
     && pip install torch numpy
 
-COPY ut-coastnet /
+COPY coastnet /
 
 RUN . /venv/bin/activate \
-    && cd /ut-coastnet \
+    && cd /coastnet \
     && make build
 
 ENTRYPOINT ["/bin/sh"]

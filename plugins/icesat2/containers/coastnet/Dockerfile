@@ -27,15 +27,15 @@ RUN python3.9 -m venv venv \
     && python -m pip install --upgrade pip \
     && pip install torch numpy
 
-COPY ut-coastnet /
-COPY CMakeLists.txt /ut-coastnet/
-COPY Makefile /ut-coastnet/
+COPY coastnet /
+COPY CMakeLists.txt /coastnet/
+COPY Makefile /coastnet/
+RUN source /venv/bin/activate \
+    && cd /coastnet \
+    && make
+
 COPY surface.sh /
 COPY bathy.sh /
-
-RUN source /venv/bin/activate \
-    && cd /ut-coastnet \
-    && make
 
 # Set the SHELL to Bash
 SHELL ["/bin/bash", "-c"]
