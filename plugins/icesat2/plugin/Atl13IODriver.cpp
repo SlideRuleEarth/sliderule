@@ -68,7 +68,7 @@ Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
     const int NUM_ELEMENTS = 5;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
-    int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
     if(num_toks < 5) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid atl13 resource: %s", resource);
 
     const char* product = elements[0];
@@ -88,7 +88,7 @@ Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
     /*
      * Determine ioBucket and ioKey
      */
-    ioBucket = (char*)resourcepath.c_str(true);
+    ioBucket = const_cast<char*>(resourcepath.c_str(true));
 
     /*
     * Differentiate Bucket and Key
@@ -106,6 +106,4 @@ Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl13IODriver::~Atl13IODriver (void)
-{
-}
+Atl13IODriver::~Atl13IODriver (void) = default;

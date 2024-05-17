@@ -283,10 +283,10 @@ void LuaObject::freeGlobalObjects (void)
     globalMut.lock();
     {
         char** keys = NULL;
-        int num_keys = globalObjects.getKeys(&keys);
+        const int num_keys = globalObjects.getKeys(&keys);
         for(int i = 0; i < num_keys; i++)
         {
-            LuaObject* lua_obj = globalObjects.get(keys[i]).lua_obj;
+            LuaObject* lua_obj = globalObjects.get(keys[i]).lua_obj;  // NOLINT(clang-analyzer-core.CallAndMessage)
             lua_obj->releaseLuaObject();
             delete [] keys[i];
         }

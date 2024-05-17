@@ -66,7 +66,7 @@ class Atl13IODriver: S3CurlIODriver
          *--------------------------------------------------------------------*/
 
         Atl13IODriver (const Asset* _asset, const char* resource);
-        ~Atl13IODriver (void);
+        ~Atl13IODriver (void) override;
 };
 
 #endif  /* __atl13_io_driver__ */

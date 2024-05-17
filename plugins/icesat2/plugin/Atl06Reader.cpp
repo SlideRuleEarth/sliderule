@@ -185,7 +185,7 @@ Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, co
         {
             for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
             {
-                int gt_index = (2 * (track - 1)) + pair;
+                const int gt_index = (2 * (track - 1)) + pair;
                 if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;

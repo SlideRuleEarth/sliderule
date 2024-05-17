@@ -101,7 +101,7 @@ int Atl13Reader::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
-        bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl13Reader(L, asset, resource, outq_name, parms, send_terminator));
@@ -174,7 +174,7 @@ Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, co
         {
             for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
             {
-                int gt_index = (2 * (track - 1)) + pair;
+                const int gt_index = (2 * (track - 1)) + pair;
                 if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
@@ -307,8 +307,8 @@ void Atl13Reader::Region::polyregion (info_t* info)
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
-        MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
+        const MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
+        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
         if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, segment_point))
@@ -364,7 +364,7 @@ void Atl13Reader::Region::rasterregion (info_t* info)
     while(segment < latitude.size)
     {
         /* Check Inclusion */
-        bool inclusion = info->reader->parms->raster->includes(longitude[segment], latitude[segment]);
+        const bool inclusion = info->reader->parms->raster->includes(longitude[segment], latitude[segment]);
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */
@@ -421,7 +421,7 @@ Atl13Reader::Atl13Data::Atl13Data (info_t* info, const Region& region):
             const char* field_name = (*anc_fields)[i].field.c_str();
             FString dataset_name("%s/%s", info->prefix, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
-            bool status = anc_data.add(field_name, array);
+            const bool status = anc_data.add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -456,9 +456,7 @@ Atl13Reader::Atl13Data::Atl13Data (info_t* info, const Region& region):
 /*----------------------------------------------------------------------------
  * Atl03Data::Destructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Atl13Data::~Atl13Data (void)
-{
-}
+Atl13Reader::Atl13Data::~Atl13Data (void) = default;
 
 /*----------------------------------------------------------------------------
  * subsettingThread
@@ -466,23 +464,23 @@ Atl13Reader::Atl13Data::~Atl13Data (void)
 void* Atl13Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     Atl13Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Subset to Region of Interest */
-        Region region(info);
+        const Region region(info);
 
         /* Read ATL06 Datasets */
-        Atl13Data atl13(info, region);
+        const Atl13Data atl13(info, region);
 
         /* Increment Read Statistics */
         local_stats.segments_read = region.num_segments;
@@ -505,7 +503,7 @@ void* Atl13Reader::subsettingThread (void* parm)
             }
 
             /* Grab Nominal Segment Quality */
-            int32_t nomial_segment_quality = atl13.segment_quality[4 * segment];
+            const int32_t nomial_segment_quality = atl13.segment_quality[4 * segment];
 
             /* Populate Elevation */
             water_t* entry = &atl13_data->water[batch_index++];
@@ -558,7 +556,7 @@ void* Atl13Reader::subsettingThread (void* parm)
                 int bufsize = 0;
 
                 /* Calculate Batch Record Size */
-                int recsize = batch_index * sizeof(water_t);
+                const int recsize = batch_index * sizeof(water_t);
                 batch_record->setUsedData(recsize);
 
                 if(rec_vec.size() > 1) // elevation and ancillary field records
@@ -751,7 +749,7 @@ int Atl13Reader::luaStats (lua_State* L)
     try
     {
         /* Get Clear Parameter */
-        bool with_clear = getLuaBoolean(L, 2, true, false);
+        const bool with_clear = getLuaBoolean(L, 2, true, false);
 
         /* Create Statistics Table */
         lua_newtable(L);
